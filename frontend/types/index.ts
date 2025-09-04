@@ -1,0 +1,65 @@
+export interface PlexSession {
+  sessionKey: string;
+  User?: {
+    id?: string;
+    title?: string;
+    thumb?: string;
+  };
+  Player?: {
+    machineIdentifier?: string;
+    platform?: string;
+    product?: string;
+    title?: string;
+    device?: string;
+    address?: string;
+    state?: "playing" | "paused" | "buffering";
+  };
+  Media?: Array<{
+    videoResolution?: string;
+    bitrate?: number;
+    container?: string;
+    videoCodec?: string;
+    audioCodec?: string;
+  }>;
+  title?: string;
+  grandparentTitle?: string;
+  parentTitle?: string;
+  year?: number;
+  duration?: number;
+  viewOffset?: number;
+  type?: string;
+  thumb?: string;
+  art?: string;
+}
+
+export interface StreamsResponse {
+  MediaContainer?: {
+    size?: number;
+    Metadata?: PlexSession[];
+  };
+}
+
+export interface DashboardStats {
+  activeStreams: number;
+  totalDevices: number;
+  pendingDevices: number;
+  approvedDevices: number;
+}
+
+export interface UserDevice {
+  id: number;
+  userId: string;
+  username?: string;
+  deviceIdentifier: string;
+  deviceName?: string;
+  devicePlatform?: string;
+  deviceProduct?: string;
+  deviceVersion?: string;
+  userAgent?: string;
+  ipAddress?: string;
+  approved: boolean;
+  status: "pending" | "approved" | "rejected";
+  firstSeen: string;
+  lastSeen: string;
+  sessionCount: number;
+}
