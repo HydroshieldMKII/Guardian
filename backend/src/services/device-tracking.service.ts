@@ -235,26 +235,4 @@ export class DeviceTrackingService {
     await this.userDeviceRepository.delete(deviceId);
     this.logger.log(`Device ${deviceId} has been rejected and deleted`);
   }
-
-  async initializeDeviceStatuses(): Promise<void> {
-    try {
-      // Find devices without a status field or with null status
-      const devicesWithoutStatus = await this.userDeviceRepository.find({
-        where: [{ status: undefined as any }, { status: null as any }],
-      });
-
-      for (const device of devicesWithoutStatus) {
-        // Set status based on approved field
-        const status = device.approved ? 'approved' : 'pending';
-        await this.userDeviceRepository.update(device.id, { status });
-        this.logger.debug(`Updated device ${device.id} status to: ${status}`);
-      }
-
-      this.logger.log(
-        `Initialized status for ${devicesWithoutStatus.length} devices`,
-      );
-    } catch (error) {
-      this.logger.warn('Error initializing device statuses', error);
-    }
-  }
 }

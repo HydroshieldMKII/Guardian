@@ -25,14 +25,14 @@ async function bootstrap() {
       cwd: process.cwd(),
       stdio: 'inherit',
       shell: true,
-      env: { ...process.env }
+      env: { ...process.env },
     });
   } else {
     proxyProcess = spawn('node', ['dist/proxy/proxy-server.js'], {
       cwd: process.cwd(),
       stdio: 'inherit',
       shell: true,
-      env: { ...process.env }
+      env: { ...process.env },
     });
   }
 
@@ -54,7 +54,6 @@ async function bootstrap() {
 
   try {
     const deviceTrackingService = app.get(DeviceTrackingService);
-    await deviceTrackingService.initializeDeviceStatuses();
   } catch (error) {
     console.error('Failed to initialize device statuses:', error);
   }
