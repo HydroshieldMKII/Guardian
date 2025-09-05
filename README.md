@@ -1,6 +1,6 @@
-# PlexGuard
+# Guardian
 
-PlexGuard is a utility designed to enhance the security and management of your Plex Media Server. This tool is built to help users monitor and control access to their Plex server, ensuring that only authorized users can view and interact with their media library.
+Guardian is a utility designed to enhance the security and management of your Plex Media Server. This tool is built to help users monitor and control access to their Plex server, ensuring that only authorized users can view and interact with their media library.
 
 ## Table of Contents
 
@@ -19,15 +19,15 @@ PlexGuard is a utility designed to enhance the security and management of your P
 - Tracks last seen active sessions and user activity, with the ability to remove per device access in one click
 - Support Plex SSL
 
-<img width="2558" height="1188" alt="plexguard1_" src="https://github.com/user-attachments/assets/d6994f2b-317b-4cdb-83eb-77fb9ce2bcdc" />
-<img width="2558" height="1191" alt="plexguard2_" src="https://github.com/user-attachments/assets/1f3e6286-7ee4-4361-9896-548edc00ed7f" />
-<img width="2558" height="1191" alt="plexguard3_" src="https://github.com/user-attachments/assets/2c6d7de2-3791-48cf-b8c7-25dca5babc6c" />
-<img width="2558" height="1192" alt="plexguard4_" src="https://github.com/user-attachments/assets/3f04c716-7e8b-4d08-9de6-fb1e89069ded" />
+<img width="2558" height="1188" alt="Guardian Dashboard" src="https://github.com/user-attachments/assets/d6994f2b-317b-4cdb-83eb-77fb9ce2bcdc" />
+<img width="2558" height="1191" alt="Guardian Dashboard" src="https://github.com/user-attachments/assets/1f3e6286-7ee4-4361-9896-548edc00ed7f" />
+<img width="2558" height="1191" alt="Guardian Dashboard" src="https://github.com/user-attachments/assets/2c6d7de2-3791-48cf-b8c7-25dca5babc6c" />
+<img width="2558" height="1192" alt="Guardian Dashboard" src="https://github.com/user-attachments/assets/3f04c716-7e8b-4d08-9de6-fb1e89069ded" />
 
 
 ## 🚀 Quick Start with Docker (Recommended)
 
-The easiest way to deploy PlexGuard is using Docker Compose:
+The easiest way to deploy Guardian is using Docker Compose:
 
 ### Prerequisites
 
@@ -40,8 +40,8 @@ The easiest way to deploy PlexGuard is using Docker Compose:
 1. **Clone the repository**:
 
    ```bash
-   git clone https://github.com/HydroshieldMKII/PlexGuard.git
-   cd PlexGuard
+   git clone https://github.com/HydroshieldMKII/Guardian.git
+   cd Guardian
    ```
 
 2. **Setup environment variables**:
@@ -57,14 +57,14 @@ The easiest way to deploy PlexGuard is using Docker Compose:
    docker compose up -d --build
    ```
 
-4. **Access PlexGuard (Default Ports)**:
+4. **Access Guardian (Default Ports)**:
    - Web Interface: http://localhost:3000
    - API: http://localhost:3001
    - Plex Proxy: http://localhost:8080
 
 ## 🛠 Manual Development Setup
 
-If you prefer to run PlexGuard without Docker:
+If you prefer to run Guardian without Docker:
 
 ### Prerequisites
 
@@ -99,7 +99,7 @@ PLEX_SERVER_IP=your_plex_server_ip
 PLEX_SERVER_PORT=32400
 USE_SSL=false #true or false
 
-# PlexGuard Settings
+# Guardian Settings
 PLEXGUARD_REFRESH_INTERVAL=10 # Refresh interval in seconds, lower value will make dashboard and actions more responsive
 PLEX_GUARD_DEFAULT_BLOCK=true # Set to true to block new devices by default, false to auto-approve new devices
 PLEXGUARD_STOPMSG="This device must be approved by the server owner."
