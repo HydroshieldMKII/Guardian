@@ -158,7 +158,7 @@ export class DeviceTrackingService {
       devicePlatform: deviceInfo.devicePlatform,
       deviceProduct: deviceInfo.deviceProduct,
       deviceVersion: deviceInfo.deviceVersion,
-      status: 'pending', // New devices start as pending
+      status: defaultBlock ? 'pending' : 'approved',
       sessionCount: 1,
       ipAddress: deviceInfo.ipAddress,
       userAgent: deviceInfo.userAgent,

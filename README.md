@@ -101,6 +101,7 @@ USE_SSL=false #true or false
 
 # PlexGuard Settings
 PLEXGUARD_REFRESH_INTERVAL=10 # Refresh interval in seconds, lower value will make dashboard and actions more responsive
+PLEX_GUARD_DEFAULT_BLOCK=true # Set to true to block new devices by default, false to auto-approve new devices
 PLEXGUARD_STOPMSG="This device must be approved by the server owner."
 
 # Port Configuration (Optional - defaults shown)
