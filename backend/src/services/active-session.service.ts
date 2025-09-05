@@ -84,7 +84,7 @@ export class ActiveSessionService {
         await this.upsertSession(sessionData);
       }
 
-      this.logger.log(`Updated ${sessions.length} active sessions in database`);
+      // this.logger.log(`Updated ${sessions.length} active sessions in database`);
     } catch (error) {
       this.logger.error('Error updating active sessions', error);
       throw error;

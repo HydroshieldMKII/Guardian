@@ -27,9 +27,9 @@ export class DeviceTrackingService {
       return;
     }
 
-    this.logger.log(
-      `Processing ${sessions.length} sessions for device tracking`,
-    );
+    // this.logger.log(
+    //   `Processing ${sessions.length} sessions for device tracking`,
+    // );
 
     for (const session of sessions) {
       try {
@@ -75,6 +75,7 @@ export class DeviceTrackingService {
   private extractDeviceInfo(session: PlexSession): DeviceInfo {
     return {
       userId: session.User?.id || session.User?.uuid || 'unknown',
+      username: session.User?.title,
       deviceIdentifier: session.Player?.machineIdentifier || 'unknown',
       deviceName: session.Player?.device || session.Player?.title,
       devicePlatform: session.Player?.platform,
@@ -139,12 +140,16 @@ export class DeviceTrackingService {
     }
 
     await this.userDeviceRepository.save(existingDevice);
-    this.logger.debug(
-      `Updated existing device for user ${deviceInfo.userId}: ${deviceInfo.deviceIdentifier}`,
-    );
+    // this.logger.debug(
+    //   `Updated existing device for user ${deviceInfo.userId}: ${deviceInfo.deviceIdentifier}`,
+    // );
   }
 
   private async createNewDevice(deviceInfo: DeviceInfo): Promise<void> {
+    const defaultBlock = process.env.PLEX_GUARD_DEFAULT_BLOCK === 'true';
+
+    console.log('New device detected:', deviceInfo);
+
     const newDevice = this.userDeviceRepository.create({
       userId: deviceInfo.userId,
       username: deviceInfo.username,
@@ -153,7 +158,7 @@ export class DeviceTrackingService {
       devicePlatform: deviceInfo.devicePlatform,
       deviceProduct: deviceInfo.deviceProduct,
       deviceVersion: deviceInfo.deviceVersion,
-      approved: false, // New devices are not approved by default
+      approved: defaultBlock,
       status: 'pending', // New devices start as pending
       sessionCount: 1,
       ipAddress: deviceInfo.ipAddress,

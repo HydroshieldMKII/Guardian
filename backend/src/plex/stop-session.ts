@@ -27,9 +27,6 @@ export class StopSessionService {
     private activeSessionService: ActiveSessionService,
   ) {}
 
-  /**
-   * Stop sessions for unapproved devices
-   */
   async stopUnapprovedSessions(
     sessionsData: PlexSessionsResponse,
   ): Promise<SessionTerminationResult> {
@@ -88,9 +85,6 @@ export class StopSessionService {
     }
   }
 
-  /**
-   * Check if a session should be stopped based on device approval status
-   */
   private async shouldStopSession(session: any): Promise<boolean> {
     try {
       const userId = session.User?.id || session.User?.uuid;
@@ -116,7 +110,7 @@ export class StopSessionService {
           `Device not found in database: ${userId}/${deviceIdentifier}`,
         );
         const defaultBlock = process.env.PLEX_GUARD_DEFAULT_BLOCK === 'true';
-        return defaultBlock; // Stop sessions from unknown devices based on config
+        return defaultBlock;
       }
 
       return !device.approved; // Stop if device is not approved
@@ -126,9 +120,6 @@ export class StopSessionService {
     }
   }
 
-  /**
-   * Stop a session by session key (public method)
-   */
   async terminateSession(
     sessionKey: string,
     reason: string = stopMessage,
@@ -156,7 +147,6 @@ export class StopSessionService {
       });
 
       if (!response.ok) {
-        // 404 means session already ended
         const errorText = await response.text();
         throw new Error(
           `HTTP ${response.status}: ${response.statusText} - ${errorText}`,

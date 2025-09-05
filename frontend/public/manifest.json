@@ -1,0 +1,17 @@
+{
+  "name": "Plex Guard Dashboard",
+  "short_name": "Plex Guard",
+  "description": "Monitor active streams and manage device access",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "32x32",
+      "type": "image/x-icon"
+    }
+  ]
+}

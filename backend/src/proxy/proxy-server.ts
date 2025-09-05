@@ -33,7 +33,7 @@ http
       req.url = `${req.url}?X-Plex-Token=${encodeURIComponent(token)}`;
     }
 
-    console.log('Proxying:', req.url);
+    // console.log('Proxying:', req.url);
     proxy.web(req, res, { target });
   })
   .listen(proxyPort, () => {
