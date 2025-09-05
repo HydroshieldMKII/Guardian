@@ -36,6 +36,7 @@ async function bootstrap() {
     });
   }
 
+  // Wait for proxy to initialize
   await new Promise((res) => setTimeout(res, 2000));
 
   const app = await NestFactory.create(AppModule);
@@ -51,8 +52,9 @@ async function bootstrap() {
   });
 
   await app.listen(config.app.port);
-  const plexService = app.get(PlexService);
 
+  const plexService = app.get(PlexService);
+  
   intervalId = setInterval(async () => {
     try {
       await plexService.updateActiveSessions();
