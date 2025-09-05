@@ -4,7 +4,7 @@ export const config = {
     environment: process.env.NODE_ENV || 'development',
   },
   plex: {
-    proxyPort: process.env.PLEXGUARD_PROXY_PORT || '8080',
+    proxyPort:  '8080',
     refreshInterval: parseInt(
       process.env.PLEXGUARD_REFRESH_INTERVAL || '10',
       10,

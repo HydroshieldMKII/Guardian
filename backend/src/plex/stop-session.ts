@@ -19,7 +19,7 @@ const stopMessage =
 @Injectable()
 export class StopSessionService {
   private readonly logger = new Logger(StopSessionService.name);
-  private readonly proxyPort = process.env.PLEXGUARD_PROXY_PORT || '8080';
+  private readonly proxyPort =  '8080';
 
   constructor(
     @InjectRepository(UserDevice)

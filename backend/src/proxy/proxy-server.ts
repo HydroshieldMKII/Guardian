@@ -21,7 +21,7 @@ for (const envPath of envPaths) {
 const ip = process.env.PLEX_SERVER_IP;
 const port = process.env.PLEX_SERVER_PORT;
 const token = process.env.PLEX_TOKEN;
-const proxyPort = process.env.PLEXGUARD_PROXY_PORT || '8080';
+const proxyPort =  '8080';
 const useSSL = process.env.USE_SSL === 'true';
 
 if (!ip || !port || !token) {

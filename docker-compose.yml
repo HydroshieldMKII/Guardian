@@ -6,7 +6,6 @@ services:
       dockerfile: Dockerfile
       args:
         - PLEXGUARD_API_PORT=${PLEXGUARD_API_PORT:-3001}
-        - PLEXGUARD_PROXY_PORT=${PLEXGUARD_PROXY_PORT:-8080}
     container_name: plexguard-backend
     ports:
       - "${PLEXGUARD_API_PORT:-3001}:${PLEXGUARD_API_PORT:-3001}"  # API port
@@ -15,7 +14,6 @@ services:
     environment:
       - NODE_ENV=production
       - PLEXGUARD_API_PORT=${PLEXGUARD_API_PORT:-3001}
-      - PLEXGUARD_PROXY_PORT=${PLEXGUARD_PROXY_PORT:-8080}
       - DATABASE_PATH=/app/data/plex-guard.db
     volumes:
       - backend_data:/app/data

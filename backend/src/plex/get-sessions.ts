@@ -3,7 +3,7 @@ import * as path from 'path';
 
 dotenv.config({ path: path.join(process.cwd(), '../.env') });
 
-const proxyPort = process.env.PLEXGUARD_PROXY_PORT || '8080';
+const proxyPort =  '8080';
 
 async function getActiveSessions() {
   // Build the proxy URL

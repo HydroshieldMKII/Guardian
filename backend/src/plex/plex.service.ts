@@ -11,7 +11,7 @@ dotenv.config({ path: path.join(process.cwd(), '../.env') });
 @Injectable()
 export class PlexService {
   private readonly logger = new Logger(PlexService.name);
-  private readonly proxyPort = process.env.PLEXGUARD_PROXY_PORT || '8080';
+  private readonly proxyPort = '8080';
 
   constructor(
     private deviceTrackingService: DeviceTrackingService,

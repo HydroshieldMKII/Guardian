@@ -107,7 +107,6 @@ PLEXGUARD_STOPMSG="This device must be approved by the server owner."
 # Port Configuration (Optional - defaults shown)
 PLEXGUARD_API_PORT=3001        # Backend API port
 PLEXGUARD_FRONTEND_PORT=3000   # Frontend web interface port
-PLEXGUARD_PROXY_PORT=8080      # Plex proxy port
 
 # Backend URL Configuration (Optional)
 # Use this when accessing the frontend from outside your local network
@@ -128,7 +127,6 @@ PlexGuard uses three configurable ports:
 
 - **PLEXGUARD_FRONTEND_PORT** (default: 3000): Frontend web interface port
 - **PLEXGUARD_API_PORT** (default: 3001): Backend API server port
-- **PLEXGUARD_PROXY_PORT** (default: 8080): Plex proxy server port
 
 You can customize these ports in your `.env` file to avoid conflicts with other services or to match your preferred configuration.
 

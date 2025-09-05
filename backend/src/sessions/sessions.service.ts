@@ -7,7 +7,7 @@ dotenv.config({ path: path.join(process.cwd(), '../.env') });
 @Injectable()
 export class SessionsService {
   private readonly logger = new Logger(SessionsService.name);
-  private readonly proxyPort = process.env.PLEXGUARD_PROXY_PORT || '8080';
+  private readonly proxyPort =  '8080';
 
   /**
    * Terminate a specific session via proxy
