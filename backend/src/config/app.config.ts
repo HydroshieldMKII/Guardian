@@ -17,7 +17,7 @@ export const config = {
     origins: '*',
   },
   database: {
-    path: 'plex-guard.db',
+    path: process.env.DATABASE_PATH || 'plex-guard.db',
     logging: process.env.NODE_ENV === 'development',
   },
 };
