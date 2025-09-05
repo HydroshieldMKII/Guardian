@@ -2,12 +2,22 @@
 
 PlexGuard is a utility designed to enhance the security and management of your Plex Media Server. This tool is built to help users monitor and control access to their Plex server, ensuring that only authorized users can view and interact with their media library.
 
+## Table of Contents
+
+- [Features](#features)
+- [Quick Start with Docker](#quick-start-with-docker)
+- [Manual Development Setup](#manual-development-setup)
+- [Configuration](#configuration)
+- [Port Configuration](#port-configuration)
+- [Contributing](#contributing)
+
 ## Features
 
 - Deny streaming sessions from unapproved devices
 - Manual device approval system
 - Informations on devices like platform, product, version and IP address
 - Tracks last seen active sessions and user activity, with the ability to remove per device access in one click
+- Support Plex SSL
 
 ## 🚀 Quick Start with Docker (Recommended)
 
@@ -28,26 +38,23 @@ The easiest way to deploy PlexGuard is using Docker Compose:
    cd PlexGuard
    ```
 
-2. **Quick setup with the management script**:
-
-   ```bash
-   ./docker-manage.sh setup
-   ./docker-manage.sh start
-   ```
-
-3. **Or manually**:
+2. **Setup environment variables**:
 
    ```bash
    cp .env.example .env
-   # Edit .env with your Plex server details
-   nano .env
-   docker compose up -d --build
+   nano .env # Edit .env with your Plex server details
    ```
 
-4. **Access PlexGuard**:
-   - Web Interface: http://localhost:{PLEXGUARD_FRONTEND_PORT} (default: 3000)
-   - API: http://localhost:{PLEXGUARD_API_PORT} (default: 3001)
-   - Plex Proxy: http://localhost:{PLEXGUARD_PROXY_PORT} (default: 8080)
+3. **Start the services**:
+
+   ```bash
+   docker compose up -d
+   ```
+
+4. **Access PlexGuard (Default Ports)**:
+   - Web Interface: http://localhost:3000
+   - API: http://localhost:3001
+   - Plex Proxy: http://localhost:8080
 
 ## 🛠 Manual Development Setup
 
@@ -103,8 +110,8 @@ COMPOSE_BAKE=true              # Use Docker Bake for better build performance
 
 PlexGuard uses three configurable ports:
 
+- **PLEXGUARD_FRONTEND_PORT** (default: 3000): Frontend web interface port.
 - **PLEXGUARD_API_PORT** (default: 3001): Backend API server port
-- **PLEXGUARD_FRONTEND_PORT** (default: 3000): Frontend web interface port  
 - **PLEXGUARD_PROXY_PORT** (default: 8080): Plex proxy server port
 
 You can customize these ports in your `.env` file to avoid conflicts with other services or to match your preferred configuration.
