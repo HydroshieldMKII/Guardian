@@ -14,10 +14,7 @@ export const config = {
       'This device must be approved by the server owner. Please contact the server administrator for more information.',
   },
   cors: {
-    origins: process.env.CORS_ORIGINS?.split(',') || [
-      `http://localhost:${process.env.PLEXGUARD_FRONTEND_PORT || '3000'}`,
-      `http://localhost:${process.env.PLEXGUARD_API_PORT || '3001'}`,
-    ],
+    origins: '*',
   },
   database: {
     path: 'plex-guard.db',
