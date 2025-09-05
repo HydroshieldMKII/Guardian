@@ -54,7 +54,7 @@ The easiest way to deploy PlexGuard is using Docker Compose:
 3. **Start the services**:
 
    ```bash
-   docker compose up -d
+   docker compose up -d --build
    ```
 
 4. **Access PlexGuard (Default Ports)**:
@@ -109,7 +109,7 @@ PLEXGUARD_FRONTEND_PORT=3000   # Frontend web interface port
 PLEXGUARD_PROXY_PORT=8080      # Plex proxy port
 
 # Docker Compose Build Performance (Optional)
-COMPOSE_BAKE=true              # Use Docker Bake for better build performance
+COMPOSE_BAKE=true
 ```
 
 ## Port Configuration
@@ -120,7 +120,7 @@ PlexGuard uses three configurable ports:
 - **PLEXGUARD_API_PORT** (default: 3001): Backend API server port
 - **PLEXGUARD_PROXY_PORT** (default: 8080): Plex proxy server port
 
-You can customize these ports in your `.env` file to avoid conflicts with other services or to match your preferred configuration.
+You can customize these ports in your `.env` file to avoid conflicts with other services or to match your preferred configuration. The frontend port and backend port should be publicly accessible.
 
 ## Contributing
 
