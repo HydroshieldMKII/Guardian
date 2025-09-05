@@ -91,10 +91,10 @@ Edit the `.env` file with your Plex server details:
 PLEX_TOKEN=your_plex_token_here
 PLEX_SERVER_IP=your_plex_server_ip
 PLEX_SERVER_PORT=32400
-USE_SSL=false
+USE_SSL=false #true or false
 
 # PlexGuard Settings
-PLEXGUARD_REFRESH_INTERVAL=10
+PLEXGUARD_REFRESH_INTERVAL=10 # Refresh interval in seconds, lower value will make dashboard and actions more responsive
 PLEXGUARD_STOPMSG="This device must be approved by the server owner."
 
 # Port Configuration (Optional - defaults shown)
