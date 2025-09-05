@@ -169,7 +169,10 @@ export function Dashboard() {
               <span className="hidden sm:inline">Device Management</span>
               <span className="sm:hidden">Devices</span>
               {stats.pendingDevices > 0 && (
-                <Badge variant="destructive" className="absolute -top-1 -right-1 sm:relative sm:top-0 sm:right-0 sm:ml-2 min-w-5 h-5 text-xs">
+                <Badge
+                  variant="destructive"
+                  className="absolute -top-1 -right-1 sm:relative sm:top-0 sm:right-0 sm:ml-2 min-w-5 h-5 text-xs"
+                >
                   {stats.pendingDevices}
                 </Badge>
               )}
