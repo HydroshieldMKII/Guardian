@@ -32,6 +32,7 @@ import {
 
 import { PlexSession, StreamsResponse } from "@/types";
 import { useSwipeToRefresh } from "../hooks/useSwipeToRefresh";
+import { config } from "@/lib/config";
 
 export function StreamsList() {
   const [streams, setStreams] = useState<PlexSession[]>([]);
@@ -53,7 +54,7 @@ export function StreamsList() {
       if (!silent) {
         setRefreshing(true);
       }
-      const response = await fetch("http://localhost:3001/sessions/active");
+      const response = await fetch(`${config.api.baseUrl}/sessions/active`);
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
@@ -96,7 +97,7 @@ export function StreamsList() {
     try {
       setRevokingAuth(stream.sessionKey);
       const response = await fetch(
-        `http://localhost:3001/devices/revoke/${encodeURIComponent(
+        `${config.api.baseUrl}/devices/revoke/${encodeURIComponent(
           userId
         )}/${encodeURIComponent(deviceIdentifier)}`,
         {

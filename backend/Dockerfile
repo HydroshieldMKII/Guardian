@@ -35,8 +35,11 @@ RUN npm ci --only=production && npm cache clean --force
 COPY --from=builder /app/dist ./dist
 
 # Expose ports
-EXPOSE 3001
-EXPOSE 8080
+# Expose the configurable ports
+ARG PLEXGUARD_API_PORT=3001
+ARG PLEXGUARD_PROXY_PORT=8080
+EXPOSE ${PLEXGUARD_API_PORT}
+EXPOSE ${PLEXGUARD_PROXY_PORT}
 
 # Create volume for SQLite database
 VOLUME ["/app/data"]

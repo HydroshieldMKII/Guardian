@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
+    "dev": "next dev --turbopack -p ${PLEXGUARD_FRONTEND_PORT:-3000}",
     "build": "next build --turbopack",
-    "start": "next start"
+    "start": "next start -p ${PLEXGUARD_FRONTEND_PORT:-3000}"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.15",

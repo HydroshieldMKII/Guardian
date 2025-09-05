@@ -45,9 +45,9 @@ The easiest way to deploy PlexGuard is using Docker Compose:
    ```
 
 4. **Access PlexGuard**:
-   - Web Interface: http://localhost:3000
-   - API: http://localhost:3001
-   - Plex Proxy: http://localhost:8080
+   - Web Interface: http://localhost:{PLEXGUARD_FRONTEND_PORT} (default: 3000)
+   - API: http://localhost:{PLEXGUARD_API_PORT} (default: 3001)
+   - Plex Proxy: http://localhost:{PLEXGUARD_PROXY_PORT} (default: 8080)
 
 ## 🛠 Manual Development Setup
 
@@ -89,7 +89,22 @@ USE_SSL=false
 # PlexGuard Settings
 PLEXGUARD_REFRESH_INTERVAL=10
 PLEXGUARD_STOPMSG="This device must be approved by the server owner."
+
+# Port Configuration (Optional - defaults shown)
+PLEXGUARD_API_PORT=3001        # Backend API port
+PLEXGUARD_FRONTEND_PORT=3000   # Frontend web interface port
+PLEXGUARD_PROXY_PORT=8080      # Plex proxy port
 ```
+
+## Port Configuration
+
+PlexGuard uses three configurable ports:
+
+- **PLEXGUARD_API_PORT** (default: 3001): Backend API server port
+- **PLEXGUARD_FRONTEND_PORT** (default: 3000): Frontend web interface port  
+- **PLEXGUARD_PROXY_PORT** (default: 8080): Plex proxy server port
+
+You can customize these ports in your `.env` file to avoid conflicts with other services or to match your preferred configuration.
 
 ## Contributing
 

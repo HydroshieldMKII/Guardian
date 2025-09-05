@@ -39,6 +39,7 @@ import {
   ToggleLeft,
   ToggleRight,
 } from "lucide-react";
+import { config } from "@/lib/config";
 
 interface UserDevice {
   id: number;
@@ -71,20 +72,20 @@ export function DeviceApproval() {
       setLoading(true);
 
       // Fetch all devices
-      const allResponse = await fetch("http://localhost:3001/devices");
+      const allResponse = await fetch(`${config.api.baseUrl}/devices`);
       const allData: UserDevice[] = await allResponse.json();
       setAllDevices(allData);
 
       // Fetch pending devices (truly new devices)
       const pendingResponse = await fetch(
-        "http://localhost:3001/devices/pending"
+        `${config.api.baseUrl}/devices/pending`
       );
       const pendingData: UserDevice[] = await pendingResponse.json();
       setPendingDevices(pendingData);
 
       // Fetch processed devices (approved or rejected)
       const processedResponse = await fetch(
-        "http://localhost:3001/devices/processed"
+        `${config.api.baseUrl}/devices/processed`
       );
       const processedData: UserDevice[] = await processedResponse.json();
       setProcessedDevices(processedData);
@@ -105,7 +106,7 @@ export function DeviceApproval() {
     try {
       setActionLoading(deviceId);
       const response = await fetch(
-        `http://localhost:3001/devices/${deviceId}/approve`,
+        `${config.api.baseUrl}/devices/${deviceId}/approve`,
         {
           method: "POST",
         }
@@ -127,7 +128,7 @@ export function DeviceApproval() {
     try {
       setActionLoading(deviceId);
       const response = await fetch(
-        `http://localhost:3001/devices/${deviceId}/reject`,
+        `${config.api.baseUrl}/devices/${deviceId}/reject`,
         {
           method: "POST",
         }
@@ -149,7 +150,7 @@ export function DeviceApproval() {
     try {
       setActionLoading(deviceId);
       const response = await fetch(
-        `http://localhost:3001/devices/${deviceId}/delete`,
+        `${config.api.baseUrl}/devices/${deviceId}/delete`,
         {
           method: "POST",
         }

@@ -42,8 +42,10 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
 USER nextjs
 
-EXPOSE 3000
+# Use configurable port
+ARG PLEXGUARD_FRONTEND_PORT=3000
+EXPOSE ${PLEXGUARD_FRONTEND_PORT}
 
-ENV PORT=3000
+ENV PORT=${PLEXGUARD_FRONTEND_PORT}
 
 CMD ["node", "server.js"]
