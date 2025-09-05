@@ -1,13 +1,13 @@
 # PlexGuard
 
-PlexGuard is a utility designed to enhance the security and management of your Plex Media Server. This tool was built to help users monitor and control access to their Plex server, ensuring that only authorized users can view and interact with their media library.
+PlexGuard is a utility designed to enhance the security and management of your Plex Media Server. This tool is built to help users monitor and control access to their Plex server, ensuring that only authorized users can view and interact with their media library.
 
 ## Features
 
 - Deny streaming sessions from unapproved devices
 - Manual device approval system
 - Informations on devices like platform, product, version and IP address
-- Tracks last seen active sessions and user activity, remove device access in one click
+- Tracks last seen active sessions and user activity, with the ability to remove per device access in one click
 
 ## 🚀 Quick Start with Docker (Recommended)
 
@@ -41,7 +41,7 @@ The easiest way to deploy PlexGuard is using Docker Compose:
    cp .env.example .env
    # Edit .env with your Plex server details
    nano .env
-   docker-compose up -d --build
+   docker compose up -d --build
    ```
 
 4. **Access PlexGuard**:
@@ -91,12 +91,6 @@ PLEXGUARD_REFRESH_INTERVAL=10
 PLEXGUARD_STOPMSG="This device must be approved by the server owner."
 ```
 
-## How It Works
-
-1. **Device Approval**: New devices are automatically blocked until manually approved (Configurable)
-2. **Session Management**: Monitor and control active streaming sessions
-3. **Database Tracking**: SQLite database stores device information and approval status
-
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Contributions are welcome!
