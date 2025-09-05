@@ -51,14 +51,7 @@ async function bootstrap() {
   });
 
   await app.listen(config.app.port);
-
   const plexService = app.get(PlexService);
-
-  try {
-    const deviceTrackingService = app.get(DeviceTrackingService);
-  } catch (error) {
-    console.error('Failed to initialize device statuses:', error);
-  }
 
   intervalId = setInterval(async () => {
     try {
