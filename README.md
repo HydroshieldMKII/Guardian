@@ -94,6 +94,9 @@ PLEXGUARD_STOPMSG="This device must be approved by the server owner."
 PLEXGUARD_API_PORT=3001        # Backend API port
 PLEXGUARD_FRONTEND_PORT=3000   # Frontend web interface port
 PLEXGUARD_PROXY_PORT=8080      # Plex proxy port
+
+# Docker Compose Build Performance (Optional)
+COMPOSE_BAKE=true              # Use Docker Bake for better build performance
 ```
 
 ## Port Configuration

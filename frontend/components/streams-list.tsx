@@ -12,6 +12,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Play,
   Pause,
   Monitor,
@@ -43,6 +51,7 @@ export function StreamsList() {
   const [expandedStream, setExpandedStream] = useState<string | null>(null);
   const [lastUpdateTime, setLastUpdateTime] = useState<Date>(new Date());
   const [autoRefresh, setAutoRefresh] = useState(true);
+  const [confirmRemoveStream, setConfirmRemoveStream] = useState<PlexSession | null>(null);
 
   const swipeHandlers = useSwipeToRefresh({
     onRefresh: () => fetchStreams(),
@@ -117,6 +126,13 @@ export function StreamsList() {
       console.error("Error revoking device authorization:", error);
     } finally {
       setRevokingAuth(null);
+      setConfirmRemoveStream(null);
+    }
+  };
+
+  const handleConfirmRemoveAccess = () => {
+    if (confirmRemoveStream) {
+      handleRevokeAuthorization(confirmRemoveStream);
     }
   };
 
@@ -443,7 +459,7 @@ export function StreamsList() {
                         <Button
                           variant="destructive"
                           size="sm"
-                          onClick={() => handleRevokeAuthorization(stream)}
+                          onClick={() => setConfirmRemoveStream(stream)}
                           disabled={
                             revokingAuth === stream.sessionKey ||
                             !stream.User?.id ||
@@ -469,6 +485,66 @@ export function StreamsList() {
           </ScrollArea>
         )}
       </CardContent>
+
+      {/* Remove Access Confirmation Dialog */}
+      <Dialog open={!!confirmRemoveStream} onOpenChange={(open) => !open && setConfirmRemoveStream(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserX className="w-5 h-5 text-red-500" />
+              Remove Device Access
+            </DialogTitle>
+            <DialogDescription>
+              Are you sure you want to remove access for this device? This will immediately stop the current stream and prevent future access until the device is re-approved.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {confirmRemoveStream && (
+            <div className="my-4 p-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
+              <div className="text-sm font-medium text-slate-900 dark:text-slate-100 mb-2">
+                {getContentTitle(confirmRemoveStream)}
+              </div>
+              <div className="flex items-center gap-4 text-xs text-slate-600 dark:text-slate-400">
+                <div className="flex items-center gap-1">
+                  <User className="w-3 h-3" />
+                  <span>{confirmRemoveStream.User?.title || "Unknown User"}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  {getDeviceIcon(confirmRemoveStream.Player?.platform)}
+                  <span>{confirmRemoveStream.Player?.title || "Unknown Device"}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setConfirmRemoveStream(null)}
+              disabled={revokingAuth !== null}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmRemoveAccess}
+              disabled={revokingAuth !== null}
+            >
+              {revokingAuth ? (
+                <>
+                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                  Removing...
+                </>
+              ) : (
+                <>
+                  <UserX className="w-4 h-4 mr-2" />
+                  Remove Access
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }

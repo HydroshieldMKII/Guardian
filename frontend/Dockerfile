@@ -15,6 +15,14 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
+# Accept build arguments for environment variables
+ARG PLEXGUARD_API_PORT=3001
+ARG PLEXGUARD_FRONTEND_PORT=3000
+
+# Set environment variables for the build process
+ENV NEXT_PUBLIC_API_PORT=${PLEXGUARD_API_PORT}
+ENV NEXT_PUBLIC_API_URL=http://localhost:${PLEXGUARD_API_PORT}
+
 # Build the application
 RUN npm run build
 

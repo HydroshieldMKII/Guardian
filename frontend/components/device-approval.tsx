@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, memo, useCallback } from "react";
 import {
   Card,
   CardContent,
@@ -58,7 +58,7 @@ interface UserDevice {
   userAgent: string | null;
 }
 
-export function DeviceApproval() {
+const DeviceApproval = memo(() => {
   const [allDevices, setAllDevices] = useState<UserDevice[]>([]);
   const [pendingDevices, setPendingDevices] = useState<UserDevice[]>([]);
   const [processedDevices, setProcessedDevices] = useState<UserDevice[]>([]);
@@ -66,35 +66,55 @@ export function DeviceApproval() {
   const [actionLoading, setActionLoading] = useState<number | null>(null);
   const [selectedDevice, setSelectedDevice] = useState<UserDevice | null>(null);
   const [showApproved, setShowApproved] = useState(false);
+  
+  // Confirmation dialog states
+  const [confirmAction, setConfirmAction] = useState<{
+    device: UserDevice;
+    action: 'approve' | 'reject' | 'delete' | 'toggle';
+    title: string;
+    description: string;
+  } | null>(null);
 
-  const fetchDevices = async () => {
+  const fetchDevices = useCallback(async () => {
     try {
       setLoading(true);
 
       // Fetch all devices
       const allResponse = await fetch(`${config.api.baseUrl}/devices`);
       const allData: UserDevice[] = await allResponse.json();
-      setAllDevices(allData);
-
+      
       // Fetch pending devices (truly new devices)
       const pendingResponse = await fetch(
         `${config.api.baseUrl}/devices/pending`
       );
       const pendingData: UserDevice[] = await pendingResponse.json();
-      setPendingDevices(pendingData);
 
       // Fetch processed devices (approved or rejected)
       const processedResponse = await fetch(
         `${config.api.baseUrl}/devices/processed`
       );
       const processedData: UserDevice[] = await processedResponse.json();
-      setProcessedDevices(processedData);
+
+      // Only update state if data has changed to prevent unnecessary re-renders
+      const allDataString = JSON.stringify(allData);
+      const pendingDataString = JSON.stringify(pendingData);
+      const processedDataString = JSON.stringify(processedData);
+      
+      if (JSON.stringify(allDevices) !== allDataString) {
+        setAllDevices(allData);
+      }
+      if (JSON.stringify(pendingDevices) !== pendingDataString) {
+        setPendingDevices(pendingData);
+      }
+      if (JSON.stringify(processedDevices) !== processedDataString) {
+        setProcessedDevices(processedData);
+      }
     } catch (error) {
       console.error("Failed to fetch devices:", error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [allDevices, pendingDevices, processedDevices]);
 
   useEffect(() => {
     fetchDevices();
@@ -113,7 +133,18 @@ export function DeviceApproval() {
       );
 
       if (response.ok) {
-        await fetchDevices(); // Refresh the list
+        // Optimistic update - update the device status immediately
+        const updateDeviceStatus = (devices: UserDevice[]) =>
+          devices.map(device =>
+            device.id === deviceId ? { ...device, status: 'approved' as const } : device
+          );
+        
+        setAllDevices(updateDeviceStatus);
+        setProcessedDevices(prev => updateDeviceStatus(prev));
+        setPendingDevices(devices => devices.filter(device => device.id !== deviceId));
+        
+        // Still fetch to ensure consistency
+        setTimeout(fetchDevices, 100);
       } else {
         console.error("Failed to approve device");
       }
@@ -121,6 +152,7 @@ export function DeviceApproval() {
       console.error("Error approving device:", error);
     } finally {
       setActionLoading(null);
+      setConfirmAction(null);
     }
   };
 
@@ -135,7 +167,17 @@ export function DeviceApproval() {
       );
 
       if (response.ok) {
-        await fetchDevices(); // Refresh the list
+        // Optimistic update
+        const updateDeviceStatus = (devices: UserDevice[]) =>
+          devices.map(device =>
+            device.id === deviceId ? { ...device, status: 'rejected' as const } : device
+          );
+        
+        setAllDevices(prev => updateDeviceStatus(prev));
+        setProcessedDevices(prev => updateDeviceStatus(prev));
+        setPendingDevices(devices => devices.filter(device => device.id !== deviceId));
+        
+        setTimeout(fetchDevices, 100);
       } else {
         console.error("Failed to reject device");
       }
@@ -143,6 +185,7 @@ export function DeviceApproval() {
       console.error("Error rejecting device:", error);
     } finally {
       setActionLoading(null);
+      setConfirmAction(null);
     }
   };
 
@@ -157,7 +200,15 @@ export function DeviceApproval() {
       );
 
       if (response.ok) {
-        await fetchDevices(); // Refresh the list
+        // Optimistic update - remove device immediately
+        const removeDevice = (devices: UserDevice[]) =>
+          devices.filter(device => device.id !== deviceId);
+        
+        setAllDevices(prev => removeDevice(prev));
+        setProcessedDevices(prev => removeDevice(prev));
+        setPendingDevices(prev => removeDevice(prev));
+        
+        setTimeout(fetchDevices, 100);
       } else {
         console.error("Failed to delete device");
       }
@@ -165,6 +216,7 @@ export function DeviceApproval() {
       console.error("Error deleting device:", error);
     } finally {
       setActionLoading(null);
+      setConfirmAction(null);
     }
   };
 
@@ -173,6 +225,65 @@ export function DeviceApproval() {
       await handleReject(device.id);
     } else {
       await handleApprove(device.id);
+    }
+  };
+
+  // Confirmation dialog handlers
+  const showApproveConfirmation = (device: UserDevice) => {
+    setConfirmAction({
+      device,
+      action: 'approve',
+      title: 'Approve Device',
+      description: `Are you sure you want to approve this device? "${device.deviceName || device.deviceIdentifier}" will be able to access your Plex server.`
+    });
+  };
+
+  const showRejectConfirmation = (device: UserDevice) => {
+    setConfirmAction({
+      device,
+      action: 'reject',
+      title: 'Reject Device',
+      description: `Are you sure you want to reject this device? "${device.deviceName || device.deviceIdentifier}" will be blocked from accessing your Plex server.`
+    });
+  };
+
+  const showDeleteConfirmation = (device: UserDevice) => {
+    setConfirmAction({
+      device,
+      action: 'delete',
+      title: 'Delete Device',
+      description: `Are you sure you want to permanently delete this device record? This action cannot be undone. The device "${device.deviceName || device.deviceIdentifier}" will need to be re-approved if it tries to connect again.`
+    });
+  };
+
+  const showToggleConfirmation = (device: UserDevice) => {
+    const isCurrentlyApproved = device.status === 'approved';
+    setConfirmAction({
+      device,
+      action: 'toggle',
+      title: isCurrentlyApproved ? 'Reject Device' : 'Approve Device',
+      description: isCurrentlyApproved 
+        ? `Are you sure you want to reject "${device.deviceName || device.deviceIdentifier}"? This will block access to your Plex server.`
+        : `Are you sure you want to approve "${device.deviceName || device.deviceIdentifier}"? This will grant access to your Plex server.`
+    });
+  };
+
+  const handleConfirmAction = async () => {
+    if (!confirmAction) return;
+    
+    switch (confirmAction.action) {
+      case 'approve':
+        await handleApprove(confirmAction.device.id);
+        break;
+      case 'reject':
+        await handleReject(confirmAction.device.id);
+        break;
+      case 'delete':
+        await handleDelete(confirmAction.device.id);
+        break;
+      case 'toggle':
+        await handleToggleApproval(confirmAction.device);
+        break;
     }
   };
 
@@ -363,7 +474,7 @@ export function DeviceApproval() {
                             <Button
                               variant="default"
                               size="sm"
-                              onClick={() => handleApprove(device.id)}
+                              onClick={() => showApproveConfirmation(device)}
                               disabled={actionLoading === device.id}
                               className="bg-green-500 hover:bg-green-600"
                             >
@@ -377,7 +488,7 @@ export function DeviceApproval() {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => handleReject(device.id)}
+                              onClick={() => showRejectConfirmation(device)}
                               disabled={actionLoading === device.id}
                               className="border-orange-500 text-orange-600 hover:bg-orange-50"
                             >
@@ -391,7 +502,7 @@ export function DeviceApproval() {
                             <Button
                               variant="destructive"
                               size="sm"
-                              onClick={() => handleDelete(device.id)}
+                              onClick={() => showDeleteConfirmation(device)}
                               disabled={actionLoading === device.id}
                             >
                               {actionLoading === device.id ? (
@@ -407,7 +518,7 @@ export function DeviceApproval() {
                             <Button
                               variant={device.status === 'approved' ? "default" : "outline"}
                               size="sm"
-                              onClick={() => handleToggleApproval(device)}
+                              onClick={() => showToggleConfirmation(device)}
                               disabled={actionLoading === device.id}
                               className={
                                 device.status === 'approved'
@@ -427,7 +538,7 @@ export function DeviceApproval() {
                             <Button
                               variant="destructive"
                               size="sm"
-                              onClick={() => handleDelete(device.id)}
+                              onClick={() => showDeleteConfirmation(device)}
                               disabled={actionLoading === device.id}
                             >
                               {actionLoading === device.id ? (
@@ -587,6 +698,97 @@ export function DeviceApproval() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Device Action Confirmation Dialog */}
+      <Dialog open={!!confirmAction} onOpenChange={(open) => !open && setConfirmAction(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {confirmAction?.action === 'approve' && <CheckCircle className="w-5 h-5 text-green-500" />}
+              {confirmAction?.action === 'reject' && <XCircle className="w-5 h-5 text-orange-500" />}
+              {confirmAction?.action === 'delete' && <Trash2 className="w-5 h-5 text-red-500" />}
+              {confirmAction?.action === 'toggle' && (
+                confirmAction.device.status === 'approved' 
+                  ? <XCircle className="w-5 h-5 text-orange-500" />
+                  : <CheckCircle className="w-5 h-5 text-green-500" />
+              )}
+              {confirmAction?.title}
+            </DialogTitle>
+            <DialogDescription>
+              {confirmAction?.description}
+            </DialogDescription>
+          </DialogHeader>
+          
+          {confirmAction && (
+            <div className="my-4 p-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
+              <div className="flex items-center gap-3 mb-2">
+                {getDeviceIcon(confirmAction.device.devicePlatform, confirmAction.device.deviceProduct)}
+                <div>
+                  <div className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                    {confirmAction.device.deviceName || confirmAction.device.deviceIdentifier}
+                  </div>
+                  <div className="text-xs text-slate-600 dark:text-slate-400">
+                    {confirmAction.device.username || confirmAction.device.userId}
+                  </div>
+                </div>
+              </div>
+              <div className="text-xs text-slate-500 dark:text-slate-400">
+                Platform: {confirmAction.device.devicePlatform || 'Unknown'} • 
+                Product: {confirmAction.device.deviceProduct || 'Unknown'}
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setConfirmAction(null)}
+              disabled={actionLoading !== null}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant={confirmAction?.action === 'delete' ? "destructive" : 
+                     confirmAction?.action === 'reject' || (confirmAction?.action === 'toggle' && confirmAction.device.status === 'approved') ? "outline" : "default"}
+              onClick={handleConfirmAction}
+              disabled={actionLoading !== null}
+              className={
+                confirmAction?.action === 'approve' || (confirmAction?.action === 'toggle' && confirmAction.device.status !== 'approved')
+                  ? "bg-green-500 hover:bg-green-600" 
+                  : confirmAction?.action === 'reject' || (confirmAction?.action === 'toggle' && confirmAction.device.status === 'approved')
+                  ? "border-orange-500 text-orange-600 hover:bg-orange-50"
+                  : ""
+              }
+            >
+              {actionLoading ? (
+                <>
+                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                <>
+                  {confirmAction?.action === 'approve' && <CheckCircle className="w-4 h-4 mr-2" />}
+                  {confirmAction?.action === 'reject' && <XCircle className="w-4 h-4 mr-2" />}
+                  {confirmAction?.action === 'delete' && <Trash2 className="w-4 h-4 mr-2" />}
+                  {confirmAction?.action === 'toggle' && (
+                    confirmAction.device.status === 'approved' 
+                      ? <XCircle className="w-4 h-4 mr-2" />
+                      : <CheckCircle className="w-4 h-4 mr-2" />
+                  )}
+                  {confirmAction?.action === 'approve' && 'Approve Device'}
+                  {confirmAction?.action === 'reject' && 'Reject Device'}
+                  {confirmAction?.action === 'delete' && 'Delete Device'}
+                  {confirmAction?.action === 'toggle' && (
+                    confirmAction.device.status === 'approved' ? 'Reject Device' : 'Approve Device'
+                  )}
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
-}
+});
+
+export { DeviceApproval };

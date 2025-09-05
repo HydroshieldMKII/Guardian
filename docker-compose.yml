@@ -35,6 +35,7 @@ services:
       dockerfile: Dockerfile
       args:
         - PLEXGUARD_FRONTEND_PORT=${PLEXGUARD_FRONTEND_PORT:-3000}
+        - PLEXGUARD_API_PORT=${PLEXGUARD_API_PORT:-3001}
     container_name: plexguard-frontend
     ports:
       - "${PLEXGUARD_FRONTEND_PORT:-3000}:${PLEXGUARD_FRONTEND_PORT:-3000}"
