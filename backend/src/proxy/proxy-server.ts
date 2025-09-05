@@ -44,7 +44,7 @@ http
     const isLocalhost = clientIP === '127.0.0.1' || clientIP === '::1';
     
     if (!isLocalhost) {
-      console.log(`Blocked proxy request from external IP: ${clientIP}`);
+      console.log(`Blocked proxy request from unknown IP: ${clientIP}`);
       res.writeHead(403, { 'Content-Type': 'text/plain' });
       res.end('Forbidden: Proxy only accessible from internal network');
       return;
