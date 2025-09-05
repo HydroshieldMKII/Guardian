@@ -49,7 +49,6 @@ interface UserDevice {
   devicePlatform: string | null;
   deviceProduct: string | null;
   deviceVersion: string | null;
-  approved: boolean;
   status: "pending" | "approved" | "rejected";
   firstSeen: string;
   lastSeen: string;
@@ -169,7 +168,7 @@ export function DeviceApproval() {
   };
 
   const handleToggleApproval = async (device: UserDevice) => {
-    if (device.approved) {
+    if (device.status === 'approved') {
       await handleReject(device.id);
     } else {
       await handleApprove(device.id);
@@ -405,24 +404,24 @@ export function DeviceApproval() {
                           /* Processed devices: Show Toggle Approval and Delete buttons */
                           <>
                             <Button
-                              variant={device.approved ? "default" : "outline"}
+                              variant={device.status === 'approved' ? "default" : "outline"}
                               size="sm"
                               onClick={() => handleToggleApproval(device)}
                               disabled={actionLoading === device.id}
                               className={
-                                device.approved
+                                device.status === 'approved'
                                   ? "bg-green-500 hover:bg-green-600"
                                   : "border-orange-500 text-orange-600 hover:bg-orange-50"
                               }
                             >
                               {actionLoading === device.id ? (
                                 <RefreshCw className="w-3 h-3 mr-1 animate-spin" />
-                              ) : device.approved ? (
+                              ) : device.status === 'approved' ? (
                                 <ToggleRight className="w-3 h-3 mr-1" />
                               ) : (
                                 <ToggleLeft className="w-3 h-3 mr-1" />
                               )}
-                              {device.approved ? "Approved" : "Rejected"}
+                              {device.status === 'approved' ? "Approved" : "Rejected"}
                             </Button>
                             <Button
                               variant="destructive"

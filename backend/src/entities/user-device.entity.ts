@@ -34,9 +34,6 @@ export class UserDevice {
   @Column({ name: 'device_version', nullable: true })
   deviceVersion: string;
 
-  @Column({ name: 'approved', default: false })
-  approved: boolean;
-
   @Column({ name: 'status', default: 'pending' })
   status: 'pending' | 'approved' | 'rejected';
 

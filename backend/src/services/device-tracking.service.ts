@@ -158,7 +158,6 @@ export class DeviceTrackingService {
       devicePlatform: deviceInfo.devicePlatform,
       deviceProduct: deviceInfo.deviceProduct,
       deviceVersion: deviceInfo.deviceVersion,
-      approved: defaultBlock,
       status: 'pending', // New devices start as pending
       sessionCount: 1,
       ipAddress: deviceInfo.ipAddress,
@@ -201,7 +200,7 @@ export class DeviceTrackingService {
 
   async getApprovedDevices(): Promise<UserDevice[]> {
     return this.userDeviceRepository.find({
-      where: { approved: true },
+      where: { status: 'approved' },
       order: { lastSeen: 'DESC' },
     });
   }
@@ -217,7 +216,6 @@ export class DeviceTrackingService {
 
   async approveDevice(deviceId: number): Promise<void> {
     await this.userDeviceRepository.update(deviceId, {
-      approved: true,
       status: 'approved',
     });
     this.logger.log(`Device ${deviceId} has been approved`);
@@ -225,7 +223,6 @@ export class DeviceTrackingService {
 
   async rejectDevice(deviceId: number): Promise<void> {
     await this.userDeviceRepository.update(deviceId, {
-      approved: false,
       status: 'rejected',
     });
     this.logger.log(`Device ${deviceId} has been rejected`);

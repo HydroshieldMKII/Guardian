@@ -100,21 +100,17 @@ export class StopSessionService {
 
       // Check if device is approved
       const device = await this.userDeviceRepository.findOne({
-        where: {
-          userId,
-          deviceIdentifier,
-        },
+        where: { userId, deviceIdentifier },
       });
 
       if (!device) {
         this.logger.warn(
-          `Device not found in database: ${userId}/${deviceIdentifier}`,
+          `Device not found for user ${userId} with identifier ${deviceIdentifier}`,
         );
-        const defaultBlock = process.env.PLEX_GUARD_DEFAULT_BLOCK === 'true';
-        return defaultBlock;
+        return true; // Stop unknown devices
       }
 
-      return !device.approved; // Stop if device is not approved
+      return device.status !== 'approved'; // Stop if device is not approved
     } catch (error) {
       this.logger.error('Error checking session approval status', error);
       return false; // Don't stop on error to be safe

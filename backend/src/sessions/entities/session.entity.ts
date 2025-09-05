@@ -35,9 +35,6 @@ export class Session {
   @Column({ name: 'view_offset', nullable: true })
   viewOffset: number;
 
-  @Column({ name: 'approved', default: false })
-  approved: boolean;
-
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 

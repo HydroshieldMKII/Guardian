@@ -11,11 +11,6 @@ export class DevicesController {
     return this.deviceTrackingService.getAllDevices();
   }
 
-  @Get('unapproved')
-  async getUnapprovedDevices(): Promise<UserDevice[]> {
-    return this.deviceTrackingService.getPendingDevices();
-  }
-
   @Get('pending')
   async getPendingDevices(): Promise<UserDevice[]> {
     return this.deviceTrackingService.getPendingDevices();
