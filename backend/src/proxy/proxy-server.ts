@@ -22,6 +22,7 @@ const ip = process.env.PLEX_SERVER_IP;
 const port = process.env.PLEX_SERVER_PORT;
 const token = process.env.PLEX_TOKEN;
 const proxyPort = process.env.PLEXGUARD_PROXY_PORT || '8080';
+const useSSL = process.env.USE_SSL === 'true';
 
 if (!ip || !port || !token) {
   throw new Error(
@@ -29,15 +30,26 @@ if (!ip || !port || !token) {
   );
 }
 
-const target = `https://${ip}:${port}`;
+const target = `${useSSL ? 'https' : 'http'}://${ip}:${port}`;
 
 const proxy = httpProxy.createProxyServer({
   changeOrigin: true,
-  secure: false, // Ignore SSL cert errors for Plex
+  secure: false, // Ignore self signed SSL cert errors for Plex
 });
 
 http
   .createServer((req, res) => {
+    // Basic check to prevent misconfiguration - only allow requests from localhost
+    const clientIP = req.socket.remoteAddress;
+    const isLocalhost = clientIP === '127.0.0.1' || clientIP === '::1';
+    
+    if (!isLocalhost) {
+      console.log(`Blocked proxy request from external IP: ${clientIP}`);
+      res.writeHead(403, { 'Content-Type': 'text/plain' });
+      res.end('Forbidden: Proxy only accessible from internal network');
+      return;
+    }
+
     const hasQuery = req.url?.includes('?');
     if (!req.url) req.url = '/';
     if (hasQuery) {
@@ -46,10 +58,9 @@ http
       req.url = `${req.url}?X-Plex-Token=${encodeURIComponent(token)}`;
     }
 
-    // console.log('Proxying:', req.url);
     proxy.web(req, res, { target });
   })
-  .listen(proxyPort, () => {
+  .listen(parseInt(proxyPort, 10), 'localhost', () => {
     console.log(
       `Proxy server running on http://localhost:${proxyPort} -> ${target}`,
     );

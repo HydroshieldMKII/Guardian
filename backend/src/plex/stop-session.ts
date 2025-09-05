@@ -107,7 +107,8 @@ export class StopSessionService {
         this.logger.warn(
           `Device not found for user ${userId} with identifier ${deviceIdentifier}`,
         );
-        return true; // Stop unknown devices
+        const defaultBlock = process.env.PLEX_GUARD_DEFAULT_BLOCK === 'true';
+        return defaultBlock;
       }
 
       return device.status !== 'approved'; // Stop if device is not approved

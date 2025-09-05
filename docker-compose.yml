@@ -10,7 +10,6 @@ services:
     container_name: plexguard-backend
     ports:
       - "${PLEXGUARD_API_PORT:-3001}:${PLEXGUARD_API_PORT:-3001}"  # API port
-      - "${PLEXGUARD_PROXY_PORT:-8080}:${PLEXGUARD_PROXY_PORT:-8080}"  # Plex proxy port
     env_file:
       - .env
     environment:

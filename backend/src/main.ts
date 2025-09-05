@@ -36,7 +36,6 @@ async function bootstrap() {
     });
   }
 
-  // Wait for proxy to initialize
   await new Promise((res) => setTimeout(res, 2000));
 
   const app = await NestFactory.create(AppModule);
@@ -44,8 +43,8 @@ async function bootstrap() {
   app.useGlobalFilters(new GlobalExceptionFilter());
 
   app.enableCors({
-    origin: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'HEAD'],
+    origin: "*",
+    methods: '*',
     allowedHeaders: '*',
     credentials: true,
     optionsSuccessStatus: 200,
@@ -54,7 +53,7 @@ async function bootstrap() {
   await app.listen(config.app.port);
 
   const plexService = app.get(PlexService);
-  
+
   intervalId = setInterval(async () => {
     try {
       await plexService.updateActiveSessions();
