@@ -18,10 +18,12 @@ COPY . .
 # Accept build arguments for environment variables
 ARG PLEXGUARD_API_PORT=3001
 ARG PLEXGUARD_FRONTEND_PORT=3000
+ARG PLEXGUARD_BACKEND_URL
 
 # Set environment variables for the build process
 ENV NEXT_PUBLIC_API_PORT=${PLEXGUARD_API_PORT}
-ENV NEXT_PUBLIC_API_URL=http://localhost:${PLEXGUARD_API_PORT}
+ENV NEXT_PUBLIC_BACKEND_URL=${PLEXGUARD_BACKEND_URL}
+ENV NEXT_PUBLIC_API_URL=${PLEXGUARD_BACKEND_URL:-http://localhost:${PLEXGUARD_API_PORT}}
 
 # Build the application
 RUN npm run build

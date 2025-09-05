@@ -1,6 +1,8 @@
 export const config = {
   api: {
-    baseUrl: process.env.NEXT_PUBLIC_API_URL || `http://localhost:${process.env.NEXT_PUBLIC_API_PORT || '3001'}`,
+    baseUrl: process.env.NEXT_PUBLIC_BACKEND_URL || 
+             process.env.NEXT_PUBLIC_API_URL || 
+             `http://localhost:${process.env.NEXT_PUBLIC_API_PORT || '3001'}`,
   },
   app: {
     environment: process.env.NODE_ENV || "development",

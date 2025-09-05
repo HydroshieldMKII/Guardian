@@ -109,6 +109,15 @@ PLEXGUARD_API_PORT=3001        # Backend API port
 PLEXGUARD_FRONTEND_PORT=3000   # Frontend web interface port
 PLEXGUARD_PROXY_PORT=8080      # Plex proxy port
 
+# Backend URL Configuration (Optional)
+# Use this when accessing the frontend from outside your local network
+# Examples:
+#   PLEXGUARD_BACKEND_URL=http://192.168.1.100:3001
+#   PLEXGUARD_BACKEND_URL=https://plexguard.your-domain.com
+#   PLEXGUARD_BACKEND_URL=http://your-external-ip:3001
+# If not set, defaults to http://localhost:${PLEXGUARD_API_PORT}
+PLEXGUARD_BACKEND_URL=
+
 # Docker Compose Build Performance (Optional)
 COMPOSE_BAKE=true
 ```
@@ -117,11 +126,12 @@ COMPOSE_BAKE=true
 
 PlexGuard uses three configurable ports:
 
-- **PLEXGUARD_FRONTEND_PORT** (default: 3000): Frontend web interface port.
+- **PLEXGUARD_FRONTEND_PORT** (default: 3000): Frontend web interface port
 - **PLEXGUARD_API_PORT** (default: 3001): Backend API server port
 - **PLEXGUARD_PROXY_PORT** (default: 8080): Plex proxy server port
 
-You can customize these ports in your `.env` file to avoid conflicts with other services or to match your preferred configuration. The frontend port and backend port should be publicly accessible.
+You can customize these ports in your `.env` file to avoid conflicts with other services or to match your preferred configuration.
+
 
 ## Contributing
 
