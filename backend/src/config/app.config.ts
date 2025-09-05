@@ -1,10 +1,10 @@
 export const config = {
   app: {
-    port: parseInt(process.env.PORT || '3001', 10),
+    port: '3001',
     environment: process.env.NODE_ENV || 'development',
   },
   plex: {
-    proxyPort: process.env.PLEXGUARD_PROXY_PORT || '8080',
+    proxyPort: '8080',
     refreshInterval: parseInt(
       process.env.PLEXGUARD_REFRESH_INTERVAL || '10',
       10,
@@ -20,7 +20,7 @@ export const config = {
     ],
   },
   database: {
-    path: process.env.DATABASE_PATH || 'plex-guard.db',
+    path: 'plex-guard.db',
     logging: process.env.NODE_ENV === 'development',
   },
 };

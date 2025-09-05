@@ -4,21 +4,37 @@ import { PlexService } from './plex/plex.service';
 import { DeviceTrackingService } from './services/device-tracking.service';
 import { GlobalExceptionFilter } from './filters/global-exception.filter';
 import { spawn } from 'child_process';
-import { config } from './config/app.config';
+import { config, isDevelopment } from './config/app.config';
 import * as dotenv from 'dotenv';
 import * as path from 'path';
 
-dotenv.config({ path: path.join(process.cwd(), '../.env') });
+// Load environment variables
+if (isDevelopment()) {
+  dotenv.config({ path: path.join(process.cwd(), '../.env') });
+} else {
+  dotenv.config({ path: path.join(process.cwd(), '.env') });
+}
 
 let proxyProcess: ReturnType<typeof spawn> | null = null;
 let intervalId: NodeJS.Timeout | null = null;
 
 async function bootstrap() {
-  proxyProcess = spawn('npx', ['ts-node', 'src/proxy/proxy-server.ts'], {
-    cwd: process.cwd(),
-    stdio: 'inherit',
-    shell: true,
-  });
+  // Start proxy server
+  if (isDevelopment()) {
+    proxyProcess = spawn('npx', ['ts-node', 'src/proxy/proxy-server.ts'], {
+      cwd: process.cwd(),
+      stdio: 'inherit',
+      shell: true,
+      env: { ...process.env }
+    });
+  } else {
+    proxyProcess = spawn('node', ['dist/proxy/proxy-server.js'], {
+      cwd: process.cwd(),
+      stdio: 'inherit',
+      shell: true,
+      env: { ...process.env }
+    });
+  }
 
   await new Promise((res) => setTimeout(res, 2000));
 

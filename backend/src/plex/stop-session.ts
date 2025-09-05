@@ -35,6 +35,7 @@ export class StopSessionService {
 
     try {
       const sessions = sessionsData?.MediaContainer?.Metadata || [];
+      console.log('Checking sessions for unapproved devices:', sessions);
 
       if (!sessions || sessions.length === 0) {
         return { stoppedSessions, errors };

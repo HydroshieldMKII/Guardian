@@ -4,6 +4,7 @@ import { SessionsModule } from './sessions/sessions.module';
 import { DeviceTrackingModule } from './services/device-tracking.module';
 import { PlexModule } from './plex/plex.module';
 import { DevicesModule } from './devices/devices.module';
+import { HealthModule } from './health/health.module';
 import { UserDevice } from './entities/user-device.entity';
 import { ActiveSession } from './entities/active-session.entity';
 import { config } from './config/app.config';
@@ -22,6 +23,7 @@ import * as path from 'path';
     DeviceTrackingModule,
     PlexModule,
     DevicesModule,
+    HealthModule,
   ],
 })
 export class AppModule {}

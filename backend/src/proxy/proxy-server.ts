@@ -3,7 +3,20 @@ import http from 'http';
 import * as dotenv from 'dotenv';
 import * as path from 'path';
 
-dotenv.config({ path: path.join(process.cwd(), '../.env') });
+// Load environment variables - try current directory first, then parent
+const envPaths = [
+  path.join(process.cwd(), '.env'),
+  path.join(process.cwd(), '../.env')
+];
+
+for (const envPath of envPaths) {
+  try {
+    dotenv.config({ path: envPath });
+    break;
+  } catch (error) {
+    // Continue trying next path
+  }
+}
 
 const ip = process.env.PLEX_SERVER_IP;
 const port = process.env.PLEX_SERVER_PORT;
