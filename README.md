@@ -19,6 +19,12 @@ PlexGuard is a utility designed to enhance the security and management of your P
 - Tracks last seen active sessions and user activity, with the ability to remove per device access in one click
 - Support Plex SSL
 
+<img width="2558" height="1188" alt="plexguard1_" src="https://github.com/user-attachments/assets/d6994f2b-317b-4cdb-83eb-77fb9ce2bcdc" />
+<img width="2558" height="1191" alt="plexguard2_" src="https://github.com/user-attachments/assets/1f3e6286-7ee4-4361-9896-548edc00ed7f" />
+<img width="2558" height="1191" alt="plexguard3_" src="https://github.com/user-attachments/assets/2c6d7de2-3791-48cf-b8c7-25dca5babc6c" />
+<img width="2558" height="1192" alt="plexguard4_" src="https://github.com/user-attachments/assets/3f04c716-7e8b-4d08-9de6-fb1e89069ded" />
+
+
 ## 🚀 Quick Start with Docker (Recommended)
 
 The easiest way to deploy PlexGuard is using Docker Compose:
