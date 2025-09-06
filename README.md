@@ -5,10 +5,9 @@ Guardian is a utility designed to enhance the security and management of your Pl
 ## Table of Contents
 
 - [Features](#features)
-- [Quick Start with Docker](#quick-start-with-docker)
-- [Manual Development Setup](#manual-development-setup)
+- [Quick Start with Docker](#-quick-start-with-docker-recommended)
+- [Manual Development Setup](#-manual-development-setup)
 - [Configuration](#configuration)
-- [Port Configuration](#port-configuration)
 - [Contributing](#contributing)
 
 ## Features
@@ -17,7 +16,6 @@ Guardian is a utility designed to enhance the security and management of your Pl
 - Manual device approval system
 - Informations on devices like platform, product, version and IP address
 - Tracks last seen active sessions and user activity, with the ability to remove per device access in one click
-- Support Plex SSL
 
 <img width="2558" height="1188" alt="Guardian Dashboard" src="https://github.com/user-attachments/assets/d6994f2b-317b-4cdb-83eb-77fb9ce2bcdc" />
 <img width="2558" height="1191" alt="Guardian Dashboard" src="https://github.com/user-attachments/assets/1f3e6286-7ee4-4361-9896-548edc00ed7f" />
@@ -60,7 +58,6 @@ The easiest way to deploy Guardian is using Docker Compose:
 4. **Access Guardian (Default Ports)**:
    - Web Interface: http://localhost:3000
    - API: http://localhost:3001
-   - Plex Proxy: http://localhost:8080
 
 ## 🛠 Manual Development Setup
 
@@ -120,15 +117,6 @@ PLEXGUARD_BACKEND_URL=
 # Docker Compose Build Performance (Optional)
 COMPOSE_BAKE=true
 ```
-
-## Port Configuration
-
-PlexGuard uses three configurable ports:
-
-- **PLEXGUARD_FRONTEND_PORT** (default: 3000): Frontend web interface port
-- **PLEXGUARD_API_PORT** (default: 3001): Backend API server port
-
-You can customize these ports in your `.env` file to avoid conflicts with other services or to match your preferred configuration.
 
 
 ## Contributing

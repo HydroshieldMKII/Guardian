@@ -49,7 +49,7 @@ export class PlexClient {
           'X-Plex-Client-Identifier': 'Guardian',
           ...options.headers,
         },
-        // Always ignore SSL errors
+        // Always ignore SSL errors (Plex use self-signed certs)
         rejectUnauthorized: false,
       };
 
@@ -99,17 +99,11 @@ export class PlexClient {
     });
   }
 
-  /**
-   * Get active sessions from Plex server
-   */
   async getSessions(): Promise<any> {
     const response = await this.request('status/sessions');
     return response.json();
   }
 
-  /**
-   * Terminate a session on the Plex server
-   */
   async terminateSession(sessionKey: string, reason: string = 'Session terminated'): Promise<void> {
     const params = new URLSearchParams({
       sessionId: sessionKey,
@@ -117,15 +111,13 @@ export class PlexClient {
     });
 
     await this.request(`status/sessions/terminate?${params.toString()}`, {
-      method: 'GET', // Plex uses GET for termination
+      method: 'GET', 
     });
 
     this.logger.log(`Successfully terminated session ${sessionKey}`);
   }
 
-  /**
-   * Test connection to Plex server
-   */
+
   async testConnection(): Promise<{ ok: boolean; status: number }> {
     try {
       const response = await this.request('/');

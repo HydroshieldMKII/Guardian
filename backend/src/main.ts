@@ -37,12 +37,14 @@ async function bootstrap() {
   if (!ok) {
     console.error(`❌ Direct connection to Plex server failed with status: ${status}. Exiting...`);
     process.exit(1);
+  }else{
+    console.log(`✅ Direct connection to Plex server successful with status: ${status}.`);
   }
 
   console.log(`✅ PlexGuard server is running on port ${config.app.port}`);
 
   const cleanup = () => {
-    console.log('Shutting down PlexGuard server...');
+    console.log('Shutting down Guardian server...');
     process.exit(0);
   };
 
