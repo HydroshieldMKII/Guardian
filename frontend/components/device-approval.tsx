@@ -317,7 +317,10 @@ const DeviceApproval = memo(() => {
   }, [activeTab]);
 
   // Filter and sort functions
-  const filteredDevices = (deviceList: UserDevice[], listType: "pending" | "processed" | "all" = "all") => {
+  const filteredDevices = (
+    deviceList: UserDevice[],
+    listType: "pending" | "processed" | "all" = "all",
+  ) => {
     let filtered = deviceList;
 
     // Apply search filter if search term exists
