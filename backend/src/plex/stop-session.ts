@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UserDevice } from '../entities/user-device.entity';
+import { PlexClient } from './plex-client';
 import { ActiveSessionService } from '../services/active-session.service';
 import {
   PlexSessionsResponse,
@@ -19,11 +20,11 @@ const stopMessage =
 @Injectable()
 export class StopSessionService {
   private readonly logger = new Logger(StopSessionService.name);
-  private readonly proxyPort =  '8080';
 
   constructor(
     @InjectRepository(UserDevice)
     private userDeviceRepository: Repository<UserDevice>,
+    private plexClient: PlexClient,
     private activeSessionService: ActiveSessionService,
   ) {}
 
@@ -48,20 +49,18 @@ export class StopSessionService {
           if (shouldStop) {
             const sessionKey = session.Session?.id;
 
-            console.log('Stopping session for session:', session);
-
             if (sessionKey) {
               await this.terminateSession(sessionKey);
               stoppedSessions.push(sessionKey);
 
-              console.log(`Stopped unapproved session: ${session}`);
+              this.logger.warn(`Stopped unapproved session: ${session}`);
               const username = session.User?.title || 'Unknown';
               const deviceName =
                 `${session.Player?.device} - ${session.Player?.title}` ||
                 'Unknown Device';
 
               this.logger.warn(
-                `🛑 Stopped unapproved session: ${username} on ${deviceName} (Session: ${sessionKey})`,
+                `Stopped unapproved session: ${username} on ${deviceName} (Session: ${sessionKey})`,
               );
             } else {
               this.logger.warn(
@@ -123,35 +122,9 @@ export class StopSessionService {
     reason: string = stopMessage,
   ): Promise<void> {
     try {
-      const proxyUrl = `http://localhost:${this.proxyPort}/status/sessions/terminate`;
-      const params = new URLSearchParams({
-        sessionId: sessionKey, // Note: 'sessionId' with capital 'I', not 'sessionKey'
-        reason: reason,
-      });
+      this.logger.log(`Terminating session ${sessionKey} with reason: ${reason}`);
 
-      const fullUrl = `${proxyUrl}?${params.toString()}`;
-
-      this.logger.log(
-        `Terminating session ${sessionKey} via GET request to: ${fullUrl}`,
-      );
-
-      const response = await fetch(fullUrl, {
-        method: 'GET', // GET request as per Plex API documentation
-        headers: {
-          Accept: 'application/json',
-          'X-Plex-Client-Identifier': 'plex-guard',
-        },
-        signal: AbortSignal.timeout(10000),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(
-          `HTTP ${response.status}: ${response.statusText} - ${errorText}`,
-        );
-      }
-
-      this.logger.log(`Successfully terminated session ${sessionKey}`);
+      await this.plexClient.terminateSession(sessionKey, reason);
 
       // Remove session from database
       try {

@@ -14,13 +14,4 @@ export class SessionsController {
     return this.plexService.getActiveSessionsFromDatabase();
   }
 
-  @Post('terminate/:sessionKey')
-  async terminateSession(@Param('sessionKey') sessionKey: string) {
-    return this.sessionsService.terminateSession(sessionKey);
-  }
-
-  @Post('terminate-unapproved')
-  async terminateUnapprovedSessions() {
-    return this.sessionsService.terminateUnapprovedSessions();
-  }
 }

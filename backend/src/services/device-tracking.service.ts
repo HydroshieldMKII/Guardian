@@ -27,10 +27,6 @@ export class DeviceTrackingService {
       return;
     }
 
-    // this.logger.log(
-    //   `Processing ${sessions.length} sessions for device tracking`,
-    // );
-
     for (const session of sessions) {
       try {
         await this.processSession(session);

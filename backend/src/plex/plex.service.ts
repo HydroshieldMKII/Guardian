@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { DeviceTrackingService } from '../services/device-tracking.service';
 import { StopSessionService } from './stop-session';
+import { PlexClient } from './plex-client';
 import { ActiveSessionService } from '../services/active-session.service';
 import { PlexSessionsResponse, PlexSession } from '../types/plex.types';
 import * as dotenv from 'dotenv';
@@ -11,11 +12,11 @@ dotenv.config({ path: path.join(process.cwd(), '../.env') });
 @Injectable()
 export class PlexService {
   private readonly logger = new Logger(PlexService.name);
-  private readonly proxyPort = '8080';
 
   constructor(
     private deviceTrackingService: DeviceTrackingService,
     private stopSessionService: StopSessionService,
+    private plexClient: PlexClient,
     private activeSessionService: ActiveSessionService,
   ) {}
 
@@ -88,26 +89,8 @@ export class PlexService {
   }
 
   async getActiveSessions(): Promise<PlexSessionsResponse> {
-    const proxyUrl = `http://localhost:${this.proxyPort}/status/sessions`;
-
     try {
-      const response = await fetch(proxyUrl, {
-        method: 'GET',
-        headers: {
-          Accept: 'application/json',
-          'X-Plex-Client-Identifier': 'plex-guard',
-        },
-        signal: AbortSignal.timeout(15000),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(
-          `HTTP ${response.status}: ${response.statusText} - ${errorText}`,
-        );
-      }
-
-      return await response.json();
+      return await this.plexClient.getSessions();
     } catch (error: any) {
       this.logger.error('Error fetching sessions', error);
       throw error;

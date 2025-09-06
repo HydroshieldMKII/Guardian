@@ -1,7 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { PlexService } from './plex/plex.service';
-import { DeviceTrackingService } from './services/device-tracking.service';
+import { PlexClient } from './plex/plex-client';
 import { GlobalExceptionFilter } from './filters/global-exception.filter';
 import { spawn } from 'child_process';
 import { config, isDevelopment } from './config/app.config';
@@ -19,27 +19,7 @@ let proxyProcess: ReturnType<typeof spawn> | null = null;
 let intervalId: NodeJS.Timeout | null = null;
 
 async function bootstrap() {
-  // Start proxy server
-  if (isDevelopment()) {
-    proxyProcess = spawn('npx', ['ts-node', 'src/proxy/proxy-server.ts'], {
-      cwd: process.cwd(),
-      stdio: 'inherit',
-      shell: true,
-      env: { ...process.env },
-    });
-  } else {
-    proxyProcess = spawn('node', ['dist/proxy/proxy-server.js'], {
-      cwd: process.cwd(),
-      stdio: 'inherit',
-      shell: true,
-      env: { ...process.env },
-    });
-  }
-
-  await new Promise((res) => setTimeout(res, 2000));
-
   const app = await NestFactory.create(AppModule);
-
   app.useGlobalFilters(new GlobalExceptionFilter());
 
   app.enableCors({
@@ -52,7 +32,15 @@ async function bootstrap() {
 
   await app.listen(config.app.port);
 
+  const plexClient = app.get(PlexClient);
+  const {ok, status} = await plexClient.testConnection();
+
   const plexService = app.get(PlexService);
+
+  if (!ok) {
+    console.error(`❌ Direct connection to Plex server failed with status: ${status}. Exiting...`);
+    process.exit(1);
+  }
 
   intervalId = setInterval(async () => {
     try {
@@ -64,8 +52,7 @@ async function bootstrap() {
 
   const cleanup = () => {
     if (intervalId) clearInterval(intervalId);
-    if (proxyProcess) proxyProcess.kill();
-    console.log('Shutting down proxy and exiting...');
+    console.log('Shutting down PlexGuard server...');
     process.exit(0);
   };
 
