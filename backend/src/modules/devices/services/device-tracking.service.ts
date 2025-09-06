@@ -1,12 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { UserDevice } from '../entities/user-device.entity';
+import { UserDevice } from '../../../entities/user-device.entity';
 import {
   PlexSession,
   DeviceInfo,
   PlexSessionsResponse,
-} from '../types/plex.types';
+} from '../../../types/plex.types';
 
 @Injectable()
 export class DeviceTrackingService {

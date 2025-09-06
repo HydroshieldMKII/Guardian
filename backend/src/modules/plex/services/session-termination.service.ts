@@ -1,13 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { UserDevice } from '../entities/user-device.entity';
+import { UserDevice } from '../../../entities/user-device.entity';
 import { PlexClient } from './plex-client';
-import { ActiveSessionService } from '../services/active-session.service';
+import { ActiveSessionService } from '../../sessions/services/active-session.service';
 import {
   PlexSessionsResponse,
   SessionTerminationResult,
-} from '../types/plex.types';
+} from '../../../types/plex.types';
 import * as dotenv from 'dotenv';
 import * as path from 'path';
 
@@ -18,8 +18,8 @@ const stopMessage =
   'This device must be approved by the server owner. Please contact the server administrator for more information.';
 
 @Injectable()
-export class StopSessionService {
-  private readonly logger = new Logger(StopSessionService.name);
+export class SessionTerminationService {
+  private readonly logger = new Logger(SessionTerminationService.name);
 
   constructor(
     @InjectRepository(UserDevice)

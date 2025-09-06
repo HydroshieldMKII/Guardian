@@ -1,6 +1,6 @@
 import { Controller, Get, Post, Param, ParseIntPipe } from '@nestjs/common';
-import { DeviceTrackingService } from '../services/device-tracking.service';
-import { UserDevice } from '../entities/user-device.entity';
+import { DeviceTrackingService } from './services/device-tracking.service';
+import { UserDevice } from '../../entities/user-device.entity';
 
 @Controller('devices')
 export class DevicesController {

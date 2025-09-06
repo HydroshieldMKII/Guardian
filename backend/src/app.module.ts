@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { SessionsModule } from './sessions/sessions.module';
-import { DeviceTrackingModule } from './services/device-tracking.module';
-import { PlexModule } from './plex/plex.module';
-import { DevicesModule } from './devices/devices.module';
-import { HealthModule } from './health/health.module';
+import { SessionsModule } from './modules/sessions/sessions.module';
+import { DevicesModule } from './modules/devices/devices.module';
+import { PlexModule } from './modules/plex/plex.module';
+import { HealthModule } from './modules/health/health.module';
+import { SchedulerService } from './services/scheduler.service';
 import { UserDevice } from './entities/user-device.entity';
 import { ActiveSession } from './entities/active-session.entity';
 import { config } from './config/app.config';
@@ -20,10 +20,10 @@ import * as path from 'path';
       logging: config.database.logging,
     }),
     SessionsModule,
-    DeviceTrackingModule,
-    PlexModule,
     DevicesModule,
+    PlexModule,
     HealthModule,
   ],
+  providers: [SchedulerService],
 })
 export class AppModule {}

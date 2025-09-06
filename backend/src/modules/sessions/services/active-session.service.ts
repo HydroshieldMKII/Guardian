@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { ActiveSession } from '../entities/active-session.entity';
+import { ActiveSession } from '../../../entities/active-session.entity';
 
 interface PlexSessionData {
   sessionKey: string;
@@ -97,10 +97,6 @@ export class ActiveSessionService {
     });
   }
 
-  async getActiveSessionsCount(): Promise<number> {
-    return this.activeSessionRepository.count();
-  }
-
   async clearAllSessions(): Promise<void> {
     await this.activeSessionRepository.clear();
     this.logger.debug('Cleared all active sessions from database');
@@ -193,5 +189,64 @@ export class ActiveSessionService {
   async removeSession(sessionKey: string): Promise<void> {
     await this.activeSessionRepository.delete({ sessionKey });
     this.logger.log(`Removed session ${sessionKey} from database`);
+  }
+
+  async getActiveSessionsFormatted(): Promise<any> {
+    try {
+      const sessions = await this.getActiveSessions();
+
+      const transformedSessions = sessions.map((session) => ({
+        sessionKey: session.sessionKey,
+        User: {
+          id: session.userId,
+          title: session.username,
+        },
+        Player: {
+          machineIdentifier: session.deviceIdentifier,
+          platform: session.devicePlatform,
+          product: session.deviceProduct,
+          title: session.deviceTitle,
+          device: session.deviceName,
+          address: session.deviceAddress,
+          state: session.playerState as 'playing' | 'paused' | 'buffering',
+        },
+        Media:
+          session.videoResolution || session.bitrate || session.container
+            ? [
+                {
+                  videoResolution: session.videoResolution,
+                  bitrate: session.bitrate,
+                  container: session.container,
+                  videoCodec: session.videoCodec,
+                  audioCodec: session.audioCodec,
+                },
+              ]
+            : [],
+        Session: {
+          id: session.sessionKey,
+          bandwidth: session.bandwidth,
+          location: session.sessionLocation as 'lan' | 'wan',
+        },
+        title: session.contentTitle,
+        grandparentTitle: session.grandparentTitle,
+        parentTitle: session.parentTitle,
+        year: session.year,
+        duration: session.duration,
+        viewOffset: session.viewOffset,
+        type: session.contentType,
+        thumb: session.thumb,
+        art: session.art,
+      }));
+
+      return {
+        MediaContainer: {
+          size: transformedSessions.length,
+          Metadata: transformedSessions,
+        },
+      };
+    } catch (error: any) {
+      this.logger.error('Error getting active sessions formatted', error);
+      throw error;
+    }
   }
 }
