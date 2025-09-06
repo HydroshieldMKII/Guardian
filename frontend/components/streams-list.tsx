@@ -77,10 +77,16 @@ export function StreamsList() {
     } catch (error: any) {
       console.error("Failed to fetch streams:", error);
       setError(error.message || "Failed to fetch streams");
-      setStreams([]);
+      if (!silent) {
+        setStreams([]);
+      }
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      if (loading) {
+        setLoading(false);
+      }
+      if (!silent) {
+        setRefreshing(false);
+      }
     }
   };
 

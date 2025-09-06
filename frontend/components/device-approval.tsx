@@ -190,10 +190,11 @@ const DeviceApproval = memo(() => {
   const [processedDevices, setProcessedDevices] = useState<UserDevice[]>([]);
   const [users, setUsers] = useState<UserPreference[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [actionLoading, setActionLoading] = useState<number | null>(null);
   const [selectedDevice, setSelectedDevice] = useState<UserDevice | null>(null);
   const [activeTab, setActiveTab] = useState<"pending" | "processed" | "users">(
-    "pending"
+    "pending",
   );
   const [searchDevices, setSearchDevices] = useState("");
   const [searchUsers, setSearchUsers] = useState("");
@@ -206,9 +207,13 @@ const DeviceApproval = memo(() => {
     description: string;
   } | null>(null);
 
-  const fetchDevices = useCallback(async () => {
+  const fetchDevices = useCallback(async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) {
+        setLoading(true);
+      } else {
+        setRefreshing(true);
+      }
 
       // Fetch all devices
       const allResponse = await fetch(`${config.api.baseUrl}/devices`);
@@ -244,17 +249,25 @@ const DeviceApproval = memo(() => {
       console.error("Failed to fetch devices:", error);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, [allDevices, pendingDevices, processedDevices]);
 
-  const fetchUsers = useCallback(async () => {
+  const fetchUsers = useCallback(async (silent = false) => {
     try {
+      if (silent) {
+        setRefreshing(true);
+      }
       const response = await fetch(`${config.api.baseUrl}/users`);
       const usersData: UserPreference[] = await response.json();
       setUsers(usersData || []); // Ensure we always have an array
     } catch (error) {
       console.error("Failed to fetch users:", error);
       setUsers([]); // Set to empty array on error
+    } finally {
+      if (silent) {
+        setRefreshing(false);
+      }
     }
   }, []);
 
@@ -264,9 +277,9 @@ const DeviceApproval = memo(() => {
       fetchUsers();
     }
     const interval = setInterval(() => {
-      fetchDevices();
+      fetchDevices(true); // Silent refresh for automatic updates
       if (activeTab === "users") {
-        fetchUsers();
+        fetchUsers(true); // Silent refresh for users
       }
     }, 30000); // Refresh every 30 seconds
     return () => clearInterval(interval);
@@ -610,10 +623,11 @@ const DeviceApproval = memo(() => {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={activeTab === "users" ? fetchUsers : fetchDevices}
+                onClick={() => activeTab === "users" ? fetchUsers(true) : fetchDevices(true)}
+                disabled={refreshing}
                 className="text-xs sm:text-sm"
               >
-                <RefreshCw className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                <RefreshCw className={`w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 ${refreshing ? "animate-spin" : ""}`} />
                 <span>Refresh</span>
               </Button>
             </div>
