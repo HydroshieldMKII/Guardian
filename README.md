@@ -63,9 +63,9 @@ The easiest way to deploy Guardian is using Docker Compose:
 
 ### Warning this is still in early development
 
-> [!CAUTION]
+> [!IMPORTANT] 
 
-Make sure to read the configuration section carefully after each update as new options may be added or existing ones modified. Also, make sure to backup your data before updating to avoid any potential data loss.
+> Make sure to read the configuration section carefully after each update as new options may be added or existing ones modified. Also, make sure to backup your data before updating to avoid any potential data loss.
 
 To update Guardian, pull the latest changes and rebuild the Docker containers:
 
