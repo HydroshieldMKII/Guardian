@@ -16,7 +16,9 @@ import * as path from 'path';
   imports: [
     TypeOrmModule.forRoot({
       type: 'sqlite',
-      database: process.env.DATABASE_PATH || path.join(process.cwd(), config.database.path),
+      database:
+        process.env.DATABASE_PATH ||
+        path.join(process.cwd(), config.database.path),
       entities: [UserDevice, ActiveSession, UserPreference],
       synchronize: true,
       logging: config.database.logging,

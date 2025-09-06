@@ -15,7 +15,7 @@ export class SchedulerService implements OnModuleInit {
 
   private startSessionUpdates() {
     const intervalMs = config.plex.refreshInterval * 1000;
-    
+
     this.logger.log(
       `Starting session update scheduler (interval: ${config.plex.refreshInterval}s)`,
     );

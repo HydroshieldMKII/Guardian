@@ -144,7 +144,9 @@ export class DeviceTrackingService {
   }
 
   private async createNewDevice(deviceInfo: DeviceInfo): Promise<void> {
-    const defaultBlock = await this.usersService.getEffectiveDefaultBlock(deviceInfo.userId);
+    const defaultBlock = await this.usersService.getEffectiveDefaultBlock(
+      deviceInfo.userId,
+    );
 
     console.log('New device detected:', deviceInfo);
 

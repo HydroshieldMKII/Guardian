@@ -108,7 +108,8 @@ export class SessionTerminationService {
         this.logger.warn(
           `Device not found for user ${userId} with identifier ${deviceIdentifier}`,
         );
-        const defaultBlock = await this.usersService.getEffectiveDefaultBlock(userId);
+        const defaultBlock =
+          await this.usersService.getEffectiveDefaultBlock(userId);
         return defaultBlock;
       }
 
@@ -124,7 +125,9 @@ export class SessionTerminationService {
     reason: string = stopMessage,
   ): Promise<void> {
     try {
-      this.logger.log(`Terminating session ${sessionKey} with reason: ${reason}`);
+      this.logger.log(
+        `Terminating session ${sessionKey} with reason: ${reason}`,
+      );
 
       await this.plexClient.terminateSession(sessionKey, reason);
 

@@ -51,7 +51,8 @@ export function StreamsList() {
   const [expandedStream, setExpandedStream] = useState<string | null>(null);
   const [lastUpdateTime, setLastUpdateTime] = useState<Date>(new Date());
   const [autoRefresh, setAutoRefresh] = useState(true);
-  const [confirmRemoveStream, setConfirmRemoveStream] = useState<PlexSession | null>(null);
+  const [confirmRemoveStream, setConfirmRemoveStream] =
+    useState<PlexSession | null>(null);
 
   const swipeHandlers = useSwipeToRefresh({
     onRefresh: () => fetchStreams(),
@@ -107,11 +108,11 @@ export function StreamsList() {
       setRevokingAuth(stream.sessionKey);
       const response = await fetch(
         `${config.api.baseUrl}/devices/revoke/${encodeURIComponent(
-          userId
+          userId,
         )}/${encodeURIComponent(deviceIdentifier)}`,
         {
           method: "POST",
-        }
+        },
       );
 
       if (response.ok) {
@@ -153,7 +154,7 @@ export function StreamsList() {
 
   const getProgressPercentage = (
     viewOffset: number = 0,
-    duration: number = 0
+    duration: number = 0,
   ) => {
     if (!duration) return 0;
     return Math.min(100, (viewOffset / duration) * 100);
@@ -163,7 +164,7 @@ export function StreamsList() {
     if (session.type === "episode" && session.grandparentTitle) {
       return `${session.grandparentTitle} - S${session.parentTitle?.replace(
         "Season ",
-        ""
+        "",
       )} ${session.title}`;
     }
     if (session.type === "movie") {
@@ -208,7 +209,7 @@ export function StreamsList() {
   const formatLastUpdate = () => {
     const now = new Date();
     const diffInSeconds = Math.floor(
-      (now.getTime() - lastUpdateTime.getTime()) / 1000
+      (now.getTime() - lastUpdateTime.getTime()) / 1000,
     );
 
     if (diffInSeconds < 60) {
@@ -373,7 +374,7 @@ export function StreamsList() {
                           setExpandedStream(
                             expandedStream === stream.sessionKey
                               ? null
-                              : stream.sessionKey
+                              : stream.sessionKey,
                           )
                         }
                         className="h-6 w-6 p-0 text-slate-400 hover:text-slate-600"
@@ -391,11 +392,18 @@ export function StreamsList() {
                   {stream.duration && stream.viewOffset !== undefined && (
                     <div className="mb-3">
                       <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mb-1 gap-2">
-                        <span className="flex-shrink-0">{formatDuration(stream.viewOffset)}</span>
-                        <Badge variant="outline" className="text-xs px-1 py-0 max-w-[100px] truncate flex-shrink-0">
+                        <span className="flex-shrink-0">
+                          {formatDuration(stream.viewOffset)}
+                        </span>
+                        <Badge
+                          variant="outline"
+                          className="text-xs px-1 py-0 max-w-[100px] truncate flex-shrink-0"
+                        >
                           {getStreamQuality(stream)}
                         </Badge>
-                        <span className="flex-shrink-0">{formatDuration(stream.duration)}</span>
+                        <span className="flex-shrink-0">
+                          {formatDuration(stream.duration)}
+                        </span>
                       </div>
                       <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
                         <div
@@ -403,7 +411,7 @@ export function StreamsList() {
                           style={{
                             width: `${getProgressPercentage(
                               stream.viewOffset,
-                              stream.duration
+                              stream.duration,
                             )}%`,
                           }}
                         >
@@ -424,7 +432,9 @@ export function StreamsList() {
                           <Monitor className="w-3 h-3 flex-shrink-0" />
                           <div className="min-w-0 flex-1">
                             <div className="font-medium">Platform</div>
-                            <div className="truncate">{stream.Player?.platform || "Unknown"}</div>
+                            <div className="truncate">
+                              {stream.Player?.platform || "Unknown"}
+                            </div>
                           </div>
                         </div>
                         <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 p-2 rounded min-w-0">
@@ -440,7 +450,9 @@ export function StreamsList() {
                           <Tv className="w-3 h-3 flex-shrink-0" />
                           <div className="min-w-0 flex-1">
                             <div className="font-medium">Product</div>
-                            <div className="truncate">{stream.Player?.product || "Unknown"}</div>
+                            <div className="truncate">
+                              {stream.Player?.product || "Unknown"}
+                            </div>
                           </div>
                         </div>
                         <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 p-2 rounded min-w-0">
@@ -487,7 +499,10 @@ export function StreamsList() {
       </CardContent>
 
       {/* Remove Access Confirmation Dialog */}
-      <Dialog open={!!confirmRemoveStream} onOpenChange={(open) => !open && setConfirmRemoveStream(null)}>
+      <Dialog
+        open={!!confirmRemoveStream}
+        onOpenChange={(open) => !open && setConfirmRemoveStream(null)}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -495,10 +510,12 @@ export function StreamsList() {
               Remove Device Access
             </DialogTitle>
             <DialogDescription>
-              Are you sure you want to remove access for this device? This will immediately stop the current stream and prevent future access until the device is re-approved.
+              Are you sure you want to remove access for this device? This will
+              immediately stop the current stream and prevent future access
+              until the device is re-approved.
             </DialogDescription>
           </DialogHeader>
-          
+
           {confirmRemoveStream && (
             <div className="my-4 p-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
               <div className="text-sm font-medium text-slate-900 dark:text-slate-100 mb-2 line-clamp-2 break-words leading-tight">
@@ -507,11 +524,15 @@ export function StreamsList() {
               <div className="flex items-center gap-4 text-xs text-slate-600 dark:text-slate-400 flex-wrap">
                 <div className="flex items-center gap-1 min-w-0">
                   <User className="w-3 h-3 flex-shrink-0" />
-                  <span className="truncate max-w-[120px]">{confirmRemoveStream.User?.title || "Unknown User"}</span>
+                  <span className="truncate max-w-[120px]">
+                    {confirmRemoveStream.User?.title || "Unknown User"}
+                  </span>
                 </div>
                 <div className="flex items-center gap-1 min-w-0">
                   {getDeviceIcon(confirmRemoveStream.Player?.platform)}
-                  <span className="truncate max-w-[120px]">{confirmRemoveStream.Player?.title || "Unknown Device"}</span>
+                  <span className="truncate max-w-[120px]">
+                    {confirmRemoveStream.Player?.title || "Unknown Device"}
+                  </span>
                 </div>
               </div>
             </div>

@@ -15,14 +15,14 @@ if (isDevelopment()) {
   dotenv.config({ path: path.join(process.cwd(), '.env') });
 }
 
-let proxyProcess: ReturnType<typeof spawn> | null = null;
+const proxyProcess: ReturnType<typeof spawn> | null = null;
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.useGlobalFilters(new GlobalExceptionFilter());
 
   app.enableCors({
-    origin: "*",
+    origin: '*',
     methods: '*',
     allowedHeaders: '*',
     credentials: true,
@@ -32,13 +32,17 @@ async function bootstrap() {
   await app.listen(config.app.port);
 
   const plexClient = app.get(PlexClient);
-  const {ok, status} = await plexClient.testConnection();
+  const { ok, status } = await plexClient.testConnection();
 
   if (!ok) {
-    console.error(`❌ Direct connection to Plex server failed with status: ${status}. Exiting...`);
+    console.error(
+      `❌ Direct connection to Plex server failed with status: ${status}. Exiting...`,
+    );
     process.exit(1);
-  }else{
-    console.log(`✅ Direct connection to Plex server successful with status: ${status}.`);
+  } else {
+    console.log(
+      `✅ Direct connection to Plex server successful with status: ${status}.`,
+    );
   }
 
   console.log(`✅ PlexGuard server is running on port ${config.app.port}`);

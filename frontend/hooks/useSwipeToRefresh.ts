@@ -24,7 +24,7 @@ export function useSwipeToRefresh({
       currentY.current = touch.clientY;
       isTracking.current = true;
     },
-    [enabled]
+    [enabled],
   );
 
   const handleTouchMove = useCallback(
@@ -48,7 +48,7 @@ export function useSwipeToRefresh({
         e.preventDefault();
       }
     },
-    [enabled, threshold]
+    [enabled, threshold],
   );
 
   const handleTouchEnd = useCallback(() => {
