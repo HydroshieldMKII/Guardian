@@ -373,8 +373,8 @@ const DeviceApproval = memo(() => {
     <>
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex-1 min-w-0">
               <CardTitle className="flex items-center">
                 <Shield className="w-5 h-5 mr-2" />
                 Device Management
@@ -383,26 +383,28 @@ const DeviceApproval = memo(() => {
                 Manage device access to your Plex server
               </CardDescription>
             </div>
-            <div className="flex items-center space-x-2">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-2">
               <div className="flex items-center space-x-1 bg-slate-200 dark:bg-slate-800 p-1 rounded-lg">
                 <Button
                   variant={!showApproved ? "default" : "ghost"}
                   size="sm"
                   onClick={() => setShowApproved(false)}
+                  className="text-xs sm:text-sm px-2 sm:px-3"
                 >
-                  Pending ({pendingDevices.length})
+                  <span>Pending</span>
                 </Button>
                 <Button
                   variant={showApproved ? "default" : "ghost"}
                   size="sm"
                   onClick={() => setShowApproved(true)}
+                  className="text-xs sm:text-sm px-2 sm:px-3"
                 >
-                  Processed Devices ({processedDevices.length})
+                  <span>Processed</span>
                 </Button>
               </div>
-              <Button variant="outline" size="sm" onClick={fetchDevices}>
-                <RefreshCw className="w-4 h-4 mr-2" />
-                Refresh
+              <Button variant="outline" size="sm" onClick={fetchDevices} className="text-xs sm:text-sm">
+                <RefreshCw className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                <span >Refresh</span>
               </Button>
             </div>
           </div>
@@ -416,37 +418,37 @@ const DeviceApproval = memo(() => {
                 : "No pending devices"}
             </div>
           ) : (
-            <ScrollArea className="h-[600px]">
-              <div className="space-y-4">
+            <ScrollArea className="h-[50vh] max-h-[400px] sm:max-h-[500px] lg:max-h-[600px]">
+              <div className="space-y-4 pr-4">
                 {devicesToShow.map((device) => (
                   <div
                     key={device.id}
-                    className="p-4 rounded-lg border bg-slate-50 dark:bg-slate-800/50"
+                    className="p-3 sm:p-4 rounded-lg border bg-slate-50 dark:bg-slate-800/50"
                   >
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex-1">
+                    <div className="flex flex-col sm:flex-row sm:items-start justify-between mb-3 gap-3">
+                      <div className="flex-1 min-w-0">
                         <div className="flex items-center space-x-2 mb-2">
                           {getDeviceIcon(
                             device.devicePlatform,
                             device.deviceProduct
                           )}
-                          <h3 className="font-semibold text-slate-900 dark:text-slate-100">
+                          <h3 className="font-semibold text-slate-900 dark:text-slate-100 truncate">
                             {device.deviceName || device.deviceIdentifier}
                           </h3>
                           {getDeviceStatus(device)}
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-slate-600 dark:text-slate-400">
-                          <div className="flex items-center">
-                            <User className="w-3 h-3 mr-1" />
-                            {device.username || device.userId}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-slate-600 dark:text-slate-400">
+                          <div className="flex items-center min-w-0">
+                            <User className="w-3 h-3 mr-1 flex-shrink-0" />
+                            <span className="truncate">{device.username || device.userId}</span>
                           </div>
-                          <div className="flex items-center">
-                            <Monitor className="w-3 h-3 mr-1" />
-                            {device.devicePlatform || "Unknown Platform"}
+                          <div className="flex items-center min-w-0">
+                            <Monitor className="w-3 h-3 mr-1 flex-shrink-0" />
+                            <span className="truncate">{device.devicePlatform || "Unknown Platform"}</span>
                           </div>
-                          <div className="flex items-center">
-                            <MapPin className="w-3 h-3 mr-1" />
-                            {device.ipAddress || "Unknown IP"}
+                          <div className="flex items-center min-w-0">
+                            <MapPin className="w-3 h-3 mr-1 flex-shrink-0" />
+                            <span className="truncate">{device.ipAddress || "Unknown IP"}</span>
                           </div>
                           <div className="flex items-center">
                             <Clock className="w-3 h-3 mr-1" />
@@ -454,14 +456,16 @@ const DeviceApproval = memo(() => {
                           </div>
                         </div>
                       </div>
-                      <div className="flex items-center space-x-2">
+                      
+                      <div className="flex flex-row sm:flex-col gap-1 sm:gap-2 flex-wrap sm:flex-nowrap">
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => setSelectedDevice(device)}
+                          className="text-xs sm:text-sm px-2 sm:px-3 flex-1 sm:flex-none"
                         >
                           <Eye className="w-3 h-3 mr-1" />
-                          Details
+                          <span>Details</span>
                         </Button>
 
                         {!showApproved ? (
@@ -472,40 +476,42 @@ const DeviceApproval = memo(() => {
                               size="sm"
                               onClick={() => showApproveConfirmation(device)}
                               disabled={actionLoading === device.id}
-                              className="bg-green-500 hover:bg-green-600"
+                              className="bg-green-500 hover:bg-green-600 text-xs sm:text-sm px-2 sm:px-3 flex-1 sm:flex-none"
                             >
                               {actionLoading === device.id ? (
                                 <RefreshCw className="w-3 h-3 mr-1 animate-spin" />
                               ) : (
                                 <CheckCircle className="w-3 h-3 mr-1" />
                               )}
-                              Approve
+                              <span>Approve</span>
                             </Button>
                             <Button
                               variant="outline"
                               size="sm"
                               onClick={() => showRejectConfirmation(device)}
                               disabled={actionLoading === device.id}
-                              className="border-orange-500 text-orange-600 hover:bg-orange-50"
+                              className="border-orange-500 text-orange-600 hover:bg-orange-50 text-xs sm:text-sm px-2 sm:px-3 flex-1 sm:flex-none"
                             >
                               {actionLoading === device.id ? (
                                 <RefreshCw className="w-3 h-3 mr-1 animate-spin" />
                               ) : (
                                 <XCircle className="w-3 h-3 mr-1" />
                               )}
-                              Reject
+                              <span>Reject</span>
                             </Button>
                             <Button
                               variant="destructive"
                               size="sm"
                               onClick={() => showDeleteConfirmation(device)}
                               disabled={actionLoading === device.id}
+                              className="text-xs sm:text-sm px-2 sm:px-3 flex-1 sm:flex-none"
                             >
                               {actionLoading === device.id ? (
                                 <RefreshCw className="w-3 h-3 mr-1 animate-spin" />
                               ) : (
                                 <Trash2 className="w-3 h-3 mr-1" />
                               )}
+                              <span>Delete</span>
                             </Button>
                           </>
                         ) : (
@@ -516,11 +522,11 @@ const DeviceApproval = memo(() => {
                               size="sm"
                               onClick={() => showToggleConfirmation(device)}
                               disabled={actionLoading === device.id}
-                              className={
+                              className={`text-xs sm:text-sm px-2 sm:px-3 flex-1 sm:flex-none ${
                                 device.status === 'approved'
                                   ? "bg-green-500 hover:bg-green-600"
                                   : "border-orange-500 text-orange-600 hover:bg-orange-50"
-                              }
+                              }`}
                             >
                               {actionLoading === device.id ? (
                                 <RefreshCw className="w-3 h-3 mr-1 animate-spin" />
@@ -529,19 +535,21 @@ const DeviceApproval = memo(() => {
                               ) : (
                                 <ToggleLeft className="w-3 h-3 mr-1" />
                               )}
-                              {device.status === 'approved' ? "Approved" : "Rejected"}
+                              <span>{device.status === 'approved' ? "Approved" : "Rejected"}</span>
                             </Button>
                             <Button
                               variant="destructive"
                               size="sm"
                               onClick={() => showDeleteConfirmation(device)}
                               disabled={actionLoading === device.id}
+                              className="text-xs sm:text-sm px-2 sm:px-3 flex-1 sm:flex-none"
                             >
                               {actionLoading === device.id ? (
                                 <RefreshCw className="w-3 h-3 mr-1 animate-spin" />
                               ) : (
                                 <Trash2 className="w-3 h-3 mr-1" />
                               )}
+                              <span>Delete</span>
                             </Button>
                           </>
                         )}

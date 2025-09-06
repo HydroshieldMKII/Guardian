@@ -1,6 +1,6 @@
 {
-  "name": "Plex Guard Dashboard",
-  "short_name": "Plex Guard",
+  "name": "Guardian Dashboard",
+  "short_name": "Guardian",
   "description": "Monitor active streams and manage device access",
   "start_url": "/",
   "display": "standalone",
