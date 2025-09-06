@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { UserDevice } from '../../../entities/user-device.entity';
 import { PlexClient } from './plex-client';
 import { ActiveSessionService } from '../../sessions/services/active-session.service';
+import { UsersService } from '../../users/services/users.service';
 import {
   PlexSessionsResponse,
   SessionTerminationResult,
@@ -26,6 +27,7 @@ export class SessionTerminationService {
     private userDeviceRepository: Repository<UserDevice>,
     private plexClient: PlexClient,
     private activeSessionService: ActiveSessionService,
+    private usersService: UsersService,
   ) {}
 
   async stopUnapprovedSessions(
@@ -106,7 +108,7 @@ export class SessionTerminationService {
         this.logger.warn(
           `Device not found for user ${userId} with identifier ${deviceIdentifier}`,
         );
-        const defaultBlock = process.env.PLEX_GUARD_DEFAULT_BLOCK === 'true';
+        const defaultBlock = await this.usersService.getEffectiveDefaultBlock(userId);
         return defaultBlock;
       }
 

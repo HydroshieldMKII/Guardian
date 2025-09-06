@@ -6,12 +6,14 @@ import { SessionTerminationService } from './services/session-termination.servic
 import { UserDevice } from '../../entities/user-device.entity';
 import { DevicesModule } from '../devices/devices.module';
 import { SessionsModule } from '../sessions/sessions.module';
+import { UsersModule } from '../users/users.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([UserDevice]),
     DevicesModule,
     SessionsModule,
+    UsersModule,
   ],
   providers: [PlexService, PlexClient, SessionTerminationService],
   exports: [PlexService, PlexClient, SessionTerminationService],

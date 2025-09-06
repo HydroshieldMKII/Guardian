@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UserDevice } from '../../../entities/user-device.entity';
+import { UsersService } from '../../users/services/users.service';
 import {
   PlexSession,
   DeviceInfo,
@@ -15,6 +16,7 @@ export class DeviceTrackingService {
   constructor(
     @InjectRepository(UserDevice)
     private userDeviceRepository: Repository<UserDevice>,
+    private usersService: UsersService,
   ) {}
 
   async processSessionsForDeviceTracking(
@@ -142,7 +144,7 @@ export class DeviceTrackingService {
   }
 
   private async createNewDevice(deviceInfo: DeviceInfo): Promise<void> {
-    const defaultBlock = process.env.PLEX_GUARD_DEFAULT_BLOCK === 'true';
+    const defaultBlock = await this.usersService.getEffectiveDefaultBlock(deviceInfo.userId);
 
     console.log('New device detected:', deviceInfo);
 
@@ -163,7 +165,7 @@ export class DeviceTrackingService {
     await this.userDeviceRepository.save(newDevice);
 
     this.logger.warn(
-      `🚨 NEW DEVICE DETECTED! User: ${deviceInfo.username || deviceInfo.userId}, Device: ${deviceInfo.deviceName || deviceInfo.deviceIdentifier}, Platform: ${deviceInfo.devicePlatform || 'Unknown'}`,
+      `🚨 NEW DEVICE DETECTED! User: ${deviceInfo.username || deviceInfo.userId}, Device: ${deviceInfo.deviceName || deviceInfo.deviceIdentifier}, Platform: ${deviceInfo.devicePlatform || 'Unknown'}, Status: ${defaultBlock ? 'PENDING' : 'APPROVED'} (User preference: ${defaultBlock ? 'Block' : 'Allow'})`,
     );
   }
 

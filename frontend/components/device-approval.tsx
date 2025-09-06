@@ -58,14 +58,141 @@ interface UserDevice {
   userAgent: string | null;
 }
 
+interface UserPreference {
+  id: number;
+  userId: string;
+  username: string | null;
+  defaultBlock: boolean | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+const UserPreferenceCard = memo(({ user, onUpdate }: { 
+  user: UserPreference; 
+  onUpdate: () => void; 
+}) => {
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  const handleUpdatePreference = async (defaultBlock: boolean | null) => {
+    try {
+      setIsUpdating(true);
+      const response = await fetch(
+        `${config.api.baseUrl}/users/${encodeURIComponent(user.userId)}/preference`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ defaultBlock }),
+        }
+      );
+
+      if (response.ok) {
+        onUpdate();
+      } else {
+        console.error("Failed to update user preference");
+      }
+    } catch (error) {
+      console.error("Error updating user preference:", error);
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const getPreferenceText = (defaultBlock: boolean | null) => {
+    if (defaultBlock === null) return "Global Default";
+    return defaultBlock ? "Block by Default" : "Allow by Default";
+  };
+
+  const getPreferenceBadge = (defaultBlock: boolean | null) => {
+    if (defaultBlock === null) {
+      return (
+        <Badge variant="secondary">
+          <Settings className="w-3 h-3 mr-1" />
+          Global Default
+        </Badge>
+      );
+    }
+    if (defaultBlock) {
+      return (
+        <Badge variant="destructive" className="bg-red-500">
+          <XCircle className="w-3 h-3 mr-1" />
+          Block by Default
+        </Badge>
+      );
+    }
+    return (
+      <Badge variant="default" className="bg-green-500">
+        <CheckCircle className="w-3 h-3 mr-1" />
+        Allow by Default
+      </Badge>
+    );
+  };
+
+  return (
+    <div className="p-3 sm:p-4 rounded-lg border bg-slate-50 dark:bg-slate-800/50">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-3 gap-3">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center space-x-2 mb-2">
+            <User className="w-4 h-4" />
+            <h3 className="font-semibold text-slate-900 dark:text-slate-100 truncate">
+              {user.username || user.userId}
+            </h3>
+            {getPreferenceBadge(user.defaultBlock)}
+          </div>
+          {/* <div className="text-sm text-slate-600 dark:text-slate-400">
+            User ID: {user.userId}
+          </div> */}
+        </div>
+        
+        <div className="flex flex-row gap-2">
+          <Button
+            variant={user.defaultBlock === null ? "default" : "outline"}
+            size="sm"
+            onClick={() => handleUpdatePreference(null)}
+            disabled={isUpdating}
+            className="text-xs px-2 flex-1 sm:flex-none"
+          >
+            <Settings className="w-3 h-3 mr-1" />
+            Global
+          </Button>
+          <Button
+            variant={user.defaultBlock === false ? "default" : "outline"}
+            size="sm"
+            onClick={() => handleUpdatePreference(false)}
+            disabled={isUpdating}
+            className="text-xs px-2 flex-1 sm:flex-none"
+          >
+            <CheckCircle className="w-3 h-3 mr-1" />
+            Allow
+          </Button>
+          <Button
+            variant={user.defaultBlock === true ? "default" : "outline"}
+            size="sm"
+            onClick={() => handleUpdatePreference(true)}
+            disabled={isUpdating}
+            className="text-xs px-2 flex-1 sm:flex-none"
+          >
+            <XCircle className="w-3 h-3 mr-1" />
+            Block
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+});
+
+UserPreferenceCard.displayName = "UserPreferenceCard";
+
 const DeviceApproval = memo(() => {
   const [allDevices, setAllDevices] = useState<UserDevice[]>([]);
   const [pendingDevices, setPendingDevices] = useState<UserDevice[]>([]);
   const [processedDevices, setProcessedDevices] = useState<UserDevice[]>([]);
+  const [users, setUsers] = useState<UserPreference[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<number | null>(null);
   const [selectedDevice, setSelectedDevice] = useState<UserDevice | null>(null);
-  const [showApproved, setShowApproved] = useState(false);
+  const [activeTab, setActiveTab] = useState<'pending' | 'processed' | 'users'>('pending');
   
   // Confirmation dialog states
   const [confirmAction, setConfirmAction] = useState<{
@@ -116,11 +243,30 @@ const DeviceApproval = memo(() => {
     }
   }, [allDevices, pendingDevices, processedDevices]);
 
+  const fetchUsers = useCallback(async () => {
+    try {
+      const response = await fetch(`${config.api.baseUrl}/users`);
+      const usersData: UserPreference[] = await response.json();
+      setUsers(usersData || []); // Ensure we always have an array
+    } catch (error) {
+      console.error("Failed to fetch users:", error);
+      setUsers([]); // Set to empty array on error
+    }
+  }, []);
+
   useEffect(() => {
     fetchDevices();
-    const interval = setInterval(fetchDevices, 30000); // Refresh every 30 seconds
+    if (activeTab === 'users') {
+      fetchUsers();
+    }
+    const interval = setInterval(() => {
+      fetchDevices();
+      if (activeTab === 'users') {
+        fetchUsers();
+      }
+    }, 30000); // Refresh every 30 seconds
     return () => clearInterval(interval);
-  }, []);
+  }, [activeTab]);
 
   const handleApprove = async (deviceId: number) => {
     try {
@@ -339,7 +485,9 @@ const DeviceApproval = memo(() => {
     }
   };
 
-  const devicesToShow = showApproved ? processedDevices : pendingDevices;
+  const devicesToShow = activeTab === 'processed' ? processedDevices : 
+                      activeTab === 'pending' ? pendingDevices : 
+                      [];
 
   if (loading) {
     return (
@@ -386,23 +534,31 @@ const DeviceApproval = memo(() => {
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-2">
               <div className="flex items-center space-x-1 bg-slate-200 dark:bg-slate-800 p-1 rounded-lg">
                 <Button
-                  variant={!showApproved ? "default" : "ghost"}
+                  variant={activeTab === 'pending' ? "default" : "ghost"}
                   size="sm"
-                  onClick={() => setShowApproved(false)}
+                  onClick={() => setActiveTab('pending')}
                   className="text-xs sm:text-sm px-2 sm:px-3"
                 >
                   <span>Pending</span>
                 </Button>
                 <Button
-                  variant={showApproved ? "default" : "ghost"}
+                  variant={activeTab === 'processed' ? "default" : "ghost"}
                   size="sm"
-                  onClick={() => setShowApproved(true)}
+                  onClick={() => setActiveTab('processed')}
                   className="text-xs sm:text-sm px-2 sm:px-3"
                 >
                   <span>Processed</span>
                 </Button>
+                <Button
+                  variant={activeTab === 'users' ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => setActiveTab('users')}
+                  className="text-xs sm:text-sm px-2 sm:px-3"
+                >
+                  <span>Users</span>
+                </Button>
               </div>
-              <Button variant="outline" size="sm" onClick={fetchDevices} className="text-xs sm:text-sm">
+              <Button variant="outline" size="sm" onClick={activeTab === 'users' ? fetchUsers : fetchDevices} className="text-xs sm:text-sm">
                 <RefreshCw className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
                 <span >Refresh</span>
               </Button>
@@ -410,10 +566,32 @@ const DeviceApproval = memo(() => {
           </div>
         </CardHeader>
         <CardContent>
-          {devicesToShow.length === 0 ? (
+          {activeTab === 'users' ? (
+            // Users management section
+            <div>
+              {users.length === 0 ? (
+                <div className="flex items-center justify-center h-32 text-slate-500 dark:text-slate-400">
+                  <User className="w-6 h-6 mr-2" />
+                  No users found
+                </div>
+              ) : (
+                <ScrollArea className="h-[50vh] max-h-[400px] sm:max-h-[500px] lg:max-h-[600px]">
+                  <div className="space-y-4 pr-4">
+                    {users.map((user) => (
+                      <UserPreferenceCard
+                        key={user.userId}
+                        user={user}
+                        onUpdate={fetchUsers}
+                      />
+                    ))}
+                  </div>
+                </ScrollArea>
+              )}
+            </div>
+          ) : devicesToShow.length === 0 ? (
             <div className="flex items-center justify-center h-32 text-slate-500 dark:text-slate-400">
               <CheckCircle className="w-6 h-6 mr-2" />
-              {showApproved
+              {activeTab === 'processed'
                 ? "No processed devices found"
                 : "No pending devices"}
             </div>
@@ -468,7 +646,7 @@ const DeviceApproval = memo(() => {
                           <span>Details</span>
                         </Button>
 
-                        {!showApproved ? (
+                        {activeTab === 'pending' ? (
                           /* Pending devices: Show Approve, Reject, Delete buttons */
                           <>
                             <Button

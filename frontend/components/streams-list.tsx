@@ -286,7 +286,7 @@ export function StreamsList() {
               <RefreshCw
                 className={`w-4 h-4 mr-2 ${refreshing ? "animate-spin" : ""}`}
               />
-              <span className="hidden sm:inline">Refresh</span>
+              <span>Refresh</span>
             </Button>
           </div>
         </div>

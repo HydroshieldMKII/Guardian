@@ -53,7 +53,7 @@ export class PlexClient {
         rejectUnauthorized: false,
       };
 
-      this.logger.debug(`Making request to: ${fullUrl}`);
+      // this.logger.debug(`Making request to: ${fullUrl}`);
 
       const httpModule = this.useSSL ? https : http;
       
