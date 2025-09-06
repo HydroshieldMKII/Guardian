@@ -42,7 +42,11 @@ export class UsersService {
           username: user.username,
           defaultBlock: null, // null means use global default
         });
-        result.push(newPreference);
+
+        // Save the preference to the database
+        const savedPreference =
+          await this.userPreferenceRepository.save(newPreference);
+        result.push(savedPreference);
       }
     }
 
@@ -66,10 +70,13 @@ export class UsersService {
     if (preference) {
       // Update existing preference
       preference.setDefaultBlockBoolean(defaultBlock);
+      this.logger.log(
+        `Updating preference for user: ${userId} to ${defaultBlock}`,
+      );
     } else {
       // Fallback: Create new preference for the userId
-      console.warn(
-        `No existing preference found for userId ${userId}. Creating new preference.`,
+      this.logger.warn(
+        `No existing preference for user ${userId}, creating new entry`,
       );
 
       // Get username from devices
