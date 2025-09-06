@@ -1,6 +1,6 @@
 services:
-  # Backend service (NestJS API)
   backend:
+    image: hydroshieldmkii/guardian-backend:${VERSION:-latest}
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -8,7 +8,7 @@ services:
         - PLEXGUARD_API_PORT=${PLEXGUARD_API_PORT:-3001}
     container_name: plexguard-backend
     ports:
-      - "${PLEXGUARD_API_PORT:-3001}:${PLEXGUARD_API_PORT:-3001}"  # API port
+      - "${PLEXGUARD_API_PORT:-3001}:${PLEXGUARD_API_PORT:-3001}"
     env_file:
       - .env
     environment:
@@ -19,8 +19,8 @@ services:
       - backend_data:/app/data
     restart: unless-stopped
 
-  # Frontend service (Next.js)
   frontend:
+    image: hydroshieldmkii/guardian-frontend:${VERSION:-latest}
     build:
       context: ./frontend
       dockerfile: Dockerfile

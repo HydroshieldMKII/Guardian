@@ -53,7 +53,7 @@ The easiest way to deploy Guardian is using Docker Compose:
 3. **Start the services**:
 
    ```bash
-   docker compose up -d --build
+   docker compose up -d
    ```
 
 4. **Access Guardian (Default Values)**:
@@ -65,12 +65,49 @@ The easiest way to deploy Guardian is using Docker Compose:
 > **WARNING ⚠️**
 > Make sure to read the configuration section carefully after each update as new options may be added or existing ones modified. Also, make sure to backup your data before updating to avoid any potential data loss.
 
-To update Guardian, pull the latest changes and rebuild the Docker containers:
+To update Guardian, pull the latest changes and restart the Docker containers:
 
 ```bash
-git pull origin main
-docker compose down
-docker compose up -d --build
+docker compose pull
+docker compose up -d
+```
+
+## Configuration
+
+Edit the `.env` file with your Plex server details:
+
+```bash
+# Plex Server Configuration
+PLEX_TOKEN=plex_token_here #https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/
+PLEX_SERVER_IP=server_ip_here
+PLEX_SERVER_PORT=32400
+USE_SSL=false # Set to true if your Plex server uses SSL
+
+# Guardian Configuration
+PLEXGUARD_REFRESH_INTERVAL=10 # Interval in seconds to refresh the device list from Plex and block devices
+PLEX_GUARD_DEFAULT_BLOCK=true # Set to true to block unapproved devices by default
+PLEXGUARD_STOPMSG="This device must be approved by the server owner. Please contact the server administrator for more information."
+VERSION=latest
+
+# Port Configuration
+PLEXGUARD_FRONTEND_PORT=3000
+PLEXGUARD_API_PORT=3001
+
+# Backend URL Configuration (Optional)
+# Use this to specify a custom backend URL when accessing from outside the network
+# Examples: 
+#   http://your-domain.com:3001
+#   https://plexguard.your-domain.com
+#   http://192.168.1.100:3001
+# If not set, defaults to http://localhost:${PLEXGUARD_API_PORT}
+PLEXGUARD_BACKEND_URL=
+
+```
+
+If you already have Guardian running and want to change the configuration, simply update the `.env` file and restart the services:
+
+```bash
+docker compose up -d --force-recreate
 ```
 
 ## 🛠 Manual Development Setup
@@ -98,46 +135,18 @@ cd frontend
 npm install
 npm run dev
 ```
+## Troubleshooting
 
-## Configuration
+If you encounter issues, ensure that:
+- Your Plex server is running and accessible.
+- Your Plex authentication token is correct.
+- Check the logs for any error messages in both browser console and containers.
 
-Edit the `.env` file with your Plex server details:
+You can check the logs of the backend container with:
 
 ```bash
-# Plex Server Configuration
-PLEX_TOKEN=your_plex_token_here
-PLEX_SERVER_IP=your_plex_server_ip
-PLEX_SERVER_PORT=32400
-USE_SSL=false #true or false
-
-# Guardian Settings
-PLEXGUARD_REFRESH_INTERVAL=10 # Refresh interval in seconds, lower value will make dashboard and actions more responsive
-PLEX_GUARD_DEFAULT_BLOCK=true # Set to true to block new devices by default, false to auto-approve new devices
-PLEXGUARD_STOPMSG="This device must be approved by the server owner."
-
-# Port Configuration (Optional - defaults shown)
-PLEXGUARD_API_PORT=3001        # Backend API port
-PLEXGUARD_FRONTEND_PORT=3000   # Frontend web interface port
-
-# Backend URL Configuration (Optional)
-# Use this when accessing the frontend from outside your local network
-# Examples:
-#   PLEXGUARD_BACKEND_URL=http://192.168.1.100:3001
-#   PLEXGUARD_BACKEND_URL=https://plexguard.your-domain.com
-#   PLEXGUARD_BACKEND_URL=http://your-external-ip:3001
-# If not set, defaults to http://localhost:${PLEXGUARD_API_PORT}
-PLEXGUARD_BACKEND_URL=
-
-# Docker Compose Build Performance (Optional)
-COMPOSE_BAKE=true
+docker compose logs -f backend
 ```
-## Issues
-
-If you encounter any issues while using Guardian, please check the following:
-
-- Ensure that your Plex server is running and accessible.
-- Verify that your Plex authentication token is correct.
-- Check the logs for any error messages.
 
 If the problem persists, please open an issue on the [GitHub repository](https://github.com/HydroshieldMKII/Guardian/issues).
 
