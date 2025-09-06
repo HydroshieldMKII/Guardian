@@ -37,11 +37,38 @@ import {
   Tablet,
   Laptop,
   Search,
+  ExternalLink,
 } from "lucide-react";
 
 import { PlexSession, StreamsResponse } from "@/types";
 import { useSwipeToRefresh } from "../hooks/useSwipeToRefresh";
 import { config } from "@/lib/config";
+
+const ClickableIP = ({ ipAddress }: { ipAddress: string | null }) => {
+  if (!ipAddress || ipAddress === "Unknown IP" || ipAddress === "Unknown") {
+    return <span className="truncate">{ipAddress || "Unknown"}</span>;
+  }
+
+  const handleClick = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent parent click events
+    window.open(
+      `https://ipinfo.io/${ipAddress}`,
+      "_blank",
+      "noopener,noreferrer",
+    );
+  };
+
+  return (
+    <button
+      onClick={handleClick}
+      className="truncate text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:underline cursor-pointer inline-flex items-center gap-1 transition-colors"
+      title={`Look up ${ipAddress} on ipinfo.io`}
+    >
+      <span className="truncate">{ipAddress}</span>
+      <ExternalLink className="w-3 h-3 flex-shrink-0 opacity-70" />
+    </button>
+  );
+};
 
 export function StreamsList() {
   const [streams, setStreams] = useState<PlexSession[]>([]);
@@ -103,23 +130,39 @@ export function StreamsList() {
     };
   }, [autoRefresh]);
 
-  // Filter streams based on search term
-  const filteredStreams = streams.filter((stream) => {
-    if (!searchTerm.trim()) return true;
-    
-    const searchLower = searchTerm.toLowerCase();
-    const username = stream.User?.title?.toLowerCase() || "";
-    const deviceName = stream.Player?.device?.toLowerCase() || stream.Player?.title?.toLowerCase() || "";
-    const contentTitle = stream.title?.toLowerCase() || "";
-    const deviceProduct = stream.Player?.product?.toLowerCase() || "";
-    
-    return (
-      username.includes(searchLower) ||
-      deviceName.includes(searchLower) ||
-      contentTitle.includes(searchLower) ||
-      deviceProduct.includes(searchLower)
-    );
-  });
+  // Filter and sort streams based on search term
+  const filteredStreams = streams
+    .filter((stream) => {
+      if (!searchTerm.trim()) return true;
+
+      const searchLower = searchTerm.toLowerCase();
+      const username = stream.User?.title?.toLowerCase() || "";
+      const deviceName =
+        stream.Player?.device?.toLowerCase() ||
+        stream.Player?.title?.toLowerCase() ||
+        "";
+      const contentTitle = stream.title?.toLowerCase() || "";
+      const deviceProduct = stream.Player?.product?.toLowerCase() || "";
+
+      return (
+        username.includes(searchLower) ||
+        deviceName.includes(searchLower) ||
+        contentTitle.includes(searchLower) ||
+        deviceProduct.includes(searchLower)
+      );
+    })
+    .sort((a, b) => {
+      // Sort by user first, then by content title
+      const userA = a.User?.title || "";
+      const userB = b.User?.title || "";
+      const titleA = a.title || "";
+      const titleB = b.title || "";
+
+      if (userA !== userB) {
+        return userA.localeCompare(userB);
+      }
+      return titleA.localeCompare(titleB);
+    });
 
   const handleRevokeAuthorization = async (stream: PlexSession) => {
     const userId = stream.User?.id;
@@ -281,7 +324,11 @@ export function StreamsList() {
           <div>
             <CardTitle className="flex items-center text-lg sm:text-xl">
               <Tv className="w-5 h-5 mr-2" />
-              Active Streams ({searchTerm ? `${filteredStreams.length}/${streams.length}` : streams.length})
+              Active Streams (
+              {searchTerm
+                ? `${filteredStreams.length}/${streams.length}`
+                : streams.length}
+              )
             </CardTitle>
             <CardDescription className="mt-1 text-sm">
               Real-time view of all active Plex streams
@@ -499,7 +546,9 @@ export function StreamsList() {
                           <div className="min-w-0 flex-1">
                             <div className="font-medium">Location</div>
                             <div className="truncate">
-                              {stream.Player?.address || "Unknown"}
+                              <ClickableIP
+                                ipAddress={stream.Player?.address || null}
+                              />
                             </div>
                           </div>
                         </div>

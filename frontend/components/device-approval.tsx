@@ -39,6 +39,7 @@ import {
   ToggleLeft,
   ToggleRight,
   Search,
+  ExternalLink,
 } from "lucide-react";
 import { config } from "@/lib/config";
 
@@ -68,6 +69,33 @@ interface UserPreference {
   updatedAt: string;
 }
 
+// Clickable IP component
+const ClickableIP = ({ ipAddress }: { ipAddress: string | null }) => {
+  if (!ipAddress || ipAddress === "Unknown IP" || ipAddress === "Unknown") {
+    return <span className="truncate">{ipAddress || "Unknown IP"}</span>;
+  }
+
+  const handleClick = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent parent click events
+    window.open(
+      `https://ipinfo.io/${ipAddress}`,
+      "_blank",
+      "noopener,noreferrer",
+    );
+  };
+
+  return (
+    <button
+      onClick={handleClick}
+      className="truncate text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:underline cursor-pointer inline-flex items-center gap-1 transition-colors"
+      title={`Look up ${ipAddress} on ipinfo.io`}
+    >
+      <span className="truncate">{ipAddress}</span>
+      <ExternalLink className="w-3 h-3 flex-shrink-0 opacity-70" />
+    </button>
+  );
+};
+
 const UserPreferenceCard = memo(
   ({ user, onUpdate }: { user: UserPreference; onUpdate: () => void }) => {
     const [isUpdating, setIsUpdating] = useState(false);
@@ -83,7 +111,7 @@ const UserPreferenceCard = memo(
               "Content-Type": "application/json",
             },
             body: JSON.stringify({ defaultBlock }),
-          }
+          },
         );
 
         if (response.ok) {
@@ -179,7 +207,7 @@ const UserPreferenceCard = memo(
         </div>
       </div>
     );
-  }
+  },
 );
 
 UserPreferenceCard.displayName = "UserPreferenceCard";
@@ -207,51 +235,54 @@ const DeviceApproval = memo(() => {
     description: string;
   } | null>(null);
 
-  const fetchDevices = useCallback(async (silent = false) => {
-    try {
-      if (!silent) {
-        setLoading(true);
-      } else {
-        setRefreshing(true);
+  const fetchDevices = useCallback(
+    async (silent = false) => {
+      try {
+        if (!silent) {
+          setLoading(true);
+        } else {
+          setRefreshing(true);
+        }
+
+        // Fetch all devices
+        const allResponse = await fetch(`${config.api.baseUrl}/devices`);
+        const allData: UserDevice[] = await allResponse.json();
+
+        // Fetch pending devices (truly new devices)
+        const pendingResponse = await fetch(
+          `${config.api.baseUrl}/devices/pending`,
+        );
+        const pendingData: UserDevice[] = await pendingResponse.json();
+
+        // Fetch processed devices (approved or rejected)
+        const processedResponse = await fetch(
+          `${config.api.baseUrl}/devices/processed`,
+        );
+        const processedData: UserDevice[] = await processedResponse.json();
+
+        // Only update state if data has changed to prevent unnecessary re-renders
+        const allDataString = JSON.stringify(allData);
+        const pendingDataString = JSON.stringify(pendingData);
+        const processedDataString = JSON.stringify(processedData);
+
+        if (JSON.stringify(allDevices) !== allDataString) {
+          setAllDevices(allData);
+        }
+        if (JSON.stringify(pendingDevices) !== pendingDataString) {
+          setPendingDevices(pendingData);
+        }
+        if (JSON.stringify(processedDevices) !== processedDataString) {
+          setProcessedDevices(processedData);
+        }
+      } catch (error) {
+        console.error("Failed to fetch devices:", error);
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
       }
-
-      // Fetch all devices
-      const allResponse = await fetch(`${config.api.baseUrl}/devices`);
-      const allData: UserDevice[] = await allResponse.json();
-
-      // Fetch pending devices (truly new devices)
-      const pendingResponse = await fetch(
-        `${config.api.baseUrl}/devices/pending`
-      );
-      const pendingData: UserDevice[] = await pendingResponse.json();
-
-      // Fetch processed devices (approved or rejected)
-      const processedResponse = await fetch(
-        `${config.api.baseUrl}/devices/processed`
-      );
-      const processedData: UserDevice[] = await processedResponse.json();
-
-      // Only update state if data has changed to prevent unnecessary re-renders
-      const allDataString = JSON.stringify(allData);
-      const pendingDataString = JSON.stringify(pendingData);
-      const processedDataString = JSON.stringify(processedData);
-
-      if (JSON.stringify(allDevices) !== allDataString) {
-        setAllDevices(allData);
-      }
-      if (JSON.stringify(pendingDevices) !== pendingDataString) {
-        setPendingDevices(pendingData);
-      }
-      if (JSON.stringify(processedDevices) !== processedDataString) {
-        setProcessedDevices(processedData);
-      }
-    } catch (error) {
-      console.error("Failed to fetch devices:", error);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, [allDevices, pendingDevices, processedDevices]);
+    },
+    [allDevices, pendingDevices, processedDevices],
+  );
 
   const fetchUsers = useCallback(async (silent = false) => {
     try {
@@ -285,39 +316,78 @@ const DeviceApproval = memo(() => {
     return () => clearInterval(interval);
   }, [activeTab]);
 
-  // Filter functions
+  // Filter and sort functions
   const filteredDevices = (deviceList: UserDevice[]) => {
-    if (!searchDevices.trim()) return deviceList;
+    let filtered = deviceList;
 
-    const searchLower = searchDevices.toLowerCase();
-    return deviceList.filter((device) => {
-      const username = (device.username || device.userId || "").toLowerCase();
-      const deviceName = (
-        device.deviceName ||
-        device.deviceIdentifier ||
-        ""
-      ).toLowerCase();
-      const devicePlatform = (device.devicePlatform || "").toLowerCase();
-      const deviceProduct = (device.deviceProduct || "").toLowerCase();
+    // Apply search filter if search term exists
+    if (searchDevices.trim()) {
+      const searchLower = searchDevices.toLowerCase();
+      filtered = deviceList.filter((device) => {
+        const username = (device.username || device.userId || "").toLowerCase();
+        const deviceName = (
+          device.deviceName ||
+          device.deviceIdentifier ||
+          ""
+        ).toLowerCase();
+        const devicePlatform = (device.devicePlatform || "").toLowerCase();
+        const deviceProduct = (device.deviceProduct || "").toLowerCase();
 
-      return (
-        username.includes(searchLower) ||
-        deviceName.includes(searchLower) ||
-        devicePlatform.includes(searchLower) ||
-        deviceProduct.includes(searchLower)
-      );
+        return (
+          username.includes(searchLower) ||
+          deviceName.includes(searchLower) ||
+          devicePlatform.includes(searchLower) ||
+          deviceProduct.includes(searchLower)
+        );
+      });
+    }
+
+    // Apply sorting based on the type of devices
+    return filtered.sort((a, b) => {
+      const usernameA = a.username || a.userId || "";
+      const usernameB = b.username || b.userId || "";
+
+      // For pending devices: sort by newest first (firstSeen desc), then by username
+      if (deviceList === pendingDevices) {
+        const dateA = new Date(a.firstSeen).getTime();
+        const dateB = new Date(b.firstSeen).getTime();
+        if (dateA !== dateB) {
+          return dateB - dateA; // Newest first
+        }
+        return usernameA.localeCompare(usernameB);
+      }
+
+      // For processed devices: sort by last seen desc (most recently active first), then by username
+      if (deviceList === processedDevices) {
+        const dateA = new Date(a.lastSeen).getTime();
+        const dateB = new Date(b.lastSeen).getTime();
+        if (dateA !== dateB) {
+          return dateB - dateA; // Most recently active first
+        }
+        return usernameA.localeCompare(usernameB);
+      }
+
+      // Default: sort by username
+      return usernameA.localeCompare(usernameB);
     });
   };
 
-  const filteredUsers = users.filter((user) => {
-    if (!searchUsers.trim()) return true;
+  const filteredUsers = users
+    .filter((user) => {
+      if (!searchUsers.trim()) return true;
 
-    const searchLower = searchUsers.toLowerCase();
-    const username = (user.username || "").toLowerCase();
-    const userId = user.userId.toLowerCase();
+      const searchLower = searchUsers.toLowerCase();
+      const username = (user.username || "").toLowerCase();
+      const userId = user.userId.toLowerCase();
 
-    return username.includes(searchLower) || userId.includes(searchLower);
-  });
+      return username.includes(searchLower) || userId.includes(searchLower);
+    })
+    .sort((a, b) => {
+      // Sort users alphabetically by username, fallback to userId
+      const nameA = a.username || a.userId;
+      const nameB = b.username || b.userId;
+      return nameA.localeCompare(nameB);
+    });
 
   const handleApprove = async (deviceId: number) => {
     try {
@@ -326,7 +396,7 @@ const DeviceApproval = memo(() => {
         `${config.api.baseUrl}/devices/${deviceId}/approve`,
         {
           method: "POST",
-        }
+        },
       );
 
       if (response.ok) {
@@ -335,13 +405,13 @@ const DeviceApproval = memo(() => {
           devices.map((device) =>
             device.id === deviceId
               ? { ...device, status: "approved" as const }
-              : device
+              : device,
           );
 
         setAllDevices(updateDeviceStatus);
         setProcessedDevices((prev) => updateDeviceStatus(prev));
         setPendingDevices((devices) =>
-          devices.filter((device) => device.id !== deviceId)
+          devices.filter((device) => device.id !== deviceId),
         );
 
         // Still fetch to ensure consistency
@@ -364,7 +434,7 @@ const DeviceApproval = memo(() => {
         `${config.api.baseUrl}/devices/${deviceId}/reject`,
         {
           method: "POST",
-        }
+        },
       );
 
       if (response.ok) {
@@ -373,13 +443,13 @@ const DeviceApproval = memo(() => {
           devices.map((device) =>
             device.id === deviceId
               ? { ...device, status: "rejected" as const }
-              : device
+              : device,
           );
 
         setAllDevices((prev) => updateDeviceStatus(prev));
         setProcessedDevices((prev) => updateDeviceStatus(prev));
         setPendingDevices((devices) =>
-          devices.filter((device) => device.id !== deviceId)
+          devices.filter((device) => device.id !== deviceId),
         );
 
         setTimeout(fetchDevices, 100);
@@ -401,7 +471,7 @@ const DeviceApproval = memo(() => {
         `${config.api.baseUrl}/devices/${deviceId}/delete`,
         {
           method: "POST",
-        }
+        },
       );
 
       if (response.ok) {
@@ -623,11 +693,15 @@ const DeviceApproval = memo(() => {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => activeTab === "users" ? fetchUsers(true) : fetchDevices(true)}
+                onClick={() =>
+                  activeTab === "users" ? fetchUsers(true) : fetchDevices(true)
+                }
                 disabled={refreshing}
                 className="text-xs sm:text-sm"
               >
-                <RefreshCw className={`w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 ${refreshing ? "animate-spin" : ""}`} />
+                <RefreshCw
+                  className={`w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 ${refreshing ? "animate-spin" : ""}`}
+                />
                 <span>Refresh</span>
               </Button>
             </div>
@@ -741,7 +815,7 @@ const DeviceApproval = memo(() => {
                         <div className="flex items-center space-x-2 mb-2">
                           {getDeviceIcon(
                             device.devicePlatform,
-                            device.deviceProduct
+                            device.deviceProduct,
                           )}
                           <h3 className="font-semibold text-slate-900 dark:text-slate-100 truncate">
                             {device.deviceName || device.deviceIdentifier}
@@ -763,9 +837,7 @@ const DeviceApproval = memo(() => {
                           </div>
                           <div className="flex items-center min-w-0">
                             <MapPin className="w-3 h-3 mr-1 flex-shrink-0" />
-                            <span className="truncate">
-                              {device.ipAddress || "Unknown IP"}
-                            </span>
+                            <ClickableIP ipAddress={device.ipAddress} />
                           </div>
                           <div className="flex items-center">
                             <Clock className="w-3 h-3 mr-1" />
@@ -963,9 +1035,9 @@ const DeviceApproval = memo(() => {
                   <h4 className="font-semibold text-sm text-slate-600 dark:text-slate-400">
                     IP Address
                   </h4>
-                  <p className="text-slate-900 dark:text-slate-100">
-                    {selectedDevice.ipAddress || "Unknown"}
-                  </p>
+                  <div className="text-slate-900 dark:text-slate-100">
+                    <ClickableIP ipAddress={selectedDevice.ipAddress} />
+                  </div>
                 </div>
                 <div>
                   <h4 className="font-semibold text-sm text-slate-600 dark:text-slate-400">
@@ -1066,7 +1138,7 @@ const DeviceApproval = memo(() => {
               <div className="flex items-center gap-3 mb-2">
                 {getDeviceIcon(
                   confirmAction.device.devicePlatform,
-                  confirmAction.device.deviceProduct
+                  confirmAction.device.deviceProduct,
                 )}
                 <div>
                   <div className="text-sm font-medium text-slate-900 dark:text-slate-100">
