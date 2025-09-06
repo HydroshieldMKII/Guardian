@@ -6,9 +6,8 @@ Guardian is a utility designed to enhance the security and management of your Pl
 
 - [Features](#features)
 - [Quick Start with Docker](#-quick-start-with-docker-recommended)
-- [Update Guardian](#update-guardian)
-- [Manual Development Setup](#-manual-development-setup)
 - [Configuration](#configuration)
+- [Update Guardian](#update-guardian)
 - [Troubleshooting](#troubleshooting)
 - [Contributing](#contributing)
 
@@ -60,17 +59,14 @@ The easiest way to deploy Guardian is using Docker Compose:
    - Web Interface: http://localhost:3000
    - API: http://localhost:3001
 
-## Update Guardian
-
-> **WARNING ⚠️**
-> Make sure to read the configuration section carefully after each update as new options may be added or existing ones modified. Also, make sure to backup your data before updating to avoid any potential data loss.
-
-To update Guardian, pull the latest changes and restart the Docker containers:
+or if you use a container management system like Portainer, you can pull the images manually with the following commands:
 
 ```bash
-docker compose pull
-docker compose up -d
+docker pull hydroshieldmkii/guardian-backend
+docker pull hydroshieldmkii/guardian-frontend
 ```
+
+don't forget to set the environment variables in your container management system.
 
 ## Configuration
 
@@ -110,31 +106,18 @@ If you already have Guardian running and want to change the configuration, simpl
 docker compose up -d --force-recreate
 ```
 
-## 🛠 Manual Development Setup
+## Update Guardian
 
-If you prefer to run Guardian without Docker:
+> **WARNING ⚠️**
+> Make sure to read the configuration section carefully after each update as new options may be added or existing ones modified. Also, make sure to backup your data before updating to avoid any potential data loss.
 
-### Prerequisites
-
-- Node.js 18+ and npm
-- Plex Media Server running
-- Plex authentication token
-
-### Backend Setup
+To update Guardian, pull the latest changes and restart the Docker containers:
 
 ```bash
-cd backend
-npm install
-npm run start:dev
+docker compose pull
+docker compose up -d
 ```
 
-### Frontend Setup
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
 ## Troubleshooting
 
 If you encounter issues, ensure that:
