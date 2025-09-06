@@ -125,6 +125,12 @@ If you encounter issues, ensure that:
 - Your Plex authentication token is correct.
 - Check the logs for any error messages in both browser console and containers.
 
+You can check container status with:
+
+```bash
+docker compose ps
+```
+
 You can check the logs of the backend container with:
 
 ```bash
