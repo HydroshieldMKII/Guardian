@@ -317,7 +317,7 @@ export function StreamsList() {
             </p>
           </div>
         ) : (
-          <ScrollArea className="h-[calc(100vh-20rem)] sm:h-[600px]">
+          <ScrollArea className="h-[50vh] max-h-[400px] sm:max-h-[500px] lg:max-h-[600px]">
             <div className="space-y-3 sm:space-y-4">
               {streams.map((stream, index) => (
                 <div
@@ -325,23 +325,23 @@ export function StreamsList() {
                   className="relative p-3 sm:p-4 rounded-lg border bg-gradient-to-r from-slate-50 to-white dark:from-slate-800/50 dark:to-slate-800/20 shadow-sm hover:shadow-md transition-all duration-200"
                 >
                   {/* Mobile-first compact header */}
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-1 text-sm sm:text-base truncate">
+                  <div className="flex items-start justify-between mb-3 gap-2">
+                    <div className="flex-1 min-w-0 pr-2">
+                      <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-1 text-sm sm:text-base line-clamp-2 break-words leading-tight">
                         {getContentTitle(stream)}
                       </h3>
 
                       {/* Primary info row - always visible */}
-                      <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-600 dark:text-slate-400 mb-2">
-                        <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded-full">
-                          <User className="w-3 h-3" />
-                          <span className="truncate max-w-20 sm:max-w-none">
+                      <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-600 dark:text-slate-400 mb-2 flex-wrap">
+                        <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded-full min-w-0 flex-shrink-0">
+                          <User className="w-3 h-3 flex-shrink-0" />
+                          <span className="truncate max-w-[80px] sm:max-w-[120px]">
                             {stream.User?.title || "Unknown"}
                           </span>
                         </div>
-                        <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded-full">
+                        <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded-full min-w-0 flex-shrink-0">
                           {getDeviceIcon(stream.Player?.platform)}
-                          <span className="truncate max-w-16 sm:max-w-none">
+                          <span className="truncate max-w-[60px] sm:max-w-[100px]">
                             {stream.Player?.title?.split(" ")[0] || "Device"}
                           </span>
                         </div>
@@ -387,15 +387,15 @@ export function StreamsList() {
                     </div>
                   </div>
 
-                  {/* Progress Bar - always visible for active streams */}
+                  {/* Progress Bar  */}
                   {stream.duration && stream.viewOffset !== undefined && (
                     <div className="mb-3">
-                      <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mb-1">
-                        <span>{formatDuration(stream.viewOffset)}</span>
-                        <Badge variant="outline" className="text-xs px-1 py-0">
+                      <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mb-1 gap-2">
+                        <span className="flex-shrink-0">{formatDuration(stream.viewOffset)}</span>
+                        <Badge variant="outline" className="text-xs px-1 py-0 max-w-[100px] truncate flex-shrink-0">
                           {getStreamQuality(stream)}
                         </Badge>
-                        <span>{formatDuration(stream.duration)}</span>
+                        <span className="flex-shrink-0">{formatDuration(stream.duration)}</span>
                       </div>
                       <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
                         <div
@@ -420,32 +420,32 @@ export function StreamsList() {
                     <div className="space-y-3 pt-3 border-t border-slate-200 dark:border-slate-700 animate-in slide-in-from-top-2 duration-200">
                       {/* Detailed device info */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-slate-600 dark:text-slate-400">
-                        <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 p-2 rounded">
-                          <Monitor className="w-3 h-3" />
-                          <div>
+                        <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 p-2 rounded min-w-0">
+                          <Monitor className="w-3 h-3 flex-shrink-0" />
+                          <div className="min-w-0 flex-1">
                             <div className="font-medium">Platform</div>
-                            <div>{stream.Player?.platform || "Unknown"}</div>
+                            <div className="truncate">{stream.Player?.platform || "Unknown"}</div>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 p-2 rounded">
-                          <MapPin className="w-3 h-3" />
-                          <div>
+                        <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 p-2 rounded min-w-0">
+                          <MapPin className="w-3 h-3 flex-shrink-0" />
+                          <div className="min-w-0 flex-1">
                             <div className="font-medium">Location</div>
                             <div className="truncate">
                               {stream.Player?.address || "Unknown"}
                             </div>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 p-2 rounded">
-                          <Tv className="w-3 h-3" />
-                          <div>
+                        <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 p-2 rounded min-w-0">
+                          <Tv className="w-3 h-3 flex-shrink-0" />
+                          <div className="min-w-0 flex-1">
                             <div className="font-medium">Product</div>
-                            <div>{stream.Player?.product || "Unknown"}</div>
+                            <div className="truncate">{stream.Player?.product || "Unknown"}</div>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 p-2 rounded">
-                          <Clock className="w-3 h-3" />
-                          <div>
+                        <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 p-2 rounded min-w-0">
+                          <Clock className="w-3 h-3 flex-shrink-0" />
+                          <div className="min-w-0 flex-1">
                             <div className="font-medium">Session</div>
                             <div className="truncate">
                               {stream.sessionKey || "Unknown"}
@@ -501,17 +501,17 @@ export function StreamsList() {
           
           {confirmRemoveStream && (
             <div className="my-4 p-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
-              <div className="text-sm font-medium text-slate-900 dark:text-slate-100 mb-2">
+              <div className="text-sm font-medium text-slate-900 dark:text-slate-100 mb-2 line-clamp-2 break-words leading-tight">
                 {getContentTitle(confirmRemoveStream)}
               </div>
-              <div className="flex items-center gap-4 text-xs text-slate-600 dark:text-slate-400">
-                <div className="flex items-center gap-1">
-                  <User className="w-3 h-3" />
-                  <span>{confirmRemoveStream.User?.title || "Unknown User"}</span>
+              <div className="flex items-center gap-4 text-xs text-slate-600 dark:text-slate-400 flex-wrap">
+                <div className="flex items-center gap-1 min-w-0">
+                  <User className="w-3 h-3 flex-shrink-0" />
+                  <span className="truncate max-w-[120px]">{confirmRemoveStream.User?.title || "Unknown User"}</span>
                 </div>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 min-w-0">
                   {getDeviceIcon(confirmRemoveStream.Player?.platform)}
-                  <span>{confirmRemoveStream.Player?.title || "Unknown Device"}</span>
+                  <span className="truncate max-w-[120px]">{confirmRemoveStream.Player?.title || "Unknown Device"}</span>
                 </div>
               </div>
             </div>
