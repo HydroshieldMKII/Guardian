@@ -55,16 +55,13 @@ The easiest way to deploy Guardian is using Docker Compose:
    docker compose up -d --build
    ```
 
-4. **Access Guardian (Default Ports)**:
+4. **Access Guardian (Default Values)**:
    - Web Interface: http://localhost:3000
    - API: http://localhost:3001
 
 ## Update Guardian
 
-### Warning this is still in early development
-
-> [!IMPORTANT] 
-
+> **WARNING ⚠️**
 > Make sure to read the configuration section carefully after each update as new options may be added or existing ones modified. Also, make sure to backup your data before updating to avoid any potential data loss.
 
 To update Guardian, pull the latest changes and rebuild the Docker containers:
@@ -133,7 +130,15 @@ PLEXGUARD_BACKEND_URL=
 # Docker Compose Build Performance (Optional)
 COMPOSE_BAKE=true
 ```
+## Issues
 
+If you encounter any issues while using Guardian, please check the following:
+
+- Ensure that your Plex server is running and accessible.
+- Verify that your Plex authentication token is correct.
+- Check the logs for any error messages.
+
+If the problem persists, please open an issue on the [GitHub repository](https://github.com/HydroshieldMKII/Guardian/issues).
 
 ## Contributing
 
