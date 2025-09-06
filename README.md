@@ -22,6 +22,11 @@ Guardian is a utility designed to enhance the security and management of your Pl
 <img width="2558" height="1191" alt="Guardian Dashboard" src="https://github.com/user-attachments/assets/2c6d7de2-3791-48cf-b8c7-25dca5babc6c" />
 <img width="2558" height="1192" alt="Guardian Dashboard" src="https://github.com/user-attachments/assets/3f04c716-7e8b-4d08-9de6-fb1e89069ded" />
 
+## Warning this is still in early development
+
+> [!CAUTION]
+
+Make sure to read the configuration section carefully after each update as new options may be added or existing ones modified. Also, make sure to backup your data before updating to avoid any potential data loss.
 
 ## 🚀 Quick Start with Docker (Recommended)
 
