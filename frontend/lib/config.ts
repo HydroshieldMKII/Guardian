@@ -12,6 +12,3 @@ export const config = {
     ),
   },
 };
-
-export const isProduction = () => config.app.environment === "production";
-export const isDevelopment = () => config.app.environment === "development";

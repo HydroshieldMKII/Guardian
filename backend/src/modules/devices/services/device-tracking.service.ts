@@ -167,13 +167,6 @@ export class DeviceTrackingService {
     );
   }
 
-  async getUserDevices(userId: string): Promise<UserDevice[]> {
-    return this.userDeviceRepository.find({
-      where: { userId },
-      order: { lastSeen: 'DESC' },
-    });
-  }
-
   async getAllDevices(): Promise<UserDevice[]> {
     return this.userDeviceRepository.find({
       order: { lastSeen: 'DESC' },

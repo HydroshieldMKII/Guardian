@@ -7,7 +7,7 @@ export class HealthController {
     return {
       status: 'ok',
       timestamp: new Date().toISOString(),
-      service: 'plexguard-backend',
+      service: 'guardian-backend',
     };
   }
 }

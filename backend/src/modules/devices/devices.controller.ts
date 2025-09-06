@@ -26,11 +26,6 @@ export class DevicesController {
     return this.deviceTrackingService.getApprovedDevices();
   }
 
-  @Get('user/:userId')
-  async getUserDevices(@Param('userId') userId: string): Promise<UserDevice[]> {
-    return this.deviceTrackingService.getUserDevices(userId);
-  }
-
   @Post(':id/approve')
   async approveDevice(
     @Param('id', ParseIntPipe) id: number,

@@ -312,10 +312,6 @@ const DeviceApproval = memo(() => {
     return <Monitor className="w-4 h-4" />;
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString();
-  };
-
   const getDeviceStatus = (device: UserDevice) => {
     switch (device.status) {
       case "approved":
@@ -555,9 +551,9 @@ const DeviceApproval = memo(() => {
                     <Separator className="my-3" />
 
                     <div className="text-xs text-slate-500 dark:text-slate-400">
-                      <span>First seen: {formatDate(device.firstSeen)}</span>
+                      <span>First seen: {new Date(device.firstSeen).toLocaleString()}</span>
                       <span className="mx-2">•</span>
-                      <span>Last seen: {formatDate(device.lastSeen)}</span>
+                      <span>Last seen: {new Date(device.lastSeen).toLocaleString()}</span>
                     </div>
                   </div>
                 ))}
@@ -677,7 +673,7 @@ const DeviceApproval = memo(() => {
                     First Seen
                   </h4>
                   <p className="text-sm text-slate-900 dark:text-slate-100">
-                    {formatDate(selectedDevice.firstSeen)}
+                    {new Date(selectedDevice.firstSeen).toLocaleString()}
                   </p>
                 </div>
                 <div>
@@ -685,7 +681,7 @@ const DeviceApproval = memo(() => {
                     Last Seen
                   </h4>
                   <p className="text-sm text-slate-900 dark:text-slate-100">
-                    {formatDate(selectedDevice.lastSeen)}
+                    {new Date(selectedDevice.lastSeen).toLocaleString()}
                   </p>
                 </div>
               </div>
