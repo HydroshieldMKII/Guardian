@@ -9,6 +9,7 @@ Guardian is a utility designed to enhance the security and management of your Pl
 - [Update Guardian](#update-guardian)
 - [Manual Development Setup](#-manual-development-setup)
 - [Configuration](#configuration)
+- [Issues](#issues)
 - [Contributing](#contributing)
 
 ## Features
