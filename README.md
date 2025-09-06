@@ -6,6 +6,7 @@ Guardian is a utility designed to enhance the security and management of your Pl
 
 - [Features](#features)
 - [Quick Start with Docker](#-quick-start-with-docker-recommended)
+- [Update Guardian](#update-guardian)
 - [Manual Development Setup](#-manual-development-setup)
 - [Configuration](#configuration)
 - [Contributing](#contributing)
@@ -21,12 +22,6 @@ Guardian is a utility designed to enhance the security and management of your Pl
 <img width="2558" height="1191" alt="Guardian Dashboard" src="https://github.com/user-attachments/assets/1f3e6286-7ee4-4361-9896-548edc00ed7f" />
 <img width="2558" height="1191" alt="Guardian Dashboard" src="https://github.com/user-attachments/assets/2c6d7de2-3791-48cf-b8c7-25dca5babc6c" />
 <img width="2558" height="1192" alt="Guardian Dashboard" src="https://github.com/user-attachments/assets/3f04c716-7e8b-4d08-9de6-fb1e89069ded" />
-
-## Warning this is still in early development
-
-> [!CAUTION]
-
-Make sure to read the configuration section carefully after each update as new options may be added or existing ones modified. Also, make sure to backup your data before updating to avoid any potential data loss.
 
 ## 🚀 Quick Start with Docker (Recommended)
 
@@ -63,6 +58,22 @@ The easiest way to deploy Guardian is using Docker Compose:
 4. **Access Guardian (Default Ports)**:
    - Web Interface: http://localhost:3000
    - API: http://localhost:3001
+
+## Update Guardian
+
+### Warning this is still in early development
+
+> [!CAUTION]
+
+Make sure to read the configuration section carefully after each update as new options may be added or existing ones modified. Also, make sure to backup your data before updating to avoid any potential data loss.
+
+To update Guardian, pull the latest changes and rebuild the Docker containers:
+
+```bash
+git pull origin main
+docker compose down
+docker compose up -d --build
+```
 
 ## 🛠 Manual Development Setup
 
