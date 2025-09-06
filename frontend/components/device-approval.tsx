@@ -38,6 +38,7 @@ import {
   Trash2,
   ToggleLeft,
   ToggleRight,
+  Search,
 } from "lucide-react";
 import { config } from "@/lib/config";
 
@@ -82,7 +83,7 @@ const UserPreferenceCard = memo(
               "Content-Type": "application/json",
             },
             body: JSON.stringify({ defaultBlock }),
-          },
+          }
         );
 
         if (response.ok) {
@@ -178,7 +179,7 @@ const UserPreferenceCard = memo(
         </div>
       </div>
     );
-  },
+  }
 );
 
 UserPreferenceCard.displayName = "UserPreferenceCard";
@@ -192,8 +193,10 @@ const DeviceApproval = memo(() => {
   const [actionLoading, setActionLoading] = useState<number | null>(null);
   const [selectedDevice, setSelectedDevice] = useState<UserDevice | null>(null);
   const [activeTab, setActiveTab] = useState<"pending" | "processed" | "users">(
-    "pending",
+    "pending"
   );
+  const [searchDevices, setSearchDevices] = useState("");
+  const [searchUsers, setSearchUsers] = useState("");
 
   // Confirmation dialog states
   const [confirmAction, setConfirmAction] = useState<{
@@ -213,13 +216,13 @@ const DeviceApproval = memo(() => {
 
       // Fetch pending devices (truly new devices)
       const pendingResponse = await fetch(
-        `${config.api.baseUrl}/devices/pending`,
+        `${config.api.baseUrl}/devices/pending`
       );
       const pendingData: UserDevice[] = await pendingResponse.json();
 
       // Fetch processed devices (approved or rejected)
       const processedResponse = await fetch(
-        `${config.api.baseUrl}/devices/processed`,
+        `${config.api.baseUrl}/devices/processed`
       );
       const processedData: UserDevice[] = await processedResponse.json();
 
@@ -269,6 +272,40 @@ const DeviceApproval = memo(() => {
     return () => clearInterval(interval);
   }, [activeTab]);
 
+  // Filter functions
+  const filteredDevices = (deviceList: UserDevice[]) => {
+    if (!searchDevices.trim()) return deviceList;
+
+    const searchLower = searchDevices.toLowerCase();
+    return deviceList.filter((device) => {
+      const username = (device.username || device.userId || "").toLowerCase();
+      const deviceName = (
+        device.deviceName ||
+        device.deviceIdentifier ||
+        ""
+      ).toLowerCase();
+      const devicePlatform = (device.devicePlatform || "").toLowerCase();
+      const deviceProduct = (device.deviceProduct || "").toLowerCase();
+
+      return (
+        username.includes(searchLower) ||
+        deviceName.includes(searchLower) ||
+        devicePlatform.includes(searchLower) ||
+        deviceProduct.includes(searchLower)
+      );
+    });
+  };
+
+  const filteredUsers = users.filter((user) => {
+    if (!searchUsers.trim()) return true;
+
+    const searchLower = searchUsers.toLowerCase();
+    const username = (user.username || "").toLowerCase();
+    const userId = user.userId.toLowerCase();
+
+    return username.includes(searchLower) || userId.includes(searchLower);
+  });
+
   const handleApprove = async (deviceId: number) => {
     try {
       setActionLoading(deviceId);
@@ -276,7 +313,7 @@ const DeviceApproval = memo(() => {
         `${config.api.baseUrl}/devices/${deviceId}/approve`,
         {
           method: "POST",
-        },
+        }
       );
 
       if (response.ok) {
@@ -285,13 +322,13 @@ const DeviceApproval = memo(() => {
           devices.map((device) =>
             device.id === deviceId
               ? { ...device, status: "approved" as const }
-              : device,
+              : device
           );
 
         setAllDevices(updateDeviceStatus);
         setProcessedDevices((prev) => updateDeviceStatus(prev));
         setPendingDevices((devices) =>
-          devices.filter((device) => device.id !== deviceId),
+          devices.filter((device) => device.id !== deviceId)
         );
 
         // Still fetch to ensure consistency
@@ -314,7 +351,7 @@ const DeviceApproval = memo(() => {
         `${config.api.baseUrl}/devices/${deviceId}/reject`,
         {
           method: "POST",
-        },
+        }
       );
 
       if (response.ok) {
@@ -323,13 +360,13 @@ const DeviceApproval = memo(() => {
           devices.map((device) =>
             device.id === deviceId
               ? { ...device, status: "rejected" as const }
-              : device,
+              : device
           );
 
         setAllDevices((prev) => updateDeviceStatus(prev));
         setProcessedDevices((prev) => updateDeviceStatus(prev));
         setPendingDevices((devices) =>
-          devices.filter((device) => device.id !== deviceId),
+          devices.filter((device) => device.id !== deviceId)
         );
 
         setTimeout(fetchDevices, 100);
@@ -351,7 +388,7 @@ const DeviceApproval = memo(() => {
         `${config.api.baseUrl}/devices/${deviceId}/delete`,
         {
           method: "POST",
-        },
+        }
       );
 
       if (response.ok) {
@@ -496,9 +533,9 @@ const DeviceApproval = memo(() => {
 
   const devicesToShow =
     activeTab === "processed"
-      ? processedDevices
+      ? filteredDevices(processedDevices)
       : activeTab === "pending"
-        ? pendingDevices
+        ? filteredDevices(pendingDevices)
         : [];
 
   if (loading) {
@@ -583,18 +620,74 @@ const DeviceApproval = memo(() => {
           </div>
         </CardHeader>
         <CardContent>
+          {/* Search bars */}
+          {activeTab === "users" ? (
+            <div className="mb-6">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                <input
+                  type="text"
+                  placeholder="Search users by username..."
+                  value={searchUsers}
+                  onChange={(e) => setSearchUsers(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 text-sm border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                />
+              </div>
+              {searchUsers && (
+                <p className="text-xs text-muted-foreground mt-2">
+                  Showing {filteredUsers.length} of {users.length} users
+                </p>
+              )}
+            </div>
+          ) : (
+            <div className="mb-6">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                <input
+                  type="text"
+                  placeholder="Search devices by username, device name, or platform..."
+                  value={searchDevices}
+                  onChange={(e) => setSearchDevices(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 text-sm border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                />
+              </div>
+              {searchDevices && (
+                <p className="text-xs text-muted-foreground mt-2">
+                  Showing{" "}
+                  {activeTab === "pending"
+                    ? filteredDevices(pendingDevices).length
+                    : filteredDevices(processedDevices).length}{" "}
+                  of{" "}
+                  {activeTab === "pending"
+                    ? pendingDevices.length
+                    : processedDevices.length}{" "}
+                  devices
+                </p>
+              )}
+            </div>
+          )}
+
           {activeTab === "users" ? (
             // Users management section
             <div>
-              {users.length === 0 ? (
+              {filteredUsers.length === 0 ? (
                 <div className="flex items-center justify-center h-32 text-slate-500 dark:text-slate-400">
-                  <User className="w-6 h-6 mr-2" />
-                  No users found
+                  {searchUsers ? (
+                    <>
+                      <Search className="w-6 h-6 mr-2" />
+                      No users match your search
+                    </>
+                  ) : (
+                    <>
+                      <User className="w-6 h-6 mr-2" />
+                      No users found
+                    </>
+                  )}
                 </div>
               ) : (
                 <ScrollArea className="h-[50vh] max-h-[400px] sm:max-h-[500px] lg:max-h-[600px]">
                   <div className="space-y-4 pr-4">
-                    {users.map((user) => (
+                    {filteredUsers.map((user) => (
                       <UserPreferenceCard
                         key={user.userId}
                         user={user}
@@ -607,10 +700,19 @@ const DeviceApproval = memo(() => {
             </div>
           ) : devicesToShow.length === 0 ? (
             <div className="flex items-center justify-center h-32 text-slate-500 dark:text-slate-400">
-              <CheckCircle className="w-6 h-6 mr-2" />
-              {activeTab === "processed"
-                ? "No processed devices found"
-                : "No pending devices"}
+              {searchDevices ? (
+                <>
+                  <Search className="w-6 h-6 mr-2" />
+                  No devices match your search
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="w-6 h-6 mr-2" />
+                  {activeTab === "processed"
+                    ? "No processed devices found"
+                    : "No pending devices"}
+                </>
+              )}
             </div>
           ) : (
             <ScrollArea className="h-[50vh] max-h-[400px] sm:max-h-[500px] lg:max-h-[600px]">
@@ -625,7 +727,7 @@ const DeviceApproval = memo(() => {
                         <div className="flex items-center space-x-2 mb-2">
                           {getDeviceIcon(
                             device.devicePlatform,
-                            device.deviceProduct,
+                            device.deviceProduct
                           )}
                           <h3 className="font-semibold text-slate-900 dark:text-slate-100 truncate">
                             {device.deviceName || device.deviceIdentifier}
@@ -950,7 +1052,7 @@ const DeviceApproval = memo(() => {
               <div className="flex items-center gap-3 mb-2">
                 {getDeviceIcon(
                   confirmAction.device.devicePlatform,
-                  confirmAction.device.deviceProduct,
+                  confirmAction.device.deviceProduct
                 )}
                 <div>
                   <div className="text-sm font-medium text-slate-900 dark:text-slate-100">

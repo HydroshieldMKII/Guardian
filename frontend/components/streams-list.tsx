@@ -36,6 +36,7 @@ import {
   Smartphone,
   Tablet,
   Laptop,
+  Search,
 } from "lucide-react";
 
 import { PlexSession, StreamsResponse } from "@/types";
@@ -53,6 +54,7 @@ export function StreamsList() {
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [confirmRemoveStream, setConfirmRemoveStream] =
     useState<PlexSession | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const swipeHandlers = useSwipeToRefresh({
     onRefresh: () => fetchStreams(),
@@ -94,6 +96,24 @@ export function StreamsList() {
       if (interval) clearInterval(interval);
     };
   }, [autoRefresh]);
+
+  // Filter streams based on search term
+  const filteredStreams = streams.filter((stream) => {
+    if (!searchTerm.trim()) return true;
+    
+    const searchLower = searchTerm.toLowerCase();
+    const username = stream.User?.title?.toLowerCase() || "";
+    const deviceName = stream.Player?.device?.toLowerCase() || stream.Player?.title?.toLowerCase() || "";
+    const contentTitle = stream.title?.toLowerCase() || "";
+    const deviceProduct = stream.Player?.product?.toLowerCase() || "";
+    
+    return (
+      username.includes(searchLower) ||
+      deviceName.includes(searchLower) ||
+      contentTitle.includes(searchLower) ||
+      deviceProduct.includes(searchLower)
+    );
+  });
 
   const handleRevokeAuthorization = async (stream: PlexSession) => {
     const userId = stream.User?.id;
@@ -255,7 +275,7 @@ export function StreamsList() {
           <div>
             <CardTitle className="flex items-center text-lg sm:text-xl">
               <Tv className="w-5 h-5 mr-2" />
-              Active Streams ({streams.length})
+              Active Streams ({searchTerm ? `${filteredStreams.length}/${streams.length}` : streams.length})
             </CardTitle>
             <CardDescription className="mt-1 text-sm">
               Real-time view of all active Plex streams
@@ -293,6 +313,25 @@ export function StreamsList() {
         </div>
       </CardHeader>
       <CardContent>
+        {/* Search input */}
+        <div className="mb-6">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+            <input
+              type="text"
+              placeholder="Search streams by username, device, content, or app..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 text-sm border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+            />
+          </div>
+          {searchTerm && (
+            <p className="text-xs text-muted-foreground mt-2">
+              Showing {filteredStreams.length} of {streams.length} streams
+            </p>
+          )}
+        </div>
+
         {error ? (
           <div className="flex flex-col items-center justify-center h-32 sm:h-40 text-red-600 dark:text-red-400 text-center">
             <AlertCircle className="w-8 h-8 mb-2" />
@@ -307,20 +346,32 @@ export function StreamsList() {
               Try Again
             </Button>
           </div>
-        ) : streams.length === 0 ? (
+        ) : filteredStreams.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-32 sm:h-40 text-slate-500 dark:text-slate-400 text-center">
-            <Pause className="w-8 h-8 mb-2" />
-            <p className="text-sm font-medium mb-1">No Active Streams</p>
-            <p className="text-xs text-muted-foreground">
-              {autoRefresh
-                ? "Monitoring for new streams..."
-                : "Pull down to refresh"}
-            </p>
+            {searchTerm ? (
+              <>
+                <Search className="w-8 h-8 mb-2" />
+                <p className="text-sm font-medium mb-1">No streams found</p>
+                <p className="text-xs text-muted-foreground">
+                  Try adjusting your search terms
+                </p>
+              </>
+            ) : (
+              <>
+                <Pause className="w-8 h-8 mb-2" />
+                <p className="text-sm font-medium mb-1">No Active Streams</p>
+                <p className="text-xs text-muted-foreground">
+                  {autoRefresh
+                    ? "Monitoring for new streams..."
+                    : "Pull down to refresh"}
+                </p>
+              </>
+            )}
           </div>
         ) : (
           <ScrollArea className="h-[50vh] max-h-[400px] sm:max-h-[500px] lg:max-h-[600px]">
             <div className="space-y-3 sm:space-y-4">
-              {streams.map((stream, index) => (
+              {filteredStreams.map((stream, index) => (
                 <div
                   key={stream.sessionKey || index}
                   className="relative p-3 sm:p-4 rounded-lg border bg-gradient-to-r from-slate-50 to-white dark:from-slate-800/50 dark:to-slate-800/20 shadow-sm hover:shadow-md transition-all duration-200"
