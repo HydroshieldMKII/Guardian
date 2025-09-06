@@ -317,7 +317,7 @@ const DeviceApproval = memo(() => {
   }, [activeTab]);
 
   // Filter and sort functions
-  const filteredDevices = (deviceList: UserDevice[]) => {
+  const filteredDevices = (deviceList: UserDevice[], listType: "pending" | "processed" | "all" = "all") => {
     let filtered = deviceList;
 
     // Apply search filter if search term exists
@@ -342,13 +342,13 @@ const DeviceApproval = memo(() => {
       });
     }
 
-    // Apply sorting based on the type of devices
+    // Apply sorting based on the list type
     return filtered.sort((a, b) => {
       const usernameA = a.username || a.userId || "";
       const usernameB = b.username || b.userId || "";
 
       // For pending devices: sort by newest first (firstSeen desc), then by username
-      if (deviceList === pendingDevices) {
+      if (listType === "pending") {
         const dateA = new Date(a.firstSeen).getTime();
         const dateB = new Date(b.firstSeen).getTime();
         if (dateA !== dateB) {
@@ -357,14 +357,14 @@ const DeviceApproval = memo(() => {
         return usernameA.localeCompare(usernameB);
       }
 
-      // For processed devices: sort by last seen desc (most recently active first), then by username
-      if (deviceList === processedDevices) {
+      // For processed devices: sort by username first, then by last seen desc
+      if (listType === "processed") {
+        if (usernameA !== usernameB) {
+          return usernameA.localeCompare(usernameB);
+        }
         const dateA = new Date(a.lastSeen).getTime();
         const dateB = new Date(b.lastSeen).getTime();
-        if (dateA !== dateB) {
-          return dateB - dateA; // Most recently active first
-        }
-        return usernameA.localeCompare(usernameB);
+        return dateB - dateA; // Most recently active first within same user
       }
 
       // Default: sort by username
@@ -616,9 +616,9 @@ const DeviceApproval = memo(() => {
 
   const devicesToShow =
     activeTab === "processed"
-      ? filteredDevices(processedDevices)
+      ? filteredDevices(processedDevices, "processed")
       : activeTab === "pending"
-        ? filteredDevices(pendingDevices)
+        ? filteredDevices(pendingDevices, "pending")
         : [];
 
   if (loading) {
