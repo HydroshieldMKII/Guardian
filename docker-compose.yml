@@ -5,7 +5,6 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: guardian-backend
-    # No external port exposure needed - only accessible via proxy
     env_file:
       - .env
     environment:
