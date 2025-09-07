@@ -18,10 +18,11 @@ Guardian is a utility designed to enhance the security and management of your Pl
 - Informations on devices like platform, product, version and IP address
 - Tracks last seen active sessions and user activity, with the ability to remove per device access in one click
 
-<img width="2558" height="1188" alt="Guardian Dashboard" src="https://github.com/user-attachments/assets/d6994f2b-317b-4cdb-83eb-77fb9ce2bcdc" />
-<img width="2558" height="1191" alt="Guardian Dashboard" src="https://github.com/user-attachments/assets/1f3e6286-7ee4-4361-9896-548edc00ed7f" />
-<img width="2558" height="1191" alt="Guardian Dashboard" src="https://github.com/user-attachments/assets/2c6d7de2-3791-48cf-b8c7-25dca5babc6c" />
-<img width="2558" height="1192" alt="Guardian Dashboard" src="https://github.com/user-attachments/assets/3f04c716-7e8b-4d08-9de6-fb1e89069ded" />
+<img width="2558" height="1237" alt="1" src="https://github.com/user-attachments/assets/0cd179aa-2bb3-4100-a000-c99ce2f985c8" />
+<img width="2558" height="1232" alt="2" src="https://github.com/user-attachments/assets/0c00c7cb-a0ed-4965-b931-a6f18f369440" />
+<img width="2558" height="1236" alt="3" src="https://github.com/user-attachments/assets/2a976d66-e9bd-44d5-a09d-cffe8842f129" />
+<img width="2558" height="1237" alt="4" src="https://github.com/user-attachments/assets/1d188e2e-100f-4d99-a1f4-7c22347a51df" />
+<img width="2556" height="1235" alt="5" src="https://github.com/user-attachments/assets/5775eab2-972c-4093-a7a2-fc23cd56a389" />
 
 ## 🚀 Quick Start with Docker (Recommended)
 
