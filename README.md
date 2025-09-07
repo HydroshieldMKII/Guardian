@@ -56,9 +56,9 @@ The easiest way to deploy Guardian is using Docker Compose:
    docker compose up -d
    ```
 
-4. **Access Guardian (Default Values)**:
-   - Web Interface: http://localhost:3000
-   - API: http://localhost:3001
+4. **Access Guardian**:
+
+With default port config, you can access the web interface at http://localhost:3000 or http://device-ip:3000
 
 or if you use a container management system like Portainer, you can pull the images manually with the following commands:
 
