@@ -46,8 +46,12 @@ The easiest way to deploy Guardian is using Docker Compose:
 2. **Setup environment variables**:
 
    ```bash
+   # Copy compose config
+   cp docker-compose.example.yml docker-compose.yml
+
+   # Copy and edit .env file
    cp .env.example .env
-   nano .env # Edit .env with your Plex server details
+   nano .env
    ```
 
 3. **Start the services**:
