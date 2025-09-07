@@ -8,12 +8,13 @@ FROM node:20-alpine AS build
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-# Build WITHOUT depending on NEXT_PUBLIC_* for URLs
+
 RUN npm run build
 
 FROM node:20-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
+
 # Runtime-configurable port (overridden by Compose)
 ENV PORT=3000
 

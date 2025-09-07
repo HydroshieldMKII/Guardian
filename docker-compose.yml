@@ -5,13 +5,11 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: guardian-backend
-    ports:
-      - "${PLEXGUARD_API_PORT:-3001}:3001"
+    # No external port exposure needed - only accessible via proxy
     env_file:
       - .env
     environment:
       NODE_ENV: production
-      PLEXGUARD_API_PORT: ${PLEXGUARD_API_PORT:-3001}
       DATABASE_PATH: /app/data/plex-guard.db
     volumes:
       - backend_data:/app/data
@@ -28,8 +26,6 @@ services:
     environment:
       NODE_ENV: production
       PORT: ${PLEXGUARD_FRONTEND_PORT:-3000}
-      # ✅ runtime-configurable; change in .env and just restart the container
-      PLEXGUARD_BACKEND_URL: ${PLEXGUARD_BACKEND_URL:-http://backend:3001}
     depends_on:
       - backend
     restart: unless-stopped

@@ -87,17 +87,6 @@ VERSION=latest
 
 # Port Configuration
 PLEXGUARD_FRONTEND_PORT=3000
-PLEXGUARD_API_PORT=3001
-
-# Backend URL Configuration (Optional)
-# Use this to specify a custom backend URL when accessing from outside the network
-# Examples: 
-#   http://your-domain.com:3001
-#   https://plexguard.your-domain.com
-#   http://192.168.1.100:3001
-# If not set, defaults to http://localhost:${PLEXGUARD_API_PORT}
-PLEXGUARD_BACKEND_URL=
-
 ```
 
 If you already have Guardian running and want to change the configuration, simply update the `.env` file and restart the services:
@@ -121,6 +110,7 @@ docker compose up -d
 ## Troubleshooting
 
 If you encounter issues, ensure that:
+
 - Your Plex server is running and accessible.
 - Your Plex authentication token is correct.
 - Check the logs for any error messages in both browser console and containers.

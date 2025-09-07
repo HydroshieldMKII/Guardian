@@ -1,6 +1,6 @@
 export const config = {
   app: {
-    port: process.env.PLEXGUARD_API_PORT || '3001',
+    port: '3001',
     environment: process.env.NODE_ENV || 'development',
   },
   plex: {
