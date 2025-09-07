@@ -96,6 +96,65 @@ const ClickableIP = ({ ipAddress }: { ipAddress: string | null }) => {
   );
 };
 
+// Skeleton components for loading states
+const DeviceSkeleton = () => (
+  <div className="p-3 sm:p-4 rounded-lg border bg-slate-50 dark:bg-slate-800/50 animate-pulse">
+    <div className="flex flex-col sm:flex-row sm:items-start justify-between mb-3 gap-3">
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center space-x-2 mb-2">
+          <div className="w-4 h-4 bg-slate-200 dark:bg-slate-700 rounded"></div>
+          <div className="h-5 bg-slate-200 dark:bg-slate-700 rounded w-32"></div>
+          <div className="h-5 bg-slate-200 dark:bg-slate-700 rounded w-20"></div>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div className="flex items-center space-x-2">
+            <div className="w-3 h-3 bg-slate-200 dark:bg-slate-700 rounded"></div>
+            <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-24"></div>
+          </div>
+          <div className="flex items-center space-x-2">
+            <div className="w-3 h-3 bg-slate-200 dark:bg-slate-700 rounded"></div>
+            <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-20"></div>
+          </div>
+          <div className="flex items-center space-x-2">
+            <div className="w-3 h-3 bg-slate-200 dark:bg-slate-700 rounded"></div>
+            <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-28"></div>
+          </div>
+          <div className="flex items-center space-x-2">
+            <div className="w-3 h-3 bg-slate-200 dark:bg-slate-700 rounded"></div>
+            <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-16"></div>
+          </div>
+        </div>
+      </div>
+      <div className="flex flex-row sm:flex-col gap-1 sm:gap-2">
+        <div className="h-8 bg-slate-200 dark:bg-slate-700 rounded w-16"></div>
+        <div className="h-8 bg-slate-200 dark:bg-slate-700 rounded w-18"></div>
+        <div className="h-8 bg-slate-200 dark:bg-slate-700 rounded w-16"></div>
+      </div>
+    </div>
+    <div className="h-px bg-slate-200 dark:bg-slate-700 my-3"></div>
+    <div className="h-3 bg-slate-200 dark:bg-slate-700 rounded w-full"></div>
+  </div>
+);
+
+const UserSkeleton = () => (
+  <div className="p-3 sm:p-4 rounded-lg border bg-slate-50 dark:bg-slate-800/50 animate-pulse">
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-3 gap-3">
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center space-x-2 mb-2">
+          <div className="w-4 h-4 bg-slate-200 dark:bg-slate-700 rounded"></div>
+          <div className="h-5 bg-slate-200 dark:bg-slate-700 rounded w-32"></div>
+          <div className="h-5 bg-slate-200 dark:bg-slate-700 rounded w-24"></div>
+        </div>
+      </div>
+      <div className="flex flex-row gap-2">
+        <div className="h-8 bg-slate-200 dark:bg-slate-700 rounded w-16"></div>
+        <div className="h-8 bg-slate-200 dark:bg-slate-700 rounded w-16"></div>
+        <div className="h-8 bg-slate-200 dark:bg-slate-700 rounded w-16"></div>
+      </div>
+    </div>
+  </div>
+);
+
 const UserPreferenceCard = memo(
   ({ user, onUpdate }: { user: UserPreference; onUpdate: () => void }) => {
     const [isUpdating, setIsUpdating] = useState(false);
@@ -624,34 +683,6 @@ const DeviceApproval = memo(() => {
         ? filteredDevices(pendingDevices, "pending")
         : [];
 
-  if (loading) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Shield className="w-5 h-5 mr-2" />
-            Device Management
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-center h-32">
-            <div className="flex items-center space-x-2">
-              <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce"></div>
-              <div
-                className="w-2 h-2 bg-blue-600 rounded-full animate-bounce"
-                style={{ animationDelay: "0.1s" }}
-              ></div>
-              <div
-                className="w-2 h-2 bg-blue-600 rounded-full animate-bounce"
-                style={{ animationDelay: "0.2s" }}
-              ></div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
   return (
     <>
       <Card>
@@ -761,7 +792,16 @@ const DeviceApproval = memo(() => {
           {activeTab === "users" ? (
             // Users management section
             <div>
-              {filteredUsers.length === 0 ? (
+              {loading || refreshing ? (
+                // Show skeleton loading for users
+                <ScrollArea className="h-[50vh] max-h-[400px] sm:max-h-[500px] lg:max-h-[600px]">
+                  <div className="space-y-4 pr-4">
+                    {Array.from({ length: 3 }, (_, i) => (
+                      <UserSkeleton key={`user-skeleton-${i}`} />
+                    ))}
+                  </div>
+                </ScrollArea>
+              ) : filteredUsers.length === 0 ? (
                 <div className="flex items-center justify-center h-32 text-slate-500 dark:text-slate-400">
                   {searchUsers ? (
                     <>
@@ -789,6 +829,15 @@ const DeviceApproval = memo(() => {
                 </ScrollArea>
               )}
             </div>
+          ) : loading || refreshing ? (
+            // Show skeleton loading for devices
+            <ScrollArea className="h-[50vh] max-h-[400px] sm:max-h-[500px] lg:max-h-[600px]">
+              <div className="space-y-4 pr-4">
+                {Array.from({ length: 4 }, (_, i) => (
+                  <DeviceSkeleton key={`device-skeleton-${i}`} />
+                ))}
+              </div>
+            </ScrollArea>
           ) : devicesToShow.length === 0 ? (
             <div className="flex items-center justify-center h-32 text-slate-500 dark:text-slate-400">
               {searchDevices ? (

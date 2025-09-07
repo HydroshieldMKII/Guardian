@@ -70,6 +70,34 @@ const ClickableIP = ({ ipAddress }: { ipAddress: string | null }) => {
   );
 };
 
+// Stream skeleton for loading states
+const StreamSkeleton = () => (
+  <div className="relative p-3 sm:p-4 rounded-lg border bg-gradient-to-r from-slate-50 to-white dark:from-slate-800/50 dark:to-slate-800/20 shadow-sm animate-pulse">
+    <div className="flex flex-col sm:flex-row sm:items-start justify-between mb-3 gap-3">
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center space-x-2 mb-2">
+          <div className="w-4 h-4 bg-slate-200 dark:bg-slate-700 rounded"></div>
+          <div className="h-5 bg-slate-200 dark:bg-slate-700 rounded w-48"></div>
+        </div>
+        <div className="flex items-center space-x-3 mb-2">
+          <div className="w-4 h-4 bg-slate-200 dark:bg-slate-700 rounded"></div>
+          <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-24"></div>
+        </div>
+        <div className="flex items-center space-x-2 mb-2">
+          <div className="w-4 h-4 bg-slate-200 dark:bg-slate-700 rounded"></div>
+          <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-32"></div>
+        </div>
+        <div className="w-full bg-slate-200 dark:bg-slate-700 rounded h-2 mb-2"></div>
+        <div className="h-3 bg-slate-200 dark:bg-slate-700 rounded w-20"></div>
+      </div>
+      <div className="flex flex-col gap-2">
+        <div className="h-8 bg-slate-200 dark:bg-slate-700 rounded w-20"></div>
+        <div className="h-6 bg-slate-200 dark:bg-slate-700 rounded w-16"></div>
+      </div>
+    </div>
+  </div>
+);
+
 export function StreamsList() {
   const [streams, setStreams] = useState<PlexSession[]>([]);
   const [loading, setLoading] = useState(true);
@@ -288,35 +316,6 @@ export function StreamsList() {
     return `Updated ${diffInMinutes}m ago`;
   };
 
-  if (loading) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center text-lg sm:text-xl">
-            <Tv className="w-5 h-5 mr-2" />
-            Active Streams
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col items-center justify-center h-32 sm:h-40">
-            <div className="flex items-center space-x-1 mb-4">
-              <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce"></div>
-              <div
-                className="w-2 h-2 bg-blue-600 rounded-full animate-bounce"
-                style={{ animationDelay: "0.1s" }}
-              ></div>
-              <div
-                className="w-2 h-2 bg-blue-600 rounded-full animate-bounce"
-                style={{ animationDelay: "0.2s" }}
-              ></div>
-            </div>
-            <p className="text-sm text-muted-foreground">Loading streams...</p>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
   return (
     <Card {...swipeHandlers}>
       <CardHeader>
@@ -399,6 +398,15 @@ export function StreamsList() {
               Try Again
             </Button>
           </div>
+        ) : loading || refreshing ? (
+          // Show skeleton loading
+          <ScrollArea className="h-[50vh] max-h-[400px] sm:max-h-[500px] lg:max-h-[600px]">
+            <div className="space-y-3 sm:space-y-4">
+              {Array.from({ length: 3 }, (_, i) => (
+                <StreamSkeleton key={`stream-skeleton-${i}`} />
+              ))}
+            </div>
+          </ScrollArea>
         ) : filteredStreams.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-32 sm:h-40 text-slate-500 dark:text-slate-400 text-center">
             {searchTerm ? (
