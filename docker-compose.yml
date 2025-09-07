@@ -4,17 +4,15 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-      args:
-        - PLEXGUARD_API_PORT=${PLEXGUARD_API_PORT:-3001}
-    container_name: plexguard-backend
+    container_name: guardian-backend
     ports:
-      - "${PLEXGUARD_API_PORT:-3001}:${PLEXGUARD_API_PORT:-3001}"
+      - "${PLEXGUARD_API_PORT:-3001}:3001"
     env_file:
       - .env
     environment:
-      - NODE_ENV=production
-      - PLEXGUARD_API_PORT=${PLEXGUARD_API_PORT:-3001}
-      - DATABASE_PATH=/app/data/plex-guard.db
+      NODE_ENV: production
+      PLEXGUARD_API_PORT: ${PLEXGUARD_API_PORT:-3001}
+      DATABASE_PATH: /app/data/plex-guard.db
     volumes:
       - backend_data:/app/data
     restart: unless-stopped
@@ -24,19 +22,14 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-      args:
-        - PLEXGUARD_FRONTEND_PORT=${PLEXGUARD_FRONTEND_PORT:-3000}
-        - PLEXGUARD_API_PORT=${PLEXGUARD_API_PORT:-3001}
-        - PLEXGUARD_BACKEND_URL=${PLEXGUARD_BACKEND_URL}
-    container_name: plexguard-frontend
+    container_name: guardian-frontend
     ports:
-      - "${PLEXGUARD_FRONTEND_PORT:-3000}:${PLEXGUARD_FRONTEND_PORT:-3000}"
+      - "${PLEXGUARD_FRONTEND_PORT:-3000}:3000"
     environment:
-      - NODE_ENV=production
-      - NEXT_PUBLIC_BACKEND_URL=${PLEXGUARD_BACKEND_URL}
-      - NEXT_PUBLIC_API_URL=${PLEXGUARD_BACKEND_URL:-http://localhost:${PLEXGUARD_API_PORT:-3001}}
-      - NEXT_PUBLIC_API_PORT=${PLEXGUARD_API_PORT:-3001}
-      - PORT=${PLEXGUARD_FRONTEND_PORT:-3000}
+      NODE_ENV: production
+      PORT: ${PLEXGUARD_FRONTEND_PORT:-3000}
+      # ✅ runtime-configurable; change in .env and just restart the container
+      PLEXGUARD_BACKEND_URL: ${PLEXGUARD_BACKEND_URL:-http://backend:3001}
     depends_on:
       - backend
     restart: unless-stopped
