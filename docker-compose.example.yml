@@ -1,0 +1,35 @@
+services:
+  backend:
+    image: hydroshieldmkii/guardian-backend:${VERSION:-latest}
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: guardian-backend
+    # No external port exposure needed - only accessible via proxy
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      DATABASE_PATH: /app/data/plex-guard.db
+    volumes:
+      - backend_data:/app/data
+    restart: unless-stopped
+
+  frontend:
+    image: hydroshieldmkii/guardian-frontend:${VERSION:-latest}
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: guardian-frontend
+    ports:
+      - "${PLEXGUARD_FRONTEND_PORT:-3000}:3000"
+    environment:
+      NODE_ENV: production
+      PORT: ${PLEXGUARD_FRONTEND_PORT:-3000}
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  backend_data:
+    driver: local
