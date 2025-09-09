@@ -149,7 +149,7 @@ export function Dashboard() {
                       {plexStatus?.configured ? (
                         <CheckCircle className="h-5 w-5 text-amber-500" />
                       ) : (
-                        <WifiOff className="h-5 w-5 text-red-500" />
+                        <WifiOff className="h-5 w-5 text-red-400" />
                       )}
                     </div>
                     <div className="flex-1">

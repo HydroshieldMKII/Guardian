@@ -12,6 +12,7 @@ import { ConfigService } from '../modules/config/services/config.service';
 export class SchedulerService implements OnModuleInit {
   private readonly logger = new Logger(SchedulerService.name);
   private intervalId: NodeJS.Timeout | null = null;
+  private currentInterval: number;
 
   constructor(
     private readonly plexService: PlexService,
@@ -20,7 +21,19 @@ export class SchedulerService implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
-    this.startSessionUpdates();
+    await this.startSessionUpdates();
+  }
+  async restartScheduler() {
+    this.logger.log('Restarting scheduler with updated interval...');
+    this.stopScheduler();
+    await this.startSessionUpdates();
+  }
+
+  private stopScheduler() {
+    if (this.intervalId) {
+      clearInterval(this.intervalId);
+      this.intervalId = null;
+    }
   }
 
   private async startSessionUpdates() {
@@ -28,14 +41,33 @@ export class SchedulerService implements OnModuleInit {
       const refreshInterval = await this.configService.getSetting(
         'PLEXGUARD_REFRESH_INTERVAL',
       );
-      const intervalMs = (parseInt(refreshInterval as string, 10) || 10) * 1000;
+      const intervalSeconds = parseInt(refreshInterval as string, 10) || 10;
+      const intervalMs = intervalSeconds * 1000;
 
-      this.logger.log(
-        `Starting session update scheduler (interval: ${parseInt(refreshInterval as string, 10) || 10}s)`,
-      );
+      // Check if interval has changed
+      if (this.currentInterval !== intervalSeconds) {
+        this.currentInterval = intervalSeconds;
+        this.logger.log(
+          `Starting session update scheduler (interval: ${intervalSeconds}s)`,
+        );
+      }
 
       this.intervalId = setInterval(async () => {
         try {
+          // Check if interval setting has changed every few iterations to avoid constant DB queries
+          const currentRefreshInterval = await this.configService.getSetting(
+            'PLEXGUARD_REFRESH_INTERVAL',
+          );
+          const currentIntervalSeconds = parseInt(currentRefreshInterval as string, 10) || 10;
+          
+          if (this.currentInterval !== currentIntervalSeconds) {
+            this.logger.log(
+              `Interval changed from ${this.currentInterval}s to ${currentIntervalSeconds}s, restarting scheduler...`
+            );
+            await this.restartScheduler();
+            return;
+          }
+
           // Check if Plex is properly configured before attempting to update sessions
           const [ip, port, token] = await Promise.all([
             this.configService.getSetting('PLEX_SERVER_IP'),
@@ -60,6 +92,7 @@ export class SchedulerService implements OnModuleInit {
       this.logger.error('Error starting scheduler:', error);
       // Fallback to default interval
       const fallbackInterval = 10 * 1000;
+      this.currentInterval = 10;
       this.logger.log(`Using fallback interval: 10s`);
 
       this.intervalId = setInterval(async () => {
@@ -88,10 +121,7 @@ export class SchedulerService implements OnModuleInit {
   }
 
   onModuleDestroy() {
-    if (this.intervalId) {
-      clearInterval(this.intervalId);
-      this.intervalId = null;
-      this.logger.log('Session update scheduler stopped');
-    }
+    this.stopScheduler();
+    this.logger.log('Session update scheduler stopped');
   }
 }

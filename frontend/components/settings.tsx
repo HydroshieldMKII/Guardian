@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
+import { useToast } from "@/hooks/use-toast";
 import {
   User,
   Bell,
@@ -53,18 +54,18 @@ const settingsSections = [
     description: "Configure Guardian behavior and settings",
     icon: Shield,
   },
-  {
-    id: "notifications",
-    title: "Notifications",
-    description: "Configure notification preferences and alert settings",
-    icon: Bell,
-  },
-  {
-    id: "profile",
-    title: "Profile",
-    description: "Manage your account profile and personal information",
-    icon: User,
-  },
+  // {
+  //   id: "notifications",
+  //   title: "Notifications",
+  //   description: "Configure notification preferences and alert settings",
+  //   icon: Bell,
+  // },
+  // {
+  //   id: "profile",
+  //   title: "Profile",
+  //   description: "Manage your account profile and personal information",
+  //   icon: User,
+  // },
 ];
 
 export function Settings({ onBack }: { onBack?: () => void } = {}) {
@@ -79,6 +80,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
     success: boolean;
     message: string;
   } | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     fetchSettings();
@@ -169,6 +171,11 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
         .map(([key, value]) => ({ key, value }));
 
       if (settingsToUpdate.length === 0) {
+        toast({
+          title: "No changes to save",
+          description: "No settings have been modified.",
+          variant: "default",
+        });
         return;
       }
 
@@ -178,6 +185,11 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
         setConnectionStatus({
           success: false,
           message: `Validation error: ${validationErrors.join(", ")}`,
+        });
+        toast({
+          title: "Validation Error",
+          description: validationErrors.join(", "),
+          variant: "destructive",
         });
         return;
       }
@@ -193,6 +205,13 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
       if (response.ok) {
         await fetchSettings(); // Refresh settings
 
+        // Show success toast
+        toast({
+          title: "Settings saved",
+          description: `Successfully updated ${settingsToUpdate.length} setting${settingsToUpdate.length !== 1 ? 's' : ''}`,
+          variant: "success",
+        });
+
         // Auto-test Plex connection if Plex settings were changed
         if (shouldAutoTestConnection(settingsToUpdate)) {
           setConnectionStatus({
@@ -206,9 +225,23 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
         } else {
           setConnectionStatus(null); // Clear connection status for non-Plex changes
         }
+      } else {
+        // Handle save error
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.error || `Server error (${response.status})`;
+        toast({
+          title: "Failed to save settings",
+          description: errorMessage,
+          variant: "destructive",
+        });
       }
     } catch (error) {
       console.error("Failed to save settings:", error);
+      toast({
+        title: "Network Error",
+        description: "Failed to save settings. Please check your connection.",
+        variant: "destructive",
+      });
     } finally {
       setSaving(false);
     }
@@ -227,15 +260,24 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
       } else {
         // Try to get the error message from the response
         const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.message || `Server error (${response.status})`;
         setConnectionStatus({
           success: false,
-          message: errorData.message || `Server error (${response.status})`,
+          message: errorMessage,
         });
       }
     } catch (error) {
+      const errorMessage = "Failed to test connection - unable to reach server";
       setConnectionStatus({
         success: false,
-        message: "Failed to test connection - unable to reach server",
+        message: errorMessage,
+      });
+      
+      // Only show toast if it's a network/backend error (unable to reach server)
+      toast({
+        title: "Network Error",
+        description: errorMessage,
+        variant: "destructive",
       });
     } finally {
       setTestingConnection(false);
@@ -430,7 +472,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
                     <div
                       className={`flex items-center space-x-1 text-sm ${
                         connectionStatus.success
-                          ? "text-green-600"
+                          ? "text-green-500"
                           : "text-yellow-600"
                       }`}
                     >
@@ -562,15 +604,15 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
         {/* Backend Error Display */}
         {backendError && (
           <div className="mb-6">
-            <Card className="border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20">
+            <Card className="border-red-200 bg-red-50 dark:border-red-700 dark:bg-red-950/20">
               <CardContent>
                 <div className="flex items-center gap-3">
-                  <XCircle className="h-5 w-5 text-red-600 dark:text-red-400 shrink-0" />
+                  <XCircle className="h-5 w-5 text-red-500 dark:text-red-400 shrink-0" />
                   <div className="flex-1">
-                    <h3 className="font-semibold text-red-900 dark:text-red-100 mb-1">
+                    <h3 className="font-semibold text-red-800 dark:text-red-200 mb-1">
                       Backend Connection Error
                     </h3>
-                    <p className="text-sm text-red-700 dark:text-red-200">
+                    <p className="text-sm text-red-600 dark:text-red-300">
                       {backendError}
                     </p>
                   </div>
@@ -578,7 +620,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
                     variant="outline"
                     size="sm"
                     onClick={fetchSettings}
-                    className="border-red-300 text-red-700 hover:bg-red-100 dark:border-red-600 dark:text-red-300 dark:hover:bg-red-800/30"
+                    className="border-red-300 text-red-600 hover:bg-red-100 dark:border-red-600 dark:text-red-400 dark:hover:bg-red-900/20"
                   >
                     <RefreshCw className="h-4 w-4 mr-2" />
                     Retry
