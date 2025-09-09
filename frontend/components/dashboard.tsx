@@ -83,16 +83,6 @@ export function Dashboard() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900">
       <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-8">
-        {/* Header */}
-        <div className="mb-6 sm:mb-8">
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-900 dark:text-slate-100 mb-2">
-            Guardian Dashboard
-          </h1>
-          <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400">
-            Monitor active streams and manage device access
-          </p>
-        </div>
-
         {/* Stats Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-8">
           <Card className="border-l-4 border-l-blue-500">
