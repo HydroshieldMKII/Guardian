@@ -43,15 +43,10 @@ The easiest way to deploy Guardian is using Docker Compose:
    cd Guardian
    ```
 
-2. **Setup environment variables**:
+2. **Setup configuration**:
 
    ```bash
-   # Copy compose config
    cp docker-compose.example.yml docker-compose.yml
-
-   # Copy and edit .env file
-   cp .env.example .env
-   nano .env
    ```
 
 3. **Start the services**:
@@ -71,36 +66,6 @@ If you use a container management system like Portainer, you can pull the images
 ```bash
 docker pull hydroshieldmkii/guardian-backend
 docker pull hydroshieldmkii/guardian-frontend
-```
-
-don't forget to set the environment variables to configure the app.
-
-## Configuration
-
-Edit the `.env` file with your Plex server details:
-
-```bash
-# Plex Server Configuration
-PLEX_TOKEN=plex_token_here #https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/
-PLEX_SERVER_IP=server_ip_here
-PLEX_SERVER_PORT=32400
-USE_SSL=false # Set to true if your Plex server uses SSL
-IGNORE_CERT_ERRORS=true # Set to true to ignore SSL certificate errors (useful if you use the plex local IP address)
-
-# Guardian Configuration
-PLEXGUARD_REFRESH_INTERVAL=10 # Interval in seconds to refresh the device list from Plex and block devices
-PLEX_GUARD_DEFAULT_BLOCK=true # Set to true to block unapproved devices by default
-PLEXGUARD_STOPMSG="This device must be approved by the server owner. Please contact the server administrator for more information."
-VERSION=latest
-
-# Port Configuration
-PLEXGUARD_FRONTEND_PORT=3000
-```
-
-If you already have Guardian running and want to change the configuration, simply update the `.env` file and restart the services:
-
-```bash
-docker compose up -d --force-recreate
 ```
 
 ## Update Guardian

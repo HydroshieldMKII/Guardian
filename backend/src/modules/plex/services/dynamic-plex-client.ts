@@ -1,18 +1,15 @@
-import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '../../config/services/config.service';
 import * as http from 'http';
 import * as https from 'https';
-import { ConfigService } from '../../config/services/config.service';
 
 @Injectable()
-export class PlexClient {
-  private readonly logger = new Logger(PlexClient.name);
+export class DynamicPlexClient {
+  private readonly logger = new Logger(DynamicPlexClient.name);
 
-  constructor(
-    @Inject(forwardRef(() => ConfigService))
-    private configService: ConfigService,
-  ) {}
+  constructor(private readonly configService: ConfigService) {}
 
-  private async getConfig() {
+  private async getConnectionSettings() {
     const [ip, port, token, useSSL, ignoreCertErrors] = await Promise.all([
       this.configService.getSetting('PLEX_SERVER_IP'),
       this.configService.getSetting('PLEX_SERVER_PORT'),
@@ -21,23 +18,21 @@ export class PlexClient {
       this.configService.getSetting('IGNORE_CERT_ERRORS'),
     ]);
 
-    return {
-      ip: ip as string,
-      port: port as string,
-      token: token as string,
-      useSSL: useSSL === 'true' || useSSL === true,
-      ignoreCertErrors: ignoreCertErrors === 'true' || ignoreCertErrors === true,
-    };
-  }
-
-  private async validateConfiguration() {
-    const { ip, port, token } = await this.getConfig();
-    
     if (!ip || !port || !token) {
       throw new Error(
-        'Missing required Plex configuration. Please configure PLEX_SERVER_IP, PLEX_SERVER_PORT, and PLEX_TOKEN in settings.',
+        'Missing required Plex configuration: PLEX_SERVER_IP, PLEX_SERVER_PORT, PLEX_TOKEN',
       );
     }
+
+    const protocol = useSSL ? 'https' : 'http';
+    return {
+      ip,
+      port,
+      token,
+      useSSL,
+      ignoreCertErrors,
+      baseUrl: `${protocol}://${ip}:${port}`,
+    };
   }
 
   async request(
@@ -48,21 +43,19 @@ export class PlexClient {
       headers?: Record<string, string>;
     } = {},
   ): Promise<any> {
-    await this.validateConfiguration();
-    const { ip, port, token, useSSL, ignoreCertErrors } = await this.getConfig();
-    const baseUrl = `${useSSL ? 'https' : 'http'}://${ip}:${port}`;
-
+    const settings = await this.getConnectionSettings();
+    
     return new Promise((resolve, reject) => {
       const cleanEndpoint = endpoint.startsWith('/')
         ? endpoint.slice(1)
         : endpoint;
       const hasQuery = cleanEndpoint.includes('?');
-      const tokenParam = `X-Plex-Token=${encodeURIComponent(token)}`;
+      const tokenParam = `X-Plex-Token=${encodeURIComponent(settings.token)}`;
       const fullEndpoint = hasQuery
         ? `${cleanEndpoint}&${tokenParam}`
         : `${cleanEndpoint}?${tokenParam}`;
 
-      const fullUrl = `${baseUrl}/${fullEndpoint}`;
+      const fullUrl = `${settings.baseUrl}/${fullEndpoint}`;
       const urlObj = new URL(fullUrl);
 
       const requestOptions = {
@@ -75,12 +68,10 @@ export class PlexClient {
           'X-Plex-Client-Identifier': 'Guardian',
           ...options.headers,
         },
-        rejectUnauthorized: !ignoreCertErrors,
+        rejectUnauthorized: !settings.ignoreCertErrors,
       };
 
-      // this.logger.debug(`Making request to: ${fullUrl}`);
-
-      const httpModule = useSSL ? https : http;
+      const httpModule = settings.useSSL ? https : http;
 
       const req = httpModule.request(requestOptions, (res) => {
         let data = '';
@@ -143,11 +134,14 @@ export class PlexClient {
 
   async terminateSession(
     sessionKey: string,
-    reason: string = 'Session terminated',
+    reason?: string,
   ): Promise<void> {
+    const stopMessage = await this.configService.getSetting('PLEXGUARD_STOPMSG');
+    const finalReason = reason || stopMessage || 'Session terminated';
+    
     const params = new URLSearchParams({
       sessionId: sessionKey,
-      reason: reason,
+      reason: finalReason,
     });
 
     await this.request(`status/sessions/terminate?${params.toString()}`, {
@@ -157,57 +151,13 @@ export class PlexClient {
     this.logger.log(`Successfully terminated session ${sessionKey}`);
   }
 
-  async testConnection(): Promise<{ ok: boolean; status: number; message?: string }> {
+  async testConnection(): Promise<{ ok: boolean; status: number }> {
     try {
-      await this.validateConfiguration();
       const response = await this.request('/');
-      return { 
-        ok: response.ok, 
-        status: response.status,
-        message: response.ok ? 'Connection successful' : 'Connection failed'
-      };
+      return { ok: response.ok, status: response.status };
     } catch (error) {
       this.logger.error('Connection test failed:', error);
-      
-      // Handle specific SSL/TLS errors
-      if (error.code === 'ERR_TLS_CERT_ALTNAME_INVALID') {
-        return { 
-          ok: false, 
-          status: 0, 
-          message: 'SSL certificate error: Hostname/IP does not match certificate. Enable "Ignore SSL certificate errors" or use HTTP instead.' 
-        };
-      }
-      
-      if (error.code && error.code.startsWith('ERR_TLS_')) {
-        return { 
-          ok: false, 
-          status: 0, 
-          message: `SSL/TLS error: ${error.message}. Consider enabling "Ignore SSL certificate errors" or using HTTP.` 
-        };
-      }
-      
-      // Handle connection refused, timeout, etc.
-      if (error.code === 'ECONNREFUSED') {
-        return { 
-          ok: false, 
-          status: 0, 
-          message: 'Connection refused. Check if Plex server is running and accessible.' 
-        };
-      }
-      
-      if (error.code === 'ECONNRESET' || error.message.includes('timeout')) {
-        return { 
-          ok: false, 
-          status: 0, 
-          message: 'Connection timeout. Check server address and port.' 
-        };
-      }
-      
-      return { 
-        ok: false, 
-        status: 0, 
-        message: `Connection failed: ${error.message}` 
-      };
+      return { ok: false, status: 0 };
     }
   }
 }

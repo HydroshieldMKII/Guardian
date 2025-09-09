@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -9,32 +9,48 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import {
   User,
   Bell,
-  Palette,
   Shield,
   Server,
-  Database,
-  Key,
-  Mail,
-  Moon,
-  Sun,
-  Monitor,
-  Volume2,
-  Smartphone,
-  AlertCircle,
   Save,
   RefreshCw,
+  CheckCircle,
+  XCircle,
+  Loader2,
 } from "lucide-react";
+
+interface AppSetting {
+  id: number;
+  key: string;
+  value: string;
+  description: string;
+  type: "string" | "number" | "boolean" | "json";
+  encrypted: boolean;
+  updatedAt: string;
+}
+
+interface SettingsFormData {
+  [key: string]: string | boolean | number;
+}
 
 const settingsSections = [
   {
-    id: "profile",
-    title: "Profile",
-    description: "Manage your account profile and personal information",
-    icon: User,
+    id: "plex",
+    title: "Plex Integration",
+    description: "Configure Plex server connection and settings",
+    icon: Server,
+  },
+  {
+    id: "guardian",
+    title: "Guardian Configuration",
+    description: "Configure Guardian behavior and settings",
+    icon: Shield,
   },
   {
     id: "notifications",
@@ -43,81 +59,379 @@ const settingsSections = [
     icon: Bell,
   },
   {
-    id: "theme",
-    title: "Theme & Appearance",
-    description: "Customize the look and feel of your dashboard",
-    icon: Palette,
-  },
-  {
-    id: "rules",
-    title: "Rules & Policies",
-    description: "Set up automated rules and access policies",
-    icon: Shield,
-  },
-  {
-    id: "integration",
-    title: "Plex Integration",
-    description: "Configure Plex server connection and settings",
-    icon: Server,
-  },
-  {
-    id: "database",
-    title: "Database",
-    description: "Manage database connections and backup settings",
-    icon: Database,
+    id: "profile",
+    title: "Profile",
+    description: "Manage your account profile and personal information",
+    icon: User,
   },
 ];
 
 export function Settings() {
-  const [activeSection, setActiveSection] = useState("profile");
+  const [activeSection, setActiveSection] = useState("plex");
+  const [settings, setSettings] = useState<AppSetting[]>([]);
+  const [formData, setFormData] = useState<SettingsFormData>({});
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [testingConnection, setTestingConnection] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<{
+    success: boolean;
+    message: string;
+  } | null>(null);
+
+  useEffect(() => {
+    fetchSettings();
+  }, []);
+
+  const fetchSettings = async () => {
+    try {
+      const response = await fetch("/api/pg/config");
+      if (response.ok) {
+        const data = await response.json();
+        setSettings(data);
+
+        // Initialize form data
+        const initialFormData: SettingsFormData = {};
+        data.forEach((setting: AppSetting) => {
+          if (setting.type === "boolean") {
+            initialFormData[setting.key] = setting.value === "true";
+          } else if (setting.type === "number") {
+            initialFormData[setting.key] = parseFloat(setting.value);
+          } else {
+            initialFormData[setting.key] = setting.encrypted
+              ? ""
+              : setting.value;
+          }
+        });
+        setFormData(initialFormData);
+      }
+    } catch (error) {
+      console.error("Failed to fetch settings:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleInputChange = (key: string, value: string | boolean | number) => {
+    setFormData((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const settingsToUpdate = Object.entries(formData)
+        .filter(([key, value]) => {
+          // Only include changed values
+          const originalSetting = settings.find((s) => s.key === key);
+          if (!originalSetting) return false;
+
+          let originalValue: any = originalSetting.value;
+          if (originalSetting.type === "boolean") {
+            originalValue = originalValue === "true";
+          } else if (originalSetting.type === "number") {
+            originalValue = parseFloat(originalValue);
+          }
+
+          return (
+            value !== originalValue &&
+            !(originalSetting.encrypted && value === "")
+          );
+        })
+        .map(([key, value]) => ({ key, value }));
+
+      if (settingsToUpdate.length === 0) {
+        return;
+      }
+
+      const response = await fetch("/api/pg/config", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(settingsToUpdate),
+      });
+
+      if (response.ok) {
+        await fetchSettings(); // Refresh settings
+        setConnectionStatus(null); // Clear connection status
+      }
+    } catch (error) {
+      console.error("Failed to save settings:", error);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleTestConnection = async () => {
+    setTestingConnection(true);
+    try {
+      const response = await fetch("/api/pg/config/test-plex-connection", {
+        method: "POST",
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        setConnectionStatus(result);
+      }
+    } catch (error) {
+      setConnectionStatus({
+        success: false,
+        message: "Failed to test connection",
+      });
+    } finally {
+      setTestingConnection(false);
+    }
+  };
+
+  const getSettingsByCategory = (category: string) => {
+    const categoryMap: Record<string, string[]> = {
+      plex: [
+        "PLEX_TOKEN",
+        "PLEX_SERVER_IP",
+        "PLEX_SERVER_PORT",
+        "USE_SSL",
+        // IGNORE_CERT_ERRORS will be handled specially with USE_SSL
+      ],
+      guardian: [
+        "PLEXGUARD_REFRESH_INTERVAL",
+        "PLEX_GUARD_DEFAULT_BLOCK",
+        "PLEXGUARD_STOPMSG",
+        "PLEXGUARD_FRONTEND_PORT",
+      ],
+    };
+
+    return settings.filter(
+      (setting) => categoryMap[category]?.includes(setting.key) || false
+    );
+  };
+
+  const renderSettingField = (setting: AppSetting) => {
+    const value = formData[setting.key];
+
+    if (setting.type === "boolean") {
+      return (
+        <div className="flex items-center justify-between">
+          <div className="space-y-0.5">
+            <Label>{setting.key.replace(/_/g, " ")}</Label>
+            <p className="text-xs text-muted-foreground">
+              {setting.description}
+            </p>
+          </div>
+          <Switch
+            checked={Boolean(value)}
+            onCheckedChange={(checked) =>
+              handleInputChange(setting.key, checked)
+            }
+          />
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-2">
+        <Label>{setting.key.replace(/_/g, " ")}</Label>
+        <Input
+          type={
+            setting.encrypted
+              ? "password"
+              : setting.type === "number"
+                ? "number"
+                : "text"
+          }
+          value={String(value || "")}
+          onChange={(e) => {
+            const newValue =
+              setting.type === "number"
+                ? parseFloat(e.target.value) || 0
+                : e.target.value;
+            handleInputChange(setting.key, newValue);
+          }}
+          placeholder={
+            setting.encrypted && !value ? "••••••••••••••••••••" : ""
+          }
+        />
+        <p className="text-xs text-muted-foreground">
+          {setting.description}
+          {setting.key === "PLEXGUARD_FRONTEND_PORT" && (
+            <span className="block mt-1 text-amber-600 dark:text-amber-400">
+              ⚠️ Restart the frontend server for port changes to take effect
+            </span>
+          )}
+        </p>
+      </div>
+    );
+  };
+
+  const renderSSLSettings = () => {
+    const useSSLSetting = settings.find(s => s.key === "USE_SSL");
+    const ignoreCertSetting = settings.find(s => s.key === "IGNORE_CERT_ERRORS");
+    
+    if (!useSSLSetting || !ignoreCertSetting) return null;
+    
+    const isSSLEnabled = Boolean(formData["USE_SSL"]);
+    
+    return (
+      <Card className="p-4">
+        <div className="space-y-4">
+          {/* Use SSL Setting */}
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label>Enable SSL</Label>
+              <p className="text-xs text-muted-foreground">
+                {useSSLSetting.description}
+              </p>
+            </div>
+            <Switch
+              checked={isSSLEnabled}
+              onCheckedChange={(checked) =>
+                handleInputChange("USE_SSL", checked)
+              }
+            />
+          </div>
+          
+          {/* Ignore Cert Errors Setting - Indented and conditional */}
+          <div className={`ml-4 pl-4 border-l-2 ${isSSLEnabled ? 'border-border' : 'border-muted'}`}>
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label className={!isSSLEnabled ? 'text-muted-foreground' : ''}>
+                  Ignore SSL certificate errors
+                </Label>
+                <p className={`text-xs ${!isSSLEnabled ? 'text-muted-foreground/60' : 'text-muted-foreground'}`}>
+                  {ignoreCertSetting.description}
+                </p>
+              </div>
+              <Switch
+                checked={Boolean(formData["IGNORE_CERT_ERRORS"])}
+                disabled={!isSSLEnabled}
+                onCheckedChange={(checked) =>
+                  handleInputChange("IGNORE_CERT_ERRORS", checked)
+                }
+              />
+            </div>
+          </div>
+        </div>
+      </Card>
+    );
+  };
 
   const renderSectionContent = (sectionId: string) => {
+    if (loading) {
+      return (
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="h-6 w-6 animate-spin" />
+        </div>
+      );
+    }
+
     switch (sectionId) {
-      case "profile":
+      case "plex":
         return (
           <div className="space-y-6">
             <div>
-              <h3 className="text-lg font-medium">Personal Information</h3>
+              <h3 className="text-lg font-medium">Plex Server Configuration</h3>
               <p className="text-sm text-muted-foreground">
-                Update your profile details and preferences.
+                Configure your connection to the Plex Media Server.
               </p>
             </div>
-            <div className="grid gap-6">
-              <Card className="p-4">
-                <div className="flex items-center space-x-4">
-                  <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center">
-                    <User className="h-8 w-8 text-muted-foreground" />
-                  </div>
-                  <div className="flex-1">
-                    <h4 className="text-sm font-medium">Profile Picture</h4>
-                    <p className="text-xs text-muted-foreground">
-                      Upload a new profile picture
+
+            <div className="space-y-4">
+              {getSettingsByCategory("plex")
+                .filter(setting => setting.key !== "USE_SSL") // Handle SSL settings separately
+                .map((setting) => (
+                <Card key={setting.key} className="p-4">
+                  {renderSettingField(setting)}
+                </Card>
+              ))}
+              
+              {/* Special SSL Settings Group */}
+              {renderSSLSettings()}
+            </div>
+
+            {/* Connection Test */}
+            <Card className="p-4">
+              <div className="space-y-4">
+                <h4 className="text-sm font-medium">Connection Test</h4>
+                <div className="flex items-center space-x-2">
+                  <Button
+                    onClick={handleTestConnection}
+                    disabled={testingConnection}
+                    size="sm"
+                    variant="outline"
+                  >
+                    {testingConnection ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <RefreshCw className="w-4 h-4 mr-2" />
+                    )}
+                    Test Connection
+                  </Button>
+
+                  {connectionStatus && (
+                    <div
+                      className={`flex items-center space-x-1 text-sm ${
+                        connectionStatus.success
+                          ? "text-green-600"
+                          : "text-red-600"
+                      }`}
+                    >
+                      {connectionStatus.success ? (
+                        <CheckCircle className="w-4 h-4" />
+                      ) : (
+                        <XCircle className="w-4 h-4" />
+                      )}
+                      <span>{connectionStatus.message}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </Card>
+          </div>
+        );
+
+      case "guardian":
+        return (
+          <div className="space-y-6">
+            <div>
+              <h3 className="text-lg font-medium">Guardian Configuration</h3>
+              <p className="text-sm text-muted-foreground">
+                Configure Guardian behavior and monitoring settings.
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              {getSettingsByCategory("guardian").map((setting) => (
+                <Card key={setting.key} className="p-4">
+                  {renderSettingField(setting)}
+                </Card>
+              ))}
+            </div>
+
+            {/* Port Change Notice */}
+            <Card className="p-4 bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800">
+              <div className="flex items-start space-x-3">
+                <div className="flex-shrink-0 mt-1">
+                  <RefreshCw className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                </div>
+                <div className="space-y-2">
+                  <h4 className="text-sm font-medium text-amber-800 dark:text-amber-200">
+                    Port Configuration
+                  </h4>
+                  <p className="text-xs text-amber-700 dark:text-amber-300">
+                    Changes to the frontend port will take effect on the next application restart. 
+                    Use the configuration-aware startup scripts to automatically apply the saved port setting.
+                  </p>
+                  <div className="space-y-1">
+                    <div className="text-xs text-amber-600 dark:text-amber-400 font-mono bg-amber-100 dark:bg-amber-900/30 px-2 py-1 rounded">
+                      <div className="font-semibold mb-1">Recommended startup commands:</div>
+                      <div>Development: <code>npm run dev:config</code></div>
+                      <div>Production: <code>npm run start:config</code></div>
+                    </div>
+                    <p className="text-xs text-amber-600 dark:text-amber-300">
+                      These scripts will automatically read the port configuration from the database before starting.
                     </p>
                   </div>
-                  <Button size="sm" variant="outline">
-                    Upload
-                  </Button>
                 </div>
-              </Card>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Card className="p-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Display Name</label>
-                    <div className="h-8 bg-muted rounded border flex items-center px-3 text-sm text-muted-foreground">
-                      Administrator
-                    </div>
-                  </div>
-                </Card>
-                <Card className="p-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Email</label>
-                    <div className="h-8 bg-muted rounded border flex items-center px-3 text-sm text-muted-foreground">
-                      admin@guardian.local
-                    </div>
-                  </div>
-                </Card>
               </div>
-            </div>
+            </Card>
           </div>
         );
 
@@ -130,241 +444,28 @@ export function Settings() {
                 Control how you receive notifications and alerts.
               </p>
             </div>
-            <div className="space-y-4">
-              {[
-                {
-                  icon: Mail,
-                  title: "Email Notifications",
-                  description: "Receive alerts via email",
-                },
-                {
-                  icon: Smartphone,
-                  title: "Push Notifications",
-                  description: "Browser push notifications",
-                },
-              ].map((item) => (
-                <Card key={item.title} className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <item.icon className="h-5 w-5 text-muted-foreground" />
-                      <div>
-                        <h4 className="text-sm font-medium">{item.title}</h4>
-                        <p className="text-xs text-muted-foreground">
-                          {item.description}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="w-10 h-6 bg-muted rounded-full relative">
-                      <div className="w-4 h-4 bg-background rounded-full absolute top-1 left-1 shadow-sm transition-transform"></div>
-                    </div>
-                  </div>
-                </Card>
-              ))}
-            </div>
+            <Card className="p-4">
+              <p className="text-sm text-muted-foreground">
+                Notification settings will be implemented in a future version.
+              </p>
+            </Card>
           </div>
         );
 
-      case "theme":
+      case "profile":
         return (
           <div className="space-y-6">
             <div>
-              <h3 className="text-lg font-medium">Theme & Appearance</h3>
+              <h3 className="text-lg font-medium">Profile Settings</h3>
               <p className="text-sm text-muted-foreground">
-                Customize the visual appearance of your dashboard.
+                Manage your account profile and preferences.
               </p>
             </div>
-            <div className="space-y-4">
-              <Card className="p-4">
-                <div className="space-y-4">
-                  <h4 className="text-sm font-medium">Theme Mode</h4>
-                  <div className="grid grid-cols-3 gap-3">
-                    {[
-                      { icon: Sun, label: "Light", active: false },
-                      { icon: Moon, label: "Dark", active: true },
-                      { icon: Monitor, label: "System", active: false },
-                    ].map((theme) => (
-                      <div
-                        key={theme.label}
-                        className={`p-3 border-2 rounded-lg cursor-pointer transition-colors ${
-                          theme.active
-                            ? "border-primary bg-primary/5"
-                            : "border-muted"
-                        }`}
-                      >
-                        <div className="flex flex-col items-center space-y-2">
-                          <theme.icon className="h-5 w-5" />
-                          <span className="text-xs font-medium">
-                            {theme.label}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </Card>
-              <Card className="p-4">
-                <div className="space-y-4">
-                  <h4 className="text-sm font-medium">Color Scheme</h4>
-                  <div className="grid grid-cols-6 gap-2">
-                    {["blue", "green", "purple", "orange", "red", "pink"].map(
-                      (color) => (
-                        <div
-                          key={color}
-                          className={`w-10 h-10 rounded-full cursor-pointer ring-2 ring-offset-2 ${
-                            color === "blue"
-                              ? "ring-primary"
-                              : "ring-transparent"
-                          }`}
-                          style={{ backgroundColor: `var(--${color}-500)` }}
-                        />
-                      )
-                    )}
-                  </div>
-                </div>
-              </Card>
-            </div>
-          </div>
-        );
-
-      case "rules":
-        return (
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-lg font-medium">Rules & Policies</h3>
+            <Card className="p-4">
               <p className="text-sm text-muted-foreground">
-                Configure automated rules and access control policies.
+                Profile settings will be implemented in a future version.
               </p>
-            </div>
-            <div className="space-y-4">
-              <Card className="p-4">
-                <div className="space-y-4">
-                  <h4 className="text-sm font-medium">Access Control</h4>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between p-2 bg-muted rounded">
-                      <span className="text-sm">
-                        Auto-approve trusted devices
-                      </span>
-                      <div className="w-10 h-6 bg-primary rounded-full relative">
-                        <div className="w-4 h-4 bg-white rounded-full absolute top-1 right-1 shadow-sm"></div>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between p-2 bg-muted rounded">
-                      <span className="text-sm">
-                        Require admin approval for new devices
-                      </span>
-                      <div className="w-10 h-6 bg-primary rounded-full relative">
-                        <div className="w-4 h-4 bg-white rounded-full absolute top-1 right-1 shadow-sm"></div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </Card>
-              <Card className="p-4">
-                <div className="space-y-4">
-                  <h4 className="text-sm font-medium">Stream Limits</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">
-                        Max concurrent streams
-                      </label>
-                      <div className="h-8 bg-muted rounded border flex items-center px-3 text-sm text-muted-foreground">
-                        5
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">
-                        Session timeout (minutes)
-                      </label>
-                      <div className="h-8 bg-muted rounded border flex items-center px-3 text-sm text-muted-foreground">
-                        30
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </Card>
-            </div>
-          </div>
-        );
-
-      case "integration":
-        return (
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-lg font-medium">Plex Integration</h3>
-              <p className="text-sm text-muted-foreground">
-                Configure your Plex server connection and integration settings.
-              </p>
-            </div>
-            <div className="space-y-4">
-              <Card className="p-4">
-                <div className="space-y-4">
-                  <h4 className="text-sm font-medium">Server Connection</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Server URL</label>
-                      <div className="h-8 bg-muted rounded border flex items-center px-3 text-sm text-muted-foreground">
-                        http://localhost:32400
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">
-                        Connection Status
-                      </label>
-                      <div className="flex items-center space-x-2">
-                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                        <span className="text-sm text-green-600">
-                          Connected
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </Card>
-              <Card className="p-4">
-                <div className="space-y-4">
-                  <h4 className="text-sm font-medium">Authentication</h4>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Plex Token</label>
-                    <div className="h-8 bg-muted rounded border flex items-center px-3 text-sm text-muted-foreground">
-                      ••••••••••••••••••••
-                    </div>
-                  </div>
-                  <Button size="sm" variant="outline">
-                    <Key className="w-4 h-4 mr-2" />
-                    Update Token
-                  </Button>
-                </div>
-              </Card>
-            </div>
-          </div>
-        );
-
-      case "database":
-        return (
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-lg font-medium">Database Settings</h3>
-              <p className="text-sm text-muted-foreground">
-                Manage database connections, backups, and maintenance.
-              </p>
-            </div>
-            <div className="space-y-4">
-              <Card className="p-4">
-                <div className="space-y-4">
-                  <h4 className="text-sm font-medium">Backup & Maintenance</h4>
-                  <div className="flex space-x-2">
-                    <Button size="sm" variant="outline">
-                      <Database className="w-4 h-4 mr-2" />
-                      Create Backup
-                    </Button>
-                    <Button size="sm" variant="outline">
-                      <RefreshCw className="w-4 h-4 mr-2" />
-                      Optimize Database
-                    </Button>
-                  </div>
-                </div>
-              </Card>
-            </div>
+            </Card>
           </div>
         );
 
@@ -377,6 +478,24 @@ export function Settings() {
           </div>
         );
     }
+  };
+
+  const hasChanges = () => {
+    return Object.entries(formData).some(([key, value]) => {
+      const originalSetting = settings.find((s) => s.key === key);
+      if (!originalSetting) return false;
+
+      let originalValue: any = originalSetting.value;
+      if (originalSetting.type === "boolean") {
+        originalValue = originalValue === "true";
+      } else if (originalSetting.type === "number") {
+        originalValue = parseFloat(originalValue);
+      }
+
+      return (
+        value !== originalValue && !(originalSetting.encrypted && value === "")
+      );
+    });
   };
 
   return (
@@ -427,15 +546,32 @@ export function Settings() {
             <CardContent className="p-6">
               {renderSectionContent(activeSection)}
 
-              {/* Save Button */}
-              <Separator className="my-6" />
-              <div className="flex justify-end space-x-2">
-                <Button variant="outline">Cancel</Button>
-                <Button>
-                  <Save className="w-4 h-4 mr-2" />
-                  Save Changes
-                </Button>
-              </div>
+              {/* Save Button - Only show for configurable sections */}
+              {(activeSection === "plex" || activeSection === "guardian") && (
+                <>
+                  <Separator className="my-6" />
+                  <div className="flex justify-end space-x-2">
+                    <Button
+                      variant="outline"
+                      onClick={fetchSettings}
+                      disabled={saving}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={handleSave}
+                      disabled={saving || !hasChanges()}
+                    >
+                      {saving ? (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      ) : (
+                        <Save className="w-4 h-4 mr-2" />
+                      )}
+                      Save Changes
+                    </Button>
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
         </div>

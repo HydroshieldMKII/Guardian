@@ -1,8 +1,9 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UserPreference } from '../../../entities/user-preference.entity';
 import { UserDevice } from '../../../entities/user-device.entity';
+import { ConfigService } from '../../config/services/config.service';
 
 @Injectable()
 export class UsersService {
@@ -13,6 +14,8 @@ export class UsersService {
     private readonly userPreferenceRepository: Repository<UserPreference>,
     @InjectRepository(UserDevice)
     private readonly userDeviceRepository: Repository<UserDevice>,
+    @Inject(forwardRef(() => ConfigService))
+    private readonly configService: ConfigService,
   ) {}
 
   // Get all users with preferences, creating default entries if there is a device but no user preference
@@ -112,7 +115,10 @@ export class UsersService {
     const effectiveDefaultBlock =
       defaultBlock !== null
         ? defaultBlock
-        : process.env.PLEX_GUARD_DEFAULT_BLOCK === 'true';
+        : (await this.configService.getSetting('PLEX_GUARD_DEFAULT_BLOCK')) ===
+            'true' ||
+          (await this.configService.getSetting('PLEX_GUARD_DEFAULT_BLOCK')) ===
+            true;
 
     // Find all pending (blocked) devices for this user
     const pendingDevices = await this.userDeviceRepository.find({
@@ -145,7 +151,10 @@ export class UsersService {
       return preference.getDefaultBlockBoolean()!;
     }
 
-    // Otherwise use global default
-    return process.env.PLEX_GUARD_DEFAULT_BLOCK === 'true';
+    // Otherwise use global default from config
+    const defaultBlock = await this.configService.getSetting(
+      'PLEX_GUARD_DEFAULT_BLOCK',
+    );
+    return defaultBlock === 'true' || defaultBlock === true;
   }
 }

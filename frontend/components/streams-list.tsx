@@ -54,7 +54,7 @@ const ClickableIP = ({ ipAddress }: { ipAddress: string | null }) => {
     window.open(
       `https://ipinfo.io/${ipAddress}`,
       "_blank",
-      "noopener,noreferrer",
+      "noopener,noreferrer"
     );
   };
 
@@ -205,11 +205,11 @@ export function StreamsList() {
       setRevokingAuth(stream.sessionKey);
       const response = await fetch(
         `${config.api.baseUrl}/devices/revoke/${encodeURIComponent(
-          userId,
+          userId
         )}/${encodeURIComponent(deviceIdentifier)}`,
         {
           method: "POST",
-        },
+        }
       );
 
       if (response.ok) {
@@ -251,7 +251,7 @@ export function StreamsList() {
 
   const getProgressPercentage = (
     viewOffset: number = 0,
-    duration: number = 0,
+    duration: number = 0
   ) => {
     if (!duration) return 0;
     return Math.min(100, (viewOffset / duration) * 100);
@@ -261,7 +261,7 @@ export function StreamsList() {
     if (session.type === "episode" && session.grandparentTitle) {
       return `${session.grandparentTitle} - S${session.parentTitle?.replace(
         "Season ",
-        "",
+        ""
       )} ${session.title}`;
     }
     if (session.type === "movie") {
@@ -306,7 +306,7 @@ export function StreamsList() {
   const formatLastUpdate = () => {
     const now = new Date();
     const diffInSeconds = Math.floor(
-      (now.getTime() - lastUpdateTime.getTime()) / 1000,
+      (now.getTime() - lastUpdateTime.getTime()) / 1000
     );
 
     if (diffInSeconds < 60) {
@@ -486,7 +486,7 @@ export function StreamsList() {
                           setExpandedStream(
                             expandedStream === stream.sessionKey
                               ? null
-                              : stream.sessionKey,
+                              : stream.sessionKey
                           )
                         }
                         className="h-6 w-6 p-0 text-slate-400 hover:text-slate-600"
@@ -523,7 +523,7 @@ export function StreamsList() {
                           style={{
                             width: `${getProgressPercentage(
                               stream.viewOffset,
-                              stream.duration,
+                              stream.duration
                             )}%`,
                           }}
                         >

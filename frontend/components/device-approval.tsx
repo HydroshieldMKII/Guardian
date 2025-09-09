@@ -80,7 +80,7 @@ const ClickableIP = ({ ipAddress }: { ipAddress: string | null }) => {
     window.open(
       `https://ipinfo.io/${ipAddress}`,
       "_blank",
-      "noopener,noreferrer",
+      "noopener,noreferrer"
     );
   };
 
@@ -170,7 +170,7 @@ const UserPreferenceCard = memo(
               "Content-Type": "application/json",
             },
             body: JSON.stringify({ defaultBlock }),
-          },
+          }
         );
 
         if (response.ok) {
@@ -266,7 +266,7 @@ const UserPreferenceCard = memo(
         </div>
       </div>
     );
-  },
+  }
 );
 
 UserPreferenceCard.displayName = "UserPreferenceCard";
@@ -281,7 +281,7 @@ const DeviceApproval = memo(() => {
   const [actionLoading, setActionLoading] = useState<number | null>(null);
   const [selectedDevice, setSelectedDevice] = useState<UserDevice | null>(null);
   const [activeTab, setActiveTab] = useState<"pending" | "processed" | "users">(
-    "pending",
+    "pending"
   );
   const [searchDevices, setSearchDevices] = useState("");
   const [searchUsers, setSearchUsers] = useState("");
@@ -309,13 +309,13 @@ const DeviceApproval = memo(() => {
 
         // Fetch pending devices (truly new devices)
         const pendingResponse = await fetch(
-          `${config.api.baseUrl}/devices/pending`,
+          `${config.api.baseUrl}/devices/pending`
         );
         const pendingData: UserDevice[] = await pendingResponse.json();
 
         // Fetch processed devices (approved or rejected)
         const processedResponse = await fetch(
-          `${config.api.baseUrl}/devices/processed`,
+          `${config.api.baseUrl}/devices/processed`
         );
         const processedData: UserDevice[] = await processedResponse.json();
 
@@ -340,7 +340,7 @@ const DeviceApproval = memo(() => {
         setRefreshing(false);
       }
     },
-    [allDevices, pendingDevices, processedDevices],
+    [allDevices, pendingDevices, processedDevices]
   );
 
   const fetchUsers = useCallback(async (silent = false) => {
@@ -378,7 +378,7 @@ const DeviceApproval = memo(() => {
   // Filter and sort functions
   const filteredDevices = (
     deviceList: UserDevice[],
-    listType: "pending" | "processed" | "all" = "all",
+    listType: "pending" | "processed" | "all" = "all"
   ) => {
     let filtered = deviceList;
 
@@ -458,7 +458,7 @@ const DeviceApproval = memo(() => {
         `${config.api.baseUrl}/devices/${deviceId}/approve`,
         {
           method: "POST",
-        },
+        }
       );
 
       if (response.ok) {
@@ -467,13 +467,13 @@ const DeviceApproval = memo(() => {
           devices.map((device) =>
             device.id === deviceId
               ? { ...device, status: "approved" as const }
-              : device,
+              : device
           );
 
         setAllDevices(updateDeviceStatus);
         setProcessedDevices((prev) => updateDeviceStatus(prev));
         setPendingDevices((devices) =>
-          devices.filter((device) => device.id !== deviceId),
+          devices.filter((device) => device.id !== deviceId)
         );
 
         // Still fetch to ensure consistency
@@ -496,7 +496,7 @@ const DeviceApproval = memo(() => {
         `${config.api.baseUrl}/devices/${deviceId}/reject`,
         {
           method: "POST",
-        },
+        }
       );
 
       if (response.ok) {
@@ -505,13 +505,13 @@ const DeviceApproval = memo(() => {
           devices.map((device) =>
             device.id === deviceId
               ? { ...device, status: "rejected" as const }
-              : device,
+              : device
           );
 
         setAllDevices((prev) => updateDeviceStatus(prev));
         setProcessedDevices((prev) => updateDeviceStatus(prev));
         setPendingDevices((devices) =>
-          devices.filter((device) => device.id !== deviceId),
+          devices.filter((device) => device.id !== deviceId)
         );
 
         setTimeout(fetchDevices, 100);
@@ -533,7 +533,7 @@ const DeviceApproval = memo(() => {
         `${config.api.baseUrl}/devices/${deviceId}/delete`,
         {
           method: "POST",
-        },
+        }
       );
 
       if (response.ok) {
@@ -867,7 +867,7 @@ const DeviceApproval = memo(() => {
                         <div className="flex items-center space-x-2 mb-2">
                           {getDeviceIcon(
                             device.devicePlatform,
-                            device.deviceProduct,
+                            device.deviceProduct
                           )}
                           <h3 className="font-semibold text-slate-900 dark:text-slate-100 truncate">
                             {device.deviceName || device.deviceIdentifier}
@@ -1190,7 +1190,7 @@ const DeviceApproval = memo(() => {
               <div className="flex items-center gap-3 mb-2">
                 {getDeviceIcon(
                   confirmAction.device.devicePlatform,
-                  confirmAction.device.deviceProduct,
+                  confirmAction.device.deviceProduct
                 )}
                 <div>
                   <div className="text-sm font-medium text-slate-900 dark:text-slate-100">
