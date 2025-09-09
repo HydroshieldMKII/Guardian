@@ -23,6 +23,7 @@ import {
   CheckCircle,
   XCircle,
   Loader2,
+  ArrowLeft,
 } from "lucide-react";
 
 interface AppSetting {
@@ -66,7 +67,7 @@ const settingsSections = [
   },
 ];
 
-export function Settings() {
+export function Settings({ onBack }: { onBack?: () => void } = {}) {
   const [activeSection, setActiveSection] = useState("plex");
   const [settings, setSettings] = useState<AppSetting[]>([]);
   const [formData, setFormData] = useState<SettingsFormData>({});
@@ -115,6 +116,26 @@ export function Settings() {
     setFormData((prev) => ({ ...prev, [key]: value }));
   };
 
+  const validateSettings = (
+    settingsToUpdate: { key: string; value: any }[]
+  ) => {
+    const errors: string[] = [];
+    return errors;
+  };
+
+  const shouldAutoTestConnection = (
+    settingsToUpdate: { key: string; value: any }[]
+  ) => {
+    const plexKeys = [
+      "PLEX_SERVER_IP",
+      "PLEX_SERVER_PORT",
+      "PLEX_TOKEN",
+      "USE_SSL",
+      "IGNORE_CERT_ERRORS",
+    ];
+    return settingsToUpdate.some((update) => plexKeys.includes(update.key));
+  };
+
   const handleSave = async () => {
     setSaving(true);
     try {
@@ -142,6 +163,16 @@ export function Settings() {
         return;
       }
 
+      // Validate settings
+      const validationErrors = validateSettings(settingsToUpdate);
+      if (validationErrors.length > 0) {
+        setConnectionStatus({
+          success: false,
+          message: `Validation error: ${validationErrors.join(", ")}`,
+        });
+        return;
+      }
+
       const response = await fetch("/api/pg/config", {
         method: "PUT",
         headers: {
@@ -152,7 +183,20 @@ export function Settings() {
 
       if (response.ok) {
         await fetchSettings(); // Refresh settings
-        setConnectionStatus(null); // Clear connection status
+
+        // Auto-test Plex connection if Plex settings were changed
+        if (shouldAutoTestConnection(settingsToUpdate)) {
+          setConnectionStatus({
+            success: false,
+            message: "Testing connection with new settings...",
+          });
+          // Small delay to show the "testing" message
+          setTimeout(async () => {
+            await handleTestConnection();
+          }, 500);
+        } else {
+          setConnectionStatus(null); // Clear connection status for non-Plex changes
+        }
       }
     } catch (error) {
       console.error("Failed to save settings:", error);
@@ -195,7 +239,6 @@ export function Settings() {
         "PLEXGUARD_REFRESH_INTERVAL",
         "PLEX_GUARD_DEFAULT_BLOCK",
         "PLEXGUARD_STOPMSG",
-        "PLEXGUARD_FRONTEND_PORT",
       ],
     };
 
@@ -249,26 +292,21 @@ export function Settings() {
             setting.encrypted && !value ? "••••••••••••••••••••" : ""
           }
         />
-        <p className="text-xs text-muted-foreground">
-          {setting.description}
-          {setting.key === "PLEXGUARD_FRONTEND_PORT" && (
-            <span className="block mt-1 text-amber-600 dark:text-amber-400">
-              ⚠️ Restart the frontend server for port changes to take effect
-            </span>
-          )}
-        </p>
+        <p className="text-xs text-muted-foreground">{setting.description}</p>
       </div>
     );
   };
 
   const renderSSLSettings = () => {
-    const useSSLSetting = settings.find(s => s.key === "USE_SSL");
-    const ignoreCertSetting = settings.find(s => s.key === "IGNORE_CERT_ERRORS");
-    
+    const useSSLSetting = settings.find((s) => s.key === "USE_SSL");
+    const ignoreCertSetting = settings.find(
+      (s) => s.key === "IGNORE_CERT_ERRORS"
+    );
+
     if (!useSSLSetting || !ignoreCertSetting) return null;
-    
+
     const isSSLEnabled = Boolean(formData["USE_SSL"]);
-    
+
     return (
       <Card className="p-4">
         <div className="space-y-4">
@@ -287,15 +325,19 @@ export function Settings() {
               }
             />
           </div>
-          
+
           {/* Ignore Cert Errors Setting - Indented and conditional */}
-          <div className={`ml-4 pl-4 border-l-2 ${isSSLEnabled ? 'border-border' : 'border-muted'}`}>
+          <div
+            className={`ml-4 pl-4 border-l-2 ${isSSLEnabled ? "border-border" : "border-muted"}`}
+          >
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
-                <Label className={!isSSLEnabled ? 'text-muted-foreground' : ''}>
+                <Label className={!isSSLEnabled ? "text-muted-foreground" : ""}>
                   Ignore SSL certificate errors
                 </Label>
-                <p className={`text-xs ${!isSSLEnabled ? 'text-muted-foreground/60' : 'text-muted-foreground'}`}>
+                <p
+                  className={`text-xs ${!isSSLEnabled ? "text-muted-foreground/60" : "text-muted-foreground"}`}
+                >
                   {ignoreCertSetting.description}
                 </p>
               </div>
@@ -335,13 +377,13 @@ export function Settings() {
 
             <div className="space-y-4">
               {getSettingsByCategory("plex")
-                .filter(setting => setting.key !== "USE_SSL") // Handle SSL settings separately
+                .filter((setting) => setting.key !== "USE_SSL") // Handle SSL settings separately
                 .map((setting) => (
-                <Card key={setting.key} className="p-4">
-                  {renderSettingField(setting)}
-                </Card>
-              ))}
-              
+                  <Card key={setting.key} className="p-4">
+                    {renderSettingField(setting)}
+                  </Card>
+                ))}
+
               {/* Special SSL Settings Group */}
               {renderSSLSettings()}
             </div>
@@ -404,34 +446,6 @@ export function Settings() {
                 </Card>
               ))}
             </div>
-
-            {/* Port Change Notice */}
-            <Card className="p-4 bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800">
-              <div className="flex items-start space-x-3">
-                <div className="flex-shrink-0 mt-1">
-                  <RefreshCw className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-                </div>
-                <div className="space-y-2">
-                  <h4 className="text-sm font-medium text-amber-800 dark:text-amber-200">
-                    Port Configuration
-                  </h4>
-                  <p className="text-xs text-amber-700 dark:text-amber-300">
-                    Changes to the frontend port will take effect on the next application restart. 
-                    Use the configuration-aware startup scripts to automatically apply the saved port setting.
-                  </p>
-                  <div className="space-y-1">
-                    <div className="text-xs text-amber-600 dark:text-amber-400 font-mono bg-amber-100 dark:bg-amber-900/30 px-2 py-1 rounded">
-                      <div className="font-semibold mb-1">Recommended startup commands:</div>
-                      <div>Development: <code>npm run dev:config</code></div>
-                      <div>Production: <code>npm run start:config</code></div>
-                    </div>
-                    <p className="text-xs text-amber-600 dark:text-amber-300">
-                      These scripts will automatically read the port configuration from the database before starting.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </Card>
           </div>
         );
 
@@ -499,13 +513,15 @@ export function Settings() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900">
+    <div className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 min-h-[calc(100vh-3.5rem)]">
       <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-8">
         {/* Header */}
         <div className="mb-6 sm:mb-8">
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-900 dark:text-slate-100 mb-2">
-            Settings
-          </h1>
+          <div className="flex items-center gap-4 mb-2">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-900 dark:text-slate-100">
+              Settings
+            </h1>
+          </div>
           <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400">
             Configure your Guardian dashboard and preferences
           </p>

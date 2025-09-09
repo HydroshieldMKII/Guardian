@@ -72,14 +72,9 @@ export class ConfigService {
       },
       {
         key: 'PLEXGUARD_STOPMSG',
-        value: 'This device must be approved by the server owner. Please contact the server administrator for more information.',
+        value:
+          'This device must be approved by the server owner. Please contact the server administrator for more information.',
         description: 'Message shown when blocking streams',
-        type: 'string' as const,
-      },
-      {
-        key: 'PLEXGUARD_FRONTEND_PORT',
-        value: '3000',
-        description: 'Frontend application port',
         type: 'string' as const,
       },
     ];
@@ -102,7 +97,7 @@ export class ConfigService {
     const settings = await this.settingsRepository.find();
     for (const setting of settings) {
       let value: any = setting.value;
-      
+
       // Parse value based on type
       if (setting.type === 'boolean') {
         value = value === 'true';
@@ -115,7 +110,7 @@ export class ConfigService {
           this.logger.warn(`Failed to parse JSON for ${setting.key}: ${value}`);
         }
       }
-      
+
       this.cache.set(setting.key, value);
     }
   }
@@ -130,8 +125,8 @@ export class ConfigService {
     const settings = await this.settingsRepository.find({
       order: { key: 'ASC' },
     });
-    
-    return settings.map(setting => ({
+
+    return settings.map((setting) => ({
       id: setting.id,
       key: setting.key,
       description: setting.description,
@@ -184,7 +179,7 @@ export class ConfigService {
     setting.updatedAt = new Date();
 
     const updated = await this.settingsRepository.save(setting);
-    
+
     // Update cache
     let cacheValue = value;
     if (setting.type === 'boolean') {
@@ -194,16 +189,18 @@ export class ConfigService {
     } else if (setting.type === 'json') {
       cacheValue = value;
     }
-    
+
     this.cache.set(key, cacheValue);
-    
+
     this.logger.log(`Updated setting: ${key}`);
     return updated;
   }
 
-  async updateMultipleSettings(settings: ConfigSettingDto[]): Promise<AppSettings[]> {
+  async updateMultipleSettings(
+    settings: ConfigSettingDto[],
+  ): Promise<AppSettings[]> {
     const results: AppSettings[] = [];
-    
+
     for (const { key, value } of settings) {
       try {
         const updated = await this.updateSetting(key, value);
@@ -213,7 +210,7 @@ export class ConfigService {
         throw error;
       }
     }
-    
+
     return results;
   }
 
@@ -237,7 +234,7 @@ export class ConfigService {
       const testUrl = `${protocol}://${ip}:${port}/?X-Plex-Token=${token}`;
 
       const httpModule = protocol === 'https' ? https : http;
-      
+
       return new Promise((resolve) => {
         const urlObj = new URL(testUrl);
         const options = {
@@ -246,7 +243,9 @@ export class ConfigService {
           path: urlObj.pathname + urlObj.search,
           method: 'GET',
           timeout: 10000,
-          rejectUnauthorized: !(ignoreCertErrors === 'true' || ignoreCertErrors === true),
+          rejectUnauthorized: !(
+            ignoreCertErrors === 'true' || ignoreCertErrors === true
+          ),
         };
 
         const req = httpModule.request(options, (res: any) => {
@@ -265,18 +264,24 @@ export class ConfigService {
 
         req.on('error', (error: any) => {
           let message = `Connection failed: ${error.message}`;
-          
+
           // Handle specific SSL/TLS errors with helpful messages
           if (error.code === 'ERR_TLS_CERT_ALTNAME_INVALID') {
-            message = 'SSL certificate error: Hostname/IP does not match certificate. Enable "Ignore SSL certificate errors" or use HTTP instead.';
+            message =
+              'SSL certificate error: Hostname/IP does not match certificate. Enable "Ignore SSL certificate errors" or use HTTP instead.';
           } else if (error.code && error.code.startsWith('ERR_TLS_')) {
             message = `SSL/TLS error: ${error.message}. Consider enabling "Ignore SSL certificate errors" or using HTTP.`;
           } else if (error.code === 'ECONNREFUSED') {
-            message = 'Connection refused. Check if Plex server is running and accessible.';
-          } else if (error.code === 'ECONNRESET' || error.message.includes('timeout')) {
-            message = 'Connection timeout. Check server address and port.';
+            message =
+              'Connection refused. Check if Plex server is running and accessible.';
+          } else if (
+            error.code === 'ECONNRESET' ||
+            error.message.includes('timeout')
+          ) {
+            message =
+              'Connection timeout. Check server address, port and SSL settings.';
           }
-          
+
           resolve({
             success: false,
             message: message,
@@ -316,7 +321,7 @@ export class ConfigService {
       ]);
 
       const configured = !!(ip && port && token);
-      
+
       if (!configured) {
         return {
           configured: false,
@@ -327,7 +332,7 @@ export class ConfigService {
 
       // Test connection to determine status
       const connectionResult = await this.testPlexConnection();
-      
+
       return {
         configured: true,
         hasValidCredentials: connectionResult.success,

@@ -36,9 +36,24 @@ export class SchedulerService implements OnModuleInit {
 
       this.intervalId = setInterval(async () => {
         try {
+          // Check if Plex is properly configured before attempting to update sessions
+          const [ip, port, token] = await Promise.all([
+            this.configService.getSetting('PLEX_SERVER_IP'),
+            this.configService.getSetting('PLEX_SERVER_PORT'),
+            this.configService.getSetting('PLEX_TOKEN'),
+          ]);
+
+          if (!ip || !port || !token) {
+            this.logger.debug('Skipping session update - Plex not configured');
+            return;
+          }
+
           await this.plexService.updateActiveSessions();
         } catch (error) {
-          this.logger.error('Error during scheduled session update:', error);
+          // Only log errors that are not configuration-related
+          if (!error.message.includes('Missing required Plex configuration')) {
+            this.logger.error('Error during scheduled session update:', error);
+          }
         }
       }, intervalMs);
     } catch (error) {
@@ -49,9 +64,24 @@ export class SchedulerService implements OnModuleInit {
 
       this.intervalId = setInterval(async () => {
         try {
+          // Check if Plex is properly configured before attempting to update sessions
+          const [ip, port, token] = await Promise.all([
+            this.configService.getSetting('PLEX_SERVER_IP'),
+            this.configService.getSetting('PLEX_SERVER_PORT'),
+            this.configService.getSetting('PLEX_TOKEN'),
+          ]);
+
+          if (!ip || !port || !token) {
+            this.logger.debug('Skipping session update - Plex not configured');
+            return;
+          }
+
           await this.plexService.updateActiveSessions();
         } catch (error) {
-          this.logger.error('Error during scheduled session update:', error);
+          // Only log errors that are not configuration-related
+          if (!error.message.includes('Missing required Plex configuration')) {
+            this.logger.error('Error during scheduled session update:', error);
+          }
         }
       }, fallbackInterval);
     }

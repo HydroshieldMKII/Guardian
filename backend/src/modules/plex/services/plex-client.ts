@@ -26,13 +26,14 @@ export class PlexClient {
       port: port as string,
       token: token as string,
       useSSL: useSSL === 'true' || useSSL === true,
-      ignoreCertErrors: ignoreCertErrors === 'true' || ignoreCertErrors === true,
+      ignoreCertErrors:
+        ignoreCertErrors === 'true' || ignoreCertErrors === true,
     };
   }
 
   private async validateConfiguration() {
     const { ip, port, token } = await this.getConfig();
-    
+
     if (!ip || !port || !token) {
       throw new Error(
         'Missing required Plex configuration. Please configure PLEX_SERVER_IP, PLEX_SERVER_PORT, and PLEX_TOKEN in settings.',
@@ -49,7 +50,8 @@ export class PlexClient {
     } = {},
   ): Promise<any> {
     await this.validateConfiguration();
-    const { ip, port, token, useSSL, ignoreCertErrors } = await this.getConfig();
+    const { ip, port, token, useSSL, ignoreCertErrors } =
+      await this.getConfig();
     const baseUrl = `${useSSL ? 'https' : 'http'}://${ip}:${port}`;
 
     return new Promise((resolve, reject) => {
@@ -157,56 +159,63 @@ export class PlexClient {
     this.logger.log(`Successfully terminated session ${sessionKey}`);
   }
 
-  async testConnection(): Promise<{ ok: boolean; status: number; message?: string }> {
+  async testConnection(): Promise<{
+    ok: boolean;
+    status: number;
+    message?: string;
+  }> {
     try {
       await this.validateConfiguration();
       const response = await this.request('/');
-      return { 
-        ok: response.ok, 
+      return {
+        ok: response.ok,
         status: response.status,
-        message: response.ok ? 'Connection successful' : 'Connection failed'
+        message: response.ok ? 'Connection successful' : 'Connection failed',
       };
     } catch (error) {
       this.logger.error('Connection test failed:', error);
-      
+
       // Handle specific SSL/TLS errors
       if (error.code === 'ERR_TLS_CERT_ALTNAME_INVALID') {
-        return { 
-          ok: false, 
-          status: 0, 
-          message: 'SSL certificate error: Hostname/IP does not match certificate. Enable "Ignore SSL certificate errors" or use HTTP instead.' 
+        return {
+          ok: false,
+          status: 0,
+          message:
+            'SSL certificate error: Hostname/IP does not match certificate. Enable "Ignore SSL certificate errors" or use HTTP instead.',
         };
       }
-      
+
       if (error.code && error.code.startsWith('ERR_TLS_')) {
-        return { 
-          ok: false, 
-          status: 0, 
-          message: `SSL/TLS error: ${error.message}. Consider enabling "Ignore SSL certificate errors" or using HTTP.` 
+        return {
+          ok: false,
+          status: 0,
+          message: `SSL/TLS error: ${error.message}. Consider enabling "Ignore SSL certificate errors" or using HTTP.`,
         };
       }
-      
+
       // Handle connection refused, timeout, etc.
       if (error.code === 'ECONNREFUSED') {
-        return { 
-          ok: false, 
-          status: 0, 
-          message: 'Connection refused. Check if Plex server is running and accessible.' 
+        return {
+          ok: false,
+          status: 0,
+          message:
+            'Connection refused. Check if Plex server is running and accessible.',
         };
       }
-      
+
       if (error.code === 'ECONNRESET' || error.message.includes('timeout')) {
-        return { 
-          ok: false, 
-          status: 0, 
-          message: 'Connection timeout. Check server address and port.' 
+        return {
+          ok: false,
+          status: 0,
+          message:
+            'Connection timeout. Check server address, port and SSL settings.',
         };
       }
-      
-      return { 
-        ok: false, 
-        status: 0, 
-        message: `Connection failed: ${error.message}` 
+
+      return {
+        ok: false,
+        status: 0,
+        message: `Connection failed: ${error.message}`,
       };
     }
   }

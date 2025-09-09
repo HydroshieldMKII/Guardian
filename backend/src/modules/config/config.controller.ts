@@ -84,4 +84,17 @@ export class ConfigController {
       );
     }
   }
+
+  @Get('plex/status')
+  async getPlexStatus() {
+    try {
+      const status = await this.configService.getPlexConfigurationStatus();
+      return status;
+    } catch (error) {
+      throw new HttpException(
+        'Failed to get Plex status',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
 }

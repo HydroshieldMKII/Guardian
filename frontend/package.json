@@ -3,11 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack -p ${PLEXGUARD_FRONTEND_PORT:-3000}",
-    "dev:config": "node scripts/start-with-config.js",
+    "dev": "next dev --turbopack -p 3000",
     "build": "next build --turbopack",
-    "start": "next start -p ${PLEXGUARD_FRONTEND_PORT:-3000}",
-    "start:config": "node scripts/start-with-config.js --production",
+    "start": "next start -p 3000",
     "pretty": "prettier --write \"./**/*.{js,jsx,mjs,cjs,ts,tsx,json}\""
   },
   "dependencies": {
