@@ -5,8 +5,6 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: guardian-backend
-    env_file:
-      - .env
     environment:
       NODE_ENV: production
       DATABASE_PATH: /app/data/plex-guard.db

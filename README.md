@@ -47,6 +47,7 @@ The easiest way to deploy Guardian is using Docker Compose:
 
    ```bash
    cp docker-compose.example.yml docker-compose.yml
+   cp .env.example .env
    ```
 
 3. **Start the services**:
@@ -79,6 +80,13 @@ To update Guardian, pull the latest changes and restart the Docker containers:
 docker compose pull
 docker compose up -d
 ```
+
+## Configuration
+
+Guardian have 2 optionnals environments variables that you can set in a `.env` file:
+
+- `PLEXGUARD_FRONTEND_PORT`: The port on which the frontend will be accessible. Default is `3000`.
+- `VERSION`: The version of Guardian to use. Default is `latest`.
 
 ## Troubleshooting
 
