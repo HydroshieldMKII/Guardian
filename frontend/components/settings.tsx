@@ -280,6 +280,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
             onCheckedChange={(checked) =>
               handleInputChange(setting.key, checked)
             }
+            className="cursor-pointer"
           />
         </div>
       );
@@ -339,6 +340,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
               onCheckedChange={(checked) =>
                 handleInputChange("USE_SSL", checked)
               }
+              className="cursor-pointer"
             />
           </div>
 
@@ -363,6 +365,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
                 onCheckedChange={(checked) =>
                   handleInputChange("IGNORE_CERT_ERRORS", checked)
                 }
+                className={!isSSLEnabled ? "" : "cursor-pointer"}
               />
             </div>
           </div>
@@ -598,7 +601,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
                 <button
                   key={section.id}
                   onClick={() => setActiveSection(section.id)}
-                  className={`w-full flex items-center space-x-3 px-4 py-3 text-left text-sm transition-colors hover:bg-accent hover:text-accent-foreground ${
+                  className={`w-full flex items-center space-x-3 px-4 py-3 text-left text-sm transition-colors hover:bg-accent hover:text-accent-foreground cursor-pointer ${
                     activeSection === section.id
                       ? "bg-accent text-accent-foreground"
                       : "text-muted-foreground"
