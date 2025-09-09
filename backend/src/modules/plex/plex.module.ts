@@ -2,7 +2,6 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { PlexService } from './services/plex.service';
 import { PlexClient } from './services/plex-client';
-import { DynamicPlexClient } from './services/dynamic-plex-client';
 import { SessionTerminationService } from './services/session-termination.service';
 import { UserDevice } from '../../entities/user-device.entity';
 import { DevicesModule } from '../devices/devices.module';
@@ -21,13 +20,11 @@ import { ConfigModule } from '../config/config.module';
   providers: [
     PlexService,
     PlexClient,
-    DynamicPlexClient,
     SessionTerminationService,
   ],
   exports: [
     PlexService,
     PlexClient,
-    DynamicPlexClient,
     SessionTerminationService,
   ],
 })
