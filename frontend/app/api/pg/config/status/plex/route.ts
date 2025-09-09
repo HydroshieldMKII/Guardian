@@ -22,10 +22,19 @@ export async function GET(request: NextRequest) {
 
     const data = await response.json();
     return NextResponse.json(data);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching Plex status:', error);
+    
+    let errorMessage = 'Failed to connect to backend';
+    
+    if (error.cause?.code === 'ECONNREFUSED' || error.message?.includes('ECONNREFUSED')) {
+      errorMessage = 'Backend server is not reachable. Please ensure the backend service is running.';
+    } else if (error.message?.includes('fetch failed')) {
+      errorMessage = 'Unable to connect to backend service. Please check if the backend is running and accessible.';
+    }
+
     return NextResponse.json(
-      { error: 'Failed to connect to backend' },
+      { error: errorMessage },
       { status: 500 }
     );
   }

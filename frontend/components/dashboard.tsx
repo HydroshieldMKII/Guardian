@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import {
   Card,
   CardContent,
@@ -22,7 +23,6 @@ import {
 } from "lucide-react";
 import { StreamsList } from "./streams-list";
 import { DeviceApproval } from "./device-approval";
-import { Settings as SettingsComponent } from "./settings";
 
 import { DashboardStats } from "@/types";
 import { apiClient } from "@/lib/api";
@@ -35,6 +35,7 @@ interface PlexStatus {
 }
 
 export function Dashboard() {
+  const router = useRouter();
   const [stats, setStats] = useState<DashboardStats>({
     activeStreams: 0,
     totalDevices: 0,
@@ -44,7 +45,10 @@ export function Dashboard() {
   const [activeTab, setActiveTab] = useState<"streams" | "devices">("streams");
   const [loading, setLoading] = useState(true);
   const [plexStatus, setPlexStatus] = useState<PlexStatus | null>(null);
-  const [showSettings, setShowSettings] = useState(false);
+
+  const handleShowSettings = () => {
+    router.push('/settings');
+  };
 
   const checkPlexStatus = async () => {
     try {
@@ -117,11 +121,6 @@ export function Dashboard() {
     );
   }
 
-  // Show settings if requested
-  if (showSettings) {
-    return <SettingsComponent onBack={() => setShowSettings(false)} />;
-  }
-
   // Show configuration prompt if Plex is not properly connected
   if (!plexStatus?.configured || !plexStatus?.hasValidCredentials) {
     return (
@@ -192,7 +191,7 @@ export function Dashboard() {
 
                 <div className="pt-4">
                   <Button
-                    onClick={() => setShowSettings(true)}
+                    onClick={handleShowSettings}
                     className="w-full"
                     size="lg"
                   >

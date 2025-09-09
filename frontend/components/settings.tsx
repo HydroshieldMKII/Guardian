@@ -74,6 +74,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [testingConnection, setTestingConnection] = useState(false);
+  const [backendError, setBackendError] = useState<string | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<{
     success: boolean;
     message: string;
@@ -84,6 +85,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
   }, []);
 
   const fetchSettings = async () => {
+    setBackendError(null);
     try {
       const response = await fetch("/api/pg/config");
       if (response.ok) {
@@ -104,9 +106,16 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
           }
         });
         setFormData(initialFormData);
+      } else {
+        // Try to get the error message from the response
+        const errorData = await response.json().catch(() => ({}));
+        setBackendError(errorData.error || `Server error (${response.status})`);
       }
     } catch (error) {
       console.error("Failed to fetch settings:", error);
+      setBackendError(
+        "Unable to connect to backend service. Please ensure the backend is running."
+      );
     } finally {
       setLoading(false);
     }
@@ -215,11 +224,18 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
       if (response.ok) {
         const result = await response.json();
         setConnectionStatus(result);
+      } else {
+        // Try to get the error message from the response
+        const errorData = await response.json().catch(() => ({}));
+        setConnectionStatus({
+          success: false,
+          message: errorData.message || `Server error (${response.status})`,
+        });
       }
     } catch (error) {
       setConnectionStatus({
         success: false,
-        message: "Failed to test connection",
+        message: "Failed to test connection - unable to reach server",
       });
     } finally {
       setTestingConnection(false);
@@ -515,17 +531,60 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
   return (
     <div className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 min-h-[calc(100vh-3.5rem)]">
       <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-8">
+        {/* Back Button */}
+        {onBack && (
+          <div className="mb-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onBack}
+              className="text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Dashboard
+            </Button>
+          </div>
+        )}
+
         {/* Header */}
         <div className="mb-6 sm:mb-8">
-          <div className="flex items-center gap-4 mb-2">
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-900 dark:text-slate-100">
-              Settings
-            </h1>
-          </div>
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-900 dark:text-slate-100 mb-2">
+            Settings
+          </h1>
           <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400">
             Configure your Guardian dashboard and preferences
           </p>
         </div>
+
+        {/* Backend Error Display */}
+        {backendError && (
+          <div className="mb-6">
+            <Card className="border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20">
+              <CardContent>
+                <div className="flex items-center gap-3">
+                  <XCircle className="h-5 w-5 text-red-600 dark:text-red-400 shrink-0" />
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-red-900 dark:text-red-100 mb-1">
+                      Backend Connection Error
+                    </h3>
+                    <p className="text-sm text-red-700 dark:text-red-200">
+                      {backendError}
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={fetchSettings}
+                    className="border-red-300 text-red-700 hover:bg-red-100 dark:border-red-600 dark:text-red-300 dark:hover:bg-red-800/30"
+                  >
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Retry
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Settings Navigation */}

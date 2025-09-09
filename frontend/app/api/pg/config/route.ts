@@ -14,10 +14,19 @@ export async function GET() {
 
     const data = await response.json();
     return NextResponse.json(data);
-  } catch (error) {
+  } catch (error: any) {
     console.error("Failed to fetch config:", error);
+    
+    let errorMessage = "Failed to fetch configuration";
+    
+    if (error.cause?.code === 'ECONNREFUSED' || error.message?.includes('ECONNREFUSED')) {
+      errorMessage = "Backend server is not reachable. Please ensure the backend service is running.";
+    } else if (error.message?.includes('fetch failed')) {
+      errorMessage = "Unable to connect to backend service. Please check if the backend is running and accessible.";
+    }
+
     return NextResponse.json(
-      { error: "Failed to fetch configuration" },
+      { error: errorMessage },
       { status: 500 }
     );
   }
@@ -41,10 +50,21 @@ export async function PUT(request: NextRequest) {
 
     const data = await response.json();
     return NextResponse.json(data);
-  } catch (error) {
+  } catch (error: any) {
     console.error("Failed to update config:", error);
+    
+    let errorMessage = "Failed to update configuration";
+    
+    if (error.cause?.code === 'ECONNREFUSED' || error.message?.includes('ECONNREFUSED')) {
+      errorMessage = "Backend server is not reachable. Please ensure the backend service is running.";
+    } else if (error.message?.includes('fetch failed')) {
+      errorMessage = "Unable to connect to backend service. Please check if the backend is running and accessible.";
+    } else if (error.message?.includes('Backend responded with')) {
+      errorMessage = `Backend service error: ${error.message}`;
+    }
+
     return NextResponse.json(
-      { error: "Failed to update configuration" },
+      { error: errorMessage },
       { status: 500 }
     );
   }
