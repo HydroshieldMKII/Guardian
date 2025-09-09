@@ -85,6 +85,7 @@ PLEX_TOKEN=plex_token_here #https://support.plex.tv/articles/204059436-finding-a
 PLEX_SERVER_IP=server_ip_here
 PLEX_SERVER_PORT=32400
 USE_SSL=false # Set to true if your Plex server uses SSL
+IGNORE_CERT_ERRORS=true # Set to true to ignore SSL certificate errors (useful if you use the plex local IP address)
 
 # Guardian Configuration
 PLEXGUARD_REFRESH_INTERVAL=10 # Interval in seconds to refresh the device list from Plex and block devices

@@ -14,6 +14,7 @@ export class PlexClient {
   private readonly port = process.env.PLEX_SERVER_PORT;
   private readonly token = process.env.PLEX_TOKEN;
   private readonly useSSL = process.env.USE_SSL === 'true';
+  private readonly ignoreCertErrors = process.env.IGNORE_CERT_ERRORS === 'true';
   private readonly baseUrl: string;
 
   constructor() {
@@ -57,8 +58,7 @@ export class PlexClient {
           'X-Plex-Client-Identifier': 'Guardian',
           ...options.headers,
         },
-        // Always ignore SSL errors (Plex use self-signed certs)
-        rejectUnauthorized: false,
+        rejectUnauthorized: !this.ignoreCertErrors,
       };
 
       // this.logger.debug(`Making request to: ${fullUrl}`);
