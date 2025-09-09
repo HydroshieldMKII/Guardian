@@ -177,7 +177,7 @@ export function Dashboard() {
                     <li className="flex items-center space-x-3">
                       <CheckCircle className="h-4 w-4 text-green-500" />
                       <span className="text-sm text-slate-600 dark:text-slate-400">
-                        Plex Server Port (usually 32400)
+                        Plex Server Port
                       </span>
                     </li>
                     <li className="flex items-center space-x-3">

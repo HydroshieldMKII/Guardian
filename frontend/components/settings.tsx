@@ -431,7 +431,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
                       className={`flex items-center space-x-1 text-sm ${
                         connectionStatus.success
                           ? "text-green-600"
-                          : "text-red-600"
+                          : "text-yellow-600"
                       }`}
                     >
                       {connectionStatus.success ? (
@@ -592,7 +592,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Settings Navigation */}
           <Card className="lg:col-span-1">
-            <CardHeader className="pb-3">
+            <CardHeader >
               <CardTitle className="text-base">Settings</CardTitle>
               <CardDescription>Choose a category to configure</CardDescription>
             </CardHeader>
