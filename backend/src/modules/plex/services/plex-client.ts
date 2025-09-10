@@ -1,30 +1,43 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import * as http from 'http';
 import * as https from 'https';
-import * as dotenv from 'dotenv';
-import * as path from 'path';
-
-// Load environment variables
-dotenv.config({ path: path.join(process.cwd(), '../.env') });
+import { ConfigService } from '../../config/services/config.service';
 
 @Injectable()
 export class PlexClient {
   private readonly logger = new Logger(PlexClient.name);
-  private readonly ip = process.env.PLEX_SERVER_IP;
-  private readonly port = process.env.PLEX_SERVER_PORT;
-  private readonly token = process.env.PLEX_TOKEN;
-  private readonly useSSL = process.env.USE_SSL === 'true';
-  private readonly ignoreCertErrors = process.env.IGNORE_CERT_ERRORS === 'true';
-  private readonly baseUrl: string;
 
-  constructor() {
-    if (!this.ip || !this.port || !this.token) {
+  constructor(
+    @Inject(forwardRef(() => ConfigService))
+    private configService: ConfigService,
+  ) {}
+
+  private async getConfig() {
+    const [ip, port, token, useSSL, ignoreCertErrors] = await Promise.all([
+      this.configService.getSetting('PLEX_SERVER_IP'),
+      this.configService.getSetting('PLEX_SERVER_PORT'),
+      this.configService.getSetting('PLEX_TOKEN'),
+      this.configService.getSetting('USE_SSL'),
+      this.configService.getSetting('IGNORE_CERT_ERRORS'),
+    ]);
+
+    return {
+      ip: ip as string,
+      port: port as string,
+      token: token as string,
+      useSSL: useSSL as boolean,
+      ignoreCertErrors: ignoreCertErrors as boolean,
+    };
+  }
+
+  private async validateConfiguration() {
+    const { ip, port, token } = await this.getConfig();
+
+    if (!ip || !port || !token) {
       throw new Error(
-        'Missing required environment variables: PLEX_SERVER_IP, PLEX_SERVER_PORT, PLEX_TOKEN',
+        'Missing required Plex configuration. Please configure PLEX_SERVER_IP, PLEX_SERVER_PORT, and PLEX_TOKEN in settings.',
       );
     }
-
-    this.baseUrl = `http://${this.ip}:${this.port}`;
   }
 
   async request(
@@ -35,17 +48,22 @@ export class PlexClient {
       headers?: Record<string, string>;
     } = {},
   ): Promise<any> {
+    await this.validateConfiguration();
+    const { ip, port, token, useSSL, ignoreCertErrors } =
+      await this.getConfig();
+    const baseUrl = `${useSSL ? 'https' : 'http'}://${ip}:${port}`;
+
     return new Promise((resolve, reject) => {
       const cleanEndpoint = endpoint.startsWith('/')
         ? endpoint.slice(1)
         : endpoint;
       const hasQuery = cleanEndpoint.includes('?');
-      const tokenParam = `X-Plex-Token=${encodeURIComponent(this.token!)}`;
+      const tokenParam = `X-Plex-Token=${encodeURIComponent(token)}`;
       const fullEndpoint = hasQuery
         ? `${cleanEndpoint}&${tokenParam}`
         : `${cleanEndpoint}?${tokenParam}`;
 
-      const fullUrl = `${this.baseUrl}/${fullEndpoint}`;
+      const fullUrl = `${baseUrl}/${fullEndpoint}`;
       const urlObj = new URL(fullUrl);
 
       const requestOptions = {
@@ -58,12 +76,12 @@ export class PlexClient {
           'X-Plex-Client-Identifier': 'Guardian',
           ...options.headers,
         },
-        rejectUnauthorized: !this.ignoreCertErrors,
+        rejectUnauthorized: !ignoreCertErrors,
       };
 
       // this.logger.debug(`Making request to: ${fullUrl}`);
 
-      const httpModule = this.useSSL ? https : http;
+      const httpModule = useSSL ? https : http;
 
       const req = httpModule.request(requestOptions, (res) => {
         let data = '';
@@ -140,13 +158,64 @@ export class PlexClient {
     this.logger.log(`Successfully terminated session ${sessionKey}`);
   }
 
-  async testConnection(): Promise<{ ok: boolean; status: number }> {
+  async testConnection(): Promise<{
+    ok: boolean;
+    status: number;
+    message?: string;
+  }> {
     try {
+      await this.validateConfiguration();
       const response = await this.request('/');
-      return { ok: response.ok, status: response.status };
+      return {
+        ok: response.ok,
+        status: response.status,
+        message: response.ok ? 'Connection successful' : 'Connection failed',
+      };
     } catch (error) {
       this.logger.error('Connection test failed:', error);
-      return { ok: false, status: 0 };
+
+      // Handle specific SSL/TLS errors
+      if (error.code === 'ERR_TLS_CERT_ALTNAME_INVALID') {
+        return {
+          ok: false,
+          status: 0,
+          message:
+            'SSL certificate error: Hostname/IP does not match certificate. Enable "Ignore SSL certificate errors" or use HTTP instead.',
+        };
+      }
+
+      if (error.code && error.code.startsWith('ERR_TLS_')) {
+        return {
+          ok: false,
+          status: 0,
+          message: `SSL/TLS error: ${error.message}. Consider enabling "Ignore SSL certificate errors" or using HTTP.`,
+        };
+      }
+
+      // Handle connection refused, timeout, etc.
+      if (error.code === 'ECONNREFUSED') {
+        return {
+          ok: false,
+          status: 0,
+          message:
+            'Connection refused. Check if Plex server is running and accessible.',
+        };
+      }
+
+      if (error.code === 'ECONNRESET' || error.message.includes('timeout')) {
+        return {
+          ok: false,
+          status: 0,
+          message:
+            'Connection timeout. Check server address, port and SSL settings.',
+        };
+      }
+
+      return {
+        ok: false,
+        status: 0,
+        message: `Connection failed: ${error.message}`,
+      };
     }
   }
 }

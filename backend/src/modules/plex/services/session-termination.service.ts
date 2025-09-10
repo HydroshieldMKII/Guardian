@@ -1,22 +1,15 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UserDevice } from '../../../entities/user-device.entity';
 import { PlexClient } from './plex-client';
 import { ActiveSessionService } from '../../sessions/services/active-session.service';
 import { UsersService } from '../../users/services/users.service';
+import { ConfigService } from '../../config/services/config.service';
 import {
   PlexSessionsResponse,
   SessionTerminationResult,
 } from '../../../types/plex.types';
-import * as dotenv from 'dotenv';
-import * as path from 'path';
-
-dotenv.config({ path: path.join(process.cwd(), '../.env') });
-
-const stopMessage =
-  process.env.PLEXGUARD_STOPMSG ||
-  'This device must be approved by the server owner. Please contact the server administrator for more information.';
 
 @Injectable()
 export class SessionTerminationService {
@@ -28,6 +21,8 @@ export class SessionTerminationService {
     private plexClient: PlexClient,
     private activeSessionService: ActiveSessionService,
     private usersService: UsersService,
+    @Inject(forwardRef(() => ConfigService))
+    private configService: ConfigService,
   ) {}
 
   async stopUnapprovedSessions(
@@ -120,11 +115,14 @@ export class SessionTerminationService {
     }
   }
 
-  async terminateSession(
-    sessionKey: string,
-    reason: string = stopMessage,
-  ): Promise<void> {
+  async terminateSession(sessionKey: string, reason?: string): Promise<void> {
     try {
+      if (!reason) {
+        reason =
+          ((await this.configService.getSetting('PLEXGUARD_STOPMSG')) as string) ||
+          'This device must be approved by the server owner. Please contact the server administrator for more information.';
+      }
+
       this.logger.log(
         `Terminating session ${sessionKey} with reason: ${reason}`,
       );

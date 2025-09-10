@@ -23,7 +23,7 @@ export class UsersController {
     const users = await this.usersService.getAllUsers();
     return users.map((user) => ({
       ...user,
-      defaultBlock: user.getDefaultBlockBoolean(),
+      defaultBlock: user.defaultBlock,
     }));
   }
 

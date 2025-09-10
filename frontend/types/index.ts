@@ -55,7 +55,6 @@ export interface UserDevice {
   devicePlatform?: string;
   deviceProduct?: string;
   deviceVersion?: string;
-  userAgent?: string;
   ipAddress?: string;
   approved: boolean;
   status: "pending" | "approved" | "rejected";

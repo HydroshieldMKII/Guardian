@@ -41,7 +41,9 @@ export async function DELETE(
 }
 
 async function proxy(req: NextRequest, params: { path: string[] }) {
-  const backend = "http://backend:3001";
+  const backend = process.env.NODE_ENV === "production" 
+    ? "http://backend:3001" 
+    : "http://localhost:3001";
   const target = new URL(backend.replace(/\/$/, ""));
   const upstream = new URL(
     `${target.origin}/${params.path.join("/")}${req.nextUrl.search}`

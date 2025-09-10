@@ -7,6 +7,7 @@ import { UserDevice } from '../../entities/user-device.entity';
 import { DevicesModule } from '../devices/devices.module';
 import { SessionsModule } from '../sessions/sessions.module';
 import { UsersModule } from '../users/users.module';
+import { ConfigModule } from '../config/config.module';
 
 @Module({
   imports: [
@@ -14,8 +15,17 @@ import { UsersModule } from '../users/users.module';
     DevicesModule,
     SessionsModule,
     UsersModule,
+    ConfigModule,
   ],
-  providers: [PlexService, PlexClient, SessionTerminationService],
-  exports: [PlexService, PlexClient, SessionTerminationService],
+  providers: [
+    PlexService,
+    PlexClient,
+    SessionTerminationService,
+  ],
+  exports: [
+    PlexService,
+    PlexClient,
+    SessionTerminationService,
+  ],
 })
 export class PlexModule {}

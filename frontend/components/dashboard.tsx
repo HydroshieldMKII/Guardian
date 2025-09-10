@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import {
   Card,
+  CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
@@ -15,6 +17,9 @@ import {
   Shield,
   AlertTriangle,
   CheckCircle,
+  Settings,
+  Server,
+  WifiOff,
 } from "lucide-react";
 import { StreamsList } from "./streams-list";
 import { DeviceApproval } from "./device-approval";
@@ -23,7 +28,14 @@ import { DashboardStats } from "@/types";
 import { apiClient } from "@/lib/api";
 import { config } from "@/lib/config";
 
+interface PlexStatus {
+  configured: boolean;
+  hasValidCredentials: boolean;
+  connectionStatus: string;
+}
+
 export function Dashboard() {
+  const router = useRouter();
   const [stats, setStats] = useState<DashboardStats>({
     activeStreams: 0,
     totalDevices: 0,
@@ -32,10 +44,39 @@ export function Dashboard() {
   });
   const [activeTab, setActiveTab] = useState<"streams" | "devices">("streams");
   const [loading, setLoading] = useState(true);
+  const [plexStatus, setPlexStatus] = useState<PlexStatus | null>(null);
+
+  const handleShowSettings = () => {
+    router.push('/settings');
+  };
+
+  const checkPlexStatus = async () => {
+    try {
+      const status = await apiClient.get("/config/plex/status");
+      setPlexStatus(status as PlexStatus);
+      return status as PlexStatus;
+    } catch (error) {
+      console.error("Failed to check Plex status:", error);
+      setPlexStatus({
+        configured: false,
+        hasValidCredentials: false,
+        connectionStatus: "Failed to check status",
+      });
+      return null;
+    }
+  };
 
   useEffect(() => {
     const fetchStats = async () => {
       try {
+        // First check if Plex is properly configured and connected
+        const status = await checkPlexStatus();
+
+        if (!status?.configured || !status?.hasValidCredentials) {
+          setLoading(false);
+          return;
+        }
+
         const [streamsData, allDevicesData, pendingData, approvedData] =
           await Promise.all([
             apiClient.get("/sessions/active"),
@@ -80,19 +121,95 @@ export function Dashboard() {
     );
   }
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900">
-      <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-8">
-        {/* Header */}
-        <div className="mb-6 sm:mb-8">
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-900 dark:text-slate-100 mb-2">
-            Guardian Dashboard
-          </h1>
-          <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400">
-            Monitor active streams and manage device access
-          </p>
-        </div>
+  // Show configuration prompt if Plex is not properly connected
+  if (!plexStatus?.configured || !plexStatus?.hasValidCredentials) {
+    return (
+      <div className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 min-h-[calc(100vh-3.5rem)]">
+        <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-8">
+          <div className="flex items-center justify-center min-h-[60vh]">
+            <Card className="w-full max-w-2xl">
+              <CardHeader className="text-center pb-2">
+                <div className="flex justify-center mb-4">
+                  <div className="p-3 bg-amber-100 dark:bg-amber-900/20 rounded-full">
+                    <Server className="h-8 w-8 text-amber-600 dark:text-amber-400" />
+                  </div>
+                </div>
+                <CardTitle className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+                  Plex Configuration Required
+                </CardTitle>
+                <CardDescription className="text-lg">
+                  Guardian needs to connect to your Plex Media Server to monitor
+                  streams and manage devices.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                  <div className="flex items-center space-x-3">
+                    <div className="flex-shrink-0">
+                      {plexStatus?.configured ? (
+                        <CheckCircle className="h-5 w-5 text-amber-500" />
+                      ) : (
+                        <WifiOff className="h-5 w-5 text-red-400" />
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                        Connection Status
+                      </h3>
+                      <p className="text-sm text-slate-600 dark:text-slate-400">
+                        {plexStatus?.connectionStatus || "Not configured"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
 
+                <div className="space-y-4">
+                  <h4 className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                    To get started, you'll need to configure:
+                  </h4>
+                  <ul className="space-y-2">
+                    <li className="flex items-center space-x-3">
+                      <CheckCircle className="h-4 w-4 text-green-500" />
+                      <span className="text-sm text-slate-600 dark:text-slate-400">
+                        Plex Server IP Address
+                      </span>
+                    </li>
+                    <li className="flex items-center space-x-3">
+                      <CheckCircle className="h-4 w-4 text-green-500" />
+                      <span className="text-sm text-slate-600 dark:text-slate-400">
+                        Plex Server Port
+                      </span>
+                    </li>
+                    <li className="flex items-center space-x-3">
+                      <CheckCircle className="h-4 w-4 text-green-500" />
+                      <span className="text-sm text-slate-600 dark:text-slate-400">
+                        Plex Authentication Token
+                      </span>
+                    </li>
+                  </ul>
+                </div>
+
+                <div className="pt-4">
+                  <Button
+                    onClick={handleShowSettings}
+                    className="w-full"
+                    size="lg"
+                  >
+                    <Settings className="h-4 w-4 mr-2" />
+                    Configure Plex Settings
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 min-h-[calc(100vh-3.5rem)]">
+      <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-8">
         {/* Stats Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-8">
           <Card className="border-l-4 border-l-blue-500">

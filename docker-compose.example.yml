@@ -5,8 +5,6 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: guardian-backend
-    env_file:
-      - .env
     environment:
       NODE_ENV: production
       DATABASE_PATH: /app/data/plex-guard.db
@@ -24,7 +22,7 @@ services:
       - "${PLEXGUARD_FRONTEND_PORT:-3000}:3000"
     environment:
       NODE_ENV: production
-      PORT: ${PLEXGUARD_FRONTEND_PORT:-3000}
+      PORT: 3000
     depends_on:
       - backend
     restart: unless-stopped

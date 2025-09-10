@@ -79,7 +79,6 @@ export class DeviceTrackingService {
       devicePlatform: session.Player?.platform,
       deviceProduct: session.Player?.product,
       deviceVersion: session.Player?.version,
-      userAgent: session.Player?.userAgent,
       ipAddress: session.Player?.address,
     };
   }
@@ -127,9 +126,6 @@ export class DeviceTrackingService {
     if (deviceInfo.deviceVersion) {
       existingDevice.deviceVersion = deviceInfo.deviceVersion;
     }
-    if (deviceInfo.userAgent) {
-      existingDevice.userAgent = deviceInfo.userAgent;
-    }
     if (deviceInfo.ipAddress) {
       existingDevice.ipAddress = deviceInfo.ipAddress;
     }
@@ -161,7 +157,6 @@ export class DeviceTrackingService {
       status: defaultBlock ? 'pending' : 'approved',
       sessionCount: 1,
       ipAddress: deviceInfo.ipAddress,
-      userAgent: deviceInfo.userAgent,
     });
 
     await this.userDeviceRepository.save(newDevice);

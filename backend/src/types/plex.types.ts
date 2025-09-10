@@ -55,7 +55,6 @@ export interface DeviceInfo {
   devicePlatform?: string;
   deviceProduct?: string;
   deviceVersion?: string;
-  userAgent?: string;
   ipAddress?: string;
   username?: string;
 }
