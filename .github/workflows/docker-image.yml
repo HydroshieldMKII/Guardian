@@ -2,7 +2,7 @@ name: Build & Push Multi-Arch (Docker Hub)
 
 on:
   push:
-    branches: [ "*" ]
+    branches: [ "main" ]
 
 jobs:
   build-and-push:
