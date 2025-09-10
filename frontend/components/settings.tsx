@@ -36,7 +36,7 @@ interface AppSetting {
   value: string;
   description: string;
   type: "string" | "number" | "boolean" | "json";
-  encrypted: boolean;
+  private: boolean;
   updatedAt: string;
 }
 
@@ -113,7 +113,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
           } else if (setting.type === "number") {
             initialFormData[setting.key] = parseFloat(setting.value);
           } else {
-            initialFormData[setting.key] = setting.encrypted
+            initialFormData[setting.key] = setting.private
               ? ""
               : setting.value;
           }
@@ -176,7 +176,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
 
           return (
             value !== originalValue &&
-            !(originalSetting.encrypted && value === "")
+            !(originalSetting.private && value === "")
           );
         })
         .map(([key, value]) => ({ key, value }));
@@ -431,7 +431,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
         <Label>{setting.key.replace(/_/g, " ")}</Label>
         <Input
           type={
-            setting.encrypted
+            setting.private
               ? "password"
               : setting.type === "number"
                 ? "number"
@@ -446,7 +446,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
             handleInputChange(setting.key, newValue);
           }}
           placeholder={
-            setting.encrypted && !value ? "••••••••••••••••••••" : ""
+            setting.private && !value ? "••••••••••••••••••••" : ""
           }
         />
         <p className="text-xs text-muted-foreground">{setting.description}</p>
@@ -625,7 +625,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
                   <div>
                     <h4 className="text-sm font-medium">Export Database</h4>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Download a backup of your Guardian database. Encrypted settings will not be included for security.
+                      Download a backup of your Guardian database. Private settings will not be included for security.
                     </p>
                   </div>
                   <Button
@@ -747,7 +747,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
       }
 
       return (
-        value !== originalValue && !(originalSetting.encrypted && value === "")
+        value !== originalValue && !(originalSetting.private && value === "")
       );
     });
   };

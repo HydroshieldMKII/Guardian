@@ -18,7 +18,7 @@ export class AppSettings {
   type: 'string' | 'number' | 'boolean' | 'json';
 
   @Column({ default: false })
-  encrypted: boolean;
+  private: boolean;
 
   @Column({ type: 'datetime', default: () => 'CURRENT_TIMESTAMP' })
   updatedAt: Date;

@@ -10,7 +10,7 @@ export interface ConfigSettingDto {
   value: string;
   description?: string;
   type?: 'string' | 'number' | 'boolean' | 'json';
-  encrypted?: boolean;
+  private?: boolean;
 }
 
 @Injectable()
@@ -32,7 +32,7 @@ export class ConfigService {
         value: '',
         description: 'Plex server authentication token',
         type: 'string' as const,
-        encrypted: true,
+        private: true,
       },
       {
         key: 'PLEX_SERVER_IP',
@@ -131,9 +131,9 @@ export class ConfigService {
       key: setting.key,
       description: setting.description,
       type: setting.type,
-      encrypted: setting.encrypted,
+      private: setting.private,
       updatedAt: setting.updatedAt,
-      value: setting.encrypted ? '••••••••' : setting.value,
+      value: setting.private ? '••••••••' : setting.value,
     }));
   }
 
@@ -366,8 +366,8 @@ export class ConfigService {
         data: {
           settings: settings.map(s => ({
             ...s,
-            // Don't export encrypted values for security
-            value: s.encrypted ? '' : s.value
+            // Don't export private values for security
+            value: s.private ? '' : s.value
           })),
           userDevices,
           activeSessions,
@@ -396,12 +396,12 @@ export class ConfigService {
       let imported = 0;
       let skipped = 0;
 
-      // Import settings (excluding encrypted ones)
+      // Import settings (excluding private ones)
       if (data.settings && Array.isArray(data.settings)) {
         for (const setting of data.settings) {
-          if (setting.encrypted) {
+          if (setting.private) {
             skipped++;
-            continue; // Skip encrypted settings for security
+            continue; // Skip private settings for security
           }
 
           try {
@@ -419,7 +419,7 @@ export class ConfigService {
                 value: setting.value,
                 description: setting.description,
                 type: setting.type || 'string',
-                encrypted: false,
+                private: false,
               });
               await this.settingsRepository.save(newSetting);
             }
