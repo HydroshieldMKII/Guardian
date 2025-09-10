@@ -7,7 +7,12 @@ import {
   Post,
   HttpException,
   HttpStatus,
+  Res,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import type { Response } from 'express';
 import { ConfigService, ConfigSettingDto } from './services/config.service';
 
 @Controller('config')
@@ -93,6 +98,55 @@ export class ConfigController {
     } catch (error) {
       throw new HttpException(
         'Failed to get Plex status',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  @Get('database/export')
+  async exportDatabase(@Res() res: Response) {
+    try {
+      const exportData = await this.configService.exportDatabase();
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const filename = `guardian-backup-${timestamp}.json`;
+      
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.send(exportData);
+    } catch (error) {
+      throw new HttpException(
+        'Failed to export database',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  @Post('database/import')
+  @UseInterceptors(FileInterceptor('file'))
+  async importDatabase(@UploadedFile() file: any) {
+    try {
+      if (!file) {
+        throw new HttpException('No file provided', HttpStatus.BAD_REQUEST);
+      }
+
+      const fileContent = file.buffer.toString('utf8');
+      let importData;
+      
+      try {
+        importData = JSON.parse(fileContent);
+      } catch (parseError) {
+        throw new HttpException('Invalid JSON file', HttpStatus.BAD_REQUEST);
+      }
+
+      const result = await this.configService.importDatabase(importData);
+      return {
+        message: 'Database imported successfully',
+        imported: result,
+      };
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      throw new HttpException(
+        error.message || 'Failed to import database',
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }

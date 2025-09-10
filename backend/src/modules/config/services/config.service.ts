@@ -347,4 +347,147 @@ export class ConfigService {
       };
     }
   }
+
+  async exportDatabase(): Promise<string> {
+    try {
+      this.logger.log('Starting database export...');
+
+      // Get all data from all tables
+      const [settings, userDevices, activeSessions, userPreferences] = await Promise.all([
+        this.settingsRepository.find(),
+        this.settingsRepository.manager.getRepository('UserDevice').find(),
+        this.settingsRepository.manager.getRepository('ActiveSession').find(),
+        this.settingsRepository.manager.getRepository('UserPreference').find(),
+      ]);
+
+      const exportData = {
+        exportedAt: new Date().toISOString(),
+        version: '1.0',
+        data: {
+          settings: settings.map(s => ({
+            ...s,
+            // Don't export encrypted values for security
+            value: s.encrypted ? '' : s.value
+          })),
+          userDevices,
+          activeSessions,
+          userPreferences,
+        },
+      };
+
+      this.logger.log(`Database export completed: ${settings.length} settings, ${userDevices.length} devices, ${activeSessions.length} sessions, ${userPreferences.length} preferences`);
+      
+      return JSON.stringify(exportData, null, 2);
+    } catch (error) {
+      this.logger.error('Error exporting database:', error);
+      throw new Error('Failed to export database');
+    }
+  }
+
+  async importDatabase(importData: any): Promise<{ imported: number; skipped: number }> {
+    try {
+      this.logger.log('Starting database import...');
+
+      if (!importData || !importData.data) {
+        throw new Error('Invalid import data format');
+      }
+
+      const { data } = importData;
+      let imported = 0;
+      let skipped = 0;
+
+      // Import settings (excluding encrypted ones)
+      if (data.settings && Array.isArray(data.settings)) {
+        for (const setting of data.settings) {
+          if (setting.encrypted) {
+            skipped++;
+            continue; // Skip encrypted settings for security
+          }
+
+          try {
+            const existing = await this.settingsRepository.findOne({
+              where: { key: setting.key }
+            });
+
+            if (existing) {
+              existing.value = setting.value;
+              existing.description = setting.description || existing.description;
+              await this.settingsRepository.save(existing);
+            } else {
+              const newSetting = this.settingsRepository.create({
+                key: setting.key,
+                value: setting.value,
+                description: setting.description,
+                type: setting.type || 'string',
+                encrypted: false,
+              });
+              await this.settingsRepository.save(newSetting);
+            }
+            imported++;
+          } catch (error) {
+            this.logger.warn(`Failed to import setting ${setting.key}:`, error);
+            skipped++;
+          }
+        }
+      }
+
+      // Import user devices
+      if (data.userDevices && Array.isArray(data.userDevices)) {
+        const deviceRepo = this.settingsRepository.manager.getRepository('UserDevice');
+        for (const device of data.userDevices) {
+          try {
+            const existing = await deviceRepo.findOne({
+              where: { uuid: device.uuid }
+            });
+
+            if (!existing) {
+              const newDevice = deviceRepo.create(device);
+              await deviceRepo.save(newDevice);
+              imported++;
+            } else {
+              skipped++;
+            }
+          } catch (error) {
+            this.logger.warn(`Failed to import device ${device.uuid}:`, error);
+            skipped++;
+          }
+        }
+      }
+
+      // Import user preferences
+      if (data.userPreferences && Array.isArray(data.userPreferences)) {
+        const prefRepo = this.settingsRepository.manager.getRepository('UserPreference');
+        for (const pref of data.userPreferences) {
+          try {
+            const existing = await prefRepo.findOne({
+              where: { key: pref.key }
+            });
+
+            if (!existing) {
+              const newPref = prefRepo.create(pref);
+              await prefRepo.save(newPref);
+              imported++;
+            } else {
+              existing.value = pref.value;
+              await prefRepo.save(existing);
+              imported++;
+            }
+          } catch (error) {
+            this.logger.warn(`Failed to import preference ${pref.key}:`, error);
+            skipped++;
+          }
+        }
+      }
+
+      // Refresh cache after import
+      await this.loadCache();
+
+      this.logger.log(`Database import completed: ${imported} items imported, ${skipped} items skipped`);
+      
+      return { imported, skipped };
+    } catch (error) {
+      this.logger.error('Error importing database:', error);
+      throw new Error(`Failed to import database: ${error.message}`);
+    }
+  }
 }

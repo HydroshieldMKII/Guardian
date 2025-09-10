@@ -25,6 +25,9 @@ import {
   XCircle,
   Loader2,
   ArrowLeft,
+  Download,
+  Upload,
+  Database,
 } from "lucide-react";
 
 interface AppSetting {
@@ -54,18 +57,24 @@ const settingsSections = [
     description: "Configure Guardian behavior and settings",
     icon: Shield,
   },
-  // {
-  //   id: "notifications",
-  //   title: "Notifications",
-  //   description: "Configure notification preferences and alert settings",
-  //   icon: Bell,
-  // },
-  // {
-  //   id: "profile",
-  //   title: "Profile",
-  //   description: "Manage your account profile and personal information",
-  //   icon: User,
-  // },
+  {
+    id: "database",
+    title: "Database Management",
+    description: "Export and import database settings and data",
+    icon: Database,
+  },
+  {
+    id: "notifications",
+    title: "Notifications",
+    description: "Configure notification preferences and alert settings",
+    icon: Bell,
+  },
+  {
+    id: "profile",
+    title: "Profile",
+    description: "Manage your account profile and personal information",
+    icon: User,
+  },
 ];
 
 export function Settings({ onBack }: { onBack?: () => void } = {}) {
@@ -75,6 +84,8 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [testingConnection, setTestingConnection] = useState(false);
+  const [exportingDatabase, setExportingDatabase] = useState(false);
+  const [importingDatabase, setImportingDatabase] = useState(false);
   const [backendError, setBackendError] = useState<string | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<{
     success: boolean;
@@ -284,6 +295,103 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
     }
   };
 
+  const handleExportDatabase = async () => {
+    setExportingDatabase(true);
+    try {
+      const response = await fetch("/api/pg/config/database/export");
+      
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `guardian-backup-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        
+        toast({
+          title: "Export successful",
+          description: "Database backup downloaded successfully",
+          variant: "success",
+        });
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        toast({
+          title: "Export failed",
+          description: errorData.message || `Server error (${response.status})`,
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Network Error",
+        description: "Failed to export database. Please check your connection.",
+        variant: "destructive",
+      });
+    } finally {
+      setExportingDatabase(false);
+    }
+  };
+
+  const handleImportDatabase = async (file: File) => {
+    setImportingDatabase(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const response = await fetch("/api/pg/config/database/import", {
+        method: "POST",
+        body: formData,
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        toast({
+          title: "Import successful",
+          description: `Successfully imported ${result.imported.imported} items, ${result.imported.skipped} items skipped`,
+          variant: "success",
+        });
+        
+        // Refresh settings after import
+        await fetchSettings();
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        toast({
+          title: "Import failed",
+          description: errorData.message || `Server error (${response.status})`,
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Network Error",
+        description: "Failed to import database. Please check your connection.",
+        variant: "destructive",
+      });
+    } finally {
+      setImportingDatabase(false);
+    }
+  };
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      if (file.type === 'application/json' || file.name.endsWith('.json')) {
+        handleImportDatabase(file);
+      } else {
+        toast({
+          title: "Invalid file type",
+          description: "Please select a JSON file for import",
+          variant: "destructive",
+        });
+      }
+    }
+    // Reset the input value so the same file can be selected again
+    event.target.value = '';
+  };
+
   const getSettingsByCategory = (category: string) => {
     const categoryMap: Record<string, string[]> = {
       plex: [
@@ -393,7 +501,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label className={!isSSLEnabled ? "text-muted-foreground" : ""}>
-                  Ignore SSL certificate errors
+                  Ignore SSL certificate errors (not recommended with public domaines or on public networks)
                 </Label>
                 <p
                   className={`text-xs ${!isSSLEnabled ? "text-muted-foreground/60" : "text-muted-foreground"}`}
@@ -506,6 +614,90 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
                   {renderSettingField(setting)}
                 </Card>
               ))}
+            </div>
+          </div>
+        );
+
+      case "database":
+        return (
+          <div className="space-y-6">
+            <div>
+              <h3 className="text-lg font-medium">Database Management</h3>
+              <p className="text-sm text-muted-foreground">
+                Export and import your Guardian database for backup and migration purposes.
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              {/* Export Database */}
+              <Card className="p-4">
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="text-sm font-medium">Export Database</h4>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Download a backup of your Guardian database. Encrypted settings will not be included for security.
+                    </p>
+                  </div>
+                  <Button
+                    onClick={handleExportDatabase}
+                    disabled={exportingDatabase}
+                    size="sm"
+                    variant="outline"
+                    className="cursor-pointer"
+                  >
+                    {exportingDatabase ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <Download className="w-4 h-4 mr-2" />
+                    )}
+                    {exportingDatabase ? "Exporting..." : "Export Database"}
+                  </Button>
+                </div>
+              </Card>
+
+              {/* Import Database */}
+              <Card className="p-4">
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="text-sm font-medium">Import Database</h4>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Import a Guardian database backup. This will merge the imported data with existing data.
+                    </p>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="file"
+                      accept=".json,application/json"
+                      onChange={handleFileUpload}
+                      disabled={importingDatabase}
+                      className="hidden"
+                      id="database-import"
+                    />
+                    <Button
+                      type="button"
+                      disabled={importingDatabase}
+                      size="sm"
+                      variant="outline"
+                      className="cursor-pointer"
+                      onClick={() => document.getElementById('database-import')?.click()}
+                    >
+                      {importingDatabase ? (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      ) : (
+                        <Upload className="w-4 h-4 mr-2" />
+                      )}
+                      {importingDatabase ? "Importing..." : "Import Database"}
+                    </Button>
+                  </div>
+                  <div className="text-xs text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/20 p-2 rounded border">
+                    <strong>Warning:</strong> Importing a database will merge data with your current database. 
+                    Consider exporting your current database first as a backup.
+                  </div>
+                </div>
+              </Card>
+            </div>
+          </div>
+        );
             </div>
           </div>
         );
