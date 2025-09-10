@@ -656,7 +656,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
                   <div>
                     <h4 className="text-sm font-medium">Export Database</h4>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Download a backup of your Guardian database. Private settings will not be included for security.
+                      Download a backup of your Guardian database. This includes all settings, user devices, preferences, and active sessions.
                     </p>
                   </div>
                   <Button
