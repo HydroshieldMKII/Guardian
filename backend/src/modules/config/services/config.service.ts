@@ -230,7 +230,7 @@ export class ConfigService {
       }
 
       // Create a HTTP/HTTPS request to test the connection
-      const protocol = useSSL === 'true' || useSSL === true ? 'https' : 'http';
+      const protocol = useSSL ? 'https' : 'http';
       const testUrl = `${protocol}://${ip}:${port}/?X-Plex-Token=${token}`;
 
       const httpModule = protocol === 'https' ? https : http;
@@ -243,9 +243,7 @@ export class ConfigService {
           path: urlObj.pathname + urlObj.search,
           method: 'GET',
           timeout: 10000,
-          rejectUnauthorized: !(
-            ignoreCertErrors === 'true' || ignoreCertErrors === true
-          ),
+          rejectUnauthorized: !ignoreCertErrors,
         };
 
         const req = httpModule.request(options, (res: any) => {
@@ -364,11 +362,7 @@ export class ConfigService {
         exportedAt: new Date().toISOString(),
         version: '1.0',
         data: {
-          settings: settings.map(s => ({
-            ...s,
-            // Don't export private values for security
-            value: s.private ? '' : s.value
-          })),
+          settings,
           userDevices,
           activeSessions,
           userPreferences,
@@ -399,15 +393,12 @@ export class ConfigService {
       // Import settings (excluding private ones)
       if (data.settings && Array.isArray(data.settings)) {
         for (const setting of data.settings) {
-          if (setting.private) {
-            skipped++;
-            continue; // Skip private settings for security
-          }
-
           try {
             const existing = await this.settingsRepository.findOne({
               where: { key: setting.key }
             });
+
+            console.log('Importing setting:', setting.key, 'Existing:', !!existing);
 
             if (existing) {
               existing.value = setting.value;
@@ -419,7 +410,7 @@ export class ConfigService {
                 value: setting.value,
                 description: setting.description,
                 type: setting.type || 'string',
-                private: false,
+                private: setting.private || false,
               });
               await this.settingsRepository.save(newSetting);
             }

@@ -63,18 +63,18 @@ const settingsSections = [
     description: "Export and import database settings and data",
     icon: Database,
   },
-  {
-    id: "notifications",
-    title: "Notifications",
-    description: "Configure notification preferences and alert settings",
-    icon: Bell,
-  },
-  {
-    id: "profile",
-    title: "Profile",
-    description: "Manage your account profile and personal information",
-    icon: User,
-  },
+  // {
+  //   id: "notifications",
+  //   title: "Notifications",
+  //   description: "Configure notification preferences and alert settings",
+  //   icon: Bell,
+  // },
+  // {
+  //   id: "profile",
+  //   title: "Profile",
+  //   description: "Manage your account profile and personal information",
+  //   icon: User,
+  // },
 ];
 
 export function Settings({ onBack }: { onBack?: () => void } = {}) {
@@ -689,39 +689,39 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
           </div>
         );
 
-      case "notifications":
-        return (
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-lg font-medium">Notification Settings</h3>
-              <p className="text-sm text-muted-foreground">
-                Control how you receive notifications and alerts.
-              </p>
-            </div>
-            <Card className="p-4">
-              <p className="text-sm text-muted-foreground">
-                Notification settings will be implemented in a future version.
-              </p>
-            </Card>
-          </div>
-        );
+      // case "notifications":
+      //   return (
+      //     <div className="space-y-6">
+      //       <div>
+      //         <h3 className="text-lg font-medium">Notification Settings</h3>
+      //         <p className="text-sm text-muted-foreground">
+      //           Control how you receive notifications and alerts.
+      //         </p>
+      //       </div>
+      //       <Card className="p-4">
+      //         <p className="text-sm text-muted-foreground">
+      //           Notification settings will be implemented in a future version.
+      //         </p>
+      //       </Card>
+      //     </div>
+      //   );
 
-      case "profile":
-        return (
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-lg font-medium">Profile Settings</h3>
-              <p className="text-sm text-muted-foreground">
-                Manage your account profile and preferences.
-              </p>
-            </div>
-            <Card className="p-4">
-              <p className="text-sm text-muted-foreground">
-                Profile settings will be implemented in a future version.
-              </p>
-            </Card>
-          </div>
-        );
+      // case "profile":
+      //   return (
+      //     <div className="space-y-6">
+      //       <div>
+      //         <h3 className="text-lg font-medium">Profile Settings</h3>
+      //         <p className="text-sm text-muted-foreground">
+      //           Manage your account profile and preferences.
+      //         </p>
+      //       </div>
+      //       <Card className="p-4">
+      //         <p className="text-sm text-muted-foreground">
+      //           Profile settings will be implemented in a future version.
+      //         </p>
+      //       </Card>
+      //     </div>
+      //   );
 
       default:
         return (

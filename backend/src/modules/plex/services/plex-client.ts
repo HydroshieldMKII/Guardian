@@ -25,9 +25,8 @@ export class PlexClient {
       ip: ip as string,
       port: port as string,
       token: token as string,
-      useSSL: useSSL === 'true' || useSSL === true,
-      ignoreCertErrors:
-        ignoreCertErrors === 'true' || ignoreCertErrors === true,
+      useSSL: useSSL as boolean,
+      ignoreCertErrors: ignoreCertErrors as boolean,
     };
   }
 
