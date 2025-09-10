@@ -142,6 +142,37 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
     settingsToUpdate: { key: string; value: any }[]
   ) => {
     const errors: string[] = [];
+    
+    for (const setting of settingsToUpdate) {
+      switch (setting.key) {
+        case 'PLEX_SERVER_PORT':
+          const port = Number(setting.value);
+          if (isNaN(port) || port < 1 || port > 65535) {
+            errors.push('Port must be a number between 1 and 65535');
+          }
+          break;
+        case 'PLEXGUARD_REFRESH_INTERVAL':
+          const interval = Number(setting.value);
+          if (isNaN(interval) || interval < 1) {
+            errors.push('Refresh interval must be a positive number');
+          }
+          break;
+        case 'PLEX_SERVER_IP':
+          if (!setting.value || setting.value.trim().length === 0) {
+            errors.push('Plex server IP is required');
+          }
+          break;
+        case 'PLEX_TOKEN':
+          if (!setting.value || setting.value.trim().length === 0) {
+            errors.push('Plex token is required');
+          }
+          break;
+          default:
+            console.warn(`No validation rules for setting: ${setting.key}`);
+            break;
+      }
+    }
+    
     return errors;
   };
 
