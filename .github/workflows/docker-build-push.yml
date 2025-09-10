@@ -29,9 +29,12 @@ jobs:
           files: |
             docker-compose.example.yml
           push: true
-          no-cache: true
           set: |
             backend.platform=linux/amd64,linux/arm64
             frontend.platform=linux/amd64,linux/arm64
             backend.tags=docker.io/hydroshieldmkii/guardian-backend:latest
             frontend.tags=docker.io/hydroshieldmkii/guardian-frontend:latest
+            backend.cache-from=type=gha,scope=guardian-backend
+            backend.cache-to=type=gha,scope=guardian-backend,mode=max
+            frontend.cache-from=type=gha,scope=guardian-frontend
+            frontend.cache-to=type=gha,scope=guardian-frontend,mode=max
