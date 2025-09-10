@@ -2,6 +2,9 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AppSettings } from '../../../entities/app-settings.entity';
+import { UserDevice } from '../../../entities/user-device.entity';
+import { UserPreference } from '../../../entities/user-preference.entity';
+import { ActiveSession } from '../../../entities/active-session.entity';
 import * as http from 'http';
 import * as https from 'https';
 
@@ -353,9 +356,9 @@ export class ConfigService {
       // Get all data from all tables
       const [settings, userDevices, activeSessions, userPreferences] = await Promise.all([
         this.settingsRepository.find(),
-        this.settingsRepository.manager.getRepository('UserDevice').find(),
-        this.settingsRepository.manager.getRepository('ActiveSession').find(),
-        this.settingsRepository.manager.getRepository('UserPreference').find(),
+        this.settingsRepository.manager.getRepository(UserDevice).find(),
+        this.settingsRepository.manager.getRepository(ActiveSession).find(),
+        this.settingsRepository.manager.getRepository(UserPreference).find(),
       ]);
 
       const exportData = {
@@ -424,11 +427,14 @@ export class ConfigService {
 
       // Import user devices
       if (data.userDevices && Array.isArray(data.userDevices)) {
-        const deviceRepo = this.settingsRepository.manager.getRepository('UserDevice');
+        const deviceRepo = this.settingsRepository.manager.getRepository(UserDevice);
         for (const device of data.userDevices) {
           try {
             const existing = await deviceRepo.findOne({
-              where: { uuid: device.uuid }
+              where: { 
+                userId: device.userId, 
+                deviceIdentifier: device.deviceIdentifier 
+              }
             });
 
             if (!existing) {
@@ -436,10 +442,13 @@ export class ConfigService {
               await deviceRepo.save(newDevice);
               imported++;
             } else {
-              skipped++;
+              // Update existing device with new data
+              Object.assign(existing, device);
+              await deviceRepo.save(existing);
+              imported++;
             }
           } catch (error) {
-            this.logger.warn(`Failed to import device ${device.uuid}:`, error);
+            this.logger.warn(`Failed to import device ${device.deviceIdentifier}:`, error);
             skipped++;
           }
         }
@@ -447,11 +456,11 @@ export class ConfigService {
 
       // Import user preferences
       if (data.userPreferences && Array.isArray(data.userPreferences)) {
-        const prefRepo = this.settingsRepository.manager.getRepository('UserPreference');
+        const prefRepo = this.settingsRepository.manager.getRepository(UserPreference);
         for (const pref of data.userPreferences) {
           try {
             const existing = await prefRepo.findOne({
-              where: { key: pref.key }
+              where: { userId: pref.userId }
             });
 
             if (!existing) {
@@ -459,12 +468,40 @@ export class ConfigService {
               await prefRepo.save(newPref);
               imported++;
             } else {
-              existing.value = pref.value;
+              // Update existing preference
+              existing.defaultBlock = pref.defaultBlock;
+              existing.username = pref.username || existing.username;
               await prefRepo.save(existing);
               imported++;
             }
           } catch (error) {
-            this.logger.warn(`Failed to import preference ${pref.key}:`, error);
+            this.logger.warn(`Failed to import preference for user ${pref.userId}:`, error);
+            skipped++;
+          }
+        }
+      }
+
+      // Import active sessions
+      if (data.activeSessions && Array.isArray(data.activeSessions)) {
+        const sessionRepo = this.settingsRepository.manager.getRepository(ActiveSession);
+        for (const session of data.activeSessions) {
+          try {
+            const existing = await sessionRepo.findOne({
+              where: { sessionKey: session.sessionKey }
+            });
+
+            if (!existing) {
+              const newSession = sessionRepo.create(session);
+              await sessionRepo.save(newSession);
+              imported++;
+            } else {
+              // Update existing session
+              Object.assign(existing, session);
+              await sessionRepo.save(existing);
+              imported++;
+            }
+          } catch (error) {
+            this.logger.warn(`Failed to import session ${session.sessionKey}:`, error);
             skipped++;
           }
         }
