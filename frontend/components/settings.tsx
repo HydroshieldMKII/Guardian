@@ -182,11 +182,6 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
         .map(([key, value]) => ({ key, value }));
 
       if (settingsToUpdate.length === 0) {
-        toast({
-          title: "No changes to save",
-          description: "No settings have been modified.",
-          variant: "default",
-        });
         return;
       }
 
@@ -196,11 +191,6 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
         setConnectionStatus({
           success: false,
           message: `Validation error: ${validationErrors.join(", ")}`,
-        });
-        toast({
-          title: "Validation Error",
-          description: validationErrors.join(", "),
-          variant: "destructive",
         });
         return;
       }
@@ -698,9 +688,6 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
             </div>
           </div>
         );
-            </div>
-          </div>
-        );
 
       case "notifications":
         return (
@@ -826,7 +813,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Settings Navigation */}
           <Card className="lg:col-span-1">
-            <CardHeader >
+            <CardHeader>
               <CardTitle className="text-base">Settings</CardTitle>
               <CardDescription>Choose a category to configure</CardDescription>
             </CardHeader>

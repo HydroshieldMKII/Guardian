@@ -57,7 +57,6 @@ interface UserDevice {
   lastSeen: string;
   sessionCount: number;
   ipAddress: string | null;
-  userAgent: string | null;
 }
 
 interface UserPreference {
@@ -1117,17 +1116,6 @@ const DeviceApproval = memo(() => {
                   {selectedDevice.deviceIdentifier}
                 </p>
               </div>
-
-              {selectedDevice.userAgent && (
-                <div>
-                  <h4 className="font-semibold text-sm text-slate-600 dark:text-slate-400 mb-2">
-                    User Agent
-                  </h4>
-                  <p className="text-xs font-mono bg-slate-100 dark:bg-slate-800 p-2 rounded">
-                    {selectedDevice.userAgent}
-                  </p>
-                </div>
-              )}
 
               <div className="grid grid-cols-2 gap-4">
                 <div>

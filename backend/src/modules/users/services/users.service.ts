@@ -72,7 +72,7 @@ export class UsersService {
 
     if (preference) {
       // Update existing preference
-      preference.setDefaultBlockBoolean(defaultBlock);
+      preference.defaultBlock = defaultBlock;
       this.logger.log(
         `Updating preference for user: ${userId} to ${defaultBlock}`,
       );
@@ -91,10 +91,8 @@ export class UsersService {
       preference = this.userPreferenceRepository.create({
         userId,
         username: device?.username || undefined,
-        defaultBlock: null,
+        defaultBlock: defaultBlock,
       });
-
-      preference.setDefaultBlockBoolean(defaultBlock);
     }
 
     // Save the preference
@@ -148,7 +146,7 @@ export class UsersService {
 
     // If user has a specific preference, use it
     if (preference && preference.defaultBlock !== null) {
-      return preference.getDefaultBlockBoolean()!;
+      return preference.defaultBlock;
     }
 
     // Otherwise use global default from config
