@@ -47,7 +47,7 @@ The easiest way to deploy Guardian is using Docker Compose:
 
    ```bash
    cp docker-compose.example.yml docker-compose.yml
-   cp .env.example .env
+   cp .env.example .env #Edit .env to set custom port or release tag if needed
    ```
 
 3. **Start the services**:
@@ -68,6 +68,8 @@ If you use a container management system like Portainer, you can pull the images
 docker pull hydroshieldmkii/guardian-backend
 docker pull hydroshieldmkii/guardian-frontend
 ```
+
+Dont forget to set the environment variables in your container manager
 
 ## Update Guardian
 

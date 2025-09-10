@@ -400,7 +400,7 @@ export class ConfigService {
         activeSessions: data.activeSessions?.length || 0,
       });
 
-      // Import settings (excluding private ones)
+      // Import settings
       if (data.settings && Array.isArray(data.settings)) {
         for (const setting of data.settings) {
           try {
