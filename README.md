@@ -1,22 +1,70 @@
 # Guardian
 
+<p align="center">
+  <nobr>
+    <!-- Build Status -->
+    <a href="https://github.com/HydroshieldMKII/Guardian/actions/workflows/docker-multiarch.yml">
+      <img alt="Build Status" src="https://github.com/HydroshieldMKII/Guardian/actions/workflows/docker-multiarch.yml/badge.svg">
+    </a>
+  </nobr>
+  <nobr>
+    <!-- Docker Hub pulls -->
+    <a href="https://hub.docker.com/r/hydroshieldmkii/guardian-backend">
+      <img alt="Frontend Docker pulls" src="https://img.shields.io/docker/pulls/hydroshieldmkii/guardian-frontend?style=flat">
+    </a>
+  </nobr>
+    <nobr>
+    <!-- Docker Hub pulls -->
+    <a href="https://hub.docker.com/r/hydroshieldmkii/guardian-frontend">
+      <img alt="Backend Docker pulls" src="https://img.shields.io/docker/pulls/hydroshieldmkii/guardian-backend?style=flat">
+    </a>
+  </nobr>
+  <nobr>
+    <!-- GitHub stars -->
+    <a href="https://github.com/HydroshieldMKII/Guardian/stargazers">
+      <img alt="GitHub Repo stars" src="https://img.shields.io/github/stars/HydroshieldMKII/Guardian?style=flat">
+    </a>
+  </nobr>
+  <nobr>
+    <!-- Discord -->
+    <a href="https://discord.gg/invite/xTKuHyhdS4">
+      <img alt="Discord" src="https://img.shields.io/discord/1415505445883215955?logo=discord&style=flat">
+    </a>
+  </nobr>
+</p>
+
 Guardian is a utility designed to enhance the security and management of your Plex Media Server. This tool is built to help users monitor and control access to their Plex server, ensuring that only authorized users can view and interact with their media library.
 
 ## Table of Contents
 
 - [Features](#features)
-- [Quick Start with Docker](#-quick-start-with-docker-recommended)
-- [Configuration](#configuration)
+- [Install Guardian](#installation)
 - [Update Guardian](#update-guardian)
+- [Configuration](#configuration)
 - [Troubleshooting](#troubleshooting)
 - [Contributing](#contributing)
 
 ## Features
 
-- Deny streaming sessions from unapproved devices
-- Manual device approval system
-- Informations on devices like platform, product, version and IP address
-- Tracks last seen active sessions and user activity, with the ability to remove per device access in one click
+### **Device Security & Access Control**
+
+- **Real-time session termination** - Automatically blocks streaming from unapproved devices
+- **Three-tier device approval system** - Pending, approved, and rejected device states
+- **Per-user default blocking policies** - Configurable allow/block preferences for individual users
+- **Global default blocking** - Set server-wide policy for new device detection
+- **One-click device management** - Approve, reject, or permanently delete device records
+
+### **Real-time Monitoring & Tracking**
+
+- **Live session monitoring** - Track all active Plex streams
+- **Comprehensive device information** - Platform, product, version, IP address with quick lookup, and last seen timestamp
+- **Stream monitoring** - Track title, quality, and duration of active streams
+
+### **Configuration & Flexibility**
+
+- **Configurable monitoring intervals** - Adjust real-time monitoring frequency
+- **SSL/TLS support** - Secure connections with certificate validation options
+- **Database persistence** - Support export and import of device data for backup and migration
 
 <img width="2558" height="1237" alt="1" src="https://github.com/user-attachments/assets/0cd179aa-2bb3-4100-a000-c99ce2f985c8" />
 <img width="2558" height="1232" alt="2" src="https://github.com/user-attachments/assets/0c00c7cb-a0ed-4965-b931-a6f18f369440" />
@@ -47,7 +95,9 @@ The easiest way to deploy Guardian is using Docker Compose:
 
    ```bash
    cp docker-compose.example.yml docker-compose.yml
-   cp .env.example .env #Edit .env to set custom port or release tag if needed
+
+   # Optionally, copy the .env file to customize environment variables
+   cp .env.example .env
    ```
 
 3. **Start the services**:
@@ -62,14 +112,25 @@ With default port config, you can access the web interface at http://localhost:3
 
 ### Manually pull image
 
-If you use a container management system like Portainer, you can pull the images manually with the following commands:
+If you want to manually pull the images, you can do so with the following commands:
 
 ```bash
 docker pull hydroshieldmkii/guardian-backend
 docker pull hydroshieldmkii/guardian-frontend
 ```
 
-Dont forget to set the environment variables in your container manager
+## Configuration
+
+Guardian have 2 optionnals environments variables that you can set in a `.env` file:
+
+- `PLEXGUARD_FRONTEND_PORT`: The port on which the frontend will be accessible. Default is `3000`.
+- `VERSION`: The version of Guardian to use. Default is `latest`.
+
+To apply changes to the `.env` file, restart the Docker containers:
+
+```bash
+docker compose up -d --force-recreate
+```
 
 ## Update Guardian
 
@@ -82,13 +143,6 @@ To update Guardian, pull the latest changes and restart the Docker containers:
 docker compose pull
 docker compose up -d
 ```
-
-## Configuration
-
-Guardian have 2 optionnals environments variables that you can set in a `.env` file:
-
-- `PLEXGUARD_FRONTEND_PORT`: The port on which the frontend will be accessible. Default is `3000`.
-- `VERSION`: The version of Guardian to use. Default is `latest`.
 
 ## Troubleshooting
 
