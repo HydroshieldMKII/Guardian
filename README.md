@@ -6,32 +6,33 @@
     <a href="https://github.com/HydroshieldMKII/Guardian/actions/workflows/docker-multiarch.yml">
       <img alt="Build Status" src="https://github.com/HydroshieldMKII/Guardian/actions/workflows/docker-multiarch.yml/badge.svg">
     </a>
-  </nobr>
+  </nobr>&nbsp;
   <nobr>
-    <!-- Docker Hub pulls -->
+    <!-- Backend Docker pulls -->
     <a href="https://hub.docker.com/r/hydroshieldmkii/guardian-backend">
-      <img alt="Frontend Docker pulls" src="https://img.shields.io/docker/pulls/hydroshieldmkii/guardian-frontend?style=flat">
+      <img alt="Docker pulls (backend)" src="https://img.shields.io/docker/pulls/hydroshieldmkii/guardian-backend?style=flat">
     </a>
-  </nobr>
-    <nobr>
-    <!-- Docker Hub pulls -->
+  </nobr>&nbsp;
+  <nobr>
+    <!-- Frontend Docker pulls -->
     <a href="https://hub.docker.com/r/hydroshieldmkii/guardian-frontend">
-      <img alt="Backend Docker pulls" src="https://img.shields.io/docker/pulls/hydroshieldmkii/guardian-backend?style=flat">
+      <img alt="Docker pulls (frontend)" src="https://img.shields.io/docker/pulls/hydroshieldmkii/guardian-frontend?style=flat">
     </a>
-  </nobr>
+  </nobr>&nbsp;
   <nobr>
     <!-- GitHub stars -->
     <a href="https://github.com/HydroshieldMKII/Guardian/stargazers">
       <img alt="GitHub Repo stars" src="https://img.shields.io/github/stars/HydroshieldMKII/Guardian?style=flat">
     </a>
-  </nobr>
+  </nobr>&nbsp;
   <nobr>
     <!-- Discord -->
     <a href="https://discord.gg/invite/xTKuHyhdS4">
-      <img alt="Discord" src="https://img.shields.io/discord/1415505445883215955?logo=discord&style=flat">
+      <img alt="Discord chat" src="https://img.shields.io/discord/1415505445883215955?logo=discord&style=flat">
     </a>
   </nobr>
 </p>
+
 
 Guardian is a utility designed to enhance the security and management of your Plex Media Server. This tool is built to help users monitor and control access to their Plex server, ensuring that only authorized users can view and interact with their media library.
 
