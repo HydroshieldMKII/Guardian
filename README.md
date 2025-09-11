@@ -46,10 +46,25 @@ Guardian is a utility designed to enhance the security and management of your Pl
 
 ## Features
 
-- Deny streaming sessions from unapproved devices
-- Manual device approval system
-- Informations on devices like platform, product, version and IP address
-- Tracks last seen active sessions and user activity, with the ability to remove per device access in one click
+### **Device Security & Access Control**
+
+- **Real-time session termination** - Automatically blocks streaming from unapproved devices
+- **Three-tier device approval system** - Pending, approved, and rejected device states
+- **Per-user default blocking policies** - Configurable allow/block preferences for individual users
+- **Global default blocking** - Set server-wide policy for new device detection
+- **One-click device management** - Approve, reject, or permanently delete device records
+
+### **Real-time Monitoring & Tracking**
+
+- **Live session monitoring** - Track all active Plex streams
+- **Comprehensive device information** - Platform, product, version, IP address with quick lookup, and last seen timestamp
+- **Stream monitoring** - Track title, quality, and duration of active streams
+
+### **Configuration & Flexibility**
+
+- **Configurable monitoring intervals** - Adjust real-time monitoring frequency
+- **SSL/TLS support** - Secure connections with certificate validation options
+- **Database persistence** - Support export and import of device data for backup and migration
 
 <img width="2558" height="1237" alt="1" src="https://github.com/user-attachments/assets/0cd179aa-2bb3-4100-a000-c99ce2f985c8" />
 <img width="2558" height="1232" alt="2" src="https://github.com/user-attachments/assets/0c00c7cb-a0ed-4965-b931-a6f18f369440" />
