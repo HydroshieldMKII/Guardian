@@ -86,6 +86,8 @@ export class DeviceTrackingService {
 
   private async trackDevice(deviceInfo: DeviceInfo): Promise<void> {
     try {
+      this.logger.debug(`Tracking device: ${deviceInfo.deviceIdentifier} for user: ${deviceInfo.userId} with session: ${deviceInfo.sessionKey}`);
+      
       // Check if device already exists
       const existingDevice = await this.userDeviceRepository.findOne({
         where: {
@@ -95,9 +97,11 @@ export class DeviceTrackingService {
       });
 
       if (existingDevice) {
+        this.logger.debug(`Found existing device ${existingDevice.id}, updating...`);
         // Update existing device
         await this.updateExistingDevice(existingDevice, deviceInfo);
       } else {
+        this.logger.debug(`Device not found, creating new device entry...`);
         // Create new device entry
         await this.createNewDevice(deviceInfo);
       }
@@ -230,13 +234,26 @@ export class DeviceTrackingService {
   }
 
   async clearSessionKey(sessionKey: string): Promise<void> {
-      // Clear specific session keys for devices that stopped streaming
-      const result = await this.userDeviceRepository
-        .update(
-          { currentSessionKey: sessionKey },
-          { currentSessionKey: undefined },
-        );
-      this.logger.debug(`Cleared session keys for ${result.affected || 0} devices that stopped streaming`);
-    }
+    this.logger.debug(`Attempting to clear session key: ${sessionKey}`);
+    
+    // Find devices with this session key first
+    const devicesWithSession = await this.userDeviceRepository.find({
+      where: { currentSessionKey: sessionKey },
+      select: ['id', 'deviceIdentifier', 'currentSessionKey']
+    });
+    
+    this.logger.debug(`Found ${devicesWithSession.length} device(s) with session key ${sessionKey}`);
+    
+    // Clear specific session key for device that stopped streaming
+    const result = await this.userDeviceRepository
+      .createQueryBuilder()
+      .update(UserDevice)
+      .set({ currentSessionKey: () => 'NULL' })
+      .where('current_session_key = :sessionKey', { sessionKey })
+      .execute();
+      
+    this.logger.debug(`Cleared session key for ${result.affected || 0} device(s) that stopped streaming (session: ${sessionKey})`);
+  
+  }
   
 }
