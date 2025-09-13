@@ -77,6 +77,20 @@ const settingsSections = [
   // },
 ];
 
+// Function to convert setting keys to proper labels
+const getSettingLabel = (key: string): string => {
+  const labelMap: Record<string, string> = {
+    'PLEX_SERVER_IP': 'Plex server IP address',
+    'PLEX_SERVER_PORT': 'Plex server port',
+    'PLEX_TOKEN': 'Plex server authentication token',
+    'PLEXGUARD_REFRESH_INTERVAL': 'Refresh interval for session monitoring (seconds)',
+    'PLEXGUARD_STOPMSG': 'Message shown when blocking streams',
+    'PLEX_GUARD_DEFAULT_BLOCK': 'Block new devices by default',
+  };
+  
+  return labelMap[key] || key.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
+};
+
 export function Settings({ onBack }: { onBack?: () => void } = {}) {
   const [activeSection, setActiveSection] = useState("plex");
   const [settings, setSettings] = useState<AppSetting[]>([]);
@@ -441,7 +455,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
       return (
         <div className="flex items-center justify-between">
           <div className="space-y-0.5">
-            <Label>{setting.key.replace(/_/g, " ")}</Label>
+            <Label>{getSettingLabel(setting.key)}</Label>
             <p className="text-xs text-muted-foreground">
               {setting.description}
             </p>
@@ -459,7 +473,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
 
     return (
       <div className="space-y-2">
-        <Label>{setting.key.replace(/_/g, " ")}</Label>
+        <Label>{getSettingLabel(setting.key)}</Label>
         <Input
           type={
             setting.private
