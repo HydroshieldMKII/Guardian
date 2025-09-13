@@ -569,7 +569,7 @@ export function StreamsList() {
                             </div>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 p-2 rounded min-w-0">
+                        <div className="flex items-center gap-2 bg-muted p-2 rounded min-w-0">
                           <Clock className="w-3 h-3 flex-shrink-0" />
                           <div className="min-w-0 flex-1">
                             <div className="font-medium">Session</div>
