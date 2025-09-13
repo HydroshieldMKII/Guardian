@@ -25,7 +25,7 @@ export class DeviceTrackingService {
     const sessions = this.extractSessionsFromData(sessionsData);
 
     if (!sessions || sessions.length === 0) {
-      this.logger.debug('No active sessions found for device tracking');
+      // this.logger.debug('No active sessions found for device tracking');
       return;
     }
 

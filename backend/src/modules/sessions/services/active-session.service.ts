@@ -59,14 +59,10 @@ export class ActiveSessionService {
     try {
       const sessions = this.extractSessionsFromData(sessionsData);
 
-      // Get current session keys from the API
+      // Current session keys
       const currentSessionKeys = sessions
         .map((s) => s.sessionKey)
         .filter(Boolean);
-
-      if (!sessions || sessions.length === 0) {
-        return;
-      }
 
       // Get sessions that are about to be removed (devices that stopped streaming)
       const endingSessions = await this.activeSessionRepository

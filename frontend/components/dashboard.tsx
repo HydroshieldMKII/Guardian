@@ -306,60 +306,60 @@ export function Dashboard() {
         {/* Server Statistics */}
         <div className="mb-3 sm:mb-8">
           <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center">
-            Server Overview
+            Devices Overview
           </h3>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
             <Card className="border-l-4 border-l-blue-500">
-            <CardHeader className="pb-2 sm:pb-3">
-              <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center">
-                <Activity className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-                <span className="hidden sm:inline">Active Streams</span>
-                <span className="sm:hidden">Streams</span>
-              </CardTitle>
-              <CardDescription className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">
-                {stats.activeStreams}
-              </CardDescription>
-            </CardHeader>
-          </Card>
+              <CardHeader className="pb-2 sm:pb-3">
+                <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center">
+                  <Activity className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">Active Streams</span>
+                  <span className="sm:hidden">Streams</span>
+                </CardTitle>
+                <CardDescription className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">
+                  {stats.activeStreams}
+                </CardDescription>
+              </CardHeader>
+            </Card>
 
-          <Card className="border-l-4 border-l-green-500">
-            <CardHeader className="pb-2 sm:pb-3">
-              <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center">
-                <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-                <span className="hidden sm:inline">Approved Devices</span>
-                <span className="sm:hidden">Approved</span>
-              </CardTitle>
-              <CardDescription className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">
-                {stats.approvedDevices}
-              </CardDescription>
-            </CardHeader>
-          </Card>
+            <Card className="border-l-4 border-l-green-500">
+              <CardHeader className="pb-2 sm:pb-3">
+                <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center">
+                  <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">Approved Devices</span>
+                  <span className="sm:hidden">Approved</span>
+                </CardTitle>
+                <CardDescription className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">
+                  {stats.approvedDevices}
+                </CardDescription>
+              </CardHeader>
+            </Card>
 
-          <Card className="border-l-4 border-l-yellow-500">
-            <CardHeader className="pb-2 sm:pb-3">
-              <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center">
-                <AlertTriangle className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-                <span className="hidden sm:inline">Pending Approval</span>
-                <span className="sm:hidden">Pending</span>
-              </CardTitle>
-              <CardDescription className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">
-                {stats.pendingDevices}
-              </CardDescription>
-            </CardHeader>
-          </Card>
+            <Card className="border-l-4 border-l-yellow-500">
+              <CardHeader className="pb-2 sm:pb-3">
+                <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center">
+                  <AlertTriangle className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">Pending Approval</span>
+                  <span className="sm:hidden">Pending</span>
+                </CardTitle>
+                <CardDescription className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">
+                  {stats.pendingDevices}
+                </CardDescription>
+              </CardHeader>
+            </Card>
 
-          <Card className="border-l-4 border-l-purple-500">
-            <CardHeader className="pb-2 sm:pb-3">
-              <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center">
-                <Users className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-                <span className="hidden sm:inline">Total Devices</span>
-                <span className="sm:hidden">Total</span>
-              </CardTitle>
-              <CardDescription className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">
-                {stats.totalDevices}
-              </CardDescription>
-            </CardHeader>
-          </Card>
+            <Card className="border-l-4 border-l-purple-500">
+              <CardHeader className="pb-2 sm:pb-3">
+                <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center">
+                  <Users className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">Total Devices</span>
+                  <span className="sm:hidden">Total</span>
+                </CardTitle>
+                <CardDescription className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">
+                  {stats.totalDevices}
+                </CardDescription>
+              </CardHeader>
+            </Card>
           </div>
         </div>
 
