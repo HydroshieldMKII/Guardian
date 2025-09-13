@@ -852,10 +852,10 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
         {/* Backend Error Display */}
         {backendError && (
           <div className="mb-6">
-            <Card className="border-red-200 bg-red-50 dark:border-red-700 dark:bg-red-950/20">
+            <Card className="border-red-600 bg-red-50 dark:border-red-700 dark:bg-red-950/20">
               <CardContent>
                 <div className="flex items-center gap-3">
-                  <XCircle className="h-5 w-5 text-red-500 dark:text-red-400 shrink-0" />
+                  <XCircle className="h-5 w-5 text-red-600 dark:text-red-700 shrink-0" />
                   <div className="flex-1">
                     <h3 className="font-semibold text-red-800 dark:text-red-200 mb-1">
                       Backend Connection Error
@@ -868,7 +868,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
                     variant="outline"
                     size="sm"
                     onClick={fetchSettings}
-                    className="border-red-300 text-red-600 hover:bg-red-100 dark:border-red-600 dark:text-red-400 dark:hover:bg-red-900/20"
+                    className="border-red-600 text-red-600 hover:bg-red-100 dark:border-red-700 dark:text-red-700 dark:hover:bg-red-900/20"
                   >
                     <RefreshCw className="h-4 w-4 mr-2" />
                     Retry

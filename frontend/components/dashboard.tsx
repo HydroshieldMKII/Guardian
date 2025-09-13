@@ -289,7 +289,7 @@ export function Dashboard() {
               {stats.pendingDevices > 0 && (
                 <Badge
                   variant="destructive"
-                  className="absolute -top-1 -right-1 sm:relative sm:top-0 sm:right-0 sm:ml-2 min-w-5 h-5 text-xs"
+                  className="absolute -top-1 -right-1 sm:relative sm:top-0 sm:right-0 sm:ml-2 min-w-5 h-5 text-xs bg-red-600 dark:bg-red-700 text-white"
                 >
                   {stats.pendingDevices}
                 </Badge>

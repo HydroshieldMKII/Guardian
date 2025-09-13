@@ -100,38 +100,61 @@ const DeviceSkeleton = () => (
   <div className="p-3 sm:p-4 rounded-lg border bg-card border-border shadow-sm animate-pulse">
     <div className="flex flex-col sm:flex-row sm:items-start justify-between mb-3 gap-3">
       <div className="flex-1 min-w-0">
-        <div className="flex items-center space-x-2 mb-2">
-          <div className="w-4 h-4 bg-muted rounded"></div>
-          <div className="h-5 bg-muted rounded w-32"></div>
+        {/* Device header with icon, name and status */}
+        <div className="flex items-center space-x-2 mb-3">
+          <div className="w-5 h-5 bg-muted rounded"></div>
+          <div className="h-5 bg-muted rounded w-36 sm:w-40"></div>
           <div className="h-5 bg-muted rounded w-20"></div>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          <div className="flex items-center space-x-2">
-            <div className="w-3 h-3 bg-muted rounded"></div>
-            <div className="h-4 bg-muted rounded w-24"></div>
-          </div>
-          <div className="flex items-center space-x-2">
-            <div className="w-3 h-3 bg-muted rounded"></div>
-            <div className="h-4 bg-muted rounded w-20"></div>
-          </div>
+        
+        {/* Device details grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
           <div className="flex items-center space-x-2">
             <div className="w-3 h-3 bg-muted rounded"></div>
             <div className="h-4 bg-muted rounded w-28"></div>
           </div>
           <div className="flex items-center space-x-2">
             <div className="w-3 h-3 bg-muted rounded"></div>
-            <div className="h-4 bg-muted rounded w-16"></div>
+            <div className="h-4 bg-muted rounded w-24"></div>
+          </div>
+          <div className="flex items-center space-x-2">
+            <div className="w-3 h-3 bg-muted rounded"></div>
+            <div className="h-4 bg-muted rounded w-32"></div>
+          </div>
+          <div className="flex items-center space-x-2">
+            <div className="w-3 h-3 bg-muted rounded"></div>
+            <div className="h-4 bg-muted rounded w-20"></div>
+          </div>
+        </div>
+        
+        {/* Additional device info */}
+        <div className="space-y-2">
+          <div className="flex items-center space-x-2">
+            <div className="w-3 h-3 bg-muted rounded"></div>
+            <div className="h-4 bg-muted rounded w-44"></div>
+          </div>
+          <div className="flex items-center space-x-2">
+            <div className="w-3 h-3 bg-muted rounded"></div>
+            <div className="h-4 bg-muted rounded w-38"></div>
           </div>
         </div>
       </div>
-      <div className="flex flex-row sm:flex-col gap-1 sm:gap-2">
-        <div className="h-8 bg-muted rounded w-16"></div>
-        <div className="h-8 bg-muted rounded w-18"></div>
-        <div className="h-8 bg-muted rounded w-16"></div>
+      
+      {/* Action buttons skeleton */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 min-w-0 sm:min-w-[280px]">
+        <div className="h-8 bg-muted rounded col-span-2 sm:col-span-1"></div>
+        <div className="h-8 bg-muted rounded"></div>
+        <div className="h-8 bg-muted rounded"></div>
+        <div className="h-8 bg-muted rounded"></div>
       </div>
     </div>
+    
+    {/* Separator and timestamp */}
     <div className="h-px bg-border my-3"></div>
-    <div className="h-3 bg-muted rounded w-full"></div>
+    <div className="flex justify-between items-center">
+      <div className="h-3 bg-muted rounded w-32"></div>
+      <div className="h-3 bg-muted rounded w-24"></div>
+    </div>
   </div>
 );
 
@@ -139,16 +162,31 @@ const UserSkeleton = () => (
   <div className="p-3 sm:p-4 rounded-lg border bg-card border-border shadow-sm animate-pulse">
     <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-3 gap-3">
       <div className="flex-1 min-w-0">
-        <div className="flex items-center space-x-2 mb-2">
-          <div className="w-4 h-4 bg-muted rounded"></div>
+        {/* User header */}
+        <div className="flex items-center space-x-2 mb-3">
+          <div className="w-5 h-5 bg-muted rounded"></div>
           <div className="h-5 bg-muted rounded w-32"></div>
-          <div className="h-5 bg-muted rounded w-24"></div>
+          <div className="h-5 bg-muted rounded w-28"></div>
+        </div>
+        
+        {/* User details */}
+        <div className="space-y-2">
+          <div className="flex items-center space-x-2">
+            <div className="w-3 h-3 bg-muted rounded"></div>
+            <div className="h-4 bg-muted rounded w-36"></div>
+          </div>
+          <div className="flex items-center space-x-2">
+            <div className="w-3 h-3 bg-muted rounded"></div>
+            <div className="h-4 bg-muted rounded w-28"></div>
+          </div>
         </div>
       </div>
+      
+      {/* Action buttons skeleton */}
       <div className="flex flex-row gap-2">
+        <div className="h-8 bg-muted rounded w-20"></div>
         <div className="h-8 bg-muted rounded w-16"></div>
-        <div className="h-8 bg-muted rounded w-16"></div>
-        <div className="h-8 bg-muted rounded w-16"></div>
+        <div className="h-8 bg-muted rounded w-18"></div>
       </div>
     </div>
   </div>
@@ -667,7 +705,7 @@ const DeviceApproval = memo(() => {
         );
       case "rejected":
         return (
-          <Badge variant="destructive" className="bg-orange-600 dark:bg-orange-700 text-white">
+          <Badge variant="destructive" className="bg-red-600 dark:bg-red-700 text-white">
             <XCircle className="w-3 h-3 mr-1" />
             Rejected
           </Badge>
@@ -803,7 +841,7 @@ const DeviceApproval = memo(() => {
                 // Show skeleton loading for users
                 <ScrollArea className="h-[50vh] max-h-[400px] sm:max-h-[500px] lg:max-h-[600px]">
                   <div className="space-y-4 pr-4">
-                    {Array.from({ length: 3 }, (_, i) => (
+                    {Array.from({ length: 4 }, (_, i) => (
                       <UserSkeleton key={`user-skeleton-${i}`} />
                     ))}
                   </div>
@@ -837,11 +875,13 @@ const DeviceApproval = memo(() => {
               )}
             </div>
           ) : loading || refreshing ? (
-            // Show skeleton loading for devices
+            // Show skeleton loading for devices with realistic count based on tab
             <ScrollArea className="h-[50vh] max-h-[400px] sm:max-h-[500px] lg:max-h-[600px]">
               <div className="space-y-4 pr-4">
-                {Array.from({ length: 4 }, (_, i) => (
-                  <DeviceSkeleton key={`device-skeleton-${i}`} />
+                {Array.from({ 
+                  length: activeTab === "pending" ? 3 : activeTab === "processed" ? 5 : 4 
+                }, (_, i) => (
+                  <DeviceSkeleton key={`device-skeleton-${activeTab}-${i}`} />
                 ))}
               </div>
             </ScrollArea>
@@ -938,7 +978,7 @@ const DeviceApproval = memo(() => {
                               size="sm"
                               onClick={() => showRejectConfirmation(device)}
                               disabled={actionLoading === device.id}
-                              className="border-orange-500 text-orange-600 hover:bg-orange-50 dark:border-orange-400 dark:text-orange-300 dark:hover:bg-orange-900/30 text-xs px-2"
+                              className="border-red-600 text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-700 dark:hover:bg-red-900/20 text-xs px-2"
                             >
                               {actionLoading === device.id ? (
                                 <RefreshCw className="w-3 h-3 mr-1 animate-spin" />
@@ -952,7 +992,7 @@ const DeviceApproval = memo(() => {
                               size="sm"
                               onClick={() => showDeleteConfirmation(device)}
                               disabled={actionLoading === device.id}
-                              className="text-xs px-2"
+                              className="text-xs px-2 bg-red-600 dark:bg-red-700 text-white hover:bg-red-700 dark:hover:bg-red-800"
                             >
                               {actionLoading === device.id ? (
                                 <RefreshCw className="w-3 h-3 mr-1 animate-spin" />
@@ -977,7 +1017,7 @@ const DeviceApproval = memo(() => {
                               className={`text-xs px-2 col-span-2 sm:col-span-2 ${
                                 device.status === "approved"
                                   ? "bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white"
-                                  : "border-orange-500 text-orange-600 hover:bg-orange-50 dark:border-orange-400 dark:text-orange-300 dark:hover:bg-orange-900/30"
+                                  : "border-red-600 text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-700 dark:hover:bg-red-900/20"
                               }`}
                             >
                               {actionLoading === device.id ? (
@@ -998,7 +1038,7 @@ const DeviceApproval = memo(() => {
                               size="sm"
                               onClick={() => showDeleteConfirmation(device)}
                               disabled={actionLoading === device.id}
-                              className="text-xs px-2"
+                              className="text-xs px-2 bg-red-600 dark:bg-red-700 text-white hover:bg-red-700 dark:hover:bg-red-800"
                             >
                               {actionLoading === device.id ? (
                                 <RefreshCw className="w-3 h-3 mr-1 animate-spin" />
@@ -1165,14 +1205,14 @@ const DeviceApproval = memo(() => {
                 <CheckCircle className="w-5 h-5 text-green-500" />
               )}
               {confirmAction?.action === "reject" && (
-                <XCircle className="w-5 h-5 text-orange-500" />
+                <XCircle className="w-5 h-5 text-red-600" />
               )}
               {confirmAction?.action === "delete" && (
-                <Trash2 className="w-5 h-5 text-red-500" />
+                <Trash2 className="w-5 h-5 text-red-600" />
               )}
               {confirmAction?.action === "toggle" &&
                 (confirmAction.device.status === "approved" ? (
-                  <XCircle className="w-5 h-5 text-orange-500" />
+                  <XCircle className="w-5 h-5 text-red-600" />
                 ) : (
                   <CheckCircle className="w-5 h-5 text-green-500" />
                 ))}
@@ -1234,8 +1274,10 @@ const DeviceApproval = memo(() => {
                   : confirmAction?.action === "reject" ||
                       (confirmAction?.action === "toggle" &&
                         confirmAction.device.status === "approved")
-                    ? "border-orange-500 text-orange-600 hover:bg-orange-50"
-                    : ""
+                    ? "border-red-600 text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-700 dark:hover:bg-red-900/20"
+                    : confirmAction?.action === "delete"
+                      ? "bg-red-600 dark:bg-red-700 text-white hover:bg-red-700 dark:hover:bg-red-800"
+                      : ""
               }
             >
               {actionLoading ? (

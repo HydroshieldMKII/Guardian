@@ -385,7 +385,7 @@ export function StreamsList() {
         </div>
 
         {error ? (
-          <div className="flex flex-col items-center justify-center h-32 sm:h-40 text-red-600 dark:text-red-400 text-center">
+          <div className="flex flex-col items-center justify-center h-32 sm:h-40 text-red-600 dark:text-red-700 text-center">
             <AlertCircle className="w-8 h-8 mb-2" />
             <p className="text-sm font-medium mb-1">Connection Error</p>
             <p className="text-xs text-muted-foreground px-4">{error}</p>
@@ -591,7 +591,7 @@ export function StreamsList() {
                             !stream.User?.id ||
                             !stream.Player?.machineIdentifier
                           }
-                          className="h-8 text-xs"
+                          className="h-8 text-xs bg-red-600 dark:bg-red-700 text-white hover:bg-red-700 dark:hover:bg-red-800"
                         >
                           {revokingAuth === stream.sessionKey ? (
                             <RefreshCw className="w-3 h-3 mr-1 animate-spin" />
@@ -664,6 +664,7 @@ export function StreamsList() {
               variant="destructive"
               onClick={handleConfirmRemoveAccess}
               disabled={revokingAuth !== null}
+              className="bg-red-600 dark:bg-red-700 text-white hover:bg-red-700 dark:hover:bg-red-800"
             >
               {revokingAuth ? (
                 <>
