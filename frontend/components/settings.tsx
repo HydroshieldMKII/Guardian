@@ -83,10 +83,10 @@ const getSettingLabel = (key: string): string => {
   const labelMap: Record<string, string> = {
     'PLEX_SERVER_IP': 'Plex server IP address',
     'PLEX_SERVER_PORT': 'Plex server port',
-    'PLEX_TOKEN': 'Plex server authentication token',
-    'PLEXGUARD_REFRESH_INTERVAL': 'Refresh interval for session monitoring (seconds)',
-    'PLEXGUARD_STOPMSG': 'Message shown when blocking streams',
-    'PLEX_GUARD_DEFAULT_BLOCK': 'Block new devices by default',
+    'PLEX_TOKEN': 'Authentication token',
+    'PLEXGUARD_REFRESH_INTERVAL': 'Refresh interval',
+    'PLEXGUARD_STOPMSG': 'Message',
+    'PLEX_GUARD_DEFAULT_BLOCK': 'Default behavior for new devices',
   };
   
   return labelMap[key] || key.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, l => l.toUpperCase());

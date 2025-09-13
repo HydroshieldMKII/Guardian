@@ -1,11 +1,10 @@
-import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AppSettings } from '../../../entities/app-settings.entity';
 import { UserDevice } from '../../../entities/user-device.entity';
 import { UserPreference } from '../../../entities/user-preference.entity';
 import { ActiveSession } from '../../../entities/active-session.entity';
-import { SchedulerService } from '../../../services/scheduler.service';
 import * as http from 'http';
 import * as https from 'https';
 
@@ -21,12 +20,11 @@ export interface ConfigSettingDto {
 export class ConfigService {
   private readonly logger = new Logger(ConfigService.name);
   private cache = new Map<string, any>();
+  private configChangeListeners = new Map<string, Array<() => void>>();
 
   constructor(
     @InjectRepository(AppSettings)
     private settingsRepository: Repository<AppSettings>,
-    @Inject(forwardRef(() => SchedulerService))
-    private schedulerService: SchedulerService,
   ) {
     this.initializeDefaultSettings();
   }
@@ -121,6 +119,39 @@ export class ConfigService {
     }
   }
 
+  // Add listener for config changes
+  addConfigChangeListener(key: string, callback: () => void) {
+    if (!this.configChangeListeners.has(key)) {
+      this.configChangeListeners.set(key, []);
+    }
+    this.configChangeListeners.get(key)!.push(callback);
+  }
+
+  // Remove listener for config changes
+  removeConfigChangeListener(key: string, callback: () => void) {
+    const listeners = this.configChangeListeners.get(key);
+    if (listeners) {
+      const index = listeners.indexOf(callback);
+      if (index > -1) {
+        listeners.splice(index, 1);
+      }
+    }
+  }
+
+  // Notify listeners of config changes
+  private notifyConfigChange(key: string) {
+    const listeners = this.configChangeListeners.get(key);
+    if (listeners) {
+      listeners.forEach(callback => {
+        try {
+          callback();
+        } catch (error) {
+          this.logger.error(`Error calling config change listener for ${key}:`, error);
+        }
+      });
+    }
+  }
+
   async getAllSettings(): Promise<AppSettings[]> {
     return this.settingsRepository.find({
       order: { key: 'ASC' },
@@ -168,7 +199,7 @@ export class ConfigService {
     return value;
   }
 
-  async updateSetting(key: string, value: any): Promise<AppSettings> {
+    async updateSetting(key: string, value: any): Promise<AppSettings> {
     let stringValue = value;
     if (typeof value === 'object') {
       stringValue = JSON.stringify(value);
@@ -186,15 +217,6 @@ export class ConfigService {
 
     const updated = await this.settingsRepository.save(setting);
 
-    if (key === 'PLEXGUARD_REFRESH_INTERVAL') {
-      this.logger.log('Refresh interval updated, restarting scheduler...');
-      try {
-        await this.schedulerService.restartScheduler();
-      } catch (error) {
-        this.logger.error('Failed to restart scheduler after interval change:', error);
-      }
-    }
-
     // Update cache
     let cacheValue = value;
     if (setting.type === 'boolean') {
@@ -209,6 +231,9 @@ export class ConfigService {
 
     this.logger.log(`Updated setting: ${key}`);
 
+    // Notify listeners of the config change
+    this.notifyConfigChange(key);
+
     return updated;
   }
 
@@ -216,31 +241,15 @@ export class ConfigService {
     settings: ConfigSettingDto[],
   ): Promise<AppSettings[]> {
     const results: AppSettings[] = [];
-    let shouldRestartScheduler = false;
 
     for (const { key, value } of settings) {
       try {
-        // Skip scheduler restart for individual updates, we'll handle it once at the end
+        // Each updateSetting call will handle config change notifications
         const updated = await this.updateSetting(key, value);
         results.push(updated);
-        
-        // Check if refresh interval was updated
-        if (key === 'PLEXGUARD_REFRESH_INTERVAL') {
-          shouldRestartScheduler = true;
-        }
       } catch (error) {
         this.logger.error(`Failed to update setting ${key}:`, error);
         throw error;
-      }
-    }
-
-    // Restart scheduler if refresh interval was updated
-    if (shouldRestartScheduler) {
-      this.logger.log('Refresh interval updated in batch, restarting scheduler...');
-      try {
-        await this.schedulerService.restartScheduler();
-      } catch (error) {
-        this.logger.error('Failed to restart scheduler after batch interval change:', error);
       }
     }
 
