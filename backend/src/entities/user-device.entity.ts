@@ -43,8 +43,12 @@ export class UserDevice {
   @UpdateDateColumn({ name: 'last_seen' })
   lastSeen: Date;
 
-  @Column({ name: 'session_count', default: 1 })
+  @Column({ name: 'session_count', default: 0 })
   sessionCount: number;
+
+  // To keep track if it's a new session
+  @Column({ name: 'current_session_key', nullable: true })
+  currentSessionKey: string;
 
   @Column({ name: 'ip_address', nullable: true })
   ipAddress: string;

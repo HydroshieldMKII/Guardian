@@ -572,7 +572,7 @@ export function StreamsList() {
                         <div className="flex items-center gap-2 bg-muted p-2 rounded min-w-0">
                           <Clock className="w-3 h-3 flex-shrink-0" />
                           <div className="min-w-0 flex-1">
-                            <div className="font-medium">Session</div>
+                            <div className="font-medium">Streams Started</div>
                             <div className="truncate">
                               {stream.sessionKey || "Unknown"}
                             </div>

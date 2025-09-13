@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ActiveSession } from '../../../entities/active-session.entity';
+import { DeviceTrackingService } from '../../devices/services/device-tracking.service';
 
 interface PlexSessionData {
   sessionKey: string;
@@ -48,36 +49,46 @@ export class ActiveSessionService {
   constructor(
     @InjectRepository(ActiveSession)
     private activeSessionRepository: Repository<ActiveSession>,
+    private deviceTrackingService: DeviceTrackingService,
   ) {}
 
   async updateActiveSessions(sessionsData: any): Promise<void> {
     try {
       const sessions = this.extractSessionsFromData(sessionsData);
 
-      if (!sessions || sessions.length === 0) {
-        // No active sessions, clear the database
-        await this.clearAllSessions();
-        this.logger.debug('No active sessions, cleared database');
-        return;
-      }
-
       // Get current session keys from the API
       const currentSessionKeys = sessions
         .map((s) => s.sessionKey)
         .filter(Boolean);
 
-      // Remove sessions that are no longer active
-      if (currentSessionKeys.length > 0) {
-        await this.activeSessionRepository
-          .createQueryBuilder()
-          .delete()
-          .where('session_key NOT IN (:...sessionKeys)', {
-            sessionKeys: currentSessionKeys,
-          })
-          .execute();
-      } else {
-        await this.clearAllSessions();
+      if (!sessions || sessions.length === 0) {
+        return;
       }
+
+      // Get sessions that are about to be removed (devices that stopped streaming)
+      const endingSessions = await this.activeSessionRepository
+        .createQueryBuilder('session')
+        .select('session.sessionKey')
+        .where('session.sessionKey NOT IN (:...sessionKeys)', {
+          sessionKeys: currentSessionKeys,
+        })
+        .getMany();
+
+      const endingSessionKeys = endingSessions.map(s => s.sessionKey);
+
+      // Remove sessions that are no longer active
+      await this.activeSessionRepository
+        .createQueryBuilder()
+        .delete()
+        .where('session_key NOT IN (:...sessionKeys)', {
+          sessionKeys: currentSessionKeys,
+        })
+        .execute();
+      
+      // Clear session keys from devices for ended sessions only
+        for (const sessionKey of endingSessionKeys) {
+          await this.deviceTrackingService.clearSessionKey(sessionKey);
+        }
 
       // Update or create sessions
       for (const sessionData of sessions) {
@@ -95,11 +106,6 @@ export class ActiveSessionService {
     return this.activeSessionRepository.find({
       order: { lastActivity: 'DESC' },
     });
-  }
-
-  async clearAllSessions(): Promise<void> {
-    await this.activeSessionRepository.clear();
-    this.logger.debug('Cleared all active sessions from database');
   }
 
   private extractSessionsFromData(data: any): PlexSessionData[] {
@@ -188,7 +194,8 @@ export class ActiveSessionService {
 
   async removeSession(sessionKey: string): Promise<void> {
     await this.activeSessionRepository.delete({ sessionKey });
-    this.logger.log(`Removed session ${sessionKey} from database`);
+    await this.deviceTrackingService.clearSessionKey(sessionKey);
+    this.logger.log(`Removed session ${sessionKey} from database and cleared device session key`);
   }
 
   async getActiveSessionsFormatted(): Promise<any> {

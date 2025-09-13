@@ -940,7 +940,7 @@ const DeviceApproval = memo(() => {
                           </div>
                           <div className="flex items-center">
                             <Clock className="w-3 h-3 mr-1" />
-                            Sessions: {device.sessionCount}
+                            Streams Started: {device.sessionCount}
                           </div>
                         </div>
                       </div>
@@ -1140,7 +1140,7 @@ const DeviceApproval = memo(() => {
                 </div>
                 <div>
                   <h4 className="font-semibold text-sm text-muted-foreground">
-                    Sessions
+                    Streams Started
                   </h4>
                   <p className="text-foreground">
                     {selectedDevice.sessionCount}

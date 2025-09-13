@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { UserDevice } from '../../../entities/user-device.entity';
 import { UsersService } from '../../users/services/users.service';
 import {
@@ -75,6 +75,7 @@ export class DeviceTrackingService {
       userId: session.User?.id || session.User?.uuid || 'unknown',
       username: session.User?.title,
       deviceIdentifier: session.Player?.machineIdentifier || 'unknown',
+      sessionKey: session.sessionKey,
       deviceName: session.Player?.device || session.Player?.title,
       devicePlatform: session.Player?.platform,
       deviceProduct: session.Player?.product,
@@ -111,7 +112,13 @@ export class DeviceTrackingService {
     deviceInfo: DeviceInfo,
   ): Promise<void> {
     existingDevice.lastSeen = new Date();
-    existingDevice.sessionCount += 1;
+    
+    // Only increment session count if this is a new session
+    if (deviceInfo.sessionKey && existingDevice.currentSessionKey !== deviceInfo.sessionKey) {
+      existingDevice.sessionCount += 1;
+      existingDevice.currentSessionKey = deviceInfo.sessionKey;
+      this.logger.debug(`New session started for device ${deviceInfo.deviceIdentifier}. Session count: ${existingDevice.sessionCount}`);
+    }
 
     // Update device info if it has changed or was null
     if (deviceInfo.deviceName && !existingDevice.deviceName) {
@@ -156,6 +163,7 @@ export class DeviceTrackingService {
       deviceVersion: deviceInfo.deviceVersion,
       status: defaultBlock ? 'pending' : 'approved',
       sessionCount: 1,
+      currentSessionKey: deviceInfo.sessionKey,
       ipAddress: deviceInfo.ipAddress,
     });
 
@@ -220,4 +228,15 @@ export class DeviceTrackingService {
     await this.userDeviceRepository.delete(deviceId);
     this.logger.log(`Device ${deviceId} has been rejected and deleted`);
   }
+
+  async clearSessionKey(sessionKey: string): Promise<void> {
+      // Clear specific session keys for devices that stopped streaming
+      const result = await this.userDeviceRepository
+        .update(
+          { currentSessionKey: sessionKey },
+          { currentSessionKey: undefined },
+        );
+      this.logger.debug(`Cleared session keys for ${result.affected || 0} devices that stopped streaming`);
+    }
+  
 }
