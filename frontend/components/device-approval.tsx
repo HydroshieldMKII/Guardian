@@ -97,58 +97,58 @@ const ClickableIP = ({ ipAddress }: { ipAddress: string | null }) => {
 
 // Skeleton components for loading states
 const DeviceSkeleton = () => (
-  <div className="p-3 sm:p-4 rounded-lg border bg-slate-50 dark:bg-slate-800/50 animate-pulse">
+  <div className="p-3 sm:p-4 rounded-lg border bg-card border-border shadow-sm animate-pulse">
     <div className="flex flex-col sm:flex-row sm:items-start justify-between mb-3 gap-3">
       <div className="flex-1 min-w-0">
         <div className="flex items-center space-x-2 mb-2">
-          <div className="w-4 h-4 bg-slate-200 dark:bg-slate-700 rounded"></div>
-          <div className="h-5 bg-slate-200 dark:bg-slate-700 rounded w-32"></div>
-          <div className="h-5 bg-slate-200 dark:bg-slate-700 rounded w-20"></div>
+          <div className="w-4 h-4 bg-muted rounded"></div>
+          <div className="h-5 bg-muted rounded w-32"></div>
+          <div className="h-5 bg-muted rounded w-20"></div>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           <div className="flex items-center space-x-2">
-            <div className="w-3 h-3 bg-slate-200 dark:bg-slate-700 rounded"></div>
-            <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-24"></div>
+            <div className="w-3 h-3 bg-muted rounded"></div>
+            <div className="h-4 bg-muted rounded w-24"></div>
           </div>
           <div className="flex items-center space-x-2">
-            <div className="w-3 h-3 bg-slate-200 dark:bg-slate-700 rounded"></div>
-            <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-20"></div>
+            <div className="w-3 h-3 bg-muted rounded"></div>
+            <div className="h-4 bg-muted rounded w-20"></div>
           </div>
           <div className="flex items-center space-x-2">
-            <div className="w-3 h-3 bg-slate-200 dark:bg-slate-700 rounded"></div>
-            <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-28"></div>
+            <div className="w-3 h-3 bg-muted rounded"></div>
+            <div className="h-4 bg-muted rounded w-28"></div>
           </div>
           <div className="flex items-center space-x-2">
-            <div className="w-3 h-3 bg-slate-200 dark:bg-slate-700 rounded"></div>
-            <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-16"></div>
+            <div className="w-3 h-3 bg-muted rounded"></div>
+            <div className="h-4 bg-muted rounded w-16"></div>
           </div>
         </div>
       </div>
       <div className="flex flex-row sm:flex-col gap-1 sm:gap-2">
-        <div className="h-8 bg-slate-200 dark:bg-slate-700 rounded w-16"></div>
-        <div className="h-8 bg-slate-200 dark:bg-slate-700 rounded w-18"></div>
-        <div className="h-8 bg-slate-200 dark:bg-slate-700 rounded w-16"></div>
+        <div className="h-8 bg-muted rounded w-16"></div>
+        <div className="h-8 bg-muted rounded w-18"></div>
+        <div className="h-8 bg-muted rounded w-16"></div>
       </div>
     </div>
-    <div className="h-px bg-slate-200 dark:bg-slate-700 my-3"></div>
-    <div className="h-3 bg-slate-200 dark:bg-slate-700 rounded w-full"></div>
+    <div className="h-px bg-border my-3"></div>
+    <div className="h-3 bg-muted rounded w-full"></div>
   </div>
 );
 
 const UserSkeleton = () => (
-  <div className="p-3 sm:p-4 rounded-lg border bg-slate-50 dark:bg-slate-800/50 animate-pulse">
+  <div className="p-3 sm:p-4 rounded-lg border bg-card border-border shadow-sm animate-pulse">
     <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-3 gap-3">
       <div className="flex-1 min-w-0">
         <div className="flex items-center space-x-2 mb-2">
-          <div className="w-4 h-4 bg-slate-200 dark:bg-slate-700 rounded"></div>
-          <div className="h-5 bg-slate-200 dark:bg-slate-700 rounded w-32"></div>
-          <div className="h-5 bg-slate-200 dark:bg-slate-700 rounded w-24"></div>
+          <div className="w-4 h-4 bg-muted rounded"></div>
+          <div className="h-5 bg-muted rounded w-32"></div>
+          <div className="h-5 bg-muted rounded w-24"></div>
         </div>
       </div>
       <div className="flex flex-row gap-2">
-        <div className="h-8 bg-slate-200 dark:bg-slate-700 rounded w-16"></div>
-        <div className="h-8 bg-slate-200 dark:bg-slate-700 rounded w-16"></div>
-        <div className="h-8 bg-slate-200 dark:bg-slate-700 rounded w-16"></div>
+        <div className="h-8 bg-muted rounded w-16"></div>
+        <div className="h-8 bg-muted rounded w-16"></div>
+        <div className="h-8 bg-muted rounded w-16"></div>
       </div>
     </div>
   </div>
@@ -215,12 +215,12 @@ const UserPreferenceCard = memo(
     };
 
     return (
-      <div className="p-3 sm:p-4 rounded-lg border bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-slate-900/20">
+      <div className="p-3 sm:p-4 rounded-lg border bg-card border-border shadow-sm hover:shadow-md transition-shadow">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-3 gap-3">
           <div className="flex-1 min-w-0">
             <div className="flex items-center space-x-2 mb-2">
               <User className="w-4 h-4" />
-              <h3 className="font-semibold text-slate-900 dark:text-slate-100 truncate">
+              <h3 className="font-semibold text-foreground truncate">
                 {user.username || user.userId}
               </h3>
               {getPreferenceBadge(user.defaultBlock)}
@@ -675,7 +675,7 @@ const DeviceApproval = memo(() => {
       case "pending":
       default:
         return (
-          <Badge variant="secondary" className="bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200">
+          <Badge variant="secondary" className="bg-muted text-muted-foreground">
             <AlertTriangle className="w-3 h-3 mr-1" />
             Pending
           </Badge>
@@ -705,7 +705,7 @@ const DeviceApproval = memo(() => {
               </CardDescription>
             </div>
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-2">
-              <div className="flex items-center space-x-1 bg-slate-200 dark:bg-slate-800 p-1 rounded-lg">
+                              <div className="flex items-center space-x-1 bg-muted p-1 rounded-lg">
                 <Button
                   variant={activeTab === "pending" ? "default" : "ghost"}
                   size="sm"
@@ -809,7 +809,7 @@ const DeviceApproval = memo(() => {
                   </div>
                 </ScrollArea>
               ) : filteredUsers.length === 0 ? (
-                <div className="flex items-center justify-center h-32 text-slate-500 dark:text-slate-400">
+                <div className="flex items-center justify-center h-32 text-muted-foreground">
                   {searchUsers ? (
                     <>
                       <Search className="w-6 h-6 mr-2" />
@@ -846,7 +846,7 @@ const DeviceApproval = memo(() => {
               </div>
             </ScrollArea>
           ) : devicesToShow.length === 0 ? (
-            <div className="flex items-center justify-center h-32 text-slate-500 dark:text-slate-400">
+            <div className="flex items-center justify-center h-32 text-muted-foreground">
               {searchDevices ? (
                 <>
                   <Search className="w-6 h-6 mr-2" />
@@ -867,7 +867,7 @@ const DeviceApproval = memo(() => {
                 {devicesToShow.map((device) => (
                   <div
                     key={device.id}
-                    className="p-3 sm:p-4 rounded-lg border bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-slate-900/20"
+                    className="p-3 sm:p-4 rounded-lg border bg-card border-border shadow-sm hover:shadow-md transition-shadow"
                   >
                     <div className="flex flex-col sm:flex-row sm:items-start justify-between mb-3 gap-3">
                       <div className="flex-1 min-w-0">
@@ -876,12 +876,12 @@ const DeviceApproval = memo(() => {
                             device.devicePlatform,
                             device.deviceProduct
                           )}
-                          <h3 className="font-semibold text-slate-900 dark:text-slate-100 truncate">
+                          <h3 className="font-semibold text-foreground truncate">
                             {device.deviceName || device.deviceIdentifier}
                           </h3>
                           {getDeviceStatus(device)}
                         </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-slate-600 dark:text-slate-400">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-muted-foreground">
                           <div className="flex items-center min-w-0">
                             <User className="w-3 h-3 mr-1 flex-shrink-0" />
                             <span className="truncate">
@@ -1014,7 +1014,7 @@ const DeviceApproval = memo(() => {
 
                     <Separator className="my-3" />
 
-                    <div className="text-xs text-slate-500 dark:text-slate-400">
+                    <div className="text-xs text-muted-foreground">
                       <span>
                         First seen:{" "}
                         {new Date(device.firstSeen).toLocaleString()}
@@ -1051,63 +1051,63 @@ const DeviceApproval = memo(() => {
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <h4 className="font-semibold text-sm text-slate-600 dark:text-slate-400">
+                  <h4 className="font-semibold text-sm text-muted-foreground">
                     Device Name
                   </h4>
-                  <p className="text-slate-900 dark:text-slate-100">
+                  <p className="text-foreground">
                     {selectedDevice.deviceName || "Unknown"}
                   </p>
                 </div>
                 <div>
-                  <h4 className="font-semibold text-sm text-slate-600 dark:text-slate-400">
+                  <h4 className="font-semibold text-sm text-muted-foreground">
                     User
                   </h4>
-                  <p className="text-slate-900 dark:text-slate-100">
+                  <p className="text-foreground">
                     {selectedDevice.username || selectedDevice.userId}
                   </p>
                 </div>
                 <div>
-                  <h4 className="font-semibold text-sm text-slate-600 dark:text-slate-400">
+                  <h4 className="font-semibold text-sm text-muted-foreground">
                     Platform
                   </h4>
-                  <p className="text-slate-900 dark:text-slate-100">
+                  <p className="text-foreground">
                     {selectedDevice.devicePlatform || "Unknown"}
                   </p>
                 </div>
                 <div>
-                  <h4 className="font-semibold text-sm text-slate-600 dark:text-slate-400">
+                  <h4 className="font-semibold text-sm text-muted-foreground">
                     Product
                   </h4>
-                  <p className="text-slate-900 dark:text-slate-100">
+                  <p className="text-foreground">
                     {selectedDevice.deviceProduct || "Unknown"}
                   </p>
                 </div>
                 <div>
-                  <h4 className="font-semibold text-sm text-slate-600 dark:text-slate-400">
+                  <h4 className="font-semibold text-sm text-muted-foreground">
                     Version
                   </h4>
-                  <p className="text-slate-900 dark:text-slate-100">
+                  <p className="text-foreground">
                     {selectedDevice.deviceVersion || "Unknown"}
                   </p>
                 </div>
                 <div>
-                  <h4 className="font-semibold text-sm text-slate-600 dark:text-slate-400">
+                  <h4 className="font-semibold text-sm text-muted-foreground">
                     IP Address
                   </h4>
-                  <div className="text-slate-900 dark:text-slate-100">
+                  <div className="text-foreground">
                     <ClickableIP ipAddress={selectedDevice.ipAddress} />
                   </div>
                 </div>
                 <div>
-                  <h4 className="font-semibold text-sm text-slate-600 dark:text-slate-400">
+                  <h4 className="font-semibold text-sm text-muted-foreground">
                     Sessions
                   </h4>
-                  <p className="text-slate-900 dark:text-slate-100">
+                  <p className="text-foreground">
                     {selectedDevice.sessionCount}
                   </p>
                 </div>
                 <div>
-                  <h4 className="font-semibold text-sm text-slate-600 dark:text-slate-400">
+                  <h4 className="font-semibold text-sm text-muted-foreground">
                     Status
                   </h4>
                   <div>{getDeviceStatus(selectedDevice)}</div>
@@ -1117,28 +1117,28 @@ const DeviceApproval = memo(() => {
               <Separator />
 
               <div>
-                <h4 className="font-semibold text-sm text-slate-600 dark:text-slate-400 mb-2">
+                <h4 className="font-semibold text-sm text-muted-foreground mb-2">
                   Device Identifier
                 </h4>
-                <p className="text-xs font-mono bg-slate-100 dark:bg-slate-800 p-2 rounded">
+                <p className="text-xs font-mono bg-muted p-2 rounded">
                   {selectedDevice.deviceIdentifier}
                 </p>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <h4 className="font-semibold text-sm text-slate-600 dark:text-slate-400">
+                  <h4 className="font-semibold text-sm text-muted-foreground">
                     First Seen
                   </h4>
-                  <p className="text-sm text-slate-900 dark:text-slate-100">
+                  <p className="text-sm text-foreground">
                     {new Date(selectedDevice.firstSeen).toLocaleString()}
                   </p>
                 </div>
                 <div>
-                  <h4 className="font-semibold text-sm text-slate-600 dark:text-slate-400">
+                  <h4 className="font-semibold text-sm text-muted-foreground">
                     Last Seen
                   </h4>
-                  <p className="text-sm text-slate-900 dark:text-slate-100">
+                  <p className="text-sm text-foreground">
                     {new Date(selectedDevice.lastSeen).toLocaleString()}
                   </p>
                 </div>
@@ -1182,24 +1182,24 @@ const DeviceApproval = memo(() => {
           </DialogHeader>
 
           {confirmAction && (
-            <div className="my-4 p-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
+            <div className="my-4 p-4 bg-muted rounded-lg">
               <div className="flex items-center gap-3 mb-2">
                 {getDeviceIcon(
                   confirmAction.device.devicePlatform,
                   confirmAction.device.deviceProduct
                 )}
                 <div>
-                  <div className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                  <div className="text-sm font-medium text-foreground">
                     {confirmAction.device.deviceName ||
                       confirmAction.device.deviceIdentifier}
                   </div>
-                  <div className="text-xs text-slate-600 dark:text-slate-400">
+                  <div className="text-xs text-muted-foreground">
                     {confirmAction.device.username ||
                       confirmAction.device.userId}
                   </div>
                 </div>
               </div>
-              <div className="text-xs text-slate-500 dark:text-slate-400">
+              <div className="text-xs text-muted-foreground">
                 Platform: {confirmAction.device.devicePlatform || "Unknown"} •
                 Product: {confirmAction.device.deviceProduct || "Unknown"}
               </div>
