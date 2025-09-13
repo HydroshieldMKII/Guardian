@@ -364,10 +364,9 @@ export function Dashboard() {
         </div>
 
         {/* Quality Stats */}
-        <div className="mb-6 sm:mb-8">
+        {/* <div className="mb-6 sm:mb-8">
           <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center">
-            {/* <Video className="w-5 h-5 mr-2" /> */}
-            Stream Quality Overview
+            Streams Quality Overview
           </h3>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             <Card className="border-l-4 border-l-orange-500">
@@ -422,7 +421,7 @@ export function Dashboard() {
               </CardHeader>
             </Card>
           </div>
-        </div>
+        </div> */}
 
         {/* Tab Navigation */}
         <div className="mb-4 sm:mb-6">
