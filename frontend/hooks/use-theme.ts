@@ -32,7 +32,7 @@ export function ThemeProvider({
   const [theme, setTheme] = useState<Theme>(defaultTheme);
 
   useEffect(() => {
-    // Read current theme from DOM (set by inline script)
+    // Read current theme from DOM (Inline script at the top of _document)
     const root = document.documentElement;
     const currentTheme = root.classList.contains('light') ? 'light' : 'dark';
     
@@ -43,7 +43,7 @@ export function ThemeProvider({
   // Handle theme changes
   useEffect(() => {
     const root = document.documentElement;
-    root.className = theme; // Replace all classes with just the theme
+    root.className = theme; // Set the class on the root element
   }, [theme]);
 
   const updateTheme = (newTheme: Theme) => {
