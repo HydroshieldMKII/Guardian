@@ -200,14 +200,14 @@ const UserPreferenceCard = memo(
       }
       if (defaultBlock) {
         return (
-          <Badge variant="destructive" className="bg-red-500">
+          <Badge variant="destructive" className="bg-red-600 dark:bg-red-700 text-white">
             <XCircle className="w-3 h-3 mr-1" />
             Block by Default
           </Badge>
         );
       }
       return (
-        <Badge variant="default" className="bg-green-500">
+        <Badge variant="default" className="bg-green-600 dark:bg-green-700 text-white">
           <CheckCircle className="w-3 h-3 mr-1" />
           Allow by Default
         </Badge>
@@ -215,7 +215,7 @@ const UserPreferenceCard = memo(
     };
 
     return (
-      <div className="p-3 sm:p-4 rounded-lg border bg-slate-50 dark:bg-slate-800/50">
+      <div className="p-3 sm:p-4 rounded-lg border bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-slate-900/20">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-3 gap-3">
           <div className="flex-1 min-w-0">
             <div className="flex items-center space-x-2 mb-2">
@@ -230,13 +230,13 @@ const UserPreferenceCard = memo(
           </div> */}
           </div>
 
-          <div className="flex flex-row gap-2">
+          <div className="grid grid-cols-3 gap-2">
             <Button
               variant={user.defaultBlock === null ? "default" : "outline"}
               size="sm"
               onClick={() => handleUpdatePreference(null)}
               disabled={isUpdating}
-              className="text-xs px-2 flex-1 sm:flex-none"
+              className="text-xs px-2"
             >
               <Settings className="w-3 h-3 mr-1" />
               Global
@@ -246,7 +246,11 @@ const UserPreferenceCard = memo(
               size="sm"
               onClick={() => handleUpdatePreference(false)}
               disabled={isUpdating}
-              className="text-xs px-2 flex-1 sm:flex-none"
+              className={`text-xs px-2 ${
+                user.defaultBlock === false
+                  ? "bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white"
+                  : ""
+              }`}
             >
               <CheckCircle className="w-3 h-3 mr-1" />
               Allow
@@ -256,7 +260,11 @@ const UserPreferenceCard = memo(
               size="sm"
               onClick={() => handleUpdatePreference(true)}
               disabled={isUpdating}
-              className="text-xs px-2 flex-1 sm:flex-none"
+              className={`text-xs px-2 ${
+                user.defaultBlock === true
+                  ? "bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-600 text-white"
+                  : ""
+              }`}
             >
               <XCircle className="w-3 h-3 mr-1" />
               Block
@@ -652,14 +660,14 @@ const DeviceApproval = memo(() => {
     switch (device.status) {
       case "approved":
         return (
-          <Badge variant="default" className="bg-green-500">
+          <Badge variant="default" className="bg-green-600 dark:bg-green-700 text-white">
             <CheckCircle className="w-3 h-3 mr-1" />
             Approved
           </Badge>
         );
       case "rejected":
         return (
-          <Badge variant="destructive" className="bg-orange-500">
+          <Badge variant="destructive" className="bg-orange-600 dark:bg-orange-700 text-white">
             <XCircle className="w-3 h-3 mr-1" />
             Rejected
           </Badge>
@@ -667,7 +675,7 @@ const DeviceApproval = memo(() => {
       case "pending":
       default:
         return (
-          <Badge variant="secondary">
+          <Badge variant="secondary" className="bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200">
             <AlertTriangle className="w-3 h-3 mr-1" />
             Pending
           </Badge>
@@ -859,7 +867,7 @@ const DeviceApproval = memo(() => {
                 {devicesToShow.map((device) => (
                   <div
                     key={device.id}
-                    className="p-3 sm:p-4 rounded-lg border bg-slate-50 dark:bg-slate-800/50"
+                    className="p-3 sm:p-4 rounded-lg border bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-slate-900/20"
                   >
                     <div className="flex flex-col sm:flex-row sm:items-start justify-between mb-3 gap-3">
                       <div className="flex-1 min-w-0">
@@ -897,12 +905,12 @@ const DeviceApproval = memo(() => {
                         </div>
                       </div>
 
-                      <div className="flex flex-row sm:flex-col gap-1 sm:gap-2 flex-wrap sm:flex-nowrap">
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 min-w-0 sm:min-w-[280px]">
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => setSelectedDevice(device)}
-                          className="text-xs sm:text-sm px-2 sm:px-3 flex-1 sm:flex-none"
+                          className="text-xs px-2 col-span-2 sm:col-span-1"
                         >
                           <Eye className="w-3 h-3 mr-1" />
                           <span>Details</span>
@@ -916,7 +924,7 @@ const DeviceApproval = memo(() => {
                               size="sm"
                               onClick={() => showApproveConfirmation(device)}
                               disabled={actionLoading === device.id}
-                              className="bg-green-500 hover:bg-green-600 text-xs sm:text-sm px-2 sm:px-3 flex-1 sm:flex-none"
+                              className="bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white text-xs px-2"
                             >
                               {actionLoading === device.id ? (
                                 <RefreshCw className="w-3 h-3 mr-1 animate-spin" />
@@ -930,7 +938,7 @@ const DeviceApproval = memo(() => {
                               size="sm"
                               onClick={() => showRejectConfirmation(device)}
                               disabled={actionLoading === device.id}
-                              className="border-orange-500 text-orange-600 hover:bg-orange-50 text-xs sm:text-sm px-2 sm:px-3 flex-1 sm:flex-none"
+                              className="border-orange-500 text-orange-600 hover:bg-orange-50 dark:border-orange-400 dark:text-orange-300 dark:hover:bg-orange-900/30 text-xs px-2"
                             >
                               {actionLoading === device.id ? (
                                 <RefreshCw className="w-3 h-3 mr-1 animate-spin" />
@@ -944,7 +952,7 @@ const DeviceApproval = memo(() => {
                               size="sm"
                               onClick={() => showDeleteConfirmation(device)}
                               disabled={actionLoading === device.id}
-                              className="text-xs sm:text-sm px-2 sm:px-3 flex-1 sm:flex-none"
+                              className="text-xs px-2"
                             >
                               {actionLoading === device.id ? (
                                 <RefreshCw className="w-3 h-3 mr-1 animate-spin" />
@@ -966,10 +974,10 @@ const DeviceApproval = memo(() => {
                               size="sm"
                               onClick={() => showToggleConfirmation(device)}
                               disabled={actionLoading === device.id}
-                              className={`text-xs sm:text-sm px-2 sm:px-3 flex-1 sm:flex-none ${
+                              className={`text-xs px-2 col-span-2 sm:col-span-2 ${
                                 device.status === "approved"
-                                  ? "bg-green-500 hover:bg-green-600"
-                                  : "border-orange-500 text-orange-600 hover:bg-orange-50"
+                                  ? "bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white"
+                                  : "border-orange-500 text-orange-600 hover:bg-orange-50 dark:border-orange-400 dark:text-orange-300 dark:hover:bg-orange-900/30"
                               }`}
                             >
                               {actionLoading === device.id ? (
@@ -990,7 +998,7 @@ const DeviceApproval = memo(() => {
                               size="sm"
                               onClick={() => showDeleteConfirmation(device)}
                               disabled={actionLoading === device.id}
-                              className="text-xs sm:text-sm px-2 sm:px-3 flex-1 sm:flex-none"
+                              className="text-xs px-2"
                             >
                               {actionLoading === device.id ? (
                                 <RefreshCw className="w-3 h-3 mr-1 animate-spin" />
