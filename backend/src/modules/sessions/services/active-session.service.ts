@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ActiveSession } from '../../../entities/active-session.entity';
+import { UserDevice } from '../../../entities/user-device.entity';
 import { DeviceTrackingService } from '../../devices/services/device-tracking.service';
 
 interface PlexSessionData {
@@ -49,6 +50,8 @@ export class ActiveSessionService {
   constructor(
     @InjectRepository(ActiveSession)
     private activeSessionRepository: Repository<ActiveSession>,
+    @InjectRepository(UserDevice)
+    private userDeviceRepository: Repository<UserDevice>,
     private deviceTrackingService: DeviceTrackingService,
   ) {}
 
@@ -202,48 +205,71 @@ export class ActiveSessionService {
     try {
       const sessions = await this.getActiveSessions();
 
-      const transformedSessions = sessions.map((session) => ({
-        sessionKey: session.sessionKey,
-        User: {
-          id: session.userId,
-          title: session.username,
-        },
-        Player: {
-          machineIdentifier: session.deviceIdentifier,
-          platform: session.devicePlatform,
-          product: session.deviceProduct,
-          title: session.deviceTitle,
-          device: session.deviceName,
-          address: session.deviceAddress,
-          state: session.playerState as 'playing' | 'paused' | 'buffering',
-        },
-        Media:
-          session.videoResolution || session.bitrate || session.container
-            ? [
-                {
-                  videoResolution: session.videoResolution,
-                  bitrate: session.bitrate,
-                  container: session.container,
-                  videoCodec: session.videoCodec,
-                  audioCodec: session.audioCodec,
-                },
-              ]
-            : [],
-        Session: {
-          id: session.sessionKey,
-          bandwidth: session.bandwidth,
-          location: session.sessionLocation as 'lan' | 'wan',
-        },
-        title: session.contentTitle,
-        grandparentTitle: session.grandparentTitle,
-        parentTitle: session.parentTitle,
-        year: session.year,
-        duration: session.duration,
-        viewOffset: session.viewOffset,
-        type: session.contentType,
-        thumb: session.thumb,
-        art: session.art,
-      }));
+      const deviceSessionCounts = new Map<string, number>();
+      
+      for (const session of sessions) {
+        if (session.userId && session.deviceIdentifier) {
+          const key = `${session.userId}-${session.deviceIdentifier}`;
+          if (!deviceSessionCounts.has(key)) {
+            const device = await this.userDeviceRepository.findOne({
+              where: {
+                userId: session.userId,
+                deviceIdentifier: session.deviceIdentifier,
+              },
+            });
+            deviceSessionCounts.set(key, device?.sessionCount || 0);
+          }
+        }
+      }
+
+      const transformedSessions = sessions.map((session) => {
+        const deviceKey = `${session.userId}-${session.deviceIdentifier}`;
+        const sessionCount = deviceSessionCounts.get(deviceKey) || 0;
+        
+        return {
+          sessionKey: session.sessionKey,
+          User: {
+            id: session.userId,
+            title: session.username,
+          },
+          Player: {
+            machineIdentifier: session.deviceIdentifier,
+            platform: session.devicePlatform,
+            product: session.deviceProduct,
+            title: session.deviceTitle,
+            device: session.deviceName,
+            address: session.deviceAddress,
+            state: session.playerState as 'playing' | 'paused' | 'buffering',
+          },
+          Media:
+            session.videoResolution || session.bitrate || session.container
+              ? [
+                  {
+                    videoResolution: session.videoResolution,
+                    bitrate: session.bitrate,
+                    container: session.container,
+                    videoCodec: session.videoCodec,
+                    audioCodec: session.audioCodec,
+                  },
+                ]
+              : [],
+          Session: {
+            id: session.sessionKey,
+            bandwidth: session.bandwidth,
+            location: session.sessionLocation as 'lan' | 'wan',
+            sessionCount: sessionCount,
+          },
+          title: session.contentTitle,
+          grandparentTitle: session.grandparentTitle,
+          parentTitle: session.parentTitle,
+          year: session.year,
+          duration: session.duration,
+          viewOffset: session.viewOffset,
+          type: session.contentType,
+          thumb: session.thumb,
+          art: session.art,
+        };
+      });
 
       return {
         MediaContainer: {

@@ -21,6 +21,12 @@ export interface PlexSession {
     videoCodec?: string;
     audioCodec?: string;
   }>;
+  Session?: {
+    id?: string;
+    bandwidth?: number;
+    location?: "lan" | "wan";
+    sessionCount?: number;
+  };
   title?: string;
   grandparentTitle?: string;
   parentTitle?: string;

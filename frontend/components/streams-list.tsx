@@ -574,7 +574,7 @@ export function StreamsList() {
                           <div className="min-w-0 flex-1">
                             <div className="font-medium">Streams Started</div>
                             <div className="truncate">
-                              {stream.sessionKey || "Unknown"}
+                              {stream.Session?.sessionCount || 0}
                             </div>
                           </div>
                         </div>
