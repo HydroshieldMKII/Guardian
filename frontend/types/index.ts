@@ -50,6 +50,12 @@ export interface DashboardStats {
   totalDevices: number;
   pendingDevices: number;
   approvedDevices: number;
+  qualityStats?: {
+    averageBitrate: number;
+    commonResolution: string;
+    commonCodec: string;
+    highQualityStreams: number;
+  };
 }
 
 export interface UserDevice {

@@ -20,6 +20,8 @@ import {
   Settings,
   Server,
   WifiOff,
+  Video,
+  Signal,
 } from "lucide-react";
 import { StreamsList } from "./streams-list";
 import { DeviceApproval } from "./device-approval";
@@ -45,6 +47,83 @@ export function Dashboard() {
   const [activeTab, setActiveTab] = useState<"streams" | "devices">("streams");
   const [loading, setLoading] = useState(true);
   const [plexStatus, setPlexStatus] = useState<PlexStatus | null>(null);
+
+  const analyzeQualityStats = (streamsData: any) => {
+    const sessions = streamsData?.MediaContainer?.Metadata || [];
+    
+    if (sessions.length === 0) {
+      return {
+        averageBitrate: 0,
+        commonResolution: "-",
+        commonCodec: "-", 
+        highQualityStreams: 0,
+      };
+    }
+
+    const bitrates: number[] = [];
+    const resolutions: string[] = [];
+    const codecs: string[] = [];
+    let highQualityCount = 0;
+
+    sessions.forEach((session: any) => {
+      const media = session.Media?.[0];
+      if (media) {
+        if (media.bitrate) {
+          bitrates.push(media.bitrate);
+          // Consider 4k (>= 2160p) or high bitrate (>= 15Mbps) as high quality
+          if (media.videoResolution?.includes('2160') || media.bitrate >= 15000) {
+            highQualityCount++;
+          }
+        }
+        if (media.videoResolution) {
+          resolutions.push(media.videoResolution);
+        }
+        if (media.videoCodec) {
+          codecs.push(media.videoCodec);
+        }
+      }
+    });
+
+    const averageBitrate = bitrates.length > 0 
+      ? Math.round(bitrates.reduce((a, b) => a + b, 0) / bitrates.length / 1000)
+      : 0;
+
+    // Find the highest resolution
+    const getResolutionValue = (res: string) => {
+      const resLower = res.toLowerCase();
+      if (resLower.includes('2160') || resLower.includes('4k')) return 2160;
+      if (resLower.includes('1440') || resLower.includes('2k')) return 1440;
+      if (resLower.includes('1080')) return 1080;
+      if (resLower.includes('720')) return 720;
+      if (resLower.includes('480')) return 480;
+      return 0;
+    };
+
+    const highestResolution = resolutions.length > 0
+      ? resolutions.reduce((highest, current) => 
+          getResolutionValue(current) > getResolutionValue(highest) ? current : highest
+        ).toUpperCase() || "-"
+      : "-";
+
+    // Find most common codec
+    const codecCounts = codecs.reduce((acc: Record<string, number>, codec) => {
+      acc[codec] = (acc[codec] || 0) + 1;
+      return acc;
+    }, {});
+
+    const commonCodec = Object.keys(codecCounts).length > 0
+      ? Object.entries(codecCounts)
+          .sort(([,a], [,b]) => b - a)[0][0]
+          .toUpperCase() || "-"
+      : "-";
+
+    return {
+      averageBitrate,
+      commonResolution: highestResolution,
+      commonCodec,
+      highQualityStreams: highQualityCount,
+    };
+  };
 
   const handleShowSettings = () => {
     router.push('/settings');
@@ -85,11 +164,14 @@ export function Dashboard() {
             apiClient.get("/devices/approved"),
           ]);
 
+        const qualityStats = analyzeQualityStats(streamsData);
+
         setStats({
           activeStreams: (streamsData as any)?.MediaContainer?.size || 0,
           totalDevices: (allDevicesData as any[]).length,
           pendingDevices: (pendingData as any[]).length,
           approvedDevices: (approvedData as any[]).length,
+          qualityStats,
         });
       } catch (error) {
         console.error("Failed to fetch dashboard stats:", error);
@@ -211,6 +293,16 @@ export function Dashboard() {
   return (
     <div className="min-h-[calc(100vh-3.5rem)]">
       <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-8">
+        {/* Dashboard Header */}
+        <div className="mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">
+            Guardian Dashboard
+          </h1>
+          <p className="text-muted-foreground text-sm sm:text-base">
+            Monitor and manage your Plex Media Server streams and devices
+          </p>
+        </div>
+
         {/* Stats Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-8">
           <Card className="border-l-4 border-l-blue-500">
@@ -264,6 +356,67 @@ export function Dashboard() {
               </CardDescription>
             </CardHeader>
           </Card>
+        </div>
+
+        {/* Quality Stats */}
+        <div className="mb-6 sm:mb-8">
+          <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center">
+            <Video className="w-5 h-5 mr-2" />
+            Stream Quality Overview
+          </h3>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            <Card className="border-l-4 border-l-orange-500">
+              <CardHeader className="pb-2 sm:pb-3">
+                <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center">
+                  <Signal className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">Avg Bitrate</span>
+                  <span className="sm:hidden">Bitrate</span>
+                </CardTitle>
+                <CardDescription className="text-lg sm:text-xl lg:text-2xl font-bold text-foreground">
+                  {stats.qualityStats ? (stats.qualityStats.averageBitrate > 0 ? `${stats.qualityStats.averageBitrate} Mbps` : "-") : "-"}
+                </CardDescription>
+              </CardHeader>
+            </Card>
+
+            <Card className="border-l-4 border-l-blue-500">
+              <CardHeader className="pb-2 sm:pb-3">
+                <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center">
+                  <Video className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">Highest Resolution</span>
+                  <span className="sm:hidden">Max Res</span>
+                </CardTitle>
+                <CardDescription className="text-lg sm:text-xl lg:text-2xl font-bold text-foreground">
+                  {stats.qualityStats?.commonResolution || "-"}
+                </CardDescription>
+              </CardHeader>
+            </Card>
+
+            <Card className="border-l-4 border-l-green-500">
+              <CardHeader className="pb-2 sm:pb-3">
+                <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center">
+                  <Activity className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">Top Codec</span>
+                  <span className="sm:hidden">Codec</span>
+                </CardTitle>
+                <CardDescription className="text-lg sm:text-xl lg:text-2xl font-bold text-foreground">
+                  {stats.qualityStats?.commonCodec || "-"}
+                </CardDescription>
+              </CardHeader>
+            </Card>
+
+            <Card className="border-l-4 border-l-purple-500">
+              <CardHeader className="pb-2 sm:pb-3">
+                <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center">
+                  <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">High Quality</span>
+                  <span className="sm:hidden">HQ Streams</span>
+                </CardTitle>
+                <CardDescription className="text-lg sm:text-xl lg:text-2xl font-bold text-foreground">
+                  {stats.qualityStats ? (stats.activeStreams > 0 ? stats.qualityStats.highQualityStreams : "-") : "-"}
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          </div>
         </div>
 
         {/* Tab Navigation */}

@@ -38,6 +38,10 @@ import {
   Laptop,
   Search,
   ExternalLink,
+  Video,
+  Headphones,
+  HardDrive,
+  Signal,
 } from "lucide-react";
 
 import { PlexSession, StreamsResponse } from "@/types";
@@ -285,6 +289,20 @@ export function StreamsList() {
     return resolution || bitrate || "Unknown";
   };
 
+  const getDetailedQuality = (session: PlexSession) => {
+    const media = session.Media?.[0];
+    if (!media) return null;
+
+    return {
+      resolution: media.videoResolution?.toUpperCase() || "Unknown",
+      bitrate: media.bitrate ? `${Math.round(media.bitrate / 1000)} Mbps` : "Unknown",
+      videoCodec: media.videoCodec?.toUpperCase() || "Unknown",
+      audioCodec: media.audioCodec?.toUpperCase() || "Unknown", 
+      container: media.container?.toUpperCase() || "Unknown",
+      bandwidth: session.Session?.bandwidth ? `${Math.round(session.Session.bandwidth / 1000)} Mbps` : "Unknown"
+    };
+  };
+
   const getDeviceIcon = (platform: string = "") => {
     const platformLower = platform.toLowerCase();
     if (platformLower.includes("android") || platformLower.includes("ios")) {
@@ -459,6 +477,32 @@ export function StreamsList() {
                           </span>
                         </div>
                       </div>
+
+                      {/* Quality info row - compact */}
+                      {(() => {
+                        const quality = getDetailedQuality(stream);
+                        return quality && (quality.resolution !== "Unknown" || quality.videoCodec !== "Unknown") ? (
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground mb-2 flex-wrap">
+                            {quality.resolution !== "Unknown" && (
+                              <div className="flex items-center gap-1 bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full">
+                                <Video className="w-3 h-3" />
+                                <span>{quality.resolution}</span>
+                              </div>
+                            )}
+                            {quality.videoCodec !== "Unknown" && (
+                              <div className="flex items-center gap-1 bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-300 px-2 py-0.5 rounded-full">
+                                <span>{quality.videoCodec}</span>
+                              </div>
+                            )}
+                            {quality.bitrate !== "Unknown" && (
+                              <div className="flex items-center gap-1 bg-purple-50 dark:bg-purple-950/30 text-purple-700 dark:text-purple-300 px-2 py-0.5 rounded-full">
+                                <Signal className="w-3 h-3" />
+                                <span>{quality.bitrate}</span>
+                              </div>
+                            )}
+                          </div>
+                        ) : null;
+                      })()}
                     </div>
 
                     {/* Status and actions */}
@@ -507,12 +551,6 @@ export function StreamsList() {
                         <span className="flex-shrink-0">
                           {formatDuration(stream.viewOffset)}
                         </span>
-                        <Badge
-                          variant="outline"
-                          className="text-xs px-1 py-0 max-w-[100px] truncate flex-shrink-0"
-                        >
-                          {getStreamQuality(stream)}
-                        </Badge>
                         <span className="flex-shrink-0">
                           {formatDuration(stream.duration)}
                         </span>
@@ -538,43 +576,100 @@ export function StreamsList() {
                   {/* Expandable details */}
                   {expandedStream === stream.sessionKey && (
                     <div className="space-y-3 pt-3 border-t border-border animate-in slide-in-from-top-2 duration-200">
-                      {/* Detailed device info */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-muted-foreground">
-                        <div className="flex items-center gap-2 bg-muted p-2 rounded min-w-0">
-                          <Monitor className="w-3 h-3 flex-shrink-0" />
-                          <div className="min-w-0 flex-1">
-                            <div className="font-medium">Platform</div>
-                            <div className="truncate">
-                              {stream.Player?.platform || "Unknown"}
+                      {/* Quality Information Section */}
+                      {(() => {
+                        const quality = getDetailedQuality(stream);
+                        return quality ? (
+                          <div className="space-y-2">
+                            <h4 className="text-sm font-medium text-foreground mb-2">Stream Quality</h4>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
+                              <div className="flex items-center gap-2 bg-muted p-2 rounded min-w-0">
+                                <Video className="w-3 h-3 flex-shrink-0 text-blue-500" />
+                                <div className="min-w-0 flex-1">
+                                  <div className="font-medium">Resolution</div>
+                                  <div className="truncate">{quality.resolution}</div>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2 bg-muted p-2 rounded min-w-0">
+                                <Signal className="w-3 h-3 flex-shrink-0 text-green-500" />
+                                <div className="min-w-0 flex-1">
+                                  <div className="font-medium">Bitrate</div>
+                                  <div className="truncate">{quality.bitrate}</div>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2 bg-muted p-2 rounded min-w-0">
+                                <Wifi className="w-3 h-3 flex-shrink-0 text-purple-500" />
+                                <div className="min-w-0 flex-1">
+                                  <div className="font-medium">Bandwidth</div>
+                                  <div className="truncate">{quality.bandwidth}</div>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2 bg-muted p-2 rounded min-w-0">
+                                <Video className="w-3 h-3 flex-shrink-0 text-orange-500" />
+                                <div className="min-w-0 flex-1">
+                                  <div className="font-medium">Video Codec</div>
+                                  <div className="truncate">{quality.videoCodec}</div>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2 bg-muted p-2 rounded min-w-0">
+                                <Headphones className="w-3 h-3 flex-shrink-0 text-red-500" />
+                                <div className="min-w-0 flex-1">
+                                  <div className="font-medium">Audio Codec</div>
+                                  <div className="truncate">{quality.audioCodec}</div>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2 bg-muted p-2 rounded min-w-0">
+                                <HardDrive className="w-3 h-3 flex-shrink-0 text-gray-500" />
+                                <div className="min-w-0 flex-1">
+                                  <div className="font-medium">Container</div>
+                                  <div className="truncate">{quality.container}</div>
+                                </div>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                        <div className="flex items-center gap-2 bg-muted p-2 rounded min-w-0">
-                          <MapPin className="w-3 h-3 flex-shrink-0" />
-                          <div className="min-w-0 flex-1">
-                            <div className="font-medium">Location</div>
-                            <div className="truncate">
-                              <ClickableIP
-                                ipAddress={stream.Player?.address || null}
-                              />
+                        ) : null;
+                      })()}
+
+                      {/* Device Information Section */}
+                      <div className="space-y-2">
+                        <h4 className="text-sm font-medium text-foreground mb-2">Device Information</h4>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-muted-foreground">
+                          <div className="flex items-center gap-2 bg-muted p-2 rounded min-w-0">
+                            <Monitor className="w-3 h-3 flex-shrink-0" />
+                            <div className="min-w-0 flex-1">
+                              <div className="font-medium">Platform</div>
+                              <div className="truncate">
+                                {stream.Player?.platform || "Unknown"}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                        <div className="flex items-center gap-2 bg-muted p-2 rounded min-w-0">
-                          <Tv className="w-3 h-3 flex-shrink-0" />
-                          <div className="min-w-0 flex-1">
-                            <div className="font-medium">Product</div>
-                            <div className="truncate">
-                              {stream.Player?.product || "Unknown"}
+                          <div className="flex items-center gap-2 bg-muted p-2 rounded min-w-0">
+                            <MapPin className="w-3 h-3 flex-shrink-0" />
+                            <div className="min-w-0 flex-1">
+                              <div className="font-medium">Location</div>
+                              <div className="truncate">
+                                <ClickableIP
+                                  ipAddress={stream.Player?.address || null}
+                                />
+                              </div>
                             </div>
                           </div>
-                        </div>
-                        <div className="flex items-center gap-2 bg-muted p-2 rounded min-w-0">
-                          <Clock className="w-3 h-3 flex-shrink-0" />
-                          <div className="min-w-0 flex-1">
-                            <div className="font-medium">Streams Started</div>
-                            <div className="truncate">
-                              {stream.Session?.sessionCount || 0}
+                          <div className="flex items-center gap-2 bg-muted p-2 rounded min-w-0">
+                            <Tv className="w-3 h-3 flex-shrink-0" />
+                            <div className="min-w-0 flex-1">
+                              <div className="font-medium">Product</div>
+                              <div className="truncate">
+                                {stream.Player?.product || "Unknown"}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 bg-muted p-2 rounded min-w-0">
+                            <Clock className="w-3 h-3 flex-shrink-0" />
+                            <div className="min-w-0 flex-1">
+                              <div className="font-medium">Streams Started</div>
+                              <div className="truncate">
+                                {stream.Session?.sessionCount || 0}
+                              </div>
                             </div>
                           </div>
                         </div>
