@@ -180,7 +180,7 @@ export function Dashboard() {
       }
     };
 
-    fetchStats();
+    // fetchStats();
     const interval = setInterval(fetchStats, config.app.refreshInterval);
     return () => clearInterval(interval);
   }, []);
