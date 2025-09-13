@@ -28,6 +28,7 @@ import {
   Download,
   Upload,
   Database,
+  AlertTriangle,
 } from "lucide-react";
 
 interface AppSetting {
@@ -190,19 +191,6 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
     return errors;
   };
 
-  const shouldAutoTestConnection = (
-    settingsToUpdate: { key: string; value: any }[]
-  ) => {
-    const plexKeys = [
-      "PLEX_SERVER_IP",
-      "PLEX_SERVER_PORT",
-      "PLEX_TOKEN",
-      "USE_SSL",
-      "IGNORE_CERT_ERRORS",
-    ];
-    return settingsToUpdate.some((update) => plexKeys.includes(update.key));
-  };
-
   const handleSave = async () => {
     setSaving(true);
     try {
@@ -258,19 +246,8 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
           variant: "success",
         });
 
-        // Auto-test Plex connection if Plex settings were changed
-        if (shouldAutoTestConnection(settingsToUpdate)) {
-          setConnectionStatus({
-            success: false,
-            message: "Testing connection with new settings...",
-          });
-          // Small delay to show the "testing" message
-          setTimeout(async () => {
-            await handleTestConnection();
-          }, 500);
-        } else {
-          setConnectionStatus(null); // Clear connection status for non-Plex changes
-        }
+        // Clear connection status after saving settings
+        setConnectionStatus(null);
       } else {
         // Handle save error
         const errorData = await response.json().catch(() => ({}));
@@ -294,6 +271,16 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
   };
 
   const handleTestConnection = async () => {
+    // Check if there are pending Plex settings changes
+    if (hasPlexChanges()) {
+      toast({
+        title: "Pending Changes Detected",
+        description: "Please save your Plex settings before testing the connection to ensure accurate results.",
+        variant: "warning",
+      });
+      return;
+    }
+
     setTestingConnection(true);
     try {
       const response = await fetch("/api/pg/config/test-plex-connection", {
@@ -596,6 +583,14 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
             <Card className="p-4">
               <div className="space-y-4">
                 <h4 className="text-sm font-medium">Connection Test</h4>
+                {hasPlexChanges() && (
+                  <div className="flex items-center space-x-2 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-md">
+                    <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                    <span className="text-sm text-amber-800 dark:text-amber-200">
+                      Save your Plex settings before testing the connection
+                    </span>
+                  </div>
+                )}
                 <div className="flex items-center space-x-2">
                   <Button
                     onClick={handleTestConnection}
@@ -781,6 +776,35 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
 
   const hasChanges = () => {
     return Object.entries(formData).some(([key, value]) => {
+      const originalSetting = settings.find((s) => s.key === key);
+      if (!originalSetting) return false;
+
+      let originalValue: any = originalSetting.value;
+      if (originalSetting.type === "boolean") {
+        originalValue = originalValue === "true";
+      } else if (originalSetting.type === "number") {
+        originalValue = parseFloat(originalValue);
+      }
+
+      return (
+        value !== originalValue && !(originalSetting.private && value === "")
+      );
+    });
+  };
+
+  // Check if there are unsaved changes in Plex-related settings
+  const hasPlexChanges = () => {
+    const plexKeys = [
+      "PLEX_TOKEN",
+      "PLEX_SERVER_IP", 
+      "PLEX_SERVER_PORT",
+      "USE_SSL",
+      "IGNORE_CERT_ERRORS"
+    ];
+    
+    return Object.entries(formData).some(([key, value]) => {
+      if (!plexKeys.includes(key)) return false;
+      
       const originalSetting = settings.find((s) => s.key === key);
       if (!originalSetting) return false;
 
