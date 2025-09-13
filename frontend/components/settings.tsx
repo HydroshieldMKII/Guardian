@@ -784,7 +784,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
   };
 
   return (
-    <div className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 min-h-[calc(100vh-3.5rem)]">
+    <div className="min-h-[calc(100vh-3.5rem)]">
       <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-8">
         {/* Back Button */}
         {onBack && (

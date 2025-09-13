@@ -104,6 +104,7 @@ export function Dashboard() {
   }, []);
 
   if (loading) {
+    // Loading dots animation
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="flex items-center space-x-2">
@@ -124,7 +125,7 @@ export function Dashboard() {
   // Show configuration prompt if Plex is not properly connected
   if (!plexStatus?.configured || !plexStatus?.hasValidCredentials) {
     return (
-      <div className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 min-h-[calc(100vh-3.5rem)]">
+      <div className="min-h-[calc(100vh-3.5rem)]">
         <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-8">
           <div className="flex items-center justify-center min-h-[60vh]">
             <Card className="w-full max-w-2xl">
@@ -143,20 +144,20 @@ export function Dashboard() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                <div className="bg-primary/10 dark:bg-primary/20 border border-primary/20 rounded-lg p-4">
                   <div className="flex items-center space-x-3">
                     <div className="flex-shrink-0">
                       {plexStatus?.configured ? (
-                        <CheckCircle className="h-5 w-5 text-amber-500" />
+                        <CheckCircle className="h-5 w-5 text-primary" />
                       ) : (
-                        <WifiOff className="h-5 w-5 text-red-400" />
+                        <WifiOff className="h-5 w-5 text-primary" />
                       )}
                     </div>
                     <div className="flex-1">
-                      <h3 className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                      <h3 className="text-sm font-medium text-primary">
                         Connection Status
                       </h3>
-                      <p className="text-sm text-slate-600 dark:text-slate-400">
+                      <p className="text-sm text-primary/80">
                         {plexStatus?.connectionStatus || "Not configured"}
                       </p>
                     </div>
@@ -208,7 +209,7 @@ export function Dashboard() {
   }
 
   return (
-    <div className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 min-h-[calc(100vh-3.5rem)]">
+    <div className="min-h-[calc(100vh-3.5rem)]">
       <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-8">
         {/* Stats Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-8">

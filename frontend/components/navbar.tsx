@@ -11,9 +11,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Shield, Settings, User, LogOut, Home } from "lucide-react";
+import { Shield, Settings, User, LogOut, Home, Moon, Sun } from "lucide-react";
+import { useTheme } from "@/hooks/use-theme";
 
 export function Navbar() {
+  const { theme, toggleTheme } = useTheme();
+
   return (
     <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="flex h-14 items-center justify-between w-full px-4">
@@ -22,8 +25,24 @@ export function Navbar() {
           <span className="font-bold text-xl">Guardian</span>
         </Link>
 
-        {/* Profile Dropdown */}
-        <div className="pr-10">
+        {/* Right side with theme toggle and profile */}
+        <div className="flex items-center space-x-2 pr-10">
+          {/* Theme Toggle Button */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleTheme}
+            className="h-8 w-8 rounded-full"
+            title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+          >
+            {theme === "dark" ? (
+              <Sun className="h-4 w-4" />
+            ) : (
+              <Moon className="h-4 w-4" />
+            )}
+          </Button>
+
+          {/* Profile Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-8 w-8 rounded-full cursor-pointer">
