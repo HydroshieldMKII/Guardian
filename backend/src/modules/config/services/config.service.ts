@@ -1,10 +1,11 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AppSettings } from '../../../entities/app-settings.entity';
 import { UserDevice } from '../../../entities/user-device.entity';
 import { UserPreference } from '../../../entities/user-preference.entity';
 import { ActiveSession } from '../../../entities/active-session.entity';
+import { SchedulerService } from '../../../services/scheduler.service';
 import * as http from 'http';
 import * as https from 'https';
 
@@ -24,6 +25,8 @@ export class ConfigService {
   constructor(
     @InjectRepository(AppSettings)
     private settingsRepository: Repository<AppSettings>,
+    @Inject(forwardRef(() => SchedulerService))
+    private schedulerService: SchedulerService,
   ) {
     this.initializeDefaultSettings();
   }
@@ -183,6 +186,15 @@ export class ConfigService {
 
     const updated = await this.settingsRepository.save(setting);
 
+    if (key === 'PLEXGUARD_REFRESH_INTERVAL') {
+      this.logger.log('Refresh interval updated, restarting scheduler...');
+      try {
+        await this.schedulerService.restartScheduler();
+      } catch (error) {
+        this.logger.error('Failed to restart scheduler after interval change:', error);
+      }
+    }
+
     // Update cache
     let cacheValue = value;
     if (setting.type === 'boolean') {
@@ -196,6 +208,7 @@ export class ConfigService {
     this.cache.set(key, cacheValue);
 
     this.logger.log(`Updated setting: ${key}`);
+
     return updated;
   }
 
@@ -203,14 +216,31 @@ export class ConfigService {
     settings: ConfigSettingDto[],
   ): Promise<AppSettings[]> {
     const results: AppSettings[] = [];
+    let shouldRestartScheduler = false;
 
     for (const { key, value } of settings) {
       try {
+        // Skip scheduler restart for individual updates, we'll handle it once at the end
         const updated = await this.updateSetting(key, value);
         results.push(updated);
+        
+        // Check if refresh interval was updated
+        if (key === 'PLEXGUARD_REFRESH_INTERVAL') {
+          shouldRestartScheduler = true;
+        }
       } catch (error) {
         this.logger.error(`Failed to update setting ${key}:`, error);
         throw error;
+      }
+    }
+
+    // Restart scheduler if refresh interval was updated
+    if (shouldRestartScheduler) {
+      this.logger.log('Refresh interval updated in batch, restarting scheduler...');
+      try {
+        await this.schedulerService.restartScheduler();
+      } catch (error) {
+        this.logger.error('Failed to restart scheduler after batch interval change:', error);
       }
     }
 

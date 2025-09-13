@@ -23,6 +23,7 @@ export class SchedulerService implements OnModuleInit {
   async onModuleInit() {
     await this.startSessionUpdates();
   }
+
   async restartScheduler() {
     this.logger.log('Restarting scheduler with updated interval...');
     this.stopScheduler();
@@ -54,20 +55,6 @@ export class SchedulerService implements OnModuleInit {
 
       this.intervalId = setInterval(async () => {
         try {
-          // Check if interval setting has changed every few iterations to avoid constant DB queries
-          const currentRefreshInterval = await this.configService.getSetting(
-            'PLEXGUARD_REFRESH_INTERVAL',
-          );
-          const currentIntervalSeconds = parseInt(currentRefreshInterval as string, 10) || 10;
-          
-          if (this.currentInterval !== currentIntervalSeconds) {
-            this.logger.log(
-              `Interval changed from ${this.currentInterval}s to ${currentIntervalSeconds}s, restarting scheduler...`
-            );
-            await this.restartScheduler();
-            return;
-          }
-
           // Check if Plex is properly configured before attempting to update sessions
           const [ip, port, token] = await Promise.all([
             this.configService.getSetting('PLEX_SERVER_IP'),
