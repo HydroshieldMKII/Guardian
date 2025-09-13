@@ -30,36 +30,21 @@ export function ThemeProvider({
   storageKey = "guardian-ui-theme",
 }: ThemeProviderProps) {
   const [theme, setTheme] = useState<Theme>(defaultTheme);
-  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
+    // Read current theme from DOM (set by inline script)
+    const root = document.documentElement;
+    const currentTheme = root.classList.contains('light') ? 'light' : 'dark';
     
-    // Check if we're in the browser
-    if (typeof window !== "undefined") {
-      const root = window.document.documentElement;
-      
-      // Get theme from localStorage or use default
-      const storedTheme = localStorage.getItem(storageKey) as Theme;
-      const initialTheme = storedTheme || defaultTheme;
-      
-      // Apply theme class to document immediately
-      root.classList.remove("light", "dark");
-      root.classList.add(initialTheme);
-      
-      // Update state
-      setTheme(initialTheme);
-    }
-  }, [storageKey, defaultTheme]);
+    // Update state to match DOM
+    setTheme(currentTheme);
+  }, []);
 
-  // Apply theme class immediately when theme changes
+  // Handle theme changes
   useEffect(() => {
-    if (mounted && typeof window !== "undefined") {
-      const root = window.document.documentElement;
-      root.classList.remove("light", "dark");
-      root.classList.add(theme);
-    }
-  }, [theme, mounted]);
+    const root = document.documentElement;
+    root.className = theme; // Replace all classes with just the theme
+  }, [theme]);
 
   const updateTheme = (newTheme: Theme) => {
     if (typeof window !== "undefined") {

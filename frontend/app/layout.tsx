@@ -36,24 +36,25 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <head>
+    <html lang="en" suppressHydrationWarning>
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        suppressHydrationWarning
+      >
         <script
           dangerouslySetInnerHTML={{
             __html: `
-              try {
-                const theme = localStorage.getItem('guardian-ui-theme') || 'dark';
-                document.documentElement.classList.add(theme);
-              } catch (e) {
-                document.documentElement.classList.add('dark');
-              }
+              (function() {
+                try {
+                  var theme = localStorage.getItem('guardian-ui-theme') || 'dark';
+                  document.documentElement.className = theme;
+                } catch (e) {
+                  document.documentElement.className = 'dark';
+                }
+              })();
             `,
           }}
         />
-      </head>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
         <ThemeProvider defaultTheme="dark" storageKey="guardian-ui-theme">
           <ErrorBoundary>
             <Navbar />
