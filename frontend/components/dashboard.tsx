@@ -294,18 +294,22 @@ export function Dashboard() {
     <div className="min-h-[calc(100vh-3.5rem)]">
       <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-8">
         {/* Dashboard Header */}
-        <div className="mb-6 sm:mb-8">
+        {/* <div className="mb-6 sm:mb-8">
           <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">
             Guardian Dashboard
           </h1>
           <p className="text-muted-foreground text-sm sm:text-base">
             Monitor and manage your Plex Media Server streams and devices
           </p>
-        </div>
+        </div> */}
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-8">
-          <Card className="border-l-4 border-l-blue-500">
+        {/* Server Statistics */}
+        <div className="mb-3 sm:mb-8">
+          <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center">
+            Server Overview
+          </h3>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
+            <Card className="border-l-4 border-l-blue-500">
             <CardHeader className="pb-2 sm:pb-3">
               <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center">
                 <Activity className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
@@ -356,12 +360,13 @@ export function Dashboard() {
               </CardDescription>
             </CardHeader>
           </Card>
+          </div>
         </div>
 
         {/* Quality Stats */}
         <div className="mb-6 sm:mb-8">
           <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center">
-            <Video className="w-5 h-5 mr-2" />
+            {/* <Video className="w-5 h-5 mr-2" /> */}
             Stream Quality Overview
           </h3>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
