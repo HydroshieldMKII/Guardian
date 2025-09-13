@@ -86,7 +86,7 @@ export class DeviceTrackingService {
 
   private async trackDevice(deviceInfo: DeviceInfo): Promise<void> {
     try {
-      this.logger.debug(`Tracking device: ${deviceInfo.deviceIdentifier} for user: ${deviceInfo.userId} with session: ${deviceInfo.sessionKey}`);
+      // this.logger.debug(`Tracking device: ${deviceInfo.deviceIdentifier} for user: ${deviceInfo.userId} with session: ${deviceInfo.sessionKey}`);
       
       // Check if device already exists
       const existingDevice = await this.userDeviceRepository.findOne({
@@ -97,7 +97,7 @@ export class DeviceTrackingService {
       });
 
       if (existingDevice) {
-        this.logger.debug(`Found existing device ${existingDevice.id}, updating...`);
+        // this.logger.debug(`Found existing device ${existingDevice.id}, updating...`);
         // Update existing device
         await this.updateExistingDevice(existingDevice, deviceInfo);
       } else {
