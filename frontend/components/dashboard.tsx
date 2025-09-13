@@ -135,7 +135,7 @@ export function Dashboard() {
                     <Server className="h-8 w-8 text-amber-600 dark:text-amber-400" />
                   </div>
                 </div>
-                <CardTitle className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+                <CardTitle className="text-2xl font-bold text-foreground">
                   Plex Configuration Required
                 </CardTitle>
                 <CardDescription className="text-lg">
@@ -165,25 +165,25 @@ export function Dashboard() {
                 </div>
 
                 <div className="space-y-4">
-                  <h4 className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                  <h4 className="text-sm font-medium text-foreground">
                     To get started, you'll need to configure:
                   </h4>
                   <ul className="space-y-2">
                     <li className="flex items-center space-x-3">
                       <CheckCircle className="h-4 w-4 text-green-500" />
-                      <span className="text-sm text-slate-600 dark:text-slate-400">
+                      <span className="text-sm text-muted-foreground">
                         Plex Server IP Address
                       </span>
                     </li>
                     <li className="flex items-center space-x-3">
                       <CheckCircle className="h-4 w-4 text-green-500" />
-                      <span className="text-sm text-slate-600 dark:text-slate-400">
+                      <span className="text-sm text-muted-foreground">
                         Plex Server Port
                       </span>
                     </li>
                     <li className="flex items-center space-x-3">
                       <CheckCircle className="h-4 w-4 text-green-500" />
-                      <span className="text-sm text-slate-600 dark:text-slate-400">
+                      <span className="text-sm text-muted-foreground">
                         Plex Authentication Token
                       </span>
                     </li>
@@ -215,12 +215,12 @@ export function Dashboard() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-8">
           <Card className="border-l-4 border-l-blue-500">
             <CardHeader className="pb-2 sm:pb-3">
-              <CardTitle className="text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-400 flex items-center">
+              <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center">
                 <Activity className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
                 <span className="hidden sm:inline">Active Streams</span>
                 <span className="sm:hidden">Streams</span>
               </CardTitle>
-              <CardDescription className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900 dark:text-slate-100">
+              <CardDescription className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">
                 {stats.activeStreams}
               </CardDescription>
             </CardHeader>
@@ -228,12 +228,12 @@ export function Dashboard() {
 
           <Card className="border-l-4 border-l-green-500">
             <CardHeader className="pb-2 sm:pb-3">
-              <CardTitle className="text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-400 flex items-center">
+              <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center">
                 <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
                 <span className="hidden sm:inline">Approved Devices</span>
                 <span className="sm:hidden">Approved</span>
               </CardTitle>
-              <CardDescription className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900 dark:text-slate-100">
+              <CardDescription className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">
                 {stats.approvedDevices}
               </CardDescription>
             </CardHeader>
@@ -241,12 +241,12 @@ export function Dashboard() {
 
           <Card className="border-l-4 border-l-yellow-500">
             <CardHeader className="pb-2 sm:pb-3">
-              <CardTitle className="text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-400 flex items-center">
+              <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center">
                 <AlertTriangle className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
                 <span className="hidden sm:inline">Pending Approval</span>
                 <span className="sm:hidden">Pending</span>
               </CardTitle>
-              <CardDescription className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900 dark:text-slate-100">
+              <CardDescription className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">
                 {stats.pendingDevices}
               </CardDescription>
             </CardHeader>
@@ -254,12 +254,12 @@ export function Dashboard() {
 
           <Card className="border-l-4 border-l-purple-500">
             <CardHeader className="pb-2 sm:pb-3">
-              <CardTitle className="text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-400 flex items-center">
+              <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center">
                 <Users className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
                 <span className="hidden sm:inline">Total Devices</span>
                 <span className="sm:hidden">Total</span>
               </CardTitle>
-              <CardDescription className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900 dark:text-slate-100">
+              <CardDescription className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">
                 {stats.totalDevices}
               </CardDescription>
             </CardHeader>
@@ -268,7 +268,7 @@ export function Dashboard() {
 
         {/* Tab Navigation */}
         <div className="mb-4 sm:mb-6">
-          <div className="flex w-full sm:w-fit space-x-0 sm:space-x-1 bg-slate-200 dark:bg-slate-800 p-1 rounded-lg">
+          <div className="flex w-full sm:w-fit space-x-0 sm:space-x-1 bg-muted p-1 rounded-lg">
             <Button
               variant={activeTab === "streams" ? "default" : "ghost"}
               onClick={() => setActiveTab("streams")}
