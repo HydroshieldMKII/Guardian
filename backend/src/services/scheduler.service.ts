@@ -33,7 +33,6 @@ export class SchedulerService implements OnModuleInit {
         this.logger.error('Failed to restart scheduler after config change:', error);
       });
     };
-    
     this.configService.addConfigChangeListener('PLEXGUARD_REFRESH_INTERVAL', this.configChangeCallback);
 
     // Register listener for device cleanup setting changes
@@ -43,7 +42,6 @@ export class SchedulerService implements OnModuleInit {
         this.logger.error('Failed to handle cleanup config change:', error);
       });
     };
-    
     this.configService.addConfigChangeListener('DEVICE_CLEANUP_ENABLED', this.cleanupConfigChangeCallback);
 
     await this.startSessionUpdates();
