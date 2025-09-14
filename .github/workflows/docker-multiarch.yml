@@ -83,6 +83,7 @@ jobs:
   push-backend:
     needs: [changes, build-backend, build-frontend]
     if: |
+      always() &&
       needs.changes.outputs.backend == 'true' && 
       needs.build-backend.result == 'success' &&
       (needs.changes.outputs.frontend != 'true' || needs.build-frontend.result == 'success')
@@ -113,6 +114,7 @@ jobs:
   push-frontend:
     needs: [changes, build-frontend, build-backend]
     if: |
+      always() &&
       needs.changes.outputs.frontend == 'true' && 
       needs.build-frontend.result == 'success' &&
       (needs.changes.outputs.backend != 'true' || needs.build-backend.result == 'success')
