@@ -420,7 +420,7 @@ export function StreamsList({ sessionsData, onRefresh, autoRefresh: parentAutoRe
             </div>
           </ScrollArea>
         ) : filteredStreams.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-32 sm:h-40 text-muted-foreground text-center">
+          <div className="flex flex-col items-center justify-center h-[50vh] max-h-[400px] sm:max-h-[500px] lg:max-h-[600px] text-muted-foreground text-center">
             {searchTerm ? (
               <>
                 <Search className="w-8 h-8 mb-2" />
