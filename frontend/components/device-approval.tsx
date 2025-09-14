@@ -717,12 +717,6 @@ const DeviceApproval = memo(({ devicesData, usersData, onRefresh, autoRefresh: p
               </CardTitle>
               <CardDescription className="mt-1 flex items-center">
                 Manage device access to your Plex server
-                {refreshing && (
-                  <span className="ml-2 flex items-center text-blue-600 text-xs">
-                    <RefreshCw className="w-3 h-3 mr-1 animate-spin" />
-                    Updating...
-                  </span>
-                )}
               </CardDescription>
             </div>
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-2">

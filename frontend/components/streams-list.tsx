@@ -361,12 +361,6 @@ export function StreamsList({ sessionsData, onRefresh, autoRefresh: parentAutoRe
             </CardDescription>
             <div className="text-xs text-muted-foreground mt-1 flex items-center">
               {formatLastUpdate()}
-              {refreshing && (
-                <span className="ml-2 flex items-center text-blue-600">
-                  <RefreshCw className="w-3 h-3 mr-1 animate-spin" />
-                  Updating...
-                </span>
-              )}
             </div>
           </div>
           <div className="flex items-center gap-2">

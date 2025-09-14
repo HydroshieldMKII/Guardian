@@ -39,7 +39,7 @@ export function Dashboard() {
     pendingDevices: 0,
     approvedDevices: 0,
   });
-  const [activeTab, setActiveTab] = useState<"streams" | "devices">("streams");
+  const [activeTab, setActiveTab] = useState<"streams" | "devices">("devices");
   const [loading, setLoading] = useState(true);
   const [plexStatus, setPlexStatus] = useState<PlexStatus | null>(null);
   const [autoRefresh, setAutoRefresh] = useState(true);
@@ -409,15 +409,6 @@ export function Dashboard() {
         <div className="mb-4 sm:mb-6">
           <div className="flex w-full sm:w-fit space-x-0 sm:space-x-1 bg-muted p-1 rounded-lg">
             <Button
-              variant={activeTab === "streams" ? "default" : "ghost"}
-              onClick={() => setActiveTab("streams")}
-              className="flex-1 sm:flex-none px-3 sm:px-6 text-sm"
-            >
-              <Activity className="w-4 h-4 mr-1 sm:mr-2" />
-              <span className="hidden sm:inline">Active Streams</span>
-              <span className="sm:hidden">Streams</span>
-            </Button>
-            <Button
               variant={activeTab === "devices" ? "default" : "ghost"}
               onClick={() => setActiveTab("devices")}
               className="flex-1 sm:flex-none px-3 sm:px-6 text-sm relative"
@@ -433,6 +424,15 @@ export function Dashboard() {
                   {stats.pendingDevices}
                 </Badge>
               )}
+            </Button>
+            <Button
+              variant={activeTab === "streams" ? "default" : "ghost"}
+              onClick={() => setActiveTab("streams")}
+              className="flex-1 sm:flex-none px-3 sm:px-6 text-sm"
+            >
+              <Activity className="w-4 h-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Active Streams</span>
+              <span className="sm:hidden">Streams</span>
             </Button>
           </div>
         </div>
