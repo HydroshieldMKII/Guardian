@@ -8,6 +8,9 @@ import { ActiveSession } from '../../../entities/active-session.entity';
 import * as http from 'http';
 import * as https from 'https';
 
+// App version
+const CURRENT_APP_VERSION = '1.1.2';
+
 export interface ConfigSettingDto {
   key: string;
   value: string;
@@ -99,7 +102,17 @@ export class ConfigService {
         description: 'Default page to show when app loads',
         type: 'string' as const,
       },
+      {
+        key: 'APP_VERSION',
+        value: CURRENT_APP_VERSION,
+        description: 'Current application version',
+        type: 'string' as const,
+        private: false,
+      },
     ];
+
+    // Update version number on startup if current version is higher
+    await this.updateAppVersionIfNewer();
 
     for (const setting of defaultSettings) {
       const existing = await this.settingsRepository.findOne({
@@ -431,17 +444,22 @@ export class ConfigService {
   async exportDatabase(): Promise<string> {
     try {
       this.logger.log('Starting database export...');
-
       // Get all data from all tables 
+
+
+
       const [settings, userDevices, userPreferences] = await Promise.all([
         this.settingsRepository.find(),
         this.settingsRepository.manager.getRepository(UserDevice).find(),
         this.settingsRepository.manager.getRepository(UserPreference).find(),
       ]);
 
+      // Get current app version from settings database
+      const appVersion = await this.getSetting('APP_VERSION');
+
       const exportData = {
         exportedAt: new Date().toISOString(),
-        version: '1.0',
+        version: appVersion,
         data: {
           settings,
           userDevices,
@@ -570,10 +588,60 @@ export class ConfigService {
 
       this.logger.log(`Database import completed: ${imported} items imported, ${skipped} items skipped`);
       
-      return { imported, skipped };
+      return { 
+        imported, 
+        skipped
+      };
     } catch (error) {
       this.logger.error('Error importing database:', error);
       throw new Error(`Failed to import database: ${error.message}`);
     }
+  }
+
+  private async updateAppVersionIfNewer(): Promise<void> {
+    try {
+      const versionSetting = await this.settingsRepository.findOne({
+        where: { key: 'APP_VERSION' },
+      });
+
+      if (versionSetting && this.isVersionNewer(CURRENT_APP_VERSION, versionSetting.value)) {
+        versionSetting.value = CURRENT_APP_VERSION;
+        await this.settingsRepository.save(versionSetting);
+        this.logger.log(`Updated app version from ${versionSetting.value} to: ${CURRENT_APP_VERSION}`);
+      }
+    } catch (error) {
+      this.logger.warn('Failed to update app version:', error);
+    }
+  }
+
+  private isVersionNewer(newVersion: string, currentVersion: string): boolean {
+    const parseVersion = (version: string) => {
+      return version.split('.').map(v => parseInt(v) || 0);
+    };
+
+    const newV = parseVersion(newVersion);
+    const currentV = parseVersion(currentVersion);
+
+    for (let i = 0; i < Math.max(newV.length, currentV.length); i++) {
+      const newPart = newV[i] || 0;
+      const currentPart = currentV[i] || 0;
+      
+      if (newPart > currentPart){
+        this.logger.log(`Current app version ${currentVersion} is older than your data version ${newVersion}. Updating to the latest version.`);
+        return true;
+      }
+      if (newPart < currentPart){
+        this.logger.error(`WARNING: Current app version ${currentVersion} is newer than your data version ${newVersion}. Please check your installation.`);
+        return false;
+      }
+    }
+    
+    return false; // versions are equal
+  }
+
+  async getVersionInfo(): Promise<{ version: string; }> {
+    return {
+      version: await this.getSetting('APP_VERSION'),
+    };
   }
 }

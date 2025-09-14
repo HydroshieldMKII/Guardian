@@ -32,6 +32,7 @@ import {
   ChevronDown,
   Activity,
 } from "lucide-react";
+import { config } from "../lib/config";
 
 interface AppSetting {
   id: number;
@@ -120,6 +121,10 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
   const [exportingDatabase, setExportingDatabase] = useState(false);
   const [importingDatabase, setImportingDatabase] = useState(false);
   const [backendError, setBackendError] = useState<string | null>(null);
+  const [versionInfo, setVersionInfo] = useState<{
+    version: string;
+    name: string;
+  } | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<{
     success: boolean;
     message: string;
@@ -128,12 +133,25 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
 
   useEffect(() => {
     fetchSettings();
+    fetchVersionInfo();
   }, []);
+
+  const fetchVersionInfo = async () => {
+    try {
+      const response = await fetch(`${config.api.baseUrl}/config/version`);
+      if (response.ok) {
+        const data = await response.json();
+        setVersionInfo(data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch version info:", error);
+    }
+  };
 
   const fetchSettings = async () => {
     setBackendError(null);
     try {
-      const response = await fetch("/api/pg/config");
+      const response = await fetch(`${config.api.baseUrl}/config`);
       if (response.ok) {
         const data = await response.json();
         setSettings(data);
@@ -262,7 +280,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
         return;
       }
 
-      const response = await fetch("/api/pg/config", {
+      const response = await fetch(`${config.api.baseUrl}/config`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -317,7 +335,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
 
     setTestingConnection(true);
     try {
-      const response = await fetch("/api/pg/config/test-plex-connection", {
+      const response = await fetch(`${config.api.baseUrl}/config/test-plex-connection`, {
         method: "POST",
       });
 
@@ -354,7 +372,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
   const handleExportDatabase = async () => {
     setExportingDatabase(true);
     try {
-      const response = await fetch("/api/pg/config/database/export");
+      const response = await fetch(`${config.api.baseUrl}/config/database/export`);
       
       if (response.ok) {
         const blob = await response.blob();
@@ -394,24 +412,65 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
   const handleImportDatabase = async (file: File) => {
     setImportingDatabase(true);
     try {
+      // Read and validate the file
+      const fileContent = await file.text();
+      let importData;
+      
+      try {
+        importData = JSON.parse(fileContent);
+      } catch (parseError) {
+        toast({
+          title: "Invalid file",
+          description: "The selected file is not a valid JSON file",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Check version compatibility
+      const importVersion = importData.version;
+      const currentVersion = versionInfo?.version;
+      
+      if (importVersion && currentVersion && importVersion !== currentVersion) {
+        const shouldContinue = window.confirm(
+          `Version mismatch detected! Please make sure you have a backup before proceeding.\n\n` +
+          `Current version: ${currentVersion}\n` +
+          `Import file version: ${importVersion}\n\n` +
+          `You may lose data or break your installation. Do you want to continue with the import?`
+        );
+        
+        if (!shouldContinue) {
+          toast({
+            title: "Import cancelled",
+            description: "Import was cancelled due to version mismatch",
+            variant: "default",
+          });
+          return;
+        }
+      }
+      
       const formData = new FormData();
       formData.append('file', file);
-      
-      const response = await fetch("/api/pg/config/database/import", {
+
+      const response = await fetch(`${config.api.baseUrl}/config/database/import`, {
         method: "POST",
         body: formData,
       });
       
       if (response.ok) {
         const result = await response.json();
+        const successMessage = `Successfully imported ${result.imported.imported} items, ${result.imported.skipped} items skipped`;
+        const versionMessage = importVersion && currentVersion !== importVersion ? ` (Version: ${importVersion} → ${currentVersion})` : '';
+        
         toast({
           title: "Import successful",
-          description: `Successfully imported ${result.imported.imported} items, ${result.imported.skipped} items skipped`,
+          description: successMessage + versionMessage,
           variant: "success",
         });
         
-        // Refresh settings after import
+        // Refresh settings and version info after import
         await fetchSettings();
+        await fetchVersionInfo();
       } else {
         const errorData = await response.json().catch(() => ({}));
         toast({
@@ -1048,6 +1107,16 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
                 </button>
               ))}
             </CardContent>
+            
+            {/* Version Information */}
+            {versionInfo && (
+              <div className="px-4 py-3 border-t border-border">
+                <div className="text-xs text-muted-foreground space-y-1">
+                  <div className="font-medium text-foreground">Guardian</div>
+                  <div>Version {versionInfo.version}</div>
+                </div>
+              </div>
+            )}
           </Card>
 
           {/* Settings Content */}
