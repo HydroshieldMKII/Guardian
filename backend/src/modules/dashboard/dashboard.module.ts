@@ -4,9 +4,10 @@ import { DashboardService } from './dashboard.service';
 import { SessionsModule } from '../sessions/sessions.module';
 import { DevicesModule } from '../devices/devices.module';
 import { ConfigModule } from '../config/config.module';
+import { UsersModule } from '../users/users.module';
 
 @Module({
-  imports: [SessionsModule, DevicesModule, ConfigModule],
+  imports: [SessionsModule, DevicesModule, ConfigModule, UsersModule],
   controllers: [DashboardController],
   providers: [DashboardService],
   exports: [DashboardService],

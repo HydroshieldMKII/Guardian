@@ -48,6 +48,11 @@ import { PlexSession, StreamsResponse } from "@/types";
 import { useSwipeToRefresh } from "../hooks/useSwipeToRefresh";
 import { config } from "@/lib/config";
 
+interface StreamsListProps {
+  sessionsData?: StreamsResponse;
+  onRefresh?: () => void;
+}
+
 const ClickableIP = ({ ipAddress }: { ipAddress: string | null }) => {
   if (!ipAddress || ipAddress === "Unknown IP" || ipAddress === "Unknown") {
     return <span className="truncate">{ipAddress || "Unknown"}</span>;
@@ -102,7 +107,7 @@ const StreamSkeleton = () => (
   </div>
 );
 
-export function StreamsList() {
+export function StreamsList({ sessionsData, onRefresh }: StreamsListProps) {
   const [streams, setStreams] = useState<PlexSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -115,52 +120,29 @@ export function StreamsList() {
     useState<PlexSession | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
 
+  // Update streams when sessionsData prop changes
+  useEffect(() => {
+    if (sessionsData) {
+      setStreams(sessionsData?.MediaContainer?.Metadata || []);
+      setError(null);
+      setLastUpdateTime(new Date());
+      setLoading(false);
+    }
+  }, [sessionsData]);
+
   const swipeHandlers = useSwipeToRefresh({
-    onRefresh: () => fetchStreams(),
+    onRefresh: onRefresh || (() => {}),
     enabled: true,
   });
 
-  const fetchStreams = async (silent = false) => {
-    try {
-      if (!silent) {
-        setRefreshing(true);
-      }
-      const response = await fetch(`${config.api.baseUrl}/sessions/active`);
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-      const data: StreamsResponse = await response.json();
-      setStreams(data?.MediaContainer?.Metadata || []);
-      setError(null);
-      setLastUpdateTime(new Date());
-    } catch (error: any) {
-      console.error("Failed to fetch streams:", error);
-      setError(error.message || "Failed to fetch streams");
-      if (!silent) {
-        setStreams([]);
-      }
-    } finally {
-      if (loading) {
-        setLoading(false);
-      }
-      if (!silent) {
-        setRefreshing(false);
-      }
+  const handleRefresh = () => {
+    if (onRefresh) {
+      setRefreshing(true);
+      onRefresh();
+      // Reset refreshing state after a short delay
+      setTimeout(() => setRefreshing(false), 1000);
     }
   };
-
-  useEffect(() => {
-    fetchStreams();
-    let interval: NodeJS.Timeout;
-
-    if (autoRefresh) {
-      interval = setInterval(() => fetchStreams(true), 5000); // More frequent updates (5 seconds)
-    }
-
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [autoRefresh]);
 
   // Filter and sort streams based on search term
   const filteredStreams = streams
@@ -220,7 +202,7 @@ export function StreamsList() {
         const result = await response.json();
         console.log(result.message);
         // Refresh the streams to reflect any changes
-        fetchStreams();
+        handleRefresh();
       } else {
         console.error("Failed to revoke device authorization");
       }
@@ -371,7 +353,7 @@ export function StreamsList() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => fetchStreams()}
+              onClick={handleRefresh}
               disabled={refreshing}
             >
               <RefreshCw
@@ -410,7 +392,7 @@ export function StreamsList() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => fetchStreams()}
+              onClick={handleRefresh}
               className="mt-3"
             >
               Try Again

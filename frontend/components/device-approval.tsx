@@ -41,35 +41,11 @@ import {
   Search,
   ExternalLink,
 } from "lucide-react";
+import { UserDevice, UserPreference } from "@/types";
 import { config } from "@/lib/config";
 
-interface UserDevice {
-  id: number;
-  userId: string;
-  username: string | null;
-  deviceIdentifier: string;
-  deviceName: string | null;
-  devicePlatform: string | null;
-  deviceProduct: string | null;
-  deviceVersion: string | null;
-  status: "pending" | "approved" | "rejected";
-  firstSeen: string;
-  lastSeen: string;
-  sessionCount: number;
-  ipAddress: string | null;
-}
-
-interface UserPreference {
-  id: number;
-  userId: string;
-  username: string | null;
-  defaultBlock: boolean | null;
-  createdAt: string;
-  updatedAt: string;
-}
-
 // Clickable IP component
-const ClickableIP = ({ ipAddress }: { ipAddress: string | null }) => {
+const ClickableIP = ({ ipAddress }: { ipAddress: string | null | undefined }) => {
   if (!ipAddress || ipAddress === "Unknown IP" || ipAddress === "Unknown") {
     return <span className="truncate">{ipAddress || "Unknown IP"}</span>;
   }
@@ -316,7 +292,18 @@ const UserPreferenceCard = memo(
 
 UserPreferenceCard.displayName = "UserPreferenceCard";
 
-const DeviceApproval = memo(() => {
+interface DeviceApprovalProps {
+  devicesData?: {
+    all: UserDevice[];
+    pending: UserDevice[];
+    approved: UserDevice[];
+    processed: UserDevice[];
+  };
+  usersData?: UserPreference[];
+  onRefresh?: () => void;
+}
+
+const DeviceApproval = memo(({ devicesData, usersData, onRefresh }: DeviceApprovalProps) => {
   const [allDevices, setAllDevices] = useState<UserDevice[]>([]);
   const [pendingDevices, setPendingDevices] = useState<UserDevice[]>([]);
   const [processedDevices, setProcessedDevices] = useState<UserDevice[]>([]);
@@ -331,6 +318,23 @@ const DeviceApproval = memo(() => {
   const [searchDevices, setSearchDevices] = useState("");
   const [searchUsers, setSearchUsers] = useState("");
 
+  // Update devices state when devicesData prop changes
+  useEffect(() => {
+    if (devicesData) {
+      setAllDevices(devicesData.all || []);
+      setPendingDevices(devicesData.pending || []);
+      setProcessedDevices(devicesData.processed || []);
+      setLoading(false);
+    }
+  }, [devicesData]);
+
+  // Update users state when usersData prop changes
+  useEffect(() => {
+    if (usersData) {
+      setUsers(usersData || []);
+    }
+  }, [usersData]);
+
   // Confirmation dialog states
   const [confirmAction, setConfirmAction] = useState<{
     device: UserDevice;
@@ -339,86 +343,14 @@ const DeviceApproval = memo(() => {
     description: string;
   } | null>(null);
 
-  const fetchDevices = useCallback(
-    async (silent = false) => {
-      try {
-        if (!silent) {
-          setLoading(true);
-        } else {
-          setRefreshing(true);
-        }
-
-        // Fetch all devices
-        const allResponse = await fetch(`${config.api.baseUrl}/devices`);
-        const allData: UserDevice[] = await allResponse.json();
-
-        // Fetch pending devices (truly new devices)
-        const pendingResponse = await fetch(
-          `${config.api.baseUrl}/devices/pending`
-        );
-        const pendingData: UserDevice[] = await pendingResponse.json();
-
-        // Fetch processed devices (approved or rejected)
-        const processedResponse = await fetch(
-          `${config.api.baseUrl}/devices/processed`
-        );
-        const processedData: UserDevice[] = await processedResponse.json();
-
-        // Only update state if data has changed to prevent unnecessary re-renders
-        const allDataString = JSON.stringify(allData);
-        const pendingDataString = JSON.stringify(pendingData);
-        const processedDataString = JSON.stringify(processedData);
-
-        if (JSON.stringify(allDevices) !== allDataString) {
-          setAllDevices(allData);
-        }
-        if (JSON.stringify(pendingDevices) !== pendingDataString) {
-          setPendingDevices(pendingData);
-        }
-        if (JSON.stringify(processedDevices) !== processedDataString) {
-          setProcessedDevices(processedData);
-        }
-      } catch (error) {
-        console.error("Failed to fetch devices:", error);
-      } finally {
-        setLoading(false);
-        setRefreshing(false);
-      }
-    },
-    [allDevices, pendingDevices, processedDevices]
-  );
-
-  const fetchUsers = useCallback(async (silent = false) => {
-    try {
-      if (silent) {
-        setRefreshing(true);
-      }
-      const response = await fetch(`${config.api.baseUrl}/users`);
-      const usersData: UserPreference[] = await response.json();
-      setUsers(usersData || []); // Ensure we always have an array
-    } catch (error) {
-      console.error("Failed to fetch users:", error);
-      setUsers([]); // Set to empty array on error
-    } finally {
-      if (silent) {
-        setRefreshing(false);
-      }
+  const handleRefresh = () => {
+    if (onRefresh) {
+      setRefreshing(true);
+      onRefresh();
+      // Reset refreshing state after a short delay
+      setTimeout(() => setRefreshing(false), 1000);
     }
-  }, []);
-
-  useEffect(() => {
-    fetchDevices();
-    if (activeTab === "users") {
-      fetchUsers();
-    }
-    const interval = setInterval(() => {
-      fetchDevices(true); // Silent refresh for automatic updates
-      if (activeTab === "users") {
-        fetchUsers(true); // Silent refresh for users
-      }
-    }, 30000); // Refresh every 30 seconds
-    return () => clearInterval(interval);
-  }, [activeTab]);
+  };
 
   // Filter and sort functions
   const filteredDevices = (
@@ -522,7 +454,7 @@ const DeviceApproval = memo(() => {
         );
 
         // Still fetch to ensure consistency
-        setTimeout(fetchDevices, 100);
+        setTimeout(handleRefresh, 100);
       } else {
         console.error("Failed to approve device");
       }
@@ -559,7 +491,7 @@ const DeviceApproval = memo(() => {
           devices.filter((device) => device.id !== deviceId)
         );
 
-        setTimeout(fetchDevices, 100);
+        setTimeout(handleRefresh, 100);
       } else {
         console.error("Failed to reject device");
       }
@@ -590,7 +522,7 @@ const DeviceApproval = memo(() => {
         setProcessedDevices((prev) => removeDevice(prev));
         setPendingDevices((prev) => removeDevice(prev));
 
-        setTimeout(fetchDevices, 100);
+        setTimeout(handleRefresh, 100);
       } else {
         console.error("Failed to delete device");
       }
@@ -669,7 +601,7 @@ const DeviceApproval = memo(() => {
     }
   };
 
-  const getDeviceIcon = (platform: string | null, product: string | null) => {
+  const getDeviceIcon = (platform: string | null | undefined, product: string | null | undefined) => {
     const p = platform?.toLowerCase() || product?.toLowerCase() || "";
 
     if (
@@ -772,9 +704,7 @@ const DeviceApproval = memo(() => {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() =>
-                  activeTab === "users" ? fetchUsers(true) : fetchDevices(true)
-                }
+                onClick={handleRefresh}
                 disabled={refreshing}
                 className="text-xs sm:text-sm"
               >
@@ -867,7 +797,7 @@ const DeviceApproval = memo(() => {
                       <UserPreferenceCard
                         key={user.userId}
                         user={user}
-                        onUpdate={fetchUsers}
+                        onUpdate={handleRefresh}
                       />
                     ))}
                   </div>

@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ActiveSessionService } from '../sessions/services/active-session.service';
 import { DeviceTrackingService } from '../devices/services/device-tracking.service';
 import { ConfigService } from '../config/services/config.service';
+import { UsersService } from '../users/services/users.service';
 
 export interface DashboardData {
   plexStatus: {
@@ -15,7 +16,9 @@ export interface DashboardData {
     all: any[];
     pending: any[];
     approved: any[];
+    processed: any[];
   };
+  users: any[];
   stats: {
     activeStreams: number;
     totalDevices: number;
@@ -30,6 +33,7 @@ export class DashboardService {
     private readonly activeSessionService: ActiveSessionService,
     private readonly deviceTrackingService: DeviceTrackingService,
     private readonly configService: ConfigService,
+    private readonly usersService: UsersService,
   ) {}
 
   async getDashboardData(): Promise<DashboardData> {
@@ -46,7 +50,8 @@ export class DashboardService {
           plexStatus,
           settings,
           sessions: { MediaContainer: { size: 0, Metadata: [] } },
-          devices: { all: [], pending: [], approved: [] },
+          devices: { all: [], pending: [], approved: [], processed: [] },
+          users: [],
           stats: {
             activeStreams: 0,
             totalDevices: 0,
@@ -57,12 +62,14 @@ export class DashboardService {
       }
 
       // Fetch all data in parallel
-      const [sessions, allDevices, pendingDevices, approvedDevices] = 
+      const [sessions, allDevices, pendingDevices, approvedDevices, processedDevices, users] = 
         await Promise.all([
           this.activeSessionService.getActiveSessionsFormatted(),
           this.deviceTrackingService.getAllDevices(),
           this.deviceTrackingService.getPendingDevices(),
           this.deviceTrackingService.getApprovedDevices(),
+          this.deviceTrackingService.getProcessedDevices(),
+          this.usersService.getAllUsers(),
         ]);
 
       // Calculate stats
@@ -81,7 +88,9 @@ export class DashboardService {
           all: allDevices,
           pending: pendingDevices,
           approved: approvedDevices,
+          processed: processedDevices,
         },
+        users,
         stats,
       };
     } catch (error) {

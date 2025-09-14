@@ -32,6 +32,7 @@ import { config } from "@/lib/config";
 
 export function Dashboard() {
   const router = useRouter();
+  const [dashboardData, setDashboardData] = useState<UnifiedDashboardData | null>(null);
   const [stats, setStats] = useState<DashboardStats>({
     activeStreams: 0,
     totalDevices: 0,
@@ -123,49 +124,35 @@ export function Dashboard() {
     router.push('/settings');
   };
 
-  useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        // Fetch all dashboard data
-        const dashboardData = await apiClient.getDashboardData<UnifiedDashboardData>();
-        
-        // Update Plex status
-        setPlexStatus(dashboardData.plexStatus);
-        
-        // If Plex is not properly configured, we still get data but it will be empty
-        if (!dashboardData.plexStatus.configured || !dashboardData.plexStatus.hasValidCredentials) {
-          setStats({
-            activeStreams: 0,
-            totalDevices: 0,
-            pendingDevices: 0,
-            approvedDevices: 0,
-          });
-          setLoading(false);
-          return;
-        }
-
-        // Calculate quality stats from the sessions data
-        // const qualityStats = analyzeQualityStats(dashboardData.sessions);
-
-        // Update stats with quality stats included
-        // setStats({
-        //   ...dashboardData.stats,
-        //   qualityStats,
-        // });
-      } catch (error) {
-        console.error("Failed to fetch dashboard stats:", error);
-        setPlexStatus({
-          configured: false,
-          hasValidCredentials: false,
-          connectionStatus: "Failed to fetch dashboard data",
-        });
-      } finally {
-        setLoading(false);
+  const refreshDashboard = async (silent = false) => {
+    try {
+      if (!silent) {
+        setLoading(true);
       }
-    };
+      
+      // Fetch all dashboard data
+      const dashboardData = await apiClient.getDashboardData<UnifiedDashboardData>();
+      
+      // Update all state with the consolidated data
+      setDashboardData(dashboardData);
+      setPlexStatus(dashboardData.plexStatus);
+      setStats(dashboardData.stats);
+      
+    } catch (error) {
+      console.error("Failed to fetch dashboard stats:", error);
+      setPlexStatus({
+        configured: false,
+        hasValidCredentials: false,
+        connectionStatus: "Failed to fetch dashboard data",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    fetchStats(); // Initial fetch
-    const interval = setInterval(fetchStats, config.app.refreshInterval);
+  useEffect(() => {
+    refreshDashboard(); // Initial fetch
+    const interval = setInterval(() => refreshDashboard(true), config.app.refreshInterval);
     return () => clearInterval(interval);
   }, []);
 
@@ -440,7 +427,18 @@ export function Dashboard() {
         </div>
 
         {/* Tab Content */}
-        {activeTab === "streams" ? <StreamsList /> : <DeviceApproval />}
+        {activeTab === "streams" ? (
+          <StreamsList 
+            sessionsData={dashboardData?.sessions}
+            onRefresh={() => refreshDashboard(true)}
+          />
+        ) : (
+          <DeviceApproval 
+            devicesData={dashboardData?.devices}
+            usersData={dashboardData?.users}
+            onRefresh={() => refreshDashboard(true)}
+          />
+        )}
       </div>
     </div>
   );

@@ -91,6 +91,15 @@ export interface PlexStatus {
   connectionStatus: string;
 }
 
+export interface UserPreference {
+  id: number;
+  userId: string;
+  username?: string;
+  defaultBlock: boolean | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface UnifiedDashboardData {
   plexStatus: PlexStatus;
   settings: AppSetting[];
@@ -99,6 +108,8 @@ export interface UnifiedDashboardData {
     all: UserDevice[];
     pending: UserDevice[];
     approved: UserDevice[];
+    processed: UserDevice[];
   };
+  users: UserPreference[];
   stats: DashboardStats;
 }
