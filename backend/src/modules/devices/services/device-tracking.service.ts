@@ -255,5 +255,47 @@ export class DeviceTrackingService {
     this.logger.debug(`Cleared session key for ${result.affected || 0} device(s) that stopped streaming (session: ${sessionKey})`);
   
   }
+
+  async cleanupInactiveDevices(inactiveDays: number): Promise<{ deletedCount: number; deletedDevices: UserDevice[] }> {
+    if (inactiveDays <= 0) {
+      this.logger.warn('Invalid inactive days for cleanup:', inactiveDays);
+      return { deletedCount: 0, deletedDevices: [] };
+    }
+
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - inactiveDays);
+
+    // Find devices that haven't been seen since the cutoff date
+    const inactiveDevices = await this.userDeviceRepository
+      .createQueryBuilder('device')
+      .where('device.last_seen < :cutoffDate', { cutoffDate })
+      .getMany();
+
+    if (inactiveDevices.length === 0) {
+      this.logger.log('No inactive devices found for cleanup');
+      return { deletedCount: 0, deletedDevices: [] };
+    }
+
+    this.logger.log(`Found ${inactiveDevices.length} inactive device(s) older than ${inactiveDays} days`);
+    
+    // Log which devices will be deleted
+    for (const device of inactiveDevices) {
+      this.logger.log(
+        `Removing inactive device: ${device.deviceName || device.deviceIdentifier} ` +
+        `(User: ${device.username || device.userId}, Last seen: ${device.lastSeen.toISOString()})`
+      );
+    }
+
+    // Delete the inactive devices
+    const deviceIds = inactiveDevices.map(device => device.id);
+    await this.userDeviceRepository.delete({ id: In(deviceIds) });
+
+    this.logger.log(`Successfully removed ${inactiveDevices.length} inactive device(s)`);
+    
+    return { 
+      deletedCount: inactiveDevices.length, 
+      deletedDevices: inactiveDevices 
+    };
+  }
   
 }

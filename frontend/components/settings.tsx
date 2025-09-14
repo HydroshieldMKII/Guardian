@@ -78,18 +78,30 @@ const settingsSections = [
   // },
 ];
 
-// Function to convert setting keys to proper labels
-const getSettingLabel = (key: string): string => {
-  const labelMap: Record<string, string> = {
-    'PLEX_SERVER_IP': 'Plex server IP address',
-    'PLEX_SERVER_PORT': 'Plex server port',
-    'PLEX_TOKEN': 'Authentication token',
-    'PLEXGUARD_REFRESH_INTERVAL': 'Refresh interval',
-    'PLEXGUARD_STOPMSG': 'Message',
-    'PLEX_GUARD_DEFAULT_BLOCK': 'Default behavior for new devices',
+// Function to get setting label and description
+const getSettingInfo = (setting: AppSetting): { label: string; description: string } => {
+  const settingInfoMap: Record<string, { label: string; description?: string }> = {
+    'PLEX_SERVER_IP': { label: 'Plex server IP address' },
+    'PLEX_SERVER_PORT': { label: 'Plex server port' },
+    'PLEX_TOKEN': { label: 'Authentication token' },
+    'PLEXGUARD_REFRESH_INTERVAL': { label: 'Refresh interval' },
+    'PLEXGUARD_STOPMSG': { label: 'Message' },
+    'PLEX_GUARD_DEFAULT_BLOCK': { label: 'Default behavior for new devices' },
+    'DEVICE_CLEANUP_ENABLED': { 
+      label: 'Automatic device cleanup',
+      description: 'When enabled, devices that haven\'t streamed for the specified number of days will be automatically removed and require approval again.'
+    },
+    'DEVICE_CLEANUP_INTERVAL_DAYS': { 
+      label: 'Device inactivity threshold (days)',
+      description: 'Number of days a device can be inactive before it\'s automatically removed. Cleanup runs every hour.'
+    },
   };
   
-  return labelMap[key] || key.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
+  const info = settingInfoMap[setting.key];
+  const label = info?.label || setting.key.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
+  const description = info?.description || setting.description;
+  
+  return { label, description };
 };
 
 export function Settings({ onBack }: { onBack?: () => void } = {}) {
@@ -427,6 +439,8 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
         "PLEXGUARD_REFRESH_INTERVAL",
         "PLEX_GUARD_DEFAULT_BLOCK",
         "PLEXGUARD_STOPMSG",
+        "DEVICE_CLEANUP_ENABLED",
+        "DEVICE_CLEANUP_INTERVAL_DAYS",
       ],
     };
 
@@ -437,14 +451,15 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
 
   const renderSettingField = (setting: AppSetting) => {
     const value = formData[setting.key];
+    const { label, description } = getSettingInfo(setting);
 
     if (setting.type === "boolean") {
       return (
         <div className="flex items-center justify-between">
           <div className="space-y-0.5">
-            <Label>{getSettingLabel(setting.key)}</Label>
+            <Label>{label}</Label>
             <p className="text-xs text-muted-foreground">
-              {setting.description}
+              {description}
             </p>
           </div>
           <Switch
@@ -460,7 +475,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
 
     return (
       <div className="space-y-2">
-        <Label>{getSettingLabel(setting.key)}</Label>
+        <Label>{label}</Label>
         <Input
           type={
             setting.private
@@ -481,7 +496,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
             setting.private && !value ? "••••••••••••••••••••" : ""
           }
         />
-        <p className="text-xs text-muted-foreground">{setting.description}</p>
+        <p className="text-xs text-muted-foreground">{description}</p>
       </div>
     );
   };

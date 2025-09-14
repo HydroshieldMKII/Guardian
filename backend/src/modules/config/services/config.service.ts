@@ -81,6 +81,18 @@ export class ConfigService {
         description: 'Message shown when blocking streams',
         type: 'string' as const,
       },
+      {
+        key: 'DEVICE_CLEANUP_ENABLED',
+        value: 'false',
+        description: 'Automatically remove inactive devices',
+        type: 'boolean' as const,
+      },
+      {
+        key: 'DEVICE_CLEANUP_INTERVAL_DAYS',
+        value: '30',
+        description: 'Days of inactivity before device removal',
+        type: 'number' as const,
+      },
     ];
 
     for (const setting of defaultSettings) {
