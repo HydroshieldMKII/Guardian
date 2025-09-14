@@ -198,15 +198,6 @@ export function Dashboard() {
   return (
     <div className="min-h-[calc(100vh-3.5rem)]">
       <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-8">
-        {/* Dashboard Header */}
-        {/* <div className="mb-6 sm:mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">
-            Guardian Dashboard
-          </h1>
-          <p className="text-muted-foreground text-sm sm:text-base">
-            Monitor and manage your Plex Media Server streams and devices
-          </p>
-        </div> */}
 
         {/* Server Statistics */}
         <div className="mb-3 sm:mb-8">
