@@ -29,6 +29,8 @@ import {
   Upload,
   Database,
   AlertTriangle,
+  ChevronDown,
+  Activity,
 } from "lucide-react";
 
 interface AppSetting {
@@ -94,6 +96,10 @@ const getSettingInfo = (setting: AppSetting): { label: string; description: stri
     'DEVICE_CLEANUP_INTERVAL_DAYS': { 
       label: 'Device inactivity threshold (days)',
       description: 'Number of days a device can be inactive before it\'s automatically removed. Cleanup runs every hour.'
+    },
+    'DEFAULT_PAGE': {
+      label: 'Default page on startup',
+      description: 'Choose which page to display when the app loads'
     },
   };
   
@@ -202,6 +208,12 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
             errors.push('Device cleanup interval must be a whole number (no decimals)');
           } else if (cleanupDays < 1) {
             errors.push('Device cleanup interval must be at least 1 day');
+          }
+          break;
+        case 'DEFAULT_PAGE':
+          const validPages = ['devices', 'streams'];
+          if (!validPages.includes(String(setting.value))) {
+            errors.push('Default page must be either "devices" or "streams"');
           }
           break;
           default:
@@ -449,6 +461,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
         "PLEXGUARD_REFRESH_INTERVAL",
         "PLEX_GUARD_DEFAULT_BLOCK",
         "PLEXGUARD_STOPMSG",
+        "DEFAULT_PAGE",
       ],
     };
 
@@ -477,6 +490,35 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
             }
             className="cursor-pointer"
           />
+        </div>
+      );
+    }
+
+    // Special handling for DEFAULT_PAGE setting
+    if (setting.key === "DEFAULT_PAGE") {
+      const options = [
+        { value: "devices", label: "Device Management", icon: Shield },
+        { value: "streams", label: "Active Streams", icon: Activity }
+      ];
+      
+      return (
+        <div className="space-y-2">
+          <Label>{label}</Label>
+          <div className="relative">
+            <select
+              value={String(value || "devices")}
+              onChange={(e) => handleInputChange(setting.key, e.target.value)}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 pr-8 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 appearance-none cursor-pointer"
+            >
+              {options.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+          </div>
+          <p className="text-xs text-muted-foreground">{description}</p>
         </div>
       );
     }

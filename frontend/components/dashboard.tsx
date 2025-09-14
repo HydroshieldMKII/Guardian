@@ -65,6 +65,13 @@ export function Dashboard() {
         setDashboardData(newDashboardData);
         setPlexStatus(newDashboardData.plexStatus);
         setStats(newDashboardData.stats);
+        
+        // Set default tab on first load
+        if (!dashboardData) {
+          const defaultPageSetting = newDashboardData.settings.find(s => s.key === "DEFAULT_PAGE");
+          const defaultPage = defaultPageSetting?.value || "devices";
+          setActiveTab(defaultPage === "streams" ? "streams" : "devices");
+        }
       }
       
     } catch (error) {

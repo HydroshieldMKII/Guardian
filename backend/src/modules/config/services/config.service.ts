@@ -93,6 +93,12 @@ export class ConfigService {
         description: 'Days of inactivity before device removal',
         type: 'number' as const,
       },
+      {
+        key: 'DEFAULT_PAGE',
+        value: 'devices',
+        description: 'Default page to show when app loads',
+        type: 'string' as const,
+      },
     ];
 
     for (const setting of defaultSettings) {
@@ -223,6 +229,14 @@ export class ConfigService {
       }
       if (numValue < 1) {
         throw new Error('Device cleanup interval must be at least 1 day');
+      }
+    }
+
+    // Validate DEFAULT_PAGE setting
+    if (key === 'DEFAULT_PAGE') {
+      const validPages = ['devices', 'streams'];
+      if (!validPages.includes(String(value))) {
+        throw new Error('Default page must be either "devices" or "streams"');
       }
     }
 
