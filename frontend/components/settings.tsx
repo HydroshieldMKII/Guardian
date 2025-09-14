@@ -49,16 +49,16 @@ interface SettingsFormData {
 
 const settingsSections = [
   {
-    id: "plex",
-    title: "Plex Integration",
-    description: "Configure Plex server connection and settings",
-    icon: Server,
-  },
-  {
     id: "guardian",
     title: "Guardian Configuration",
     description: "Configure Guardian behavior and settings",
     icon: Shield,
+  },
+  {
+    id: "plex",
+    title: "Plex Integration",
+    description: "Configure Plex server connection and settings",
+    icon: Server,
   },
   {
     id: "database",
@@ -111,7 +111,7 @@ const getSettingInfo = (setting: AppSetting): { label: string; description: stri
 };
 
 export function Settings({ onBack }: { onBack?: () => void } = {}) {
-  const [activeSection, setActiveSection] = useState("plex");
+  const [activeSection, setActiveSection] = useState("guardian");
   const [settings, setSettings] = useState<AppSetting[]>([]);
   const [formData, setFormData] = useState<SettingsFormData>({});
   const [loading, setLoading] = useState(true);
