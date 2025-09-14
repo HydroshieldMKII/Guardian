@@ -94,8 +94,10 @@ jobs:
     runs-on: ubuntu-latest
     needs: [changes, build-backend, build-frontend]
     if: |
-      (needs.changes.outputs.backend == 'true' && needs.build-backend.result == 'success') ||
-      (needs.changes.outputs.frontend == 'true' && needs.build-frontend.result == 'success')
+      always() &&
+      (needs.changes.outputs.backend != 'true' || needs.build-backend.result == 'success') &&
+      (needs.changes.outputs.frontend != 'true' || needs.build-frontend.result == 'success') &&
+      (needs.changes.outputs.backend == 'true' || needs.changes.outputs.frontend == 'true')
     permissions:
       contents: read
     steps:
