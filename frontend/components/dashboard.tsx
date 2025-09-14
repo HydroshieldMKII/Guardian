@@ -291,11 +291,19 @@ export function Dashboard() {
             <Button
               variant={activeTab === "streams" ? "default" : "ghost"}
               onClick={() => setActiveTab("streams")}
-              className="flex-1 sm:flex-none px-3 sm:px-6 text-sm"
+              className="flex-1 sm:flex-none px-3 sm:px-6 text-sm relative"
             >
               <Activity className="w-4 h-4 mr-1 sm:mr-2" />
               <span className="hidden sm:inline">Active Streams</span>
               <span className="sm:hidden">Streams</span>
+              {stats.activeStreams > 0 && (
+                <Badge
+                  variant="default"
+                  className="absolute -top-1 -right-1 sm:relative sm:top-0 sm:right-0 sm:ml-2 min-w-5 h-5 text-xs bg-blue-600 dark:bg-blue-700 text-white"
+                >
+                  {stats.activeStreams}
+                </Badge>
+              )}
             </Button>
           </div>
         </div>
