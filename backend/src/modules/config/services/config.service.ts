@@ -4,12 +4,11 @@ import { Repository } from 'typeorm';
 import { AppSettings } from '../../../entities/app-settings.entity';
 import { UserDevice } from '../../../entities/user-device.entity';
 import { UserPreference } from '../../../entities/user-preference.entity';
-import { ActiveSession } from '../../../entities/active-session.entity';
 import * as http from 'http';
 import * as https from 'https';
 
 // App version
-const CURRENT_APP_VERSION = '1.1.0';
+const CURRENT_APP_VERSION = '1.1.2';
 
 export interface ConfigSettingDto {
   key: string;
@@ -652,7 +651,6 @@ export class ConfigService {
 
   async getVersionInfo(): Promise<{ 
     version: string; 
-    name: string; 
     databaseVersion: string; 
     codeVersion: string;
     isVersionMismatch: boolean;
@@ -661,8 +659,7 @@ export class ConfigService {
     const isVersionMismatch = this.isVersionNewer(dbVersion, CURRENT_APP_VERSION);
     
     return {
-      version: dbVersion,
-      name: 'guardian',
+      version: CURRENT_APP_VERSION,
       databaseVersion: dbVersion,
       codeVersion: CURRENT_APP_VERSION,
       isVersionMismatch,

@@ -129,7 +129,6 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
   const [backendError, setBackendError] = useState<string | null>(null);
   const [versionInfo, setVersionInfo] = useState<{
     version: string;
-    name: string;
     databaseVersion: string;
     codeVersion: string;
     isVersionMismatch: boolean;
@@ -237,6 +236,13 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
           latestVersion,
           currentVersion,
           updateUrl: release.html_url,
+        });
+
+        // Show toast notification for available update
+        toast({
+          title: "Update available!",
+          description: `A new version (v${latestVersion}) is available. Please update to the latest version.`,
+          variant: "success",
         });
       } else {
         // Clear any existing update info and show toast for latest version
