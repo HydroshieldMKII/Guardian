@@ -124,6 +124,9 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
   const [versionInfo, setVersionInfo] = useState<{
     version: string;
     name: string;
+    databaseVersion: string;
+    codeVersion: string;
+    isVersionMismatch: boolean;
   } | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<{
     success: boolean;
@@ -1079,6 +1082,37 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
           </div>
         )}
 
+        {/* Version Mismatch Warning */}
+        {versionInfo?.isVersionMismatch && (
+          <div className="mb-6">
+            <Card className="border-amber-600 bg-amber-50 dark:border-amber-700 dark:bg-amber-950/20">
+              <CardContent>
+                <div className="flex items-center gap-3">
+                  <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-700 shrink-0" />
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-amber-800 dark:text-amber-200 mb-1">
+                      Version Mismatch Detected
+                    </h3>
+                    <p className="text-sm text-amber-600 dark:text-amber-300">
+                      Database version ({versionInfo.databaseVersion}) is newer than code version ({versionInfo.codeVersion}). 
+                      Please update your Guardian installation to avoid compatibility issues.
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={fetchVersionInfo}
+                    className="border-amber-600 text-amber-600 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-700 dark:hover:bg-amber-900/20"
+                  >
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Refresh
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Settings Navigation */}
           <Card className="lg:col-span-1">
@@ -1112,8 +1146,12 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
             {versionInfo && (
               <div className="px-4 py-3 border-t border-border">
                 <div className="text-xs text-muted-foreground space-y-1">
-                  <div className="font-medium text-foreground">Guardian</div>
-                  <div>Version {versionInfo.version}</div>
+
+                      <div>
+                        Database version: {versionInfo.databaseVersion}
+                      </div>
+                      <div>Code: v{versionInfo.codeVersion}</div>
+
                 </div>
               </div>
             )}

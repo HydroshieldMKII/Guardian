@@ -639,9 +639,22 @@ export class ConfigService {
     return false; // versions are equal
   }
 
-  async getVersionInfo(): Promise<{ version: string; }> {
+  async getVersionInfo(): Promise<{ 
+    version: string; 
+    name: string; 
+    databaseVersion: string; 
+    codeVersion: string;
+    isVersionMismatch: boolean;
+  }> {
+    const dbVersion = await this.getSetting('APP_VERSION') || CURRENT_APP_VERSION;
+    const isVersionMismatch = this.isVersionNewer(dbVersion, CURRENT_APP_VERSION);
+    
     return {
-      version: await this.getSetting('APP_VERSION'),
+      version: dbVersion,
+      name: 'guardian',
+      databaseVersion: dbVersion,
+      codeVersion: CURRENT_APP_VERSION,
+      isVersionMismatch,
     };
   }
 }
