@@ -46,6 +46,7 @@ export function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [plexStatus, setPlexStatus] = useState<PlexStatus | null>(null);
   const [autoRefresh, setAutoRefresh] = useState(true);
+  const [initialTabSet, setInitialTabSet] = useState(false);
 
   const handleShowSettings = () => {
     router.push('/settings');
@@ -60,22 +61,10 @@ export function Dashboard() {
       // Fetch all dashboard data
       const newDashboardData = await apiClient.getDashboardData<UnifiedDashboardData>();
       
-      // Only update state if data actually changed
-      const currentDataString = JSON.stringify(dashboardData);
-      const newDataString = JSON.stringify(newDashboardData);
-      
-      if (currentDataString !== newDataString) {
-        setDashboardData(newDashboardData);
-        setPlexStatus(newDashboardData.plexStatus);
-        setStats(newDashboardData.stats);
-        
-        // Set default tab on first load
-        if (!dashboardData) {
-          const defaultPageSetting = newDashboardData.settings.find(s => s.key === "DEFAULT_PAGE");
-          const defaultPage = defaultPageSetting?.value || "devices";
-          setActiveTab(defaultPage === "streams" ? "streams" : "devices");
-        }
-      }
+      // Always update the data
+      setDashboardData(newDashboardData);
+      setPlexStatus(newDashboardData.plexStatus);
+      setStats(newDashboardData.stats);
       
     } catch (error) {
       console.error("Failed to fetch dashboard stats:", error);
@@ -88,6 +77,16 @@ export function Dashboard() {
       setLoading(false);
     }
   };
+
+  // Set initial tab only once when dashboard data is first available
+  useEffect(() => {
+    if (dashboardData && !initialTabSet) {
+      const defaultPageSetting = dashboardData.settings.find(s => s.key === "DEFAULT_PAGE");
+      const defaultPage = defaultPageSetting?.value || "devices";
+      setActiveTab(defaultPage === "streams" ? "streams" : "devices");
+      setInitialTabSet(true);
+    }
+  }, [dashboardData, initialTabSet]);
 
   useEffect(() => {
     refreshDashboard();
@@ -213,34 +212,6 @@ export function Dashboard() {
   return (
     <div className="min-h-[calc(100vh-3.5rem)]">
       <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-8">
-
-        {/* Version Mismatch Warning */}
-        {versionInfo?.isVersionMismatch && (
-          <div className="mb-6">
-            <Card className="border-red-600 bg-red-50 dark:border-red-700 dark:bg-red-950/20">
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-3">
-                  <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-700 shrink-0" />
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-red-800 dark:text-red-200 mb-1">
-                      Critical Version Mismatch
-                    </h3>
-                    <p className="text-sm text-red-600 dark:text-red-300 mb-2">
-                      Database version ({versionInfo.databaseVersion}) is newer than code version ({versionInfo.codeVersion}).
-                    </p>
-                    <Button
-                      size="sm"
-                      onClick={() => router.push('/settings')}
-                      className="bg-red-600 hover:bg-red-700 text-white"
-                    >
-                      Go to Settings
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
 
         {/* Server Statistics */}
         <div className="mb-3 sm:mb-8">

@@ -4,17 +4,14 @@ import { useState } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import {
   Dialog,
-  DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogPortal,
-  DialogOverlay,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle } from "lucide-react";
-import { cn } from "@/lib/utils";
 
 interface ConfirmationModalProps {
   isOpen: boolean;
