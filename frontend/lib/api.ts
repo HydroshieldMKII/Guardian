@@ -55,6 +55,10 @@ class ApiClient {
   async delete<T>(endpoint: string): Promise<T> {
     return this.request<T>(endpoint, { method: "DELETE" });
   }
+
+  async getDashboardData<T>(): Promise<T> {
+    return this.get<T>("/dashboard");
+  }
 }
 
 export const apiClient = new ApiClient(config.api.baseUrl);

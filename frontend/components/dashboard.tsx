@@ -26,15 +26,9 @@ import {
 import { StreamsList } from "./streams-list";
 import { DeviceApproval } from "./device-approval";
 
-import { DashboardStats } from "@/types";
+import { DashboardStats, UnifiedDashboardData, PlexStatus } from "@/types";
 import { apiClient } from "@/lib/api";
 import { config } from "@/lib/config";
-
-interface PlexStatus {
-  configured: boolean;
-  hasValidCredentials: boolean;
-  connectionStatus: string;
-}
 
 export function Dashboard() {
   const router = useRouter();
@@ -129,58 +123,48 @@ export function Dashboard() {
     router.push('/settings');
   };
 
-  const checkPlexStatus = async () => {
-    try {
-      const status = await apiClient.get("/config/plex/status");
-      setPlexStatus(status as PlexStatus);
-      return status as PlexStatus;
-    } catch (error) {
-      console.error("Failed to check Plex status:", error);
-      setPlexStatus({
-        configured: false,
-        hasValidCredentials: false,
-        connectionStatus: "Failed to check status",
-      });
-      return null;
-    }
-  };
-
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        // First check if Plex is properly configured and connected
-        const status = await checkPlexStatus();
-
-        if (!status?.configured || !status?.hasValidCredentials) {
+        // Fetch all dashboard data
+        const dashboardData = await apiClient.getDashboardData<UnifiedDashboardData>();
+        
+        // Update Plex status
+        setPlexStatus(dashboardData.plexStatus);
+        
+        // If Plex is not properly configured, we still get data but it will be empty
+        if (!dashboardData.plexStatus.configured || !dashboardData.plexStatus.hasValidCredentials) {
+          setStats({
+            activeStreams: 0,
+            totalDevices: 0,
+            pendingDevices: 0,
+            approvedDevices: 0,
+          });
           setLoading(false);
           return;
         }
 
-        const [streamsData, allDevicesData, pendingData, approvedData] =
-          await Promise.all([
-            apiClient.get("/sessions/active"),
-            apiClient.get("/devices"),
-            apiClient.get("/devices/pending"),
-            apiClient.get("/devices/approved"),
-          ]);
+        // Calculate quality stats from the sessions data
+        // const qualityStats = analyzeQualityStats(dashboardData.sessions);
 
-        const qualityStats = analyzeQualityStats(streamsData);
-
-        setStats({
-          activeStreams: (streamsData as any)?.MediaContainer?.size || 0,
-          totalDevices: (allDevicesData as any[]).length,
-          pendingDevices: (pendingData as any[]).length,
-          approvedDevices: (approvedData as any[]).length,
-          qualityStats,
-        });
+        // Update stats with quality stats included
+        // setStats({
+        //   ...dashboardData.stats,
+        //   qualityStats,
+        // });
       } catch (error) {
         console.error("Failed to fetch dashboard stats:", error);
+        setPlexStatus({
+          configured: false,
+          hasValidCredentials: false,
+          connectionStatus: "Failed to fetch dashboard data",
+        });
       } finally {
         setLoading(false);
       }
     };
 
-    // fetchStats();
+    fetchStats(); // Initial fetch
     const interval = setInterval(fetchStats, config.app.refreshInterval);
     return () => clearInterval(interval);
   }, []);

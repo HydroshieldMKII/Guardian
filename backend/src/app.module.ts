@@ -6,6 +6,7 @@ import { PlexModule } from './modules/plex/plex.module';
 import { HealthModule } from './modules/health/health.module';
 import { UsersModule } from './modules/users/users.module';
 import { ConfigModule } from './modules/config/config.module';
+import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { SchedulerService } from './services/scheduler.service';
 import { UserDevice } from './entities/user-device.entity';
 import { ActiveSession } from './entities/active-session.entity';
@@ -31,6 +32,7 @@ import * as path from 'path';
     HealthModule,
     UsersModule,
     ConfigModule,
+    DashboardModule,
   ],
   providers: [SchedulerService],
 })

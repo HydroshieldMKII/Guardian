@@ -74,3 +74,31 @@ export interface UserDevice {
   lastSeen: string;
   sessionCount: number;
 }
+
+export interface AppSetting {
+  id: number;
+  key: string;
+  value: string;
+  description: string;
+  type: "string" | "number" | "boolean" | "json";
+  private: boolean;
+  updatedAt: string;
+}
+
+export interface PlexStatus {
+  configured: boolean;
+  hasValidCredentials: boolean;
+  connectionStatus: string;
+}
+
+export interface UnifiedDashboardData {
+  plexStatus: PlexStatus;
+  settings: AppSetting[];
+  sessions: StreamsResponse;
+  devices: {
+    all: UserDevice[];
+    pending: UserDevice[];
+    approved: UserDevice[];
+  };
+  stats: DashboardStats;
+}

@@ -4,6 +4,6 @@ export const config = {
   },
   app: {
     environment: process.env.NODE_ENV || "development",
-    refreshInterval: 5000, // 5 seconds
+    refreshInterval: 3000, // 3 seconds
   },
 };
