@@ -26,164 +26,69 @@ import {
 import { StreamsList } from "./streams-list";
 import { DeviceApproval } from "./device-approval";
 
-import { DashboardStats } from "@/types";
+import { DashboardStats, UnifiedDashboardData, PlexStatus } from "@/types";
 import { apiClient } from "@/lib/api";
 import { config } from "@/lib/config";
 
-interface PlexStatus {
-  configured: boolean;
-  hasValidCredentials: boolean;
-  connectionStatus: string;
-}
-
 export function Dashboard() {
   const router = useRouter();
+  const [dashboardData, setDashboardData] = useState<UnifiedDashboardData | null>(null);
   const [stats, setStats] = useState<DashboardStats>({
     activeStreams: 0,
     totalDevices: 0,
     pendingDevices: 0,
     approvedDevices: 0,
   });
-  const [activeTab, setActiveTab] = useState<"streams" | "devices">("streams");
+  const [activeTab, setActiveTab] = useState<"streams" | "devices">("devices");
   const [loading, setLoading] = useState(true);
   const [plexStatus, setPlexStatus] = useState<PlexStatus | null>(null);
-
-  const analyzeQualityStats = (streamsData: any) => {
-    const sessions = streamsData?.MediaContainer?.Metadata || [];
-    
-    if (sessions.length === 0) {
-      return {
-        averageBitrate: 0,
-        commonResolution: "-",
-        commonCodec: "-", 
-        highQualityStreams: 0,
-      };
-    }
-
-    const bitrates: number[] = [];
-    const resolutions: string[] = [];
-    const codecs: string[] = [];
-    let highQualityCount = 0;
-
-    sessions.forEach((session: any) => {
-      const media = session.Media?.[0];
-      if (media) {
-        if (media.bitrate) {
-          bitrates.push(media.bitrate);
-          // Consider 4k (>= 2160p) or high bitrate (>= 15Mbps) as high quality
-          if (media.videoResolution?.includes('2160') || media.bitrate >= 15000) {
-            highQualityCount++;
-          }
-        }
-        if (media.videoResolution) {
-          resolutions.push(media.videoResolution);
-        }
-        if (media.videoCodec) {
-          codecs.push(media.videoCodec);
-        }
-      }
-    });
-
-    const averageBitrate = bitrates.length > 0 
-      ? Math.round(bitrates.reduce((a, b) => a + b, 0) / bitrates.length / 1000)
-      : 0;
-
-    // Find the highest resolution
-    const getResolutionValue = (res: string) => {
-      const resLower = res.toLowerCase();
-      if (resLower.includes('2160') || resLower.includes('4k')) return 2160;
-      if (resLower.includes('1440') || resLower.includes('2k')) return 1440;
-      if (resLower.includes('1080')) return 1080;
-      if (resLower.includes('720')) return 720;
-      if (resLower.includes('480')) return 480;
-      return 0;
-    };
-
-    const highestResolution = resolutions.length > 0
-      ? resolutions.reduce((highest, current) => 
-          getResolutionValue(current) > getResolutionValue(highest) ? current : highest
-        ).toUpperCase() || "-"
-      : "-";
-
-    // Find most common codec
-    const codecCounts = codecs.reduce((acc: Record<string, number>, codec) => {
-      acc[codec] = (acc[codec] || 0) + 1;
-      return acc;
-    }, {});
-
-    const commonCodec = Object.keys(codecCounts).length > 0
-      ? Object.entries(codecCounts)
-          .sort(([,a], [,b]) => b - a)[0][0]
-          .toUpperCase() || "-"
-      : "-";
-
-    return {
-      averageBitrate,
-      commonResolution: highestResolution,
-      commonCodec,
-      highQualityStreams: highQualityCount,
-    };
-  };
+  const [autoRefresh, setAutoRefresh] = useState(true);
 
   const handleShowSettings = () => {
     router.push('/settings');
   };
 
-  const checkPlexStatus = async () => {
+  const refreshDashboard = async (silent = false) => {
     try {
-      const status = await apiClient.get("/config/plex/status");
-      setPlexStatus(status as PlexStatus);
-      return status as PlexStatus;
+      if (!silent) {
+        setLoading(true);
+      }
+      
+      // Fetch all dashboard data
+      const newDashboardData = await apiClient.getDashboardData<UnifiedDashboardData>();
+      
+      // Only update state if data actually changed
+      const currentDataString = JSON.stringify(dashboardData);
+      const newDataString = JSON.stringify(newDashboardData);
+      
+      if (currentDataString !== newDataString) {
+        setDashboardData(newDashboardData);
+        setPlexStatus(newDashboardData.plexStatus);
+        setStats(newDashboardData.stats);
+      }
+      
     } catch (error) {
-      console.error("Failed to check Plex status:", error);
+      console.error("Failed to fetch dashboard stats:", error);
       setPlexStatus({
         configured: false,
         hasValidCredentials: false,
-        connectionStatus: "Failed to check status",
+        connectionStatus: "Failed to fetch dashboard data",
       });
-      return null;
+    } finally {
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        // First check if Plex is properly configured and connected
-        const status = await checkPlexStatus();
-
-        if (!status?.configured || !status?.hasValidCredentials) {
-          setLoading(false);
-          return;
-        }
-
-        const [streamsData, allDevicesData, pendingData, approvedData] =
-          await Promise.all([
-            apiClient.get("/sessions/active"),
-            apiClient.get("/devices"),
-            apiClient.get("/devices/pending"),
-            apiClient.get("/devices/approved"),
-          ]);
-
-        const qualityStats = analyzeQualityStats(streamsData);
-
-        setStats({
-          activeStreams: (streamsData as any)?.MediaContainer?.size || 0,
-          totalDevices: (allDevicesData as any[]).length,
-          pendingDevices: (pendingData as any[]).length,
-          approvedDevices: (approvedData as any[]).length,
-          qualityStats,
-        });
-      } catch (error) {
-        console.error("Failed to fetch dashboard stats:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    // fetchStats();
-    const interval = setInterval(fetchStats, config.app.refreshInterval);
-    return () => clearInterval(interval);
+    refreshDashboard();
   }, []);
+
+  useEffect(() => {
+    if (!autoRefresh) return; // Don't set up interval in manual mode
+    
+    const interval = setInterval(() => refreshDashboard(true), config.app.refreshInterval);
+    return () => clearInterval(interval);
+  }, [autoRefresh]);
 
   if (loading) {
     // Loading dots animation
@@ -363,78 +268,9 @@ export function Dashboard() {
           </div>
         </div>
 
-        {/* Quality Stats */}
-        {/* <div className="mb-6 sm:mb-8">
-          <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center">
-            Streams Quality Overview
-          </h3>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-            <Card className="border-l-4 border-l-orange-500">
-              <CardHeader className="pb-2 sm:pb-3">
-                <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center">
-                  <Signal className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-                  <span className="hidden sm:inline">Avg Bitrate</span>
-                  <span className="sm:hidden">Bitrate</span>
-                </CardTitle>
-                <CardDescription className="text-lg sm:text-xl lg:text-2xl font-bold text-foreground">
-                  {stats.qualityStats ? (stats.qualityStats.averageBitrate > 0 ? `${stats.qualityStats.averageBitrate} Mbps` : "-") : "-"}
-                </CardDescription>
-              </CardHeader>
-            </Card>
-
-            <Card className="border-l-4 border-l-blue-500">
-              <CardHeader className="pb-2 sm:pb-3">
-                <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center">
-                  <Video className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-                  <span className="hidden sm:inline">Highest Resolution</span>
-                  <span className="sm:hidden">Max Res</span>
-                </CardTitle>
-                <CardDescription className="text-lg sm:text-xl lg:text-2xl font-bold text-foreground">
-                  {stats.qualityStats?.commonResolution || "-"}
-                </CardDescription>
-              </CardHeader>
-            </Card>
-
-            <Card className="border-l-4 border-l-green-500">
-              <CardHeader className="pb-2 sm:pb-3">
-                <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center">
-                  <Activity className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-                  <span className="hidden sm:inline">Top Codec</span>
-                  <span className="sm:hidden">Codec</span>
-                </CardTitle>
-                <CardDescription className="text-lg sm:text-xl lg:text-2xl font-bold text-foreground">
-                  {stats.qualityStats?.commonCodec || "-"}
-                </CardDescription>
-              </CardHeader>
-            </Card>
-
-            <Card className="border-l-4 border-l-purple-500">
-              <CardHeader className="pb-2 sm:pb-3">
-                <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center">
-                  <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-                  <span className="hidden sm:inline">High Quality</span>
-                  <span className="sm:hidden">HQ Streams</span>
-                </CardTitle>
-                <CardDescription className="text-lg sm:text-xl lg:text-2xl font-bold text-foreground">
-                  {stats.qualityStats ? (stats.activeStreams > 0 ? stats.qualityStats.highQualityStreams : "-") : "-"}
-                </CardDescription>
-              </CardHeader>
-            </Card>
-          </div>
-        </div> */}
-
         {/* Tab Navigation */}
         <div className="mb-4 sm:mb-6">
           <div className="flex w-full sm:w-fit space-x-0 sm:space-x-1 bg-muted p-1 rounded-lg">
-            <Button
-              variant={activeTab === "streams" ? "default" : "ghost"}
-              onClick={() => setActiveTab("streams")}
-              className="flex-1 sm:flex-none px-3 sm:px-6 text-sm"
-            >
-              <Activity className="w-4 h-4 mr-1 sm:mr-2" />
-              <span className="hidden sm:inline">Active Streams</span>
-              <span className="sm:hidden">Streams</span>
-            </Button>
             <Button
               variant={activeTab === "devices" ? "default" : "ghost"}
               onClick={() => setActiveTab("devices")}
@@ -452,11 +288,43 @@ export function Dashboard() {
                 </Badge>
               )}
             </Button>
+            <Button
+              variant={activeTab === "streams" ? "default" : "ghost"}
+              onClick={() => setActiveTab("streams")}
+              className="flex-1 sm:flex-none px-3 sm:px-6 text-sm relative"
+            >
+              <Activity className="w-4 h-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Active Streams</span>
+              <span className="sm:hidden">Streams</span>
+              {stats.activeStreams > 0 && (
+                <Badge
+                  variant="default"
+                  className="absolute -top-1 -right-1 sm:relative sm:top-0 sm:right-0 sm:ml-2 min-w-5 h-5 text-xs bg-blue-600 dark:bg-blue-700 text-white"
+                >
+                  {stats.activeStreams}
+                </Badge>
+              )}
+            </Button>
           </div>
         </div>
 
         {/* Tab Content */}
-        {activeTab === "streams" ? <StreamsList /> : <DeviceApproval />}
+        {activeTab === "streams" ? (
+          <StreamsList 
+            sessionsData={dashboardData?.sessions}
+            onRefresh={() => refreshDashboard(true)}
+            autoRefresh={autoRefresh}
+            onAutoRefreshChange={setAutoRefresh}
+          />
+        ) : (
+          <DeviceApproval 
+            devicesData={dashboardData?.devices}
+            usersData={dashboardData?.users}
+            onRefresh={() => refreshDashboard(true)}
+            autoRefresh={autoRefresh}
+            onAutoRefreshChange={setAutoRefresh}
+          />
+        )}
       </div>
     </div>
   );

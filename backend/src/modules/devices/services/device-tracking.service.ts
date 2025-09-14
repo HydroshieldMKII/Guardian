@@ -255,5 +255,68 @@ export class DeviceTrackingService {
     this.logger.debug(`Cleared session key for ${result.affected || 0} device(s) that stopped streaming (session: ${sessionKey})`);
   
   }
+
+  async cleanupInactiveDevices(inactiveDays: number): Promise<{ deletedCount: number; deletedDevices: UserDevice[] }> {
+    // Validate input
+    if (typeof inactiveDays !== 'number' || isNaN(inactiveDays)) {
+      this.logger.warn('Invalid inactive days for cleanup - not a number:', inactiveDays);
+      return { deletedCount: 0, deletedDevices: [] };
+    }
+
+    if (!Number.isInteger(inactiveDays)) {
+      this.logger.warn('Invalid inactive days for cleanup - must be an integer:', inactiveDays);
+      return { deletedCount: 0, deletedDevices: [] };
+    }
+
+    if (inactiveDays <= 0) {
+      this.logger.warn('Invalid inactive days for cleanup - must be positive:', inactiveDays);
+      return { deletedCount: 0, deletedDevices: [] };
+    }
+
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - inactiveDays);
+
+    
+    const allDevices = await this.userDeviceRepository.find();
+
+    if (allDevices.length === 0) {
+      return { deletedCount: 0, deletedDevices: [] };
+    }
+
+    const inactiveDevices: UserDevice[] = [];
+    
+    for (const device of allDevices) {
+      if (!device.lastSeen) {
+        this.logger.warn(`Device ${device.id} has no lastSeen date, skipping...`);
+        continue;
+      }
+      
+      if (new Date(device.lastSeen) < cutoffDate) {
+        inactiveDevices.push(device);
+      }
+    }
+
+
+    this.logger.log(`Found ${inactiveDevices.length} inactive device(s) older than ${inactiveDays} days`);
+    
+    // Log which devices will be deleted
+    for (const device of inactiveDevices) {
+      this.logger.log(
+        `Removing inactive device: ${device.deviceName || device.deviceIdentifier} ` +
+        `(User: ${device.username || device.userId}, Last seen: ${device.lastSeen.toISOString()})`
+      );
+    }
+
+    // Delete the inactive devices
+    const deviceIds = inactiveDevices.map(device => device.id);
+    await this.userDeviceRepository.delete({ id: In(deviceIds) });
+
+    this.logger.log(`Successfully removed ${inactiveDevices.length} inactive device(s)`);
+    
+    return { 
+      deletedCount: inactiveDevices.length, 
+      deletedDevices: inactiveDevices 
+    };
+  }
   
 }

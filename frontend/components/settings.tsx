@@ -78,18 +78,30 @@ const settingsSections = [
   // },
 ];
 
-// Function to convert setting keys to proper labels
-const getSettingLabel = (key: string): string => {
-  const labelMap: Record<string, string> = {
-    'PLEX_SERVER_IP': 'Plex server IP address',
-    'PLEX_SERVER_PORT': 'Plex server port',
-    'PLEX_TOKEN': 'Authentication token',
-    'PLEXGUARD_REFRESH_INTERVAL': 'Refresh interval',
-    'PLEXGUARD_STOPMSG': 'Message',
-    'PLEX_GUARD_DEFAULT_BLOCK': 'Default behavior for new devices',
+// Function to get setting label and description
+const getSettingInfo = (setting: AppSetting): { label: string; description: string } => {
+  const settingInfoMap: Record<string, { label: string; description?: string }> = {
+    'PLEX_SERVER_IP': { label: 'Plex server IP address' },
+    'PLEX_SERVER_PORT': { label: 'Plex server port' },
+    'PLEX_TOKEN': { label: 'Authentication token' },
+    'PLEXGUARD_REFRESH_INTERVAL': { label: 'Refresh interval' },
+    'PLEXGUARD_STOPMSG': { label: 'Message' },
+    'PLEX_GUARD_DEFAULT_BLOCK': { label: 'Default behavior for new devices' },
+    'DEVICE_CLEANUP_ENABLED': { 
+      label: 'Automatic device cleanup',
+      description: 'When enabled, devices that haven\'t streamed for the specified number of days will be automatically removed and require approval again.'
+    },
+    'DEVICE_CLEANUP_INTERVAL_DAYS': { 
+      label: 'Device inactivity threshold (days)',
+      description: 'Number of days a device can be inactive before it\'s automatically removed. Cleanup runs every hour.'
+    },
   };
   
-  return labelMap[key] || key.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
+  const info = settingInfoMap[setting.key];
+  const label = info?.label || setting.key.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
+  const description = info?.description || setting.description;
+  
+  return { label, description };
 };
 
 export function Settings({ onBack }: { onBack?: () => void } = {}) {
@@ -180,6 +192,16 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
         case 'PLEX_TOKEN':
           if (!setting.value || setting.value.trim().length === 0) {
             errors.push('Plex token is required');
+          }
+          break;
+        case 'DEVICE_CLEANUP_INTERVAL_DAYS':
+          const cleanupDays = Number(setting.value);
+          if (isNaN(cleanupDays)) {
+            errors.push('Device cleanup interval must be a number');
+          } else if (!Number.isInteger(cleanupDays)) {
+            errors.push('Device cleanup interval must be a whole number (no decimals)');
+          } else if (cleanupDays < 1) {
+            errors.push('Device cleanup interval must be at least 1 day');
           }
           break;
           default:
@@ -437,14 +459,15 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
 
   const renderSettingField = (setting: AppSetting) => {
     const value = formData[setting.key];
+    const { label, description } = getSettingInfo(setting);
 
     if (setting.type === "boolean") {
       return (
         <div className="flex items-center justify-between">
           <div className="space-y-0.5">
-            <Label>{getSettingLabel(setting.key)}</Label>
+            <Label>{label}</Label>
             <p className="text-xs text-muted-foreground">
-              {setting.description}
+              {description}
             </p>
           </div>
           <Switch
@@ -460,7 +483,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
 
     return (
       <div className="space-y-2">
-        <Label>{getSettingLabel(setting.key)}</Label>
+        <Label>{label}</Label>
         <Input
           type={
             setting.private
@@ -481,8 +504,81 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
             setting.private && !value ? "••••••••••••••••••••" : ""
           }
         />
-        <p className="text-xs text-muted-foreground">{setting.description}</p>
+        <p className="text-xs text-muted-foreground">{description}</p>
       </div>
+    );
+  };
+
+  const renderDeviceCleanupSettings = () => {
+    const cleanupEnabledSetting = settings.find((s) => s.key === "DEVICE_CLEANUP_ENABLED");
+    const cleanupIntervalSetting = settings.find((s) => s.key === "DEVICE_CLEANUP_INTERVAL_DAYS");
+
+    if (!cleanupEnabledSetting || !cleanupIntervalSetting) return null;
+
+    const isCleanupEnabled = Boolean(formData["DEVICE_CLEANUP_ENABLED"]);
+    const { label: enabledLabel, description: enabledDescription } = getSettingInfo(cleanupEnabledSetting);
+    const { label: intervalLabel, description: intervalDescription } = getSettingInfo(cleanupIntervalSetting);
+
+    return (
+      <Card className="p-4">
+        <div className="space-y-4">
+          {/* Device Cleanup Enabled Setting */}
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label>{enabledLabel}</Label>
+              <p className="text-xs text-muted-foreground">
+                {enabledDescription}
+              </p>
+            </div>
+            <Switch
+              checked={isCleanupEnabled}
+              onCheckedChange={(checked) =>
+                handleInputChange("DEVICE_CLEANUP_ENABLED", checked)
+              }
+              className="cursor-pointer"
+            />
+          </div>
+
+          {/* Cleanup Interval Setting */}
+          <div
+            className={`ml-4 pl-4 border-l-2 ${isCleanupEnabled ? "border-border" : "border-muted"}`}
+          >
+            <div className="space-y-2">
+              <Label className={!isCleanupEnabled ? "text-muted-foreground" : ""}>
+                {intervalLabel}
+              </Label>
+              <Input
+                type="number"
+                min="1"
+                max="365"
+                step="1"
+                value={String(formData["DEVICE_CLEANUP_INTERVAL_DAYS"] || "")}
+                disabled={!isCleanupEnabled}
+                onChange={(e) => {
+                  const newValue = parseInt(e.target.value, 10);
+                  if (!isNaN(newValue) && newValue > 0) {
+                    handleInputChange("DEVICE_CLEANUP_INTERVAL_DAYS", newValue);
+                  } else if (e.target.value === "") {
+                    handleInputChange("DEVICE_CLEANUP_INTERVAL_DAYS", "");
+                  }
+                }}
+                onKeyDown={(e) => {
+                  // Prevent decimal input
+                  if (e.key === '.' || e.key === ',') {
+                    e.preventDefault();
+                  }
+                }}
+                className={!isCleanupEnabled ? "bg-muted" : ""}
+              />
+              <p
+                className={`text-xs ${!isCleanupEnabled ? "text-muted-foreground/60" : "text-muted-foreground"}`}
+              >
+                {intervalDescription}
+              </p>
+            </div>
+          </div>
+        </div>
+      </Card>
     );
   };
 
@@ -644,6 +740,9 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
                   {renderSettingField(setting)}
                 </Card>
               ))}
+
+              {/* Device Cleanup Settings Group */}
+              {renderDeviceCleanupSettings()}
             </div>
           </div>
         );

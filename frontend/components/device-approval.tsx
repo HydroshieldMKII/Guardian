@@ -38,38 +38,15 @@ import {
   Trash2,
   ToggleLeft,
   ToggleRight,
+  Wifi,
   Search,
   ExternalLink,
 } from "lucide-react";
+import { UserDevice, UserPreference } from "@/types";
 import { config } from "@/lib/config";
 
-interface UserDevice {
-  id: number;
-  userId: string;
-  username: string | null;
-  deviceIdentifier: string;
-  deviceName: string | null;
-  devicePlatform: string | null;
-  deviceProduct: string | null;
-  deviceVersion: string | null;
-  status: "pending" | "approved" | "rejected";
-  firstSeen: string;
-  lastSeen: string;
-  sessionCount: number;
-  ipAddress: string | null;
-}
-
-interface UserPreference {
-  id: number;
-  userId: string;
-  username: string | null;
-  defaultBlock: boolean | null;
-  createdAt: string;
-  updatedAt: string;
-}
-
 // Clickable IP component
-const ClickableIP = ({ ipAddress }: { ipAddress: string | null }) => {
+const ClickableIP = ({ ipAddress }: { ipAddress: string | null | undefined }) => {
   if (!ipAddress || ipAddress === "Unknown IP" || ipAddress === "Unknown") {
     return <span className="truncate">{ipAddress || "Unknown IP"}</span>;
   }
@@ -316,13 +293,27 @@ const UserPreferenceCard = memo(
 
 UserPreferenceCard.displayName = "UserPreferenceCard";
 
-const DeviceApproval = memo(() => {
+interface DeviceApprovalProps {
+  devicesData?: {
+    all: UserDevice[];
+    pending: UserDevice[];
+    approved: UserDevice[];
+    processed: UserDevice[];
+  };
+  usersData?: UserPreference[];
+  onRefresh?: () => void;
+  autoRefresh?: boolean;
+  onAutoRefreshChange?: (value: boolean) => void;
+}
+
+const DeviceApproval = memo(({ devicesData, usersData, onRefresh, autoRefresh: parentAutoRefresh, onAutoRefreshChange }: DeviceApprovalProps) => {
   const [allDevices, setAllDevices] = useState<UserDevice[]>([]);
   const [pendingDevices, setPendingDevices] = useState<UserDevice[]>([]);
   const [processedDevices, setProcessedDevices] = useState<UserDevice[]>([]);
   const [users, setUsers] = useState<UserPreference[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [autoRefresh, setAutoRefresh] = useState(parentAutoRefresh ?? true);
   const [actionLoading, setActionLoading] = useState<number | null>(null);
   const [selectedDevice, setSelectedDevice] = useState<UserDevice | null>(null);
   const [activeTab, setActiveTab] = useState<"pending" | "processed" | "users">(
@@ -330,6 +321,52 @@ const DeviceApproval = memo(() => {
   );
   const [searchDevices, setSearchDevices] = useState("");
   const [searchUsers, setSearchUsers] = useState("");
+
+  // Update devices state when devicesData prop changes
+  useEffect(() => {
+    if (devicesData) {
+      // Only update if data actually changed
+      const currentAllString = JSON.stringify(allDevices);
+      const currentPendingString = JSON.stringify(pendingDevices);
+      const currentProcessedString = JSON.stringify(processedDevices);
+      
+      const newAllString = JSON.stringify(devicesData.all || []);
+      const newPendingString = JSON.stringify(devicesData.pending || []);
+      const newProcessedString = JSON.stringify(devicesData.processed || []);
+      
+      if (currentAllString !== newAllString) {
+        setAllDevices(devicesData.all || []);
+      }
+      if (currentPendingString !== newPendingString) {
+        setPendingDevices(devicesData.pending || []);
+      }
+      if (currentProcessedString !== newProcessedString) {
+        setProcessedDevices(devicesData.processed || []);
+      }
+      
+      setLoading(false);
+    }
+  }, [devicesData, allDevices, pendingDevices, processedDevices]);
+
+  // Update users state when usersData prop changes
+  useEffect(() => {
+    if (usersData) {
+      // Only update if data actually changed
+      const currentUsersString = JSON.stringify(users);
+      const newUsersString = JSON.stringify(usersData || []);
+      
+      if (currentUsersString !== newUsersString) {
+        setUsers(usersData || []);
+      }
+    }
+  }, [usersData, users]);
+
+  // Sync local autoRefresh with parent
+  useEffect(() => {
+    if (parentAutoRefresh !== undefined) {
+      setAutoRefresh(parentAutoRefresh);
+    }
+  }, [parentAutoRefresh]);
 
   // Confirmation dialog states
   const [confirmAction, setConfirmAction] = useState<{
@@ -339,86 +376,26 @@ const DeviceApproval = memo(() => {
     description: string;
   } | null>(null);
 
-  const fetchDevices = useCallback(
-    async (silent = false) => {
-      try {
-        if (!silent) {
-          setLoading(true);
-        } else {
-          setRefreshing(true);
-        }
-
-        // Fetch all devices
-        const allResponse = await fetch(`${config.api.baseUrl}/devices`);
-        const allData: UserDevice[] = await allResponse.json();
-
-        // Fetch pending devices (truly new devices)
-        const pendingResponse = await fetch(
-          `${config.api.baseUrl}/devices/pending`
-        );
-        const pendingData: UserDevice[] = await pendingResponse.json();
-
-        // Fetch processed devices (approved or rejected)
-        const processedResponse = await fetch(
-          `${config.api.baseUrl}/devices/processed`
-        );
-        const processedData: UserDevice[] = await processedResponse.json();
-
-        // Only update state if data has changed to prevent unnecessary re-renders
-        const allDataString = JSON.stringify(allData);
-        const pendingDataString = JSON.stringify(pendingData);
-        const processedDataString = JSON.stringify(processedData);
-
-        if (JSON.stringify(allDevices) !== allDataString) {
-          setAllDevices(allData);
-        }
-        if (JSON.stringify(pendingDevices) !== pendingDataString) {
-          setPendingDevices(pendingData);
-        }
-        if (JSON.stringify(processedDevices) !== processedDataString) {
-          setProcessedDevices(processedData);
-        }
-      } catch (error) {
-        console.error("Failed to fetch devices:", error);
-      } finally {
-        setLoading(false);
-        setRefreshing(false);
-      }
-    },
-    [allDevices, pendingDevices, processedDevices]
-  );
-
-  const fetchUsers = useCallback(async (silent = false) => {
-    try {
-      if (silent) {
-        setRefreshing(true);
-      }
-      const response = await fetch(`${config.api.baseUrl}/users`);
-      const usersData: UserPreference[] = await response.json();
-      setUsers(usersData || []); // Ensure we always have an array
-    } catch (error) {
-      console.error("Failed to fetch users:", error);
-      setUsers([]); // Set to empty array on error
-    } finally {
-      if (silent) {
-        setRefreshing(false);
-      }
+  const handleRefresh = () => {
+    if (onRefresh) {
+      setRefreshing(true);
+      onRefresh();
+      // Reset refreshing state after a short delay
+      setTimeout(() => setRefreshing(false), 1000);
     }
-  }, []);
+  };
 
-  useEffect(() => {
-    fetchDevices();
-    if (activeTab === "users") {
-      fetchUsers();
+  // Handle auto-refresh toggle
+  const handleAutoRefreshToggle = () => {
+    const newValue = !autoRefresh;
+    setAutoRefresh(newValue);
+    if (onAutoRefreshChange) {
+      onAutoRefreshChange(newValue);
     }
-    const interval = setInterval(() => {
-      fetchDevices(true); // Silent refresh for automatic updates
-      if (activeTab === "users") {
-        fetchUsers(true); // Silent refresh for users
-      }
-    }, 30000); // Refresh every 30 seconds
-    return () => clearInterval(interval);
-  }, [activeTab]);
+  };
+
+  // Auto-refresh functionality (controlled by parent dashboard component)
+  // The dashboard component handles the actual refresh interval
 
   // Filter and sort functions
   const filteredDevices = (
@@ -522,7 +499,7 @@ const DeviceApproval = memo(() => {
         );
 
         // Still fetch to ensure consistency
-        setTimeout(fetchDevices, 100);
+        setTimeout(handleRefresh, 100);
       } else {
         console.error("Failed to approve device");
       }
@@ -559,7 +536,7 @@ const DeviceApproval = memo(() => {
           devices.filter((device) => device.id !== deviceId)
         );
 
-        setTimeout(fetchDevices, 100);
+        setTimeout(handleRefresh, 100);
       } else {
         console.error("Failed to reject device");
       }
@@ -590,7 +567,7 @@ const DeviceApproval = memo(() => {
         setProcessedDevices((prev) => removeDevice(prev));
         setPendingDevices((prev) => removeDevice(prev));
 
-        setTimeout(fetchDevices, 100);
+        setTimeout(handleRefresh, 100);
       } else {
         console.error("Failed to delete device");
       }
@@ -669,7 +646,7 @@ const DeviceApproval = memo(() => {
     }
   };
 
-  const getDeviceIcon = (platform: string | null, product: string | null) => {
+  const getDeviceIcon = (platform: string | null | undefined, product: string | null | undefined) => {
     const p = platform?.toLowerCase() || product?.toLowerCase() || "";
 
     if (
@@ -734,11 +711,11 @@ const DeviceApproval = memo(() => {
         <CardHeader>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex-1 min-w-0">
-              <CardTitle className="flex items-center">
+              <CardTitle className="flex items-center text-lg sm:text-xl">
                 <Shield className="w-5 h-5 mr-2" />
                 Device Management
               </CardTitle>
-              <CardDescription className="mt-1">
+              <CardDescription className="mt-1 flex items-center">
                 Manage device access to your Plex server
               </CardDescription>
             </div>
@@ -769,20 +746,33 @@ const DeviceApproval = memo(() => {
                   <span>Users</span>
                 </Button>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  activeTab === "users" ? fetchUsers(true) : fetchDevices(true)
-                }
-                disabled={refreshing}
-                className="text-xs sm:text-sm"
-              >
-                <RefreshCw
-                  className={`w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 ${refreshing ? "animate-spin" : ""}`}
-                />
-                <span>Refresh</span>
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleAutoRefreshToggle}
+                  className={`text-xs sm:text-sm ${
+                    autoRefresh ? "bg-green-50 border-green-200 text-green-700" : ""
+                  }`}
+                >
+                  <Wifi
+                    className={`w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 ${autoRefresh ? "animate-pulse" : ""}`}
+                  />
+                  {autoRefresh ? "Live" : "Manual"}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleRefresh}
+                  disabled={refreshing}
+                  className="text-xs sm:text-sm"
+                >
+                  <RefreshCw
+                    className={`w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 ${refreshing ? "animate-spin" : ""}`}
+                  />
+                  <span>Refresh</span>
+                </Button>
+              </div>
             </div>
           </div>
         </CardHeader>
@@ -837,8 +827,8 @@ const DeviceApproval = memo(() => {
           {activeTab === "users" ? (
             // Users management section
             <div>
-              {loading || refreshing ? (
-                // Show skeleton loading for users
+              {(loading && users.length === 0) ? (
+                // Show skeleton loading for users only on initial load
                 <ScrollArea className="h-[50vh] max-h-[400px] sm:max-h-[500px] lg:max-h-[600px]">
                   <div className="space-y-4 pr-4">
                     {Array.from({ length: 4 }, (_, i) => (
@@ -867,15 +857,18 @@ const DeviceApproval = memo(() => {
                       <UserPreferenceCard
                         key={user.userId}
                         user={user}
-                        onUpdate={fetchUsers}
+                        onUpdate={handleRefresh}
                       />
                     ))}
                   </div>
                 </ScrollArea>
               )}
             </div>
-          ) : loading || refreshing ? (
-            // Show skeleton loading for devices with realistic count based on tab
+          ) : (loading && (
+            (activeTab === "pending" && pendingDevices.length === 0) ||
+            (activeTab === "processed" && processedDevices.length === 0)
+          )) ? (
+            // Show skeleton loading for devices only on initial load when no data exists
             <ScrollArea className="h-[50vh] max-h-[400px] sm:max-h-[500px] lg:max-h-[600px]">
               <div className="space-y-4 pr-4">
                 {Array.from({ 
@@ -886,7 +879,7 @@ const DeviceApproval = memo(() => {
               </div>
             </ScrollArea>
           ) : devicesToShow.length === 0 ? (
-            <div className="flex items-center justify-center h-32 text-muted-foreground">
+            <div className="flex items-center justify-center h-[50vh] max-h-[400px] sm:max-h-[500px] lg:max-h-[600px] text-muted-foreground">
               {searchDevices ? (
                 <>
                   <Search className="w-6 h-6 mr-2" />

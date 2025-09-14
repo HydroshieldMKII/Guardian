@@ -81,6 +81,18 @@ export class ConfigService {
         description: 'Message shown when blocking streams',
         type: 'string' as const,
       },
+      {
+        key: 'DEVICE_CLEANUP_ENABLED',
+        value: 'false',
+        description: 'Automatically remove inactive devices',
+        type: 'boolean' as const,
+      },
+      {
+        key: 'DEVICE_CLEANUP_INTERVAL_DAYS',
+        value: '30',
+        description: 'Days of inactivity before device removal',
+        type: 'number' as const,
+      },
     ];
 
     for (const setting of defaultSettings) {
@@ -200,6 +212,20 @@ export class ConfigService {
   }
 
     async updateSetting(key: string, value: any): Promise<AppSettings> {
+    // Validate DEVICE_CLEANUP_INTERVAL_DAYS setting
+    if (key === 'DEVICE_CLEANUP_INTERVAL_DAYS') {
+      const numValue = Number(value);
+      if (isNaN(numValue)) {
+        throw new Error('Device cleanup interval must be a number');
+      }
+      if (!Number.isInteger(numValue)) {
+        throw new Error('Device cleanup interval must be a whole number (no decimals)');
+      }
+      if (numValue < 1) {
+        throw new Error('Device cleanup interval must be at least 1 day');
+      }
+    }
+
     let stringValue = value;
     if (typeof value === 'object') {
       stringValue = JSON.stringify(value);

@@ -42,11 +42,19 @@ import {
   Headphones,
   HardDrive,
   Signal,
+  X,
 } from "lucide-react";
 
 import { PlexSession, StreamsResponse } from "@/types";
 import { useSwipeToRefresh } from "../hooks/useSwipeToRefresh";
 import { config } from "@/lib/config";
+
+interface StreamsListProps {
+  sessionsData?: StreamsResponse;
+  onRefresh?: () => void;
+  autoRefresh?: boolean;
+  onAutoRefreshChange?: (value: boolean) => void;
+}
 
 const ClickableIP = ({ ipAddress }: { ipAddress: string | null }) => {
   if (!ipAddress || ipAddress === "Unknown IP" || ipAddress === "Unknown") {
@@ -102,7 +110,7 @@ const StreamSkeleton = () => (
   </div>
 );
 
-export function StreamsList() {
+export function StreamsList({ sessionsData, onRefresh, autoRefresh: parentAutoRefresh, onAutoRefreshChange }: StreamsListProps) {
   const [streams, setStreams] = useState<PlexSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -110,57 +118,59 @@ export function StreamsList() {
   const [revokingAuth, setRevokingAuth] = useState<string | null>(null);
   const [expandedStream, setExpandedStream] = useState<string | null>(null);
   const [lastUpdateTime, setLastUpdateTime] = useState<Date>(new Date());
-  const [autoRefresh, setAutoRefresh] = useState(true);
+  const [autoRefresh, setAutoRefresh] = useState(parentAutoRefresh ?? true);
   const [confirmRemoveStream, setConfirmRemoveStream] =
     useState<PlexSession | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
 
-  const swipeHandlers = useSwipeToRefresh({
-    onRefresh: () => fetchStreams(),
-    enabled: true,
-  });
-
-  const fetchStreams = async (silent = false) => {
-    try {
-      if (!silent) {
-        setRefreshing(true);
+  // Update streams when sessionsData prop changes
+  useEffect(() => {
+    if (sessionsData) {
+      const newStreams = sessionsData?.MediaContainer?.Metadata || [];
+      
+      // Only update if data actually changed
+      const currentStreamsString = JSON.stringify(streams);
+      const newStreamsString = JSON.stringify(newStreams);
+      
+      if (currentStreamsString !== newStreamsString) {
+        setStreams(newStreams);
+        setLastUpdateTime(new Date());
       }
-      const response = await fetch(`${config.api.baseUrl}/sessions/active`);
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-      const data: StreamsResponse = await response.json();
-      setStreams(data?.MediaContainer?.Metadata || []);
+      
       setError(null);
-      setLastUpdateTime(new Date());
-    } catch (error: any) {
-      console.error("Failed to fetch streams:", error);
-      setError(error.message || "Failed to fetch streams");
-      if (!silent) {
-        setStreams([]);
-      }
-    } finally {
-      if (loading) {
-        setLoading(false);
-      }
-      if (!silent) {
-        setRefreshing(false);
-      }
+      setLoading(false);
+    }
+  }, [sessionsData, streams]);
+
+  // Sync local autoRefresh with parent
+  useEffect(() => {
+    if (parentAutoRefresh !== undefined) {
+      setAutoRefresh(parentAutoRefresh);
+    }
+  }, [parentAutoRefresh]);
+
+  // Handle auto-refresh toggle
+  const handleAutoRefreshToggle = () => {
+    const newValue = !autoRefresh;
+    setAutoRefresh(newValue);
+    if (onAutoRefreshChange) {
+      onAutoRefreshChange(newValue);
     }
   };
 
-  useEffect(() => {
-    fetchStreams();
-    let interval: NodeJS.Timeout;
+  const swipeHandlers = useSwipeToRefresh({
+    onRefresh: onRefresh || (() => {}),
+    enabled: true,
+  });
 
-    if (autoRefresh) {
-      interval = setInterval(() => fetchStreams(true), 5000); // More frequent updates (5 seconds)
+  const handleRefresh = () => {
+    if (onRefresh) {
+      setRefreshing(true);
+      onRefresh();
+      // Reset refreshing state after a short delay
+      setTimeout(() => setRefreshing(false), 1000);
     }
-
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [autoRefresh]);
+  };
 
   // Filter and sort streams based on search term
   const filteredStreams = streams
@@ -220,7 +230,7 @@ export function StreamsList() {
         const result = await response.json();
         console.log(result.message);
         // Refresh the streams to reflect any changes
-        fetchStreams();
+        handleRefresh();
       } else {
         console.error("Failed to revoke device authorization");
       }
@@ -321,19 +331,6 @@ export function StreamsList() {
     return <Monitor className="w-4 h-4" />;
   };
 
-  const formatLastUpdate = () => {
-    const now = new Date();
-    const diffInSeconds = Math.floor(
-      (now.getTime() - lastUpdateTime.getTime()) / 1000
-    );
-
-    if (diffInSeconds < 60) {
-      return `Updated ${diffInSeconds}s ago`;
-    }
-    const diffInMinutes = Math.floor(diffInSeconds / 60);
-    return `Updated ${diffInMinutes}m ago`;
-  };
-
   return (
     <Card {...swipeHandlers}>
       <CardHeader>
@@ -350,15 +347,12 @@ export function StreamsList() {
             <CardDescription className="mt-1 text-sm">
               Real-time view of all active Plex streams
             </CardDescription>
-            <div className="text-xs text-muted-foreground mt-1">
-              {formatLastUpdate()}
-            </div>
           </div>
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setAutoRefresh(!autoRefresh)}
+              onClick={handleAutoRefreshToggle}
               className={`${
                 autoRefresh ? "bg-green-50 border-green-200 text-green-700" : ""
               }`}
@@ -371,7 +365,7 @@ export function StreamsList() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => fetchStreams()}
+              onClick={handleRefresh}
               disabled={refreshing}
             >
               <RefreshCw
@@ -410,14 +404,14 @@ export function StreamsList() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => fetchStreams()}
+              onClick={handleRefresh}
               className="mt-3"
             >
               Try Again
             </Button>
           </div>
-        ) : loading || refreshing ? (
-          // Show skeleton loading
+        ) : (loading && streams.length === 0) ? (
+          // Show skeleton loading only on initial load when no data exists yet
           <ScrollArea className="h-[50vh] max-h-[400px] sm:max-h-[500px] lg:max-h-[600px]">
             <div className="space-y-3 sm:space-y-4">
               {Array.from({ length: 3 }, (_, i) => (
@@ -426,7 +420,7 @@ export function StreamsList() {
             </div>
           </ScrollArea>
         ) : filteredStreams.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-32 sm:h-40 text-muted-foreground text-center">
+          <div className="flex flex-col items-center justify-center h-[50vh] max-h-[400px] sm:max-h-[500px] lg:max-h-[600px] text-muted-foreground text-center">
             {searchTerm ? (
               <>
                 <Search className="w-8 h-8 mb-2" />
@@ -439,11 +433,6 @@ export function StreamsList() {
               <>
                 <Pause className="w-8 h-8 mb-2" />
                 <p className="text-sm font-medium mb-1">No Active Streams</p>
-                <p className="text-xs text-muted-foreground">
-                  {autoRefresh
-                    ? "Monitoring for new streams..."
-                    : "Pull down to refresh"}
-                </p>
               </>
             )}
           </div>
@@ -507,21 +496,41 @@ export function StreamsList() {
 
                     {/* Status and actions */}
                     <div className="flex flex-col items-end gap-2 ml-2">
-                      <Badge
-                        variant={
-                          stream.Player?.state === "playing"
-                            ? "default"
-                            : "secondary"
-                        }
-                        className="flex items-center text-xs"
-                      >
-                        {stream.Player?.state === "playing" ? (
-                          <Play className="w-3 h-3 mr-1" />
-                        ) : (
-                          <Pause className="w-3 h-3 mr-1" />
-                        )}
-                        {stream.Player?.state || "unknown"}
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setConfirmRemoveStream(stream)}
+                          disabled={
+                            revokingAuth === stream.sessionKey ||
+                            !stream.User?.id ||
+                            !stream.Player?.machineIdentifier
+                          }
+                          className="h-6 w-6 p-0 text-muted-foreground text-red-600"
+                          title={revokingAuth === stream.sessionKey ? "Removing access..." : "Remove access"}
+                        >
+                          {revokingAuth === stream.sessionKey ? (
+                            <RefreshCw className="w-3 h-3 animate-spin" />
+                          ) : (
+                            <X className="w-3 h-3" />
+                          )}
+                        </Button>
+                        <Badge
+                          variant={
+                            stream.Player?.state === "playing"
+                              ? "default"
+                              : "secondary"
+                          }
+                          className="flex items-center text-xs"
+                        >
+                          {stream.Player?.state === "playing" ? (
+                            <Play className="w-3 h-3 mr-1" />
+                          ) : (
+                            <Pause className="w-3 h-3 mr-1" />
+                          )}
+                          {stream.Player?.state || "unknown"}
+                        </Badge>
+                      </div>
 
                       <Button
                         variant="ghost"
@@ -673,30 +682,6 @@ export function StreamsList() {
                             </div>
                           </div>
                         </div>
-                      </div>
-
-                      {/* Action button */}
-                      <div className="flex justify-end pt-2">
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => setConfirmRemoveStream(stream)}
-                          disabled={
-                            revokingAuth === stream.sessionKey ||
-                            !stream.User?.id ||
-                            !stream.Player?.machineIdentifier
-                          }
-                          className="h-8 text-xs bg-red-600 dark:bg-red-700 text-white hover:bg-red-700 dark:hover:bg-red-800"
-                        >
-                          {revokingAuth === stream.sessionKey ? (
-                            <RefreshCw className="w-3 h-3 mr-1 animate-spin" />
-                          ) : (
-                            <UserX className="w-3 h-3 mr-1" />
-                          )}
-                          {revokingAuth === stream.sessionKey
-                            ? "Removing..."
-                            : "Remove Access"}
-                        </Button>
                       </div>
                     </div>
                   )}
