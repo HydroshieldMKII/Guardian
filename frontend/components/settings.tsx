@@ -1085,15 +1085,15 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
         {/* Version Mismatch Warning */}
         {versionInfo?.isVersionMismatch && (
           <div className="mb-6">
-            <Card className="border-amber-600 bg-amber-50 dark:border-amber-700 dark:bg-amber-950/20">
+            <Card className="border-red-600 bg-red-50 dark:border-red-700 dark:bg-red-950/20">
               <CardContent>
                 <div className="flex items-center gap-3">
-                  <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-700 shrink-0" />
+                  <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-700 shrink-0" />
                   <div className="flex-1">
-                    <h3 className="font-semibold text-amber-800 dark:text-amber-200 mb-1">
+                    <h3 className="font-semibold text-red-800 dark:text-red-200 mb-1">
                       Version Mismatch Detected
                     </h3>
-                    <p className="text-sm text-amber-600 dark:text-amber-300">
+                    <p className="text-sm text-red-600 dark:text-red-300">
                       Database version ({versionInfo.databaseVersion}) is newer than code version ({versionInfo.codeVersion}). 
                       Please update your Guardian installation to avoid compatibility issues.
                     </p>
@@ -1102,7 +1102,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
                     variant="outline"
                     size="sm"
                     onClick={fetchVersionInfo}
-                    className="border-amber-600 text-amber-600 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-700 dark:hover:bg-amber-900/20"
+                    className="border-red-600 text-red-600 hover:bg-red-100 dark:border-red-700 dark:text-red-700 dark:hover:bg-red-900/20"
                   >
                     <RefreshCw className="h-4 w-4 mr-2" />
                     Refresh
