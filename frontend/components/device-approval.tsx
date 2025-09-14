@@ -711,7 +711,7 @@ const DeviceApproval = memo(({ devicesData, usersData, onRefresh, autoRefresh: p
         <CardHeader>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex-1 min-w-0">
-              <CardTitle className="flex items-center">
+              <CardTitle className="flex items-center text-lg sm:text-xl">
                 <Shield className="w-5 h-5 mr-2" />
                 Device Management
               </CardTitle>

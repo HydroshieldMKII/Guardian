@@ -330,19 +330,6 @@ export function StreamsList({ sessionsData, onRefresh, autoRefresh: parentAutoRe
     return <Monitor className="w-4 h-4" />;
   };
 
-  const formatLastUpdate = () => {
-    const now = new Date();
-    const diffInSeconds = Math.floor(
-      (now.getTime() - lastUpdateTime.getTime()) / 1000
-    );
-
-    if (diffInSeconds < 60) {
-      return `Updated ${diffInSeconds}s ago`;
-    }
-    const diffInMinutes = Math.floor(diffInSeconds / 60);
-    return `Updated ${diffInMinutes}m ago`;
-  };
-
   return (
     <Card {...swipeHandlers}>
       <CardHeader>
@@ -359,9 +346,6 @@ export function StreamsList({ sessionsData, onRefresh, autoRefresh: parentAutoRe
             <CardDescription className="mt-1 text-sm">
               Real-time view of all active Plex streams
             </CardDescription>
-            <div className="text-xs text-muted-foreground mt-1 flex items-center">
-              {formatLastUpdate()}
-            </div>
           </div>
           <div className="flex items-center gap-2">
             <Button
