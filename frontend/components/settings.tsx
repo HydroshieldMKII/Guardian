@@ -31,6 +31,8 @@ import {
   AlertTriangle,
   ChevronDown,
   Activity,
+  ExternalLink,
+  BookOpen
 } from "lucide-react";
 import { config } from "../lib/config";
 
@@ -102,6 +104,10 @@ const getSettingInfo = (setting: AppSetting): { label: string; description: stri
       label: 'Default page on startup',
       description: 'Choose which page to display when the app loads'
     },
+    'AUTO_CHECK_UPDATES': {
+      label: 'Automatic update checking',
+      description: 'Automatically check for new Guardian releases when the app launches'
+    },
   };
   
   const info = settingInfoMap[setting.key];
@@ -145,6 +151,49 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
     fetchSettings();
     fetchVersionInfo();
   }, []);
+
+  // Check for updates when version info is available and AUTO_CHECK_UPDATES is enabled
+  useEffect(() => {
+    if (versionInfo?.version && settings.length > 0) {
+      const autoCheckSetting = settings.find(setting => setting.key === 'AUTO_CHECK_UPDATES');
+      const shouldAutoCheck = autoCheckSetting?.value === 'true';
+      
+      if (shouldAutoCheck) {
+        checkForUpdatesQuietly();
+      }
+    }
+  }, [versionInfo?.version, settings]);
+
+  const checkForUpdatesQuietly = async () => {
+    if (!versionInfo?.version) return;
+    
+    try {
+      // Fetch latest release from GitHub API
+      const response = await fetch('https://api.github.com/repos/HydroshieldMKII/Guardian/releases/latest');
+      if (!response.ok) {
+        console.warn('Failed to check for updates:', response.status);
+        return;
+      }
+      
+      const release = await response.json();
+      const latestVersion = release.tag_name.replace(/^v/, ''); // Remove 'v' prefix if present
+      const currentVersion = versionInfo.version;
+      
+      // Compare versions
+      const hasUpdate = isVersionNewer(latestVersion, currentVersion);
+      
+      if (hasUpdate) {
+        setUpdateInfo({
+          hasUpdate: true,
+          latestVersion,
+          currentVersion,
+          updateUrl: release.html_url,
+        });
+      }
+    } catch (error) {
+      console.error('Failed to check for updates quietly:', error);
+    }
+  };
 
   const fetchVersionInfo = async () => {
     try {
@@ -313,6 +362,11 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
           const validPages = ['devices', 'streams'];
           if (!validPages.includes(String(setting.value))) {
             errors.push('Default page must be either "devices" or "streams"');
+          }
+          break;
+        case 'AUTO_CHECK_UPDATES':
+          if (typeof setting.value !== 'boolean') {
+            errors.push('Auto check updates must be a boolean value');
           }
           break;
           default:
@@ -602,6 +656,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
         "PLEX_GUARD_DEFAULT_BLOCK",
         "PLEXGUARD_STOPMSG",
         "DEFAULT_PAGE",
+        "AUTO_CHECK_UPDATES",
       ],
     };
 
@@ -1209,26 +1264,24 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
                   </div>
                   <div className="flex gap-2">
                     <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={checkForUpdates}
-                      disabled={checkingUpdates}
-                      className="border-blue-600 text-blue-600 hover:bg-blue-100 dark:border-blue-700 dark:text-blue-700 dark:hover:bg-blue-900/20"
-                    >
-                      {checkingUpdates ? (
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      ) : (
-                        <RefreshCw className="h-4 w-4 mr-2" />
-                      )}
-                      Check Again
-                    </Button>
-                    <Button
+                    variant="outline"
                       size="sm"
                       onClick={() => window.open(updateInfo.updateUrl, '_blank')}
+                      className="border-blue-600 text-blue-600 hover:bg-blue-100 dark:border-blue-700 dark:text-blue-700 dark:hover:bg-blue-900/20"
+                    >
+                      <ExternalLink className="h-4 w-4 mr-2" />
+                      See What's New
+                    </Button>
+                    {/* How to update */}
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       className="bg-blue-600 hover:bg-blue-700 text-white"
                     >
-                      <Download className="h-4 w-4 mr-2" />
-                      Download Update
+                      <a href="https://github.com/HydroshieldMKII/Guardian?tab=readme-ov-file#update-guardian" target="_blank" rel="noopener noreferrer" className="flex items-center">
+                        <BookOpen className="h-4 w-4 mr-2" />
+                        How to Update
+                      </a>
                     </Button>
                   </div>
                 </div>
@@ -1291,15 +1344,17 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
                   </div>
                   {versionInfo.isVersionMismatch ? (
                     <>
-                      <div className="text-red-600 dark:text-red-400">
+                        <div className={versionInfo.databaseVersion < versionInfo.codeVersion ? "ml-2 text-red-600 dark:text-red-400" : "ml-2"}>
                         Database version: v{versionInfo.databaseVersion}
-                      </div>
-                      <div>App Version: v{versionInfo.codeVersion}</div>
+                        </div>
+                        <div className={versionInfo.codeVersion < versionInfo.databaseVersion ? "ml-2 text-red-600 dark:text-red-400" : "ml-2"}>
+                        App Version: v{versionInfo.codeVersion}
+                        </div>
                     </>
                   ) : (
                     <>
-                      <div>Database version {versionInfo.databaseVersion}</div>
-                      <div>App Version {versionInfo.version}</div>
+                      <div className="ml-2">Database version {versionInfo.databaseVersion}</div>
+                      <div className="ml-2">App Version {versionInfo.version}</div>
                     </>
                   )}
                 

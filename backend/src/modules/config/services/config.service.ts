@@ -9,7 +9,7 @@ import * as http from 'http';
 import * as https from 'https';
 
 // App version
-const CURRENT_APP_VERSION = '1.1.2';
+const CURRENT_APP_VERSION = '1.1.0';
 
 export interface ConfigSettingDto {
   key: string;
@@ -101,6 +101,12 @@ export class ConfigService {
         value: 'devices',
         description: 'Default page to show when app loads',
         type: 'string' as const,
+      },
+      {
+        key: 'AUTO_CHECK_UPDATES',
+        value: 'true',
+        description: 'Automatically check for updates on app launch',
+        type: 'boolean' as const,
       },
       {
         key: 'APP_VERSION',
@@ -616,24 +622,27 @@ export class ConfigService {
     }
   }
 
-  private isVersionNewer(newVersion: string, currentVersion: string): boolean {
+  private isVersionNewer(codeVersion: string, databaseVersion: string): boolean {
     const parseVersion = (version: string) => {
       return version.split('.').map(v => parseInt(v) || 0);
     };
 
-    const newV = parseVersion(newVersion);
-    const currentV = parseVersion(currentVersion);
+    const newV = parseVersion(codeVersion);
+    const currentV = parseVersion(databaseVersion);
 
     for (let i = 0; i < Math.max(newV.length, currentV.length); i++) {
       const newPart = newV[i] || 0;
       const currentPart = currentV[i] || 0;
       
+      // code version > database version
       if (newPart > currentPart){
-        this.logger.log(`Current app version ${currentVersion} is older than your data version ${newVersion}. Updating to the latest version.`);
+        this.logger.log(`Current app version ${codeVersion} is newer than your data version ${databaseVersion}. Updating to the latest version.`);
         return true;
       }
+
+      // code version < database version
       if (newPart < currentPart){
-        this.logger.error(`WARNING: Current app version ${currentVersion} is newer than your data version ${newVersion}. Please check your installation.`);
+        this.logger.error(`WARNING: Current app version ${codeVersion} is older than your data version ${databaseVersion}. Please check your installation.`);
         return false;
       }
     }
