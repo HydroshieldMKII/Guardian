@@ -442,7 +442,7 @@ export function StreamsList({ sessionsData, onRefresh, autoRefresh: parentAutoRe
               {filteredStreams.map((stream, index) => (
                 <div
                   key={stream.sessionKey || index}
-                  className="relative p-3 sm:p-4 rounded-lg border bg-card shadow-sm hover:shadow-md transition-all duration-200"
+                  className="relative p-3 sm:p-4 rounded-lg border bg-card shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden"
                 >
                   {/* Mobile-first compact header */}
                   <div className="flex items-start justify-between mb-3 gap-2">
