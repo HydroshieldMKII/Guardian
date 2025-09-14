@@ -265,16 +265,26 @@ export class DeviceTrackingService {
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - inactiveDays);
 
-    // Find devices that haven't been seen since the cutoff date
-    const inactiveDevices = await this.userDeviceRepository
-      .createQueryBuilder('device')
-      .where('device.last_seen < :cutoffDate', { cutoffDate })
-      .getMany();
+    
+    const allDevices = await this.userDeviceRepository.find();
 
-    if (inactiveDevices.length === 0) {
-      this.logger.log('No inactive devices found for cleanup');
+    if (allDevices.length === 0) {
       return { deletedCount: 0, deletedDevices: [] };
     }
+
+    const inactiveDevices: UserDevice[] = [];
+    
+    for (const device of allDevices) {
+      if (!device.lastSeen) {
+        this.logger.warn(`Device ${device.id} has no lastSeen date, skipping...`);
+        continue;
+      }
+      
+      if (new Date(device.lastSeen) < cutoffDate) {
+        inactiveDevices.push(device);
+      }
+    }
+
 
     this.logger.log(`Found ${inactiveDevices.length} inactive device(s) older than ${inactiveDays} days`);
     

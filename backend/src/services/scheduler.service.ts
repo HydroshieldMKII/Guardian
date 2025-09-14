@@ -219,7 +219,7 @@ export class SchedulerService implements OnModuleInit {
       if (result.deletedCount > 0) {
         this.logger.log(`Device cleanup completed: ${result.deletedCount} inactive devices removed`);
       } else {
-        this.logger.debug('Device cleanup completed: no inactive devices found');
+        // this.logger.debug('Device cleanup completed: no inactive devices found');
       }
     } catch (error) {
       this.logger.error('Error during device cleanup:', error);
