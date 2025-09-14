@@ -42,6 +42,7 @@ import {
   Headphones,
   HardDrive,
   Signal,
+  X,
 } from "lucide-react";
 
 import { PlexSession, StreamsResponse } from "@/types";
@@ -432,11 +433,6 @@ export function StreamsList({ sessionsData, onRefresh, autoRefresh: parentAutoRe
               <>
                 <Pause className="w-8 h-8 mb-2" />
                 <p className="text-sm font-medium mb-1">No Active Streams</p>
-                <p className="text-xs text-muted-foreground">
-                  {autoRefresh
-                    ? "Monitoring for new streams..."
-                    : "Pull down to refresh"}
-                </p>
               </>
             )}
           </div>
@@ -500,21 +496,41 @@ export function StreamsList({ sessionsData, onRefresh, autoRefresh: parentAutoRe
 
                     {/* Status and actions */}
                     <div className="flex flex-col items-end gap-2 ml-2">
-                      <Badge
-                        variant={
-                          stream.Player?.state === "playing"
-                            ? "default"
-                            : "secondary"
-                        }
-                        className="flex items-center text-xs"
-                      >
-                        {stream.Player?.state === "playing" ? (
-                          <Play className="w-3 h-3 mr-1" />
-                        ) : (
-                          <Pause className="w-3 h-3 mr-1" />
-                        )}
-                        {stream.Player?.state || "unknown"}
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setConfirmRemoveStream(stream)}
+                          disabled={
+                            revokingAuth === stream.sessionKey ||
+                            !stream.User?.id ||
+                            !stream.Player?.machineIdentifier
+                          }
+                          className="h-6 w-6 p-0 text-muted-foreground text-red-600"
+                          title={revokingAuth === stream.sessionKey ? "Removing access..." : "Remove access"}
+                        >
+                          {revokingAuth === stream.sessionKey ? (
+                            <RefreshCw className="w-3 h-3 animate-spin" />
+                          ) : (
+                            <X className="w-3 h-3" />
+                          )}
+                        </Button>
+                        <Badge
+                          variant={
+                            stream.Player?.state === "playing"
+                              ? "default"
+                              : "secondary"
+                          }
+                          className="flex items-center text-xs"
+                        >
+                          {stream.Player?.state === "playing" ? (
+                            <Play className="w-3 h-3 mr-1" />
+                          ) : (
+                            <Pause className="w-3 h-3 mr-1" />
+                          )}
+                          {stream.Player?.state || "unknown"}
+                        </Badge>
+                      </div>
 
                       <Button
                         variant="ghost"
@@ -666,30 +682,6 @@ export function StreamsList({ sessionsData, onRefresh, autoRefresh: parentAutoRe
                             </div>
                           </div>
                         </div>
-                      </div>
-
-                      {/* Action button */}
-                      <div className="flex justify-end pt-2">
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => setConfirmRemoveStream(stream)}
-                          disabled={
-                            revokingAuth === stream.sessionKey ||
-                            !stream.User?.id ||
-                            !stream.Player?.machineIdentifier
-                          }
-                          className="h-8 text-xs bg-red-600 dark:bg-red-700 text-white hover:bg-red-700 dark:hover:bg-red-800"
-                        >
-                          {revokingAuth === stream.sessionKey ? (
-                            <RefreshCw className="w-3 h-3 mr-1 animate-spin" />
-                          ) : (
-                            <UserX className="w-3 h-3 mr-1" />
-                          )}
-                          {revokingAuth === stream.sessionKey
-                            ? "Removing..."
-                            : "Remove Access"}
-                        </Button>
                       </div>
                     </div>
                   )}

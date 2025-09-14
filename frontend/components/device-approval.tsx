@@ -879,7 +879,7 @@ const DeviceApproval = memo(({ devicesData, usersData, onRefresh, autoRefresh: p
               </div>
             </ScrollArea>
           ) : devicesToShow.length === 0 ? (
-            <div className="flex items-center justify-center h-32 text-muted-foreground">
+            <div className="flex items-center justify-center h-[50vh] max-h-[400px] sm:max-h-[500px] lg:max-h-[600px] text-muted-foreground">
               {searchDevices ? (
                 <>
                   <Search className="w-6 h-6 mr-2" />
