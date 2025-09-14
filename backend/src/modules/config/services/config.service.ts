@@ -605,9 +605,11 @@ export class ConfigService {
       });
 
       if (versionSetting && this.isVersionNewer(CURRENT_APP_VERSION, versionSetting.value)) {
+        this.logger.log(`Updated app version from ${versionSetting.value} to: ${CURRENT_APP_VERSION}`);
         versionSetting.value = CURRENT_APP_VERSION;
         await this.settingsRepository.save(versionSetting);
-        this.logger.log(`Updated app version from ${versionSetting.value} to: ${CURRENT_APP_VERSION}`);
+      }else{
+        this.logger.log(`App version is up to date: ${CURRENT_APP_VERSION}`);
       }
     } catch (error) {
       this.logger.warn('Failed to update app version:', error);

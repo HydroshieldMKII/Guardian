@@ -132,6 +132,13 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
     success: boolean;
     message: string;
   } | null>(null);
+  const [updateInfo, setUpdateInfo] = useState<{
+    hasUpdate: boolean;
+    latestVersion: string;
+    currentVersion: string;
+    updateUrl: string;
+  } | null>(null);
+  const [checkingUpdates, setCheckingUpdates] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -149,6 +156,77 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
     } catch (error) {
       console.error("Failed to fetch version info:", error);
     }
+  };
+
+  const checkForUpdates = async () => {
+    if (!versionInfo?.version) return;
+    
+    setCheckingUpdates(true);
+    try {
+      // Fetch latest release from GitHub API
+      const response = await fetch('https://api.github.com/repos/HydroshieldMKII/Guardian/releases/latest');
+      if (!response.ok) {
+        console.warn('Failed to check for updates:', response.status);
+        toast({
+          title: "Update check failed",
+          description: "Unable to check for updates. Please try again later.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      const release = await response.json();
+      const latestVersion = release.tag_name.replace(/^v/, ''); // Remove 'v' prefix if present
+      const currentVersion = versionInfo.version;
+      
+      // Compare versions
+      const hasUpdate = isVersionNewer(latestVersion, currentVersion);
+      
+      if (hasUpdate) {
+        setUpdateInfo({
+          hasUpdate: true,
+          latestVersion,
+          currentVersion,
+          updateUrl: release.html_url,
+        });
+      } else {
+        // Clear any existing update info and show toast for latest version
+        setUpdateInfo(null);
+        toast({
+          title: "You're up to date!",
+          description: `Guardian v${currentVersion} is the latest version.`,
+          variant: "success",
+        });
+      }
+    } catch (error) {
+      console.error('Failed to check for updates:', error);
+      toast({
+        title: "Update check failed",
+        description: "Unable to check for updates. Please check your internet connection.",
+        variant: "destructive",
+      });
+    } finally {
+      setCheckingUpdates(false);
+    }
+  };
+
+  const isVersionNewer = (newVersion: string, currentVersion: string): boolean => {
+    const parseVersion = (version: string) => {
+      return version.split('.').map(v => parseInt(v) || 0);
+    };
+
+    const newV = parseVersion(newVersion);
+    const currentV = parseVersion(currentVersion);
+
+    for (let i = 0; i < Math.max(newV.length, currentV.length); i++) {
+      const newPart = newV[i] || 0;
+      const currentPart = currentV[i] || 0;
+      
+      if (newPart > currentPart) return true;
+      if (newPart < currentPart) return false;
+    }
+    
+    return false; // versions are equal
   };
 
   const fetchSettings = async () => {
@@ -1113,6 +1191,52 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
           </div>
         )}
 
+        {/* Update Available Banner */}
+        {updateInfo?.hasUpdate && (
+          <div className="mb-6">
+            <Card className="border-blue-600 bg-blue-50 dark:border-blue-700 dark:bg-blue-950/20">
+              <CardContent>
+                <div className="flex items-center gap-3">
+                  <Download className="h-5 w-5 text-blue-600 dark:text-blue-700 shrink-0" />
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-blue-800 dark:text-blue-200 mb-1">
+                      Update Available
+                    </h3>
+                    <p className="text-sm text-blue-600 dark:text-blue-300">
+                      A new version of Guardian is available: v{updateInfo.latestVersion} 
+                      (current: v{updateInfo.currentVersion}). Update to get the latest features and bug fixes.
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={checkForUpdates}
+                      disabled={checkingUpdates}
+                      className="border-blue-600 text-blue-600 hover:bg-blue-100 dark:border-blue-700 dark:text-blue-700 dark:hover:bg-blue-900/20"
+                    >
+                      {checkingUpdates ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <RefreshCw className="h-4 w-4 mr-2" />
+                      )}
+                      Check Again
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={() => window.open(updateInfo.updateUrl, '_blank')}
+                      className="bg-blue-600 hover:bg-blue-700 text-white"
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Download Update
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Settings Navigation */}
           <Card className="lg:col-span-1">
@@ -1145,13 +1269,40 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
             {/* Version Information */}
             {versionInfo && (
               <div className="px-4 py-3 border-t border-border">
-                <div className="text-xs text-muted-foreground space-y-1">
-
-                      <div>
-                        Database version: {versionInfo.databaseVersion}
+                <div className="text-xs text-muted-foreground space-y-2">
+                  <div className="font-medium text-foreground">
+                  {/* Update Check Button */}
+                  <div className="pt-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={checkForUpdates}
+                      disabled={checkingUpdates}
+                      className="h-6 text-xs text-muted-foreground hover:text-foreground"
+                    >
+                      {checkingUpdates ? (
+                        <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                      ) : (
+                        <RefreshCw className="h-3 w-3 mr-1" />
+                      )}
+                      Check for Updates
+                    </Button>
+                  </div>
+                  </div>
+                  {versionInfo.isVersionMismatch ? (
+                    <>
+                      <div className="text-red-600 dark:text-red-400">
+                        Database version: v{versionInfo.databaseVersion}
                       </div>
-                      <div>Code: v{versionInfo.codeVersion}</div>
-
+                      <div>App Version: v{versionInfo.codeVersion}</div>
+                    </>
+                  ) : (
+                    <>
+                      <div>Database version {versionInfo.databaseVersion}</div>
+                      <div>App Version {versionInfo.version}</div>
+                    </>
+                  )}
+                
                 </div>
               </div>
             )}
