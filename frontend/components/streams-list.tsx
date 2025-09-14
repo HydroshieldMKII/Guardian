@@ -51,6 +51,8 @@ import { config } from "@/lib/config";
 interface StreamsListProps {
   sessionsData?: StreamsResponse;
   onRefresh?: () => void;
+  autoRefresh?: boolean;
+  onAutoRefreshChange?: (value: boolean) => void;
 }
 
 const ClickableIP = ({ ipAddress }: { ipAddress: string | null }) => {
@@ -107,7 +109,7 @@ const StreamSkeleton = () => (
   </div>
 );
 
-export function StreamsList({ sessionsData, onRefresh }: StreamsListProps) {
+export function StreamsList({ sessionsData, onRefresh, autoRefresh: parentAutoRefresh, onAutoRefreshChange }: StreamsListProps) {
   const [streams, setStreams] = useState<PlexSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -115,7 +117,7 @@ export function StreamsList({ sessionsData, onRefresh }: StreamsListProps) {
   const [revokingAuth, setRevokingAuth] = useState<string | null>(null);
   const [expandedStream, setExpandedStream] = useState<string | null>(null);
   const [lastUpdateTime, setLastUpdateTime] = useState<Date>(new Date());
-  const [autoRefresh, setAutoRefresh] = useState(true);
+  const [autoRefresh, setAutoRefresh] = useState(parentAutoRefresh ?? true);
   const [confirmRemoveStream, setConfirmRemoveStream] =
     useState<PlexSession | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -129,6 +131,22 @@ export function StreamsList({ sessionsData, onRefresh }: StreamsListProps) {
       setLoading(false);
     }
   }, [sessionsData]);
+
+  // Sync local autoRefresh with parent
+  useEffect(() => {
+    if (parentAutoRefresh !== undefined) {
+      setAutoRefresh(parentAutoRefresh);
+    }
+  }, [parentAutoRefresh]);
+
+  // Handle auto-refresh toggle
+  const handleAutoRefreshToggle = () => {
+    const newValue = !autoRefresh;
+    setAutoRefresh(newValue);
+    if (onAutoRefreshChange) {
+      onAutoRefreshChange(newValue);
+    }
+  };
 
   const swipeHandlers = useSwipeToRefresh({
     onRefresh: onRefresh || (() => {}),
@@ -340,7 +358,7 @@ export function StreamsList({ sessionsData, onRefresh }: StreamsListProps) {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setAutoRefresh(!autoRefresh)}
+              onClick={handleAutoRefreshToggle}
               className={`${
                 autoRefresh ? "bg-green-50 border-green-200 text-green-700" : ""
               }`}

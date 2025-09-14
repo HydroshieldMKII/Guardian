@@ -38,6 +38,7 @@ import {
   Trash2,
   ToggleLeft,
   ToggleRight,
+  Wifi,
   Search,
   ExternalLink,
 } from "lucide-react";
@@ -301,15 +302,18 @@ interface DeviceApprovalProps {
   };
   usersData?: UserPreference[];
   onRefresh?: () => void;
+  autoRefresh?: boolean;
+  onAutoRefreshChange?: (value: boolean) => void;
 }
 
-const DeviceApproval = memo(({ devicesData, usersData, onRefresh }: DeviceApprovalProps) => {
+const DeviceApproval = memo(({ devicesData, usersData, onRefresh, autoRefresh: parentAutoRefresh, onAutoRefreshChange }: DeviceApprovalProps) => {
   const [allDevices, setAllDevices] = useState<UserDevice[]>([]);
   const [pendingDevices, setPendingDevices] = useState<UserDevice[]>([]);
   const [processedDevices, setProcessedDevices] = useState<UserDevice[]>([]);
   const [users, setUsers] = useState<UserPreference[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [autoRefresh, setAutoRefresh] = useState(parentAutoRefresh ?? true);
   const [actionLoading, setActionLoading] = useState<number | null>(null);
   const [selectedDevice, setSelectedDevice] = useState<UserDevice | null>(null);
   const [activeTab, setActiveTab] = useState<"pending" | "processed" | "users">(
@@ -335,6 +339,13 @@ const DeviceApproval = memo(({ devicesData, usersData, onRefresh }: DeviceApprov
     }
   }, [usersData]);
 
+  // Sync local autoRefresh with parent
+  useEffect(() => {
+    if (parentAutoRefresh !== undefined) {
+      setAutoRefresh(parentAutoRefresh);
+    }
+  }, [parentAutoRefresh]);
+
   // Confirmation dialog states
   const [confirmAction, setConfirmAction] = useState<{
     device: UserDevice;
@@ -351,6 +362,18 @@ const DeviceApproval = memo(({ devicesData, usersData, onRefresh }: DeviceApprov
       setTimeout(() => setRefreshing(false), 1000);
     }
   };
+
+  // Handle auto-refresh toggle
+  const handleAutoRefreshToggle = () => {
+    const newValue = !autoRefresh;
+    setAutoRefresh(newValue);
+    if (onAutoRefreshChange) {
+      onAutoRefreshChange(newValue);
+    }
+  };
+
+  // Auto-refresh functionality (controlled by parent dashboard component)
+  // The dashboard component handles the actual refresh interval
 
   // Filter and sort functions
   const filteredDevices = (
@@ -701,18 +724,33 @@ const DeviceApproval = memo(({ devicesData, usersData, onRefresh }: DeviceApprov
                   <span>Users</span>
                 </Button>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleRefresh}
-                disabled={refreshing}
-                className="text-xs sm:text-sm"
-              >
-                <RefreshCw
-                  className={`w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 ${refreshing ? "animate-spin" : ""}`}
-                />
-                <span>Refresh</span>
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleAutoRefreshToggle}
+                  className={`text-xs sm:text-sm ${
+                    autoRefresh ? "bg-green-50 border-green-200 text-green-700" : ""
+                  }`}
+                >
+                  <Wifi
+                    className={`w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 ${autoRefresh ? "animate-pulse" : ""}`}
+                  />
+                  {autoRefresh ? "Live" : "Manual"}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleRefresh}
+                  disabled={refreshing}
+                  className="text-xs sm:text-sm"
+                >
+                  <RefreshCw
+                    className={`w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 ${refreshing ? "animate-spin" : ""}`}
+                  />
+                  <span>Refresh</span>
+                </Button>
+              </div>
             </div>
           </div>
         </CardHeader>

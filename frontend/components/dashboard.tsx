@@ -42,6 +42,7 @@ export function Dashboard() {
   const [activeTab, setActiveTab] = useState<"streams" | "devices">("streams");
   const [loading, setLoading] = useState(true);
   const [plexStatus, setPlexStatus] = useState<PlexStatus | null>(null);
+  const [autoRefresh, setAutoRefresh] = useState(true);
 
   const analyzeQualityStats = (streamsData: any) => {
     const sessions = streamsData?.MediaContainer?.Metadata || [];
@@ -151,10 +152,15 @@ export function Dashboard() {
   };
 
   useEffect(() => {
-    refreshDashboard(); // Initial fetch
+    refreshDashboard();
+  }, []);
+
+  useEffect(() => {
+    if (!autoRefresh) return; // Don't set up interval in manual mode
+    
     const interval = setInterval(() => refreshDashboard(true), config.app.refreshInterval);
     return () => clearInterval(interval);
-  }, []);
+  }, [autoRefresh]);
 
   if (loading) {
     // Loading dots animation
@@ -431,12 +437,16 @@ export function Dashboard() {
           <StreamsList 
             sessionsData={dashboardData?.sessions}
             onRefresh={() => refreshDashboard(true)}
+            autoRefresh={autoRefresh}
+            onAutoRefreshChange={setAutoRefresh}
           />
         ) : (
           <DeviceApproval 
             devicesData={dashboardData?.devices}
             usersData={dashboardData?.users}
             onRefresh={() => refreshDashboard(true)}
+            autoRefresh={autoRefresh}
+            onAutoRefreshChange={setAutoRefresh}
           />
         )}
       </div>
