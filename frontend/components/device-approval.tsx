@@ -830,7 +830,7 @@ const DeviceApproval = memo(({ devicesData, usersData, onRefresh, autoRefresh: p
               {(loading && users.length === 0) ? (
                 // Show skeleton loading for users only on initial load
                 <ScrollArea className="h-[50vh] max-h-[400px] sm:max-h-[500px] lg:max-h-[600px]">
-                  <div className="space-y-4 pr-4">
+                  <div className="space-y-4">
                     {Array.from({ length: 4 }, (_, i) => (
                       <UserSkeleton key={`user-skeleton-${i}`} />
                     ))}
@@ -852,7 +852,7 @@ const DeviceApproval = memo(({ devicesData, usersData, onRefresh, autoRefresh: p
                 </div>
               ) : (
                 <ScrollArea className="h-[50vh] max-h-[400px] sm:max-h-[500px] lg:max-h-[600px]">
-                  <div className="space-y-4 pr-4">
+                  <div className="space-y-4">
                     {filteredUsers.map((user) => (
                       <UserPreferenceCard
                         key={user.userId}
