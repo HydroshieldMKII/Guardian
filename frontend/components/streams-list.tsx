@@ -452,7 +452,7 @@ export function StreamsList({ sessionsData, onRefresh, autoRefresh: parentAutoRe
                       </h3>
 
                       {/* Primary info row - always visible */}
-                      <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground mb-2 flex-wrap">
+                      <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground my-2">
                         <div className="flex items-center gap-1 bg-muted px-2 py-1 rounded-full min-w-0 flex-shrink-0">
                           <User className="w-3 h-3 flex-shrink-0" />
                           <span className="truncate max-w-[80px] sm:max-w-[120px]">
