@@ -8,7 +8,7 @@ import * as http from 'http';
 import * as https from 'https';
 
 // App version
-const CURRENT_APP_VERSION = '1.1.2';
+const CURRENT_APP_VERSION = '1.1.0';
 
 export interface ConfigSettingDto {
   key: string;
@@ -103,7 +103,7 @@ export class ConfigService {
       },
       {
         key: 'AUTO_CHECK_UPDATES',
-        value: 'true',
+        value: 'false',
         description: 'Automatically check for updates on app launch',
         type: 'boolean' as const,
       },

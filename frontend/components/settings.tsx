@@ -35,6 +35,8 @@ import {
   BookOpen
 } from "lucide-react";
 import { config } from "../lib/config";
+import { useVersion } from "@/contexts/version-context";
+import { useUpdateChecker } from "@/hooks/use-update-checker";
 
 interface AppSetting {
   id: number;
@@ -106,7 +108,7 @@ const getSettingInfo = (setting: AppSetting): { label: string; description: stri
     },
     'AUTO_CHECK_UPDATES': {
       label: 'Automatic update checking',
-      description: 'Automatically check for new Guardian releases when the app launches'
+      description: 'Automatically check for new releases when the app launches'
     },
   };
   
@@ -127,94 +129,30 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
   const [exportingDatabase, setExportingDatabase] = useState(false);
   const [importingDatabase, setImportingDatabase] = useState(false);
   const [backendError, setBackendError] = useState<string | null>(null);
-  const [versionInfo, setVersionInfo] = useState<{
-    version: string;
-    databaseVersion: string;
-    codeVersion: string;
-    isVersionMismatch: boolean;
-  } | null>(null);
+  const { versionInfo, refreshVersionInfo } = useVersion();
+  const { updateInfo, checkingUpdates, checkForUpdatesAutomatically } = useUpdateChecker();
   const [connectionStatus, setConnectionStatus] = useState<{
     success: boolean;
     message: string;
   } | null>(null);
-  const [updateInfo, setUpdateInfo] = useState<{
-    hasUpdate: boolean;
-    latestVersion: string;
-    currentVersion: string;
-    updateUrl: string;
-  } | null>(null);
-  const [checkingUpdates, setCheckingUpdates] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
     fetchSettings();
-    fetchVersionInfo();
   }, []);
 
-  // Check for updates when version info is available and AUTO_CHECK_UPDATES is enabled
+  // Check for updates automatically when settings page loads
   useEffect(() => {
-    if (versionInfo?.version && settings.length > 0) {
-      const autoCheckSetting = settings.find(setting => setting.key === 'AUTO_CHECK_UPDATES');
-      const shouldAutoCheck = autoCheckSetting?.value === 'true';
-      
-      if (shouldAutoCheck) {
-        checkForUpdatesQuietly();
-      }
-    }
-  }, [versionInfo?.version, settings]);
-
-  const checkForUpdatesQuietly = async () => {
-    if (!versionInfo?.version) return;
-    
-    try {
-      // Fetch latest release from GitHub API
-      const response = await fetch('https://api.github.com/repos/HydroshieldMKII/Guardian/releases/latest');
-      if (!response.ok) {
-        console.warn('Failed to check for updates:', response.status);
-        return;
-      }
-      
-      const release = await response.json();
-      const latestVersion = release.tag_name.replace(/^v/, ''); // Remove 'v' prefix if present
-      const currentVersion = versionInfo.version;
-      
-      // Compare versions
-      const hasUpdate = isVersionNewer(latestVersion, currentVersion);
-      
-      if (hasUpdate) {
-        setUpdateInfo({
-          hasUpdate: true,
-          latestVersion,
-          currentVersion,
-          updateUrl: release.html_url,
-        });
-      }
-    } catch (error) {
-      console.error('Failed to check for updates quietly:', error);
-    }
-  };
-
-  const fetchVersionInfo = async () => {
-    try {
-      const response = await fetch(`${config.api.baseUrl}/config/version`);
-      if (response.ok) {
-        const data = await response.json();
-        setVersionInfo(data);
-      }
-    } catch (error) {
-      console.error("Failed to fetch version info:", error);
-    }
-  };
+    checkForUpdatesAutomatically();
+  }, [checkForUpdatesAutomatically]);
 
   const checkForUpdates = async () => {
     if (!versionInfo?.version) return;
     
-    setCheckingUpdates(true);
     try {
       // Fetch latest release from GitHub API
       const response = await fetch('https://api.github.com/repos/HydroshieldMKII/Guardian/releases/latest');
       if (!response.ok) {
-        console.warn('Failed to check for updates:', response.status);
         toast({
           title: "Update check failed",
           description: "Unable to check for updates. Please try again later.",
@@ -231,22 +169,14 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
       const hasUpdate = isVersionNewer(latestVersion, currentVersion);
       
       if (hasUpdate) {
-        setUpdateInfo({
-          hasUpdate: true,
-          latestVersion,
-          currentVersion,
-          updateUrl: release.html_url,
-        });
-
-        // Show toast notification for available update
+        // Show update available message
         toast({
           title: "Update available!",
-          description: `A new version (v${latestVersion}) is available. Please update to the latest version.`,
+          description: `A new version (v${latestVersion}) is available. Check the update banner above.`,
           variant: "success",
         });
       } else {
-        // Clear any existing update info and show toast for latest version
-        setUpdateInfo(null);
+        // Show up-to-date message
         toast({
           title: "You're up to date!",
           description: `Guardian v${currentVersion} is the latest version.`,
@@ -260,8 +190,6 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
         description: "Unable to check for updates. Please check your internet connection.",
         variant: "destructive",
       });
-    } finally {
-      setCheckingUpdates(false);
     }
   };
 
@@ -611,7 +539,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
         
         // Refresh settings and version info after import
         await fetchSettings();
-        await fetchVersionInfo();
+        await refreshVersionInfo();
       } else {
         const errorData = await response.json().catch(() => ({}));
         toast({
@@ -1221,37 +1149,6 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
           </div>
         )}
 
-        {/* Version Mismatch Warning */}
-        {versionInfo?.isVersionMismatch && (
-          <div className="mb-6">
-            <Card className="border-red-600 bg-red-50 dark:border-red-700 dark:bg-red-950/20">
-              <CardContent>
-                <div className="flex items-center gap-3">
-                  <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-700 shrink-0" />
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-red-800 dark:text-red-200 mb-1">
-                      Version Mismatch Detected
-                    </h3>
-                    <p className="text-sm text-red-600 dark:text-red-300">
-                      Database version ({versionInfo.databaseVersion}) is newer than code version ({versionInfo.codeVersion}). 
-                      Please update your Guardian installation to avoid compatibility issues.
-                    </p>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={fetchVersionInfo}
-                    className="border-red-600 text-red-600 hover:bg-red-100 dark:border-red-700 dark:text-red-700 dark:hover:bg-red-900/20"
-                  >
-                    <RefreshCw className="h-4 w-4 mr-2" />
-                    Refresh
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
         {/* Update Available Banner */}
         {updateInfo?.hasUpdate && (
           <div className="mb-6">
@@ -1261,11 +1158,10 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
                   <Download className="h-5 w-5 text-blue-600 dark:text-blue-700 shrink-0" />
                   <div className="flex-1">
                     <h3 className="font-semibold text-blue-800 dark:text-blue-200 mb-1">
-                      Update Available
+                      Update Available ({updateInfo.currentVersion} {'=>'} {updateInfo.latestVersion})
                     </h3>
                     <p className="text-sm text-blue-600 dark:text-blue-300">
-                      A new version of Guardian is available: v{updateInfo.latestVersion} 
-                      (current: v{updateInfo.currentVersion}). Update to get the latest features and bug fixes.
+                      Update to get the latest features and bug fixes.
                     </p>
                   </div>
                   <div className="flex gap-2">

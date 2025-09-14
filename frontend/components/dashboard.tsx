@@ -22,6 +22,7 @@ import {
   WifiOff,
   Video,
   Signal,
+  Download,
 } from "lucide-react";
 import { StreamsList } from "./streams-list";
 import { DeviceApproval } from "./device-approval";
@@ -29,9 +30,13 @@ import { DeviceApproval } from "./device-approval";
 import { DashboardStats, UnifiedDashboardData, PlexStatus } from "@/types";
 import { apiClient } from "@/lib/api";
 import { config } from "@/lib/config";
+import { useVersion } from "@/contexts/version-context";
+import { useUpdateChecker } from "@/hooks/use-update-checker";
 
 export function Dashboard() {
   const router = useRouter();
+  const { versionInfo } = useVersion();
+  const { updateInfo, checkForUpdatesAutomatically } = useUpdateChecker();
   const [dashboardData, setDashboardData] = useState<UnifiedDashboardData | null>(null);
   const [stats, setStats] = useState<DashboardStats>({
     activeStreams: 0,
@@ -89,6 +94,11 @@ export function Dashboard() {
   useEffect(() => {
     refreshDashboard();
   }, []);
+
+  // Check for updates automatically when dashboard loads
+  useEffect(() => {
+    checkForUpdatesAutomatically();
+  }, [checkForUpdatesAutomatically]);
 
   useEffect(() => {
     if (!autoRefresh) return; // Don't set up interval in manual mode
@@ -205,6 +215,66 @@ export function Dashboard() {
   return (
     <div className="min-h-[calc(100vh-3.5rem)]">
       <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-8">
+
+        {/* Version Mismatch Warning */}
+        {versionInfo?.isVersionMismatch && (
+          <div className="mb-6">
+            <Card className="border-red-600 bg-red-50 dark:border-red-700 dark:bg-red-950/20">
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-3">
+                  <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-700 shrink-0" />
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-red-800 dark:text-red-200 mb-1">
+                      Critical Version Mismatch
+                    </h3>
+                    <p className="text-sm text-red-600 dark:text-red-300 mb-2">
+                      Database version ({versionInfo.databaseVersion}) is newer than code version ({versionInfo.codeVersion}).
+                    </p>
+                    <Button
+                      size="sm"
+                      onClick={() => router.push('/settings')}
+                      className="bg-red-600 hover:bg-red-700 text-white"
+                    >
+                      Go to Settings
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Update Available Banner */}
+        {updateInfo?.hasUpdate && (
+          <div className="mb-6">
+            <Card className="border-blue-600 bg-blue-50 dark:border-blue-700 dark:bg-blue-950/20">
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-3">
+                  <Download className="h-5 w-5 text-blue-600 dark:text-blue-700 shrink-0" />
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-blue-800 dark:text-blue-200 mb-1">
+                      Update Available
+                    </h3>
+                    <p className="text-sm text-blue-600 dark:text-blue-300 mb-2">
+                      A new version of Guardian is available: v{updateInfo.latestVersion} 
+                      (current: v{updateInfo.currentVersion}). Update to get the latest features and bug fixes.
+                    </p>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        onClick={() => window.open(updateInfo.updateUrl, '_blank')}
+                        className="bg-blue-600 hover:bg-blue-700 text-white"
+                      >
+                        <Download className="h-4 w-4 mr-2" />
+                        Download Update
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         {/* Server Statistics */}
         <div className="mb-3 sm:mb-8">
