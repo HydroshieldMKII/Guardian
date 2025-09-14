@@ -2,6 +2,8 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ActiveSession } from '../../../entities/active-session.entity';
+import { UserDevice } from '../../../entities/user-device.entity';
+import { DeviceTrackingService } from '../../devices/services/device-tracking.service';
 
 interface PlexSessionData {
   sessionKey: string;
@@ -48,36 +50,44 @@ export class ActiveSessionService {
   constructor(
     @InjectRepository(ActiveSession)
     private activeSessionRepository: Repository<ActiveSession>,
+    @InjectRepository(UserDevice)
+    private userDeviceRepository: Repository<UserDevice>,
+    private deviceTrackingService: DeviceTrackingService,
   ) {}
 
   async updateActiveSessions(sessionsData: any): Promise<void> {
     try {
       const sessions = this.extractSessionsFromData(sessionsData);
 
-      if (!sessions || sessions.length === 0) {
-        // No active sessions, clear the database
-        await this.clearAllSessions();
-        this.logger.debug('No active sessions, cleared database');
-        return;
-      }
-
-      // Get current session keys from the API
+      // Current session keys
       const currentSessionKeys = sessions
         .map((s) => s.sessionKey)
         .filter(Boolean);
 
+      // Get sessions that are about to be removed (devices that stopped streaming)
+      const endingSessions = await this.activeSessionRepository
+        .createQueryBuilder('session')
+        .select('session.sessionKey')
+        .where('session.sessionKey NOT IN (:...sessionKeys)', {
+          sessionKeys: currentSessionKeys,
+        })
+        .getMany();
+
+      const endingSessionKeys = endingSessions.map(s => s.sessionKey);
+
       // Remove sessions that are no longer active
-      if (currentSessionKeys.length > 0) {
-        await this.activeSessionRepository
-          .createQueryBuilder()
-          .delete()
-          .where('session_key NOT IN (:...sessionKeys)', {
-            sessionKeys: currentSessionKeys,
-          })
-          .execute();
-      } else {
-        await this.clearAllSessions();
-      }
+      await this.activeSessionRepository
+        .createQueryBuilder()
+        .delete()
+        .where('session_key NOT IN (:...sessionKeys)', {
+          sessionKeys: currentSessionKeys,
+        })
+        .execute();
+      
+      // Clear session keys from devices for ended sessions only
+        for (const sessionKey of endingSessionKeys) {
+          await this.deviceTrackingService.clearSessionKey(sessionKey);
+        }
 
       // Update or create sessions
       for (const sessionData of sessions) {
@@ -95,11 +105,6 @@ export class ActiveSessionService {
     return this.activeSessionRepository.find({
       order: { lastActivity: 'DESC' },
     });
-  }
-
-  async clearAllSessions(): Promise<void> {
-    await this.activeSessionRepository.clear();
-    this.logger.debug('Cleared all active sessions from database');
   }
 
   private extractSessionsFromData(data: any): PlexSessionData[] {
@@ -188,55 +193,79 @@ export class ActiveSessionService {
 
   async removeSession(sessionKey: string): Promise<void> {
     await this.activeSessionRepository.delete({ sessionKey });
-    this.logger.log(`Removed session ${sessionKey} from database`);
+    await this.deviceTrackingService.clearSessionKey(sessionKey);
+    this.logger.log(`Removed session ${sessionKey} from database and cleared device session key`);
   }
 
   async getActiveSessionsFormatted(): Promise<any> {
     try {
       const sessions = await this.getActiveSessions();
 
-      const transformedSessions = sessions.map((session) => ({
-        sessionKey: session.sessionKey,
-        User: {
-          id: session.userId,
-          title: session.username,
-        },
-        Player: {
-          machineIdentifier: session.deviceIdentifier,
-          platform: session.devicePlatform,
-          product: session.deviceProduct,
-          title: session.deviceTitle,
-          device: session.deviceName,
-          address: session.deviceAddress,
-          state: session.playerState as 'playing' | 'paused' | 'buffering',
-        },
-        Media:
-          session.videoResolution || session.bitrate || session.container
-            ? [
-                {
-                  videoResolution: session.videoResolution,
-                  bitrate: session.bitrate,
-                  container: session.container,
-                  videoCodec: session.videoCodec,
-                  audioCodec: session.audioCodec,
-                },
-              ]
-            : [],
-        Session: {
-          id: session.sessionKey,
-          bandwidth: session.bandwidth,
-          location: session.sessionLocation as 'lan' | 'wan',
-        },
-        title: session.contentTitle,
-        grandparentTitle: session.grandparentTitle,
-        parentTitle: session.parentTitle,
-        year: session.year,
-        duration: session.duration,
-        viewOffset: session.viewOffset,
-        type: session.contentType,
-        thumb: session.thumb,
-        art: session.art,
-      }));
+      const deviceSessionCounts = new Map<string, number>();
+      
+      for (const session of sessions) {
+        if (session.userId && session.deviceIdentifier) {
+          const key = `${session.userId}-${session.deviceIdentifier}`;
+          if (!deviceSessionCounts.has(key)) {
+            const device = await this.userDeviceRepository.findOne({
+              where: {
+                userId: session.userId,
+                deviceIdentifier: session.deviceIdentifier,
+              },
+            });
+            deviceSessionCounts.set(key, device?.sessionCount || 0);
+          }
+        }
+      }
+
+      const transformedSessions = sessions.map((session) => {
+        const deviceKey = `${session.userId}-${session.deviceIdentifier}`;
+        const sessionCount = deviceSessionCounts.get(deviceKey) || 0;
+        
+        return {
+          sessionKey: session.sessionKey,
+          User: {
+            id: session.userId,
+            title: session.username,
+          },
+          Player: {
+            machineIdentifier: session.deviceIdentifier,
+            platform: session.devicePlatform,
+            product: session.deviceProduct,
+            title: session.deviceTitle,
+            device: session.deviceName,
+            address: session.deviceAddress,
+            state: session.playerState as 'playing' | 'paused' | 'buffering',
+          },
+          Media:
+            session.videoResolution || session.bitrate || session.container
+              ? [
+                  {
+                    videoResolution: session.videoResolution,
+                    bitrate: session.bitrate,
+                    container: session.container,
+                    videoCodec: session.videoCodec,
+                    audioCodec: session.audioCodec,
+                  },
+                ]
+              : [],
+          Session: {
+            id: session.sessionKey,
+            bandwidth: session.bandwidth,
+            location: session.sessionLocation as 'lan' | 'wan',
+            sessionCount: sessionCount,
+          },
+          title: session.contentTitle,
+          grandparentTitle: session.grandparentTitle,
+          parentTitle: session.parentTitle,
+          year: session.year,
+          duration: session.duration,
+          viewOffset: session.viewOffset,
+          type: session.contentType,
+          thumb: session.thumb,
+          art: session.art,
+        };
+      });
 
       return {
         MediaContainer: {

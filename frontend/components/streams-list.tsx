@@ -38,6 +38,10 @@ import {
   Laptop,
   Search,
   ExternalLink,
+  Video,
+  Headphones,
+  HardDrive,
+  Signal,
 } from "lucide-react";
 
 import { PlexSession, StreamsResponse } from "@/types";
@@ -72,27 +76,27 @@ const ClickableIP = ({ ipAddress }: { ipAddress: string | null }) => {
 
 // Stream skeleton for loading states
 const StreamSkeleton = () => (
-  <div className="relative p-3 sm:p-4 rounded-lg border bg-gradient-to-r from-slate-50 to-white dark:from-slate-800/50 dark:to-slate-800/20 shadow-sm animate-pulse">
+  <div className="relative p-3 sm:p-4 rounded-lg border bg-card shadow-sm animate-pulse">
     <div className="flex flex-col sm:flex-row sm:items-start justify-between mb-3 gap-3">
       <div className="flex-1 min-w-0">
         <div className="flex items-center space-x-2 mb-2">
-          <div className="w-4 h-4 bg-slate-200 dark:bg-slate-700 rounded"></div>
-          <div className="h-5 bg-slate-200 dark:bg-slate-700 rounded w-48"></div>
+          <div className="w-4 h-4 bg-muted rounded"></div>
+          <div className="h-5 bg-muted rounded w-48"></div>
         </div>
         <div className="flex items-center space-x-3 mb-2">
-          <div className="w-4 h-4 bg-slate-200 dark:bg-slate-700 rounded"></div>
-          <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-24"></div>
+          <div className="w-4 h-4 bg-muted rounded"></div>
+          <div className="h-4 bg-muted rounded w-24"></div>
         </div>
         <div className="flex items-center space-x-2 mb-2">
-          <div className="w-4 h-4 bg-slate-200 dark:bg-slate-700 rounded"></div>
-          <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-32"></div>
+          <div className="w-4 h-4 bg-muted rounded"></div>
+          <div className="h-4 bg-muted rounded w-32"></div>
         </div>
-        <div className="w-full bg-slate-200 dark:bg-slate-700 rounded h-2 mb-2"></div>
-        <div className="h-3 bg-slate-200 dark:bg-slate-700 rounded w-20"></div>
+        <div className="w-full bg-muted rounded h-2 mb-2"></div>
+        <div className="h-3 bg-muted rounded w-20"></div>
       </div>
       <div className="flex flex-col gap-2">
-        <div className="h-8 bg-slate-200 dark:bg-slate-700 rounded w-20"></div>
-        <div className="h-6 bg-slate-200 dark:bg-slate-700 rounded w-16"></div>
+        <div className="h-8 bg-muted rounded w-20"></div>
+        <div className="h-6 bg-muted rounded w-16"></div>
       </div>
     </div>
   </div>
@@ -285,6 +289,20 @@ export function StreamsList() {
     return resolution || bitrate || "Unknown";
   };
 
+  const getDetailedQuality = (session: PlexSession) => {
+    const media = session.Media?.[0];
+    if (!media) return null;
+
+    return {
+      resolution: media.videoResolution?.toUpperCase() || "Unknown",
+      bitrate: media.bitrate ? `${Math.round(media.bitrate / 1000)} Mbps` : "Unknown",
+      videoCodec: media.videoCodec?.toUpperCase() || "Unknown",
+      audioCodec: media.audioCodec?.toUpperCase() || "Unknown", 
+      container: media.container?.toUpperCase() || "Unknown",
+      bandwidth: session.Session?.bandwidth ? `${Math.round(session.Session.bandwidth / 1000)} Mbps` : "Unknown"
+    };
+  };
+
   const getDeviceIcon = (platform: string = "") => {
     const platformLower = platform.toLowerCase();
     if (platformLower.includes("android") || platformLower.includes("ios")) {
@@ -385,7 +403,7 @@ export function StreamsList() {
         </div>
 
         {error ? (
-          <div className="flex flex-col items-center justify-center h-32 sm:h-40 text-red-600 dark:text-red-400 text-center">
+          <div className="flex flex-col items-center justify-center h-32 sm:h-40 text-red-600 dark:text-red-700 text-center">
             <AlertCircle className="w-8 h-8 mb-2" />
             <p className="text-sm font-medium mb-1">Connection Error</p>
             <p className="text-xs text-muted-foreground px-4">{error}</p>
@@ -408,7 +426,7 @@ export function StreamsList() {
             </div>
           </ScrollArea>
         ) : filteredStreams.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-32 sm:h-40 text-slate-500 dark:text-slate-400 text-center">
+          <div className="flex flex-col items-center justify-center h-32 sm:h-40 text-muted-foreground text-center">
             {searchTerm ? (
               <>
                 <Search className="w-8 h-8 mb-2" />
@@ -435,30 +453,56 @@ export function StreamsList() {
               {filteredStreams.map((stream, index) => (
                 <div
                   key={stream.sessionKey || index}
-                  className="relative p-3 sm:p-4 rounded-lg border bg-gradient-to-r from-slate-50 to-white dark:from-slate-800/50 dark:to-slate-800/20 shadow-sm hover:shadow-md transition-all duration-200"
+                  className="relative p-3 sm:p-4 rounded-lg border bg-card shadow-sm hover:shadow-md transition-all duration-200"
                 >
                   {/* Mobile-first compact header */}
                   <div className="flex items-start justify-between mb-3 gap-2">
                     <div className="flex-1 min-w-0 pr-2">
-                      <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-1 text-sm sm:text-base line-clamp-2 break-words leading-tight">
+                      <h3 className="font-semibold text-foreground mb-1 text-sm sm:text-base line-clamp-2 break-words leading-tight">
                         {getContentTitle(stream)}
                       </h3>
 
                       {/* Primary info row - always visible */}
-                      <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-600 dark:text-slate-400 mb-2 flex-wrap">
-                        <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded-full min-w-0 flex-shrink-0">
+                      <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground mb-2 flex-wrap">
+                        <div className="flex items-center gap-1 bg-muted px-2 py-1 rounded-full min-w-0 flex-shrink-0">
                           <User className="w-3 h-3 flex-shrink-0" />
                           <span className="truncate max-w-[80px] sm:max-w-[120px]">
                             {stream.User?.title || "Unknown"}
                           </span>
                         </div>
-                        <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded-full min-w-0 flex-shrink-0">
+                        <div className="flex items-center gap-1 bg-muted px-2 py-1 rounded-full min-w-0 flex-shrink-0">
                           {getDeviceIcon(stream.Player?.platform)}
                           <span className="truncate max-w-[60px] sm:max-w-[100px]">
                             {stream.Player?.title?.split(" ")[0] || "Device"}
                           </span>
                         </div>
                       </div>
+
+                      {/* Quality info row - compact */}
+                      {(() => {
+                        const quality = getDetailedQuality(stream);
+                        return quality && (quality.resolution !== "Unknown" || quality.videoCodec !== "Unknown") ? (
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground mb-2 flex-wrap">
+                            {quality.resolution !== "Unknown" && (
+                              <div className="flex items-center gap-1 bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full">
+                                <Video className="w-3 h-3" />
+                                <span>{quality.resolution}</span>
+                              </div>
+                            )}
+                            {quality.videoCodec !== "Unknown" && (
+                              <div className="flex items-center gap-1 bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-300 px-2 py-0.5 rounded-full">
+                                <span>{quality.videoCodec}</span>
+                              </div>
+                            )}
+                            {quality.bitrate !== "Unknown" && (
+                              <div className="flex items-center gap-1 bg-purple-50 dark:bg-purple-950/30 text-purple-700 dark:text-purple-300 px-2 py-0.5 rounded-full">
+                                <Signal className="w-3 h-3" />
+                                <span>{quality.bitrate}</span>
+                              </div>
+                            )}
+                          </div>
+                        ) : null;
+                      })()}
                     </div>
 
                     {/* Status and actions */}
@@ -489,7 +533,7 @@ export function StreamsList() {
                               : stream.sessionKey
                           )
                         }
-                        className="h-6 w-6 p-0 text-slate-400 hover:text-slate-600"
+                        className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
                       >
                         {expandedStream === stream.sessionKey ? (
                           <ChevronUp className="w-4 h-4" />
@@ -503,21 +547,15 @@ export function StreamsList() {
                   {/* Progress Bar  */}
                   {stream.duration && stream.viewOffset !== undefined && (
                     <div className="mb-3">
-                      <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mb-1 gap-2">
+                      <div className="flex items-center justify-between text-xs text-muted-foreground mb-1 gap-2">
                         <span className="flex-shrink-0">
                           {formatDuration(stream.viewOffset)}
                         </span>
-                        <Badge
-                          variant="outline"
-                          className="text-xs px-1 py-0 max-w-[100px] truncate flex-shrink-0"
-                        >
-                          {getStreamQuality(stream)}
-                        </Badge>
                         <span className="flex-shrink-0">
                           {formatDuration(stream.duration)}
                         </span>
                       </div>
-                      <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
+                      <div className="w-full bg-muted rounded-full h-2">
                         <div
                           className="bg-gradient-to-r from-blue-500 to-blue-600 h-2 rounded-full transition-all duration-500 relative overflow-hidden"
                           style={{
@@ -537,44 +575,101 @@ export function StreamsList() {
 
                   {/* Expandable details */}
                   {expandedStream === stream.sessionKey && (
-                    <div className="space-y-3 pt-3 border-t border-slate-200 dark:border-slate-700 animate-in slide-in-from-top-2 duration-200">
-                      {/* Detailed device info */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-slate-600 dark:text-slate-400">
-                        <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 p-2 rounded min-w-0">
-                          <Monitor className="w-3 h-3 flex-shrink-0" />
-                          <div className="min-w-0 flex-1">
-                            <div className="font-medium">Platform</div>
-                            <div className="truncate">
-                              {stream.Player?.platform || "Unknown"}
+                    <div className="space-y-3 pt-3 border-t border-border animate-in slide-in-from-top-2 duration-200">
+                      {/* Quality Information Section */}
+                      {(() => {
+                        const quality = getDetailedQuality(stream);
+                        return quality ? (
+                          <div className="space-y-2">
+                            <h4 className="text-sm font-medium text-foreground mb-2">Stream Quality</h4>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
+                              <div className="flex items-center gap-2 bg-muted p-2 rounded min-w-0">
+                                <Video className="w-3 h-3 flex-shrink-0 text-blue-500" />
+                                <div className="min-w-0 flex-1">
+                                  <div className="font-medium">Resolution</div>
+                                  <div className="truncate">{quality.resolution}</div>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2 bg-muted p-2 rounded min-w-0">
+                                <Signal className="w-3 h-3 flex-shrink-0 text-green-500" />
+                                <div className="min-w-0 flex-1">
+                                  <div className="font-medium">Bitrate</div>
+                                  <div className="truncate">{quality.bitrate}</div>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2 bg-muted p-2 rounded min-w-0">
+                                <Wifi className="w-3 h-3 flex-shrink-0 text-purple-500" />
+                                <div className="min-w-0 flex-1">
+                                  <div className="font-medium">Bandwidth</div>
+                                  <div className="truncate">{quality.bandwidth}</div>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2 bg-muted p-2 rounded min-w-0">
+                                <Video className="w-3 h-3 flex-shrink-0 text-orange-500" />
+                                <div className="min-w-0 flex-1">
+                                  <div className="font-medium">Video Codec</div>
+                                  <div className="truncate">{quality.videoCodec}</div>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2 bg-muted p-2 rounded min-w-0">
+                                <Headphones className="w-3 h-3 flex-shrink-0 text-red-500" />
+                                <div className="min-w-0 flex-1">
+                                  <div className="font-medium">Audio Codec</div>
+                                  <div className="truncate">{quality.audioCodec}</div>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2 bg-muted p-2 rounded min-w-0">
+                                <HardDrive className="w-3 h-3 flex-shrink-0 text-gray-500" />
+                                <div className="min-w-0 flex-1">
+                                  <div className="font-medium">Container</div>
+                                  <div className="truncate">{quality.container}</div>
+                                </div>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                        <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 p-2 rounded min-w-0">
-                          <MapPin className="w-3 h-3 flex-shrink-0" />
-                          <div className="min-w-0 flex-1">
-                            <div className="font-medium">Location</div>
-                            <div className="truncate">
-                              <ClickableIP
-                                ipAddress={stream.Player?.address || null}
-                              />
+                        ) : null;
+                      })()}
+
+                      {/* Device Information Section */}
+                      <div className="space-y-2">
+                        <h4 className="text-sm font-medium text-foreground mb-2">Device Information</h4>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-muted-foreground">
+                          <div className="flex items-center gap-2 bg-muted p-2 rounded min-w-0">
+                            <Monitor className="w-3 h-3 flex-shrink-0" />
+                            <div className="min-w-0 flex-1">
+                              <div className="font-medium">Platform</div>
+                              <div className="truncate">
+                                {stream.Player?.platform || "Unknown"}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                        <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 p-2 rounded min-w-0">
-                          <Tv className="w-3 h-3 flex-shrink-0" />
-                          <div className="min-w-0 flex-1">
-                            <div className="font-medium">Product</div>
-                            <div className="truncate">
-                              {stream.Player?.product || "Unknown"}
+                          <div className="flex items-center gap-2 bg-muted p-2 rounded min-w-0">
+                            <MapPin className="w-3 h-3 flex-shrink-0" />
+                            <div className="min-w-0 flex-1">
+                              <div className="font-medium">Location</div>
+                              <div className="truncate">
+                                <ClickableIP
+                                  ipAddress={stream.Player?.address || null}
+                                />
+                              </div>
                             </div>
                           </div>
-                        </div>
-                        <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 p-2 rounded min-w-0">
-                          <Clock className="w-3 h-3 flex-shrink-0" />
-                          <div className="min-w-0 flex-1">
-                            <div className="font-medium">Session</div>
-                            <div className="truncate">
-                              {stream.sessionKey || "Unknown"}
+                          <div className="flex items-center gap-2 bg-muted p-2 rounded min-w-0">
+                            <Tv className="w-3 h-3 flex-shrink-0" />
+                            <div className="min-w-0 flex-1">
+                              <div className="font-medium">Product</div>
+                              <div className="truncate">
+                                {stream.Player?.product || "Unknown"}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 bg-muted p-2 rounded min-w-0">
+                            <Clock className="w-3 h-3 flex-shrink-0" />
+                            <div className="min-w-0 flex-1">
+                              <div className="font-medium">Streams Started</div>
+                              <div className="truncate">
+                                {stream.Session?.sessionCount || 0}
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -591,7 +686,7 @@ export function StreamsList() {
                             !stream.User?.id ||
                             !stream.Player?.machineIdentifier
                           }
-                          className="h-8 text-xs"
+                          className="h-8 text-xs bg-red-600 dark:bg-red-700 text-white hover:bg-red-700 dark:hover:bg-red-800"
                         >
                           {revokingAuth === stream.sessionKey ? (
                             <RefreshCw className="w-3 h-3 mr-1 animate-spin" />
@@ -631,11 +726,11 @@ export function StreamsList() {
           </DialogHeader>
 
           {confirmRemoveStream && (
-            <div className="my-4 p-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
-              <div className="text-sm font-medium text-slate-900 dark:text-slate-100 mb-2 line-clamp-2 break-words leading-tight">
+            <div className="my-4 p-4 bg-muted rounded-lg">
+              <div className="text-sm font-medium text-foreground mb-2 line-clamp-2 break-words leading-tight">
                 {getContentTitle(confirmRemoveStream)}
               </div>
-              <div className="flex items-center gap-4 text-xs text-slate-600 dark:text-slate-400 flex-wrap">
+              <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
                 <div className="flex items-center gap-1 min-w-0">
                   <User className="w-3 h-3 flex-shrink-0" />
                   <span className="truncate max-w-[120px]">
@@ -664,6 +759,7 @@ export function StreamsList() {
               variant="destructive"
               onClick={handleConfirmRemoveAccess}
               disabled={revokingAuth !== null}
+              className="bg-red-600 dark:bg-red-700 text-white hover:bg-red-700 dark:hover:bg-red-800"
             >
               {revokingAuth ? (
                 <>

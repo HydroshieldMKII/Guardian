@@ -20,6 +20,7 @@ export interface ConfigSettingDto {
 export class ConfigService {
   private readonly logger = new Logger(ConfigService.name);
   private cache = new Map<string, any>();
+  private configChangeListeners = new Map<string, Array<() => void>>();
 
   constructor(
     @InjectRepository(AppSettings)
@@ -118,6 +119,39 @@ export class ConfigService {
     }
   }
 
+  // Add listener for config changes
+  addConfigChangeListener(key: string, callback: () => void) {
+    if (!this.configChangeListeners.has(key)) {
+      this.configChangeListeners.set(key, []);
+    }
+    this.configChangeListeners.get(key)!.push(callback);
+  }
+
+  // Remove listener for config changes
+  removeConfigChangeListener(key: string, callback: () => void) {
+    const listeners = this.configChangeListeners.get(key);
+    if (listeners) {
+      const index = listeners.indexOf(callback);
+      if (index > -1) {
+        listeners.splice(index, 1);
+      }
+    }
+  }
+
+  // Notify listeners of config changes
+  private notifyConfigChange(key: string) {
+    const listeners = this.configChangeListeners.get(key);
+    if (listeners) {
+      listeners.forEach(callback => {
+        try {
+          callback();
+        } catch (error) {
+          this.logger.error(`Error calling config change listener for ${key}:`, error);
+        }
+      });
+    }
+  }
+
   async getAllSettings(): Promise<AppSettings[]> {
     return this.settingsRepository.find({
       order: { key: 'ASC' },
@@ -165,7 +199,7 @@ export class ConfigService {
     return value;
   }
 
-  async updateSetting(key: string, value: any): Promise<AppSettings> {
+    async updateSetting(key: string, value: any): Promise<AppSettings> {
     let stringValue = value;
     if (typeof value === 'object') {
       stringValue = JSON.stringify(value);
@@ -196,6 +230,10 @@ export class ConfigService {
     this.cache.set(key, cacheValue);
 
     this.logger.log(`Updated setting: ${key}`);
+
+    // Notify listeners of the config change
+    this.notifyConfigChange(key);
+
     return updated;
   }
 
@@ -206,6 +244,7 @@ export class ConfigService {
 
     for (const { key, value } of settings) {
       try {
+        // Each updateSetting call will handle config change notifications
         const updated = await this.updateSetting(key, value);
         results.push(updated);
       } catch (error) {
@@ -353,11 +392,10 @@ export class ConfigService {
     try {
       this.logger.log('Starting database export...');
 
-      // Get all data from all tables
-      const [settings, userDevices, activeSessions, userPreferences] = await Promise.all([
+      // Get all data from all tables 
+      const [settings, userDevices, userPreferences] = await Promise.all([
         this.settingsRepository.find(),
         this.settingsRepository.manager.getRepository(UserDevice).find(),
-        this.settingsRepository.manager.getRepository(ActiveSession).find(),
         this.settingsRepository.manager.getRepository(UserPreference).find(),
       ]);
 
@@ -367,12 +405,11 @@ export class ConfigService {
         data: {
           settings,
           userDevices,
-          activeSessions,
           userPreferences,
         },
       };
 
-      this.logger.log(`Database export completed: ${settings.length} settings, ${userDevices.length} devices, ${activeSessions.length} sessions, ${userPreferences.length} preferences`);
+      this.logger.log(`Database export completed: ${settings.length} settings, ${userDevices.length} devices, ${userPreferences.length} preferences`);
       
       return JSON.stringify(exportData, null, 2);
     } catch (error) {
@@ -397,7 +434,6 @@ export class ConfigService {
         settings: data.settings?.length || 0,
         userDevices: data.userDevices?.length || 0,
         userPreferences: data.userPreferences?.length || 0,
-        activeSessions: data.activeSessions?.length || 0,
       });
 
       // Import settings
@@ -414,17 +450,10 @@ export class ConfigService {
               existing.value = setting.value;
               existing.description = setting.description || existing.description;
               await this.settingsRepository.save(existing);
-            } else {
-              const newSetting = this.settingsRepository.create({
-                key: setting.key,
-                value: setting.value,
-                description: setting.description,
-                type: setting.type || 'string',
-                private: setting.private || false,
-              });
-              await this.settingsRepository.save(newSetting);
+                          imported++;
+            }else{
+              this.logger.warn(`Skipping unknown setting ${setting.key}`);
             }
-            imported++;
           } catch (error) {
             this.logger.warn(`Failed to import setting ${setting.key}:`, error);
             skipped++;
@@ -491,32 +520,6 @@ export class ConfigService {
             }
           } catch (error) {
             this.logger.warn(`Failed to import preference for user ${pref.userId}:`, error);
-            skipped++;
-          }
-        }
-      }
-
-      // Import active sessions
-      if (data.activeSessions && Array.isArray(data.activeSessions)) {
-        const sessionRepo = this.settingsRepository.manager.getRepository(ActiveSession);
-        for (const session of data.activeSessions) {
-          try {
-            const existing = await sessionRepo.findOne({
-              where: { sessionKey: session.sessionKey }
-            });
-
-            if (!existing) {
-              const newSession = sessionRepo.create(session);
-              await sessionRepo.save(newSession);
-              imported++;
-            } else {
-              // Update existing session
-              Object.assign(existing, session);
-              await sessionRepo.save(existing);
-              imported++;
-            }
-          } catch (error) {
-            this.logger.warn(`Failed to import session ${session.sessionKey}:`, error);
             skipped++;
           }
         }

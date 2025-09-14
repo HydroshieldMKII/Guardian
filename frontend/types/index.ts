@@ -21,6 +21,12 @@ export interface PlexSession {
     videoCodec?: string;
     audioCodec?: string;
   }>;
+  Session?: {
+    id?: string;
+    bandwidth?: number;
+    location?: "lan" | "wan";
+    sessionCount?: number;
+  };
   title?: string;
   grandparentTitle?: string;
   parentTitle?: string;
@@ -44,6 +50,12 @@ export interface DashboardStats {
   totalDevices: number;
   pendingDevices: number;
   approvedDevices: number;
+  qualityStats?: {
+    averageBitrate: number;
+    commonResolution: string;
+    commonCodec: string;
+    highQualityStreams: number;
+  };
 }
 
 export interface UserDevice {

@@ -28,6 +28,7 @@ import {
   Download,
   Upload,
   Database,
+  AlertTriangle,
 } from "lucide-react";
 
 interface AppSetting {
@@ -76,6 +77,20 @@ const settingsSections = [
   //   icon: User,
   // },
 ];
+
+// Function to convert setting keys to proper labels
+const getSettingLabel = (key: string): string => {
+  const labelMap: Record<string, string> = {
+    'PLEX_SERVER_IP': 'Plex server IP address',
+    'PLEX_SERVER_PORT': 'Plex server port',
+    'PLEX_TOKEN': 'Authentication token',
+    'PLEXGUARD_REFRESH_INTERVAL': 'Refresh interval',
+    'PLEXGUARD_STOPMSG': 'Message',
+    'PLEX_GUARD_DEFAULT_BLOCK': 'Default behavior for new devices',
+  };
+  
+  return labelMap[key] || key.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
+};
 
 export function Settings({ onBack }: { onBack?: () => void } = {}) {
   const [activeSection, setActiveSection] = useState("plex");
@@ -176,19 +191,6 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
     return errors;
   };
 
-  const shouldAutoTestConnection = (
-    settingsToUpdate: { key: string; value: any }[]
-  ) => {
-    const plexKeys = [
-      "PLEX_SERVER_IP",
-      "PLEX_SERVER_PORT",
-      "PLEX_TOKEN",
-      "USE_SSL",
-      "IGNORE_CERT_ERRORS",
-    ];
-    return settingsToUpdate.some((update) => plexKeys.includes(update.key));
-  };
-
   const handleSave = async () => {
     setSaving(true);
     try {
@@ -244,19 +246,8 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
           variant: "success",
         });
 
-        // Auto-test Plex connection if Plex settings were changed
-        if (shouldAutoTestConnection(settingsToUpdate)) {
-          setConnectionStatus({
-            success: false,
-            message: "Testing connection with new settings...",
-          });
-          // Small delay to show the "testing" message
-          setTimeout(async () => {
-            await handleTestConnection();
-          }, 500);
-        } else {
-          setConnectionStatus(null); // Clear connection status for non-Plex changes
-        }
+        // Clear connection status after saving settings
+        setConnectionStatus(null);
       } else {
         // Handle save error
         const errorData = await response.json().catch(() => ({}));
@@ -280,6 +271,16 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
   };
 
   const handleTestConnection = async () => {
+    // Check if there are pending Plex settings changes
+    if (hasPlexChanges()) {
+      toast({
+        title: "Pending Changes Detected",
+        description: "Please save your Plex settings before testing the connection to ensure accurate results.",
+        variant: "warning",
+      });
+      return;
+    }
+
     setTestingConnection(true);
     try {
       const response = await fetch("/api/pg/config/test-plex-connection", {
@@ -441,7 +442,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
       return (
         <div className="flex items-center justify-between">
           <div className="space-y-0.5">
-            <Label>{setting.key.replace(/_/g, " ")}</Label>
+            <Label>{getSettingLabel(setting.key)}</Label>
             <p className="text-xs text-muted-foreground">
               {setting.description}
             </p>
@@ -459,7 +460,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
 
     return (
       <div className="space-y-2">
-        <Label>{setting.key.replace(/_/g, " ")}</Label>
+        <Label>{getSettingLabel(setting.key)}</Label>
         <Input
           type={
             setting.private
@@ -582,6 +583,14 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
             <Card className="p-4">
               <div className="space-y-4">
                 <h4 className="text-sm font-medium">Connection Test</h4>
+                {hasPlexChanges() && (
+                  <div className="flex items-center space-x-2 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-md">
+                    <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                    <span className="text-sm text-amber-800 dark:text-amber-200">
+                      Save your Plex settings before testing the connection
+                    </span>
+                  </div>
+                )}
                 <div className="flex items-center space-x-2">
                   <Button
                     onClick={handleTestConnection}
@@ -783,8 +792,37 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
     });
   };
 
+  // Check if there are unsaved changes in Plex-related settings
+  const hasPlexChanges = () => {
+    const plexKeys = [
+      "PLEX_TOKEN",
+      "PLEX_SERVER_IP", 
+      "PLEX_SERVER_PORT",
+      "USE_SSL",
+      "IGNORE_CERT_ERRORS"
+    ];
+    
+    return Object.entries(formData).some(([key, value]) => {
+      if (!plexKeys.includes(key)) return false;
+      
+      const originalSetting = settings.find((s) => s.key === key);
+      if (!originalSetting) return false;
+
+      let originalValue: any = originalSetting.value;
+      if (originalSetting.type === "boolean") {
+        originalValue = originalValue === "true";
+      } else if (originalSetting.type === "number") {
+        originalValue = parseFloat(originalValue);
+      }
+
+      return (
+        value !== originalValue && !(originalSetting.private && value === "")
+      );
+    });
+  };
+
   return (
-    <div className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 min-h-[calc(100vh-3.5rem)]">
+    <div className="min-h-[calc(100vh-3.5rem)]">
       <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-8">
         {/* Back Button */}
         {onBack && (
@@ -814,10 +852,10 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
         {/* Backend Error Display */}
         {backendError && (
           <div className="mb-6">
-            <Card className="border-red-200 bg-red-50 dark:border-red-700 dark:bg-red-950/20">
+            <Card className="border-red-600 bg-red-50 dark:border-red-700 dark:bg-red-950/20">
               <CardContent>
                 <div className="flex items-center gap-3">
-                  <XCircle className="h-5 w-5 text-red-500 dark:text-red-400 shrink-0" />
+                  <XCircle className="h-5 w-5 text-red-600 dark:text-red-700 shrink-0" />
                   <div className="flex-1">
                     <h3 className="font-semibold text-red-800 dark:text-red-200 mb-1">
                       Backend Connection Error
@@ -830,7 +868,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
                     variant="outline"
                     size="sm"
                     onClick={fetchSettings}
-                    className="border-red-300 text-red-600 hover:bg-red-100 dark:border-red-600 dark:text-red-400 dark:hover:bg-red-900/20"
+                    className="border-red-600 text-red-600 hover:bg-red-100 dark:border-red-700 dark:text-red-700 dark:hover:bg-red-900/20"
                   >
                     <RefreshCw className="h-4 w-4 mr-2" />
                     Retry

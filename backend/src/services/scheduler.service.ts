@@ -13,6 +13,7 @@ export class SchedulerService implements OnModuleInit {
   private readonly logger = new Logger(SchedulerService.name);
   private intervalId: NodeJS.Timeout | null = null;
   private currentInterval: number;
+  private configChangeCallback: () => void;
 
   constructor(
     private readonly plexService: PlexService,
@@ -21,8 +22,19 @@ export class SchedulerService implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
+    // Register listener for refresh interval changes
+    this.configChangeCallback = () => {
+      this.logger.log('Refresh interval changed, restarting scheduler...');
+      this.restartScheduler().catch(error => {
+        this.logger.error('Failed to restart scheduler after config change:', error);
+      });
+    };
+    
+    this.configService.addConfigChangeListener('PLEXGUARD_REFRESH_INTERVAL', this.configChangeCallback);
+
     await this.startSessionUpdates();
   }
+
   async restartScheduler() {
     this.logger.log('Restarting scheduler with updated interval...');
     this.stopScheduler();
@@ -53,21 +65,8 @@ export class SchedulerService implements OnModuleInit {
       }
 
       this.intervalId = setInterval(async () => {
+        // this.logger.log('Scheduler tick - checking for active sessions to update');
         try {
-          // Check if interval setting has changed every few iterations to avoid constant DB queries
-          const currentRefreshInterval = await this.configService.getSetting(
-            'PLEXGUARD_REFRESH_INTERVAL',
-          );
-          const currentIntervalSeconds = parseInt(currentRefreshInterval as string, 10) || 10;
-          
-          if (this.currentInterval !== currentIntervalSeconds) {
-            this.logger.log(
-              `Interval changed from ${this.currentInterval}s to ${currentIntervalSeconds}s, restarting scheduler...`
-            );
-            await this.restartScheduler();
-            return;
-          }
-
           // Check if Plex is properly configured before attempting to update sessions
           const [ip, port, token] = await Promise.all([
             this.configService.getSetting('PLEX_SERVER_IP'),
@@ -121,6 +120,11 @@ export class SchedulerService implements OnModuleInit {
   }
 
   onModuleDestroy() {
+    // Remove config change listener
+    if (this.configChangeCallback) {
+      this.configService.removeConfigChangeListener('PLEXGUARD_REFRESH_INTERVAL', this.configChangeCallback);
+    }
+    
     this.stopScheduler();
     this.logger.log('Session update scheduler stopped');
   }

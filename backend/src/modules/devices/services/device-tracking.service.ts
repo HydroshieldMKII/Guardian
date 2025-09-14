@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { UserDevice } from '../../../entities/user-device.entity';
 import { UsersService } from '../../users/services/users.service';
 import {
@@ -25,7 +25,7 @@ export class DeviceTrackingService {
     const sessions = this.extractSessionsFromData(sessionsData);
 
     if (!sessions || sessions.length === 0) {
-      this.logger.debug('No active sessions found for device tracking');
+      // this.logger.debug('No active sessions found for device tracking');
       return;
     }
 
@@ -75,6 +75,7 @@ export class DeviceTrackingService {
       userId: session.User?.id || session.User?.uuid || 'unknown',
       username: session.User?.title,
       deviceIdentifier: session.Player?.machineIdentifier || 'unknown',
+      sessionKey: session.sessionKey,
       deviceName: session.Player?.device || session.Player?.title,
       devicePlatform: session.Player?.platform,
       deviceProduct: session.Player?.product,
@@ -85,6 +86,8 @@ export class DeviceTrackingService {
 
   private async trackDevice(deviceInfo: DeviceInfo): Promise<void> {
     try {
+      // this.logger.debug(`Tracking device: ${deviceInfo.deviceIdentifier} for user: ${deviceInfo.userId} with session: ${deviceInfo.sessionKey}`);
+      
       // Check if device already exists
       const existingDevice = await this.userDeviceRepository.findOne({
         where: {
@@ -94,9 +97,11 @@ export class DeviceTrackingService {
       });
 
       if (existingDevice) {
+        // this.logger.debug(`Found existing device ${existingDevice.id}, updating...`);
         // Update existing device
         await this.updateExistingDevice(existingDevice, deviceInfo);
       } else {
+        this.logger.debug(`Device not found, creating new device entry...`);
         // Create new device entry
         await this.createNewDevice(deviceInfo);
       }
@@ -111,7 +116,13 @@ export class DeviceTrackingService {
     deviceInfo: DeviceInfo,
   ): Promise<void> {
     existingDevice.lastSeen = new Date();
-    existingDevice.sessionCount += 1;
+    
+    // Only increment session count if this is a new session
+    if (deviceInfo.sessionKey && existingDevice.currentSessionKey !== deviceInfo.sessionKey) {
+      existingDevice.sessionCount += 1;
+      existingDevice.currentSessionKey = deviceInfo.sessionKey;
+      this.logger.debug(`New session started for device ${deviceInfo.deviceIdentifier}. Session count: ${existingDevice.sessionCount}`);
+    }
 
     // Update device info if it has changed or was null
     if (deviceInfo.deviceName && !existingDevice.deviceName) {
@@ -156,6 +167,7 @@ export class DeviceTrackingService {
       deviceVersion: deviceInfo.deviceVersion,
       status: defaultBlock ? 'pending' : 'approved',
       sessionCount: 1,
+      currentSessionKey: deviceInfo.sessionKey,
       ipAddress: deviceInfo.ipAddress,
     });
 
@@ -220,4 +232,28 @@ export class DeviceTrackingService {
     await this.userDeviceRepository.delete(deviceId);
     this.logger.log(`Device ${deviceId} has been rejected and deleted`);
   }
+
+  async clearSessionKey(sessionKey: string): Promise<void> {
+    this.logger.debug(`Attempting to clear session key: ${sessionKey}`);
+    
+    // Find devices with this session key first
+    const devicesWithSession = await this.userDeviceRepository.find({
+      where: { currentSessionKey: sessionKey },
+      select: ['id', 'deviceIdentifier', 'currentSessionKey']
+    });
+    
+    this.logger.debug(`Found ${devicesWithSession.length} device(s) with session key ${sessionKey}`);
+    
+    // Clear specific session key for device that stopped streaming
+    const result = await this.userDeviceRepository
+      .createQueryBuilder()
+      .update(UserDevice)
+      .set({ currentSessionKey: () => 'NULL' })
+      .where('current_session_key = :sessionKey', { sessionKey })
+      .execute();
+      
+    this.logger.debug(`Cleared session key for ${result.affected || 0} device(s) that stopped streaming (session: ${sessionKey})`);
+  
+  }
+  
 }

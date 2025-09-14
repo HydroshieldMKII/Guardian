@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { Navbar } from "@/components/navbar";
 import { Toaster } from "@/components/ui/toaster";
+import { ThemeProvider } from "@/hooks/use-theme";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -35,15 +36,32 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        suppressHydrationWarning
       >
-        <ErrorBoundary>
-          <Navbar />
-          {children}
-        </ErrorBoundary>
-        <Toaster />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  var theme = localStorage.getItem('guardian-ui-theme') || 'dark';
+                  document.documentElement.className = theme;
+                } catch (e) {
+                  document.documentElement.className = 'dark';
+                }
+              })();
+            `,
+          }}
+        />
+        <ThemeProvider defaultTheme="dark" storageKey="guardian-ui-theme">
+          <ErrorBoundary>
+            <Navbar />
+            {children}
+          </ErrorBoundary>
+          <Toaster />
+        </ThemeProvider>
       </body>
     </html>
   );

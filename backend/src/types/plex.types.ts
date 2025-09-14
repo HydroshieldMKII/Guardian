@@ -51,6 +51,7 @@ export interface PlexSessionsResponse {
 export interface DeviceInfo {
   userId: string;
   deviceIdentifier: string;
+  sessionKey?: string;
   deviceName?: string;
   devicePlatform?: string;
   deviceProduct?: string;

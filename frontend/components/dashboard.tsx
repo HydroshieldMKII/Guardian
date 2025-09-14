@@ -20,6 +20,8 @@ import {
   Settings,
   Server,
   WifiOff,
+  Video,
+  Signal,
 } from "lucide-react";
 import { StreamsList } from "./streams-list";
 import { DeviceApproval } from "./device-approval";
@@ -45,6 +47,83 @@ export function Dashboard() {
   const [activeTab, setActiveTab] = useState<"streams" | "devices">("streams");
   const [loading, setLoading] = useState(true);
   const [plexStatus, setPlexStatus] = useState<PlexStatus | null>(null);
+
+  const analyzeQualityStats = (streamsData: any) => {
+    const sessions = streamsData?.MediaContainer?.Metadata || [];
+    
+    if (sessions.length === 0) {
+      return {
+        averageBitrate: 0,
+        commonResolution: "-",
+        commonCodec: "-", 
+        highQualityStreams: 0,
+      };
+    }
+
+    const bitrates: number[] = [];
+    const resolutions: string[] = [];
+    const codecs: string[] = [];
+    let highQualityCount = 0;
+
+    sessions.forEach((session: any) => {
+      const media = session.Media?.[0];
+      if (media) {
+        if (media.bitrate) {
+          bitrates.push(media.bitrate);
+          // Consider 4k (>= 2160p) or high bitrate (>= 15Mbps) as high quality
+          if (media.videoResolution?.includes('2160') || media.bitrate >= 15000) {
+            highQualityCount++;
+          }
+        }
+        if (media.videoResolution) {
+          resolutions.push(media.videoResolution);
+        }
+        if (media.videoCodec) {
+          codecs.push(media.videoCodec);
+        }
+      }
+    });
+
+    const averageBitrate = bitrates.length > 0 
+      ? Math.round(bitrates.reduce((a, b) => a + b, 0) / bitrates.length / 1000)
+      : 0;
+
+    // Find the highest resolution
+    const getResolutionValue = (res: string) => {
+      const resLower = res.toLowerCase();
+      if (resLower.includes('2160') || resLower.includes('4k')) return 2160;
+      if (resLower.includes('1440') || resLower.includes('2k')) return 1440;
+      if (resLower.includes('1080')) return 1080;
+      if (resLower.includes('720')) return 720;
+      if (resLower.includes('480')) return 480;
+      return 0;
+    };
+
+    const highestResolution = resolutions.length > 0
+      ? resolutions.reduce((highest, current) => 
+          getResolutionValue(current) > getResolutionValue(highest) ? current : highest
+        ).toUpperCase() || "-"
+      : "-";
+
+    // Find most common codec
+    const codecCounts = codecs.reduce((acc: Record<string, number>, codec) => {
+      acc[codec] = (acc[codec] || 0) + 1;
+      return acc;
+    }, {});
+
+    const commonCodec = Object.keys(codecCounts).length > 0
+      ? Object.entries(codecCounts)
+          .sort(([,a], [,b]) => b - a)[0][0]
+          .toUpperCase() || "-"
+      : "-";
+
+    return {
+      averageBitrate,
+      commonResolution: highestResolution,
+      commonCodec,
+      highQualityStreams: highQualityCount,
+    };
+  };
 
   const handleShowSettings = () => {
     router.push('/settings');
@@ -85,11 +164,14 @@ export function Dashboard() {
             apiClient.get("/devices/approved"),
           ]);
 
+        const qualityStats = analyzeQualityStats(streamsData);
+
         setStats({
           activeStreams: (streamsData as any)?.MediaContainer?.size || 0,
           totalDevices: (allDevicesData as any[]).length,
           pendingDevices: (pendingData as any[]).length,
           approvedDevices: (approvedData as any[]).length,
+          qualityStats,
         });
       } catch (error) {
         console.error("Failed to fetch dashboard stats:", error);
@@ -98,12 +180,13 @@ export function Dashboard() {
       }
     };
 
-    fetchStats();
+    // fetchStats();
     const interval = setInterval(fetchStats, config.app.refreshInterval);
     return () => clearInterval(interval);
   }, []);
 
   if (loading) {
+    // Loading dots animation
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="flex items-center space-x-2">
@@ -124,7 +207,7 @@ export function Dashboard() {
   // Show configuration prompt if Plex is not properly connected
   if (!plexStatus?.configured || !plexStatus?.hasValidCredentials) {
     return (
-      <div className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 min-h-[calc(100vh-3.5rem)]">
+      <div className="min-h-[calc(100vh-3.5rem)]">
         <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-8">
           <div className="flex items-center justify-center min-h-[60vh]">
             <Card className="w-full max-w-2xl">
@@ -134,7 +217,7 @@ export function Dashboard() {
                     <Server className="h-8 w-8 text-amber-600 dark:text-amber-400" />
                   </div>
                 </div>
-                <CardTitle className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+                <CardTitle className="text-2xl font-bold text-foreground">
                   Plex Configuration Required
                 </CardTitle>
                 <CardDescription className="text-lg">
@@ -143,20 +226,20 @@ export function Dashboard() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                <div className="bg-primary/10 dark:bg-primary/20 border border-primary/20 rounded-lg p-4">
                   <div className="flex items-center space-x-3">
                     <div className="flex-shrink-0">
                       {plexStatus?.configured ? (
-                        <CheckCircle className="h-5 w-5 text-amber-500" />
+                        <CheckCircle className="h-5 w-5 text-primary" />
                       ) : (
-                        <WifiOff className="h-5 w-5 text-red-400" />
+                        <WifiOff className="h-5 w-5 text-primary" />
                       )}
                     </div>
                     <div className="flex-1">
-                      <h3 className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                      <h3 className="text-sm font-medium text-primary">
                         Connection Status
                       </h3>
-                      <p className="text-sm text-slate-600 dark:text-slate-400">
+                      <p className="text-sm text-primary/80">
                         {plexStatus?.connectionStatus || "Not configured"}
                       </p>
                     </div>
@@ -164,25 +247,25 @@ export function Dashboard() {
                 </div>
 
                 <div className="space-y-4">
-                  <h4 className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                  <h4 className="text-sm font-medium text-foreground">
                     To get started, you'll need to configure:
                   </h4>
                   <ul className="space-y-2">
                     <li className="flex items-center space-x-3">
                       <CheckCircle className="h-4 w-4 text-green-500" />
-                      <span className="text-sm text-slate-600 dark:text-slate-400">
+                      <span className="text-sm text-muted-foreground">
                         Plex Server IP Address
                       </span>
                     </li>
                     <li className="flex items-center space-x-3">
                       <CheckCircle className="h-4 w-4 text-green-500" />
-                      <span className="text-sm text-slate-600 dark:text-slate-400">
+                      <span className="text-sm text-muted-foreground">
                         Plex Server Port
                       </span>
                     </li>
                     <li className="flex items-center space-x-3">
                       <CheckCircle className="h-4 w-4 text-green-500" />
-                      <span className="text-sm text-slate-600 dark:text-slate-400">
+                      <span className="text-sm text-muted-foreground">
                         Plex Authentication Token
                       </span>
                     </li>
@@ -208,66 +291,141 @@ export function Dashboard() {
   }
 
   return (
-    <div className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 min-h-[calc(100vh-3.5rem)]">
+    <div className="min-h-[calc(100vh-3.5rem)]">
       <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-8">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-8">
-          <Card className="border-l-4 border-l-blue-500">
-            <CardHeader className="pb-2 sm:pb-3">
-              <CardTitle className="text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-400 flex items-center">
-                <Activity className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-                <span className="hidden sm:inline">Active Streams</span>
-                <span className="sm:hidden">Streams</span>
-              </CardTitle>
-              <CardDescription className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900 dark:text-slate-100">
-                {stats.activeStreams}
-              </CardDescription>
-            </CardHeader>
-          </Card>
+        {/* Dashboard Header */}
+        {/* <div className="mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">
+            Guardian Dashboard
+          </h1>
+          <p className="text-muted-foreground text-sm sm:text-base">
+            Monitor and manage your Plex Media Server streams and devices
+          </p>
+        </div> */}
 
-          <Card className="border-l-4 border-l-green-500">
-            <CardHeader className="pb-2 sm:pb-3">
-              <CardTitle className="text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-400 flex items-center">
-                <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-                <span className="hidden sm:inline">Approved Devices</span>
-                <span className="sm:hidden">Approved</span>
-              </CardTitle>
-              <CardDescription className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900 dark:text-slate-100">
-                {stats.approvedDevices}
-              </CardDescription>
-            </CardHeader>
-          </Card>
+        {/* Server Statistics */}
+        <div className="mb-3 sm:mb-8">
+          <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center">
+            Devices Overview
+          </h3>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
+            <Card className="border-l-4 border-l-blue-500">
+              <CardHeader className="pb-2 sm:pb-3">
+                <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center">
+                  <Activity className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">Active Streams</span>
+                  <span className="sm:hidden">Streams</span>
+                </CardTitle>
+                <CardDescription className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">
+                  {stats.activeStreams}
+                </CardDescription>
+              </CardHeader>
+            </Card>
 
-          <Card className="border-l-4 border-l-yellow-500">
-            <CardHeader className="pb-2 sm:pb-3">
-              <CardTitle className="text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-400 flex items-center">
-                <AlertTriangle className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-                <span className="hidden sm:inline">Pending Approval</span>
-                <span className="sm:hidden">Pending</span>
-              </CardTitle>
-              <CardDescription className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900 dark:text-slate-100">
-                {stats.pendingDevices}
-              </CardDescription>
-            </CardHeader>
-          </Card>
+            <Card className="border-l-4 border-l-green-500">
+              <CardHeader className="pb-2 sm:pb-3">
+                <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center">
+                  <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">Approved Devices</span>
+                  <span className="sm:hidden">Approved</span>
+                </CardTitle>
+                <CardDescription className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">
+                  {stats.approvedDevices}
+                </CardDescription>
+              </CardHeader>
+            </Card>
 
-          <Card className="border-l-4 border-l-purple-500">
-            <CardHeader className="pb-2 sm:pb-3">
-              <CardTitle className="text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-400 flex items-center">
-                <Users className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-                <span className="hidden sm:inline">Total Devices</span>
-                <span className="sm:hidden">Total</span>
-              </CardTitle>
-              <CardDescription className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900 dark:text-slate-100">
-                {stats.totalDevices}
-              </CardDescription>
-            </CardHeader>
-          </Card>
+            <Card className="border-l-4 border-l-yellow-500">
+              <CardHeader className="pb-2 sm:pb-3">
+                <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center">
+                  <AlertTriangle className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">Pending Approval</span>
+                  <span className="sm:hidden">Pending</span>
+                </CardTitle>
+                <CardDescription className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">
+                  {stats.pendingDevices}
+                </CardDescription>
+              </CardHeader>
+            </Card>
+
+            <Card className="border-l-4 border-l-purple-500">
+              <CardHeader className="pb-2 sm:pb-3">
+                <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center">
+                  <Users className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">Total Devices</span>
+                  <span className="sm:hidden">Total</span>
+                </CardTitle>
+                <CardDescription className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">
+                  {stats.totalDevices}
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          </div>
         </div>
+
+        {/* Quality Stats */}
+        {/* <div className="mb-6 sm:mb-8">
+          <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center">
+            Streams Quality Overview
+          </h3>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            <Card className="border-l-4 border-l-orange-500">
+              <CardHeader className="pb-2 sm:pb-3">
+                <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center">
+                  <Signal className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">Avg Bitrate</span>
+                  <span className="sm:hidden">Bitrate</span>
+                </CardTitle>
+                <CardDescription className="text-lg sm:text-xl lg:text-2xl font-bold text-foreground">
+                  {stats.qualityStats ? (stats.qualityStats.averageBitrate > 0 ? `${stats.qualityStats.averageBitrate} Mbps` : "-") : "-"}
+                </CardDescription>
+              </CardHeader>
+            </Card>
+
+            <Card className="border-l-4 border-l-blue-500">
+              <CardHeader className="pb-2 sm:pb-3">
+                <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center">
+                  <Video className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">Highest Resolution</span>
+                  <span className="sm:hidden">Max Res</span>
+                </CardTitle>
+                <CardDescription className="text-lg sm:text-xl lg:text-2xl font-bold text-foreground">
+                  {stats.qualityStats?.commonResolution || "-"}
+                </CardDescription>
+              </CardHeader>
+            </Card>
+
+            <Card className="border-l-4 border-l-green-500">
+              <CardHeader className="pb-2 sm:pb-3">
+                <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center">
+                  <Activity className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">Top Codec</span>
+                  <span className="sm:hidden">Codec</span>
+                </CardTitle>
+                <CardDescription className="text-lg sm:text-xl lg:text-2xl font-bold text-foreground">
+                  {stats.qualityStats?.commonCodec || "-"}
+                </CardDescription>
+              </CardHeader>
+            </Card>
+
+            <Card className="border-l-4 border-l-purple-500">
+              <CardHeader className="pb-2 sm:pb-3">
+                <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center">
+                  <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">High Quality</span>
+                  <span className="sm:hidden">HQ Streams</span>
+                </CardTitle>
+                <CardDescription className="text-lg sm:text-xl lg:text-2xl font-bold text-foreground">
+                  {stats.qualityStats ? (stats.activeStreams > 0 ? stats.qualityStats.highQualityStreams : "-") : "-"}
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          </div>
+        </div> */}
 
         {/* Tab Navigation */}
         <div className="mb-4 sm:mb-6">
-          <div className="flex w-full sm:w-fit space-x-0 sm:space-x-1 bg-slate-200 dark:bg-slate-800 p-1 rounded-lg">
+          <div className="flex w-full sm:w-fit space-x-0 sm:space-x-1 bg-muted p-1 rounded-lg">
             <Button
               variant={activeTab === "streams" ? "default" : "ghost"}
               onClick={() => setActiveTab("streams")}
@@ -288,7 +446,7 @@ export function Dashboard() {
               {stats.pendingDevices > 0 && (
                 <Badge
                   variant="destructive"
-                  className="absolute -top-1 -right-1 sm:relative sm:top-0 sm:right-0 sm:ml-2 min-w-5 h-5 text-xs"
+                  className="absolute -top-1 -right-1 sm:relative sm:top-0 sm:right-0 sm:ml-2 min-w-5 h-5 text-xs bg-red-600 dark:bg-red-700 text-white"
                 >
                   {stats.pendingDevices}
                 </Badge>
