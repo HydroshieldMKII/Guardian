@@ -36,7 +36,6 @@ import {
 } from "lucide-react";
 import { config } from "../lib/config";
 import { useVersion } from "@/contexts/version-context";
-import { useUpdateChecker } from "@/hooks/use-update-checker";
 
 interface AppSetting {
   id: number;
@@ -129,8 +128,8 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
   const [exportingDatabase, setExportingDatabase] = useState(false);
   const [importingDatabase, setImportingDatabase] = useState(false);
   const [backendError, setBackendError] = useState<string | null>(null);
-  const { versionInfo, refreshVersionInfo } = useVersion();
-  const { updateInfo, checkingUpdates, checkForUpdatesAutomatically } = useUpdateChecker();
+  const { versionInfo, updateInfo, refreshVersionInfo, checkForUpdatesIfEnabled, checkForUpdatesManually } = useVersion();
+  const [checkingUpdates, setCheckingUpdates] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<{
     success: boolean;
     message: string;
@@ -143,44 +142,37 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
 
   // Check for updates automatically when settings page loads
   useEffect(() => {
-    checkForUpdatesAutomatically();
-  }, [checkForUpdatesAutomatically]);
+    checkForUpdatesIfEnabled();
+  }, [checkForUpdatesIfEnabled]);
 
   const checkForUpdates = async () => {
     if (!versionInfo?.version) return;
     
+    setCheckingUpdates(true);
     try {
-      // Fetch latest release from GitHub API
-      const response = await fetch('https://api.github.com/repos/HydroshieldMKII/Guardian/releases/latest');
-      if (!response.ok) {
+      const result = await checkForUpdatesManually();
+      
+      if (result) {
+        if (result.hasUpdate) {
+          // Show update available message
+          toast({
+            title: "Update available!",
+            description: `A new version (v${result.latestVersion}) is available. Check the banner above.`,
+            variant: "success",
+          });
+        } else {
+          // Show up-to-date message
+          toast({
+            title: "You're up to date!",
+            description: `Guardian v${result.currentVersion} is the latest version.`,
+            variant: "success",
+          });
+        }
+      } else {
         toast({
           title: "Update check failed",
           description: "Unable to check for updates. Please try again later.",
           variant: "destructive",
-        });
-        return;
-      }
-      
-      const release = await response.json();
-      const latestVersion = release.tag_name.replace(/^v/, ''); // Remove 'v' prefix if present
-      const currentVersion = versionInfo.version;
-      
-      // Compare versions
-      const hasUpdate = isVersionNewer(latestVersion, currentVersion);
-      
-      if (hasUpdate) {
-        // Show update available message
-        toast({
-          title: "Update available!",
-          description: `A new version (v${latestVersion}) is available. Check the update banner above.`,
-          variant: "success",
-        });
-      } else {
-        // Show up-to-date message
-        toast({
-          title: "You're up to date!",
-          description: `Guardian v${currentVersion} is the latest version.`,
-          variant: "success",
         });
       }
     } catch (error) {
@@ -190,26 +182,9 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
         description: "Unable to check for updates. Please check your internet connection.",
         variant: "destructive",
       });
+    } finally {
+      setCheckingUpdates(false);
     }
-  };
-
-  const isVersionNewer = (newVersion: string, currentVersion: string): boolean => {
-    const parseVersion = (version: string) => {
-      return version.split('.').map(v => parseInt(v) || 0);
-    };
-
-    const newV = parseVersion(newVersion);
-    const currentV = parseVersion(currentVersion);
-
-    for (let i = 0; i < Math.max(newV.length, currentV.length); i++) {
-      const newPart = newV[i] || 0;
-      const currentPart = currentV[i] || 0;
-      
-      if (newPart > currentPart) return true;
-      if (newPart < currentPart) return false;
-    }
-    
-    return false; // versions are equal
   };
 
   const fetchSettings = async () => {
@@ -1143,49 +1118,6 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
                     <RefreshCw className="h-4 w-4 mr-2" />
                     Retry
                   </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
-        {/* Update Available Banner */}
-        {updateInfo?.hasUpdate && (
-          <div className="mb-6">
-            <Card className="border-blue-600 bg-blue-50 dark:border-blue-700 dark:bg-blue-950/20">
-              <CardContent>
-                <div className="flex items-center gap-3">
-                  <Download className="h-5 w-5 text-blue-600 dark:text-blue-700 shrink-0" />
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-blue-800 dark:text-blue-200 mb-1">
-                      Update Available ({updateInfo.currentVersion} {'=>'} {updateInfo.latestVersion})
-                    </h3>
-                    <p className="text-sm text-blue-600 dark:text-blue-300">
-                      Update to get the latest features and bug fixes.
-                    </p>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                    variant="outline"
-                      size="sm"
-                      onClick={() => window.open(updateInfo.updateUrl, '_blank')}
-                      className="border-blue-600 text-blue-600 hover:bg-blue-100 dark:border-blue-700 dark:text-blue-700 dark:hover:bg-blue-900/20"
-                    >
-                      <ExternalLink className="h-4 w-4 mr-2" />
-                      See What's New
-                    </Button>
-                    {/* How to update */}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="bg-blue-600 hover:bg-blue-700 text-white"
-                    >
-                      <a href="https://github.com/HydroshieldMKII/Guardian?tab=readme-ov-file#update-guardian" target="_blank" rel="noopener noreferrer" className="flex items-center">
-                        <BookOpen className="h-4 w-4 mr-2" />
-                        How to Update
-                      </a>
-                    </Button>
-                  </div>
                 </div>
               </CardContent>
             </Card>

@@ -11,8 +11,16 @@ interface VersionInfo {
   isVersionMismatch: boolean;
 }
 
+interface UpdateInfo {
+  hasUpdate: boolean;
+  latestVersion: string;
+  currentVersion: string;
+  updateUrl: string;
+}
+
 interface VersionContextType {
   versionInfo: VersionInfo | null;
+  updateInfo: UpdateInfo | null;
   loading: boolean;
   error: string | null;
   refreshVersionInfo: () => Promise<void>;
@@ -22,12 +30,20 @@ interface VersionContextType {
     currentVersion?: string;
     updateUrl?: string;
   } | null>;
+  checkForUpdatesManually: () => Promise<{
+    hasUpdate: boolean;
+    latestVersion?: string;
+    currentVersion?: string;
+    updateUrl?: string;
+  } | null>;
+  clearUpdateInfo: () => void;
 }
 
 const VersionContext = createContext<VersionContextType | undefined>(undefined);
 
 export function VersionProvider({ children }: { children: React.ReactNode }) {
   const [versionInfo, setVersionInfo] = useState<VersionInfo | null>(null);
+  const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -87,12 +103,24 @@ export function VersionProvider({ children }: { children: React.ReactNode }) {
       // Compare versions
       const hasUpdate = isVersionNewer(latestVersion, currentVersion);
       
-      return {
+      const result = {
         hasUpdate,
         latestVersion,
         currentVersion,
         updateUrl: release.html_url,
       };
+
+      // Update global state when auto-checking
+      if (hasUpdate) {
+        setUpdateInfo({
+          hasUpdate: true,
+          latestVersion,
+          currentVersion,
+          updateUrl: release.html_url,
+        });
+      }
+
+      return result;
     } catch (error) {
       console.error('Failed to check for updates automatically:', error);
       return null;
@@ -118,6 +146,54 @@ export function VersionProvider({ children }: { children: React.ReactNode }) {
     return false; // versions are equal
   };
 
+  const checkForUpdatesManually = async () => {
+    if (!versionInfo?.version) return null;
+    
+    try {
+      // Manual check bypasses the AUTO_CHECK_UPDATES setting
+      const response = await fetch('https://api.github.com/repos/HydroshieldMKII/Guardian/releases/latest');
+      if (!response.ok) {
+        console.warn('Failed to check for updates:', response.status);
+        return null;
+      }
+      
+      const release = await response.json();
+      const latestVersion = release.tag_name.replace(/^v/, ''); // Remove 'v' prefix if present
+      const currentVersion = versionInfo.version;
+      
+      // Compare versions
+      const hasUpdate = isVersionNewer(latestVersion, currentVersion);
+      
+      const result = {
+        hasUpdate,
+        latestVersion,
+        currentVersion,
+        updateUrl: release.html_url,
+      };
+
+      // Update global state
+      if (hasUpdate) {
+        setUpdateInfo({
+          hasUpdate: true,
+          latestVersion,
+          currentVersion,
+          updateUrl: release.html_url,
+        });
+      } else {
+        setUpdateInfo(null);
+      }
+
+      return result;
+    } catch (error) {
+      console.error('Failed to check for updates manually:', error);
+      return null;
+    }
+  };
+
+  const clearUpdateInfo = () => {
+    setUpdateInfo(null);
+  };
+
   useEffect(() => {
     fetchVersionInfo();
   }, []);
@@ -125,10 +201,13 @@ export function VersionProvider({ children }: { children: React.ReactNode }) {
   return (
     <VersionContext.Provider value={{
       versionInfo,
+      updateInfo,
       loading,
       error,
       refreshVersionInfo,
-      checkForUpdatesIfEnabled
+      checkForUpdatesIfEnabled,
+      checkForUpdatesManually,
+      clearUpdateInfo
     }}>
       {children}
     </VersionContext.Provider>

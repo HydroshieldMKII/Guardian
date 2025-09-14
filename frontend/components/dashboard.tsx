@@ -31,12 +31,10 @@ import { DashboardStats, UnifiedDashboardData, PlexStatus } from "@/types";
 import { apiClient } from "@/lib/api";
 import { config } from "@/lib/config";
 import { useVersion } from "@/contexts/version-context";
-import { useUpdateChecker } from "@/hooks/use-update-checker";
 
 export function Dashboard() {
   const router = useRouter();
-  const { versionInfo } = useVersion();
-  const { updateInfo, checkForUpdatesAutomatically } = useUpdateChecker();
+  const { versionInfo, checkForUpdatesIfEnabled } = useVersion();
   const [dashboardData, setDashboardData] = useState<UnifiedDashboardData | null>(null);
   const [stats, setStats] = useState<DashboardStats>({
     activeStreams: 0,
@@ -97,8 +95,8 @@ export function Dashboard() {
 
   // Check for updates automatically when dashboard loads
   useEffect(() => {
-    checkForUpdatesAutomatically();
-  }, [checkForUpdatesAutomatically]);
+    checkForUpdatesIfEnabled();
+  }, [checkForUpdatesIfEnabled]);
 
   useEffect(() => {
     if (!autoRefresh) return; // Don't set up interval in manual mode
@@ -237,38 +235,6 @@ export function Dashboard() {
                     >
                       Go to Settings
                     </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
-        {/* Update Available Banner */}
-        {updateInfo?.hasUpdate && (
-          <div className="mb-6">
-            <Card className="border-blue-600 bg-blue-50 dark:border-blue-700 dark:bg-blue-950/20">
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-3">
-                  <Download className="h-5 w-5 text-blue-600 dark:text-blue-700 shrink-0" />
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-blue-800 dark:text-blue-200 mb-1">
-                      Update Available
-                    </h3>
-                    <p className="text-sm text-blue-600 dark:text-blue-300 mb-2">
-                      A new version of Guardian is available: v{updateInfo.latestVersion} 
-                      (current: v{updateInfo.currentVersion}). Update to get the latest features and bug fixes.
-                    </p>
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        onClick={() => window.open(updateInfo.updateUrl, '_blank')}
-                        className="bg-blue-600 hover:bg-blue-700 text-white"
-                      >
-                        <Download className="h-4 w-4 mr-2" />
-                        Download Update
-                      </Button>
-                    </div>
                   </div>
                 </div>
               </CardContent>

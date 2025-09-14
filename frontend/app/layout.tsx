@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { Navbar } from "@/components/navbar";
 import { GlobalVersionMismatchBanner } from "@/components/global-version-mismatch-banner";
+import { GlobalUpdateBanner } from "@/components/global-update-banner";
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "@/hooks/use-theme";
 import { VersionProvider } from "@/contexts/version-context";
@@ -61,6 +62,7 @@ export default function RootLayout({
           <VersionProvider>
             <ErrorBoundary>
               <GlobalVersionMismatchBanner />
+              <GlobalUpdateBanner />
               <Navbar />
               {children}
             </ErrorBoundary>

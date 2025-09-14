@@ -610,9 +610,10 @@ export class ConfigService {
       });
 
       if (versionSetting && this.isVersionNewer(CURRENT_APP_VERSION, versionSetting.value)) {
-        this.logger.log(`Updated app version from ${versionSetting.value} to: ${CURRENT_APP_VERSION}`);
+        this.logger.log(`Updating app version from ${versionSetting.value} to: ${CURRENT_APP_VERSION}`);
         versionSetting.value = CURRENT_APP_VERSION;
         await this.settingsRepository.save(versionSetting);
+        this.logger.log('App version updated successfully');
       }else{
         this.logger.log(`App version is up to date: ${CURRENT_APP_VERSION}`);
       }
@@ -635,7 +636,7 @@ export class ConfigService {
       
       // code version > database version
       if (newPart > currentPart){
-        this.logger.log(`Current app version ${codeVersion} is newer than your data version ${databaseVersion}. Updating to the latest version.`);
+        // this.logger.log(`Current app version ${codeVersion} is newer than your data version ${databaseVersion}. Updating to the latest version.`);
         return true;
       }
 
