@@ -156,11 +156,14 @@ export class SchedulerService implements OnModuleInit {
         this.configService.getSetting('DEVICE_CLEANUP_INTERVAL_DAYS'),
       ]);
 
-      const isEnabled = cleanupEnabled === 'true';
+      this.logger.debug(`Device cleanup settings: enabled=${cleanupEnabled}, intervalDays=${cleanupIntervalDays}`);
+
+      // getSetting returns actual boolean for boolean type settings, not string
+      const isEnabled = cleanupEnabled === true;
       const intervalDays = parseInt(cleanupIntervalDays as string, 10) || 30;
 
       if (!isEnabled) {
-        this.logger.debug('Skipping device cleanup - feature is disabled');
+        this.logger.debug(`Skipping device cleanup - feature is disabled (cleanupEnabled=${cleanupEnabled}, type=${typeof cleanupEnabled})`);
         return;
       }
 
