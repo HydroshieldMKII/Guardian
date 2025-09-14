@@ -439,8 +439,6 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
         "PLEXGUARD_REFRESH_INTERVAL",
         "PLEX_GUARD_DEFAULT_BLOCK",
         "PLEXGUARD_STOPMSG",
-        "DEVICE_CLEANUP_ENABLED",
-        "DEVICE_CLEANUP_INTERVAL_DAYS",
       ],
     };
 
@@ -498,6 +496,66 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
         />
         <p className="text-xs text-muted-foreground">{description}</p>
       </div>
+    );
+  };
+
+  const renderDeviceCleanupSettings = () => {
+    const cleanupEnabledSetting = settings.find((s) => s.key === "DEVICE_CLEANUP_ENABLED");
+    const cleanupIntervalSetting = settings.find((s) => s.key === "DEVICE_CLEANUP_INTERVAL_DAYS");
+
+    if (!cleanupEnabledSetting || !cleanupIntervalSetting) return null;
+
+    const isCleanupEnabled = Boolean(formData["DEVICE_CLEANUP_ENABLED"]);
+    const { label: enabledLabel, description: enabledDescription } = getSettingInfo(cleanupEnabledSetting);
+    const { label: intervalLabel, description: intervalDescription } = getSettingInfo(cleanupIntervalSetting);
+
+    return (
+      <Card className="p-4">
+        <div className="space-y-4">
+          {/* Device Cleanup Enabled Setting */}
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label>{enabledLabel}</Label>
+              <p className="text-xs text-muted-foreground">
+                {enabledDescription}
+              </p>
+            </div>
+            <Switch
+              checked={isCleanupEnabled}
+              onCheckedChange={(checked) =>
+                handleInputChange("DEVICE_CLEANUP_ENABLED", checked)
+              }
+              className="cursor-pointer"
+            />
+          </div>
+
+          {/* Cleanup Interval Setting */}
+          <div
+            className={`ml-4 pl-4 border-l-2 ${isCleanupEnabled ? "border-border" : "border-muted"}`}
+          >
+            <div className="space-y-2">
+              <Label className={!isCleanupEnabled ? "text-muted-foreground" : ""}>
+                {intervalLabel}
+              </Label>
+              <Input
+                type="number"
+                value={String(formData["DEVICE_CLEANUP_INTERVAL_DAYS"] || "")}
+                disabled={!isCleanupEnabled}
+                onChange={(e) => {
+                  const newValue = parseFloat(e.target.value) || 0;
+                  handleInputChange("DEVICE_CLEANUP_INTERVAL_DAYS", newValue);
+                }}
+                className={!isCleanupEnabled ? "bg-muted" : ""}
+              />
+              <p
+                className={`text-xs ${!isCleanupEnabled ? "text-muted-foreground/60" : "text-muted-foreground"}`}
+              >
+                {intervalDescription}
+              </p>
+            </div>
+          </div>
+        </div>
+      </Card>
     );
   };
 
@@ -659,6 +717,9 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
                   {renderSettingField(setting)}
                 </Card>
               ))}
+
+              {/* Device Cleanup Settings Group */}
+              {renderDeviceCleanupSettings()}
             </div>
           </div>
         );
