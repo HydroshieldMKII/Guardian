@@ -18,6 +18,18 @@ Guardian is a utility designed to enhance the security and management of your Pl
 - [Troubleshooting](#troubleshooting)
 - [Contributing](#contributing)
 
+<img width="1280" height="707" alt="streams" src="https://github.com/user-attachments/assets/ec79a1c5-877a-4152-be6b-af7c6067d890" />
+
+<img width="1280" height="599" alt="streams_expended" src="https://github.com/user-attachments/assets/3240be5f-b054-441a-999c-313fe3f783de" />
+
+<img width="1280" height="688" alt="devices_pending" src="https://github.com/user-attachments/assets/7b73cf98-4b99-458b-b590-08453d14e6c7" />
+
+<img width="1280" height="688" alt="devices_processed" src="https://github.com/user-attachments/assets/cd693ef0-cded-4c00-9b93-b2bdb9cbc6eb" />
+
+<img width="1280" height="599" alt="device_info" src="https://github.com/user-attachments/assets/f498f459-e980-4c3d-b3cb-fed6bb02ca8e" />
+
+<img width="1280" height="598" alt="devices_users" src="https://github.com/user-attachments/assets/3f4496d5-af09-4c40-b418-44ddcee9ea95" />
+
 ## Features
 
 ### **Device Security & Access Control**
