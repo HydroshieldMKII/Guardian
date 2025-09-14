@@ -829,7 +829,7 @@ const DeviceApproval = memo(({ devicesData, usersData, onRefresh, autoRefresh: p
             <div>
               {(loading && users.length === 0) ? (
                 // Show skeleton loading for users only on initial load
-                <ScrollArea className="h-[60vh] max-h-[600px] sm:max-h-[700px] lg:max-h-[800px]">
+                <ScrollArea className="h-[70vh] max-h-[700px] sm:max-h-[800px] lg:max-h-[900px]">
                   <div className="space-y-4">
                     {Array.from({ length: 4 }, (_, i) => (
                       <UserSkeleton key={`user-skeleton-${i}`} />
@@ -851,7 +851,7 @@ const DeviceApproval = memo(({ devicesData, usersData, onRefresh, autoRefresh: p
                   )}
                 </div>
               ) : (
-                <ScrollArea className="h-[60vh] max-h-[600px] sm:max-h-[700px] lg:max-h-[800px]">
+                <ScrollArea className="h-[70vh] max-h-[700px] sm:max-h-[800px] lg:max-h-[900px]">
                   <div className="space-y-4">
                     {filteredUsers.map((user) => (
                       <UserPreferenceCard
@@ -869,7 +869,7 @@ const DeviceApproval = memo(({ devicesData, usersData, onRefresh, autoRefresh: p
             (activeTab === "processed" && processedDevices.length === 0)
           )) ? (
             // Show skeleton loading for devices only on initial load when no data exists
-            <ScrollArea className="h-[60vh] max-h-[600px] sm:max-h-[700px] lg:max-h-[800px]">
+            <ScrollArea className="h-[70vh] max-h-[700px] sm:max-h-[800px] lg:max-h-[900px]">
               <div className="space-y-4">
                 {Array.from({ 
                   length: activeTab === "pending" ? 3 : activeTab === "processed" ? 5 : 4 
@@ -879,7 +879,7 @@ const DeviceApproval = memo(({ devicesData, usersData, onRefresh, autoRefresh: p
               </div>
             </ScrollArea>
           ) : devicesToShow.length === 0 ? (
-            <div className="flex items-center justify-center h-[60vh] max-h-[600px] sm:max-h-[700px] lg:max-h-[800px] text-muted-foreground">
+            <div className="flex items-center justify-center h-[70vh] max-h-[700px] sm:max-h-[800px] lg:max-h-[900px] text-muted-foreground">
               {searchDevices ? (
                 <>
                   <Search className="w-6 h-6 mr-2" />
@@ -895,7 +895,7 @@ const DeviceApproval = memo(({ devicesData, usersData, onRefresh, autoRefresh: p
               )}
             </div>
           ) : (
-            <ScrollArea className="h-[60vh] max-h-[600px] sm:max-h-[700px] lg:max-h-[800px]">
+            <ScrollArea className="h-[70vh] max-h-[700px] sm:max-h-[800px] lg:max-h-[900px]">
               <div className="space-y-4">
                 {devicesToShow.map((device) => (
                   <div
