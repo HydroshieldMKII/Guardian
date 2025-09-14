@@ -137,7 +137,7 @@ const DeviceSkeleton = () => (
 
 const UserSkeleton = () => (
   <div className="p-3 sm:p-4 rounded-lg border bg-card border-border shadow-sm animate-pulse">
-    <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-3 gap-3">
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
       <div className="flex-1 min-w-0">
         {/* User header */}
         <div className="flex items-center space-x-2 mb-3">
@@ -231,7 +231,7 @@ const UserPreferenceCard = memo(
 
     return (
       <div className="p-3 sm:p-4 rounded-lg border bg-card border-border shadow-sm hover:shadow-md transition-shadow">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-3 gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex-1 min-w-0">
             <div className="flex items-center space-x-2 mb-2">
               <User className="w-4 h-4" />
@@ -870,7 +870,7 @@ const DeviceApproval = memo(({ devicesData, usersData, onRefresh, autoRefresh: p
           )) ? (
             // Show skeleton loading for devices only on initial load when no data exists
             <ScrollArea className="h-[50vh] max-h-[400px] sm:max-h-[500px] lg:max-h-[600px]">
-              <div className="space-y-4 pr-4">
+              <div className="space-y-4">
                 {Array.from({ 
                   length: activeTab === "pending" ? 3 : activeTab === "processed" ? 5 : 4 
                 }, (_, i) => (
@@ -896,7 +896,7 @@ const DeviceApproval = memo(({ devicesData, usersData, onRefresh, autoRefresh: p
             </div>
           ) : (
             <ScrollArea className="h-[50vh] max-h-[400px] sm:max-h-[500px] lg:max-h-[600px]">
-              <div className="space-y-4 pr-4">
+              <div className="space-y-4">
                 {devicesToShow.map((device) => (
                   <div
                     key={device.id}
@@ -910,7 +910,10 @@ const DeviceApproval = memo(({ devicesData, usersData, onRefresh, autoRefresh: p
                             device.deviceProduct
                           )}
                           <h3 className="font-semibold text-foreground truncate">
-                            {device.deviceName || device.deviceIdentifier}
+                            {(device.deviceName || device.deviceIdentifier).length > 14 
+                              ? (device.deviceName || device.deviceIdentifier).slice(0, 14) + '...'
+                              : (device.deviceName || device.deviceIdentifier)
+                            }
                           </h3>
                           {getDeviceStatus(device)}
                         </div>
