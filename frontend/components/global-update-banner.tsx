@@ -29,21 +29,21 @@ export function GlobalUpdateBanner() {
   return (
     <div className="bg-blue-600 text-white border-b border-blue-700">
       <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between py-3">
-          <div className="flex items-center gap-3 flex-1">
-            <Download className="h-5 w-5 shrink-0" />
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between py-3 gap-2">
+          <div className="flex items-start sm:items-center gap-3 flex-1 min-w-0">
+            <Download className="h-5 w-5 shrink-0 mt-0.5 sm:mt-0" />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium">
                 Update Available: Guardian v{updateInfo.latestVersion}
               </p>
-              <p className="text-xs text-blue-100 truncate">
+              <p className="text-xs text-blue-100 break-words sm:truncate">
                 A new version is available (current: v{updateInfo.currentVersion}). 
                 Update to get the latest features and bug fixes.
               </p>
             </div>
           </div>
           
-          <div className="flex items-center gap-2 ml-4">
+          <div className="flex items-center gap-2 sm:ml-4 self-start sm:self-center">
             <Button
               variant="ghost"
               size="sm"
