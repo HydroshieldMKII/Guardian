@@ -132,12 +132,17 @@ export function Dashboard() {
       }
       
       // Fetch all dashboard data
-      const dashboardData = await apiClient.getDashboardData<UnifiedDashboardData>();
+      const newDashboardData = await apiClient.getDashboardData<UnifiedDashboardData>();
       
-      // Update all state with the consolidated data
-      setDashboardData(dashboardData);
-      setPlexStatus(dashboardData.plexStatus);
-      setStats(dashboardData.stats);
+      // Only update state if data actually changed
+      const currentDataString = JSON.stringify(dashboardData);
+      const newDataString = JSON.stringify(newDashboardData);
+      
+      if (currentDataString !== newDataString) {
+        setDashboardData(newDashboardData);
+        setPlexStatus(newDashboardData.plexStatus);
+        setStats(newDashboardData.stats);
+      }
       
     } catch (error) {
       console.error("Failed to fetch dashboard stats:", error);

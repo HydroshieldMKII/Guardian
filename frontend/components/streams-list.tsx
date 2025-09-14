@@ -125,12 +125,21 @@ export function StreamsList({ sessionsData, onRefresh, autoRefresh: parentAutoRe
   // Update streams when sessionsData prop changes
   useEffect(() => {
     if (sessionsData) {
-      setStreams(sessionsData?.MediaContainer?.Metadata || []);
+      const newStreams = sessionsData?.MediaContainer?.Metadata || [];
+      
+      // Only update if data actually changed
+      const currentStreamsString = JSON.stringify(streams);
+      const newStreamsString = JSON.stringify(newStreams);
+      
+      if (currentStreamsString !== newStreamsString) {
+        setStreams(newStreams);
+        setLastUpdateTime(new Date());
+      }
+      
       setError(null);
-      setLastUpdateTime(new Date());
       setLoading(false);
     }
-  }, [sessionsData]);
+  }, [sessionsData, streams]);
 
   // Sync local autoRefresh with parent
   useEffect(() => {
@@ -350,8 +359,14 @@ export function StreamsList({ sessionsData, onRefresh, autoRefresh: parentAutoRe
             <CardDescription className="mt-1 text-sm">
               Real-time view of all active Plex streams
             </CardDescription>
-            <div className="text-xs text-muted-foreground mt-1">
+            <div className="text-xs text-muted-foreground mt-1 flex items-center">
               {formatLastUpdate()}
+              {refreshing && (
+                <span className="ml-2 flex items-center text-blue-600">
+                  <RefreshCw className="w-3 h-3 mr-1 animate-spin" />
+                  Updating...
+                </span>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -416,8 +431,8 @@ export function StreamsList({ sessionsData, onRefresh, autoRefresh: parentAutoRe
               Try Again
             </Button>
           </div>
-        ) : loading || refreshing ? (
-          // Show skeleton loading
+        ) : (loading && streams.length === 0) ? (
+          // Show skeleton loading only on initial load when no data exists yet
           <ScrollArea className="h-[50vh] max-h-[400px] sm:max-h-[500px] lg:max-h-[600px]">
             <div className="space-y-3 sm:space-y-4">
               {Array.from({ length: 3 }, (_, i) => (

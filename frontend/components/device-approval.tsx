@@ -325,19 +325,41 @@ const DeviceApproval = memo(({ devicesData, usersData, onRefresh, autoRefresh: p
   // Update devices state when devicesData prop changes
   useEffect(() => {
     if (devicesData) {
-      setAllDevices(devicesData.all || []);
-      setPendingDevices(devicesData.pending || []);
-      setProcessedDevices(devicesData.processed || []);
+      // Only update if data actually changed
+      const currentAllString = JSON.stringify(allDevices);
+      const currentPendingString = JSON.stringify(pendingDevices);
+      const currentProcessedString = JSON.stringify(processedDevices);
+      
+      const newAllString = JSON.stringify(devicesData.all || []);
+      const newPendingString = JSON.stringify(devicesData.pending || []);
+      const newProcessedString = JSON.stringify(devicesData.processed || []);
+      
+      if (currentAllString !== newAllString) {
+        setAllDevices(devicesData.all || []);
+      }
+      if (currentPendingString !== newPendingString) {
+        setPendingDevices(devicesData.pending || []);
+      }
+      if (currentProcessedString !== newProcessedString) {
+        setProcessedDevices(devicesData.processed || []);
+      }
+      
       setLoading(false);
     }
-  }, [devicesData]);
+  }, [devicesData, allDevices, pendingDevices, processedDevices]);
 
   // Update users state when usersData prop changes
   useEffect(() => {
     if (usersData) {
-      setUsers(usersData || []);
+      // Only update if data actually changed
+      const currentUsersString = JSON.stringify(users);
+      const newUsersString = JSON.stringify(usersData || []);
+      
+      if (currentUsersString !== newUsersString) {
+        setUsers(usersData || []);
+      }
     }
-  }, [usersData]);
+  }, [usersData, users]);
 
   // Sync local autoRefresh with parent
   useEffect(() => {
@@ -693,8 +715,14 @@ const DeviceApproval = memo(({ devicesData, usersData, onRefresh, autoRefresh: p
                 <Shield className="w-5 h-5 mr-2" />
                 Device Management
               </CardTitle>
-              <CardDescription className="mt-1">
+              <CardDescription className="mt-1 flex items-center">
                 Manage device access to your Plex server
+                {refreshing && (
+                  <span className="ml-2 flex items-center text-blue-600 text-xs">
+                    <RefreshCw className="w-3 h-3 mr-1 animate-spin" />
+                    Updating...
+                  </span>
+                )}
               </CardDescription>
             </div>
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-2">
@@ -805,8 +833,8 @@ const DeviceApproval = memo(({ devicesData, usersData, onRefresh, autoRefresh: p
           {activeTab === "users" ? (
             // Users management section
             <div>
-              {loading || refreshing ? (
-                // Show skeleton loading for users
+              {(loading && users.length === 0) ? (
+                // Show skeleton loading for users only on initial load
                 <ScrollArea className="h-[50vh] max-h-[400px] sm:max-h-[500px] lg:max-h-[600px]">
                   <div className="space-y-4 pr-4">
                     {Array.from({ length: 4 }, (_, i) => (
@@ -842,8 +870,11 @@ const DeviceApproval = memo(({ devicesData, usersData, onRefresh, autoRefresh: p
                 </ScrollArea>
               )}
             </div>
-          ) : loading || refreshing ? (
-            // Show skeleton loading for devices with realistic count based on tab
+          ) : (loading && (
+            (activeTab === "pending" && pendingDevices.length === 0) ||
+            (activeTab === "processed" && processedDevices.length === 0)
+          )) ? (
+            // Show skeleton loading for devices only on initial load when no data exists
             <ScrollArea className="h-[50vh] max-h-[400px] sm:max-h-[500px] lg:max-h-[600px]">
               <div className="space-y-4 pr-4">
                 {Array.from({ 
