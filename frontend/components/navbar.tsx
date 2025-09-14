@@ -60,9 +60,9 @@ export function Navbar() {
                   <p className="text-sm font-medium leading-none">
                     Administrator
                   </p>
-                  <p className="text-xs leading-none text-muted-foreground">
+                  {/* <p className="text-xs leading-none text-muted-foreground">
                     admin@guardian.local
-                  </p>
+                  </p> */}
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
