@@ -36,6 +36,7 @@ import {
 } from "lucide-react";
 import { config } from "../lib/config";
 import { useVersion } from "@/contexts/version-context";
+import { ConfirmationModal } from "@/components/ui/confirmation-modal";
 
 interface AppSetting {
   id: number;
@@ -107,7 +108,7 @@ const getSettingInfo = (setting: AppSetting): { label: string; description: stri
     },
     'AUTO_CHECK_UPDATES': {
       label: 'Automatic update checking',
-      description: 'Automatically check for new releases when the app launches'
+      description: 'Automatically check for new releases when you open the app'
     },
   };
   
@@ -130,6 +131,12 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
   const [backendError, setBackendError] = useState<string | null>(null);
   const { versionInfo, updateInfo, refreshVersionInfo, checkForUpdatesIfEnabled, checkForUpdatesManually } = useVersion();
   const [checkingUpdates, setCheckingUpdates] = useState(false);
+  const [showVersionMismatchModal, setShowVersionMismatchModal] = useState(false);
+  const [pendingImportFile, setPendingImportFile] = useState<File | null>(null);
+  const [versionMismatchInfo, setVersionMismatchInfo] = useState<{
+    currentVersion: string;
+    importVersion: string;
+  } | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<{
     success: boolean;
     message: string;
@@ -454,7 +461,6 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
   };
 
   const handleImportDatabase = async (file: File) => {
-    setImportingDatabase(true);
     try {
       // Read and validate the file
       const fileContent = await file.text();
@@ -476,23 +482,34 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
       const currentVersion = versionInfo?.version;
       
       if (importVersion && currentVersion && importVersion !== currentVersion) {
-        const shouldContinue = window.confirm(
-          `Version mismatch detected! Please make sure you have a backup before proceeding.\n\n` +
-          `Current version: ${currentVersion}\n` +
-          `Import file version: ${importVersion}\n\n` +
-          `You may lose data or break your installation. Do you want to continue with the import?`
-        );
-        
-        if (!shouldContinue) {
-          toast({
-            title: "Import cancelled",
-            description: "Import was cancelled due to version mismatch",
-            variant: "default",
+        // Show modal instead of native confirm - with a small delay to ensure file dialog closes
+        setTimeout(() => {
+          setPendingImportFile(file);
+          setVersionMismatchInfo({
+            currentVersion,
+            importVersion,
           });
-          return;
-        }
+          setShowVersionMismatchModal(true);
+        }, 100);
+        return;
       }
       
+      // Proceed with import if no version mismatch
+      setImportingDatabase(true);
+      await performDatabaseImport(file);
+    } catch (error) {
+      toast({
+        title: "Network Error",
+        description: "Failed to import database. Please check your connection.",
+        variant: "destructive",
+      });
+    } finally {
+      setImportingDatabase(false);
+    }
+  };
+
+  const performDatabaseImport = async (file: File) => {
+    try {
       const formData = new FormData();
       formData.append('file', file);
 
@@ -503,6 +520,10 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
       
       if (response.ok) {
         const result = await response.json();
+        const importData = JSON.parse(await file.text());
+        const importVersion = importData.version;
+        const currentVersion = versionInfo?.version;
+        
         const successMessage = `Successfully imported ${result.imported.imported} items, ${result.imported.skipped} items skipped`;
         const versionMessage = importVersion && currentVersion !== importVersion ? ` (Version: ${importVersion} → ${currentVersion})` : '';
         
@@ -529,13 +550,39 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
         description: "Failed to import database. Please check your connection.",
         variant: "destructive",
       });
-    } finally {
-      setImportingDatabase(false);
     }
+  };
+
+  const handleVersionMismatchConfirm = async () => {
+    if (pendingImportFile) {
+      // Close modal first
+      setShowVersionMismatchModal(false);
+      setImportingDatabase(true);
+      await performDatabaseImport(pendingImportFile);
+      setImportingDatabase(false);
+      setPendingImportFile(null);
+      setVersionMismatchInfo(null);
+    }
+  };
+
+  const handleVersionMismatchCancel = () => {
+    // Close modal first
+    setShowVersionMismatchModal(false);
+    setPendingImportFile(null);
+    setVersionMismatchInfo(null);
+    setImportingDatabase(false);
+    toast({
+      title: "Import cancelled",
+      description: "Import was cancelled due to version mismatch",
+      variant: "destructive",
+    });
   };
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
+    // Reset the input value immediately to close the file dialog
+    event.target.value = '';
+    
     if (file) {
       if (file.type === 'application/json' || file.name.endsWith('.json')) {
         handleImportDatabase(file);
@@ -547,8 +594,6 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
         });
       }
     }
-    // Reset the input value so the same file can be selected again
-    event.target.value = '';
   };
 
   const getSettingsByCategory = (category: string) => {
@@ -1232,6 +1277,25 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
           </Card>
         </div>
       </div>
+
+      {/* Version Mismatch Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={showVersionMismatchModal}
+        onClose={() => {
+          // Handle closing by ESC or outside click - treat as cancel
+          handleVersionMismatchCancel();
+        }}
+        onConfirm={handleVersionMismatchConfirm}
+        title="Version Mismatch Detected"
+        description={
+          versionMismatchInfo
+            ? `Version mismatch detected! Please make sure you have a backup before proceeding.\n\nCurrent version: ${versionMismatchInfo.currentVersion}\nImport file version: ${versionMismatchInfo.importVersion}\n\nYou may lose data or break your installation. Do you want to continue with the import?`
+            : ""
+        }
+        confirmText="Continue Import"
+        cancelText="Cancel Import"
+        variant="destructive"
+      />
     </div>
   );
 }
