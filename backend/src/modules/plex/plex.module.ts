@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { PlexService } from './services/plex.service';
 import { PlexClient } from './services/plex-client';
@@ -12,20 +12,12 @@ import { ConfigModule } from '../config/config.module';
 @Module({
   imports: [
     TypeOrmModule.forFeature([UserDevice]),
-    DevicesModule,
+    forwardRef(() => DevicesModule),
     SessionsModule,
     UsersModule,
     ConfigModule,
   ],
-  providers: [
-    PlexService,
-    PlexClient,
-    SessionTerminationService,
-  ],
-  exports: [
-    PlexService,
-    PlexClient,
-    SessionTerminationService,
-  ],
+  providers: [PlexService, PlexClient, SessionTerminationService],
+  exports: [PlexService, PlexClient, SessionTerminationService],
 })
 export class PlexModule {}

@@ -146,6 +146,12 @@ export class PlexClient {
     sessionKey: string,
     reason: string = 'Session terminated',
   ): Promise<void> {
+
+    if (!sessionKey) {
+      this.logger.warn('No session key provided for termination');
+      return;
+    }
+
     const params = new URLSearchParams({
       sessionId: sessionKey,
       reason: reason,
@@ -155,7 +161,7 @@ export class PlexClient {
       method: 'GET',
     });
 
-    this.logger.log(`Successfully terminated session ${sessionKey}`);
+    this.logger.log(`Terminated session ${sessionKey}`);
   }
 
   async testConnection(): Promise<{

@@ -442,26 +442,26 @@ export function StreamsList({ sessionsData, onRefresh, autoRefresh: parentAutoRe
               {filteredStreams.map((stream, index) => (
                 <div
                   key={stream.sessionKey || index}
-                  className="relative p-3 sm:p-4 rounded-lg border bg-card shadow-sm hover:shadow-md transition-all duration-200"
+                  className="relative p-3 sm:p-4 rounded-lg border bg-card shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden"
                 >
-                  {/* Mobile-first compact header */}
-                  <div className="flex items-start justify-between mb-3 gap-2">
-                    <div className="flex-1 min-w-0 pr-2">
-                      <h3 className="font-semibold text-foreground mb-1 text-sm sm:text-base line-clamp-2 break-words leading-tight">
+                  {/* Responsive header */}
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-3 gap-3">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-foreground mb-1 text-sm sm:text-base break-words leading-tight">
                         {getContentTitle(stream)}
                       </h3>
 
-                      {/* Primary info row - always visible */}
-                      <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground my-2">
-                        <div className="flex items-center gap-1 bg-muted px-2 py-1 rounded-full min-w-0 flex-shrink-0">
+                      {/* Primary info row */}
+                      <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground my-2 flex-wrap">
+                        <div className="flex items-center gap-1 bg-muted px-2 py-1 rounded-full min-w-0">
                           <User className="w-3 h-3 flex-shrink-0" />
-                          <span className="truncate max-w-[80px] sm:max-w-[120px]">
+                          <span className="truncate max-w-[120px] sm:max-w-[150px]">
                             {stream.User?.title || "Unknown"}
                           </span>
                         </div>
-                        <div className="flex items-center gap-1 bg-muted px-2 py-1 rounded-full min-w-0 flex-shrink-0">
+                        <div className="flex items-center gap-1 bg-muted px-2 py-1 rounded-full min-w-0">
                           {getDeviceIcon(stream.Player?.platform)}
-                          <span className="truncate max-w-[60px] sm:max-w-[100px]">
+                          <span className="truncate max-w-[100px] sm:max-w-[120px]">
                             {stream.Player?.title?.split(" ")[0] || "Device"}
                           </span>
                         </div>
@@ -495,7 +495,23 @@ export function StreamsList({ sessionsData, onRefresh, autoRefresh: parentAutoRe
                     </div>
 
                     {/* Status and actions */}
-                    <div className="flex flex-col items-end gap-2 ml-2">
+                    <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-2 w-full sm:w-auto order-first sm:order-last">
+                      <Badge
+                        variant={
+                          stream.Player?.state === "playing"
+                            ? "default"
+                            : "secondary"
+                        }
+                        className="flex items-center text-xs"
+                      >
+                        {stream.Player?.state === "playing" ? (
+                          <Play className="w-3 h-3 mr-1" />
+                        ) : (
+                          <Pause className="w-3 h-3 mr-1" />
+                        )}
+                        {stream.Player?.state || "unknown"}
+                      </Badge>
+                      
                       <div className="flex items-center gap-2">
                         <Button
                           variant="ghost"
@@ -515,41 +531,26 @@ export function StreamsList({ sessionsData, onRefresh, autoRefresh: parentAutoRe
                             <X className="w-3 h-3" />
                           )}
                         </Button>
-                        <Badge
-                          variant={
-                            stream.Player?.state === "playing"
-                              ? "default"
-                              : "secondary"
-                          }
-                          className="flex items-center text-xs"
-                        >
-                          {stream.Player?.state === "playing" ? (
-                            <Play className="w-3 h-3 mr-1" />
-                          ) : (
-                            <Pause className="w-3 h-3 mr-1" />
-                          )}
-                          {stream.Player?.state || "unknown"}
-                        </Badge>
-                      </div>
 
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() =>
-                          setExpandedStream(
-                            expandedStream === stream.sessionKey
-                              ? null
-                              : stream.sessionKey
-                          )
-                        }
-                        className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
-                      >
-                        {expandedStream === stream.sessionKey ? (
-                          <ChevronUp className="w-4 h-4" />
-                        ) : (
-                          <ChevronDown className="w-4 h-4" />
-                        )}
-                      </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() =>
+                            setExpandedStream(
+                              expandedStream === stream.sessionKey
+                                ? null
+                                : stream.sessionKey
+                            )
+                          }
+                          className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+                        >
+                          {expandedStream === stream.sessionKey ? (
+                            <ChevronUp className="w-4 h-4" />
+                          ) : (
+                            <ChevronDown className="w-4 h-4" />
+                          )}
+                        </Button>
+                      </div>
                     </div>
                   </div>
 
@@ -706,7 +707,7 @@ export function StreamsList({ sessionsData, onRefresh, autoRefresh: parentAutoRe
             <DialogDescription>
               Are you sure you want to remove access for this device? This will
               immediately stop the current stream and prevent future access
-              until the device is re-approved.
+              until the device is manually re-approved.
             </DialogDescription>
           </DialogHeader>
 

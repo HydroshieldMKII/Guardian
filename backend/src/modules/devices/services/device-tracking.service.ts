@@ -230,7 +230,7 @@ export class DeviceTrackingService {
 
   async deleteDevice(deviceId: number): Promise<void> {
     await this.userDeviceRepository.delete(deviceId);
-    this.logger.log(`Device ${deviceId} has been rejected and deleted`);
+    this.logger.log(`Device ${deviceId} has been deleted`);
   }
 
   async clearSessionKey(sessionKey: string): Promise<void> {
