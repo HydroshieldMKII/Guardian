@@ -910,10 +910,16 @@ const DeviceApproval = memo(({ devicesData, usersData, onRefresh, autoRefresh: p
                             device.deviceProduct
                           )}
                           <h3 className="font-semibold text-foreground truncate">
-                            {(device.deviceName || device.deviceIdentifier).length > 14 
-                              ? (device.deviceName || device.deviceIdentifier).slice(0, 14) + '...'
-                              : (device.deviceName || device.deviceIdentifier)
-                            }
+                            {/* On mobile, show shortened name */}
+                            <span className="sm:hidden">
+                              {(device.deviceName || device.deviceIdentifier).length > 14 
+                                ? (device.deviceName || device.deviceIdentifier).slice(0, 14) + '...'
+                                : (device.deviceName || device.deviceIdentifier)
+                              }
+                            </span>
+                            <span className="hidden sm:inline">
+                              {device.deviceName || device.deviceIdentifier}
+                            </span>
                           </h3>
                           {getDeviceStatus(device)}
                         </div>
