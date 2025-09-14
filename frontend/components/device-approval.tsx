@@ -941,17 +941,133 @@ const DeviceApproval = memo(({ devicesData, usersData, onRefresh, autoRefresh: p
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 min-w-0 sm:min-w-[280px]">
+                      {/* Desktop: Buttons on the right side */}
+                      <div className="hidden sm:flex sm:flex-col sm:gap-2 sm:min-w-[140px]">
+                        {/* Details button on top */}
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => setSelectedDevice(device)}
-                          className="text-xs px-2 col-span-2 sm:col-span-1"
+                          className="text-xs px-2 w-full"
                         >
                           <Eye className="w-3 h-3 mr-1" />
                           <span>Details</span>
                         </Button>
 
+                        {/* Action buttons below */}
+                        <div className="flex gap-2">
+                          {activeTab === "pending" ? (
+                            /* Pending devices: Show Approve, Reject, Delete buttons */
+                            <>
+                              <Button
+                                variant="default"
+                                size="sm"
+                                onClick={() => showApproveConfirmation(device)}
+                                disabled={actionLoading === device.id}
+                                className="bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white text-xs px-2 flex-1"
+                              >
+                                {actionLoading === device.id ? (
+                                  <RefreshCw className="w-3 h-3 mr-1 animate-spin" />
+                                ) : (
+                                  <CheckCircle className="w-3 h-3 mr-1" />
+                                )}
+                                <span>Approve</span>
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => showRejectConfirmation(device)}
+                                disabled={actionLoading === device.id}
+                                className="border-red-600 text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-700 dark:hover:bg-red-900/20 text-xs px-2 flex-1"
+                              >
+                                {actionLoading === device.id ? (
+                                  <RefreshCw className="w-3 h-3 mr-1 animate-spin" />
+                                ) : (
+                                  <XCircle className="w-3 h-3 mr-1" />
+                                )}
+                                <span>Reject</span>
+                              </Button>
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => showDeleteConfirmation(device)}
+                                disabled={actionLoading === device.id}
+                                className="text-xs px-2 bg-red-600 dark:bg-red-700 text-white hover:bg-red-700 dark:hover:bg-red-800 flex-1"
+                              >
+                                {actionLoading === device.id ? (
+                                  <RefreshCw className="w-3 h-3 mr-1 animate-spin" />
+                                ) : (
+                                  <Trash2 className="w-3 h-3 mr-1" />
+                                )}
+                                <span>Delete</span>
+                              </Button>
+                            </>
+                          ) : (
+                            /* Processed devices: Show Toggle Approval and Delete buttons */
+                            <>
+                              <Button
+                                variant={
+                                  device.status === "approved"
+                                    ? "default"
+                                    : "outline"
+                                }
+                                size="sm"
+                                onClick={() => showToggleConfirmation(device)}
+                                disabled={actionLoading === device.id}
+                                className={`text-xs px-2 flex-1 ${
+                                  device.status === "approved"
+                                    ? "bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white"
+                                    : "border-red-600 text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-700 dark:hover:bg-red-900/20"
+                                }`}
+                              >
+                                {actionLoading === device.id ? (
+                                  <RefreshCw className="w-3 h-3 mr-1 animate-spin" />
+                                ) : device.status === "approved" ? (
+                                  <ToggleRight className="w-3 h-3 mr-1" />
+                                ) : (
+                                  <ToggleLeft className="w-3 h-3 mr-1" />
+                                )}
+                                <span>
+                                  {device.status === "approved"
+                                    ? "Approved"
+                                    : "Rejected"}
+                                </span>
+                              </Button>
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => showDeleteConfirmation(device)}
+                                disabled={actionLoading === device.id}
+                                className="text-xs px-2 bg-red-600 dark:bg-red-700 text-white hover:bg-red-700 dark:hover:bg-red-800 flex-1"
+                              >
+                                {actionLoading === device.id ? (
+                                  <RefreshCw className="w-3 h-3 mr-1 animate-spin" />
+                                ) : (
+                                  <Trash2 className="w-3 h-3 mr-1" />
+                                )}
+                                <span>Delete</span>
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Mobile: Buttons at full width below device info */}
+                    <div className="sm:hidden space-y-2">
+                      {/* Details button on top */}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setSelectedDevice(device)}
+                        className="text-xs px-2 w-full"
+                      >
+                        <Eye className="w-3 h-3 mr-1" />
+                        <span>Details</span>
+                      </Button>
+
+                      {/* Action buttons below at full width */}
+                      <div className="grid grid-cols-1 gap-2">
                         {activeTab === "pending" ? (
                           /* Pending devices: Show Approve, Reject, Delete buttons */
                           <>
@@ -960,7 +1076,7 @@ const DeviceApproval = memo(({ devicesData, usersData, onRefresh, autoRefresh: p
                               size="sm"
                               onClick={() => showApproveConfirmation(device)}
                               disabled={actionLoading === device.id}
-                              className="bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white text-xs px-2"
+                              className="bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white text-xs px-2 w-full"
                             >
                               {actionLoading === device.id ? (
                                 <RefreshCw className="w-3 h-3 mr-1 animate-spin" />
@@ -974,7 +1090,7 @@ const DeviceApproval = memo(({ devicesData, usersData, onRefresh, autoRefresh: p
                               size="sm"
                               onClick={() => showRejectConfirmation(device)}
                               disabled={actionLoading === device.id}
-                              className="border-red-600 text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-700 dark:hover:bg-red-900/20 text-xs px-2"
+                              className="border-red-600 text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-700 dark:hover:bg-red-900/20 text-xs px-2 w-full"
                             >
                               {actionLoading === device.id ? (
                                 <RefreshCw className="w-3 h-3 mr-1 animate-spin" />
@@ -988,7 +1104,7 @@ const DeviceApproval = memo(({ devicesData, usersData, onRefresh, autoRefresh: p
                               size="sm"
                               onClick={() => showDeleteConfirmation(device)}
                               disabled={actionLoading === device.id}
-                              className="text-xs px-2 bg-red-600 dark:bg-red-700 text-white hover:bg-red-700 dark:hover:bg-red-800"
+                              className="text-xs px-2 bg-red-600 dark:bg-red-700 text-white hover:bg-red-700 dark:hover:bg-red-800 w-full"
                             >
                               {actionLoading === device.id ? (
                                 <RefreshCw className="w-3 h-3 mr-1 animate-spin" />
@@ -1010,7 +1126,7 @@ const DeviceApproval = memo(({ devicesData, usersData, onRefresh, autoRefresh: p
                               size="sm"
                               onClick={() => showToggleConfirmation(device)}
                               disabled={actionLoading === device.id}
-                              className={`text-xs px-2 col-span-2 sm:col-span-2 ${
+                              className={`text-xs px-2 w-full ${
                                 device.status === "approved"
                                   ? "bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white"
                                   : "border-red-600 text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-700 dark:hover:bg-red-900/20"
@@ -1034,7 +1150,7 @@ const DeviceApproval = memo(({ devicesData, usersData, onRefresh, autoRefresh: p
                               size="sm"
                               onClick={() => showDeleteConfirmation(device)}
                               disabled={actionLoading === device.id}
-                              className="text-xs px-2 bg-red-600 dark:bg-red-700 text-white hover:bg-red-700 dark:hover:bg-red-800"
+                              className="text-xs px-2 bg-red-600 dark:bg-red-700 text-white hover:bg-red-700 dark:hover:bg-red-800 w-full"
                             >
                               {actionLoading === device.id ? (
                                 <RefreshCw className="w-3 h-3 mr-1 animate-spin" />
