@@ -16,6 +16,7 @@ export class SchedulerService implements OnModuleInit {
   private cleanupIntervalId: NodeJS.Timeout | null = null;
   private currentInterval: number;
   private configChangeCallback: () => void;
+  private cleanupConfigChangeCallback: () => void;
 
   constructor(
     private readonly plexService: PlexService,
@@ -35,6 +36,16 @@ export class SchedulerService implements OnModuleInit {
     
     this.configService.addConfigChangeListener('PLEXGUARD_REFRESH_INTERVAL', this.configChangeCallback);
 
+    // Register listener for device cleanup setting changes
+    this.cleanupConfigChangeCallback = () => {
+      this.logger.log('Device cleanup settings changed, updating cleanup scheduler...');
+      this.handleCleanupConfigChange().catch(error => {
+        this.logger.error('Failed to handle cleanup config change:', error);
+      });
+    };
+    
+    this.configService.addConfigChangeListener('DEVICE_CLEANUP_ENABLED', this.cleanupConfigChangeCallback);
+
     await this.startSessionUpdates();
     await this.startDeviceCleanupScheduler();
   }
@@ -43,6 +54,29 @@ export class SchedulerService implements OnModuleInit {
     this.logger.log('Restarting scheduler with updated interval...');
     this.stopScheduler();
     await this.startSessionUpdates();
+  }
+
+  private async handleCleanupConfigChange() {
+    try {
+      const cleanupEnabled = await this.configService.getSetting('DEVICE_CLEANUP_ENABLED');
+      const isEnabled = cleanupEnabled === true;
+
+      if (isEnabled) {
+        // If cleanup is enabled and scheduler isn't running, start it
+        if (!this.cleanupIntervalId) {
+          this.logger.log('Device cleanup enabled - starting cleanup scheduler');
+          await this.startDeviceCleanupScheduler();
+        }
+      } else {
+        // If cleanup is disabled and scheduler is running, stop it
+        if (this.cleanupIntervalId) {
+          this.logger.log('Device cleanup disabled - stopping cleanup scheduler');
+          this.stopDeviceCleanupScheduler();
+        }
+      }
+    } catch (error) {
+      this.logger.error('Error handling cleanup config change:', error);
+    }
   }
 
   private stopScheduler() {
@@ -132,6 +166,20 @@ export class SchedulerService implements OnModuleInit {
 
   private async startDeviceCleanupScheduler() {
     try {
+      // Check if cleanup is enabled before starting
+      const cleanupEnabled = await this.configService.getSetting('DEVICE_CLEANUP_ENABLED');
+      const isEnabled = cleanupEnabled === true;
+
+      if (!isEnabled) {
+        this.logger.log('Device cleanup is disabled - scheduler not started');
+        return;
+      }
+
+      // Stop existing scheduler if running
+      if (this.cleanupIntervalId) {
+        this.stopDeviceCleanupScheduler();
+      }
+
       this.logger.log('Starting device cleanup scheduler (checking every 1 hour)');
 
       // Run cleanup immediately on startup
@@ -181,9 +229,12 @@ export class SchedulerService implements OnModuleInit {
   }
 
   onModuleDestroy() {
-    // Remove config change listener
     if (this.configChangeCallback) {
       this.configService.removeConfigChangeListener('PLEXGUARD_REFRESH_INTERVAL', this.configChangeCallback);
+    }
+    
+    if (this.cleanupConfigChangeCallback) {
+      this.configService.removeConfigChangeListener('DEVICE_CLEANUP_ENABLED', this.cleanupConfigChangeCallback);
     }
     
     this.stopScheduler();
