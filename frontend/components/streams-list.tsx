@@ -707,7 +707,7 @@ export function StreamsList({ sessionsData, onRefresh, autoRefresh: parentAutoRe
             <DialogDescription>
               Are you sure you want to remove access for this device? This will
               immediately stop the current stream and prevent future access
-              until the device is re-approved.
+              until the device is manually re-approved.
             </DialogDescription>
           </DialogHeader>
 

@@ -1,10 +1,11 @@
 import { Controller, Get, Post, Param, ParseIntPipe } from '@nestjs/common';
 import { DeviceTrackingService } from './services/device-tracking.service';
 import { UserDevice } from '../../entities/user-device.entity';
+import { PlexClient } from '../plex/services/plex-client';
 
 @Controller('devices')
 export class DevicesController {
-  constructor(private readonly deviceTrackingService: DeviceTrackingService) {}
+  constructor(private readonly deviceTrackingService: DeviceTrackingService, private readonly plexClient: PlexClient) {}
 
   @Get()
   async getAllDevices(): Promise<UserDevice[]> {
@@ -63,7 +64,9 @@ export class DevicesController {
     if (!device) {
       return { message: 'Device not found' };
     }
+
     await this.deviceTrackingService.rejectDevice(device.id);
+    await this.plexClient.terminateSession(device.currentSessionKey);
     return { message: `Device authorization revoked successfully` };
   }
 }

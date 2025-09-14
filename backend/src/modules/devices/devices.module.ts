@@ -1,12 +1,17 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { DevicesController } from './devices.controller';
 import { DeviceTrackingService } from './services/device-tracking.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UserDevice } from '../../entities/user-device.entity';
 import { UsersModule } from '../users/users.module';
+import { PlexModule } from '../plex/plex.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([UserDevice]), UsersModule],
+  imports: [
+    TypeOrmModule.forFeature([UserDevice]),
+    UsersModule,
+    forwardRef(() => PlexModule),
+  ],
   controllers: [DevicesController],
   providers: [DeviceTrackingService],
   exports: [DeviceTrackingService],
