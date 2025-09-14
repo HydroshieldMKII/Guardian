@@ -21,6 +21,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   Shield,
   CheckCircle,
   XCircle,
@@ -41,6 +47,9 @@ import {
   Wifi,
   Search,
   ExternalLink,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
 import { UserDevice, UserPreference } from "@/types";
 import { config } from "@/lib/config";
@@ -321,6 +330,62 @@ const DeviceApproval = memo(({ devicesData, usersData, onRefresh, autoRefresh: p
   );
   const [searchDevices, setSearchDevices] = useState("");
   const [searchUsers, setSearchUsers] = useState("");
+  
+  // Local storage keys for sorting preferences
+  const DEVICE_SORT_BY_KEY = "guardian-device-sort-by";
+  const DEVICE_SORT_ORDER_KEY = "guardian-device-sort-order";
+  const USER_SORT_BY_KEY = "guardian-user-sort-by";
+  const USER_SORT_ORDER_KEY = "guardian-user-sort-order";
+
+  // Helper functions for localStorage
+  const getStoredValue = (key: string, defaultValue: string) => {
+    if (typeof window === "undefined") return defaultValue;
+    try {
+      return localStorage.getItem(key) || defaultValue;
+    } catch {
+      return defaultValue;
+    }
+  };
+
+  const setStoredValue = (key: string, value: string) => {
+    if (typeof window === "undefined") return;
+    try {
+      localStorage.setItem(key, value);
+    } catch {
+      // Silently fail if localStorage is not available (no choices made)
+    }
+  };
+  
+  // Sorting state with localStorage initialization
+  const [deviceSortBy, setDeviceSortBy] = useState<"username" | "deviceName" | "lastSeen" | "firstSeen" | "sessionCount" | "platform">(
+    () => getStoredValue(DEVICE_SORT_BY_KEY, "firstSeen") as "username" | "deviceName" | "lastSeen" | "firstSeen" | "sessionCount" | "platform"
+  );
+  const [deviceSortOrder, setDeviceSortOrder] = useState<"asc" | "desc">(
+    () => getStoredValue(DEVICE_SORT_ORDER_KEY, "desc") as "asc" | "desc"
+  );
+  const [userSortBy, setUserSortBy] = useState<"username" | "userId">(
+    () => getStoredValue(USER_SORT_BY_KEY, "username") as "username" | "userId"
+  );
+  const [userSortOrder, setUserSortOrder] = useState<"asc" | "desc">(
+    () => getStoredValue(USER_SORT_ORDER_KEY, "asc") as "asc" | "desc"
+  );
+
+  // Save sorting preferences to localStorage when they change
+  useEffect(() => {
+    setStoredValue(DEVICE_SORT_BY_KEY, deviceSortBy);
+  }, [deviceSortBy]);
+
+  useEffect(() => {
+    setStoredValue(DEVICE_SORT_ORDER_KEY, deviceSortOrder);
+  }, [deviceSortOrder]);
+
+  useEffect(() => {
+    setStoredValue(USER_SORT_BY_KEY, userSortBy);
+  }, [userSortBy]);
+
+  useEffect(() => {
+    setStoredValue(USER_SORT_ORDER_KEY, userSortOrder);
+  }, [userSortOrder]);
 
   // Update devices state when devicesData prop changes
   useEffect(() => {
@@ -426,33 +491,51 @@ const DeviceApproval = memo(({ devicesData, usersData, onRefresh, autoRefresh: p
       });
     }
 
-    // Apply sorting based on the list type
+    // Apply sorting based on selected sort criteria
     return filtered.sort((a, b) => {
-      const usernameA = a.username || a.userId || "";
-      const usernameB = b.username || b.userId || "";
+      let valueA: any;
+      let valueB: any;
 
-      // For pending devices: sort by newest first (firstSeen desc), then by username
-      if (listType === "pending") {
-        const dateA = new Date(a.firstSeen).getTime();
-        const dateB = new Date(b.firstSeen).getTime();
-        if (dateA !== dateB) {
-          return dateB - dateA; // Newest first
-        }
-        return usernameA.localeCompare(usernameB);
+      switch (deviceSortBy) {
+        case "username":
+          valueA = (a.username || a.userId || "").toLowerCase();
+          valueB = (b.username || b.userId || "").toLowerCase();
+          break;
+        case "deviceName":
+          valueA = (a.deviceName || a.deviceIdentifier || "").toLowerCase();
+          valueB = (b.deviceName || b.deviceIdentifier || "").toLowerCase();
+          break;
+        case "lastSeen":
+          valueA = new Date(a.lastSeen).getTime();
+          valueB = new Date(b.lastSeen).getTime();
+          break;
+        case "firstSeen":
+          valueA = new Date(a.firstSeen).getTime();
+          valueB = new Date(b.firstSeen).getTime();
+          break;
+        case "sessionCount":
+          valueA = a.sessionCount || 0;
+          valueB = b.sessionCount || 0;
+          break;
+        case "platform":
+          valueA = (a.devicePlatform || "").toLowerCase();
+          valueB = (b.devicePlatform || "").toLowerCase();
+          break;
+        default:
+          valueA = new Date(a.firstSeen).getTime();
+          valueB = new Date(b.firstSeen).getTime();
+          break;
       }
 
-      // For processed devices: sort by username first, then by last seen desc
-      if (listType === "processed") {
-        if (usernameA !== usernameB) {
-          return usernameA.localeCompare(usernameB);
-        }
-        const dateA = new Date(a.lastSeen).getTime();
-        const dateB = new Date(b.lastSeen).getTime();
-        return dateB - dateA; // Most recently active first within same user
+      // For date and number values, use numeric comparison
+      if (deviceSortBy === "lastSeen" || deviceSortBy === "firstSeen" || deviceSortBy === "sessionCount") {
+        const comparison = valueA - valueB;
+        return deviceSortOrder === "asc" ? comparison : -comparison;
       }
 
-      // Default: sort by username
-      return usernameA.localeCompare(usernameB);
+      // For string values, use localeCompare
+      const comparison = valueA.localeCompare(valueB);
+      return deviceSortOrder === "asc" ? comparison : -comparison;
     });
   };
 
@@ -467,10 +550,26 @@ const DeviceApproval = memo(({ devicesData, usersData, onRefresh, autoRefresh: p
       return username.includes(searchLower) || userId.includes(searchLower);
     })
     .sort((a, b) => {
-      // Sort users alphabetically by username, fallback to userId
-      const nameA = a.username || a.userId;
-      const nameB = b.username || b.userId;
-      return nameA.localeCompare(nameB);
+      let valueA: string;
+      let valueB: string;
+
+      switch (userSortBy) {
+        case "username":
+          valueA = (a.username || a.userId).toLowerCase();
+          valueB = (b.username || b.userId).toLowerCase();
+          break;
+        case "userId":
+          valueA = a.userId.toLowerCase();
+          valueB = b.userId.toLowerCase();
+          break;
+        default:
+          valueA = (a.username || a.userId).toLowerCase();
+          valueB = (b.username || b.userId).toLowerCase();
+          break;
+      }
+
+      const comparison = valueA.localeCompare(valueB);
+      return userSortOrder === "asc" ? comparison : -comparison;
     });
 
   const handleApprove = async (deviceId: number) => {
@@ -780,36 +879,150 @@ const DeviceApproval = memo(({ devicesData, usersData, onRefresh, autoRefresh: p
           {/* Search bars */}
           {activeTab === "users" ? (
             <div className="mb-6">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                <input
-                  type="text"
-                  placeholder="Search users by username..."
-                  value={searchUsers}
-                  onChange={(e) => setSearchUsers(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 text-sm border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                />
+              {/* Search and Sort Row */}
+              <div className="flex flex-col sm:flex-row gap-3 mb-4">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                  <input
+                    type="text"
+                    placeholder="Search users by username..."
+                    value={searchUsers}
+                    onChange={(e) => setSearchUsers(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 text-sm border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                  />
+                </div>
+                
+                {/* User Sorting Controls */}
+                <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+                  <span className="text-sm text-muted-foreground hidden sm:block">Sort:</span>
+                  <div className="flex gap-2">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="sm" className="h-9 flex-1 sm:flex-none">
+                          {userSortBy === "username" && "Username"}
+                          {userSortBy === "userId" && "User ID"}
+                          <ArrowUpDown className="ml-1 h-3 w-3" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start">
+                        <DropdownMenuItem onClick={() => setUserSortBy("username")}>
+                          Username
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setUserSortBy("userId")}>
+                          User ID
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                    
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-9 flex-1 sm:flex-none"
+                      onClick={() => setUserSortOrder(userSortOrder === "asc" ? "desc" : "asc")}
+                    >
+                      {userSortOrder === "asc" ? (
+                        <>
+                          <ArrowUp className="h-3 w-3 mr-1" />
+                          <span className="hidden sm:inline">Ascending</span>
+                          <span className="sm:hidden">Asc</span>
+                        </>
+                      ) : (
+                        <>
+                          <ArrowDown className="h-3 w-3 mr-1" />
+                          <span className="hidden sm:inline">Descending</span>
+                          <span className="sm:hidden">Desc</span>
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
               </div>
+              
               {searchUsers && (
-                <p className="text-xs text-muted-foreground mt-2">
+                <p className="text-xs text-muted-foreground mb-4">
                   Showing {filteredUsers.length} of {users.length} users
                 </p>
               )}
             </div>
           ) : (
             <div className="mb-6">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                <input
-                  type="text"
-                  placeholder="Search devices by username, device name, or platform..."
-                  value={searchDevices}
-                  onChange={(e) => setSearchDevices(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 text-sm border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                />
+              {/* Search and Sort Row */}
+              <div className="flex flex-col sm:flex-row gap-3 mb-4">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                  <input
+                    type="text"
+                    placeholder="Search devices by username, device name, or platform..."
+                    value={searchDevices}
+                    onChange={(e) => setSearchDevices(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 text-sm border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                  />
+                </div>
+                
+                {/* Device Sorting Controls */}
+                <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+                  <span className="text-sm text-muted-foreground hidden sm:block">Sort:</span>
+                  <div className="flex gap-2">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="sm" className="h-9 flex-1 sm:flex-none">
+                          {deviceSortBy === "username" && "Username"}
+                          {deviceSortBy === "deviceName" && "Device Name"}
+                          {deviceSortBy === "lastSeen" && "Last Seen"}
+                          {deviceSortBy === "firstSeen" && "First Seen"}
+                          {deviceSortBy === "sessionCount" && "Session Count"}
+                          {deviceSortBy === "platform" && "Platform"}
+                          <ArrowUpDown className="ml-1 h-3 w-3" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start">
+                        <DropdownMenuItem onClick={() => setDeviceSortBy("username")}>
+                          Username
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setDeviceSortBy("deviceName")}>
+                          Device Name
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setDeviceSortBy("lastSeen")}>
+                          Last Seen
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setDeviceSortBy("firstSeen")}>
+                          First Seen
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setDeviceSortBy("sessionCount")}>
+                          Session Count
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setDeviceSortBy("platform")}>
+                          Platform
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                    
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-9 flex-1 sm:flex-none"
+                      onClick={() => setDeviceSortOrder(deviceSortOrder === "asc" ? "desc" : "asc")}
+                    >
+                      {deviceSortOrder === "asc" ? (
+                        <>
+                          <ArrowUp className="h-3 w-3 mr-1" />
+                          <span className="hidden sm:inline">Ascending</span>
+                          <span className="sm:hidden">Asc</span>
+                        </>
+                      ) : (
+                        <>
+                          <ArrowDown className="h-3 w-3 mr-1" />
+                          <span className="hidden sm:inline">Descending</span>
+                          <span className="sm:hidden">Desc</span>
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
               </div>
+              
               {searchDevices && (
-                <p className="text-xs text-muted-foreground mt-2">
+                <p className="text-xs text-muted-foreground mb-4">
                   Showing{" "}
                   {activeTab === "pending"
                     ? filteredDevices(pendingDevices).length
@@ -829,7 +1042,7 @@ const DeviceApproval = memo(({ devicesData, usersData, onRefresh, autoRefresh: p
             <div>
               {(loading && users.length === 0) ? (
                 // Show skeleton loading for users only on initial load
-                <ScrollArea className="h-[50vh] max-h-[400px] sm:max-h-[500px] lg:max-h-[600px]">
+                <ScrollArea className="h-[70vh] max-h-[700px] sm:max-h-[800px] lg:max-h-[900px]">
                   <div className="space-y-4">
                     {Array.from({ length: 4 }, (_, i) => (
                       <UserSkeleton key={`user-skeleton-${i}`} />
@@ -851,7 +1064,7 @@ const DeviceApproval = memo(({ devicesData, usersData, onRefresh, autoRefresh: p
                   )}
                 </div>
               ) : (
-                <ScrollArea className="h-[50vh] max-h-[400px] sm:max-h-[500px] lg:max-h-[600px]">
+                <ScrollArea className="h-[70vh] max-h-[700px] sm:max-h-[800px] lg:max-h-[900px]">
                   <div className="space-y-4">
                     {filteredUsers.map((user) => (
                       <UserPreferenceCard
@@ -869,7 +1082,7 @@ const DeviceApproval = memo(({ devicesData, usersData, onRefresh, autoRefresh: p
             (activeTab === "processed" && processedDevices.length === 0)
           )) ? (
             // Show skeleton loading for devices only on initial load when no data exists
-            <ScrollArea className="h-[50vh] max-h-[400px] sm:max-h-[500px] lg:max-h-[600px]">
+            <ScrollArea className="h-[70vh] max-h-[700px] sm:max-h-[800px] lg:max-h-[900px]">
               <div className="space-y-4">
                 {Array.from({ 
                   length: activeTab === "pending" ? 3 : activeTab === "processed" ? 5 : 4 
@@ -879,7 +1092,7 @@ const DeviceApproval = memo(({ devicesData, usersData, onRefresh, autoRefresh: p
               </div>
             </ScrollArea>
           ) : devicesToShow.length === 0 ? (
-            <div className="flex items-center justify-center h-[50vh] max-h-[400px] sm:max-h-[500px] lg:max-h-[600px] text-muted-foreground">
+            <div className="flex items-center justify-center h-[70vh] max-h-[700px] sm:max-h-[800px] lg:max-h-[900px] text-muted-foreground">
               {searchDevices ? (
                 <>
                   <Search className="w-6 h-6 mr-2" />
@@ -895,7 +1108,7 @@ const DeviceApproval = memo(({ devicesData, usersData, onRefresh, autoRefresh: p
               )}
             </div>
           ) : (
-            <ScrollArea className="h-[50vh] max-h-[400px] sm:max-h-[500px] lg:max-h-[600px]">
+            <ScrollArea className="h-[70vh] max-h-[700px] sm:max-h-[800px] lg:max-h-[900px]">
               <div className="space-y-4">
                 {devicesToShow.map((device) => (
                   <div

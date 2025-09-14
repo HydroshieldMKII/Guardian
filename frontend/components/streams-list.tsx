@@ -412,7 +412,7 @@ export function StreamsList({ sessionsData, onRefresh, autoRefresh: parentAutoRe
           </div>
         ) : (loading && streams.length === 0) ? (
           // Show skeleton loading only on initial load when no data exists yet
-          <ScrollArea className="h-[50vh] max-h-[400px] sm:max-h-[500px] lg:max-h-[600px]">
+          <ScrollArea className="h-[70vh] max-h-[700px] sm:max-h-[800px] lg:max-h-[900px]">
             <div className="space-y-3 sm:space-y-4">
               {Array.from({ length: 3 }, (_, i) => (
                 <StreamSkeleton key={`stream-skeleton-${i}`} />
@@ -420,7 +420,7 @@ export function StreamsList({ sessionsData, onRefresh, autoRefresh: parentAutoRe
             </div>
           </ScrollArea>
         ) : filteredStreams.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-[50vh] max-h-[400px] sm:max-h-[500px] lg:max-h-[600px] text-muted-foreground text-center">
+          <div className="flex flex-col items-center justify-center h-[70vh] max-h-[700px] sm:max-h-[800px] lg:max-h-[900px] text-muted-foreground text-center">
             {searchTerm ? (
               <>
                 <Search className="w-8 h-8 mb-2" />
@@ -437,7 +437,7 @@ export function StreamsList({ sessionsData, onRefresh, autoRefresh: parentAutoRe
             )}
           </div>
         ) : (
-          <ScrollArea className="h-[50vh] max-h-[400px] sm:max-h-[500px] lg:max-h-[600px]">
+          <ScrollArea className="h-[70vh] max-h-[700px] sm:max-h-[800px] lg:max-h-[900px]">
             <div className="space-y-3 sm:space-y-4">
               {filteredStreams.map((stream, index) => (
                 <div

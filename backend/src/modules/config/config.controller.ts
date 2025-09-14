@@ -19,6 +19,18 @@ import { ConfigService, ConfigSettingDto } from './services/config.service';
 export class ConfigController {
   constructor(private readonly configService: ConfigService) {}
 
+  @Get('version')
+  async getVersion() {
+    try {
+      return await this.configService.getVersionInfo();
+    } catch (error) {
+      throw new HttpException(
+        'Failed to get version information',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
   @Get()
   async getAllSettings() {
     try {

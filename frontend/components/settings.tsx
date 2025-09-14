@@ -29,7 +29,14 @@ import {
   Upload,
   Database,
   AlertTriangle,
+  ChevronDown,
+  Activity,
+  ExternalLink,
+  BookOpen
 } from "lucide-react";
+import { config } from "../lib/config";
+import { useVersion } from "@/contexts/version-context";
+import { ConfirmationModal } from "@/components/ui/confirmation-modal";
 
 interface AppSetting {
   id: number;
@@ -47,16 +54,16 @@ interface SettingsFormData {
 
 const settingsSections = [
   {
-    id: "plex",
-    title: "Plex Integration",
-    description: "Configure Plex server connection and settings",
-    icon: Server,
-  },
-  {
     id: "guardian",
     title: "Guardian Configuration",
     description: "Configure Guardian behavior and settings",
     icon: Shield,
+  },
+  {
+    id: "plex",
+    title: "Plex Integration",
+    description: "Configure Plex server connection and settings",
+    icon: Server,
   },
   {
     id: "database",
@@ -95,6 +102,14 @@ const getSettingInfo = (setting: AppSetting): { label: string; description: stri
       label: 'Device inactivity threshold (days)',
       description: 'Number of days a device can be inactive before it\'s automatically removed. Cleanup runs every hour.'
     },
+    'DEFAULT_PAGE': {
+      label: 'Default page on startup',
+      description: 'Choose which page to display when the app loads'
+    },
+    'AUTO_CHECK_UPDATES': {
+      label: 'Automatic update checking',
+      description: 'Automatically check for new releases when you open the app'
+    },
   };
   
   const info = settingInfoMap[setting.key];
@@ -105,7 +120,7 @@ const getSettingInfo = (setting: AppSetting): { label: string; description: stri
 };
 
 export function Settings({ onBack }: { onBack?: () => void } = {}) {
-  const [activeSection, setActiveSection] = useState("plex");
+  const [activeSection, setActiveSection] = useState("guardian");
   const [settings, setSettings] = useState<AppSetting[]>([]);
   const [formData, setFormData] = useState<SettingsFormData>({});
   const [loading, setLoading] = useState(true);
@@ -114,6 +129,14 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
   const [exportingDatabase, setExportingDatabase] = useState(false);
   const [importingDatabase, setImportingDatabase] = useState(false);
   const [backendError, setBackendError] = useState<string | null>(null);
+  const { versionInfo, updateInfo, refreshVersionInfo, checkForUpdatesIfEnabled, checkForUpdatesManually } = useVersion();
+  const [checkingUpdates, setCheckingUpdates] = useState(false);
+  const [showVersionMismatchModal, setShowVersionMismatchModal] = useState(false);
+  const [pendingImportFile, setPendingImportFile] = useState<File | null>(null);
+  const [versionMismatchInfo, setVersionMismatchInfo] = useState<{
+    currentVersion: string;
+    importVersion: string;
+  } | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<{
     success: boolean;
     message: string;
@@ -124,10 +147,57 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
     fetchSettings();
   }, []);
 
+  // Check for updates automatically when settings page loads
+  useEffect(() => {
+    checkForUpdatesIfEnabled();
+  }, [checkForUpdatesIfEnabled]);
+
+  const checkForUpdates = async () => {
+    if (!versionInfo?.version) return;
+    
+    setCheckingUpdates(true);
+    try {
+      const result = await checkForUpdatesManually();
+      
+      if (result) {
+        if (result.hasUpdate) {
+          // Show update available message
+          toast({
+            title: "Update available!",
+            description: `A new version (v${result.latestVersion}) is available. Check the banner above.`,
+            variant: "success",
+          });
+        } else {
+          // Show up-to-date message
+          toast({
+            title: "You're up to date!",
+            description: `Guardian v${result.currentVersion} is the latest version.`,
+            variant: "success",
+          });
+        }
+      } else {
+        toast({
+          title: "Update check failed",
+          description: "Unable to check for updates. Please try again later.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Failed to check for updates:', error);
+      toast({
+        title: "Update check failed",
+        description: "Unable to check for updates. Please check your internet connection.",
+        variant: "destructive",
+      });
+    } finally {
+      setCheckingUpdates(false);
+    }
+  };
+
   const fetchSettings = async () => {
     setBackendError(null);
     try {
-      const response = await fetch("/api/pg/config");
+      const response = await fetch(`${config.api.baseUrl}/config`);
       if (response.ok) {
         const data = await response.json();
         setSettings(data);
@@ -204,6 +274,17 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
             errors.push('Device cleanup interval must be at least 1 day');
           }
           break;
+        case 'DEFAULT_PAGE':
+          const validPages = ['devices', 'streams'];
+          if (!validPages.includes(String(setting.value))) {
+            errors.push('Default page must be either "devices" or "streams"');
+          }
+          break;
+        case 'AUTO_CHECK_UPDATES':
+          if (typeof setting.value !== 'boolean') {
+            errors.push('Auto check updates must be a boolean value');
+          }
+          break;
           default:
             console.warn(`No validation rules for setting: ${setting.key}`);
             break;
@@ -250,7 +331,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
         return;
       }
 
-      const response = await fetch("/api/pg/config", {
+      const response = await fetch(`${config.api.baseUrl}/config`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -305,7 +386,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
 
     setTestingConnection(true);
     try {
-      const response = await fetch("/api/pg/config/test-plex-connection", {
+      const response = await fetch(`${config.api.baseUrl}/config/test-plex-connection`, {
         method: "POST",
       });
 
@@ -342,7 +423,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
   const handleExportDatabase = async () => {
     setExportingDatabase(true);
     try {
-      const response = await fetch("/api/pg/config/database/export");
+      const response = await fetch(`${config.api.baseUrl}/config/database/export`);
       
       if (response.ok) {
         const blob = await response.blob();
@@ -380,26 +461,81 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
   };
 
   const handleImportDatabase = async (file: File) => {
-    setImportingDatabase(true);
+    try {
+      // Read and validate the file
+      const fileContent = await file.text();
+      let importData;
+      
+      try {
+        importData = JSON.parse(fileContent);
+      } catch (parseError) {
+        toast({
+          title: "Invalid file",
+          description: "The selected file is not a valid JSON file",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Check version compatibility
+      const importVersion = importData.version;
+      const currentVersion = versionInfo?.version;
+      
+      if (importVersion && currentVersion && importVersion !== currentVersion) {
+        // Show modal instead of native confirm - with a small delay to ensure file dialog closes
+        setTimeout(() => {
+          setPendingImportFile(file);
+          setVersionMismatchInfo({
+            currentVersion,
+            importVersion,
+          });
+          setShowVersionMismatchModal(true);
+        }, 100);
+        return;
+      }
+      
+      // Proceed with import if no version mismatch
+      setImportingDatabase(true);
+      await performDatabaseImport(file);
+    } catch (error) {
+      toast({
+        title: "Network Error",
+        description: "Failed to import database. Please check your connection.",
+        variant: "destructive",
+      });
+    } finally {
+      setImportingDatabase(false);
+    }
+  };
+
+  const performDatabaseImport = async (file: File) => {
     try {
       const formData = new FormData();
       formData.append('file', file);
-      
-      const response = await fetch("/api/pg/config/database/import", {
+
+      const response = await fetch(`${config.api.baseUrl}/config/database/import`, {
         method: "POST",
         body: formData,
       });
       
       if (response.ok) {
         const result = await response.json();
+        const importData = JSON.parse(await file.text());
+        const importVersion = importData.version;
+        const currentVersion = versionInfo?.version;
+        
+        const successMessage = `Successfully imported ${result.imported.imported} items, ${result.imported.skipped} items skipped`;
+        const versionMessage = importVersion && currentVersion !== importVersion ? ` (Version: ${importVersion} → ${currentVersion})` : '';
+        
         toast({
           title: "Import successful",
-          description: `Successfully imported ${result.imported.imported} items, ${result.imported.skipped} items skipped`,
+          description: successMessage + versionMessage,
           variant: "success",
         });
         
-        // Refresh settings after import
+        // Refresh settings and version info after import
         await fetchSettings();
+        await refreshVersionInfo();
       } else {
         const errorData = await response.json().catch(() => ({}));
         toast({
@@ -414,13 +550,39 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
         description: "Failed to import database. Please check your connection.",
         variant: "destructive",
       });
-    } finally {
-      setImportingDatabase(false);
     }
+  };
+
+  const handleVersionMismatchConfirm = async () => {
+    if (pendingImportFile) {
+      // Close modal first
+      setShowVersionMismatchModal(false);
+      setImportingDatabase(true);
+      await performDatabaseImport(pendingImportFile);
+      setImportingDatabase(false);
+      setPendingImportFile(null);
+      setVersionMismatchInfo(null);
+    }
+  };
+
+  const handleVersionMismatchCancel = () => {
+    // Close modal first
+    setShowVersionMismatchModal(false);
+    setPendingImportFile(null);
+    setVersionMismatchInfo(null);
+    setImportingDatabase(false);
+    toast({
+      title: "Import cancelled",
+      description: "Import was cancelled due to version mismatch",
+      variant: "destructive",
+    });
   };
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
+    // Reset the input value immediately to close the file dialog
+    event.target.value = '';
+    
     if (file) {
       if (file.type === 'application/json' || file.name.endsWith('.json')) {
         handleImportDatabase(file);
@@ -432,8 +594,6 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
         });
       }
     }
-    // Reset the input value so the same file can be selected again
-    event.target.value = '';
   };
 
   const getSettingsByCategory = (category: string) => {
@@ -449,6 +609,8 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
         "PLEXGUARD_REFRESH_INTERVAL",
         "PLEX_GUARD_DEFAULT_BLOCK",
         "PLEXGUARD_STOPMSG",
+        "DEFAULT_PAGE",
+        "AUTO_CHECK_UPDATES",
       ],
     };
 
@@ -477,6 +639,35 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
             }
             className="cursor-pointer"
           />
+        </div>
+      );
+    }
+
+    // Special handling for DEFAULT_PAGE setting
+    if (setting.key === "DEFAULT_PAGE") {
+      const options = [
+        { value: "devices", label: "Device Management", icon: Shield },
+        { value: "streams", label: "Active Streams", icon: Activity }
+      ];
+      
+      return (
+        <div className="space-y-2">
+          <Label>{label}</Label>
+          <div className="relative">
+            <select
+              value={String(value || "devices")}
+              onChange={(e) => handleInputChange(setting.key, e.target.value)}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 pr-8 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 appearance-none cursor-pointer"
+            >
+              {options.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+          </div>
+          <p className="text-xs text-muted-foreground">{description}</p>
         </div>
       );
     }
@@ -1006,6 +1197,49 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
                 </button>
               ))}
             </CardContent>
+            
+            {/* Version Information */}
+            {versionInfo && (
+              <div className="px-4 py-3 border-t border-border">
+                <div className="text-xs text-muted-foreground space-y-2">
+                  <div className="font-medium text-foreground">
+                  {/* Update Check Button */}
+                  <div className="pt-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={checkForUpdates}
+                      disabled={checkingUpdates}
+                      className="h-6 text-xs text-muted-foreground hover:text-foreground"
+                    >
+                      {checkingUpdates ? (
+                        <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                      ) : (
+                        <RefreshCw className="h-3 w-3 mr-1" />
+                      )}
+                      Check for Updates
+                    </Button>
+                  </div>
+                  </div>
+                  {versionInfo.isVersionMismatch ? (
+                    <>
+                        <div className={versionInfo.databaseVersion < versionInfo.codeVersion ? "ml-2 text-red-600 dark:text-red-400" : "ml-2"}>
+                        Database version: v{versionInfo.databaseVersion}
+                        </div>
+                        <div className={versionInfo.codeVersion < versionInfo.databaseVersion ? "ml-2 text-red-600 dark:text-red-400" : "ml-2"}>
+                        App Version: v{versionInfo.codeVersion}
+                        </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="ml-2">Database version {versionInfo.databaseVersion}</div>
+                      <div className="ml-2">App Version {versionInfo.version}</div>
+                    </>
+                  )}
+                
+                </div>
+              </div>
+            )}
           </Card>
 
           {/* Settings Content */}
@@ -1043,6 +1277,25 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
           </Card>
         </div>
       </div>
+
+      {/* Version Mismatch Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={showVersionMismatchModal}
+        onClose={() => {
+          // Handle closing by ESC or outside click - treat as cancel
+          handleVersionMismatchCancel();
+        }}
+        onConfirm={handleVersionMismatchConfirm}
+        title="Version Mismatch Detected"
+        description={
+          versionMismatchInfo
+            ? `Version mismatch detected! Please make sure you have a backup before proceeding.\n\nCurrent version: ${versionMismatchInfo.currentVersion}\nImport file version: ${versionMismatchInfo.importVersion}\n\nYou may lose data or break your installation. Do you want to continue with the import?`
+            : ""
+        }
+        confirmText="Continue Import"
+        cancelText="Cancel Import"
+        variant="destructive"
+      />
     </div>
   );
 }

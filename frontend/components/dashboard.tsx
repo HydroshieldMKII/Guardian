@@ -22,6 +22,7 @@ import {
   WifiOff,
   Video,
   Signal,
+  Download,
 } from "lucide-react";
 import { StreamsList } from "./streams-list";
 import { DeviceApproval } from "./device-approval";
@@ -29,9 +30,11 @@ import { DeviceApproval } from "./device-approval";
 import { DashboardStats, UnifiedDashboardData, PlexStatus } from "@/types";
 import { apiClient } from "@/lib/api";
 import { config } from "@/lib/config";
+import { useVersion } from "@/contexts/version-context";
 
 export function Dashboard() {
   const router = useRouter();
+  const { versionInfo, checkForUpdatesIfEnabled } = useVersion();
   const [dashboardData, setDashboardData] = useState<UnifiedDashboardData | null>(null);
   const [stats, setStats] = useState<DashboardStats>({
     activeStreams: 0,
@@ -43,6 +46,7 @@ export function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [plexStatus, setPlexStatus] = useState<PlexStatus | null>(null);
   const [autoRefresh, setAutoRefresh] = useState(true);
+  const [initialTabSet, setInitialTabSet] = useState(false);
 
   const handleShowSettings = () => {
     router.push('/settings');
@@ -57,15 +61,10 @@ export function Dashboard() {
       // Fetch all dashboard data
       const newDashboardData = await apiClient.getDashboardData<UnifiedDashboardData>();
       
-      // Only update state if data actually changed
-      const currentDataString = JSON.stringify(dashboardData);
-      const newDataString = JSON.stringify(newDashboardData);
-      
-      if (currentDataString !== newDataString) {
-        setDashboardData(newDashboardData);
-        setPlexStatus(newDashboardData.plexStatus);
-        setStats(newDashboardData.stats);
-      }
+      // Always update the data
+      setDashboardData(newDashboardData);
+      setPlexStatus(newDashboardData.plexStatus);
+      setStats(newDashboardData.stats);
       
     } catch (error) {
       console.error("Failed to fetch dashboard stats:", error);
@@ -79,9 +78,24 @@ export function Dashboard() {
     }
   };
 
+  // Set initial tab only once when dashboard data is first available
+  useEffect(() => {
+    if (dashboardData && !initialTabSet) {
+      const defaultPageSetting = dashboardData.settings.find(s => s.key === "DEFAULT_PAGE");
+      const defaultPage = defaultPageSetting?.value || "devices";
+      setActiveTab(defaultPage === "streams" ? "streams" : "devices");
+      setInitialTabSet(true);
+    }
+  }, [dashboardData, initialTabSet]);
+
   useEffect(() => {
     refreshDashboard();
   }, []);
+
+  // Check for updates automatically when dashboard loads
+  useEffect(() => {
+    checkForUpdatesIfEnabled();
+  }, [checkForUpdatesIfEnabled]);
 
   useEffect(() => {
     if (!autoRefresh) return; // Don't set up interval in manual mode

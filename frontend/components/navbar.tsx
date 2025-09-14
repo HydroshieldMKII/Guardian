@@ -11,11 +11,13 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Shield, Settings, User, LogOut, Home, Moon, Sun } from "lucide-react";
+import { Shield, Settings, User, LogOut, Home, Moon, Sun, AlertTriangle } from "lucide-react";
 import { useTheme } from "@/hooks/use-theme";
+import { useVersion } from "@/contexts/version-context";
 
 export function Navbar() {
   const { theme, toggleTheme } = useTheme();
+  const { versionInfo } = useVersion();
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -60,9 +62,9 @@ export function Navbar() {
                   <p className="text-sm font-medium leading-none">
                     Administrator
                   </p>
-                  <p className="text-xs leading-none text-muted-foreground">
+                  {/* <p className="text-xs leading-none text-muted-foreground">
                     admin@guardian.local
-                  </p>
+                  </p> */}
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
@@ -76,6 +78,9 @@ export function Navbar() {
                 <Link href="/settings" className="flex items-center">
                   <Settings className="mr-2 h-4 w-4" />
                   Settings
+                  {versionInfo?.isVersionMismatch && (
+                    <AlertTriangle className="ml-auto h-4 w-4 text-red-500" />
+                  )}
                 </Link>
               </DropdownMenuItem>
               {/* <DropdownMenuSeparator />

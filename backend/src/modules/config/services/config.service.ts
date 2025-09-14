@@ -4,9 +4,11 @@ import { Repository } from 'typeorm';
 import { AppSettings } from '../../../entities/app-settings.entity';
 import { UserDevice } from '../../../entities/user-device.entity';
 import { UserPreference } from '../../../entities/user-preference.entity';
-import { ActiveSession } from '../../../entities/active-session.entity';
 import * as http from 'http';
 import * as https from 'https';
+
+// App version
+const CURRENT_APP_VERSION = '1.1.3';
 
 export interface ConfigSettingDto {
   key: string;
@@ -93,7 +95,29 @@ export class ConfigService {
         description: 'Days of inactivity before device removal',
         type: 'number' as const,
       },
+      {
+        key: 'DEFAULT_PAGE',
+        value: 'devices',
+        description: 'Default page to show when app loads',
+        type: 'string' as const,
+      },
+      {
+        key: 'AUTO_CHECK_UPDATES',
+        value: 'false',
+        description: 'Automatically check for updates on app launch',
+        type: 'boolean' as const,
+      },
+      {
+        key: 'APP_VERSION',
+        value: CURRENT_APP_VERSION,
+        description: 'Current application version',
+        type: 'string' as const,
+        private: false,
+      },
     ];
+
+    // Update version number on startup if current version is higher
+    await this.updateAppVersionIfNewer();
 
     for (const setting of defaultSettings) {
       const existing = await this.settingsRepository.findOne({
@@ -223,6 +247,14 @@ export class ConfigService {
       }
       if (numValue < 1) {
         throw new Error('Device cleanup interval must be at least 1 day');
+      }
+    }
+
+    // Validate DEFAULT_PAGE setting
+    if (key === 'DEFAULT_PAGE') {
+      const validPages = ['devices', 'streams'];
+      if (!validPages.includes(String(value))) {
+        throw new Error('Default page must be either "devices" or "streams"');
       }
     }
 
@@ -417,17 +449,22 @@ export class ConfigService {
   async exportDatabase(): Promise<string> {
     try {
       this.logger.log('Starting database export...');
-
       // Get all data from all tables 
+
+
+
       const [settings, userDevices, userPreferences] = await Promise.all([
         this.settingsRepository.find(),
         this.settingsRepository.manager.getRepository(UserDevice).find(),
         this.settingsRepository.manager.getRepository(UserPreference).find(),
       ]);
 
+      // Get current app version from settings database
+      const appVersion = await this.getSetting('APP_VERSION');
+
       const exportData = {
         exportedAt: new Date().toISOString(),
-        version: '1.0',
+        version: appVersion,
         data: {
           settings,
           userDevices,
@@ -556,10 +593,77 @@ export class ConfigService {
 
       this.logger.log(`Database import completed: ${imported} items imported, ${skipped} items skipped`);
       
-      return { imported, skipped };
+      return { 
+        imported, 
+        skipped
+      };
     } catch (error) {
       this.logger.error('Error importing database:', error);
       throw new Error(`Failed to import database: ${error.message}`);
     }
+  }
+
+  private async updateAppVersionIfNewer(): Promise<void> {
+    try {
+      const versionSetting = await this.settingsRepository.findOne({
+        where: { key: 'APP_VERSION' },
+      });
+
+      if (versionSetting && this.isVersionNewer(CURRENT_APP_VERSION, versionSetting.value)) {
+        this.logger.log(`Updating app version from ${versionSetting.value} to: ${CURRENT_APP_VERSION}`);
+        versionSetting.value = CURRENT_APP_VERSION;
+        await this.settingsRepository.save(versionSetting);
+        this.logger.log('App version updated successfully');
+      }else{
+        this.logger.log(`App version is up to date: ${CURRENT_APP_VERSION}`);
+      }
+    } catch (error) {
+      this.logger.warn('Failed to update app version:', error);
+    }
+  }
+
+  private isVersionNewer(codeVersion: string, databaseVersion: string): boolean {
+    const parseVersion = (version: string) => {
+      return version.split('.').map(v => parseInt(v) || 0);
+    };
+
+    const newV = parseVersion(codeVersion);
+    const currentV = parseVersion(databaseVersion);
+
+    for (let i = 0; i < Math.max(newV.length, currentV.length); i++) {
+      const newPart = newV[i] || 0;
+      const currentPart = currentV[i] || 0;
+      
+      // code version > database version
+      if (newPart > currentPart){
+        // this.logger.log(`Current app version ${codeVersion} is newer than your data version ${databaseVersion}. Updating to the latest version.`);
+        return true;
+      }
+
+      // code version < database version
+      if (newPart < currentPart){
+        this.logger.error(`WARNING: Current app version ${codeVersion} is older than your data version ${databaseVersion}. Please check your installation.`);
+        return false;
+      }
+    }
+    
+    return false; // versions are equal
+  }
+
+  async getVersionInfo(): Promise<{ 
+    version: string; 
+    databaseVersion: string; 
+    codeVersion: string;
+    isVersionMismatch: boolean;
+  }> {
+    const dbVersion = await this.getSetting('APP_VERSION') || CURRENT_APP_VERSION;
+    const isVersionMismatch = this.isVersionNewer(dbVersion, CURRENT_APP_VERSION);
+    
+    return {
+      version: CURRENT_APP_VERSION,
+      databaseVersion: dbVersion,
+      codeVersion: CURRENT_APP_VERSION,
+      isVersionMismatch,
+    };
   }
 }
