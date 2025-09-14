@@ -194,6 +194,16 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
             errors.push('Plex token is required');
           }
           break;
+        case 'DEVICE_CLEANUP_INTERVAL_DAYS':
+          const cleanupDays = Number(setting.value);
+          if (isNaN(cleanupDays)) {
+            errors.push('Device cleanup interval must be a number');
+          } else if (!Number.isInteger(cleanupDays)) {
+            errors.push('Device cleanup interval must be a whole number (no decimals)');
+          } else if (cleanupDays < 1) {
+            errors.push('Device cleanup interval must be at least 1 day');
+          }
+          break;
           default:
             console.warn(`No validation rules for setting: ${setting.key}`);
             break;
@@ -539,11 +549,24 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
               </Label>
               <Input
                 type="number"
+                min="1"
+                max="365"
+                step="1"
                 value={String(formData["DEVICE_CLEANUP_INTERVAL_DAYS"] || "")}
                 disabled={!isCleanupEnabled}
                 onChange={(e) => {
-                  const newValue = parseFloat(e.target.value) || 0;
-                  handleInputChange("DEVICE_CLEANUP_INTERVAL_DAYS", newValue);
+                  const newValue = parseInt(e.target.value, 10);
+                  if (!isNaN(newValue) && newValue > 0) {
+                    handleInputChange("DEVICE_CLEANUP_INTERVAL_DAYS", newValue);
+                  } else if (e.target.value === "") {
+                    handleInputChange("DEVICE_CLEANUP_INTERVAL_DAYS", "");
+                  }
+                }}
+                onKeyDown={(e) => {
+                  // Prevent decimal input
+                  if (e.key === '.' || e.key === ',') {
+                    e.preventDefault();
+                  }
                 }}
                 className={!isCleanupEnabled ? "bg-muted" : ""}
               />

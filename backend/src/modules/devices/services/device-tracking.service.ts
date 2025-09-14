@@ -257,8 +257,19 @@ export class DeviceTrackingService {
   }
 
   async cleanupInactiveDevices(inactiveDays: number): Promise<{ deletedCount: number; deletedDevices: UserDevice[] }> {
+    // Validate input
+    if (typeof inactiveDays !== 'number' || isNaN(inactiveDays)) {
+      this.logger.warn('Invalid inactive days for cleanup - not a number:', inactiveDays);
+      return { deletedCount: 0, deletedDevices: [] };
+    }
+
+    if (!Number.isInteger(inactiveDays)) {
+      this.logger.warn('Invalid inactive days for cleanup - must be an integer:', inactiveDays);
+      return { deletedCount: 0, deletedDevices: [] };
+    }
+
     if (inactiveDays <= 0) {
-      this.logger.warn('Invalid inactive days for cleanup:', inactiveDays);
+      this.logger.warn('Invalid inactive days for cleanup - must be positive:', inactiveDays);
       return { deletedCount: 0, deletedDevices: [] };
     }
 
