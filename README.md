@@ -13,9 +13,8 @@ Guardian is a utility designed to enhance the security and management of your Pl
 
 - [Features](#features)
 - [Installation](#installation)
-   - [Docker (Recommended)](#quick-start-with-docker-recommended)
+   - [Docker (Recommended)](#🚀-quick-start-with-docker-recommended)
    - [Unraid](#unraid)
-   
 - [Update Guardian](#update-guardian)
 - [Configuration](#configuration)
 - [Troubleshooting](#troubleshooting)
