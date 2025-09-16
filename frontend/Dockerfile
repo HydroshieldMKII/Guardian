@@ -15,9 +15,6 @@ FROM node:20-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 
-# Runtime-configurable port (overridden by Compose)
-ENV PORT=3000
-
 # health tools (optional)
 RUN apk add --no-cache wget
 

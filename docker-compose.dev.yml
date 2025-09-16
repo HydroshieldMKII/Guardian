@@ -1,7 +1,9 @@
 services:
-
   backend:
     image: hydroshieldmkii/guardian-backend:${VERSION:-latest}
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
     container_name: guardian-backend
     environment:
       NODE_ENV: production
@@ -12,6 +14,9 @@ services:
 
   frontend:
     image: hydroshieldmkii/guardian-frontend:${VERSION:-latest}
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
     container_name: guardian-frontend
     ports:
       - "${PLEXGUARD_FRONTEND_PORT:-3000}:3000"

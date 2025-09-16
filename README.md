@@ -12,7 +12,10 @@ Guardian is a utility designed to enhance the security and management of your Pl
 ## Table of Contents
 
 - [Features](#features)
-- [Install Guardian](#installation)
+- [Installation](#installation)
+   - [Docker (Recommended)](#quick-start-with-docker-recommended)
+   - [Unraid](#unraid)
+   
 - [Update Guardian](#update-guardian)
 - [Configuration](#configuration)
 - [Troubleshooting](#troubleshooting)
@@ -52,17 +55,18 @@ Guardian is a utility designed to enhance the security and management of your Pl
 - **SSL/TLS support** - Secure connections with certificate validation options
 - **Database persistence** - Support export and import of device data for backup and migration
 
-## 🚀 Quick Start with Docker (Recommended)
+## Installation
 
-The easiest way to deploy Guardian is using Docker Compose:
+
+### 🚀 Quick Start with Docker (Recommended)
+
+The easiest way to deploy Guardian is using Docker Compose
 
 ### Prerequisites
 
 - Docker and Docker Compose installed
 - Plex Media Server running
 - Plex authentication token
-
-### Installation
 
 1. **Clone the repository**:
 
@@ -88,20 +92,72 @@ The easiest way to deploy Guardian is using Docker Compose:
 
 4. **Access Guardian**:
 
-With default port config, you can access the web interface at http://localhost:3000 or http://device-ip:3000
+With default port config, you can access the web interface at http://localhost:3000 or http://DEVICE-IP:3000
 
-### Manually pull image
+### Unraid
 
-If you want to manually pull the images, you can do so with the following commands:
+You can deploy Guardian on Unraid using the Compose Manager plugin:
 
-```bash
-docker pull hydroshieldmkii/guardian-backend
-docker pull hydroshieldmkii/guardian-frontend
-```
+#### Prerequisites
+
+- Unraid server up and running
+- Compose Manager plugin installed
+
+#### Installation Steps
+
+1. **Create a new stack**:
+   - Navigate to Docker → Compose section
+   - Click "Add New Stack"
+   - Give it a descriptive name (e.g., "Guardian")
+
+2. **Configure the stack**:
+   - Click the gear icon next to your new stack
+   - Select "Edit Stack" → "Compose File"
+   - Copy the contents from [docker-compose.example.yml](./docker-compose.example.yml)
+   - Paste the content into the text box
+
+   You may need to adjust a few settings to fit your Unraid setup. Adjust the volume paths and ports as necessary in the configuration you just pasted.
+   
+   **Example volume mount adjustments:**
+
+   If you want to store data in a specific location, modify the `volumes` section. Make sure it points to a valid path on your Unraid server.
+
+   ```yaml
+   # Default from docker-compose.example.yml:
+   volumes:
+     - backend_data:/app/data
+   
+   # Example for Unraid with custom path:
+   volumes:
+     - /mnt/user/appdata/guardian:/app/data
+   ```
+
+   **Example port adjustments:**
+
+   if you need to change the port, you can do it by modifying the `ports` section.
+
+   ```yaml
+   # Default from docker-compose.example.yml:
+   ports:
+      - "${PLEXGUARD_FRONTEND_PORT:-3000}:3000"
+
+   # Example for Unraid to use port 3456:
+   ports:
+      - "3456:3000"
+   ```
+
+   In this example, Guardian will be accessible on port `3456`
+
+3. **Deploy**:
+   - Click "Compose Up" to start the services
+
+4. **Access Guardian**:
+   - Open your browser and navigate to `http://[UNRAID-IP]:3000`
+
 
 ## Configuration
 
-Guardian have 2 optionnals environments variables that you can set in a `.env` file:
+Guardian have 2 optionnals environments variables that you can set in a `.env` file to easily customize your deployment:
 
 - `PLEXGUARD_FRONTEND_PORT`: The port on which the frontend will be accessible. Default is `3000`.
 - `VERSION`: The version of Guardian to use. Default is `latest`.
