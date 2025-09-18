@@ -100,7 +100,7 @@ const UserAvatar = ({ userId, username, avatarUrl }: {
   const initials = displayName.substring(0, 2).toUpperCase();
 
   return (
-    <Avatar className="w-5 h-5 flex-shrink-0">
+    <Avatar className="w-10 h-10 flex-shrink-0">
       {avatarUrl && (
         <AvatarImage 
           src={avatarUrl} 

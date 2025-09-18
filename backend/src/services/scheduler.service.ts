@@ -34,6 +34,11 @@ export class SchedulerService implements OnModuleInit {
       this.logger.log('Refresh interval changed, updating cron expression...');
       await this.setupDynamicSessionUpdatesCron();
     });
+
+    // Perform tasks on startup
+    await this.handleSessionUpdates();
+    await this.performDeviceCleanup();
+    await this.usersService.syncUsersFromDeviceData();
   }
 
   private async setupDynamicSessionUpdatesCron() {
