@@ -23,80 +23,52 @@ export class UsersService {
     return await this.userPreferenceRepository.find();
   }
 
-  // Sync users from Plex server API (called by scheduler)
-  async syncUsersFromPlexServer(): Promise<void> {
-    this.logger.log('Syncing users from device data...');
-    await this.syncUserAvatarsFromDevices();
-  }
+  // Update user info directly from session data (called during session processing)
+  async updateUserFromSessionData(userId: string, username?: string, avatarUrl?: string): Promise<void> {
+    if (!userId) return;
 
+    try {
+      // Find existing user preference
+      let preference = await this.userPreferenceRepository.findOne({
+        where: { userId },
+      });
 
-  // Sync user avatars and usernames from device data
-  async syncUserAvatarsFromDevices(): Promise<void> {
-    // Get all existing user preferences
-    const existingPreferences = await this.userPreferenceRepository.find();
-    
-    // Get users from devices with their latest avatar URLs
-    const usersFromDevices = await this.userDeviceRepository
-      .createQueryBuilder('device')
-      .select('device.userId', 'userId')
-      .addSelect('device.username', 'username')
-      .addSelect('device.avatarUrl', 'avatarUrl')
-      .where('device.avatarUrl IS NOT NULL') // Only get devices with avatar URLs
-      .orderBy('device.lastSeen', 'DESC') // Get the most recent avatar URL
-      .distinct(true)
-      .getRawMany();
+      let needsUpdate = false;
+      let isNewUser = false;
 
-    let updateCount = 0;
-    let createCount = 0;
-    const existingUserIds = new Set(existingPreferences.map(p => p.userId));
-
-    // Update existing preferences with latest avatar URLs from devices
-    for (const preference of existingPreferences) {
-      const deviceUser = usersFromDevices.find(u => u.userId === preference.userId);
-      if (deviceUser?.avatarUrl) {
-        let needsUpdate = false;
-        
-        // Check if avatar URL needs updating
-        if (!preference.avatarUrl || preference.avatarUrl !== deviceUser.avatarUrl) {
-          preference.avatarUrl = deviceUser.avatarUrl;
-          needsUpdate = true;
-        }
-        
-        // Check if username needs updating
-        if (!preference.username && deviceUser.username) {
-          preference.username = deviceUser.username;
-          needsUpdate = true;
-        }
-        
-        if (needsUpdate) {
-          await this.userPreferenceRepository.save(preference);
-          updateCount++;
-          this.logger.debug(`Updated avatar/username for user ${preference.userId}`);
-        }
-      }
-    }
-
-    // Create preferences for users with devices but no preferences
-    for (const user of usersFromDevices) {
-      if (!existingUserIds.has(user.userId)) {
-        this.logger.log('Creating default preference for user:', user);
-
-        // Create default preference entry
-        const newPreference = this.userPreferenceRepository.create({
-          userId: user.userId,
-          username: user.username,
-          avatarUrl: user.avatarUrl,
+      if (!preference) {
+        // Create new user preference if it doesn't exist
+        preference = this.userPreferenceRepository.create({
+          userId,
+          username,
+          avatarUrl,
           defaultBlock: null, // null means use global default
         });
-
-        // Save the preference to the database
-        await this.userPreferenceRepository.save(newPreference);
-        createCount++;
+        isNewUser = true;
+        needsUpdate = true;
+      } else {
+        // Update existing preference if data has changed
+        if (avatarUrl && preference.avatarUrl !== avatarUrl) {
+          preference.avatarUrl = avatarUrl;
+          needsUpdate = true;
+        }
+        
+        if (username && !preference.username) {
+          preference.username = username;
+          needsUpdate = true;
+        }
       }
-    }
 
-    if (updateCount > 0 || createCount > 0) {
-      this.logger.log(`Synced users from devices: ${updateCount} updated, ${createCount} created`);
+      if (needsUpdate) {
+        await this.userPreferenceRepository.save(preference);
+        if (isNewUser) {
+          this.logger.debug(`Created new user preference: ${userId} (${username})`);
+        } else {
+          this.logger.debug(`Updated user info: ${userId} (${username})`);
+        }
+      }
+    } catch (error) {
+      this.logger.error(`Error updating user from session data: ${userId}`, error);
     }
   }
 

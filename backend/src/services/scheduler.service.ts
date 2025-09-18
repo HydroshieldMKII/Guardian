@@ -38,7 +38,6 @@ export class SchedulerService implements OnModuleInit {
     // Perform tasks on startup
     await this.handleSessionUpdates();
     await this.performDeviceCleanup();
-    await this.usersService.syncUserAvatarsFromDevices();
   }
 
   private async setupDynamicSessionUpdatesCron() {
@@ -136,20 +135,6 @@ export class SchedulerService implements OnModuleInit {
       await this.deviceTrackingService.cleanupInactiveDevices(intervalDays);
     } catch (error) {
       this.logger.error('Error during device cleanup:', error);
-    }
-  }
-
-  // Sync user data every 30 minutes
-  @Cron('0 */30 * * * *', {
-    name: 'userSync',
-  })
-  async handleUserSync() {
-    try {
-      this.logger.log('Running scheduled user sync from device data...');
-      await this.usersService.syncUserAvatarsFromDevices();
-      this.logger.log('User sync completed successfully');
-    } catch (error) {
-      this.logger.error('Error during scheduled user sync:', error);
     }
   }
 

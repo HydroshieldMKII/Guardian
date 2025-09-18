@@ -28,6 +28,8 @@ export class PlexService {
   async updateActiveSessions(): Promise<PlexSessionsResponse> {
     try {
       const sessions = await this.getActiveSessions();
+      
+      // this.logger.debug(JSON.stringify(sessions));
 
       // Update active sessions in database
       try {

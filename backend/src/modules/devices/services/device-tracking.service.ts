@@ -65,6 +65,13 @@ export class DeviceTrackingService {
         return;
       }
 
+      // Update user info directly from session data
+      await this.usersService.updateUserFromSessionData(
+        deviceInfo.userId,
+        deviceInfo.username,
+        deviceInfo.avatarUrl
+      );
+
       await this.trackDevice(deviceInfo);
     } catch (error) {
       this.logger.error('Error processing session', error);
@@ -146,9 +153,6 @@ export class DeviceTrackingService {
     if (deviceInfo.username && !existingDevice.username) {
       existingDevice.username = deviceInfo.username;
     }
-    if (deviceInfo.avatarUrl) {
-      existingDevice.avatarUrl = deviceInfo.avatarUrl;
-    }
 
     await this.userDeviceRepository.save(existingDevice);
     // this.logger.debug(
@@ -166,7 +170,6 @@ export class DeviceTrackingService {
     const newDevice = this.userDeviceRepository.create({
       userId: deviceInfo.userId,
       username: deviceInfo.username,
-      avatarUrl: deviceInfo.avatarUrl,
       deviceIdentifier: deviceInfo.deviceIdentifier,
       deviceName: deviceInfo.deviceName,
       devicePlatform: deviceInfo.devicePlatform,
