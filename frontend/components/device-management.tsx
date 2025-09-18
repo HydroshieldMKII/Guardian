@@ -1231,7 +1231,7 @@ const DeviceManagement = memo(({
           </DialogHeader>
           {selectedDevice && (
             <div className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+              <div className="grid grid-cols-2 gap-3 sm:gap-4">
                 <div>
                   <h4 className="font-semibold text-xs sm:text-sm text-muted-foreground">
                     Device Name
@@ -1307,7 +1307,7 @@ const DeviceManagement = memo(({
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+              <div className="grid grid-cols-2 gap-3 sm:gap-4">
                 <div>
                   <h4 className="font-semibold text-xs sm:text-sm text-muted-foreground">
                     First Seen
