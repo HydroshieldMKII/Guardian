@@ -976,7 +976,7 @@ const DeviceManagement = memo(({
                                         variant="outline"
                                         size="sm"
                                         onClick={() => setSelectedDevice(device)}
-                                        className="text-xs px-3 py-2 w-full sm:w-auto"
+                                        className="text-xs px-3 py-2 w-full sm:w-auto sm:px-2 sm:py-1"
                                       >
                                         <Eye className="w-3 h-3 mr-2" />
                                         View Details
@@ -990,7 +990,7 @@ const DeviceManagement = memo(({
                                             size="sm"
                                             onClick={() => showApproveConfirmation(device)}
                                             disabled={actionLoading === device.id}
-                                            className="bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white text-xs px-3 py-2"
+                                            className="bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white text-xs px-3 py-2 sm:px-2 sm:py-1"
                                           >
                                             {actionLoading === device.id ? (
                                               <RefreshCw className="w-3 h-3 animate-spin" />
@@ -1007,7 +1007,7 @@ const DeviceManagement = memo(({
                                             size="sm"
                                             onClick={() => showRejectConfirmation(device)}
                                             disabled={actionLoading === device.id}
-                                            className="border-red-600 text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-700 dark:hover:bg-red-900/20 text-xs px-3 py-2"
+                                            className="border-red-600 text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-700 dark:hover:bg-red-900/20 text-xs px-3 py-2 sm:px-2 sm:py-1"
                                           >
                                             {actionLoading === device.id ? (
                                               <RefreshCw className="w-3 h-3 animate-spin" />
@@ -1027,7 +1027,7 @@ const DeviceManagement = memo(({
                                             size="sm"
                                             onClick={() => showToggleConfirmation(device)}
                                             disabled={actionLoading === device.id}
-                                            className={`text-xs px-3 py-2 ${
+                                            className={`text-xs px-3 py-2 sm:px-2 sm:py-1 ${
                                               device.status === "approved"
                                                 ? "border-red-600 text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-700 dark:hover:bg-red-900/20"
                                                 : "bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white"
@@ -1054,7 +1054,7 @@ const DeviceManagement = memo(({
                                             size="sm"
                                             onClick={() => showDeleteConfirmation(device)}
                                             disabled={actionLoading === device.id}
-                                            className="text-xs px-3 py-2 bg-red-600 dark:bg-red-700 text-white hover:bg-red-700 dark:hover:bg-red-800"
+                                            className="text-xs px-3 py-2 sm:px-2 sm:py-1 bg-red-600 dark:bg-red-700 text-white hover:bg-red-700 dark:hover:bg-red-800"
                                           >
                                             {actionLoading === device.id ? (
                                               <RefreshCw className="w-3 h-3 animate-spin" />
