@@ -171,7 +171,7 @@ const UnifiedDeviceManagement = memo(({
   const [selectedDevice, setSelectedDevice] = useState<UserDevice | null>(null);
   const [expandedUsers, setExpandedUsers] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterType, setFilterType] = useState<"all" | "pending" | "processed">("all");
+  const [filterType, setFilterType] = useState<"all" | "pending">("all");
   
   // Local storage keys for sorting preferences
   const USER_SORT_BY_KEY = "guardian-unified-sort-by";
@@ -347,8 +347,6 @@ const UnifiedDeviceManagement = memo(({
       switch (filterType) {
         case "pending":
           return group.pendingCount > 0;
-        case "processed":
-          return group.approvedCount > 0 || group.rejectedCount > 0;
         default:
           return true;
       }
@@ -667,14 +665,6 @@ const UnifiedDeviceManagement = memo(({
                   className="text-xs sm:text-sm px-2 sm:px-3"
                 >
                   <span>With Pending</span>
-                </Button>
-                <Button
-                  variant={filterType === "processed" ? "default" : "ghost"}
-                  size="sm"
-                  onClick={() => setFilterType("processed")}
-                  className="text-xs sm:text-sm px-2 sm:px-3"
-                >
-                  <span>With Devices</span>
                 </Button>
               </div>
               <div className="flex items-center gap-2">
