@@ -75,6 +75,7 @@ export class DeviceTrackingService {
     return {
       userId: session.User?.id || session.User?.uuid || 'unknown',
       username: session.User?.title,
+      avatarUrl: session.User?.thumb,
       deviceIdentifier: session.Player?.machineIdentifier || 'unknown',
       sessionKey: session.sessionKey,
       deviceName: session.Player?.device || session.Player?.title,
@@ -145,6 +146,9 @@ export class DeviceTrackingService {
     if (deviceInfo.username && !existingDevice.username) {
       existingDevice.username = deviceInfo.username;
     }
+    if (deviceInfo.avatarUrl) {
+      existingDevice.avatarUrl = deviceInfo.avatarUrl;
+    }
 
     await this.userDeviceRepository.save(existingDevice);
     // this.logger.debug(
@@ -162,6 +166,7 @@ export class DeviceTrackingService {
     const newDevice = this.userDeviceRepository.create({
       userId: deviceInfo.userId,
       username: deviceInfo.username,
+      avatarUrl: deviceInfo.avatarUrl,
       deviceIdentifier: deviceInfo.deviceIdentifier,
       deviceName: deviceInfo.deviceName,
       devicePlatform: deviceInfo.devicePlatform,

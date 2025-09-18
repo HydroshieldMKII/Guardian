@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Dialog,
   DialogContent,
@@ -86,6 +87,31 @@ const ClickableIP = ({ ipAddress }: { ipAddress: string | null | undefined }) =>
       <span className="truncate">{ipAddress}</span>
       <ExternalLink className="w-3 h-3 flex-shrink-0 opacity-70" />
     </button>
+  );
+};
+
+// User avatar component that displays Plex profile picture
+const UserAvatar = ({ userId, username, avatarUrl }: { 
+  userId: string; 
+  username?: string; 
+  avatarUrl?: string;
+}) => {
+  const displayName = username || userId;
+  const initials = displayName.substring(0, 2).toUpperCase();
+
+  return (
+    <Avatar className="w-5 h-5 flex-shrink-0">
+      {avatarUrl && (
+        <AvatarImage 
+          src={avatarUrl} 
+          alt={`${displayName}'s avatar`}
+          className="object-cover"
+        />
+      )}
+      <AvatarFallback className="text-xs bg-muted text-muted-foreground">
+        {initials}
+      </AvatarFallback>
+    </Avatar>
   );
 };
 
@@ -788,7 +814,11 @@ const UnifiedDeviceManagement = memo(({
                               ) : (
                                 <ChevronRight className="w-4 h-4 text-muted-foreground" />
                               )}
-                              <User className="w-5 h-5 flex-shrink-0" />
+                              <UserAvatar 
+                                userId={group.user.userId}
+                                username={group.user.username}
+                                avatarUrl={group.user.preference?.avatarUrl}
+                              />
                               <div className="min-w-0 flex-1">
                                 <h3 className="font-semibold text-foreground truncate">
                                   {group.user.username || group.user.userId}

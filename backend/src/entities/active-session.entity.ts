@@ -91,9 +91,6 @@ export class ActiveSession {
   @Column({ name: 'bandwidth', nullable: true })
   bandwidth: number;
 
-  @Column({ name: 'raw_data', type: 'text', nullable: true })
-  rawData: string; // JSON string of the complete session data
-
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 

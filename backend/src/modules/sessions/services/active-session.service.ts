@@ -170,7 +170,6 @@ export class ActiveSessionService {
         ...(media?.audioCodec && { audioCodec: media.audioCodec }),
         ...(session?.location && { sessionLocation: session.location }),
         ...(session?.bandwidth && { bandwidth: session.bandwidth }),
-        rawData: JSON.stringify(sessionData),
         lastActivity: new Date(),
       };
 
