@@ -45,6 +45,7 @@ export class SessionTerminationService {
 
           if (shouldStop) {
             const sessionKey = session.Session?.id;
+            console.log('Terminating unapproved session:', session);
 
             if (sessionKey) {
               await this.terminateSession(sessionKey);
@@ -61,6 +62,8 @@ export class SessionTerminationService {
               this.logger.warn(
                 'Could not find session identifier in session data',
               );
+
+              //
             }
           }
         } catch (error) {

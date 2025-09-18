@@ -918,18 +918,20 @@ const UnifiedDeviceManagement = memo(({
                                       </div>
                                     </div>
 
-                                    {/* Device Actions */}
-                                    <div className="flex flex-col sm:flex-row gap-2 min-w-0 sm:min-w-[200px]">
+                                    {/* Device Actions*/}
+                                    <div className="flex flex-col gap-2 min-w-0 sm:min-w-[200px]">
+                                      {/* Row 1: Details Button */}
                                       <Button
                                         variant="outline"
                                         size="sm"
                                         onClick={() => setSelectedDevice(device)}
-                                        className="text-xs px-2"
+                                        className="text-xs px-2 w-full"
                                       >
                                         <Eye className="w-3 h-3 mr-1" />
                                         Details
                                       </Button>
 
+                                      {/* Row 2: Action Buttons */}
                                       {device.status === "pending" ? (
                                         <div className="flex gap-1">
                                           <Button
