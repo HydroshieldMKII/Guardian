@@ -1127,37 +1127,36 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
             <div>
               <h3 className="text-lg font-medium">Administrative Tools</h3>
               <p className="text-sm text-muted-foreground">
-                Dangerous operations for database management. Use with extreme caution.
+                Miscellaneous options and scripts. Use with caution.
               </p>
             </div>
 
             <div className="space-y-4">
               {/* Reset Stream Counts */}
-              <Card className="p-4 border-orange-200 dark:border-orange-800">
+              <Card className="p-4">
                 <div className="space-y-4">
                   <div>
                     <h4 className="text-sm font-medium flex items-center">
-                      <AlertTriangle className="w-4 h-4 mr-2 text-orange-500" />
+                      {/* <AlertTriangle className="w-4 h-4 mr-2 text-orange-500" /> */}
                       Reset Stream Counts
                     </h4>
                     <p className="text-xs text-muted-foreground mt-1">
                       Reset session counts for all devices. This will not delete devices.
                     </p>
                   </div>
-                  <Button
+                    <Button
                     onClick={() => setShowResetStreamCountsModal(true)}
                     disabled={resettingStreamCounts}
                     size="sm"
                     variant="outline"
-                    className="border-orange-200 text-orange-700 hover:bg-orange-50 dark:border-orange-800 dark:text-orange-400 dark:hover:bg-orange-900/20"
-                  >
+                    >
                     {resettingStreamCounts ? (
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                     ) : (
                       <RefreshCw className="w-4 h-4 mr-2" />
                     )}
                     {resettingStreamCounts ? "Resetting..." : "Reset Stream Counts"}
-                  </Button>
+                    </Button>
                 </div>
               </Card>
 
@@ -1170,7 +1169,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
                       Delete All Devices
                     </h4>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Permanently remove all device records from the database. Devices will need to be detected again on next stream.
+                      Permanently remove all device records from the database.
                     </p>
                   </div>
                   <Button
@@ -1509,7 +1508,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
         onClose={() => setShowResetDatabaseModal(false)}
         onConfirm={handleResetDatabase}
         title="Reset Entire Database"
-        description="DANGER: This will permanently delete ALL data including settings, devices, user preferences, and sessions. Default settings will be restored. This action cannot be undone. Are you absolutely sure you want to proceed?"
+        description="DANGER: This will permanently delete ALL data including settings, devices, users, and sessions. Default settings will be restored. This action cannot be undone. Are you absolutely sure you want to proceed?"
         confirmText="Yes, Reset Database"
         cancelText="Cancel"
         variant="destructive"
@@ -1533,7 +1532,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
         onClose={() => setShowDeleteAllDevicesModal(false)}
         onConfirm={handleDeleteAllDevices}
         title="Delete All Devices"
-        description="This will permanently remove all device records from the database. Devices will need to be detected again on their next stream attempt. User preferences will remain intact. This action cannot be undone."
+        description="This will permanently remove all device records from the database. Devices will need to be detected again on their next stream attempt. Device preferences will be lost. This action cannot be undone."
         confirmText="Delete All Devices"
         cancelText="Cancel"
         variant="destructive"
