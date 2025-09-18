@@ -806,13 +806,13 @@ const DeviceManagement = memo(({
                   >
                     <div className="rounded-lg border bg-card shadow-sm hover:shadow-md transition-shadow">
                       <CollapsibleTrigger asChild>
-                        <div className="p-4 border-b cursor-pointer hover:bg-muted/50 transition-colors">
-                          <div className="flex items-center justify-between">
+                        <div className="p-3 sm:p-4 border-b cursor-pointer hover:bg-muted/50 transition-colors">
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                             <div className="flex items-center space-x-3 min-w-0 flex-1">
                               {expandedUsers.has(group.user.userId) ? (
-                                <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                                <ChevronDown className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                               ) : (
-                                <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                                <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                               )}
                               <UserAvatar 
                                 userId={group.user.userId}
@@ -820,10 +820,10 @@ const DeviceManagement = memo(({
                                 avatarUrl={group.user.preference?.avatarUrl}
                               />
                               <div className="min-w-0 flex-1">
-                                <h3 className="font-semibold text-foreground truncate">
+                                <h3 className="font-semibold text-foreground truncate text-sm sm:text-base">
                                   {group.user.username || group.user.userId}
                                 </h3>
-                                <p className="text-sm text-muted-foreground">
+                                <p className="text-xs sm:text-sm text-muted-foreground">
                                   {group.devices.length} device{group.devices.length !== 1 ? 's' : ''}
                                   {group.pendingCount > 0 && (
                                     <span className="text-yellow-600 dark:text-yellow-400">
@@ -832,22 +832,28 @@ const DeviceManagement = memo(({
                                   )}
                                 </p>
                               </div>
-                              {group.user.preference && getUserPreferenceBadge(group.user.preference.defaultBlock)}
+                              <div className="hidden sm:flex">
+                                {group.user.preference && getUserPreferenceBadge(group.user.preference.defaultBlock)}
+                              </div>
                             </div>
                             
-                            <div className="flex items-center gap-2 ml-4">
+                            {/* Mobile: Stack badges vertically, Desktop: Horizontal */}
+                            <div className="flex flex-wrap gap-1 sm:gap-2 sm:ml-4">
+                              <div className="sm:hidden">
+                                {group.user.preference && getUserPreferenceBadge(group.user.preference.defaultBlock)}
+                              </div>
                               {group.pendingCount > 0 && (
-                                <Badge variant="secondary" className="bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300">
+                                <Badge variant="secondary" className="bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 text-xs">
                                   {group.pendingCount} pending
                                 </Badge>
                               )}
                               {group.approvedCount > 0 && (
-                                <Badge variant="secondary" className="bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300">
+                                <Badge variant="secondary" className="bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 text-xs">
                                   {group.approvedCount} approved
                                 </Badge>
                               )}
                               {group.rejectedCount > 0 && (
-                                <Badge variant="secondary" className="bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300">
+                                <Badge variant="secondary" className="bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 text-xs">
                                   {group.rejectedCount} rejected
                                 </Badge>
                               )}
@@ -857,49 +863,54 @@ const DeviceManagement = memo(({
                       </CollapsibleTrigger>
                       
                       <CollapsibleContent>
-                        <div className="p-4 space-y-4">
+                        <div className="p-3 sm:p-4 space-y-4">
                           {/* User Preference Controls */}
-                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 bg-muted/30 rounded-lg">
+                          <div className="flex flex-col gap-3 p-3 bg-muted/30 rounded-lg">
                             <div className="flex items-center space-x-2">
-                              <Settings className="w-4 h-4" />
+                              <Settings className="w-4 h-4 flex-shrink-0" />
                               <span className="text-sm font-medium">Default Device Policy:</span>
+                            </div>
+                            <div className="flex sm:hidden">
                               {group.user.preference && getUserPreferenceBadge(group.user.preference.defaultBlock)}
                             </div>
-                            <div className="grid grid-cols-3 gap-2 sm:w-auto">
+                            <div className="grid grid-cols-3 gap-2">
                               <Button
                                 variant={!group.user.preference || group.user.preference.defaultBlock === null ? "default" : "outline"}
                                 size="sm"
                                 onClick={() => handleUpdateUserPreference(group.user.userId, null)}
-                                className="text-xs px-2"
+                                className="text-xs px-2 py-1"
                               >
                                 <Settings className="w-3 h-3 mr-1" />
-                                Global
+                                <span className="hidden sm:inline">Global</span>
+                                <span className="sm:hidden">Global</span>
                               </Button>
                               <Button
                                 variant={group.user.preference?.defaultBlock === false ? "default" : "outline"}
                                 size="sm"
                                 onClick={() => handleUpdateUserPreference(group.user.userId, false)}
-                                className={`text-xs px-2 ${
+                                className={`text-xs px-2 py-1 ${
                                   group.user.preference?.defaultBlock === false
                                     ? "bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white"
                                     : ""
                                 }`}
                               >
                                 <CheckCircle className="w-3 h-3 mr-1" />
-                                Allow
+                                <span className="hidden sm:inline">Allow</span>
+                                <span className="sm:hidden">Allow</span>
                               </Button>
                               <Button
                                 variant={group.user.preference?.defaultBlock === true ? "default" : "outline"}
                                 size="sm"
                                 onClick={() => handleUpdateUserPreference(group.user.userId, true)}
-                                className={`text-xs px-2 ${
+                                className={`text-xs px-2 py-1 ${
                                   group.user.preference?.defaultBlock === true
                                     ? "bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-600 text-white"
                                     : ""
                                 }`}
                               >
                                 <XCircle className="w-3 h-3 mr-1" />
-                                Block
+                                <span className="hidden sm:inline">Block</span>
+                                <span className="sm:hidden">Block</span>
                               </Button>
                             </div>
                           </div>
@@ -917,66 +928,77 @@ const DeviceManagement = memo(({
                                   key={device.id}
                                   className="p-3 rounded border bg-card/50 hover:bg-card transition-colors"
                                 >
-                                  <div className="flex flex-col sm:flex-row sm:items-start justify-between mb-3 gap-3">
-                                    <div className="flex-1 min-w-0">
-                                      <div className="flex items-center space-x-2 mb-2">
+                                  {/* Mobile-first layout */}
+                                  <div className="space-y-3">
+                                    {/* Device Header */}
+                                    <div className="flex items-start gap-3">
+                                      <div className="flex-shrink-0 mt-0.5">
                                         {getDeviceIcon(device.devicePlatform, device.deviceProduct)}
-                                        <h4 className="font-medium text-foreground truncate">
+                                      </div>
+                                      <div className="flex-1 min-w-0">
+                                        <h4 className="font-medium text-foreground truncate text-sm sm:text-base">
                                           {device.deviceName || device.deviceIdentifier}
                                         </h4>
-                                        {getDeviceStatus(device)}
-                                      </div>
-                                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-muted-foreground">
-                                        <div className="flex items-center min-w-0">
-                                          <Monitor className="w-3 h-3 mr-1 flex-shrink-0" />
-                                          <span className="truncate">
-                                            {device.devicePlatform || "Unknown Platform"}
-                                          </span>
-                                        </div>
-                                        <div className="flex items-center min-w-0">
-                                          <MapPin className="w-3 h-3 mr-1 flex-shrink-0" />
-                                          <ClickableIP ipAddress={device.ipAddress} />
-                                        </div>
-                                        <div className="flex items-center">
-                                          <Clock className="w-3 h-3 mr-1" />
-                                          Streams: {device.sessionCount}
-                                        </div>
-                                        <div className="flex items-center">
-                                          <Clock className="w-3 h-3 mr-1" />
-                                          Last seen: {new Date(device.lastSeen).toLocaleDateString()}
-                                        </div>
                                       </div>
                                     </div>
 
-                                    {/* Device Actions*/}
-                                    <div className="flex flex-col gap-2 min-w-0 sm:min-w-[200px]">
-                                      {/* Row 1: Details Button */}
+                                    {/* Device Info Grid - Responsive with Status */}
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs sm:text-sm text-muted-foreground">
+                                      {/* Status badge - first item, left-aligned like other info */}
+                                      <div className="flex items-center min-w-0">
+                                        <Shield className="w-3 h-3 mr-2 flex-shrink-0" />
+                                        {getDeviceStatus(device)}
+                                      </div>
+                                      <div className="flex items-center min-w-0">
+                                        <Monitor className="w-3 h-3 mr-2 flex-shrink-0" />
+                                        <span className="truncate">
+                                          {device.devicePlatform || "Unknown Platform"}
+                                        </span>
+                                      </div>
+                                      <div className="flex items-center min-w-0">
+                                        <MapPin className="w-3 h-3 mr-2 flex-shrink-0" />
+                                        <ClickableIP ipAddress={device.ipAddress} />
+                                      </div>
+                                      <div className="flex items-center">
+                                        <Clock className="w-3 h-3 mr-2 flex-shrink-0" />
+                                        <span>Streams: {device.sessionCount}</span>
+                                      </div>
+                                      <div className="flex items-center">
+                                        <Clock className="w-3 h-3 mr-2 flex-shrink-0" />
+                                        <span>Last: {new Date(device.lastSeen).toLocaleDateString()}</span>
+                                      </div>
+                                    </div>
+
+                                    {/* Action Buttons - Mobile-optimized */}
+                                    <div className="flex flex-col gap-2">
+                                      {/* Details Button - Full width on mobile */}
                                       <Button
                                         variant="outline"
                                         size="sm"
                                         onClick={() => setSelectedDevice(device)}
-                                        className="text-xs px-2 w-full"
+                                        className="text-xs px-3 py-2 w-full sm:w-auto"
                                       >
-                                        <Eye className="w-3 h-3 mr-1" />
-                                        Details
+                                        <Eye className="w-3 h-3 mr-2" />
+                                        View Details
                                       </Button>
 
-                                      {/* Row 2: Action Buttons */}
+                                      {/* Action Buttons Row */}
                                       {device.status === "pending" ? (
-                                        <div className="flex gap-1">
+                                        <div className="grid grid-cols-2 gap-2">
                                           <Button
                                             variant="default"
                                             size="sm"
                                             onClick={() => showApproveConfirmation(device)}
                                             disabled={actionLoading === device.id}
-                                            className="bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white text-xs px-2 flex-1"
+                                            className="bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white text-xs px-3 py-2"
                                           >
                                             {actionLoading === device.id ? (
                                               <RefreshCw className="w-3 h-3 animate-spin" />
                                             ) : (
                                               <>
-                                                <CheckCircle className="w-3 h-3 mr-1" />
-                                                Approve
+                                                <CheckCircle className="w-3 h-3 mr-1 sm:mr-2" />
+                                                <span className="hidden sm:inline">Approve</span>
+                                                <span className="sm:hidden">Approve</span>
                                               </>
                                             )}
                                           </Button>
@@ -985,26 +1007,27 @@ const DeviceManagement = memo(({
                                             size="sm"
                                             onClick={() => showRejectConfirmation(device)}
                                             disabled={actionLoading === device.id}
-                                            className="border-red-600 text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-700 dark:hover:bg-red-900/20 text-xs px-2 flex-1"
+                                            className="border-red-600 text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-700 dark:hover:bg-red-900/20 text-xs px-3 py-2"
                                           >
                                             {actionLoading === device.id ? (
                                               <RefreshCw className="w-3 h-3 animate-spin" />
                                             ) : (
                                               <>
-                                                <XCircle className="w-3 h-3 mr-1" />
-                                                Reject
+                                                <XCircle className="w-3 h-3 mr-1 sm:mr-2" />
+                                                <span className="hidden sm:inline">Reject</span>
+                                                <span className="sm:hidden">Reject</span>
                                               </>
                                             )}
                                           </Button>
                                         </div>
                                       ) : (
-                                        <div className="flex gap-1">
+                                        <div className="grid grid-cols-2 gap-2">
                                           <Button
                                             variant={device.status === "approved" ? "default" : "outline"}
                                             size="sm"
                                             onClick={() => showToggleConfirmation(device)}
                                             disabled={actionLoading === device.id}
-                                            className={`text-xs px-2 flex-1 ${
+                                            className={`text-xs px-3 py-2 ${
                                               device.status === "approved"
                                                 ? "bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white"
                                                 : "border-red-600 text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-700 dark:hover:bg-red-900/20"
@@ -1014,13 +1037,15 @@ const DeviceManagement = memo(({
                                               <RefreshCw className="w-3 h-3 animate-spin" />
                                             ) : device.status === "approved" ? (
                                               <>
-                                                <ToggleRight className="w-3 h-3 mr-1" />
-                                                Approved
+                                                <ToggleRight className="w-3 h-3 mr-1 sm:mr-2" />
+                                                <span className="hidden sm:inline">Approved</span>
+                                                <span className="sm:hidden">Active</span>
                                               </>
                                             ) : (
                                               <>
-                                                <ToggleLeft className="w-3 h-3 mr-1" />
-                                                Rejected
+                                                <ToggleLeft className="w-3 h-3 mr-1 sm:mr-2" />
+                                                <span className="hidden sm:inline">Rejected</span>
+                                                <span className="sm:hidden">Blocked</span>
                                               </>
                                             )}
                                           </Button>
@@ -1029,14 +1054,15 @@ const DeviceManagement = memo(({
                                             size="sm"
                                             onClick={() => showDeleteConfirmation(device)}
                                             disabled={actionLoading === device.id}
-                                            className="text-xs px-2 bg-red-600 dark:bg-red-700 text-white hover:bg-red-700 dark:hover:bg-red-800"
+                                            className="text-xs px-3 py-2 bg-red-600 dark:bg-red-700 text-white hover:bg-red-700 dark:hover:bg-red-800"
                                           >
                                             {actionLoading === device.id ? (
                                               <RefreshCw className="w-3 h-3 animate-spin" />
                                             ) : (
                                               <>
-                                                <Trash2 className="w-3 h-3 mr-1" />
-                                                Delete
+                                                <Trash2 className="w-3 h-3 mr-1 sm:mr-2" />
+                                                <span className="hidden sm:inline">Delete</span>
+                                                <span className="sm:hidden">Delete</span>
                                               </>
                                             )}
                                           </Button>
@@ -1059,82 +1085,82 @@ const DeviceManagement = memo(({
         </CardContent>
       </Card>
 
-      {/* Device Details Dialog - Reuse from original component */}
+          {/* Device Details Dialog - Responsive */}
       <Dialog
         open={!!selectedDevice}
         onOpenChange={() => setSelectedDevice(null)}
       >
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center">
-              <Settings className="w-5 h-5 mr-2" />
+            <DialogTitle className="flex items-center text-base sm:text-lg">
+              <Settings className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
               Device Details
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-sm">
               Detailed information about this device
             </DialogDescription>
           </DialogHeader>
           {selectedDevice && (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
-                  <h4 className="font-semibold text-sm text-muted-foreground">
+                  <h4 className="font-semibold text-xs sm:text-sm text-muted-foreground">
                     Device Name
                   </h4>
-                  <p className="text-foreground">
+                  <p className="text-sm sm:text-base text-foreground break-words">
                     {selectedDevice.deviceName || "Unknown"}
                   </p>
                 </div>
                 <div>
-                  <h4 className="font-semibold text-sm text-muted-foreground">
+                  <h4 className="font-semibold text-xs sm:text-sm text-muted-foreground">
                     User
                   </h4>
-                  <p className="text-foreground">
+                  <p className="text-sm sm:text-base text-foreground break-words">
                     {selectedDevice.username || selectedDevice.userId}
                   </p>
                 </div>
                 <div>
-                  <h4 className="font-semibold text-sm text-muted-foreground">
+                  <h4 className="font-semibold text-xs sm:text-sm text-muted-foreground">
                     Platform
                   </h4>
-                  <p className="text-foreground">
+                  <p className="text-sm sm:text-base text-foreground">
                     {selectedDevice.devicePlatform || "Unknown"}
                   </p>
                 </div>
                 <div>
-                  <h4 className="font-semibold text-sm text-muted-foreground">
+                  <h4 className="font-semibold text-xs sm:text-sm text-muted-foreground">
                     Product
                   </h4>
-                  <p className="text-foreground">
+                  <p className="text-sm sm:text-base text-foreground">
                     {selectedDevice.deviceProduct || "Unknown"}
                   </p>
                 </div>
                 <div>
-                  <h4 className="font-semibold text-sm text-muted-foreground">
+                  <h4 className="font-semibold text-xs sm:text-sm text-muted-foreground">
                     Version
                   </h4>
-                  <p className="text-foreground">
+                  <p className="text-sm sm:text-base text-foreground">
                     {selectedDevice.deviceVersion || "Unknown"}
                   </p>
                 </div>
                 <div>
-                  <h4 className="font-semibold text-sm text-muted-foreground">
+                  <h4 className="font-semibold text-xs sm:text-sm text-muted-foreground">
                     IP Address
                   </h4>
-                  <div className="text-foreground">
+                  <div className="text-sm sm:text-base text-foreground">
                     <ClickableIP ipAddress={selectedDevice.ipAddress} />
                   </div>
                 </div>
                 <div>
-                  <h4 className="font-semibold text-sm text-muted-foreground">
+                  <h4 className="font-semibold text-xs sm:text-sm text-muted-foreground">
                     Streams Started
                   </h4>
-                  <p className="text-foreground">
+                  <p className="text-sm sm:text-base text-foreground">
                     {selectedDevice.sessionCount}
                   </p>
                 </div>
                 <div>
-                  <h4 className="font-semibold text-sm text-muted-foreground">
+                  <h4 className="font-semibold text-xs sm:text-sm text-muted-foreground">
                     Status
                   </h4>
                   <div>{getDeviceStatus(selectedDevice)}</div>
@@ -1144,100 +1170,107 @@ const DeviceManagement = memo(({
               <Separator />
 
               <div>
-                <h4 className="font-semibold text-sm text-muted-foreground mb-2">
+                <h4 className="font-semibold text-xs sm:text-sm text-muted-foreground mb-2">
                   Device Identifier
                 </h4>
-                <p className="text-xs font-mono bg-muted p-2 rounded">
+                <p className="text-xs font-mono bg-muted p-2 rounded break-all">
                   {selectedDevice.deviceIdentifier}
                 </p>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
-                  <h4 className="font-semibold text-sm text-muted-foreground">
+                  <h4 className="font-semibold text-xs sm:text-sm text-muted-foreground">
                     First Seen
                   </h4>
-                  <p className="text-sm text-foreground">
+                  <p className="text-xs sm:text-sm text-foreground">
                     {new Date(selectedDevice.firstSeen).toLocaleString()}
                   </p>
                 </div>
                 <div>
-                  <h4 className="font-semibold text-sm text-muted-foreground">
+                  <h4 className="font-semibold text-xs sm:text-sm text-muted-foreground">
                     Last Seen
                   </h4>
-                  <p className="text-sm text-foreground">
+                  <p className="text-xs sm:text-sm text-foreground">
                     {new Date(selectedDevice.lastSeen).toLocaleString()}
                   </p>
                 </div>
               </div>
             </div>
           )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setSelectedDevice(null)}>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => setSelectedDevice(null)}
+              className="w-full sm:w-auto"
+            >
               Close
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Device Action Confirmation Dialog - Reuse from original component */}
+      {/* Device Action Confirmation Dialog - Mobile responsive */}
       <Dialog
         open={!!confirmAction}
         onOpenChange={(open) => !open && setConfirmAction(null)}
       >
-        <DialogContent>
+        <DialogContent className="max-w-[95vw] sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+            <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
               {confirmAction?.action === "approve" && (
-                <CheckCircle className="w-5 h-5 text-green-500" />
+                <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
               )}
               {confirmAction?.action === "reject" && (
-                <XCircle className="w-5 h-5 text-red-600" />
+                <XCircle className="w-4 h-4 sm:w-5 sm:h-5 text-red-600" />
               )}
               {confirmAction?.action === "delete" && (
-                <Trash2 className="w-5 h-5 text-red-600" />
+                <Trash2 className="w-4 h-4 sm:w-5 sm:h-5 text-red-600" />
               )}
               {confirmAction?.action === "toggle" &&
                 (confirmAction.device.status === "approved" ? (
-                  <XCircle className="w-5 h-5 text-red-600" />
+                  <XCircle className="w-4 h-4 sm:w-5 sm:h-5 text-red-600" />
                 ) : (
-                  <CheckCircle className="w-5 h-5 text-green-500" />
+                  <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
                 ))}
               {confirmAction?.title}
             </DialogTitle>
-            <DialogDescription>{confirmAction?.description}</DialogDescription>
+            <DialogDescription className="text-sm">
+              {confirmAction?.description}
+            </DialogDescription>
           </DialogHeader>
 
           {confirmAction && (
-            <div className="my-4 p-4 bg-muted rounded-lg">
+            <div className="my-4 p-3 sm:p-4 bg-muted rounded-lg">
               <div className="flex items-center gap-3 mb-2">
                 {getDeviceIcon(
                   confirmAction.device.devicePlatform,
                   confirmAction.device.deviceProduct
                 )}
-                <div>
-                  <div className="text-sm font-medium text-foreground">
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-medium text-foreground truncate">
                     {confirmAction.device.deviceName ||
                       confirmAction.device.deviceIdentifier}
                   </div>
-                  <div className="text-xs text-muted-foreground">
+                  <div className="text-xs text-muted-foreground truncate">
                     {confirmAction.device.username ||
                       confirmAction.device.userId}
                   </div>
                 </div>
               </div>
               <div className="text-xs text-muted-foreground">
-                Platform: {confirmAction.device.devicePlatform || "Unknown"} •
+                Platform: {confirmAction.device.devicePlatform || "Unknown"} •{" "}
                 Product: {confirmAction.device.deviceProduct || "Unknown"}
               </div>
             </div>
           )}
 
-          <DialogFooter>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
             <Button
               variant="outline"
               onClick={() => setConfirmAction(null)}
               disabled={actionLoading !== null}
+              className="w-full sm:w-auto"
             >
               Cancel
             </Button>
@@ -1253,7 +1286,7 @@ const DeviceManagement = memo(({
               }
               onClick={handleConfirmAction}
               disabled={actionLoading !== null}
-              className={
+              className={`w-full sm:w-auto ${
                 confirmAction?.action === "approve" ||
                 (confirmAction?.action === "toggle" &&
                   confirmAction.device.status !== "approved")
@@ -1265,29 +1298,29 @@ const DeviceManagement = memo(({
                     : confirmAction?.action === "delete"
                       ? "bg-red-600 dark:bg-red-700 text-white hover:bg-red-700 dark:hover:bg-red-800"
                       : ""
-              }
+              }`}
             >
               {actionLoading ? (
                 <>
-                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                  <RefreshCw className="w-3 h-3 sm:w-4 sm:h-4 mr-2 animate-spin" />
                   Processing...
                 </>
               ) : (
                 <>
                   {confirmAction?.action === "approve" && (
-                    <CheckCircle className="w-4 h-4 mr-2" />
+                    <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
                   )}
                   {confirmAction?.action === "reject" && (
-                    <XCircle className="w-4 h-4 mr-2" />
+                    <XCircle className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
                   )}
                   {confirmAction?.action === "delete" && (
-                    <Trash2 className="w-4 h-4 mr-2" />
+                    <Trash2 className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
                   )}
                   {confirmAction?.action === "toggle" &&
                     (confirmAction.device.status === "approved" ? (
-                      <XCircle className="w-4 h-4 mr-2" />
+                      <XCircle className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
                     ) : (
-                      <CheckCircle className="w-4 h-4 mr-2" />
+                      <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
                     ))}
                   {confirmAction?.action === "approve" && "Approve Device"}
                   {confirmAction?.action === "reject" && "Reject Device"}

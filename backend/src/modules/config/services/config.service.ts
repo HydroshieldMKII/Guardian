@@ -493,7 +493,7 @@ export class ConfigService {
       let imported = 0;
       let skipped = 0;
 
-      console.log('Import data contains:', {
+      this.logger.debug('Import data contains:', {
         settings: data.settings?.length || 0,
         userDevices: data.userDevices?.length || 0,
         userPreferences: data.userPreferences?.length || 0,
@@ -507,7 +507,7 @@ export class ConfigService {
               where: { key: setting.key }
             });
 
-            console.log('Importing setting:', setting.key, 'Existing:', !!existing);
+            this.logger.debug('Importing setting:', setting.key, 'Existing:', !!existing);
 
             if (existing) {
               existing.value = setting.value;
@@ -536,19 +536,19 @@ export class ConfigService {
               }
             });
 
-            console.log(`Importing device ${device.deviceIdentifier} for user ${device.userId}, existing:`, !!existing);
+            this.logger.debug(`Importing device ${device.deviceIdentifier} for user ${device.userId}, existing:`, !!existing);
 
             if (!existing) {
               const newDevice = deviceRepo.create(device);
               await deviceRepo.save(newDevice);
               imported++;
-              console.log(`Created new device: ${device.deviceIdentifier}`);
+              this.logger.debug(`Created new device: ${device.deviceIdentifier}`);
             } else {
               // Update existing device with new data
               Object.assign(existing, device);
               await deviceRepo.save(existing);
               imported++;
-              console.log(`Updated existing device: ${device.deviceIdentifier}`);
+              this.logger.debug(`Updated existing device: ${device.deviceIdentifier}`);
             }
           } catch (error) {
             this.logger.warn(`Failed to import device ${device.deviceIdentifier}:`, error);
@@ -566,20 +566,20 @@ export class ConfigService {
               where: { userId: pref.userId }
             });
 
-            console.log(`Importing preference for user ${pref.userId}, existing:`, !!existing);
+            this.logger.debug(`Importing preference for user ${pref.userId}, existing:`, !!existing);
 
             if (!existing) {
               const newPref = prefRepo.create(pref);
               await prefRepo.save(newPref);
               imported++;
-              console.log(`Created new preference for user: ${pref.userId}`);
+              this.logger.debug(`Created new preference for user: ${pref.userId}`);
             } else {
               // Update existing preference
               existing.defaultBlock = pref.defaultBlock;
               existing.username = pref.username || existing.username;
               await prefRepo.save(existing);
               imported++;
-              console.log(`Updated existing preference for user: ${pref.userId}`);
+              this.logger.debug(`Updated existing preference for user: ${pref.userId}`);
             }
           } catch (error) {
             this.logger.warn(`Failed to import preference for user ${pref.userId}:`, error);
