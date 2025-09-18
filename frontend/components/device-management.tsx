@@ -1023,29 +1023,29 @@ const DeviceManagement = memo(({
                                       ) : (
                                         <div className="grid grid-cols-2 gap-2">
                                           <Button
-                                            variant={device.status === "approved" ? "default" : "outline"}
+                                            variant={device.status === "approved" ? "outline" : "default"}
                                             size="sm"
                                             onClick={() => showToggleConfirmation(device)}
                                             disabled={actionLoading === device.id}
                                             className={`text-xs px-3 py-2 ${
                                               device.status === "approved"
-                                                ? "bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white"
-                                                : "border-red-600 text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-700 dark:hover:bg-red-900/20"
+                                                ? "border-red-600 text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-700 dark:hover:bg-red-900/20"
+                                                : "bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white"
                                             }`}
                                           >
                                             {actionLoading === device.id ? (
                                               <RefreshCw className="w-3 h-3 animate-spin" />
                                             ) : device.status === "approved" ? (
                                               <>
-                                                <ToggleRight className="w-3 h-3 mr-1 sm:mr-2" />
-                                                <span className="hidden sm:inline">Approved</span>
-                                                <span className="sm:hidden">Active</span>
+                                                <XCircle className="w-3 h-3 mr-1 sm:mr-2" />
+                                                <span className="hidden sm:inline">Reject</span>
+                                                <span className="sm:hidden">Reject</span>
                                               </>
                                             ) : (
                                               <>
-                                                <ToggleLeft className="w-3 h-3 mr-1 sm:mr-2" />
-                                                <span className="hidden sm:inline">Rejected</span>
-                                                <span className="sm:hidden">Blocked</span>
+                                                <CheckCircle className="w-3 h-3 mr-1 sm:mr-2" />
+                                                <span className="hidden sm:inline">Approve</span>
+                                                <span className="sm:hidden">Approve</span>
                                               </>
                                             )}
                                           </Button>
