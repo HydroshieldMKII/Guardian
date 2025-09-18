@@ -55,6 +55,7 @@ export class ActiveSessionService {
     private deviceTrackingService: DeviceTrackingService,
   ) {}
 
+  // Update active sessions in the database based on the latest sessions data from Plex
   async updateActiveSessions(sessionsData: any): Promise<void> {
     try {
       const sessions = this.extractSessionsFromData(sessionsData);
@@ -85,9 +86,9 @@ export class ActiveSessionService {
         .execute();
       
       // Clear session keys from devices for ended sessions only
-        for (const sessionKey of endingSessionKeys) {
-          await this.deviceTrackingService.clearSessionKey(sessionKey);
-        }
+      for (const sessionKey of endingSessionKeys) {
+        await this.deviceTrackingService.clearSessionKey(sessionKey);
+      }
 
       // Update or create sessions
       for (const sessionData of sessions) {

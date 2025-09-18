@@ -99,43 +99,7 @@ export class UsersService {
     const savedPreference =
       await this.userPreferenceRepository.save(preference);
 
-    // Update all pending devices for this user to match the new preference
-    await this.updatePendingDevicesForUser(userId, defaultBlock);
-
     return savedPreference;
-  }
-
-  private async updatePendingDevicesForUser(
-    userId: string,
-    defaultBlock: boolean | null,
-  ): Promise<void> {
-    // Get effective default block setting
-    const effectiveDefaultBlock =
-      defaultBlock !== null
-        ? defaultBlock
-        : await this.configService.getSetting('PLEX_GUARD_DEFAULT_BLOCK');
-
-    // Find all pending (blocked) devices for this user
-    const pendingDevices = await this.userDeviceRepository.find({
-      where: { userId, status: 'pending' },
-    });
-
-    if (pendingDevices.length === 0) {
-      return;
-    }
-
-    // Get the new status based on effective default block
-    const newStatus = effectiveDefaultBlock ? 'pending' : 'approved';
-
-    // Update all pending devices to the new status
-    await this.userDeviceRepository.update(
-      { userId, status: 'pending' },
-      { status: newStatus },
-    );
-
-    this.logger.log(
-      `Updated ${pendingDevices.length} pending device(s) for user ${userId} to status: ${newStatus} (user preference: ${defaultBlock === null ? 'global default' : defaultBlock ? 'block' : 'allow'})`,
-    );
   }
 
   async getEffectiveDefaultBlock(userId: string): Promise<boolean> {

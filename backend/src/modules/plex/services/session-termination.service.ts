@@ -50,11 +50,9 @@ export class SessionTerminationService {
               await this.terminateSession(sessionKey);
               stoppedSessions.push(sessionKey);
 
-              this.logger.warn(`Stopped unapproved session: ${session}`);
+              this.logger.warn(`Stopped unapproved session: ${session.Session?.id}`);
               const username = session.User?.title || 'Unknown';
-              const deviceName =
-                `${session.Player?.device} - ${session.Player?.title}` ||
-                'Unknown Device';
+              const deviceName = session.Player?.title || 'Unknown Device';
 
               this.logger.warn(
                 `Stopped unapproved session: ${username} on ${deviceName} (Session: ${sessionKey})`,
@@ -98,17 +96,20 @@ export class SessionTerminationService {
       const device = await this.userDeviceRepository.findOne({
         where: { userId, deviceIdentifier },
       });
-
-      if (!device) {
-        this.logger.warn(
-          `Device not found for user ${userId} with identifier ${deviceIdentifier}`,
-        );
-        const defaultBlock =
-          await this.usersService.getEffectiveDefaultBlock(userId);
-        return defaultBlock;
+      
+      // If device not found or still pending, use user's default block preference, if none use global default
+      if (!device || device.status === 'pending') {
+        return await this.usersService.getEffectiveDefaultBlock(userId);
       }
 
-      return device.status !== 'approved'; // Stop if device is not approved
+      if (device.status === 'rejected') {
+        this.logger.warn(
+          `Device ${deviceIdentifier} for user ${userId} is explicitly rejected.`,
+        );
+        return true; // Always stop if device is rejected
+      }
+
+      return false; // no terminate if device is approved
     } catch (error) {
       this.logger.error('Error checking session approval status', error);
       return false; // Don't stop on error to be safe

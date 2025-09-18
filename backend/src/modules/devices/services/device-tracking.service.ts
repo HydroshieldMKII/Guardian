@@ -19,6 +19,7 @@ export class DeviceTrackingService {
     private usersService: UsersService,
   ) {}
 
+  // Function to process sessions and track devices
   async processSessionsForDeviceTracking(
     sessionsData: PlexSessionsResponse,
   ): Promise<void> {
@@ -84,6 +85,7 @@ export class DeviceTrackingService {
     };
   }
 
+  // Function to track or update device info in the database
   private async trackDevice(deviceInfo: DeviceInfo): Promise<void> {
     try {
       // this.logger.debug(`Tracking device: ${deviceInfo.deviceIdentifier} for user: ${deviceInfo.userId} with session: ${deviceInfo.sessionKey}`);
@@ -153,7 +155,7 @@ export class DeviceTrackingService {
   private async createNewDevice(deviceInfo: DeviceInfo): Promise<void> {
     const defaultBlock = await this.usersService.getEffectiveDefaultBlock(
       deviceInfo.userId,
-    );
+    ); // User wont have a preference yet, so this will return app default
 
     console.log('New device detected:', deviceInfo);
 
@@ -165,7 +167,7 @@ export class DeviceTrackingService {
       devicePlatform: deviceInfo.devicePlatform,
       deviceProduct: deviceInfo.deviceProduct,
       deviceVersion: deviceInfo.deviceVersion,
-      status: defaultBlock ? 'pending' : 'approved',
+      status: 'pending',
       sessionCount: 1,
       currentSessionKey: deviceInfo.sessionKey,
       ipAddress: deviceInfo.ipAddress,
@@ -174,7 +176,7 @@ export class DeviceTrackingService {
     await this.userDeviceRepository.save(newDevice);
 
     this.logger.warn(
-      `🚨 NEW DEVICE DETECTED! User: ${deviceInfo.username || deviceInfo.userId}, Device: ${deviceInfo.deviceName || deviceInfo.deviceIdentifier}, Platform: ${deviceInfo.devicePlatform || 'Unknown'}, Status: ${defaultBlock ? 'PENDING' : 'APPROVED'} (User preference: ${defaultBlock ? 'Block' : 'Allow'})`,
+      `🚨 NEW DEVICE DETECTED! User: ${deviceInfo.username || deviceInfo.userId}, Device: ${deviceInfo.deviceName || deviceInfo.deviceIdentifier}, Platform: ${deviceInfo.devicePlatform || 'Unknown'}, Status: pending, App default action: ${defaultBlock ? 'Block' : 'Allow'}`,
     );
   }
 

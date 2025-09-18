@@ -1289,7 +1289,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
         title="Version Mismatch Detected"
         description={
           versionMismatchInfo
-            ? `Version mismatch detected! Please make sure you have a backup before proceeding.\n\nCurrent version: ${versionMismatchInfo.currentVersion}\nImport file version: ${versionMismatchInfo.importVersion}\n\nYou may lose data or break your installation. Do you want to continue with the import?`
+            ? `Version mismatch detected! Please make sure you have a backup before proceeding.\n\nCurrent version: ${versionMismatchInfo.currentVersion}\nImport file version: ${versionMismatchInfo.importVersion}\n\nYou may lose data during the import. Do you want to continue with the import?`
             : ""
         }
         confirmText="Continue Import"
