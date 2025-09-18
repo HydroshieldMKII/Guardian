@@ -18,7 +18,7 @@ export class UsersService {
     private readonly configService: ConfigService,
   ) {}
 
-  // Get all users with preferences (read-only, no creation)
+  // Get all users with preferences
   async getAllUsers(): Promise<UserPreference[]> {
     return await this.userPreferenceRepository.find();
   }
@@ -26,17 +26,12 @@ export class UsersService {
   // Sync users from Plex server API (called by scheduler)
   async syncUsersFromPlexServer(): Promise<void> {
     this.logger.log('Syncing users from device data...');
-    await this.syncUsersFromDeviceData();
-  }
-
-  // Sync users from device data and update/create preferences  
-  async syncUsersFromDeviceData(): Promise<void> {
-    this.logger.log('Syncing users from device data...');
     await this.syncUserAvatarsFromDevices();
   }
 
-  // Fallback method: sync user avatars and usernames from device data
-  private async syncUserAvatarsFromDevices(): Promise<void> {
+
+  // Sync user avatars and usernames from device data
+  async syncUserAvatarsFromDevices(): Promise<void> {
     // Get all existing user preferences
     const existingPreferences = await this.userPreferenceRepository.find();
     

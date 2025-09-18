@@ -20,11 +20,7 @@ export class UsersController {
 
   @Get()
   async getAllUsers(): Promise<any[]> {
-    const users = await this.usersService.getAllUsers();
-    return users.map((user) => ({
-      ...user,
-      defaultBlock: user.defaultBlock,
-    }));
+    return await this.usersService.getAllUsers();
   }
 
   @Get(':userId')
