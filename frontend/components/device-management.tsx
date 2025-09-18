@@ -169,7 +169,7 @@ const UserGroupSkeleton = () => (
   </div>
 );
 
-interface UnifiedDeviceManagementProps {
+interface DeviceManagementProps {
   devicesData?: {
     all: UserDevice[];
     pending: UserDevice[];
@@ -182,13 +182,13 @@ interface UnifiedDeviceManagementProps {
   onAutoRefreshChange?: (value: boolean) => void;
 }
 
-const UnifiedDeviceManagement = memo(({
+const DeviceManagement = memo(({
   devicesData,
   usersData,
   onRefresh,
   autoRefresh: parentAutoRefresh,
   onAutoRefreshChange
-}: UnifiedDeviceManagementProps) => {
+}: DeviceManagementProps) => {
   const [userGroups, setUserGroups] = useState<UserDeviceGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -1306,6 +1306,6 @@ const UnifiedDeviceManagement = memo(({
   );
 });
 
-UnifiedDeviceManagement.displayName = "UnifiedDeviceManagement";
+DeviceManagement.displayName = "DeviceManagement";
 
-export { UnifiedDeviceManagement };
+export { DeviceManagement };
