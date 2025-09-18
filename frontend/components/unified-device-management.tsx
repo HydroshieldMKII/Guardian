@@ -171,7 +171,7 @@ const UnifiedDeviceManagement = memo(({
   const [selectedDevice, setSelectedDevice] = useState<UserDevice | null>(null);
   const [expandedUsers, setExpandedUsers] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterType, setFilterType] = useState<"all" | "pending">("all");
+
   
   // Local storage keys for sorting preferences
   const USER_SORT_BY_KEY = "guardian-unified-sort-by";
@@ -343,13 +343,7 @@ const UnifiedDeviceManagement = memo(({
         return username.includes(searchLower) || hasMatchingDevice;
       }
       
-      // Apply filter type
-      switch (filterType) {
-        case "pending":
-          return group.pendingCount > 0;
-        default:
-          return true;
-      }
+      return true;
     })
     .sort((a, b) => {
       let valueA: any;
@@ -645,28 +639,10 @@ const UnifiedDeviceManagement = memo(({
                 User & Device Management
               </CardTitle>
               <CardDescription className="mt-1 flex items-center">
-                Manage users and their devices in a unified interface
+                Manage all users and their devices in one unified view
               </CardDescription>
             </div>
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-2">
-              <div className="flex items-center space-x-1 bg-muted p-1 rounded-lg">
-                <Button
-                  variant={filterType === "all" ? "default" : "ghost"}
-                  size="sm"
-                  onClick={() => setFilterType("all")}
-                  className="text-xs sm:text-sm px-2 sm:px-3"
-                >
-                  <span>All Users</span>
-                </Button>
-                <Button
-                  variant={filterType === "pending" ? "default" : "ghost"}
-                  size="sm"
-                  onClick={() => setFilterType("pending")}
-                  className="text-xs sm:text-sm px-2 sm:px-3"
-                >
-                  <span>With Pending</span>
-                </Button>
-              </div>
               <div className="flex items-center gap-2">
                 <Button
                   variant="outline"
