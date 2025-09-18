@@ -18,6 +18,93 @@ export class UsersService {
     private readonly configService: ConfigService,
   ) {}
 
+  // Get all users with preferences (read-only, no creation)
+  async getAllUsers(): Promise<UserPreference[]> {
+    return await this.userPreferenceRepository.find();
+  }
+
+  // Sync users from Plex server API (called by scheduler)
+  async syncUsersFromPlexServer(): Promise<void> {
+    this.logger.log('Syncing users from device data...');
+    await this.syncUsersFromDeviceData();
+  }
+
+  // Sync users from device data and update/create preferences  
+  async syncUsersFromDeviceData(): Promise<void> {
+    this.logger.log('Syncing users from device data...');
+    await this.syncUserAvatarsFromDevices();
+  }
+
+  // Fallback method: sync user avatars and usernames from device data
+  private async syncUserAvatarsFromDevices(): Promise<void> {
+    // Get all existing user preferences
+    const existingPreferences = await this.userPreferenceRepository.find();
+    
+    // Get users from devices with their latest avatar URLs
+    const usersFromDevices = await this.userDeviceRepository
+      .createQueryBuilder('device')
+      .select('device.userId', 'userId')
+      .addSelect('device.username', 'username')
+      .addSelect('device.avatarUrl', 'avatarUrl')
+      .where('device.avatarUrl IS NOT NULL') // Only get devices with avatar URLs
+      .orderBy('device.lastSeen', 'DESC') // Get the most recent avatar URL
+      .distinct(true)
+      .getRawMany();
+
+    let updateCount = 0;
+    let createCount = 0;
+    const existingUserIds = new Set(existingPreferences.map(p => p.userId));
+
+    // Update existing preferences with latest avatar URLs from devices
+    for (const preference of existingPreferences) {
+      const deviceUser = usersFromDevices.find(u => u.userId === preference.userId);
+      if (deviceUser?.avatarUrl) {
+        let needsUpdate = false;
+        
+        // Check if avatar URL needs updating
+        if (!preference.avatarUrl || preference.avatarUrl !== deviceUser.avatarUrl) {
+          preference.avatarUrl = deviceUser.avatarUrl;
+          needsUpdate = true;
+        }
+        
+        // Check if username needs updating
+        if (!preference.username && deviceUser.username) {
+          preference.username = deviceUser.username;
+          needsUpdate = true;
+        }
+        
+        if (needsUpdate) {
+          await this.userPreferenceRepository.save(preference);
+          updateCount++;
+          this.logger.debug(`Updated avatar/username for user ${preference.userId}`);
+        }
+      }
+    }
+
+    // Create preferences for users with devices but no preferences
+    for (const user of usersFromDevices) {
+      if (!existingUserIds.has(user.userId)) {
+        this.logger.log('Creating default preference for user:', user);
+
+        // Create default preference entry
+        const newPreference = this.userPreferenceRepository.create({
+          userId: user.userId,
+          username: user.username,
+          avatarUrl: user.avatarUrl,
+          defaultBlock: null, // null means use global default
+        });
+
+        // Save the preference to the database
+        await this.userPreferenceRepository.save(newPreference);
+        createCount++;
+      }
+    }
+
+    if (updateCount > 0 || createCount > 0) {
+      this.logger.log(`Synced users from devices: ${updateCount} updated, ${createCount} created`);
+    }
+  }
+
 
 
   async getUserPreference(userId: string): Promise<UserPreference | null> {
@@ -60,9 +147,7 @@ export class UsersService {
     }
 
     // Save the preference
-    const savedPreference =
-      await this.userPreferenceRepository.save(preference);
-
+    const savedPreference = await this.userPreferenceRepository.save(preference);
     return savedPreference;
   }
 
