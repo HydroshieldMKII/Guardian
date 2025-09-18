@@ -49,7 +49,7 @@ export class SchedulerService implements OnModuleInit {
       // Convert seconds to cron expression
       const cronExpression = this.secondsToCronExpression(intervalSeconds);
       
-      // Remove existing job if it exists
+      // Remove existing job if it exists (e.g when interval changes)
       try {
         this.schedulerRegistry.deleteCronJob('sessionUpdates');
       } catch (error) {

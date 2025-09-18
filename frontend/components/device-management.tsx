@@ -838,7 +838,7 @@ const DeviceManagement = memo(({
                             </div>
                             
                             {/* Mobile: Stack badges vertically, Desktop: Horizontal */}
-                            <div className="flex flex-wrap gap-1 sm:gap-2 sm:ml-4">
+                            <div className="flex flex-wrap gap-1 sm:gap-2 sm:ml-2">
                               <div className="sm:hidden">
                                 {group.user.preference && getUserPreferenceBadge(group.user.preference.defaultBlock)}
                               </div>
