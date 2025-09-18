@@ -25,7 +25,7 @@ import {
   Download,
 } from "lucide-react";
 import { StreamsList } from "./streams-list";
-import { DeviceApproval } from "./device-approval";
+import { UnifiedDeviceManagement } from "./unified-device-management";
 
 import { DashboardStats, UnifiedDashboardData, PlexStatus } from "@/types";
 import { apiClient } from "@/lib/api";
@@ -322,7 +322,7 @@ export function Dashboard() {
             onAutoRefreshChange={setAutoRefresh}
           />
         ) : (
-          <DeviceApproval 
+          <UnifiedDeviceManagement 
             devicesData={dashboardData?.devices}
             usersData={dashboardData?.users}
             onRefresh={() => refreshDashboard(true)}
