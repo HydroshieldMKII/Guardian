@@ -929,145 +929,274 @@ const DeviceManagement = memo(({
                                   className="p-3 rounded border bg-card/50 hover:bg-card transition-colors"
                                 >
                                   {/* Mobile-first layout */}
-                                  <div className="space-y-3">
-                                    {/* Device Header */}
-                                    <div className="flex items-start gap-3">
-                                      <div className="flex-shrink-0 mt-0.5">
-                                        {getDeviceIcon(device.devicePlatform, device.deviceProduct)}
+                                  <div className="space-y-3 sm:space-y-0">
+                                    {/* Mobile: Stacked layout */}
+                                    <div className="sm:hidden space-y-3">
+                                      {/* Device Header */}
+                                      <div className="flex items-start gap-3">
+                                        <div className="flex-shrink-0 mt-0.5">
+                                          {getDeviceIcon(device.devicePlatform, device.deviceProduct)}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                          <h4 className="font-medium text-foreground truncate text-sm">
+                                            {device.deviceName || device.deviceIdentifier}
+                                          </h4>
+                                        </div>
                                       </div>
+
+                                      {/* Device Info Grid - Mobile */}
+                                      <div className="grid grid-cols-1 gap-2 text-xs text-muted-foreground">
+                                        {/* Status badge - first item, left-aligned like other info */}
+                                        <div className="flex items-center min-w-0">
+                                          <Shield className="w-3 h-3 mr-2 flex-shrink-0" />
+                                          {getDeviceStatus(device)}
+                                        </div>
+                                        <div className="flex items-center min-w-0">
+                                          <Monitor className="w-3 h-3 mr-2 flex-shrink-0" />
+                                          <span className="truncate">
+                                            {device.devicePlatform || "Unknown Platform"}
+                                          </span>
+                                        </div>
+                                        <div className="flex items-center min-w-0">
+                                          <MapPin className="w-3 h-3 mr-2 flex-shrink-0" />
+                                          <ClickableIP ipAddress={device.ipAddress} />
+                                        </div>
+                                        <div className="flex items-center">
+                                          <Clock className="w-3 h-3 mr-2 flex-shrink-0" />
+                                          <span>Streams: {device.sessionCount}</span>
+                                        </div>
+                                        <div className="flex items-center">
+                                          <Clock className="w-3 h-3 mr-2 flex-shrink-0" />
+                                          <span>Last: {new Date(device.lastSeen).toLocaleDateString()}</span>
+                                        </div>
+                                      </div>
+
+                                      {/* Action Buttons - Mobile */}
+                                      <div className="flex flex-col gap-2">
+                                        {/* Details Button - Full width on mobile */}
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => setSelectedDevice(device)}
+                                          className="text-xs px-3 py-2 w-full"
+                                        >
+                                          <Eye className="w-3 h-3 mr-2" />
+                                          View Details
+                                        </Button>
+
+                                        {/* Action Buttons Row */}
+                                        {device.status === "pending" ? (
+                                          <div className="grid grid-cols-2 gap-2">
+                                            <Button
+                                              variant="default"
+                                              size="sm"
+                                              onClick={() => showApproveConfirmation(device)}
+                                              disabled={actionLoading === device.id}
+                                              className="bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white text-xs px-3 py-2"
+                                            >
+                                              {actionLoading === device.id ? (
+                                                <RefreshCw className="w-3 h-3 animate-spin" />
+                                              ) : (
+                                                <>
+                                                  <CheckCircle className="w-3 h-3 mr-1" />
+                                                  <span>Approve</span>
+                                                </>
+                                              )}
+                                            </Button>
+                                            <Button
+                                              variant="outline"
+                                              size="sm"
+                                              onClick={() => showRejectConfirmation(device)}
+                                              disabled={actionLoading === device.id}
+                                              className="border-red-600 text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-700 dark:hover:bg-red-900/20 text-xs px-3 py-2"
+                                            >
+                                              {actionLoading === device.id ? (
+                                                <RefreshCw className="w-3 h-3 animate-spin" />
+                                              ) : (
+                                                <>
+                                                  <XCircle className="w-3 h-3 mr-1" />
+                                                  <span>Reject</span>
+                                                </>
+                                              )}
+                                            </Button>
+                                          </div>
+                                        ) : (
+                                          <div className="grid grid-cols-2 gap-2">
+                                            <Button
+                                              variant={device.status === "approved" ? "outline" : "default"}
+                                              size="sm"
+                                              onClick={() => showToggleConfirmation(device)}
+                                              disabled={actionLoading === device.id}
+                                              className={`text-xs px-3 py-2 ${
+                                                device.status === "approved"
+                                                  ? "border-red-600 text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-700 dark:hover:bg-red-900/20"
+                                                  : "bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white"
+                                              }`}
+                                            >
+                                              {actionLoading === device.id ? (
+                                                <RefreshCw className="w-3 h-3 animate-spin" />
+                                              ) : device.status === "approved" ? (
+                                                <>
+                                                  <XCircle className="w-3 h-3 mr-1" />
+                                                  <span>Reject</span>
+                                                </>
+                                              ) : (
+                                                <>
+                                                  <CheckCircle className="w-3 h-3 mr-1" />
+                                                  <span>Approve</span>
+                                                </>
+                                              )}
+                                            </Button>
+                                            <Button
+                                              variant="destructive"
+                                              size="sm"
+                                              onClick={() => showDeleteConfirmation(device)}
+                                              disabled={actionLoading === device.id}
+                                              className="text-xs px-3 py-2 bg-red-600 dark:bg-red-700 text-white hover:bg-red-700 dark:hover:bg-red-800"
+                                            >
+                                              {actionLoading === device.id ? (
+                                                <RefreshCw className="w-3 h-3 animate-spin" />
+                                              ) : (
+                                                <>
+                                                  <Trash2 className="w-3 h-3 mr-1" />
+                                                  <span>Delete</span>
+                                                </>
+                                              )}
+                                            </Button>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+
+                                    {/* Desktop: Side-by-side layout */}
+                                    <div className="hidden sm:flex sm:items-start sm:justify-between sm:gap-4">
                                       <div className="flex-1 min-w-0">
-                                        <h4 className="font-medium text-foreground truncate text-sm sm:text-base">
-                                          {device.deviceName || device.deviceIdentifier}
-                                        </h4>
-                                      </div>
-                                    </div>
-
-                                    {/* Device Info Grid - Responsive with Status */}
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs sm:text-sm text-muted-foreground">
-                                      {/* Status badge - first item, left-aligned like other info */}
-                                      <div className="flex items-center min-w-0">
-                                        <Shield className="w-3 h-3 mr-2 flex-shrink-0" />
-                                        {getDeviceStatus(device)}
-                                      </div>
-                                      <div className="flex items-center min-w-0">
-                                        <Monitor className="w-3 h-3 mr-2 flex-shrink-0" />
-                                        <span className="truncate">
-                                          {device.devicePlatform || "Unknown Platform"}
-                                        </span>
-                                      </div>
-                                      <div className="flex items-center min-w-0">
-                                        <MapPin className="w-3 h-3 mr-2 flex-shrink-0" />
-                                        <ClickableIP ipAddress={device.ipAddress} />
-                                      </div>
-                                      <div className="flex items-center">
-                                        <Clock className="w-3 h-3 mr-2 flex-shrink-0" />
-                                        <span>Streams: {device.sessionCount}</span>
-                                      </div>
-                                      <div className="flex items-center">
-                                        <Clock className="w-3 h-3 mr-2 flex-shrink-0" />
-                                        <span>Last: {new Date(device.lastSeen).toLocaleDateString()}</span>
-                                      </div>
-                                    </div>
-
-                                    {/* Action Buttons - Mobile-optimized */}
-                                    <div className="flex flex-col gap-2">
-                                      {/* Details Button - Full width on mobile */}
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => setSelectedDevice(device)}
-                                        className="text-xs px-3 py-2 w-full sm:w-auto sm:px-2 sm:py-1"
-                                      >
-                                        <Eye className="w-3 h-3 mr-2" />
-                                        View Details
-                                      </Button>
-
-                                      {/* Action Buttons Row */}
-                                      {device.status === "pending" ? (
-                                        <div className="grid grid-cols-2 gap-2">
-                                          <Button
-                                            variant="default"
-                                            size="sm"
-                                            onClick={() => showApproveConfirmation(device)}
-                                            disabled={actionLoading === device.id}
-                                            className="bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white text-xs px-3 py-2 sm:px-2 sm:py-1"
-                                          >
-                                            {actionLoading === device.id ? (
-                                              <RefreshCw className="w-3 h-3 animate-spin" />
-                                            ) : (
-                                              <>
-                                                <CheckCircle className="w-3 h-3 mr-1 sm:mr-2" />
-                                                <span className="hidden sm:inline">Approve</span>
-                                                <span className="sm:hidden">Approve</span>
-                                              </>
-                                            )}
-                                          </Button>
-                                          <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => showRejectConfirmation(device)}
-                                            disabled={actionLoading === device.id}
-                                            className="border-red-600 text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-700 dark:hover:bg-red-900/20 text-xs px-3 py-2 sm:px-2 sm:py-1"
-                                          >
-                                            {actionLoading === device.id ? (
-                                              <RefreshCw className="w-3 h-3 animate-spin" />
-                                            ) : (
-                                              <>
-                                                <XCircle className="w-3 h-3 mr-1 sm:mr-2" />
-                                                <span className="hidden sm:inline">Reject</span>
-                                                <span className="sm:hidden">Reject</span>
-                                              </>
-                                            )}
-                                          </Button>
+                                        {/* Device Header */}
+                                        <div className="flex items-center space-x-2 mb-2">
+                                          {getDeviceIcon(device.devicePlatform, device.deviceProduct)}
+                                          <h4 className="font-medium text-foreground truncate">
+                                            {device.deviceName || device.deviceIdentifier}
+                                          </h4>
+                                          {getDeviceStatus(device)}
                                         </div>
-                                      ) : (
-                                        <div className="grid grid-cols-2 gap-2">
-                                          <Button
-                                            variant={device.status === "approved" ? "outline" : "default"}
-                                            size="sm"
-                                            onClick={() => showToggleConfirmation(device)}
-                                            disabled={actionLoading === device.id}
-                                            className={`text-xs px-3 py-2 sm:px-2 sm:py-1 ${
-                                              device.status === "approved"
-                                                ? "border-red-600 text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-700 dark:hover:bg-red-900/20"
-                                                : "bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white"
-                                            }`}
-                                          >
-                                            {actionLoading === device.id ? (
-                                              <RefreshCw className="w-3 h-3 animate-spin" />
-                                            ) : device.status === "approved" ? (
-                                              <>
-                                                <XCircle className="w-3 h-3 mr-1 sm:mr-2" />
-                                                <span className="hidden sm:inline">Reject</span>
-                                                <span className="sm:hidden">Reject</span>
-                                              </>
-                                            ) : (
-                                              <>
-                                                <CheckCircle className="w-3 h-3 mr-1 sm:mr-2" />
-                                                <span className="hidden sm:inline">Approve</span>
-                                                <span className="sm:hidden">Approve</span>
-                                              </>
-                                            )}
-                                          </Button>
-                                          <Button
-                                            variant="destructive"
-                                            size="sm"
-                                            onClick={() => showDeleteConfirmation(device)}
-                                            disabled={actionLoading === device.id}
-                                            className="text-xs px-3 py-2 sm:px-2 sm:py-1 bg-red-600 dark:bg-red-700 text-white hover:bg-red-700 dark:hover:bg-red-800"
-                                          >
-                                            {actionLoading === device.id ? (
-                                              <RefreshCw className="w-3 h-3 animate-spin" />
-                                            ) : (
-                                              <>
-                                                <Trash2 className="w-3 h-3 mr-1 sm:mr-2" />
-                                                <span className="hidden sm:inline">Delete</span>
-                                                <span className="sm:hidden">Delete</span>
-                                              </>
-                                            )}
-                                          </Button>
+                                        {/* Device Info Grid - Desktop */}
+                                        <div className="grid grid-cols-2 gap-2 text-sm text-muted-foreground">
+                                          <div className="flex items-center min-w-0">
+                                            <Monitor className="w-3 h-3 mr-1 flex-shrink-0" />
+                                            <span className="truncate">
+                                              {device.devicePlatform || "Unknown Platform"}
+                                            </span>
+                                          </div>
+                                          <div className="flex items-center min-w-0">
+                                            <MapPin className="w-3 h-3 mr-1 flex-shrink-0" />
+                                            <ClickableIP ipAddress={device.ipAddress} />
+                                          </div>
+                                          <div className="flex items-center">
+                                            <Clock className="w-3 h-3 mr-1" />
+                                            Streams: {device.sessionCount}
+                                          </div>
+                                          <div className="flex items-center">
+                                            <Clock className="w-3 h-3 mr-1" />
+                                            Last seen: {new Date(device.lastSeen).toLocaleDateString()}
+                                          </div>
                                         </div>
-                                      )}
+                                      </div>
+
+                                      {/* Action Buttons - Desktop (Right side) */}
+                                      <div className="flex flex-col gap-2 min-w-0 w-48">
+                                        {/* Details Button */}
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => setSelectedDevice(device)}
+                                          className="text-xs px-2 py-1 w-full"
+                                        >
+                                          <Eye className="w-3 h-3 mr-1" />
+                                          Details
+                                        </Button>
+
+                                        {/* Action Buttons Row */}
+                                        {device.status === "pending" ? (
+                                          <div className="flex gap-1">
+                                            <Button
+                                              variant="default"
+                                              size="sm"
+                                              onClick={() => showApproveConfirmation(device)}
+                                              disabled={actionLoading === device.id}
+                                              className="bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white text-xs px-2 py-1 flex-1"
+                                            >
+                                              {actionLoading === device.id ? (
+                                                <RefreshCw className="w-3 h-3 animate-spin" />
+                                              ) : (
+                                                <>
+                                                  <CheckCircle className="w-3 h-3 mr-1" />
+                                                  Approve
+                                                </>
+                                              )}
+                                            </Button>
+                                            <Button
+                                              variant="outline"
+                                              size="sm"
+                                              onClick={() => showRejectConfirmation(device)}
+                                              disabled={actionLoading === device.id}
+                                              className="border-red-600 text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-700 dark:hover:bg-red-900/20 text-xs px-2 py-1 flex-1"
+                                            >
+                                              {actionLoading === device.id ? (
+                                                <RefreshCw className="w-3 h-3 animate-spin" />
+                                              ) : (
+                                                <>
+                                                  <XCircle className="w-3 h-3 mr-1" />
+                                                  Reject
+                                                </>
+                                              )}
+                                            </Button>
+                                          </div>
+                                        ) : (
+                                          <div className="flex gap-1">
+                                            <Button
+                                              variant={device.status === "approved" ? "outline" : "default"}
+                                              size="sm"
+                                              onClick={() => showToggleConfirmation(device)}
+                                              disabled={actionLoading === device.id}
+                                              className={`text-xs px-2 py-1 flex-1 ${
+                                                device.status === "approved"
+                                                  ? "border-red-600 text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-700 dark:hover:bg-red-900/20"
+                                                  : "bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white"
+                                              }`}
+                                            >
+                                              {actionLoading === device.id ? (
+                                                <RefreshCw className="w-3 h-3 animate-spin" />
+                                              ) : device.status === "approved" ? (
+                                                <>
+                                                  <XCircle className="w-3 h-3 mr-1" />
+                                                  Reject
+                                                </>
+                                              ) : (
+                                                <>
+                                                  <CheckCircle className="w-3 h-3 mr-1" />
+                                                  Approve
+                                                </>
+                                              )}
+                                            </Button>
+                                            <Button
+                                              variant="destructive"
+                                              size="sm"
+                                              onClick={() => showDeleteConfirmation(device)}
+                                              disabled={actionLoading === device.id}
+                                              className="text-xs px-2 py-1 bg-red-600 dark:bg-red-700 text-white hover:bg-red-700 dark:hover:bg-red-800"
+                                            >
+                                              {actionLoading === device.id ? (
+                                                <RefreshCw className="w-3 h-3 animate-spin" />
+                                              ) : (
+                                                <>
+                                                  <Trash2 className="w-3 h-3 mr-1" />
+                                                  Delete
+                                                </>
+                                              )}
+                                            </Button>
+                                          </div>
+                                        )}
+                                      </div>
                                     </div>
                                   </div>
                                 </div>
