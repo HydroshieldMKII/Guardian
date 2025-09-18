@@ -666,4 +666,68 @@ export class ConfigService {
       isVersionMismatch,
     };
   }
+
+  // Database management scripts
+  async resetDatabase(): Promise<void> {
+    try {
+      this.logger.warn('RESETTING ALL DATABASE TABLES');
+      
+      // Clear all tables
+      await this.settingsRepository.manager.getRepository(UserDevice).clear();
+      await this.settingsRepository.manager.getRepository(UserPreference).clear();
+      await this.settingsRepository.manager.getRepository(AppSettings).clear();
+      
+      // Reinitialize default settings
+      await this.initializeDefaultSettings();
+      
+      // Clear cache
+      this.cache.clear();
+      
+      this.logger.warn('Database reset completed - all data has been deleted');
+    } catch (error) {
+      this.logger.error('Failed to reset database:', error);
+      throw new Error(`Database reset failed: ${error.message}`);
+    }
+  }
+
+  async resetStreamCounts(): Promise<void> {
+    try {
+      this.logger.warn('Resetting all device stream counts');
+      
+      // Reset session count and clear current session keys for all devices
+      const result = await this.settingsRepository.manager
+        .getRepository(UserDevice)
+        .createQueryBuilder()
+        .update(UserDevice)
+        .set({ 
+          sessionCount: 0,
+          currentSessionKey: () => 'NULL'
+        })
+        .execute();
+      
+      this.logger.log(`Stream counts reset for ${result.affected || 0} devices`);
+    } catch (error) {
+      this.logger.error('Failed to reset stream counts:', error);
+      throw new Error(`Stream count reset failed: ${error.message}`);
+    }
+  }
+
+  async deleteAllDevices(): Promise<void> {
+    try {
+      this.logger.warn('DELETING ALL DEVICES per user request');
+      
+      // Get count before deletion for logging
+      const deviceCount = await this.settingsRepository.manager
+        .getRepository(UserDevice)
+        .count();
+      
+      // Delete all devices
+      await this.settingsRepository.manager.getRepository(UserDevice).clear();
+      
+      this.logger.warn(`All ${deviceCount} devices have been deleted`);
+    } catch (error) {
+      this.logger.error('Failed to delete all devices:', error);
+      throw new Error(`Device deletion failed: ${error.message}`);
+    }
+  }
 }

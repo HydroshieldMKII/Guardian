@@ -71,6 +71,12 @@ const settingsSections = [
     description: "Export and import database settings and data",
     icon: Database,
   },
+  {
+    id: "admin",
+    title: "Administrative Tools",
+    description: "Dangerous operations for database management",
+    icon: AlertTriangle,
+  },
   // {
   //   id: "notifications",
   //   title: "Notifications",
@@ -141,6 +147,15 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
     success: boolean;
     message: string;
   } | null>(null);
+  
+  // Admin tools state
+  const [resettingDatabase, setResettingDatabase] = useState(false);
+  const [resettingStreamCounts, setResettingStreamCounts] = useState(false);
+  const [deletingAllDevices, setDeletingAllDevices] = useState(false);
+  const [showResetDatabaseModal, setShowResetDatabaseModal] = useState(false);
+  const [showResetStreamCountsModal, setShowResetStreamCountsModal] = useState(false);
+  const [showDeleteAllDevicesModal, setShowDeleteAllDevicesModal] = useState(false);
+  
   const { toast } = useToast();
 
   useEffect(() => {
@@ -578,7 +593,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
     });
   };
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     // Reset the input value immediately to close the file dialog
     event.target.value = '';
@@ -593,6 +608,93 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
           variant: "destructive",
         });
       }
+    }
+  };
+
+  // Admin tools handlers
+  const handleResetDatabase = async () => {
+    setResettingDatabase(true);
+    try {
+      const response = await fetch(`${config.api.baseUrl}/config/scripts/reset-database`, {
+        method: 'POST',
+      });
+
+      if (response.ok) {
+        toast({
+          title: "Database reset successfully",
+          description: "All data has been cleared and default settings restored",
+          variant: "success",
+        });
+        // Refresh settings after reset
+        await fetchSettings();
+      } else {
+        throw new Error('Failed to reset database');
+      }
+    } catch (error) {
+      toast({
+        title: "Failed to reset database",
+        description: error instanceof Error ? error.message : "Unknown error occurred",
+        variant: "destructive",
+      });
+    } finally {
+      setResettingDatabase(false);
+      setShowResetDatabaseModal(false);
+    }
+  };
+
+  const handleResetStreamCounts = async () => {
+    setResettingStreamCounts(true);
+    try {
+      const response = await fetch(`${config.api.baseUrl}/config/scripts/reset-stream-counts`, {
+        method: 'POST',
+      });
+
+      if (response.ok) {
+        toast({
+          title: "Stream counts reset successfully",
+          description: "All device stream counts have been reset to zero",
+          variant: "success",
+        });
+      } else {
+        throw new Error('Failed to reset stream counts');
+      }
+    } catch (error) {
+      toast({
+        title: "Failed to reset stream counts",
+        description: error instanceof Error ? error.message : "Unknown error occurred",
+        variant: "destructive",
+      });
+    } finally {
+      setResettingStreamCounts(false);
+      setShowResetStreamCountsModal(false);
+    }
+  };
+
+  const handleDeleteAllDevices = async () => {
+    setDeletingAllDevices(true);
+    try {
+      const response = await fetch(`${config.api.baseUrl}/config/scripts/delete-all-devices`, {
+        method: 'POST',
+      });
+
+      if (response.ok) {
+        toast({
+          title: "All devices deleted successfully",
+          description: "All device records have been removed from the database",
+          variant: "success",
+        });
+      } else {
+        throw new Error('Failed to delete all devices');
+      }
+    } catch (error) {
+      toast({
+        title: "Failed to delete all devices",
+        description: error instanceof Error ? error.message : "Unknown error occurred",
+        variant: "destructive",
+      });
+    } finally {
+      setDeletingAllDevices(false);
+      setShowDeleteAllDevicesModal(false);
     }
   };
 
@@ -1019,6 +1121,110 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
           </div>
         );
 
+      case "admin":
+        return (
+          <div className="space-y-6">
+            <div>
+              <h3 className="text-lg font-medium">Administrative Tools</h3>
+              <p className="text-sm text-muted-foreground">
+                Dangerous operations for database management. Use with extreme caution.
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              {/* Reset Stream Counts */}
+              <Card className="p-4 border-orange-200 dark:border-orange-800">
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="text-sm font-medium flex items-center">
+                      <AlertTriangle className="w-4 h-4 mr-2 text-orange-500" />
+                      Reset Stream Counts
+                    </h4>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Reset session counts for all devices. This will not delete devices.
+                    </p>
+                  </div>
+                  <Button
+                    onClick={() => setShowResetStreamCountsModal(true)}
+                    disabled={resettingStreamCounts}
+                    size="sm"
+                    variant="outline"
+                    className="border-orange-200 text-orange-700 hover:bg-orange-50 dark:border-orange-800 dark:text-orange-400 dark:hover:bg-orange-900/20"
+                  >
+                    {resettingStreamCounts ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <RefreshCw className="w-4 h-4 mr-2" />
+                    )}
+                    {resettingStreamCounts ? "Resetting..." : "Reset Stream Counts"}
+                  </Button>
+                </div>
+              </Card>
+
+              {/* Delete All Devices */}
+              <Card className="p-4 border-red-200 dark:border-red-800">
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="text-sm font-medium flex items-center">
+                      <AlertTriangle className="w-4 h-4 mr-2 text-red-500" />
+                      Delete All Devices
+                    </h4>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Permanently remove all device records from the database. Devices will need to be detected again on next stream.
+                    </p>
+                  </div>
+                  <Button
+                    onClick={() => setShowDeleteAllDevicesModal(true)}
+                    disabled={deletingAllDevices}
+                    size="sm"
+                    variant="outline"
+                    className="border-red-200 text-red-700 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900/20"
+                  >
+                    {deletingAllDevices ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <XCircle className="w-4 h-4 mr-2" />
+                    )}
+                    {deletingAllDevices ? "Deleting..." : "Delete All Devices"}
+                  </Button>
+                </div>
+              </Card>
+
+              {/* Reset Database */}
+              <Card className="p-4 border-red-200 dark:border-red-800">
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="text-sm font-medium flex items-center">
+                      <AlertTriangle className="w-4 h-4 mr-2 text-red-500" />
+                      Reset Entire Database
+                    </h4>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      <strong>DANGER:</strong> This will permanently delete ALL data including settings, devices, user preferences, and sessions. Default settings will be restored.
+                    </p>
+                  </div>
+                  <div className="text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 p-3 rounded border border-red-200 dark:border-red-800">
+                    <strong> IRREVERSIBLE ACTION:</strong> This will completely wipe your Guardian database. 
+                    Export your database first if you want to keep any data. This action cannot be undone.
+                  </div>
+                  <Button
+                    onClick={() => setShowResetDatabaseModal(true)}
+                    disabled={resettingDatabase}
+                    size="sm"
+                    variant="destructive"
+                  >
+                    {resettingDatabase ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <XCircle className="w-4 h-4 mr-2" />
+                    )}
+                    {resettingDatabase ? "Resetting..." : "Reset Database"}
+                  </Button>
+                </div>
+              </Card>
+            </div>
+          </div>
+        );
+
       // case "notifications":
       //   return (
       //     <div className="space-y-6">
@@ -1294,6 +1500,42 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
         }
         confirmText="Continue Import"
         cancelText="Cancel Import"
+        variant="destructive"
+      />
+
+      {/* Reset Database Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={showResetDatabaseModal}
+        onClose={() => setShowResetDatabaseModal(false)}
+        onConfirm={handleResetDatabase}
+        title="Reset Entire Database"
+        description="DANGER: This will permanently delete ALL data including settings, devices, user preferences, and sessions. Default settings will be restored. This action cannot be undone. Are you absolutely sure you want to proceed?"
+        confirmText="Yes, Reset Database"
+        cancelText="Cancel"
+        variant="destructive"
+      />
+
+      {/* Reset Stream Counts Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={showResetStreamCountsModal}
+        onClose={() => setShowResetStreamCountsModal(false)}
+        onConfirm={handleResetStreamCounts}
+        title="Reset Stream Counts"
+        description="This will reset session counts for all devices. Device records will remain but their stream statistics will be reset to zero. This action cannot be undone."
+        confirmText="Reset Stream Counts"
+        cancelText="Cancel"
+        variant="default"
+      />
+
+      {/* Delete All Devices Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={showDeleteAllDevicesModal}
+        onClose={() => setShowDeleteAllDevicesModal(false)}
+        onConfirm={handleDeleteAllDevices}
+        title="Delete All Devices"
+        description="This will permanently remove all device records from the database. Devices will need to be detected again on their next stream attempt. User preferences will remain intact. This action cannot be undone."
+        confirmText="Delete All Devices"
+        cancelText="Cancel"
         variant="destructive"
       />
     </div>
