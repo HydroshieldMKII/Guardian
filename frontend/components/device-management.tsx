@@ -665,7 +665,7 @@ const DeviceManagement = memo(({
                 User & Device Management
               </CardTitle>
               <CardDescription className="mt-1 flex items-center">
-                Manage all users and their devices in one unified view
+                Manage all users and their devices
               </CardDescription>
             </div>
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-2">
