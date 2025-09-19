@@ -19,6 +19,9 @@ export class UserDevice {
   @Column({ name: 'username', nullable: true })
   username: string;
 
+  @Column({ name: 'avatar_url', nullable: true })
+  avatarUrl: string;
+
   @Column({ name: 'device_identifier' })
   deviceIdentifier: string;
 

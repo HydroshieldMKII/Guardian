@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ScheduleModule } from '@nestjs/schedule';
 import { SessionsModule } from './modules/sessions/sessions.module';
 import { DevicesModule } from './modules/devices/devices.module';
 import { PlexModule } from './modules/plex/plex.module';
@@ -17,6 +18,7 @@ import * as path from 'path';
 
 @Module({
   imports: [
+    ScheduleModule.forRoot(),
     TypeOrmModule.forRoot({
       type: 'sqlite',
       database:

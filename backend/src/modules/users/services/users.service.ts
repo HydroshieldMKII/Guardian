@@ -18,43 +18,61 @@ export class UsersService {
     private readonly configService: ConfigService,
   ) {}
 
-  // Get all users with preferences, creating default entries if there is a device but no user preference
+  // Get all users with preferences
   async getAllUsers(): Promise<UserPreference[]> {
-    // Get all existing user preferences
-    const existingPreferences = await this.userPreferenceRepository.find();
-    
-    // Get users from devices that don't have preferences yet
-    const usersFromDevices = await this.userDeviceRepository
-      .createQueryBuilder('device')
-      .select('device.userId', 'userId')
-      .addSelect('device.username', 'username')
-      .distinct(true)
-      .getRawMany();
+    return await this.userPreferenceRepository.find();
+  }
 
-    const result: UserPreference[] = [...existingPreferences];
-    const existingUserIds = new Set(existingPreferences.map(p => p.userId));
+  // Update user info directly from session data (called during session processing)
+  async updateUserFromSessionData(userId: string, username?: string, avatarUrl?: string): Promise<void> {
+    if (!userId) return;
 
-    // Create preferences for users with devices but no preferences
-    for (const user of usersFromDevices) {
-      if (!existingUserIds.has(user.userId)) {
-        console.log('Creating default preference for user:', user);
+    try {
+      // Find existing user preference
+      let preference = await this.userPreferenceRepository.findOne({
+        where: { userId },
+      });
 
-        // Create default preference entry
-        const newPreference = this.userPreferenceRepository.create({
-          userId: user.userId,
-          username: user.username,
+      let needsUpdate = false;
+      let isNewUser = false;
+
+      if (!preference) {
+        // Create new user preference if it doesn't exist
+        preference = this.userPreferenceRepository.create({
+          userId,
+          username,
+          avatarUrl,
           defaultBlock: null, // null means use global default
         });
-
-        // Save the preference to the database
-        const savedPreference =
-          await this.userPreferenceRepository.save(newPreference);
-        result.push(savedPreference);
+        isNewUser = true;
+        needsUpdate = true;
+      } else {
+        // Update existing preference if data has changed
+        if (avatarUrl && preference.avatarUrl !== avatarUrl) {
+          preference.avatarUrl = avatarUrl;
+          needsUpdate = true;
+        }
+        
+        if (username && !preference.username) {
+          preference.username = username;
+          needsUpdate = true;
+        }
       }
-    }
 
-    return result;
+      if (needsUpdate) {
+        await this.userPreferenceRepository.save(preference);
+        if (isNewUser) {
+          this.logger.debug(`Created new user preference: ${userId} (${username})`);
+        } else {
+          this.logger.debug(`Updated user info: ${userId} (${username})`);
+        }
+      }
+    } catch (error) {
+      this.logger.error(`Error updating user from session data: ${userId}`, error);
+    }
   }
+
+
 
   async getUserPreference(userId: string): Promise<UserPreference | null> {
     return this.userPreferenceRepository.findOne({
@@ -96,46 +114,8 @@ export class UsersService {
     }
 
     // Save the preference
-    const savedPreference =
-      await this.userPreferenceRepository.save(preference);
-
-    // Update all pending devices for this user to match the new preference
-    await this.updatePendingDevicesForUser(userId, defaultBlock);
-
+    const savedPreference = await this.userPreferenceRepository.save(preference);
     return savedPreference;
-  }
-
-  private async updatePendingDevicesForUser(
-    userId: string,
-    defaultBlock: boolean | null,
-  ): Promise<void> {
-    // Get effective default block setting
-    const effectiveDefaultBlock =
-      defaultBlock !== null
-        ? defaultBlock
-        : await this.configService.getSetting('PLEX_GUARD_DEFAULT_BLOCK');
-
-    // Find all pending (blocked) devices for this user
-    const pendingDevices = await this.userDeviceRepository.find({
-      where: { userId, status: 'pending' },
-    });
-
-    if (pendingDevices.length === 0) {
-      return;
-    }
-
-    // Get the new status based on effective default block
-    const newStatus = effectiveDefaultBlock ? 'pending' : 'approved';
-
-    // Update all pending devices to the new status
-    await this.userDeviceRepository.update(
-      { userId, status: 'pending' },
-      { status: newStatus },
-    );
-
-    this.logger.log(
-      `Updated ${pendingDevices.length} pending device(s) for user ${userId} to status: ${newStatus} (user preference: ${defaultBlock === null ? 'global default' : defaultBlock ? 'block' : 'allow'})`,
-    );
   }
 
   async getEffectiveDefaultBlock(userId: string): Promise<boolean> {

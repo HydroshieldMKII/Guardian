@@ -36,7 +36,7 @@ export class ErrorBoundary extends Component<Props, State> {
       }
 
       return (
-        <Card className="mx-auto max-w-md">
+        <Card className="mx-auto max-w-md mt-10 border-red-300 dark:border-red-700">
           <CardHeader>
             <CardTitle className="flex items-center text-red-500 dark:text-red-400">
               <AlertTriangle className="w-5 h-5 mr-2" />
@@ -48,7 +48,7 @@ export class ErrorBoundary extends Component<Props, State> {
               An error occurred while loading this component. Please try
               refreshing the page.
             </p>
-            {process.env.NODE_ENV === "development" && this.state.error && (
+            {this.state.error && (
               <pre className="text-xs bg-red-50 dark:bg-red-950/20 p-2 rounded border overflow-auto">
                 {this.state.error.message}
               </pre>

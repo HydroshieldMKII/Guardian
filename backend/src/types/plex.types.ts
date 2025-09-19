@@ -58,6 +58,7 @@ export interface DeviceInfo {
   deviceVersion?: string;
   ipAddress?: string;
   username?: string;
+  avatarUrl?: string;
 }
 
 export interface SessionTerminationResult {

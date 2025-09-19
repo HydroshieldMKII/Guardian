@@ -19,6 +19,7 @@ export class DeviceTrackingService {
     private usersService: UsersService,
   ) {}
 
+  // Function to process sessions and track devices
   async processSessionsForDeviceTracking(
     sessionsData: PlexSessionsResponse,
   ): Promise<void> {
@@ -64,6 +65,13 @@ export class DeviceTrackingService {
         return;
       }
 
+      // Update user info directly from session data
+      await this.usersService.updateUserFromSessionData(
+        deviceInfo.userId,
+        deviceInfo.username,
+        deviceInfo.avatarUrl
+      );
+
       await this.trackDevice(deviceInfo);
     } catch (error) {
       this.logger.error('Error processing session', error);
@@ -74,6 +82,7 @@ export class DeviceTrackingService {
     return {
       userId: session.User?.id || session.User?.uuid || 'unknown',
       username: session.User?.title,
+      avatarUrl: session.User?.thumb,
       deviceIdentifier: session.Player?.machineIdentifier || 'unknown',
       sessionKey: session.sessionKey,
       deviceName: session.Player?.device || session.Player?.title,
@@ -84,6 +93,7 @@ export class DeviceTrackingService {
     };
   }
 
+  // Function to track or update device info in the database
   private async trackDevice(deviceInfo: DeviceInfo): Promise<void> {
     try {
       // this.logger.debug(`Tracking device: ${deviceInfo.deviceIdentifier} for user: ${deviceInfo.userId} with session: ${deviceInfo.sessionKey}`);
@@ -153,7 +163,7 @@ export class DeviceTrackingService {
   private async createNewDevice(deviceInfo: DeviceInfo): Promise<void> {
     const defaultBlock = await this.usersService.getEffectiveDefaultBlock(
       deviceInfo.userId,
-    );
+    ); // User wont have a preference yet, so this will return app default
 
     console.log('New device detected:', deviceInfo);
 
@@ -165,7 +175,7 @@ export class DeviceTrackingService {
       devicePlatform: deviceInfo.devicePlatform,
       deviceProduct: deviceInfo.deviceProduct,
       deviceVersion: deviceInfo.deviceVersion,
-      status: defaultBlock ? 'pending' : 'approved',
+      status: 'pending',
       sessionCount: 1,
       currentSessionKey: deviceInfo.sessionKey,
       ipAddress: deviceInfo.ipAddress,
@@ -174,7 +184,7 @@ export class DeviceTrackingService {
     await this.userDeviceRepository.save(newDevice);
 
     this.logger.warn(
-      `🚨 NEW DEVICE DETECTED! User: ${deviceInfo.username || deviceInfo.userId}, Device: ${deviceInfo.deviceName || deviceInfo.deviceIdentifier}, Platform: ${deviceInfo.devicePlatform || 'Unknown'}, Status: ${defaultBlock ? 'PENDING' : 'APPROVED'} (User preference: ${defaultBlock ? 'Block' : 'Allow'})`,
+      `🚨 NEW DEVICE DETECTED! User: ${deviceInfo.username || deviceInfo.userId}, Device: ${deviceInfo.deviceName || deviceInfo.deviceIdentifier}, Platform: ${deviceInfo.devicePlatform || 'Unknown'}, Status: pending, App default action: ${defaultBlock ? 'Block' : 'Allow'}`,
     );
   }
 
@@ -257,29 +267,13 @@ export class DeviceTrackingService {
   }
 
   async cleanupInactiveDevices(inactiveDays: number): Promise<{ deletedCount: number; deletedDevices: UserDevice[] }> {
-    // Validate input
-    if (typeof inactiveDays !== 'number' || isNaN(inactiveDays)) {
-      this.logger.warn('Invalid inactive days for cleanup - not a number:', inactiveDays);
-      return { deletedCount: 0, deletedDevices: [] };
-    }
-
-    if (!Number.isInteger(inactiveDays)) {
-      this.logger.warn('Invalid inactive days for cleanup - must be an integer:', inactiveDays);
-      return { deletedCount: 0, deletedDevices: [] };
-    }
-
-    if (inactiveDays <= 0) {
-      this.logger.warn('Invalid inactive days for cleanup - must be positive:', inactiveDays);
-      return { deletedCount: 0, deletedDevices: [] };
-    }
-
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - inactiveDays);
 
-    
     const allDevices = await this.userDeviceRepository.find();
 
     if (allDevices.length === 0) {
+      this.logger.log('No devices found in the database, skipping cleanup.');
       return { deletedCount: 0, deletedDevices: [] };
     }
 
@@ -295,7 +289,6 @@ export class DeviceTrackingService {
         inactiveDevices.push(device);
       }
     }
-
 
     this.logger.log(`Found ${inactiveDevices.length} inactive device(s) older than ${inactiveDays} days`);
     

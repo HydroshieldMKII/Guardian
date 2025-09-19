@@ -163,4 +163,43 @@ export class ConfigController {
       );
     }
   }
+
+  @Post('scripts/reset-database')
+  async resetDatabase() {
+    try {
+      await this.configService.resetDatabase();
+      return { message: 'Database reset successfully' };
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Failed to reset database',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  @Post('scripts/reset-stream-counts')
+  async resetStreamCounts() {
+    try {
+      await this.configService.resetStreamCounts();
+      return { message: 'Stream counts reset successfully' };
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Failed to reset stream counts',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  @Post('scripts/delete-all-devices')
+  async deleteAllDevices() {
+    try {
+      await this.configService.deleteAllDevices();
+      return { message: 'All devices deleted successfully' };
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Failed to delete all devices',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
 }

@@ -19,6 +19,9 @@ export class UserPreference {
   @Column({ name: 'username', nullable: true })
   username: string;
 
+  @Column({ name: 'avatar_url', nullable: true })
+  avatarUrl: string;
+
   @Column({ name: 'default_block', type: 'boolean', nullable: true })
   defaultBlock: boolean | null; // true, false, or null for global default
 

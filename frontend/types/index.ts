@@ -62,6 +62,7 @@ export interface UserDevice {
   id: number;
   userId: string;
   username?: string;
+  avatarUrl?: string;
   deviceIdentifier: string;
   deviceName?: string;
   devicePlatform?: string;
@@ -95,6 +96,7 @@ export interface UserPreference {
   id: number;
   userId: string;
   username?: string;
+  avatarUrl?: string;
   defaultBlock: boolean | null;
   createdAt: string;
   updatedAt: string;
