@@ -1,8 +1,8 @@
 "use client";
 
-import { Download, RefreshCw, X } from "lucide-react";
+import { Download, NotepadText, RefreshCw, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useVersion } from "@/contexts/version-context";
 
 export function GlobalUpdateBanner() {
@@ -10,21 +10,28 @@ export function GlobalUpdateBanner() {
   const [dismissed, setDismissed] = useState(false);
   const [checking, setChecking] = useState(false);
 
+  const handleCheckAgain = useCallback(async () => {
+    if (checking) return; // Prevent multiple simultaneous checks
+    
+    setChecking(true);
+    try {
+      await checkForUpdatesManually();
+    } catch (error) {
+      console.error('Error checking for updates:', error);
+    } finally {
+      setChecking(false);
+    }
+  }, [checking, checkForUpdatesManually]);
+
+  const handleDismiss = useCallback(() => {
+    setDismissed(true);
+    clearUpdateInfo();
+  }, [clearUpdateInfo]);
+
   // Don't show if no update available, no update info, or dismissed
   if (!updateInfo?.hasUpdate || dismissed) {
     return null;
   }
-
-  const handleCheckAgain = async () => {
-    setChecking(true);
-    await checkForUpdatesManually();
-    setChecking(false);
-  };
-
-  const handleDismiss = () => {
-    setDismissed(true);
-    clearUpdateInfo();
-  };
 
   return (
     <div className="bg-blue-600 text-white border-b border-blue-700">
@@ -44,12 +51,12 @@ export function GlobalUpdateBanner() {
           </div>
           
           <div className="flex items-center gap-2 sm:ml-4 self-start sm:self-center">
-            <Button
+            {/* <Button
               variant="ghost"
               size="sm"
               onClick={handleCheckAgain}
               disabled={checking}
-              className="text-white hover:bg-blue-700 text-xs px-2 py-1 h-auto"
+              className="text-white bg-blue-700 hover:bg-blue-700 text-xs px-2 py-1 h-auto"
             >
               {checking ? (
                 <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
@@ -57,14 +64,22 @@ export function GlobalUpdateBanner() {
                 <RefreshCw className="h-3 w-3 mr-1" />
               )}
               Check Again
-            </Button>
+            </Button> */}
             <Button
               size="sm"
               onClick={() => window.open(updateInfo.updateUrl, '_blank')}
               className="bg-blue-700 hover:bg-blue-800 text-white text-xs px-3 py-1 h-auto"
             >
+              <NotepadText className="h-3 w-3 mr-1" />
+              See what's new
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => window.open('https://github.com/HydroshieldMKII/Guardian?tab=readme-ov-file#update-guardian', '_blank')}
+              className="bg-blue-700 hover:bg-blue-800 text-white text-xs px-3 py-1 h-auto"
+            >
               <Download className="h-3 w-3 mr-1" />
-              Download
+              How to Update
             </Button>
             <Button
               variant="ghost"

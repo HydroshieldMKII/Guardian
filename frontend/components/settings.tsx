@@ -165,7 +165,14 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
   // Check for updates automatically when settings page loads
   useEffect(() => {
     checkForUpdatesIfEnabled();
-  }, [checkForUpdatesIfEnabled]);
+  }, []);
+
+  // Also check when versionInfo becomes available
+  useEffect(() => {
+    if (versionInfo?.version) {
+      checkForUpdatesIfEnabled();
+    }
+  }, [versionInfo?.version, checkForUpdatesIfEnabled]);
 
   const checkForUpdates = async () => {
     if (!versionInfo?.version) return;
@@ -193,7 +200,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
       } else {
         toast({
           title: "Update check failed",
-          description: "Unable to check for updates. Please try again later.",
+          description: "Unable to check for updates. You may be rate limited by GitHub. Please slow down your requests and try again later.",
           variant: "destructive",
         });
       }

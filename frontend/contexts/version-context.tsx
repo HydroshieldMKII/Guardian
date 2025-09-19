@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { config } from '@/lib/config';
 
 interface VersionInfo {
@@ -39,6 +39,26 @@ interface VersionContextType {
   clearUpdateInfo: () => void;
 }
 
+// Helper function for version comparison
+const isVersionNewer = (newVersion: string, currentVersion: string): boolean => {
+  const parseVersion = (version: string) => {
+    return version.split('.').map(v => parseInt(v) || 0);
+  };
+
+  const newV = parseVersion(newVersion);
+  const currentV = parseVersion(currentVersion);
+
+  for (let i = 0; i < Math.max(newV.length, currentV.length); i++) {
+    const newPart = newV[i] || 0;
+    const currentPart = currentV[i] || 0;
+    
+    if (newPart > currentPart) return true;
+    if (newPart < currentPart) return false;
+  }
+  
+  return false; // versions are equal
+};
+
 const VersionContext = createContext<VersionContextType | undefined>(undefined);
 
 export function VersionProvider({ children }: { children: React.ReactNode }) {
@@ -47,7 +67,13 @@ export function VersionProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchVersionInfo = async () => {
+  const lastUpdateCheckRef = useRef<number>(0);
+  const updateCheckCacheRef = useRef<{hasUpdate: boolean, latestVersion: string, currentVersion: string, updateUrl: string} | null>(null);
+  
+  // Constants
+  const UPDATE_CHECK_COOLDOWN = 1 * 60 * 1000; // 1 minute
+
+  const fetchVersionInfo = useCallback(async () => {
     try {
       setError(null);
       const response = await fetch(`${config.api.baseUrl}/config/version`);
@@ -63,15 +89,34 @@ export function VersionProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const refreshVersionInfo = async () => {
+  const refreshVersionInfo = useCallback(async () => {
     setLoading(true);
     await fetchVersionInfo();
-  };
+  }, [fetchVersionInfo]);
 
-  const checkForUpdatesIfEnabled = async () => {
-    if (!versionInfo?.version) return null;
+  const checkForUpdatesIfEnabled = useCallback(async () => {
+    if (!versionInfo?.version) {
+      console.log('No version info available, skipping update check');
+      return null;
+    }
+    
+    // Rate limiting: Check if we've checked recently
+    const now = Date.now();
+    if (now - lastUpdateCheckRef.current < UPDATE_CHECK_COOLDOWN) {
+      console.log('Rate limited, returning cached result');
+      // Return cached result if available
+      if (updateCheckCacheRef.current) {
+        const cached = updateCheckCacheRef.current;
+        // Update global state from cache if there's an update
+        if (cached.hasUpdate) {
+          setUpdateInfo(cached);
+        }
+        return cached;
+      }
+      return null;
+    }
     
     try {
       // First check if AUTO_CHECK_UPDATES is enabled
@@ -88,6 +133,9 @@ export function VersionProvider({ children }: { children: React.ReactNode }) {
       if (!shouldAutoCheck) {
         return null; // Auto check is disabled
       }
+      
+      // Update last check time
+      lastUpdateCheckRef.current = now;
       
       // Fetch latest release from GitHub API
       const response = await fetch('https://api.github.com/repos/HydroshieldMKII/Guardian/releases/latest');
@@ -110,6 +158,9 @@ export function VersionProvider({ children }: { children: React.ReactNode }) {
         updateUrl: release.html_url,
       };
 
+      // Cache the result
+      updateCheckCacheRef.current = result;
+
       // Update global state when auto-checking
       if (hasUpdate) {
         setUpdateInfo({
@@ -125,28 +176,9 @@ export function VersionProvider({ children }: { children: React.ReactNode }) {
       console.error('Failed to check for updates automatically:', error);
       return null;
     }
-  };
+  }, [versionInfo?.version, UPDATE_CHECK_COOLDOWN]);
 
-  const isVersionNewer = (newVersion: string, currentVersion: string): boolean => {
-    const parseVersion = (version: string) => {
-      return version.split('.').map(v => parseInt(v) || 0);
-    };
-
-    const newV = parseVersion(newVersion);
-    const currentV = parseVersion(currentVersion);
-
-    for (let i = 0; i < Math.max(newV.length, currentV.length); i++) {
-      const newPart = newV[i] || 0;
-      const currentPart = currentV[i] || 0;
-      
-      if (newPart > currentPart) return true;
-      if (newPart < currentPart) return false;
-    }
-    
-    return false; // versions are equal
-  };
-
-  const checkForUpdatesManually = async () => {
+  const checkForUpdatesManually = useCallback(async () => {
     if (!versionInfo?.version) return null;
     
     try {
@@ -188,27 +220,29 @@ export function VersionProvider({ children }: { children: React.ReactNode }) {
       console.error('Failed to check for updates manually:', error);
       return null;
     }
-  };
+  }, [versionInfo?.version]);
 
-  const clearUpdateInfo = () => {
+  const clearUpdateInfo = useCallback(() => {
     setUpdateInfo(null);
-  };
+  }, []);
 
   useEffect(() => {
     fetchVersionInfo();
-  }, []);
+  }, [fetchVersionInfo]);
+
+  const contextValue = {
+    versionInfo,
+    updateInfo,
+    loading,
+    error,
+    refreshVersionInfo,
+    checkForUpdatesIfEnabled,
+    checkForUpdatesManually,
+    clearUpdateInfo
+  };
 
   return (
-    <VersionContext.Provider value={{
-      versionInfo,
-      updateInfo,
-      loading,
-      error,
-      refreshVersionInfo,
-      checkForUpdatesIfEnabled,
-      checkForUpdatesManually,
-      clearUpdateInfo
-    }}>
+    <VersionContext.Provider value={contextValue}>
       {children}
     </VersionContext.Provider>
   );
