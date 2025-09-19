@@ -39,6 +39,26 @@ interface VersionContextType {
   clearUpdateInfo: () => void;
 }
 
+// Helper function for version comparison
+const isVersionNewer = (newVersion: string, currentVersion: string): boolean => {
+  const parseVersion = (version: string) => {
+    return version.split('.').map(v => parseInt(v) || 0);
+  };
+
+  const newV = parseVersion(newVersion);
+  const currentV = parseVersion(currentVersion);
+
+  for (let i = 0; i < Math.max(newV.length, currentV.length); i++) {
+    const newPart = newV[i] || 0;
+    const currentPart = currentV[i] || 0;
+    
+    if (newPart > currentPart) return true;
+    if (newPart < currentPart) return false;
+  }
+  
+  return false; // versions are equal
+};
+
 const VersionContext = createContext<VersionContextType | undefined>(undefined);
 
 export function VersionProvider({ children }: { children: React.ReactNode }) {
@@ -47,12 +67,13 @@ export function VersionProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Rate limiting and caching for update checks
   const lastUpdateCheckRef = useRef<number>(0);
   const updateCheckCacheRef = useRef<{hasUpdate: boolean, latestVersion: string, currentVersion: string, updateUrl: string} | null>(null);
+  
+  // Constants
   const UPDATE_CHECK_COOLDOWN = 1 * 60 * 1000; // 1 minute
 
-  const fetchVersionInfo = async () => {
+  const fetchVersionInfo = useCallback(async () => {
     try {
       setError(null);
       const response = await fetch(`${config.api.baseUrl}/config/version`);
@@ -68,24 +89,30 @@ export function VersionProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   const refreshVersionInfo = useCallback(async () => {
     setLoading(true);
     await fetchVersionInfo();
-  }, []);
+  }, [fetchVersionInfo]);
 
   const checkForUpdatesIfEnabled = useCallback(async () => {
-    if (!versionInfo?.version) return null;
+    console.log('checkForUpdatesIfEnabled called, versionInfo:', versionInfo?.version);
+    
+    if (!versionInfo?.version) {
+      console.log('No version info available, skipping update check');
+      return null;
+    }
     
     // Rate limiting: Check if we've checked recently
     const now = Date.now();
     if (now - lastUpdateCheckRef.current < UPDATE_CHECK_COOLDOWN) {
+      console.log('Rate limited, returning cached result');
       // Return cached result if available
       if (updateCheckCacheRef.current) {
         const cached = updateCheckCacheRef.current;
-        // Update global state from cache if needed
-        if (cached.hasUpdate && !updateInfo) {
+        // Update global state from cache if there's an update
+        if (cached.hasUpdate) {
           setUpdateInfo(cached);
         }
         return cached;
@@ -151,26 +178,7 @@ export function VersionProvider({ children }: { children: React.ReactNode }) {
       console.error('Failed to check for updates automatically:', error);
       return null;
     }
-  }, [versionInfo?.version, updateInfo]);
-
-  const isVersionNewer = (newVersion: string, currentVersion: string): boolean => {
-    const parseVersion = (version: string) => {
-      return version.split('.').map(v => parseInt(v) || 0);
-    };
-
-    const newV = parseVersion(newVersion);
-    const currentV = parseVersion(currentVersion);
-
-    for (let i = 0; i < Math.max(newV.length, currentV.length); i++) {
-      const newPart = newV[i] || 0;
-      const currentPart = currentV[i] || 0;
-      
-      if (newPart > currentPart) return true;
-      if (newPart < currentPart) return false;
-    }
-    
-    return false; // versions are equal
-  };
+  }, [versionInfo?.version, UPDATE_CHECK_COOLDOWN]);
 
   const checkForUpdatesManually = useCallback(async () => {
     if (!versionInfo?.version) return null;
@@ -222,19 +230,21 @@ export function VersionProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     fetchVersionInfo();
-  }, []);
+  }, [fetchVersionInfo]);
+
+  const contextValue = {
+    versionInfo,
+    updateInfo,
+    loading,
+    error,
+    refreshVersionInfo,
+    checkForUpdatesIfEnabled,
+    checkForUpdatesManually,
+    clearUpdateInfo
+  };
 
   return (
-    <VersionContext.Provider value={{
-      versionInfo,
-      updateInfo,
-      loading,
-      error,
-      refreshVersionInfo,
-      checkForUpdatesIfEnabled,
-      checkForUpdatesManually,
-      clearUpdateInfo
-    }}>
+    <VersionContext.Provider value={contextValue}>
       {children}
     </VersionContext.Provider>
   );

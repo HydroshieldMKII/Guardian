@@ -98,6 +98,12 @@ export function Dashboard() {
   }, []);
 
   useEffect(() => {
+    if (versionInfo?.version) {
+      checkForUpdatesIfEnabled();
+    }
+  }, [versionInfo?.version, checkForUpdatesIfEnabled]);
+
+  useEffect(() => {
     if (!autoRefresh) return; // Don't set up interval in manual mode
     
     const interval = setInterval(() => refreshDashboard(true), config.app.refreshInterval);
