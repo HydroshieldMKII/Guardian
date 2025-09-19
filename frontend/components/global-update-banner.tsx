@@ -1,6 +1,6 @@
 "use client";
 
-import { Download, RefreshCw, X } from "lucide-react";
+import { Download, NotepadText, RefreshCw, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { useVersion } from "@/contexts/version-context";
@@ -63,8 +63,8 @@ export function GlobalUpdateBanner() {
               onClick={() => window.open(updateInfo.updateUrl, '_blank')}
               className="bg-blue-700 hover:bg-blue-800 text-white text-xs px-3 py-1 h-auto"
             >
-              <Download className="h-3 w-3 mr-1" />
-              Download
+              <NotepadText className="h-3 w-3 mr-1" />
+              See what's new
             </Button>
             <Button
               variant="ghost"
