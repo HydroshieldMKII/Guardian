@@ -2,7 +2,7 @@
 
 import { Download, NotepadText, RefreshCw, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useVersion } from "@/contexts/version-context";
 
 export function GlobalUpdateBanner() {
@@ -15,16 +15,23 @@ export function GlobalUpdateBanner() {
     return null;
   }
 
-  const handleCheckAgain = async () => {
+  const handleCheckAgain = useCallback(async () => {
+    if (checking) return; // Prevent multiple simultaneous checks
+    
     setChecking(true);
-    await checkForUpdatesManually();
-    setChecking(false);
-  };
+    try {
+      await checkForUpdatesManually();
+    } catch (error) {
+      console.error('Error checking for updates:', error);
+    } finally {
+      setChecking(false);
+    }
+  }, [checking, checkForUpdatesManually]);
 
-  const handleDismiss = () => {
+  const handleDismiss = useCallback(() => {
     setDismissed(true);
     clearUpdateInfo();
-  };
+  }, [clearUpdateInfo]);
 
   return (
     <div className="bg-blue-600 text-white border-b border-blue-700">

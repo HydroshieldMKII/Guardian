@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { config } from '@/lib/config';
 
 interface VersionInfo {
@@ -47,6 +47,11 @@ export function VersionProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Rate limiting and caching for update checks
+  const lastUpdateCheckRef = useRef<number>(0);
+  const updateCheckCacheRef = useRef<{hasUpdate: boolean, latestVersion: string, currentVersion: string, updateUrl: string} | null>(null);
+  const UPDATE_CHECK_COOLDOWN = 1 * 60 * 1000; // 1 minute
+
   const fetchVersionInfo = async () => {
     try {
       setError(null);
@@ -65,13 +70,28 @@ export function VersionProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const refreshVersionInfo = async () => {
+  const refreshVersionInfo = useCallback(async () => {
     setLoading(true);
     await fetchVersionInfo();
-  };
+  }, []);
 
-  const checkForUpdatesIfEnabled = async () => {
+  const checkForUpdatesIfEnabled = useCallback(async () => {
     if (!versionInfo?.version) return null;
+    
+    // Rate limiting: Check if we've checked recently
+    const now = Date.now();
+    if (now - lastUpdateCheckRef.current < UPDATE_CHECK_COOLDOWN) {
+      // Return cached result if available
+      if (updateCheckCacheRef.current) {
+        const cached = updateCheckCacheRef.current;
+        // Update global state from cache if needed
+        if (cached.hasUpdate && !updateInfo) {
+          setUpdateInfo(cached);
+        }
+        return cached;
+      }
+      return null;
+    }
     
     try {
       // First check if AUTO_CHECK_UPDATES is enabled
@@ -88,6 +108,9 @@ export function VersionProvider({ children }: { children: React.ReactNode }) {
       if (!shouldAutoCheck) {
         return null; // Auto check is disabled
       }
+      
+      // Update last check time
+      lastUpdateCheckRef.current = now;
       
       // Fetch latest release from GitHub API
       const response = await fetch('https://api.github.com/repos/HydroshieldMKII/Guardian/releases/latest');
@@ -110,6 +133,9 @@ export function VersionProvider({ children }: { children: React.ReactNode }) {
         updateUrl: release.html_url,
       };
 
+      // Cache the result
+      updateCheckCacheRef.current = result;
+
       // Update global state when auto-checking
       if (hasUpdate) {
         setUpdateInfo({
@@ -125,7 +151,7 @@ export function VersionProvider({ children }: { children: React.ReactNode }) {
       console.error('Failed to check for updates automatically:', error);
       return null;
     }
-  };
+  }, [versionInfo?.version, updateInfo]);
 
   const isVersionNewer = (newVersion: string, currentVersion: string): boolean => {
     const parseVersion = (version: string) => {
@@ -146,7 +172,7 @@ export function VersionProvider({ children }: { children: React.ReactNode }) {
     return false; // versions are equal
   };
 
-  const checkForUpdatesManually = async () => {
+  const checkForUpdatesManually = useCallback(async () => {
     if (!versionInfo?.version) return null;
     
     try {
@@ -188,11 +214,11 @@ export function VersionProvider({ children }: { children: React.ReactNode }) {
       console.error('Failed to check for updates manually:', error);
       return null;
     }
-  };
+  }, [versionInfo?.version]);
 
-  const clearUpdateInfo = () => {
+  const clearUpdateInfo = useCallback(() => {
     setUpdateInfo(null);
-  };
+  }, []);
 
   useEffect(() => {
     fetchVersionInfo();

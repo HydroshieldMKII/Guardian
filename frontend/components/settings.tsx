@@ -165,7 +165,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
   // Check for updates automatically when settings page loads
   useEffect(() => {
     checkForUpdatesIfEnabled();
-  }, [checkForUpdatesIfEnabled]);
+  }, []);
 
   const checkForUpdates = async () => {
     if (!versionInfo?.version) return;

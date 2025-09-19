@@ -95,7 +95,7 @@ export function Dashboard() {
   // Check for updates automatically when dashboard loads
   useEffect(() => {
     checkForUpdatesIfEnabled();
-  }, [checkForUpdatesIfEnabled]);
+  }, []);
 
   useEffect(() => {
     if (!autoRefresh) return; // Don't set up interval in manual mode
