@@ -97,8 +97,6 @@ export function VersionProvider({ children }: { children: React.ReactNode }) {
   }, [fetchVersionInfo]);
 
   const checkForUpdatesIfEnabled = useCallback(async () => {
-    console.log('checkForUpdatesIfEnabled called, versionInfo:', versionInfo?.version);
-    
     if (!versionInfo?.version) {
       console.log('No version info available, skipping update check');
       return null;
