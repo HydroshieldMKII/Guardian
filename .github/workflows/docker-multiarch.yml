@@ -1,42 +1,22 @@
 name: Build & Push to DockerHub
 
 on:
-  push:
-    branches: ["main"]
+  release:
+    types: [published]
 
 concurrency:
-  group: dockerhub-publish-main
+  group: dockerhub-publish-${{ github.event.release.tag_name }}
   cancel-in-progress: false
 
 permissions:
-  contents: read # checkout + path filter
-  actions: write # Buildx cache (type=gha)
+  contents: read
+  actions: write
+
+env:
+  RELEASE_TAG: ${{ github.event.release.tag_name }}
 
 jobs:
-  changes:
-    runs-on: ubuntu-latest
-    outputs:
-      backend: ${{ steps.filter.outputs.backend }}
-      frontend: ${{ steps.filter.outputs.frontend }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Detect changed paths
-        id: filter
-        uses: dorny/paths-filter@v3
-        with:
-          filters: |
-            backend:
-              - 'backend/**'
-            frontend:
-              - 'frontend/**'
-
   build-backend:
-    needs: changes
-    if: needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -52,14 +32,14 @@ jobs:
           file: ./backend/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: false
-          tags: docker.io/hydroshieldmkii/guardian-backend:latest
+          tags: |
+            docker.io/hydroshieldmkii/guardian-backend:latest
+            docker.io/hydroshieldmkii/guardian-backend:${{ env.RELEASE_TAG }}
           cache-from: type=gha,scope=guardian-backend
           cache-to: type=gha,scope=guardian-backend,mode=max
           outputs: type=image,name=docker.io/hydroshieldmkii/guardian-backend,push=false
 
   build-frontend:
-    needs: changes
-    if: needs.changes.outputs.frontend == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -75,18 +55,15 @@ jobs:
           file: ./frontend/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: false
-          tags: docker.io/hydroshieldmkii/guardian-frontend:latest
+          tags: |
+            docker.io/hydroshieldmkii/guardian-frontend:latest
+            docker.io/hydroshieldmkii/guardian-frontend:${{ env.RELEASE_TAG }}
           cache-from: type=gha,scope=guardian-frontend
           cache-to: type=gha,scope=guardian-frontend,mode=max
           outputs: type=image,name=docker.io/hydroshieldmkii/guardian-frontend,push=false
 
   push-backend:
-    needs: [changes, build-backend, build-frontend]
-    if: |
-      always() &&
-      needs.changes.outputs.backend == 'true' && 
-      needs.build-backend.result == 'success' &&
-      (needs.changes.outputs.frontend != 'true' || needs.build-frontend.result == 'success')
+    needs: [build-backend, build-frontend]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -108,16 +85,13 @@ jobs:
           file: ./backend/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: docker.io/hydroshieldmkii/guardian-backend:latest
+          tags: |
+            docker.io/hydroshieldmkii/guardian-backend:latest
+            docker.io/hydroshieldmkii/guardian-backend:${{ env.RELEASE_TAG }}
           cache-from: type=gha,scope=guardian-backend
 
   push-frontend:
-    needs: [changes, build-frontend, build-backend]
-    if: |
-      always() &&
-      needs.changes.outputs.frontend == 'true' && 
-      needs.build-frontend.result == 'success' &&
-      (needs.changes.outputs.backend != 'true' || needs.build-backend.result == 'success')
+    needs: [build-frontend, build-backend]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -139,18 +113,13 @@ jobs:
           file: ./frontend/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: docker.io/hydroshieldmkii/guardian-frontend:latest
+          tags: |
+            docker.io/hydroshieldmkii/guardian-frontend:latest
+            docker.io/hydroshieldmkii/guardian-frontend:${{ env.RELEASE_TAG }}
           cache-from: type=gha,scope=guardian-frontend
 
   publish-confirmation:
     runs-on: ubuntu-latest
-    needs: [changes, build-backend, build-frontend, push-backend, push-frontend]
-    if: |
-      always() &&
-      (needs.changes.outputs.backend != 'true' || (needs.build-backend.result == 'success' && needs.push-backend.result == 'success')) &&
-      (needs.changes.outputs.frontend != 'true' || (needs.build-frontend.result == 'success' && needs.push-frontend.result == 'success')) &&
-      (needs.changes.outputs.backend == 'true' || needs.changes.outputs.frontend == 'true')
-    permissions:
-      contents: read
+    needs: [push-backend, push-frontend]
     steps:
-      - run: echo "✅ Images built and published successfully for changed components."
+      - run: echo "✅ Release ${{ env.RELEASE_TAG }} images built and published."
