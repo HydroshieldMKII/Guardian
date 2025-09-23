@@ -20,7 +20,7 @@ Guardian is a utility designed to enhance the security and management of your Pl
 - [Troubleshooting](#troubleshooting)
 - [Contributing](#contributing)
 
-<img width="2568" height="1350" alt="list-b" src="https://github.com/user-attachments/assets/dc72f748-8202-4df1-8c2e-02223a8dcb20" />
+<img width="2554" height="1350" alt="list-b" src="https://github.com/user-attachments/assets/647896de-0f1c-4dd3-aba5-9eca07e2bbe5" />
 <img width="2560" height="1350" alt="listd-b" src="https://github.com/user-attachments/assets/84f3114c-f78d-4c03-aaeb-45c8deb7c11b" />
 <img width="2559" height="1349" alt="deviced-b" src="https://github.com/user-attachments/assets/38d37729-2a19-49f8-8736-217fa2500437" />
 <img width="2556" height="1349" alt="active-stream-b" src="https://github.com/user-attachments/assets/229d0ed0-940d-4c31-b76c-4c2152b1b836" />
