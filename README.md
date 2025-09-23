@@ -20,31 +20,23 @@ Guardian is a utility designed to enhance the security and management of your Pl
 - [Troubleshooting](#troubleshooting)
 - [Contributing](#contributing)
 
-<img width="1280" height="707" alt="streams" src="https://github.com/user-attachments/assets/ec79a1c5-877a-4152-be6b-af7c6067d890" />
+<img width="2568" height="1350" alt="list-b" src="https://github.com/user-attachments/assets/dc72f748-8202-4df1-8c2e-02223a8dcb20" />
+<img width="2560" height="1350" alt="listd-b" src="https://github.com/user-attachments/assets/84f3114c-f78d-4c03-aaeb-45c8deb7c11b" />
+<img width="2559" height="1349" alt="deviced-b" src="https://github.com/user-attachments/assets/38d37729-2a19-49f8-8736-217fa2500437" />
+<img width="2556" height="1349" alt="active-stream-b" src="https://github.com/user-attachments/assets/229d0ed0-940d-4c31-b76c-4c2152b1b836" />
 
-<img width="1280" height="599" alt="streams_expended" src="https://github.com/user-attachments/assets/3240be5f-b054-441a-999c-313fe3f783de" />
-
-<img width="1280" height="688" alt="devices_pending" src="https://github.com/user-attachments/assets/7b73cf98-4b99-458b-b590-08453d14e6c7" />
-
-<img width="1280" height="688" alt="devices_processed" src="https://github.com/user-attachments/assets/cd693ef0-cded-4c00-9b93-b2bdb9cbc6eb" />
-
-<img width="1280" height="599" alt="device_info" src="https://github.com/user-attachments/assets/f498f459-e980-4c3d-b3cb-fed6bb02ca8e" />
-
-<img width="1280" height="598" alt="devices_users" src="https://github.com/user-attachments/assets/3f4496d5-af09-4c40-b418-44ddcee9ea95" />
 
 ## Features
 
 ### **Device Security & Access Control**
 
-- **Real-time session termination** - Automatically blocks streaming from unapproved devices
-- **Three-tier device approval system** - Pending, approved, and rejected device states
-- **Per-user default blocking policies** - Configurable allow/block preferences for individual users
+- **Automatic session termination** - Automatically blocks streaming from unapproved devices
+- **Per-user default blocking policies** - Configurable allow/block preferences for individual users and their devices
 - **Global default blocking** - Set server-wide policy for new device detection
-- **One-click device management** - Approve, reject, or permanently delete device records
 
 ### **Real-time Monitoring & Tracking**
 
-- **Live session monitoring** - Track all active Plex streams
+- **Live session monitoring** - Track all active Plex and Plexamp streams
 - **Comprehensive device information** - Platform, product, version, IP address with quick lookup, and last seen timestamp
 - **Stream monitoring** - Track title, quality, and duration of active streams
 
