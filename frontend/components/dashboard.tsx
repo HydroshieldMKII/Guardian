@@ -328,19 +328,6 @@ export function Dashboard() {
               </CardHeader>
             </Card>
 
-            <Card className="border-l-4 border-l-green-500">
-              <CardHeader className="pb-2 sm:pb-3">
-                <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center">
-                  <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-                  <span className="hidden sm:inline">Approved Devices</span>
-                  <span className="sm:hidden">Approved</span>
-                </CardTitle>
-                <CardDescription className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">
-                  {stats.approvedDevices}
-                </CardDescription>
-              </CardHeader>
-            </Card>
-
             <Card className="border-l-4 border-l-yellow-500">
               <CardHeader className="pb-2 sm:pb-3">
                 <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center">
@@ -350,6 +337,19 @@ export function Dashboard() {
                 </CardTitle>
                 <CardDescription className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">
                   {stats.pendingDevices}
+                </CardDescription>
+              </CardHeader>
+            </Card>
+
+            <Card className="border-l-4 border-l-green-500">
+              <CardHeader className="pb-2 sm:pb-3">
+                <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center">
+                  <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">Approved Devices</span>
+                  <span className="sm:hidden">Approved</span>
+                </CardTitle>
+                <CardDescription className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">
+                  {stats.approvedDevices}
                 </CardDescription>
               </CardHeader>
             </Card>
