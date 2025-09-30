@@ -65,7 +65,7 @@ import {
   ChevronRight,
   Users,
 } from "lucide-react";
-import { UserDevice, UserPreference } from "@/types";
+import { UserDevice, UserPreference, AppSetting } from "@/types";
 import { config } from "@/lib/config";
 
 // Clickable IP component
@@ -182,6 +182,7 @@ interface DeviceManagementProps {
     processed: UserDevice[];
   };
   usersData?: UserPreference[];
+  settingsData?: AppSetting[];
   onRefresh?: () => void;
   autoRefresh?: boolean;
   onAutoRefreshChange?: (value: boolean) => void;
@@ -190,6 +191,7 @@ interface DeviceManagementProps {
 const DeviceManagement = memo(({
   devicesData,
   usersData,
+  settingsData,
   onRefresh,
   autoRefresh: parentAutoRefresh,
   onAutoRefreshChange
@@ -652,6 +654,37 @@ const DeviceManagement = memo(({
     const now = new Date();
     const expiresAt = new Date(device.temporaryAccessUntil);
     return expiresAt > now;
+  };
+
+  const shouldShowGrantTempAccess = (device: UserDevice): boolean => {
+    // Only show for pending or rejected devices
+    if (device.status !== "pending" && device.status !== "rejected") {
+      return false;
+    }
+
+    // Find the user's preference
+    const userPreference = usersData?.find(u => u.userId === device.userId);
+    
+    // If user policy is explicitly set to allow (defaultBlock = false), don't show Grant Temp Access
+    if (userPreference && userPreference.defaultBlock === false) {
+      return false;
+    }
+
+    // If user has no preference (defaultBlock = null), check global setting
+    if (!userPreference || userPreference.defaultBlock === null) {
+      // Find global default block setting
+      const globalDefaultBlock = settingsData?.find(s => s.key === "PLEX_GUARD_DEFAULT_BLOCK");
+      
+      // If global setting is to allow (value "false"), don't show Grant Temp Access
+      if (globalDefaultBlock && globalDefaultBlock.value === "false") {
+        return false;
+      }
+    }
+
+    // Show Grant Temp Access if:
+    // - User is explicitly set to block (defaultBlock = true), OR
+    // - User is set to global AND global is to block (default behavior)
+    return true;
   };
 
   // Confirmation dialog handlers
@@ -1188,7 +1221,7 @@ const DeviceManagement = memo(({
                                                   </>
                                                 )}
                                               </Button>
-                                            ) : (
+                                            ) : shouldShowGrantTempAccess(device) ? (
                                               <Button
                                                 variant="default"
                                                 size="sm"
@@ -1199,7 +1232,7 @@ const DeviceManagement = memo(({
                                                 <Timer className="w-3 h-3 mr-1" />
                                                 <span>Grant Temp Access</span>
                                               </Button>
-                                            )}
+                                            ) : null}
                                           </div>
                                         ) : device.status === "rejected" ? (
                                           <div className="space-y-2">
@@ -1255,7 +1288,7 @@ const DeviceManagement = memo(({
                                                   </>
                                                 )}
                                               </Button>
-                                            ) : (
+                                            ) : shouldShowGrantTempAccess(device) ? (
                                               <Button
                                                 variant="default"
                                                 size="sm"
@@ -1266,7 +1299,7 @@ const DeviceManagement = memo(({
                                                 <Timer className="w-3 h-3 mr-1" />
                                                 <span>Grant Temp Access</span>
                                               </Button>
-                                            )}
+                                            ) : null}
                                           </div>
                                         ) : (
                                           <div className="grid grid-cols-2 gap-2">
@@ -1409,7 +1442,7 @@ const DeviceManagement = memo(({
                                                   </>
                                                 )}
                                               </Button>
-                                            ) : (
+                                            ) : shouldShowGrantTempAccess(device) ? (
                                               <Button
                                                 variant="default"
                                                 size="sm"
@@ -1420,7 +1453,7 @@ const DeviceManagement = memo(({
                                                 <Timer className="w-3 h-3 mr-1" />
                                                 Temp Access
                                               </Button>
-                                            )}
+                                            ) : null}
                                           </div>
                                         ) : device.status === "rejected" ? (
                                           <div className="space-y-1">
@@ -1476,7 +1509,7 @@ const DeviceManagement = memo(({
                                                   </>
                                                 )}
                                               </Button>
-                                            ) : (
+                                            ) : shouldShowGrantTempAccess(device) ? (
                                               <Button
                                                 variant="default"
                                                 size="sm"
@@ -1487,7 +1520,7 @@ const DeviceManagement = memo(({
                                                 <Timer className="w-3 h-3 mr-1" />
                                                 Temp Access
                                               </Button>
-                                            )}
+                                            ) : null}
                                           </div>
                                         ) : (
                                           <div className="flex gap-1">

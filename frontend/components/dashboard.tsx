@@ -406,6 +406,7 @@ export function Dashboard() {
           <DeviceManagement 
             devicesData={dashboardData?.devices}
             usersData={dashboardData?.users}
+            settingsData={dashboardData?.settings}
             onRefresh={() => refreshDashboard(true)}
             autoRefresh={autoRefresh}
             onAutoRefreshChange={setAutoRefresh}
