@@ -1013,15 +1013,13 @@ const DeviceManagement = memo(({
           {/* User Groups List */}
           {(loading && userGroups.length === 0) ? (
             // Show skeleton loading only on initial load
-            <ScrollArea className="h-[70vh] max-h-[700px] sm:max-h-[800px] lg:max-h-[900px]">
-              <div className="space-y-4">
-                {Array.from({ length: 3 }, (_, i) => (
-                  <UserGroupSkeleton key={`user-group-skeleton-${i}`} />
-                ))}
-              </div>
-            </ScrollArea>
+            <div className="space-y-4">
+              {Array.from({ length: 3 }, (_, i) => (
+                <UserGroupSkeleton key={`user-group-skeleton-${i}`} />
+              ))}
+            </div>
           ) : filteredAndSortedGroups.length === 0 ? (
-            <div className="flex items-center justify-center h-[70vh] max-h-[700px] sm:max-h-[800px] lg:max-h-[900px] text-muted-foreground">
+            <div className="flex items-center justify-center py-16 text-muted-foreground">
               {searchTerm ? (
                 <>
                   <Search className="w-6 h-6 mr-2" />
@@ -1035,9 +1033,8 @@ const DeviceManagement = memo(({
               )}
             </div>
           ) : (
-            <ScrollArea className="h-[70vh] max-h-[700px] sm:max-h-[800px] lg:max-h-[900px]">
-              <div className="space-y-4">
-                {filteredAndSortedGroups.map((group) => (
+            <div className="space-y-4">
+              {filteredAndSortedGroups.map((group) => (
                   <Collapsible
                     key={group.user.userId}
                     open={expandedUsers.has(group.user.userId)}
@@ -1655,9 +1652,8 @@ const DeviceManagement = memo(({
                       </CollapsibleContent>
                     </div>
                   </Collapsible>
-                ))}
-              </div>
-            </ScrollArea>
+              ))}
+            </div>
           )}
         </CardContent>
       </Card>
