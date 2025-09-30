@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getBackendUrl } from "@/lib/config";
 
 export async function GET(request: NextRequest) {
   try {
-    const backendUrl = process.env.DEPLOYMENT_MODE === 'standalone' 
-      ? 'http://localhost:3001'
-      : 'http://backend:3001';
+    const backendUrl = getBackendUrl();
     
     const response = await fetch(`${backendUrl}/config/plex/status`, {
       method: 'GET',

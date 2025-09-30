@@ -1,12 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-
-const BACKEND_URL = process.env.DEPLOYMENT_MODE === "standalone" 
-  ? "http://localhost:3001" 
-  : "http://backend:3001";
+import { getBackendUrl } from "@/lib/config";
 
 export async function GET() {
   try {
-    const response = await fetch(`${BACKEND_URL}/config`);
+    const response = await fetch(`${getBackendUrl()}/config`);
 
     if (!response.ok) {
       throw new Error(`Backend responded with ${response.status}`);
@@ -36,7 +33,7 @@ export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
 
-    const response = await fetch(`${BACKEND_URL}/config`, {
+    const response = await fetch(`${getBackendUrl()}/config`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",

@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import { getBackendUrl } from "@/lib/config";
 
 export async function GET(
   req: NextRequest,
@@ -41,9 +42,7 @@ export async function DELETE(
 }
 
 async function proxy(req: NextRequest, params: { path: string[] }) {
-  const backend = process.env.DEPLOYMENT_MODE === "standalone" 
-    ? "http://localhost:3001" 
-    : "http://backend:3001";
+  const backend = getBackendUrl();
   const target = new URL(backend.replace(/\/$/, ""));
   const upstream = new URL(
     `${target.origin}/${params.path.join("/")}${req.nextUrl.search}`

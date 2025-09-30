@@ -1,13 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-
-const BACKEND_URL =
-  process.env.DEPLOYMENT_MODE === "standalone"
-    ? "http://localhost:3001"
-    : "http://backend:3001";
+import { getBackendUrl } from "@/lib/config";
 
 export async function POST() {
   try {
-    const response = await fetch(`${BACKEND_URL}/config/test-plex-connection`, {
+    const response = await fetch(`${getBackendUrl()}/config/test-plex-connection`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
