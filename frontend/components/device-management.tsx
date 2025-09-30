@@ -64,6 +64,7 @@ import {
   ChevronDown,
   ChevronRight,
   Users,
+  Activity,
 } from "lucide-react";
 import { UserDevice, UserPreference, AppSetting } from "@/types";
 import { config } from "@/lib/config";
@@ -1160,84 +1161,125 @@ const DeviceManagement = memo(({
                               <p className="text-sm">No devices found for this user</p>
                             </div>
                           ) : (
-                            <div className="space-y-3">
+                            <div className="space-y-4">
                               {group.devices.map((device) => (
                                 <div
                                   key={device.id}
-                                  className="p-3 rounded border bg-card/50 hover:bg-card transition-colors"
+                                  className="relative group bg-gradient-to-br from-card to-card/80 rounded-xl border shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden backdrop-blur-sm"
                                 >
+                                  {/* Status indicator stripe */}
+                                  <div className={`absolute top-0 left-0 w-full h-1 ${
+                                    device.status === 'approved' ? 'bg-gradient-to-r from-green-500 to-emerald-500' :
+                                    device.status === 'rejected' ? 'bg-gradient-to-r from-red-500 to-rose-500' :
+                                    'bg-gradient-to-r from-yellow-500 to-amber-500'
+                                  }`} />
+                                  
+                                  {/* Temporary access indicator */}
+                                  {hasTemporaryAccess(device) && (
+                                    <div className="absolute top-3 right-3 z-10">
+                                      <div className="flex items-center gap-1 px-2 py-1 bg-blue-500/90 text-white text-xs rounded-full backdrop-blur-sm border border-blue-400/20">
+                                        <Timer className="w-3 h-3" />
+                                        <span className="font-medium">{getTemporaryAccessTimeLeft(device)}</span>
+                                      </div>
+                                    </div>
+                                  )}
                                   {/* Mobile-first layout */}
-                                  <div className="space-y-3 sm:space-y-0">
+                                  <div className="space-y-4 sm:space-y-0">
                                     {/* Mobile: Stacked layout */}
-                                    <div className="sm:hidden space-y-3">
+                                    <div className="sm:hidden p-4 pt-5 space-y-4">
                                       {/* Device Header */}
-                                      <div className="flex items-start gap-3">
-                                        <div className="flex-shrink-0 mt-0.5">
-                                          {getDeviceIcon(device.devicePlatform, device.deviceProduct)}
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                          <h4 className="font-medium text-foreground truncate text-sm">
-                                            {device.deviceName || device.deviceIdentifier}
-                                          </h4>
+                                      <div className="flex items-start justify-between gap-3">
+                                        <div className="flex items-start gap-3 flex-1 min-w-0">
+                                          <div className="flex-shrink-0 mt-0.5">
+                                            {getDeviceIcon(device.devicePlatform, device.deviceProduct)}
+                                          </div>
+                                          <div className="flex-1 min-w-0">
+                                            <h4 className="font-semibold text-foreground truncate text-base mb-1">
+                                              {device.deviceName || device.deviceIdentifier}
+                                            </h4>
+                                            <div className="flex items-center gap-2">
+                                              <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                                                device.status === 'approved' ? 'bg-green-500' :
+                                                device.status === 'rejected' ? 'bg-red-500' :
+                                                'bg-yellow-500'
+                                              }`} />
+                                              <span className="text-xs font-medium text-muted-foreground capitalize">
+                                                {device.status}
+                                              </span>
+                                            </div>
+                                          </div>
                                         </div>
                                       </div>
 
                                       {/* Device Info Grid - Mobile */}
-                                      <div className="grid grid-cols-1 gap-2 text-xs text-muted-foreground">
-                                        {/* Status badge - first item, left-aligned like other info */}
-                                        <div className="flex items-center min-w-0">
-                                          <Shield className="w-3 h-3 mr-2 flex-shrink-0" />
-                                          {getDeviceStatus(device)}
-                                        </div>
-                                        <div className="flex items-center min-w-0">
-                                          <Monitor className="w-3 h-3 mr-2 flex-shrink-0" />
-                                          <span className="truncate">
-                                            {device.devicePlatform || "Unknown Platform"}
+                                      <div className="grid grid-cols-1 gap-3 text-sm">
+                                        <div className="flex items-center justify-between p-2.5 bg-muted/30 rounded-lg">
+                                          <div className="flex items-center gap-2">
+                                            <Monitor className="w-4 h-4 text-muted-foreground" />
+                                            <span className="font-medium text-foreground">Platform</span>
+                                          </div>
+                                          <span className="text-muted-foreground truncate ml-2">
+                                            {device.devicePlatform || "Unknown"}
                                           </span>
                                         </div>
-                                        <div className="flex items-center min-w-0">
-                                          <MapPin className="w-3 h-3 mr-2 flex-shrink-0" />
-                                          <ClickableIP ipAddress={device.ipAddress} />
+                                        <div className="flex items-center justify-between p-2.5 bg-muted/30 rounded-lg">
+                                          <div className="flex items-center gap-2">
+                                            <MapPin className="w-4 h-4 text-muted-foreground" />
+                                            <span className="font-medium text-foreground">IP Address</span>
+                                          </div>
+                                          <div className="ml-2">
+                                            <ClickableIP ipAddress={device.ipAddress} />
+                                          </div>
                                         </div>
-                                        <div className="flex items-center">
-                                          <Clock className="w-3 h-3 mr-2 flex-shrink-0" />
-                                          <span>Streams: {device.sessionCount}</span>
-                                        </div>
-                                        <div className="flex items-center">
-                                          <Clock className="w-3 h-3 mr-2 flex-shrink-0" />
-                                          <span>Last: {new Date(device.lastSeen).toLocaleDateString()}</span>
+                                        <div className="grid grid-cols-2 gap-2">
+                                          <div className="flex flex-col p-2.5 bg-muted/30 rounded-lg">
+                                            <div className="flex items-center gap-1.5 mb-1">
+                                              <Activity className="w-3.5 h-3.5 text-muted-foreground" />
+                                              <span className="text-xs font-medium text-muted-foreground">Streams</span>
+                                            </div>
+                                            <span className="font-semibold text-foreground">{device.sessionCount}</span>
+                                          </div>
+                                          <div className="flex flex-col p-2.5 bg-muted/30 rounded-lg">
+                                            <div className="flex items-center gap-1.5 mb-1">
+                                              <Clock className="w-3.5 h-3.5 text-muted-foreground" />
+                                              <span className="text-xs font-medium text-muted-foreground">Last Seen</span>
+                                            </div>
+                                            <span className="font-semibold text-foreground text-xs">
+                                              {new Date(device.lastSeen).toLocaleDateString()}
+                                            </span>
+                                          </div>
                                         </div>
                                       </div>
 
                                       {/* Action Buttons - Mobile */}
-                                      <div className="flex flex-col gap-2">
+                                      <div className="flex flex-col gap-3 pt-3 border-t border-border/50">
                                         {/* Details Button - Full width on mobile */}
                                         <Button
                                           variant="outline"
                                           size="sm"
                                           onClick={() => setSelectedDevice(device)}
-                                          className="text-xs px-3 py-2 w-full"
+                                          className="text-sm px-4 py-2.5 w-full font-medium shadow-sm hover:shadow-md transition-shadow"
                                         >
-                                          <Eye className="w-3 h-3 mr-2" />
+                                          <Eye className="w-4 h-4 mr-2" />
                                           View Details
                                         </Button>
 
                                         {/* Action Buttons Row */}
                                         {device.status === "pending" ? (
-                                          <div className="space-y-2">
-                                            <div className="grid grid-cols-2 gap-2">
+                                          <div className="space-y-3">
+                                            <div className="grid grid-cols-2 gap-3">
                                               <Button
                                                 variant="default"
                                                 size="sm"
                                                 onClick={() => showApproveConfirmation(device)}
                                                 disabled={actionLoading === device.id}
-                                                className="bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white text-xs px-3 py-2"
+                                                className="bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white text-sm px-4 py-2.5 font-medium shadow-sm hover:shadow-md transition-all"
                                               >
                                                 {actionLoading === device.id ? (
-                                                  <RefreshCw className="w-3 h-3 animate-spin" />
+                                                  <RefreshCw className="w-4 h-4 animate-spin" />
                                                 ) : (
                                                   <>
-                                                    <CheckCircle className="w-3 h-3 mr-1" />
+                                                    <CheckCircle className="w-4 h-4 mr-1.5" />
                                                     <span>Approve</span>
                                                   </>
                                                 )}
@@ -1247,13 +1289,13 @@ const DeviceManagement = memo(({
                                                 size="sm"
                                                 onClick={() => showRejectConfirmation(device)}
                                                 disabled={actionLoading === device.id}
-                                                className="bg-red-600 text-white hover:bg-red-700 text-xs px-3 py-2"
+                                                className="bg-red-600 text-white hover:bg-red-700 text-sm px-4 py-2.5 font-medium shadow-sm hover:shadow-md transition-all"
                                               >
                                                 {actionLoading === device.id ? (
-                                                  <RefreshCw className="w-3 h-3 animate-spin" />
+                                                  <RefreshCw className="w-4 h-4 animate-spin" />
                                                 ) : (
                                                   <>
-                                                    <XCircle className="w-3 h-3 mr-1" />
+                                                    <XCircle className="w-4 h-4 mr-1.5" />
                                                     <span>Reject</span>
                                                   </>
                                                 )}
@@ -1266,13 +1308,13 @@ const DeviceManagement = memo(({
                                                 size="sm"
                                                 onClick={() => handleRevokeTemporaryAccess(device.id)}
                                                 disabled={actionLoading === device.id}
-                                                className="w-full text-xs px-3 py-2 bg-orange-600 text-white hover:bg-orange-700"
+                                                className="w-full text-sm px-4 py-2.5 bg-orange-600 text-white hover:bg-orange-700 font-medium shadow-sm hover:shadow-md transition-all"
                                               >
                                                 {actionLoading === device.id ? (
-                                                  <RefreshCw className="w-3 h-3 animate-spin" />
+                                                  <RefreshCw className="w-4 h-4 animate-spin" />
                                                 ) : (
                                                   <>
-                                                    <Timer className="w-3 h-3 mr-1" />
+                                                    <Timer className="w-4 h-4 mr-1.5" />
                                                     <span>Revoke Temp Access</span>
                                                   </>
                                                 )}
@@ -1283,9 +1325,9 @@ const DeviceManagement = memo(({
                                                 size="sm"
                                                 onClick={() => setTemporaryAccessDevice(device.id)}
                                                 disabled={actionLoading === device.id}
-                                                className="w-full text-xs px-3 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white"
+                                                className="w-full text-sm px-4 py-2.5 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white font-medium shadow-sm hover:shadow-md transition-all"
                                               >
-                                                <Timer className="w-3 h-3 mr-1" />
+                                                <Timer className="w-4 h-4 mr-1.5" />
                                                 <span>Grant Temp Access</span>
                                               </Button>
                                             ) : null}
@@ -1397,68 +1439,78 @@ const DeviceManagement = memo(({
                                     </div>
 
                                     {/* Desktop: Side-by-side layout */}
-                                    <div className="hidden sm:flex sm:items-start sm:justify-between sm:gap-4">
+                                    <div className="hidden sm:flex sm:items-start sm:justify-between sm:gap-6 p-4 pt-5">
                                       <div className="flex-1 min-w-0">
                                         {/* Device Header */}
-                                        <div className="flex items-center space-x-2 mb-2">
-                                          {getDeviceIcon(device.devicePlatform, device.deviceProduct)}
-                                          <h4 className="font-medium text-foreground truncate">
-                                            {device.deviceName || device.deviceIdentifier}
-                                          </h4>
-                                          {getDeviceStatus(device)}
+                                        <div className="flex items-center space-x-3 mb-3">
+                                          <div className="flex-shrink-0">
+                                            {getDeviceIcon(device.devicePlatform, device.deviceProduct)}
+                                          </div>
+                                          <div className="flex-1 min-w-0">
+                                            <h4 className="font-semibold text-foreground truncate text-base mb-1">
+                                              {device.deviceName || device.deviceIdentifier}
+                                            </h4>
+                                            <div className="flex items-center gap-2">
+                                              {getDeviceStatus(device)}
+                                            </div>
+                                          </div>
                                         </div>
                                         {/* Device Info Grid - Desktop */}
-                                        <div className="grid grid-cols-2 gap-2 text-sm text-muted-foreground">
-                                          <div className="flex items-center min-w-0">
-                                            <Monitor className="w-3 h-3 mr-1 flex-shrink-0" />
-                                            <span className="truncate">
+                                        <div className="grid grid-cols-2 gap-3 text-sm">
+                                          <div className="flex items-center gap-2 p-2 bg-muted/20 rounded-lg">
+                                            <Monitor className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                                            <span className="truncate font-medium text-foreground">
                                               {device.devicePlatform || "Unknown Platform"}
                                             </span>
                                           </div>
-                                          <div className="flex items-center min-w-0">
-                                            <MapPin className="w-3 h-3 mr-1 flex-shrink-0" />
+                                          <div className="flex items-center gap-2 p-2 bg-muted/20 rounded-lg">
+                                            <MapPin className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                                             <ClickableIP ipAddress={device.ipAddress} />
                                           </div>
-                                          <div className="flex items-center">
-                                            <Clock className="w-3 h-3 mr-1" />
-                                            Streams: {device.sessionCount}
+                                          <div className="flex items-center gap-2 p-2 bg-muted/20 rounded-lg">
+                                            <Activity className="w-4 h-4 text-muted-foreground" />
+                                            <span className="font-medium text-foreground">
+                                              {device.sessionCount} streams
+                                            </span>
                                           </div>
-                                          <div className="flex items-center">
-                                            <Clock className="w-3 h-3 mr-1" />
-                                            Last seen: {new Date(device.lastSeen).toLocaleDateString()}
+                                          <div className="flex items-center gap-2 p-2 bg-muted/20 rounded-lg">
+                                            <Clock className="w-4 h-4 text-muted-foreground" />
+                                            <span className="font-medium text-foreground">
+                                              {new Date(device.lastSeen).toLocaleDateString()}
+                                            </span>
                                           </div>
                                         </div>
                                       </div>
 
                                       {/* Action Buttons - Desktop (Right side) */}
-                                      <div className="flex flex-col gap-2 min-w-0 w-48">
+                                      <div className="flex flex-col gap-3 min-w-0 w-52">
                                         {/* Details Button */}
                                         <Button
                                           variant="outline"
                                           size="sm"
                                           onClick={() => setSelectedDevice(device)}
-                                          className="text-xs px-2 py-1 w-full"
+                                          className="text-sm px-3 py-2 w-full font-medium shadow-sm hover:shadow-md transition-all"
                                         >
-                                          <Eye className="w-3 h-3 mr-1" />
-                                          Details
+                                          <Eye className="w-4 h-4 mr-2" />
+                                          View Details
                                         </Button>
 
                                         {/* Action Buttons Row */}
                                         {device.status === "pending" ? (
-                                          <div className="space-y-1">
-                                            <div className="flex gap-1">
+                                          <div className="space-y-2">
+                                            <div className="flex gap-2">
                                               <Button
                                                 variant="default"
                                                 size="sm"
                                                 onClick={() => showApproveConfirmation(device)}
                                                 disabled={actionLoading === device.id}
-                                                className="bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white text-xs px-2 py-1 flex-1"
+                                                className="bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white text-sm px-3 py-2 flex-1 font-medium shadow-sm hover:shadow-md transition-all"
                                               >
                                                 {actionLoading === device.id ? (
-                                                  <RefreshCw className="w-3 h-3 animate-spin" />
+                                                  <RefreshCw className="w-4 h-4 animate-spin" />
                                                 ) : (
                                                   <>
-                                                    <CheckCircle className="w-3 h-3 mr-1" />
+                                                    <CheckCircle className="w-4 h-4 mr-1" />
                                                     Approve
                                                   </>
                                                 )}
@@ -1468,13 +1520,13 @@ const DeviceManagement = memo(({
                                                 size="sm"
                                                 onClick={() => showRejectConfirmation(device)}
                                                 disabled={actionLoading === device.id}
-                                                className="bg-red-600 text-white hover:bg-red-700 text-xs px-2 py-1 flex-1"
+                                                className="bg-red-600 text-white hover:bg-red-700 text-sm px-3 py-2 flex-1 font-medium shadow-sm hover:shadow-md transition-all"
                                               >
                                                 {actionLoading === device.id ? (
-                                                  <RefreshCw className="w-3 h-3 animate-spin" />
+                                                  <RefreshCw className="w-4 h-4 animate-spin" />
                                                 ) : (
                                                   <>
-                                                    <XCircle className="w-3 h-3 mr-1" />
+                                                    <XCircle className="w-4 h-4 mr-1" />
                                                     Reject
                                                   </>
                                                 )}
