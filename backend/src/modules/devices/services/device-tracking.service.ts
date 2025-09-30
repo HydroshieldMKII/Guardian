@@ -243,6 +243,13 @@ export class DeviceTrackingService {
     this.logger.log(`Device ${deviceId} has been deleted`);
   }
 
+  async renameDevice(deviceId: number, newName: string): Promise<void> {
+    await this.userDeviceRepository.update(deviceId, {
+      deviceName: newName,
+    });
+    this.logger.log(`Device ${deviceId} has been renamed to "${newName}"`);
+  }
+
   async clearSessionKey(sessionKey: string): Promise<void> {
     this.logger.debug(`Attempting to clear session key: ${sessionKey}`);
     

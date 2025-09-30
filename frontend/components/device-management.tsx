@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -48,6 +49,9 @@ import {
   Eye,
   Settings,
   Trash2,
+  Edit2,
+  Save,
+  X,
   ToggleLeft,
   ToggleRight,
   Wifi,
@@ -197,6 +201,8 @@ const DeviceManagement = memo(({
   const [selectedDevice, setSelectedDevice] = useState<UserDevice | null>(null);
   const [expandedUsers, setExpandedUsers] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState("");
+  const [editingDevice, setEditingDevice] = useState<number | null>(null);
+  const [newDeviceName, setNewDeviceName] = useState("");
 
   
   // Local storage keys for sorting preferences
@@ -516,6 +522,52 @@ const DeviceManagement = memo(({
     } else {
       await handleApprove(device.id);
     }
+  };
+
+  const handleRename = async (deviceId: number, newName: string) => {
+    try {
+      setActionLoading(deviceId);
+      const response = await fetch(
+        `${config.api.baseUrl}/devices/${deviceId}/rename`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ newName }),
+        }
+      );
+
+      if (response.ok) {
+        // Update the selectedDevice state immediately to reflect the change in the modal
+        if (selectedDevice && selectedDevice.id === deviceId) {
+          setSelectedDevice({
+            ...selectedDevice,
+            deviceName: newName,
+          });
+        }
+        
+        setTimeout(handleRefresh, 100);
+        setEditingDevice(null);
+        setNewDeviceName("");
+      } else {
+        console.error("Failed to rename device");
+      }
+    } catch (error) {
+      console.error("Error renaming device:", error);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const startEditing = (device: UserDevice) => {
+    setEditingDevice(device.id);
+    setNewDeviceName(device.deviceName || device.deviceIdentifier);
+  };
+
+  const cancelEditing = () => {
+    setEditingDevice(null);
+    setNewDeviceName("");
   };
 
   // Confirmation dialog handlers
@@ -1236,9 +1288,53 @@ const DeviceManagement = memo(({
                   <h4 className="font-semibold text-xs sm:text-sm text-muted-foreground">
                     Device Name
                   </h4>
-                  <p className="text-sm sm:text-base text-foreground break-words">
-                    {selectedDevice.deviceName || "Unknown"}
-                  </p>
+                  {editingDevice === selectedDevice.id ? (
+                    <div className="flex items-center gap-2">
+                      <Input
+                        value={newDeviceName}
+                        onChange={(e) => setNewDeviceName(e.target.value)}
+                        className="text-sm flex-1"
+                        placeholder="Enter device name"
+                      />
+                      <Button
+                        size="sm"
+                        variant="default"
+                        onClick={() => handleRename(selectedDevice.id, newDeviceName)}
+                        disabled={!newDeviceName.trim() || actionLoading === selectedDevice.id}
+                        className="px-2"
+                      >
+                        {actionLoading === selectedDevice.id ? (
+                          <RefreshCw className="w-3 h-3 animate-spin" />
+                        ) : (
+                          <Save className="w-3 h-3" />
+                        )}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={cancelEditing}
+                        disabled={actionLoading === selectedDevice.id}
+                        className="px-2"
+                      >
+                        <X className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm sm:text-base text-foreground break-words flex-1">
+                        {selectedDevice.deviceName || "Unknown"}
+                      </p>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => startEditing(selectedDevice)}
+                        className="px-2 h-6"
+                        title="Rename device"
+                      >
+                        <Edit2 className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  )}
                 </div>
                 <div>
                   <h4 className="font-semibold text-xs sm:text-sm text-muted-foreground">

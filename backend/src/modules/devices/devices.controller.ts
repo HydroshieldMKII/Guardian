@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Param, ParseIntPipe } from '@nestjs/common';
+import { Controller, Get, Post, Param, ParseIntPipe, Body } from '@nestjs/common';
 import { DeviceTrackingService } from './services/device-tracking.service';
 import { UserDevice } from '../../entities/user-device.entity';
 import { PlexClient } from '../plex/services/plex-client';
@@ -49,6 +49,15 @@ export class DevicesController {
   ): Promise<{ message: string }> {
     await this.deviceTrackingService.rejectDevice(id);
     return { message: `Device ${id} rejected and deleted successfully` };
+  }
+
+  @Post(':id/rename')
+  async renameDevice(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: { newName: string },
+  ): Promise<{ message: string }> {
+    await this.deviceTrackingService.renameDevice(id, body.newName);
+    return { message: `Device ${id} renamed successfully` };
   }
 
   @Post('revoke/:userId/:deviceIdentifier')
