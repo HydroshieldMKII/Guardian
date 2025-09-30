@@ -47,6 +47,7 @@ export function Dashboard() {
   const [plexStatus, setPlexStatus] = useState<PlexStatus | null>(null);
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [initialTabSet, setInitialTabSet] = useState(false);
+  const [navigationTarget, setNavigationTarget] = useState<{userId: string, deviceIdentifier: string} | null>(null);
 
   const handleShowSettings = () => {
     router.push('/settings');
@@ -87,6 +88,20 @@ export function Dashboard() {
       setInitialTabSet(true);
     }
   }, [dashboardData, initialTabSet]);
+
+  // Navigate to device in device management
+  const handleNavigateToDevice = (userId: string, deviceIdentifier: string) => {
+    // Switch to devices tab
+    setActiveTab("devices");
+    
+    // Set navigation target for DeviceManagement component
+    setNavigationTarget({ userId, deviceIdentifier });
+  };
+
+  // Handle navigation completion
+  const handleNavigationComplete = () => {
+    setNavigationTarget(null);
+  };
 
   useEffect(() => {
     refreshDashboard();
@@ -401,6 +416,7 @@ export function Dashboard() {
             onRefresh={() => refreshDashboard(true)}
             autoRefresh={autoRefresh}
             onAutoRefreshChange={setAutoRefresh}
+            onNavigateToDevice={handleNavigateToDevice}
           />
         ) : (
           <DeviceManagement 
@@ -410,6 +426,8 @@ export function Dashboard() {
             onRefresh={() => refreshDashboard(true)}
             autoRefresh={autoRefresh}
             onAutoRefreshChange={setAutoRefresh}
+            navigationTarget={navigationTarget}
+            onNavigationComplete={handleNavigationComplete}
           />
         )}
       </div>

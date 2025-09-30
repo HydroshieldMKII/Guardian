@@ -43,6 +43,7 @@ import {
   HardDrive,
   Signal,
   X,
+  Eye,
 } from "lucide-react";
 
 import { PlexSession, StreamsResponse } from "@/types";
@@ -54,6 +55,7 @@ interface StreamsListProps {
   onRefresh?: () => void;
   autoRefresh?: boolean;
   onAutoRefreshChange?: (value: boolean) => void;
+  onNavigateToDevice?: (userId: string, deviceIdentifier: string) => void;
 }
 
 const ClickableIP = ({ ipAddress }: { ipAddress: string | null }) => {
@@ -110,7 +112,7 @@ const StreamSkeleton = () => (
   </div>
 );
 
-export function StreamsList({ sessionsData, onRefresh, autoRefresh: parentAutoRefresh, onAutoRefreshChange }: StreamsListProps) {
+export function StreamsList({ sessionsData, onRefresh, autoRefresh: parentAutoRefresh, onAutoRefreshChange, onNavigateToDevice }: StreamsListProps) {
   const [streams, setStreams] = useState<PlexSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -530,6 +532,21 @@ export function StreamsList({ sessionsData, onRefresh, autoRefresh: parentAutoRe
                           ) : (
                             <X className="w-3 h-3" />
                           )}
+                        </Button>
+
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            if (onNavigateToDevice && stream.User?.id && stream.Player?.machineIdentifier) {
+                              onNavigateToDevice(stream.User.id, stream.Player.machineIdentifier);
+                            }
+                          }}
+                          disabled={!stream.User?.id || !stream.Player?.machineIdentifier}
+                          className="h-6 w-6 p-0 text-muted-foreground hover:text-blue-600"
+                          title="View device details"
+                        >
+                          <Eye className="w-3 h-3" />
                         </Button>
 
                         <Button

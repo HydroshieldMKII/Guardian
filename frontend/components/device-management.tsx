@@ -187,6 +187,11 @@ interface DeviceManagementProps {
   onRefresh?: () => void;
   autoRefresh?: boolean;
   onAutoRefreshChange?: (value: boolean) => void;
+  navigationTarget?: {
+    userId: string;
+    deviceIdentifier: string;
+  } | null;
+  onNavigationComplete?: () => void;
 }
 
 const DeviceManagement = memo(({
@@ -195,7 +200,9 @@ const DeviceManagement = memo(({
   settingsData,
   onRefresh,
   autoRefresh: parentAutoRefresh,
-  onAutoRefreshChange
+  onAutoRefreshChange,
+  navigationTarget,
+  onNavigationComplete
 }: DeviceManagementProps) => {
   const [userGroups, setUserGroups] = useState<UserDeviceGroup[]>([]);
   const [loading, setLoading] = useState(true);
@@ -352,6 +359,47 @@ const DeviceManagement = memo(({
       setDurationUnit('hours');
     }
   }, [temporaryAccessDevice]);
+
+  // Handle navigation from streams
+  useEffect(() => {
+    if (navigationTarget && userGroups.length > 0) {
+      const { userId, deviceIdentifier } = navigationTarget;
+      
+      // First expand the user if not already expanded
+      if (!expandedUsers.has(userId)) {
+        const newExpanded = new Set(expandedUsers);
+        newExpanded.add(userId);
+        setExpandedUsers(newExpanded);
+      }
+      
+      // Use setTimeout to allow for DOM updates
+      setTimeout(() => {
+        // Scroll to user first
+        const userElement = document.querySelector(`[data-user-id="${userId}"]`);
+        if (userElement) {
+          userElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          
+          // Then scroll to device after user is visible
+          setTimeout(() => {
+            const deviceElement = document.querySelector(`[data-device-identifier="${deviceIdentifier}"]`);
+            if (deviceElement) {
+              deviceElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              
+              // Add highlight effect
+              deviceElement.classList.add('ring-2', 'ring-blue-500', 'ring-opacity-75');
+              setTimeout(() => {
+                deviceElement.classList.remove('ring-2', 'ring-blue-500', 'ring-opacity-75');
+                // Call completion callback
+                if (onNavigationComplete) {
+                  onNavigationComplete();
+                }
+              }, 1000);
+            }
+          }, 500); // Wait for user expansion animation
+        }
+      }, 100); // Wait for state update
+    }
+  }, [navigationTarget, userGroups.length, onNavigationComplete]);
 
   const handleRefresh = () => {
     if (onRefresh) {
@@ -1041,7 +1089,10 @@ const DeviceManagement = memo(({
                     open={expandedUsers.has(group.user.userId)}
                     onOpenChange={() => toggleUserExpansion(group.user.userId)}
                   >
-                    <div className="rounded-lg border bg-card shadow-sm hover:shadow-md transition-shadow">
+                    <div 
+                      className="rounded-lg border bg-card shadow-sm hover:shadow-md transition-shadow"
+                      data-user-id={group.user.userId}
+                    >
                       <CollapsibleTrigger asChild>
                         <div className="p-3 sm:p-4 border-b cursor-pointer hover:bg-muted/50 transition-colors">
                           <div className="flex flex-col sm:flex-row sm:items-center gap-3">
@@ -1144,6 +1195,7 @@ const DeviceManagement = memo(({
                                 <div
                                   key={device.id}
                                   className="relative group bg-gradient-to-br from-card to-card/80 rounded-xl border shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden backdrop-blur-sm"
+                                  data-device-identifier={device.deviceIdentifier}
                                 >
                                   {/* Status indicator stripe */}
                                   <div className={`absolute top-0 left-0 w-full h-1 ${
