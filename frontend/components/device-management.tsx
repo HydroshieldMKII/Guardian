@@ -229,10 +229,10 @@ const DeviceManagement = memo(({
   
   // Sorting state with localStorage initialization
   const [sortBy, setSortBy] = useState<"username" | "deviceCount" | "pendingCount">(
-    () => getStoredValue(USER_SORT_BY_KEY, "username") as "username" | "deviceCount" | "pendingCount"
+    () => getStoredValue(USER_SORT_BY_KEY, "pendingCount") as "username" | "deviceCount" | "pendingCount"
   );
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">(
-    () => getStoredValue(USER_SORT_ORDER_KEY, "asc") as "asc" | "desc"
+    () => getStoredValue(USER_SORT_ORDER_KEY, "desc") as "asc" | "desc"
   );
 
   // Save sorting preferences to localStorage when they change
