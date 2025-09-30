@@ -531,26 +531,31 @@ const DeviceManagement = memo(({
       return false;
     }
 
-    // Find the user's preference
+    // Always show Grant Temp Access for rejected devices
+    if (device.status === "rejected") {
+      return true;
+    }
+
+    // For pending devices, check user and global policies
     const userPreference = usersData?.find(u => u.userId === device.userId);
     
-    // If user policy is explicitly set to allow (defaultBlock = false), don't show Grant Temp Access
+    // If user policy is explicitly set to allow (defaultBlock = false), don't show Grant Temp Access for pending devices
     if (userPreference && userPreference.defaultBlock === false) {
       return false;
     }
 
-    // If user has no preference (defaultBlock = null), check global setting
+    // If user has no preference (defaultBlock = null), check global setting for pending devices
     if (!userPreference || userPreference.defaultBlock === null) {
       // Find global default block setting
       const globalDefaultBlock = settingsData?.find(s => s.key === "PLEX_GUARD_DEFAULT_BLOCK");
       
-      // If global setting is to allow (value "false"), don't show Grant Temp Access
+      // If global setting is to allow (value "false"), don't show Grant Temp Access for pending devices
       if (globalDefaultBlock && globalDefaultBlock.value === "false") {
         return false;
       }
     }
 
-    // Show Grant Temp Access if:
+    // Show Grant Temp Access for pending devices if:
     // - User is explicitly set to block (defaultBlock = true), OR
     // - User is set to global AND global is to block (default behavior)
     return true;
