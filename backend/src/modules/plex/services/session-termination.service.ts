@@ -158,6 +158,21 @@ export class SessionTerminationService {
         );
       }
     } catch (error) {
+      // Check if it's a 404 error (session already ended)
+      if (error.message && error.message.includes('404')) {
+        this.logger.warn(`Session ${sessionKey} was already terminated or not found`);
+        // Still try to clean up from database
+        try {
+          await this.activeSessionService.removeSession(sessionKey);
+        } catch (dbError) {
+          this.logger.warn(
+            `Failed to remove session ${sessionKey} from database after 404`,
+            dbError,
+          );
+        }
+        return; // Don't throw error for 404s
+      }
+      
       this.logger.error(`Failed to terminate session ${sessionKey}`, error);
       throw error;
     }
