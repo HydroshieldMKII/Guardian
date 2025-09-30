@@ -127,6 +127,11 @@ export class ConfigService {
       if (!existing) {
         await this.settingsRepository.save(setting);
         this.logger.log(`Initialized default setting: ${setting.key}`);
+      } else {
+        // Always update description in case it changed
+        existing.description = setting.description;
+        await this.settingsRepository.save(existing);
+        this.logger.log(`Updated description for existing setting: ${setting.key}`);
       }
     }
 
