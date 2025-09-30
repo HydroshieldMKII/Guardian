@@ -8,7 +8,7 @@ import * as http from 'http';
 import * as https from 'https';
 
 // App version
-const CURRENT_APP_VERSION = '1.1.4';
+const CURRENT_APP_VERSION = '1.1.5';
 
 export interface ConfigSettingDto {
   key: string;
