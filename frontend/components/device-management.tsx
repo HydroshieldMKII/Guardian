@@ -68,6 +68,11 @@ import {
 } from "lucide-react";
 import { UserDevice, UserPreference, AppSetting } from "@/types";
 import { config } from "@/lib/config";
+import { 
+  useDeviceActions, 
+  useUserPreferences, 
+  useDeviceUtils 
+} from "@/hooks/device-management";
 
 // Clickable IP component
 const ClickableIP = ({ ipAddress }: { ipAddress: string | null | undefined }) => {
@@ -194,6 +199,13 @@ interface DeviceManagementProps {
   onNavigationComplete?: () => void;
 }
 
+interface ConfirmActionData {
+  device: UserDevice;
+  action: "approve" | "reject" | "delete" | "toggle";
+  title: string;
+  description: string;
+}
+
 const DeviceManagement = memo(({
   devicesData,
   usersData,
@@ -204,6 +216,7 @@ const DeviceManagement = memo(({
   navigationTarget,
   onNavigationComplete
 }: DeviceManagementProps) => {
+  // State management
   const [userGroups, setUserGroups] = useState<UserDeviceGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -218,7 +231,19 @@ const DeviceManagement = memo(({
   const [durationValue, setDurationValue] = useState<number>(1);
   const [durationUnit, setDurationUnit] = useState<'minutes' | 'hours' | 'days' | 'weeks'>('hours');
 
-  
+  // Confirmation dialog states
+  const [confirmAction, setConfirmAction] = useState<{
+    device: UserDevice;
+    action: "approve" | "reject" | "delete" | "toggle";
+    title: string;
+    description: string;
+  } | null>(null);
+
+  // Custom hooks
+  const deviceActions = useDeviceActions();
+  const userPreferences = useUserPreferences();
+  const deviceUtils = useDeviceUtils();
+
   // Local storage keys for sorting preferences
   const USER_SORT_BY_KEY = "guardian-unified-sort-by";
   const USER_SORT_ORDER_KEY = "guardian-unified-sort-order";
@@ -257,14 +282,6 @@ const DeviceManagement = memo(({
   useEffect(() => {
     setStoredValue(USER_SORT_ORDER_KEY, sortOrder);
   }, [sortOrder]);
-
-  // Confirmation dialog states
-  const [confirmAction, setConfirmAction] = useState<{
-    device: UserDevice;
-    action: "approve" | "reject" | "delete" | "toggle";
-    title: string;
-    description: string;
-  } | null>(null);
 
   // Group devices by user and merge with user preferences
   useEffect(() => {
@@ -351,14 +368,6 @@ const DeviceManagement = memo(({
       setAutoRefresh(parentAutoRefresh);
     }
   }, [parentAutoRefresh]);
-
-  // Reset duration values when modal opens
-  useEffect(() => {
-    if (temporaryAccessDevice) {
-      setDurationValue(1);
-      setDurationUnit('hours');
-    }
-  }, [temporaryAccessDevice]);
 
   // Handle navigation from streams
   useEffect(() => {
@@ -486,48 +495,30 @@ const DeviceManagement = memo(({
     setExpandedUsers(newExpanded);
   };
 
-  // User preference update
+  // User preference update handler
   const handleUpdateUserPreference = async (userId: string, defaultBlock: boolean | null) => {
-    try {
-      const response = await fetch(
-        `${config.api.baseUrl}/users/${encodeURIComponent(userId)}/preference`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ defaultBlock }),
-        }
-      );
-
-      if (response.ok) {
-        handleRefresh();
-      } else {
-        console.error("Failed to update user preference");
-      }
-    } catch (error) {
-      console.error("Error updating user preference:", error);
+    const success = await userPreferences.updateUserPreference(userId, defaultBlock);
+    if (success) {
+      handleRefresh();
     }
   };
+
+  // Reset duration values when modal opens
+  useEffect(() => {
+    if (temporaryAccessDevice) {
+      setDurationValue(1);
+      setDurationUnit('hours');
+    }
+  }, [temporaryAccessDevice]);
 
   // Device action handlers
   const handleApprove = async (deviceId: number) => {
     try {
       setActionLoading(deviceId);
-      const response = await fetch(
-        `${config.api.baseUrl}/devices/${deviceId}/approve`,
-        {
-          method: "POST",
-        }
-      );
-
-      if (response.ok) {
+      const success = await deviceActions.approveDevice(deviceId);
+      if (success) {
         setTimeout(handleRefresh, 100);
-      } else {
-        console.error("Failed to approve device");
       }
-    } catch (error) {
-      console.error("Error approving device:", error);
     } finally {
       setActionLoading(null);
       setConfirmAction(null);
@@ -537,20 +528,10 @@ const DeviceManagement = memo(({
   const handleReject = async (deviceId: number) => {
     try {
       setActionLoading(deviceId);
-      const response = await fetch(
-        `${config.api.baseUrl}/devices/${deviceId}/reject`,
-        {
-          method: "POST",
-        }
-      );
-
-      if (response.ok) {
+      const success = await deviceActions.rejectDevice(deviceId);
+      if (success) {
         setTimeout(handleRefresh, 100);
-      } else {
-        console.error("Failed to reject device");
       }
-    } catch (error) {
-      console.error("Error rejecting device:", error);
     } finally {
       setActionLoading(null);
       setConfirmAction(null);
@@ -560,20 +541,10 @@ const DeviceManagement = memo(({
   const handleDelete = async (deviceId: number) => {
     try {
       setActionLoading(deviceId);
-      const response = await fetch(
-        `${config.api.baseUrl}/devices/${deviceId}/delete`,
-        {
-          method: "POST",
-        }
-      );
-
-      if (response.ok) {
+      const success = await deviceActions.deleteDevice(deviceId);
+      if (success) {
         setTimeout(handleRefresh, 100);
-      } else {
-        console.error("Failed to delete device");
       }
-    } catch (error) {
-      console.error("Error deleting device:", error);
     } finally {
       setActionLoading(null);
       setConfirmAction(null);
@@ -591,18 +562,8 @@ const DeviceManagement = memo(({
   const handleRename = async (deviceId: number, newName: string) => {
     try {
       setActionLoading(deviceId);
-      const response = await fetch(
-        `${config.api.baseUrl}/devices/${deviceId}/rename`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ newName }),
-        }
-      );
-
-      if (response.ok) {
+      const success = await deviceActions.renameDevice(deviceId, newName);
+      if (success) {
         // Update the selectedDevice state immediately to reflect the change in the modal
         if (selectedDevice && selectedDevice.id === deviceId) {
           setSelectedDevice({
@@ -614,11 +575,7 @@ const DeviceManagement = memo(({
         setTimeout(handleRefresh, 100);
         setEditingDevice(null);
         setNewDeviceName("");
-      } else {
-        console.error("Failed to rename device");
       }
-    } catch (error) {
-      console.error("Error renaming device:", error);
     } finally {
       setActionLoading(null);
     }
@@ -637,25 +594,11 @@ const DeviceManagement = memo(({
   const handleGrantTemporaryAccess = async (deviceId: number, durationMinutes: number) => {
     try {
       setActionLoading(deviceId);
-      const response = await fetch(
-        `${config.api.baseUrl}/devices/${deviceId}/temporary-access`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ durationMinutes }),
-        }
-      );
-
-      if (response.ok) {
+      const success = await deviceActions.grantTemporaryAccess(deviceId, durationMinutes);
+      if (success) {
         setTimeout(handleRefresh, 100);
         setTemporaryAccessDevice(null);
-      } else {
-        console.error("Failed to grant temporary access");
       }
-    } catch (error) {
-      console.error("Error granting temporary access:", error);
     } finally {
       setActionLoading(null);
     }
@@ -698,71 +641,26 @@ const DeviceManagement = memo(({
   const handleRevokeTemporaryAccess = async (deviceId: number) => {
     try {
       setActionLoading(deviceId);
-      const response = await fetch(
-        `${config.api.baseUrl}/devices/${deviceId}/revoke-temporary-access`,
-        {
-          method: "POST",
-        }
-      );
-
-      if (response.ok) {
+      const success = await deviceActions.revokeTemporaryAccess(deviceId);
+      if (success) {
         setTimeout(handleRefresh, 100);
-      } else {
-        console.error("Failed to revoke temporary access");
       }
-    } catch (error) {
-      console.error("Error revoking temporary access:", error);
     } finally {
       setActionLoading(null);
     }
   };
 
   const getTemporaryAccessTimeLeft = (device: UserDevice): string | null => {
-    if (!device.temporaryAccessUntil) {
-      return null;
-    }
-
-    const now = new Date();
-    const expiresAt = new Date(device.temporaryAccessUntil);
-    const timeLeft = expiresAt.getTime() - now.getTime();
-
-    if (timeLeft <= 0) {
-      return "Expired";
-    }
-
-    const totalMinutes = Math.ceil(timeLeft / (60 * 1000));
-    
-    // Calculate time units
-    const weeks = Math.floor(totalMinutes / (7 * 24 * 60));
-    const days = Math.floor((totalMinutes % (7 * 24 * 60)) / (24 * 60));
-    const hours = Math.floor((totalMinutes % (24 * 60)) / 60);
-    const minutes = totalMinutes % 60;
-
-    // Build formatted string with only non-zero values
-    const parts = [];
-    if (weeks > 0) parts.push(`${weeks}w`);
-    if (days > 0) parts.push(`${days}d`);
-    if (hours > 0) parts.push(`${hours}h`);
-    if (minutes > 0) parts.push(`${minutes}m`);
-    
-    // If no parts, it means less than 1 minute
-    if (parts.length === 0) {
-      return "< 1m";
-    }
-    
-    // Return up to 3 most significant parts for readability
-    return parts.slice(0, 3).join(' ');
+    return deviceUtils.getTemporaryAccessTimeLeft(device);
   };
 
   const hasTemporaryAccess = (device: UserDevice): boolean => {
-    if (!device.temporaryAccessUntil) {
-      return false;
-    }
-    const now = new Date();
-    const expiresAt = new Date(device.temporaryAccessUntil);
-    return expiresAt > now;
+    return deviceUtils.hasTemporaryAccess(device);
   };
 
+
+
+  // Utility function to check if grant temp access should be shown
   const shouldShowGrantTempAccess = (device: UserDevice): boolean => {
     // Only show for pending or rejected devices
     if (device.status !== "pending" && device.status !== "rejected") {
@@ -941,6 +839,38 @@ const DeviceManagement = memo(({
         Allow by Default
       </Badge>
     );
+  };
+
+
+
+  // Confirmation dialog handlers
+  const showConfirmation = (device: UserDevice, action: "approve" | "reject" | "delete" | "toggle") => {
+    const confirmations = {
+      approve: {
+        title: "Approve Device",
+        description: `Are you sure you want to approve this device? "${device.deviceName || device.deviceIdentifier}" will be able to access your Plex server.`,
+      },
+      reject: {
+        title: "Reject Device",
+        description: `Are you sure you want to reject this device? "${device.deviceName || device.deviceIdentifier}" will be blocked from accessing your Plex server.`,
+      },
+      delete: {
+        title: "Delete Device",
+        description: `Are you sure you want to permanently delete this device record? This action cannot be undone. The device "${device.deviceName || device.deviceIdentifier}" will need to be re-approved if it tries to connect again.`,
+      },
+      toggle: {
+        title: device.status === "approved" ? "Reject Device" : "Approve Device",
+        description: device.status === "approved"
+          ? `Are you sure you want to reject "${device.deviceName || device.deviceIdentifier}"? This will block access to your Plex server.`
+          : `Are you sure you want to approve "${device.deviceName || device.deviceIdentifier}"? This will grant access to your Plex server.`,
+      }
+    };
+
+    setConfirmAction({
+      device,
+      action,
+      ...confirmations[action]
+    });
   };
 
   return (
@@ -1205,15 +1135,6 @@ const DeviceManagement = memo(({
                                     'bg-gradient-to-r from-yellow-500 to-amber-500'
                                   }`} />
                                   
-                                  {/* Temporary access indicator */}
-                                  {hasTemporaryAccess(device) && (
-                                    <div className="absolute top-3 right-3 z-10">
-                                      <div className="flex items-center gap-1 px-2 py-1 bg-blue-500/90 text-white text-xs rounded-full backdrop-blur-sm border border-blue-400/20">
-                                        <Timer className="w-3 h-3" />
-                                        <span className="font-medium">{getTemporaryAccessTimeLeft(device)}</span>
-                                      </div>
-                                    </div>
-                                  )}
                                   {/* Mobile-first layout */}
                                   <div className="space-y-4 sm:space-y-0">
                                     {/* Mobile: Stacked layout */}
@@ -1922,11 +1843,6 @@ const DeviceManagement = memo(({
                           <p className="text-xs sm:text-sm text-foreground">
                             {new Date(selectedDevice.temporaryAccessUntil).toLocaleString()}
                           </p>
-                          {hasTemporaryAccess(selectedDevice) && (
-                            <p className="text-xs text-muted-foreground mt-1">
-                              Time remaining: {getTemporaryAccessTimeLeft(selectedDevice)}
-                            </p>
-                          )}
                         </div>
                       )}
                       
