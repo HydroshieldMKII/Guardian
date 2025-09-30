@@ -1089,9 +1089,6 @@ const DeviceManagement = memo(({
                               <Settings className="w-4 h-4 flex-shrink-0" />
                               <span className="text-sm font-medium">Default Device Policy:</span>
                             </div>
-                            <div className="flex sm:hidden">
-                              {group.user.preference && getUserPreferenceBadge(group.user.preference.defaultBlock)}
-                            </div>
                             <div className="grid grid-cols-3 gap-2">
                               <Button
                                 variant={!group.user.preference || group.user.preference.defaultBlock === null ? "default" : "outline"}
@@ -1306,7 +1303,7 @@ const DeviceManagement = memo(({
                                             ) : null}
                                           </div>
                                         ) : device.status === "rejected" ? (
-                                          <div className="space-y-2">
+                                          <div className="space-y-3">
                                             <div className="grid grid-cols-2 gap-2">
                                               <Button
                                                 variant="default"
@@ -1348,13 +1345,13 @@ const DeviceManagement = memo(({
                                                 size="sm"
                                                 onClick={() => handleRevokeTemporaryAccess(device.id)}
                                                 disabled={actionLoading === device.id}
-                                                className="w-full text-xs px-3 py-2 bg-orange-600 text-white hover:bg-orange-700"
+                                                className="w-full text-sm px-4 py-2.5 bg-orange-600 text-white hover:bg-orange-700 font-medium shadow-sm hover:shadow-md transition-all"
                                               >
                                                 {actionLoading === device.id ? (
-                                                  <RefreshCw className="w-3 h-3 animate-spin" />
+                                                  <RefreshCw className="w-4 h-4 animate-spin" />
                                                 ) : (
                                                   <>
-                                                    <Timer className="w-3 h-3 mr-1" />
+                                                    <Timer className="w-4 h-4 mr-1.5" />
                                                     <span>Revoke Temp Access</span>
                                                   </>
                                                 )}
@@ -1365,9 +1362,9 @@ const DeviceManagement = memo(({
                                                 size="sm"
                                                 onClick={() => setTemporaryAccessDevice(device.id)}
                                                 disabled={actionLoading === device.id}
-                                                className="w-full text-xs px-3 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white"
+                                                className="w-full text-sm px-4 py-2.5 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white font-medium shadow-sm hover:shadow-md transition-all"
                                               >
-                                                <Timer className="w-3 h-3 mr-1" />
+                                                <Timer className="w-4 h-4 mr-1.5" />
                                                 <span>Grant Temp Access</span>
                                               </Button>
                                             ) : null}
