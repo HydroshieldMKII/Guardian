@@ -145,18 +145,3 @@
     @apply bg-background text-foreground;
   }
 }
-
-/* Enhanced hover effects for interactive elements */
-@layer utilities {
-  .hover-lift {
-    @apply transition-all duration-200 hover:shadow-md hover:-translate-y-0.5;
-  }
-
-  .hover-glow {
-    @apply transition-all duration-200 hover:shadow-lg hover:shadow-primary/20;
-  }
-
-  .hover-scale {
-    @apply transition-transform duration-200 hover:scale-105 active:scale-95;
-  }
-}

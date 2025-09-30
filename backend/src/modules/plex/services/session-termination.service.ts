@@ -6,6 +6,7 @@ import { PlexClient } from './plex-client';
 import { ActiveSessionService } from '../../sessions/services/active-session.service';
 import { UsersService } from '../../users/services/users.service';
 import { ConfigService } from '../../config/services/config.service';
+import { DeviceTrackingService } from '../../devices/services/device-tracking.service';
 import {
   PlexSessionsResponse,
   SessionTerminationResult,
@@ -23,6 +24,8 @@ export class SessionTerminationService {
     private usersService: UsersService,
     @Inject(forwardRef(() => ConfigService))
     private configService: ConfigService,
+    @Inject(forwardRef(() => DeviceTrackingService))
+    private deviceTrackingService: DeviceTrackingService,
   ) {}
 
   async stopUnapprovedSessions(
@@ -45,7 +48,7 @@ export class SessionTerminationService {
 
           if (shouldStop) {
             const sessionKey = session.Session?.id;
-            console.log('Terminating unapproved session:', session);
+            // console.log('Terminating unapproved session:', session);
 
             if (sessionKey) {
               await this.terminateSession(sessionKey);
@@ -100,16 +103,28 @@ export class SessionTerminationService {
         where: { userId, deviceIdentifier },
       });
       
-      // If device not found or still pending, use user's default block preference, if none use global default
+      // If device not found or still pending, check for temporary access first
       if (!device || device.status === 'pending') {
+        // Check if device has valid temporary access
+        if (device && await this.deviceTrackingService.isTemporaryAccessValid(device)) {
+          return false; // Don't stop - temporary access is valid
+        }
         return await this.usersService.getEffectiveDefaultBlock(userId);
       }
 
       if (device.status === 'rejected') {
+        // Check if rejected device has valid temporary access
+        if (await this.deviceTrackingService.isTemporaryAccessValid(device)) {
+          // this.logger.debug(
+          //   `Rejected device ${deviceIdentifier} for user ${userId} has valid temporary access, allowing session.`,
+          // );
+          return false; // Don't stop - temporary access overrides rejection
+        }
+        
         this.logger.warn(
           `Device ${deviceIdentifier} for user ${userId} is explicitly rejected.`,
         );
-        return true; // Always stop if device is rejected
+        return true; // Always stop if device is rejected and no temporary access
       }
 
       return false; // no terminate if device is approved
@@ -143,6 +158,21 @@ export class SessionTerminationService {
         );
       }
     } catch (error) {
+      // Check if it's a 404 error (session already ended)
+      if (error.message && error.message.includes('404')) {
+        this.logger.warn(`Session ${sessionKey} was already terminated or not found`);
+        // Still try to clean up from database
+        try {
+          await this.activeSessionService.removeSession(sessionKey);
+        } catch (dbError) {
+          this.logger.warn(
+            `Failed to remove session ${sessionKey} from database after 404`,
+            dbError,
+          );
+        }
+        return; // Don't throw error for 404s
+      }
+      
       this.logger.error(`Failed to terminate session ${sessionKey}`, error);
       throw error;
     }

@@ -13,6 +13,7 @@ export interface PlexSession {
     device?: string;
     address?: string;
     state?: "playing" | "paused" | "buffering";
+    originalTitle?: string;
   };
   Media?: Array<{
     videoResolution?: string;
@@ -74,6 +75,9 @@ export interface UserDevice {
   firstSeen: string;
   lastSeen: string;
   sessionCount: number;
+  temporaryAccessUntil?: string;
+  temporaryAccessGrantedAt?: string;
+  temporaryAccessDurationMinutes?: number;
 }
 
 export interface AppSetting {

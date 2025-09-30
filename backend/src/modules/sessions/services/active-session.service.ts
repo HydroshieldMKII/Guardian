@@ -202,6 +202,7 @@ export class ActiveSessionService {
       const sessions = await this.getActiveSessions();
 
       const deviceSessionCounts = new Map<string, number>();
+      const deviceCustomNames = new Map<string, string>();
       
       for (const session of sessions) {
         if (session.userId && session.deviceIdentifier) {
@@ -214,6 +215,10 @@ export class ActiveSessionService {
               },
             });
             deviceSessionCounts.set(key, device?.sessionCount || 0);
+            // Store custom device name if it exists
+            if (device?.deviceName) {
+              deviceCustomNames.set(key, device.deviceName);
+            }
           }
         }
       }
@@ -221,6 +226,7 @@ export class ActiveSessionService {
       const transformedSessions = sessions.map((session) => {
         const deviceKey = `${session.userId}-${session.deviceIdentifier}`;
         const sessionCount = deviceSessionCounts.get(deviceKey) || 0;
+        const customDeviceName = deviceCustomNames.get(deviceKey);
         
         return {
           sessionKey: session.sessionKey,
@@ -232,10 +238,11 @@ export class ActiveSessionService {
             machineIdentifier: session.deviceIdentifier,
             platform: session.devicePlatform,
             product: session.deviceProduct,
-            title: session.deviceTitle,
+            title: customDeviceName,
             device: session.deviceName,
             address: session.deviceAddress,
             state: session.playerState as 'playing' | 'paused' | 'buffering',
+            originalTitle: session.deviceTitle,
           },
           Media:
             session.videoResolution || session.bitrate || session.container

@@ -803,6 +803,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
           placeholder={
             setting.private && !value ? "••••••••••••••••••••" : ""
           }
+          className={setting.type === "number" ? "[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" : ""}
         />
         <p className="text-xs text-muted-foreground">{description}</p>
       </div>
@@ -868,7 +869,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
                     e.preventDefault();
                   }
                 }}
-                className={!isCleanupEnabled ? "bg-muted" : ""}
+                className={`[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${!isCleanupEnabled ? "bg-muted" : ""}`}
               />
               <p
                 className={`text-xs ${!isCleanupEnabled ? "text-muted-foreground/60" : "text-muted-foreground"}`}

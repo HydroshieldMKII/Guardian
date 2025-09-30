@@ -55,4 +55,13 @@ export class UserDevice {
 
   @Column({ name: 'ip_address', nullable: true })
   ipAddress: string;
+
+  @Column({ name: 'temporary_access_until', nullable: true })
+  temporaryAccessUntil: Date;
+
+  @Column({ name: 'temporary_access_granted_at', nullable: true })
+  temporaryAccessGrantedAt: Date;
+
+  @Column({ name: 'temporary_access_duration_minutes', nullable: true })
+  temporaryAccessDurationMinutes: number;
 }

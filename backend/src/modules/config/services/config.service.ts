@@ -8,7 +8,7 @@ import * as http from 'http';
 import * as https from 'https';
 
 // App version
-const CURRENT_APP_VERSION = '1.1.4';
+const CURRENT_APP_VERSION = '1.1.5';
 
 export interface ConfigSettingDto {
   key: string;
@@ -34,85 +34,85 @@ export class ConfigService {
   private async initializeDefaultSettings() {
     const defaultSettings = [
       {
-        key: 'PLEX_TOKEN',
-        value: '',
-        description: 'Plex server authentication token',
-        type: 'string' as const,
-        private: true,
+      key: 'PLEX_TOKEN',
+      value: '',
+      description: 'Plex server authentication token',
+      type: 'string' as const,
+      private: true,
       },
       {
-        key: 'PLEX_SERVER_IP',
-        value: '',
-        description: 'Plex server IP address',
-        type: 'string' as const,
+      key: 'PLEX_SERVER_IP',
+      value: '',
+      description: 'Plex server IP address',
+      type: 'string' as const,
       },
       {
-        key: 'PLEX_SERVER_PORT',
-        value: '32400',
-        description: 'Plex server port',
-        type: 'string' as const,
+      key: 'PLEX_SERVER_PORT',
+      value: '32400',
+      description: 'Plex server port',
+      type: 'string' as const,
       },
       {
-        key: 'USE_SSL',
-        value: 'false',
-        description: 'Use SSL for Plex connection',
-        type: 'boolean' as const,
+      key: 'USE_SSL',
+      value: 'false',
+      description: 'Use SSL for Plex connection',
+      type: 'boolean' as const,
       },
       {
-        key: 'IGNORE_CERT_ERRORS',
-        value: 'true',
-        description: 'Ignore SSL certificate errors',
-        type: 'boolean' as const,
+      key: 'IGNORE_CERT_ERRORS',
+      value: 'true',
+      description: 'Ignore SSL certificate errors',
+      type: 'boolean' as const,
       },
       {
-        key: 'PLEXGUARD_REFRESH_INTERVAL',
-        value: '10',
-        description: 'Refresh interval for session monitoring (seconds)',
-        type: 'number' as const,
+      key: 'PLEXGUARD_REFRESH_INTERVAL',
+      value: '10',
+      description: 'Refresh interval for fetching session info and enforcing bans (seconds)',
+      type: 'number' as const,
       },
       {
-        key: 'PLEX_GUARD_DEFAULT_BLOCK',
-        value: 'true',
-        description: 'Block new devices by default',
-        type: 'boolean' as const,
+      key: 'PLEX_GUARD_DEFAULT_BLOCK',
+      value: 'true',
+      description: 'Block new devices by default',
+      type: 'boolean' as const,
       },
       {
-        key: 'PLEXGUARD_STOPMSG',
-        value:
-          'This device must be approved by the server owner. Please contact the server administrator for more information.',
-        description: 'Message shown when blocking streams',
-        type: 'string' as const,
+      key: 'PLEXGUARD_STOPMSG',
+      value:
+        'This device must be approved by the server owner. Please contact the server administrator for more information.',
+      description: 'Message shown when blocking streams',
+      type: 'string' as const,
       },
       {
-        key: 'DEVICE_CLEANUP_ENABLED',
-        value: 'false',
-        description: 'Automatically remove inactive devices',
-        type: 'boolean' as const,
+      key: 'DEVICE_CLEANUP_ENABLED',
+      value: 'false',
+      description: 'Automatically remove inactive devices',
+      type: 'boolean' as const,
       },
       {
-        key: 'DEVICE_CLEANUP_INTERVAL_DAYS',
-        value: '30',
-        description: 'Days of inactivity before device removal',
-        type: 'number' as const,
+      key: 'DEVICE_CLEANUP_INTERVAL_DAYS',
+      value: '30',
+      description: 'Days of inactivity before device removal',
+      type: 'number' as const,
       },
       {
-        key: 'DEFAULT_PAGE',
-        value: 'devices',
-        description: 'Default page to show when app loads',
-        type: 'string' as const,
+      key: 'DEFAULT_PAGE',
+      value: 'devices',
+      description: 'Default page to show when app loads',
+      type: 'string' as const,
       },
       {
-        key: 'AUTO_CHECK_UPDATES',
-        value: 'false',
-        description: 'Automatically check for updates on app launch',
-        type: 'boolean' as const,
+      key: 'AUTO_CHECK_UPDATES',
+      value: 'false',
+      description: 'Automatically check for updates on app launch',
+      type: 'boolean' as const,
       },
       {
-        key: 'APP_VERSION',
-        value: CURRENT_APP_VERSION,
-        description: 'Current application version',
-        type: 'string' as const,
-        private: false,
+      key: 'APP_VERSION',
+      value: CURRENT_APP_VERSION,
+      description: 'Current application version',
+      type: 'string' as const,
+      private: false,
       },
     ];
 
@@ -127,6 +127,11 @@ export class ConfigService {
       if (!existing) {
         await this.settingsRepository.save(setting);
         this.logger.log(`Initialized default setting: ${setting.key}`);
+      } else {
+        // Always update description in case it changed
+        existing.description = setting.description;
+        await this.settingsRepository.save(existing);
+        this.logger.log(`Updated description for existing setting: ${setting.key}`);
       }
     }
 
