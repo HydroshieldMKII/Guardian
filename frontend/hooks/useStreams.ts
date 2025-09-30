@@ -15,7 +15,7 @@ export const useStreamsData = () => {
     setError(null);
 
     try {
-      const response = await fetch(`${config.api.baseUrl}/sessions`);
+      const response = await fetch(`${config.api.baseUrl}/sessions/active`);
       if (response.ok) {
         const data: StreamsResponse = await response.json();
         setStreams(data.MediaContainer?.Metadata || []);
