@@ -69,15 +69,7 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
         'bg-gradient-to-r from-yellow-500 to-amber-500'
       }`} />
       
-      {/* Temporary access indicator */}
-      {hasTemporaryAccess(device) && (
-        <div className="absolute top-3 right-3 z-10">
-          <div className="flex items-center gap-1 px-2 py-1 bg-blue-500/90 text-white text-xs rounded-full backdrop-blur-sm border border-blue-400/20">
-            <Timer className="w-3 h-3" />
-            <span className="font-medium">{getTemporaryAccessTimeLeft(device)}</span>
-          </div>
-        </div>
-      )}
+
       {/* Mobile-first layout */}
       <div className="space-y-4 sm:space-y-0">
         {/* Mobile: Stacked layout */}
