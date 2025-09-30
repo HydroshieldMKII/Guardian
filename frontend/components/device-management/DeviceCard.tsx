@@ -195,7 +195,7 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
                     ) : (
                       <>
                         <Timer className="w-4 h-4 mr-1.5" />
-                        <span>Revoke Temp Access</span>
+                        <span>Revoke temporary Access</span>
                       </>
                     )}
                   </Button>
@@ -262,7 +262,7 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
                     ) : (
                       <>
                         <Timer className="w-4 h-4 mr-1.5" />
-                        <span>Revoke Temp Access</span>
+                        <span>Revoke temporary Access</span>
                       </>
                     )}
                   </Button>
@@ -428,7 +428,7 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
                     ) : (
                       <>
                         <Timer className="w-3 h-3 mr-1" />
-                        Revoke Temp
+                        Revoke temporary Access
                       </>
                     )}
                   </Button>
@@ -495,7 +495,7 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
                     ) : (
                       <>
                         <Timer className="w-3 h-3 mr-1" />
-                        Revoke Temp
+                        Revoke temporary Access
                       </>
                     )}
                   </Button>

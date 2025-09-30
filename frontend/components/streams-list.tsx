@@ -20,7 +20,7 @@ import {
 
 import { PlexSession, StreamsResponse } from "@/types";
 import { useSwipeToRefresh } from "../hooks/useSwipeToRefresh";
-import { config } from "@/lib/config";
+import { useStreamsData, useStreamActions } from "../hooks/useStreams";
 
 // Import extracted components
 import { 
@@ -45,14 +45,26 @@ export default function StreamsList({
   onAutoRefreshChange = () => {},
   onNavigateToDevice,
 }: StreamsListProps) {
-  const [streams, setStreams] = useState<PlexSession[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  // Custom hooks
+  const { 
+    streams, 
+    loading, 
+    error, 
+    fetchStreamsData, 
+    updateStreamsFromProps 
+  } = useStreamsData();
+  
+  const { 
+    revokingAuth, 
+    revokeDeviceAuthorization,
+    setRevokingAuth 
+  } = useStreamActions();
+
+  // Local state
   const [refreshing, setRefreshing] = useState(false);
   const [expandedStream, setExpandedStream] = useState<string | null>(null);
   const [confirmRemoveStream, setConfirmRemoveStream] =
     useState<PlexSession | null>(null);
-  const [revokingAuth, setRevokingAuth] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
 
   // Swipe to refresh functionality
@@ -67,34 +79,13 @@ export default function StreamsList({
   // Initialize state from props or fetch data
   useEffect(() => {
     if (sessionsData) {
-      setStreams(sessionsData.MediaContainer?.Metadata || []);
-      setError(null);
+      updateStreamsFromProps(sessionsData);
     } else {
       fetchStreamsData();
     }
-  }, [sessionsData]);
+  }, [sessionsData, fetchStreamsData, updateStreamsFromProps]);
 
-  const fetchStreamsData = async () => {
-    if (loading) return;
 
-    setLoading(true);
-    setError(null);
-
-    try {
-      const response = await fetch(`${config.api.baseUrl}/sessions`);
-      if (response.ok) {
-        const data: StreamsResponse = await response.json();
-        setStreams(data.MediaContainer?.Metadata || []);
-      } else {
-        setError("Failed to fetch streams data");
-      }
-    } catch (error) {
-      console.error("Error fetching streams:", error);
-      setError("Network error. Please check your connection.");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // Handle auto-refresh toggle  
   const handleAutoRefreshToggle = () => {
@@ -117,39 +108,12 @@ export default function StreamsList({
   });
 
   const handleRevokeAuthorization = async (stream: PlexSession) => {
-    if (!stream.User?.id || !stream.Player?.machineIdentifier) {
-      console.error("Missing user ID or device identifier");
-      return;
+    const success = await revokeDeviceAuthorization(stream);
+    if (success) {
+      // Refresh the streams to reflect any changes
+      handleRefresh();
     }
-
-    const userId = stream.User.id;
-    const deviceIdentifier = stream.Player.machineIdentifier;
-
-    try {
-      setRevokingAuth(stream.sessionKey);
-      const response = await fetch(
-        `${config.api.baseUrl}/devices/revoke/${encodeURIComponent(
-          userId
-        )}/${encodeURIComponent(deviceIdentifier)}`,
-        {
-          method: "POST",
-        }
-      );
-
-      if (response.ok) {
-        const result = await response.json();
-        console.log(result.message);
-        // Refresh the streams to reflect any changes
-        handleRefresh();
-      } else {
-        console.error("Failed to revoke device authorization");
-      }
-    } catch (error) {
-      console.error("Error revoking device authorization:", error);
-    } finally {
-      setRevokingAuth(null);
-      setConfirmRemoveStream(null);
-    }
+    setConfirmRemoveStream(null);
   };
 
   const handleConfirmRemoveAccess = () => {
