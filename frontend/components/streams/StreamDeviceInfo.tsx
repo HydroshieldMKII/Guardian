@@ -41,7 +41,9 @@ export const StreamDeviceInfo: React.FC<StreamDeviceInfoProps> = ({ session }) =
           <div className="min-w-0 flex-1">
             <div className="font-medium">Product</div>
             <div className="truncate">
-              {session.Player?.product || "Unknown"}
+              {session.Player?.product && session.Player?.originalTitle 
+                ? `${session.Player.product} - ${session.Player.originalTitle}`
+                : session.Player?.product || "Unknown"}
             </div>
           </div>
         </div>

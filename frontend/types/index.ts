@@ -13,6 +13,7 @@ export interface PlexSession {
     device?: string;
     address?: string;
     state?: "playing" | "paused" | "buffering";
+    originalTitle?: string;
   };
   Media?: Array<{
     videoResolution?: string;

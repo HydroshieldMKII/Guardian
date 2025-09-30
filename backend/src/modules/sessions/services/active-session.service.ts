@@ -238,10 +238,11 @@ export class ActiveSessionService {
             machineIdentifier: session.deviceIdentifier,
             platform: session.devicePlatform,
             product: session.deviceProduct,
-            title: customDeviceName || session.deviceTitle,
+            title: customDeviceName,
             device: session.deviceName,
             address: session.deviceAddress,
             state: session.playerState as 'playing' | 'paused' | 'buffering',
+            originalTitle: session.deviceTitle,
           },
           Media:
             session.videoResolution || session.bitrate || session.container
