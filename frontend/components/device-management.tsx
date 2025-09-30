@@ -1933,6 +1933,28 @@ const DeviceManagement = memo(({
             </DialogDescription>
           </DialogHeader>
 
+          {temporaryAccessDevice && (() => {
+            const device = userGroups.flatMap(group => group.devices).find(d => d.id === temporaryAccessDevice);
+            return device ? (
+              <div className="my-4 p-3 sm:p-4 bg-muted rounded-lg">
+                <div className="flex items-center gap-3 mb-2">
+                  {getDeviceIcon(device.devicePlatform, device.deviceProduct)}
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-medium text-foreground truncate">
+                      {device.deviceName || device.deviceIdentifier}
+                    </div>
+                    <div className="text-xs text-muted-foreground truncate">
+                      {device.username || device.userId}
+                    </div>
+                  </div>
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  Platform: {device.devicePlatform || "Unknown"} • Product: {device.deviceProduct || "Unknown"}
+                </div>
+              </div>
+            ) : null;
+          })()}
+
           <div className="space-y-4">
             <div>
               <label className="text-sm font-medium text-foreground">Duration</label>
