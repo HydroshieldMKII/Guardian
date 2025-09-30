@@ -207,7 +207,8 @@ const DeviceManagement = memo(({
   const [editingDevice, setEditingDevice] = useState<number | null>(null);
   const [newDeviceName, setNewDeviceName] = useState("");
   const [temporaryAccessDevice, setTemporaryAccessDevice] = useState<number | null>(null);
-  const [temporaryAccessDuration, setTemporaryAccessDuration] = useState<number>(30);
+  const [durationValue, setDurationValue] = useState<number>(1);
+  const [durationUnit, setDurationUnit] = useState<'minutes' | 'hours' | 'days' | 'weeks'>('hours');
 
   
   // Local storage keys for sorting preferences
@@ -342,6 +343,14 @@ const DeviceManagement = memo(({
       setAutoRefresh(parentAutoRefresh);
     }
   }, [parentAutoRefresh]);
+
+  // Reset duration values when modal opens
+  useEffect(() => {
+    if (temporaryAccessDevice) {
+      setDurationValue(1);
+      setDurationUnit('hours');
+    }
+  }, [temporaryAccessDevice]);
 
   const handleRefresh = () => {
     if (onRefresh) {
@@ -602,6 +611,39 @@ const DeviceManagement = memo(({
     }
   };
 
+  // Convert duration value and unit to minutes
+  const convertToMinutes = (value: number, unit: 'minutes' | 'hours' | 'days' | 'weeks'): number => {
+    if (value <= 0) return 1; // Minimum 1 minute
+    
+    switch (unit) {
+      case 'minutes':
+        return Math.round(value);
+      case 'hours':
+        return Math.round(value * 60);
+      case 'days':
+        return Math.round(value * 60 * 24);
+      case 'weeks':
+        return Math.round(value * 60 * 24 * 7);
+      default:
+        return Math.round(value);
+    }
+  };
+
+  // Format duration for display
+  const formatDuration = (value: number, unit: 'minutes' | 'hours' | 'days' | 'weeks'): string => {
+    if (value === 1) {
+      return `1 ${unit.slice(0, -1)}`; // Remove 's' for singular
+    }
+    return `${value} ${unit}`;
+  };
+
+  // Validate if duration is reasonable (not more than 1 year)
+  const isValidDuration = (value: number, unit: 'minutes' | 'hours' | 'days' | 'weeks'): boolean => {
+    const totalMinutes = convertToMinutes(value, unit);
+    const oneYearInMinutes = 365 * 24 * 60; // 525,600 minutes
+    return totalMinutes > 0 && totalMinutes <= oneYearInMinutes;
+  };
+
   const handleRevokeTemporaryAccess = async (deviceId: number) => {
     try {
       setActionLoading(deviceId);
@@ -637,14 +679,28 @@ const DeviceManagement = memo(({
       return "Expired";
     }
 
-    const minutes = Math.ceil(timeLeft / (60 * 1000));
-    const hours = Math.floor(minutes / 60);
-    const remainingMinutes = minutes % 60;
+    const totalMinutes = Math.ceil(timeLeft / (60 * 1000));
+    
+    // Calculate time units
+    const weeks = Math.floor(totalMinutes / (7 * 24 * 60));
+    const days = Math.floor((totalMinutes % (7 * 24 * 60)) / (24 * 60));
+    const hours = Math.floor((totalMinutes % (24 * 60)) / 60);
+    const minutes = totalMinutes % 60;
 
-    if (hours > 0) {
-      return `${hours}h ${remainingMinutes}m`;
+    // Build formatted string with only non-zero values
+    const parts = [];
+    if (weeks > 0) parts.push(`${weeks}w`);
+    if (days > 0) parts.push(`${days}d`);
+    if (hours > 0) parts.push(`${hours}h`);
+    if (minutes > 0) parts.push(`${minutes}m`);
+    
+    // If no parts, it means less than 1 minute
+    if (parts.length === 0) {
+      return "< 1m";
     }
-    return `${minutes}m`;
+    
+    // Return up to 3 most significant parts for readability
+    return parts.slice(0, 3).join(' ');
   };
 
   const hasTemporaryAccess = (device: UserDevice): boolean => {
@@ -1731,6 +1787,98 @@ const DeviceManagement = memo(({
                   </p>
                 </div>
               </div>
+
+              {/* Temporary Access Section - Only show if device has or had temporary access */}
+              {(selectedDevice.temporaryAccessUntil || selectedDevice.temporaryAccessGrantedAt || selectedDevice.temporaryAccessDurationMinutes) && (
+                <>
+                  <Separator />
+                  <div>
+                    <h4 className="font-semibold text-sm text-muted-foreground mb-3 flex items-center">
+                      <Clock className="w-4 h-4 mr-2" />
+                      Temporary Access Information
+                    </h4>
+                    <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                      {selectedDevice.temporaryAccessDurationMinutes && (
+                        <div>
+                          <h4 className="font-semibold text-xs sm:text-sm text-muted-foreground">
+                            Original Duration Granted
+                          </h4>
+                          <p className="text-sm sm:text-base text-foreground">
+                            {(() => {
+                              const minutes = selectedDevice.temporaryAccessDurationMinutes;
+                              if (minutes < 60) {
+                                return `${minutes} minutes`;
+                              } else if (minutes < 1440) {
+                                const hours = Math.floor(minutes / 60);
+                                const remainingMinutes = minutes % 60;
+                                return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}m` : `${hours} hours`;
+                              } else if (minutes < 10080) {
+                                const days = Math.floor(minutes / 1440);
+                                const remainingHours = Math.floor((minutes % 1440) / 60);
+                                return remainingHours > 0 ? `${days}d ${remainingHours}h` : `${days} days`;
+                              } else {
+                                const weeks = Math.floor(minutes / 10080);
+                                const remainingDays = Math.floor((minutes % 10080) / 1440);
+                                return remainingDays > 0 ? `${weeks}w ${remainingDays}d` : `${weeks} weeks`;
+                              }
+                            })()}
+                          </p>
+                        </div>
+                      )}
+                      
+                      {selectedDevice.temporaryAccessGrantedAt && (
+                        <div>
+                          <h4 className="font-semibold text-xs sm:text-sm text-muted-foreground">
+                            Access Granted At
+                          </h4>
+                          <p className="text-xs sm:text-sm text-foreground">
+                            {new Date(selectedDevice.temporaryAccessGrantedAt).toLocaleString()}
+                          </p>
+                        </div>
+                      )}
+                      
+                      {selectedDevice.temporaryAccessUntil && (
+                        <div>
+                          <h4 className="font-semibold text-xs sm:text-sm text-muted-foreground">
+                            {hasTemporaryAccess(selectedDevice) ? "Expires At" : "Expired At"}
+                          </h4>
+                          <p className="text-xs sm:text-sm text-foreground">
+                            {new Date(selectedDevice.temporaryAccessUntil).toLocaleString()}
+                          </p>
+                          {hasTemporaryAccess(selectedDevice) && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Time remaining: {getTemporaryAccessTimeLeft(selectedDevice)}
+                            </p>
+                          )}
+                        </div>
+                      )}
+                      
+                      <div>
+                        <h4 className="font-semibold text-xs sm:text-sm text-muted-foreground">
+                          Current Status
+                        </h4>
+                        <div>
+                          {hasTemporaryAccess(selectedDevice) ? (
+                            <Badge variant="default" className="bg-blue-600 dark:bg-blue-700 text-white">
+                              <Clock className="w-3 h-3 mr-1" />
+                              Active Temporary Access
+                            </Badge>
+                          ) : selectedDevice.temporaryAccessUntil ? (
+                            <Badge variant="secondary" className="bg-muted text-muted-foreground">
+                              <Clock className="w-3 h-3 mr-1" />
+                              Temporary Access Expired
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline">
+                              No Temporary Access
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           )}
           <DialogFooter className="flex-col sm:flex-row gap-2">
@@ -1764,40 +1912,105 @@ const DeviceManagement = memo(({
           <div className="space-y-4">
             <div>
               <label className="text-sm font-medium text-foreground">Duration</label>
-              <div className="mt-2 grid grid-cols-2 gap-2">
-                <Button
-                  variant={temporaryAccessDuration === 30 ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setTemporaryAccessDuration(30)}
-                  className="text-sm"
-                >
-                  30 minutes
-                </Button>
-                <Button
-                  variant={temporaryAccessDuration === 60 ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setTemporaryAccessDuration(60)}
-                  className="text-sm"
-                >
-                  1 hour
-                </Button>
-                <Button
-                  variant={temporaryAccessDuration === 180 ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setTemporaryAccessDuration(180)}
-                  className="text-sm"
-                >
-                  3 hours
-                </Button>
-                <Button
-                  variant={temporaryAccessDuration === 360 ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setTemporaryAccessDuration(360)}
-                  className="text-sm"
-                >
-                  6 hours
-                </Button>
+              <div className="mt-2 flex gap-2">
+                <Input
+                  type="number"
+                  min="1"
+                  max="999"
+                  value={durationValue}
+                  onChange={(e) => {
+                    const value = parseInt(e.target.value) || 1;
+                    setDurationValue(Math.max(1, Math.min(999, value)));
+                  }}
+                  className="flex-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  placeholder="Enter duration"
+                />
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="min-w-[100px]">
+                      {durationUnit}
+                      <ChevronDown className="w-4 h-4 ml-2" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <DropdownMenuItem onClick={() => setDurationUnit('minutes')}>
+                      minutes
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setDurationUnit('hours')}>
+                      hours
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setDurationUnit('days')}>
+                      days
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setDurationUnit('weeks')}>
+                      weeks
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
+              
+              {/* Quick preset buttons */}
+              <div className="mt-3">
+                <p className="text-xs text-muted-foreground mb-2">Quick presets:</p>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => { setDurationValue(30); setDurationUnit('minutes'); }}
+                    className="text-xs"
+                  >
+                    30m
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => { setDurationValue(1); setDurationUnit('hours'); }}
+                    className="text-xs"
+                  >
+                    1h
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => { setDurationValue(3); setDurationUnit('hours'); }}
+                    className="text-xs"
+                  >
+                    3h
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => { setDurationValue(6); setDurationUnit('hours'); }}
+                    className="text-xs"
+                  >
+                    6h
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => { setDurationValue(1); setDurationUnit('days'); }}
+                    className="text-xs"
+                  >
+                    1d
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => { setDurationValue(1); setDurationUnit('weeks'); }}
+                    className="text-xs"
+                  >
+                    1w
+                  </Button>
+                </div>
+              </div>
+              
+                <div className="mt-3">
+                {!isValidDuration(durationValue, durationUnit) && (
+                  <p className="text-xs text-red-600">
+                  Duration is too long (maximum: 1 year)
+                  </p>
+                )}
+                </div>
             </div>
           </div>
 
@@ -1811,8 +2024,8 @@ const DeviceManagement = memo(({
               Cancel
             </Button>
             <Button
-              onClick={() => temporaryAccessDevice && handleGrantTemporaryAccess(temporaryAccessDevice, temporaryAccessDuration)}
-              disabled={actionLoading !== null}
+              onClick={() => temporaryAccessDevice && handleGrantTemporaryAccess(temporaryAccessDevice, convertToMinutes(durationValue, durationUnit))}
+              disabled={actionLoading !== null || !isValidDuration(durationValue, durationUnit)}
               className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white"
             >
               {actionLoading ? (
