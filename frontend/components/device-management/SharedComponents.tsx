@@ -105,7 +105,7 @@ export const DeviceStatus = ({ device }: { device: UserDevice }) => {
       <div className="flex items-center gap-2">
         <Badge variant="default" className="bg-blue-600 dark:bg-blue-700 text-white">
           <Timer className="w-3 h-3 mr-1" />
-          Temp Access ({timeLeft} left)
+          Temporary Access ({timeLeft} left)
         </Badge>
       </div>
     );

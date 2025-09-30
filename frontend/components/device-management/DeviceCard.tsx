@@ -208,7 +208,7 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
                     className="w-full text-sm px-4 py-2.5 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white font-medium shadow-sm hover:shadow-md transition-all"
                   >
                     <Timer className="w-4 h-4 mr-1.5" />
-                    <span>Grant Temp Access</span>
+                    <span>Grant Temporary Access</span>
                   </Button>
                 ) : null}
               </div>
@@ -275,7 +275,7 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
                     className="w-full text-sm px-4 py-2.5 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white font-medium shadow-sm hover:shadow-md transition-all"
                   >
                     <Timer className="w-4 h-4 mr-1.5" />
-                    <span>Grant Temp Access</span>
+                    <span>Grant Temporary Access</span>
                   </Button>
                 ) : null}
               </div>
@@ -441,7 +441,7 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
                     className="w-full text-xs px-2 py-1 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white"
                   >
                     <Timer className="w-3 h-3 mr-1" />
-                    Temp Access
+                    Temporary Access
                   </Button>
                 ) : null}
               </div>
@@ -508,7 +508,7 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
                     className="w-full text-xs px-2 py-1 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white"
                   >
                     <Timer className="w-3 h-3 mr-1" />
-                    Temp Access
+                    Temporary Access
                   </Button>
                 ) : null}
               </div>
