@@ -1,5 +1,4 @@
 export { ClickableIP, getDeviceIcon, formatDuration, getProgressPercentage, getContentTitle, getDetailedQuality } from './SharedComponents';
-export { StreamSkeleton } from './StreamSkeleton';
 export { StreamQuality, StreamQualityDetails } from './StreamQuality';
 export { StreamDeviceInfo } from './StreamDeviceInfo';
 export { StreamProgress } from './StreamProgress';
