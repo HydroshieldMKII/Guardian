@@ -52,6 +52,7 @@ import {
   Edit2,
   Save,
   X,
+  Timer,
   ToggleLeft,
   ToggleRight,
   Wifi,
@@ -203,6 +204,8 @@ const DeviceManagement = memo(({
   const [searchTerm, setSearchTerm] = useState("");
   const [editingDevice, setEditingDevice] = useState<number | null>(null);
   const [newDeviceName, setNewDeviceName] = useState("");
+  const [temporaryAccessDevice, setTemporaryAccessDevice] = useState<number | null>(null);
+  const [temporaryAccessDuration, setTemporaryAccessDuration] = useState<number>(30);
 
   
   // Local storage keys for sorting preferences
@@ -570,6 +573,87 @@ const DeviceManagement = memo(({
     setNewDeviceName("");
   };
 
+  const handleGrantTemporaryAccess = async (deviceId: number, durationMinutes: number) => {
+    try {
+      setActionLoading(deviceId);
+      const response = await fetch(
+        `${config.api.baseUrl}/devices/${deviceId}/temporary-access`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ durationMinutes }),
+        }
+      );
+
+      if (response.ok) {
+        setTimeout(handleRefresh, 100);
+        setTemporaryAccessDevice(null);
+      } else {
+        console.error("Failed to grant temporary access");
+      }
+    } catch (error) {
+      console.error("Error granting temporary access:", error);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleRevokeTemporaryAccess = async (deviceId: number) => {
+    try {
+      setActionLoading(deviceId);
+      const response = await fetch(
+        `${config.api.baseUrl}/devices/${deviceId}/revoke-temporary-access`,
+        {
+          method: "POST",
+        }
+      );
+
+      if (response.ok) {
+        setTimeout(handleRefresh, 100);
+      } else {
+        console.error("Failed to revoke temporary access");
+      }
+    } catch (error) {
+      console.error("Error revoking temporary access:", error);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const getTemporaryAccessTimeLeft = (device: UserDevice): string | null => {
+    if (!device.temporaryAccessUntil) {
+      return null;
+    }
+
+    const now = new Date();
+    const expiresAt = new Date(device.temporaryAccessUntil);
+    const timeLeft = expiresAt.getTime() - now.getTime();
+
+    if (timeLeft <= 0) {
+      return "Expired";
+    }
+
+    const minutes = Math.ceil(timeLeft / (60 * 1000));
+    const hours = Math.floor(minutes / 60);
+    const remainingMinutes = minutes % 60;
+
+    if (hours > 0) {
+      return `${hours}h ${remainingMinutes}m`;
+    }
+    return `${minutes}m`;
+  };
+
+  const hasTemporaryAccess = (device: UserDevice): boolean => {
+    if (!device.temporaryAccessUntil) {
+      return false;
+    }
+    const now = new Date();
+    const expiresAt = new Date(device.temporaryAccessUntil);
+    return expiresAt > now;
+  };
+
   // Confirmation dialog handlers
   const showApproveConfirmation = (device: UserDevice) => {
     setConfirmAction({
@@ -655,6 +739,19 @@ const DeviceManagement = memo(({
   };
 
   const getDeviceStatus = (device: UserDevice) => {
+    // Check for temporary access first
+    if (hasTemporaryAccess(device)) {
+      const timeLeft = getTemporaryAccessTimeLeft(device);
+      return (
+        <div className="flex items-center gap-2">
+          <Badge variant="default" className="bg-blue-600 dark:bg-blue-700 text-white">
+            <Timer className="w-3 h-3 mr-1" />
+            Temp Access ({timeLeft} left)
+          </Badge>
+        </div>
+      );
+    }
+
     switch (device.status) {
       case "approved":
         return (
@@ -1038,27 +1135,145 @@ const DeviceManagement = memo(({
 
                                         {/* Action Buttons Row */}
                                         {device.status === "pending" ? (
+                                          <div className="space-y-2">
+                                            <div className="grid grid-cols-2 gap-2">
+                                              <Button
+                                                variant="default"
+                                                size="sm"
+                                                onClick={() => showApproveConfirmation(device)}
+                                                disabled={actionLoading === device.id}
+                                                className="bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white text-xs px-3 py-2"
+                                              >
+                                                {actionLoading === device.id ? (
+                                                  <RefreshCw className="w-3 h-3 animate-spin" />
+                                                ) : (
+                                                  <>
+                                                    <CheckCircle className="w-3 h-3 mr-1" />
+                                                    <span>Approve</span>
+                                                  </>
+                                                )}
+                                              </Button>
+                                              <Button
+                                                variant="default"
+                                                size="sm"
+                                                onClick={() => showRejectConfirmation(device)}
+                                                disabled={actionLoading === device.id}
+                                                className="bg-red-600 text-white hover:bg-red-700 text-xs px-3 py-2"
+                                              >
+                                                {actionLoading === device.id ? (
+                                                  <RefreshCw className="w-3 h-3 animate-spin" />
+                                                ) : (
+                                                  <>
+                                                    <XCircle className="w-3 h-3 mr-1" />
+                                                    <span>Reject</span>
+                                                  </>
+                                                )}
+                                              </Button>
+                                            </div>
+                                            {/* Temporary Access Button */}
+                                            {hasTemporaryAccess(device) ? (
+                                              <Button
+                                                variant="default"
+                                                size="sm"
+                                                onClick={() => handleRevokeTemporaryAccess(device.id)}
+                                                disabled={actionLoading === device.id}
+                                                className="w-full text-xs px-3 py-2 bg-orange-600 text-white hover:bg-orange-700"
+                                              >
+                                                {actionLoading === device.id ? (
+                                                  <RefreshCw className="w-3 h-3 animate-spin" />
+                                                ) : (
+                                                  <>
+                                                    <Timer className="w-3 h-3 mr-1" />
+                                                    <span>Revoke Temp Access</span>
+                                                  </>
+                                                )}
+                                              </Button>
+                                            ) : (
+                                              <Button
+                                                variant="default"
+                                                size="sm"
+                                                onClick={() => setTemporaryAccessDevice(device.id)}
+                                                disabled={actionLoading === device.id}
+                                                className="w-full text-xs px-3 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white"
+                                              >
+                                                <Timer className="w-3 h-3 mr-1" />
+                                                <span>Grant Temp Access</span>
+                                              </Button>
+                                            )}
+                                          </div>
+                                        ) : device.status === "rejected" ? (
+                                          <div className="space-y-2">
+                                            <div className="grid grid-cols-2 gap-2">
+                                              <Button
+                                                variant="default"
+                                                size="sm"
+                                                onClick={() => showToggleConfirmation(device)}
+                                                disabled={actionLoading === device.id}
+                                                className="bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white text-xs px-3 py-2"
+                                              >
+                                                {actionLoading === device.id ? (
+                                                  <RefreshCw className="w-3 h-3 animate-spin" />
+                                                ) : (
+                                                  <>
+                                                    <CheckCircle className="w-3 h-3 mr-1" />
+                                                    <span>Approve</span>
+                                                  </>
+                                                )}
+                                              </Button>
+                                              <Button
+                                                variant="destructive"
+                                                size="sm"
+                                                onClick={() => showDeleteConfirmation(device)}
+                                                disabled={actionLoading === device.id}
+                                                className="text-xs px-3 py-2 bg-red-600 dark:bg-red-700 text-white hover:bg-red-700 dark:hover:bg-red-800"
+                                              >
+                                                {actionLoading === device.id ? (
+                                                  <RefreshCw className="w-3 h-3 animate-spin" />
+                                                ) : (
+                                                  <>
+                                                    <Trash2 className="w-3 h-3 mr-1" />
+                                                    <span>Delete</span>
+                                                  </>
+                                                )}
+                                              </Button>
+                                            </div>
+                                            {/* Temporary Access Button for Rejected Devices */}
+                                            {hasTemporaryAccess(device) ? (
+                                              <Button
+                                                variant="default"
+                                                size="sm"
+                                                onClick={() => handleRevokeTemporaryAccess(device.id)}
+                                                disabled={actionLoading === device.id}
+                                                className="w-full text-xs px-3 py-2 bg-orange-600 text-white hover:bg-orange-700"
+                                              >
+                                                {actionLoading === device.id ? (
+                                                  <RefreshCw className="w-3 h-3 animate-spin" />
+                                                ) : (
+                                                  <>
+                                                    <Timer className="w-3 h-3 mr-1" />
+                                                    <span>Revoke Temp Access</span>
+                                                  </>
+                                                )}
+                                              </Button>
+                                            ) : (
+                                              <Button
+                                                variant="default"
+                                                size="sm"
+                                                onClick={() => setTemporaryAccessDevice(device.id)}
+                                                disabled={actionLoading === device.id}
+                                                className="w-full text-xs px-3 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white"
+                                              >
+                                                <Timer className="w-3 h-3 mr-1" />
+                                                <span>Grant Temp Access</span>
+                                              </Button>
+                                            )}
+                                          </div>
+                                        ) : (
                                           <div className="grid grid-cols-2 gap-2">
-                                            <Button
-                                              variant="default"
-                                              size="sm"
-                                              onClick={() => showApproveConfirmation(device)}
-                                              disabled={actionLoading === device.id}
-                                              className="bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white text-xs px-3 py-2"
-                                            >
-                                              {actionLoading === device.id ? (
-                                                <RefreshCw className="w-3 h-3 animate-spin" />
-                                              ) : (
-                                                <>
-                                                  <CheckCircle className="w-3 h-3 mr-1" />
-                                                  <span>Approve</span>
-                                                </>
-                                              )}
-                                            </Button>
                                             <Button
                                               variant="outline"
                                               size="sm"
-                                              onClick={() => showRejectConfirmation(device)}
+                                              onClick={() => showToggleConfirmation(device)}
                                               disabled={actionLoading === device.id}
                                               className="border-red-600 text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-700 dark:hover:bg-red-900/20 text-xs px-3 py-2"
                                             >
@@ -1068,34 +1283,6 @@ const DeviceManagement = memo(({
                                                 <>
                                                   <XCircle className="w-3 h-3 mr-1" />
                                                   <span>Reject</span>
-                                                </>
-                                              )}
-                                            </Button>
-                                          </div>
-                                        ) : (
-                                          <div className="grid grid-cols-2 gap-2">
-                                            <Button
-                                              variant={device.status === "approved" ? "outline" : "default"}
-                                              size="sm"
-                                              onClick={() => showToggleConfirmation(device)}
-                                              disabled={actionLoading === device.id}
-                                              className={`text-xs px-3 py-2 ${
-                                                device.status === "approved"
-                                                  ? "border-red-600 text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-700 dark:hover:bg-red-900/20"
-                                                  : "bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white"
-                                              }`}
-                                            >
-                                              {actionLoading === device.id ? (
-                                                <RefreshCw className="w-3 h-3 animate-spin" />
-                                              ) : device.status === "approved" ? (
-                                                <>
-                                                  <XCircle className="w-3 h-3 mr-1" />
-                                                  <span>Reject</span>
-                                                </>
-                                              ) : (
-                                                <>
-                                                  <CheckCircle className="w-3 h-3 mr-1" />
-                                                  <span>Approve</span>
                                                 </>
                                               )}
                                             </Button>
@@ -1169,27 +1356,145 @@ const DeviceManagement = memo(({
 
                                         {/* Action Buttons Row */}
                                         {device.status === "pending" ? (
+                                          <div className="space-y-1">
+                                            <div className="flex gap-1">
+                                              <Button
+                                                variant="default"
+                                                size="sm"
+                                                onClick={() => showApproveConfirmation(device)}
+                                                disabled={actionLoading === device.id}
+                                                className="bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white text-xs px-2 py-1 flex-1"
+                                              >
+                                                {actionLoading === device.id ? (
+                                                  <RefreshCw className="w-3 h-3 animate-spin" />
+                                                ) : (
+                                                  <>
+                                                    <CheckCircle className="w-3 h-3 mr-1" />
+                                                    Approve
+                                                  </>
+                                                )}
+                                              </Button>
+                                              <Button
+                                                variant="default"
+                                                size="sm"
+                                                onClick={() => showRejectConfirmation(device)}
+                                                disabled={actionLoading === device.id}
+                                                className="bg-red-600 text-white hover:bg-red-700 text-xs px-2 py-1 flex-1"
+                                              >
+                                                {actionLoading === device.id ? (
+                                                  <RefreshCw className="w-3 h-3 animate-spin" />
+                                                ) : (
+                                                  <>
+                                                    <XCircle className="w-3 h-3 mr-1" />
+                                                    Reject
+                                                  </>
+                                                )}
+                                              </Button>
+                                            </div>
+                                            {/* Temporary Access Button */}
+                                            {hasTemporaryAccess(device) ? (
+                                              <Button
+                                                variant="default"
+                                                size="sm"
+                                                onClick={() => handleRevokeTemporaryAccess(device.id)}
+                                                disabled={actionLoading === device.id}
+                                                className="w-full text-xs px-2 py-1 bg-orange-600 text-white hover:bg-orange-700"
+                                              >
+                                                {actionLoading === device.id ? (
+                                                  <RefreshCw className="w-3 h-3 animate-spin" />
+                                                ) : (
+                                                  <>
+                                                    <Timer className="w-3 h-3 mr-1" />
+                                                    Revoke Temp
+                                                  </>
+                                                )}
+                                              </Button>
+                                            ) : (
+                                              <Button
+                                                variant="default"
+                                                size="sm"
+                                                onClick={() => setTemporaryAccessDevice(device.id)}
+                                                disabled={actionLoading === device.id}
+                                                className="w-full text-xs px-2 py-1 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white"
+                                              >
+                                                <Timer className="w-3 h-3 mr-1" />
+                                                Temp Access
+                                              </Button>
+                                            )}
+                                          </div>
+                                        ) : device.status === "rejected" ? (
+                                          <div className="space-y-1">
+                                            <div className="flex gap-1">
+                                              <Button
+                                                variant="default"
+                                                size="sm"
+                                                onClick={() => showToggleConfirmation(device)}
+                                                disabled={actionLoading === device.id}
+                                                className="bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white text-xs px-2 py-1 flex-1"
+                                              >
+                                                {actionLoading === device.id ? (
+                                                  <RefreshCw className="w-3 h-3 animate-spin" />
+                                                ) : (
+                                                  <>
+                                                    <CheckCircle className="w-3 h-3 mr-1" />
+                                                    Approve
+                                                  </>
+                                                )}
+                                              </Button>
+                                              <Button
+                                                variant="destructive"
+                                                size="sm"
+                                                onClick={() => showDeleteConfirmation(device)}
+                                                disabled={actionLoading === device.id}
+                                                className="text-xs px-2 py-1 bg-red-600 dark:bg-red-700 text-white hover:bg-red-700 dark:hover:bg-red-800"
+                                              >
+                                                {actionLoading === device.id ? (
+                                                  <RefreshCw className="w-3 h-3 animate-spin" />
+                                                ) : (
+                                                  <>
+                                                    <Trash2 className="w-3 h-3 mr-1" />
+                                                    Delete
+                                                  </>
+                                                )}
+                                              </Button>
+                                            </div>
+                                            {/* Temporary Access Button for Rejected Devices */}
+                                            {hasTemporaryAccess(device) ? (
+                                              <Button
+                                                variant="default"
+                                                size="sm"
+                                                onClick={() => handleRevokeTemporaryAccess(device.id)}
+                                                disabled={actionLoading === device.id}
+                                                className="w-full text-xs px-2 py-1 bg-orange-600 text-white hover:bg-orange-700"
+                                              >
+                                                {actionLoading === device.id ? (
+                                                  <RefreshCw className="w-3 h-3 animate-spin" />
+                                                ) : (
+                                                  <>
+                                                    <Timer className="w-3 h-3 mr-1" />
+                                                    Revoke Temp
+                                                  </>
+                                                )}
+                                              </Button>
+                                            ) : (
+                                              <Button
+                                                variant="default"
+                                                size="sm"
+                                                onClick={() => setTemporaryAccessDevice(device.id)}
+                                                disabled={actionLoading === device.id}
+                                                className="w-full text-xs px-2 py-1 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white"
+                                              >
+                                                <Timer className="w-3 h-3 mr-1" />
+                                                Temp Access
+                                              </Button>
+                                            )}
+                                          </div>
+                                        ) : (
                                           <div className="flex gap-1">
-                                            <Button
-                                              variant="default"
-                                              size="sm"
-                                              onClick={() => showApproveConfirmation(device)}
-                                              disabled={actionLoading === device.id}
-                                              className="bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white text-xs px-2 py-1 flex-1"
-                                            >
-                                              {actionLoading === device.id ? (
-                                                <RefreshCw className="w-3 h-3 animate-spin" />
-                                              ) : (
-                                                <>
-                                                  <CheckCircle className="w-3 h-3 mr-1" />
-                                                  Approve
-                                                </>
-                                              )}
-                                            </Button>
                                             <Button
                                               variant="outline"
                                               size="sm"
-                                              onClick={() => showRejectConfirmation(device)}
+                                              onClick={() => showToggleConfirmation(device)}
                                               disabled={actionLoading === device.id}
                                               className="border-red-600 text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-700 dark:hover:bg-red-900/20 text-xs px-2 py-1 flex-1"
                                             >
@@ -1199,34 +1504,6 @@ const DeviceManagement = memo(({
                                                 <>
                                                   <XCircle className="w-3 h-3 mr-1" />
                                                   Reject
-                                                </>
-                                              )}
-                                            </Button>
-                                          </div>
-                                        ) : (
-                                          <div className="flex gap-1">
-                                            <Button
-                                              variant={device.status === "approved" ? "outline" : "default"}
-                                              size="sm"
-                                              onClick={() => showToggleConfirmation(device)}
-                                              disabled={actionLoading === device.id}
-                                              className={`text-xs px-2 py-1 flex-1 ${
-                                                device.status === "approved"
-                                                  ? "border-red-600 text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-700 dark:hover:bg-red-900/20"
-                                                  : "bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white"
-                                              }`}
-                                            >
-                                              {actionLoading === device.id ? (
-                                                <RefreshCw className="w-3 h-3 animate-spin" />
-                                              ) : device.status === "approved" ? (
-                                                <>
-                                                  <XCircle className="w-3 h-3 mr-1" />
-                                                  Reject
-                                                </>
-                                              ) : (
-                                                <>
-                                                  <CheckCircle className="w-3 h-3 mr-1" />
-                                                  Approve
                                                 </>
                                               )}
                                             </Button>
@@ -1273,11 +1550,11 @@ const DeviceManagement = memo(({
       >
         <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center text-base sm:text-lg">
+            <DialogTitle className="flex items-center text-base sm:text-lg text-foreground">
               <Settings className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
               Device Details
             </DialogTitle>
-            <DialogDescription className="text-sm">
+            <DialogDescription className="text-sm text-muted-foreground">
               Detailed information about this device
             </DialogDescription>
           </DialogHeader>
@@ -1435,6 +1712,92 @@ const DeviceManagement = memo(({
         </DialogContent>
       </Dialog>
 
+      {/* Temporary Access Dialog */}
+      <Dialog
+        open={!!temporaryAccessDevice}
+        onOpenChange={(open) => !open && setTemporaryAccessDevice(null)}
+      >
+        <DialogContent className="max-w-[95vw] sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base sm:text-lg text-foreground">
+              <Timer className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
+              Grant Temporary Access
+            </DialogTitle>
+            <DialogDescription className="text-sm text-muted-foreground">
+              Allow this device to stream temporarily. After the time expires, the device will revert to its default policy.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium text-foreground">Duration</label>
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <Button
+                  variant={temporaryAccessDuration === 30 ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setTemporaryAccessDuration(30)}
+                  className="text-sm"
+                >
+                  30 minutes
+                </Button>
+                <Button
+                  variant={temporaryAccessDuration === 60 ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setTemporaryAccessDuration(60)}
+                  className="text-sm"
+                >
+                  1 hour
+                </Button>
+                <Button
+                  variant={temporaryAccessDuration === 180 ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setTemporaryAccessDuration(180)}
+                  className="text-sm"
+                >
+                  3 hours
+                </Button>
+                <Button
+                  variant={temporaryAccessDuration === 360 ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setTemporaryAccessDuration(360)}
+                  className="text-sm"
+                >
+                  6 hours
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setTemporaryAccessDevice(null)}
+              disabled={actionLoading !== null}
+              className="w-full sm:w-auto"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => temporaryAccessDevice && handleGrantTemporaryAccess(temporaryAccessDevice, temporaryAccessDuration)}
+              disabled={actionLoading !== null}
+              className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              {actionLoading ? (
+                <>
+                  <RefreshCw className="w-3 h-3 sm:w-4 sm:h-4 mr-2 animate-spin" />
+                  Granting Access...
+                </>
+              ) : (
+                <>
+                  <Timer className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
+                  Grant Access
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Device Action Confirmation Dialog - Mobile responsive */}
       <Dialog
         open={!!confirmAction}
@@ -1442,7 +1805,7 @@ const DeviceManagement = memo(({
       >
         <DialogContent className="max-w-[95vw] sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
+            <DialogTitle className="flex items-center gap-2 text-base sm:text-lg text-foreground">
               {confirmAction?.action === "approve" && (
                 <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
               )}
@@ -1460,7 +1823,7 @@ const DeviceManagement = memo(({
                 ))}
               {confirmAction?.title}
             </DialogTitle>
-            <DialogDescription className="text-sm">
+            <DialogDescription className="text-sm text-muted-foreground">
               {confirmAction?.description}
             </DialogDescription>
           </DialogHeader>

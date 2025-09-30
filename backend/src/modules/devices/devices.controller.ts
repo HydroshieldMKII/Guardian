@@ -60,6 +60,23 @@ export class DevicesController {
     return { message: `Device ${id} renamed successfully` };
   }
 
+  @Post(':id/temporary-access')
+  async grantTemporaryAccess(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: { durationMinutes: number },
+  ): Promise<{ message: string }> {
+    await this.deviceTrackingService.grantTemporaryAccess(id, body.durationMinutes);
+    return { message: `Temporary access granted to device ${id} for ${body.durationMinutes} minutes` };
+  }
+
+  @Post(':id/revoke-temporary-access')
+  async revokeTemporaryAccess(
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<{ message: string }> {
+    await this.deviceTrackingService.revokeTemporaryAccess(id);
+    return { message: `Temporary access revoked for device ${id}` };
+  }
+
   @Post('revoke/:userId/:deviceIdentifier')
   async revokeDeviceByIdentifier(
     @Param('userId') userId: string,

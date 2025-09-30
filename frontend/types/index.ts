@@ -74,6 +74,9 @@ export interface UserDevice {
   firstSeen: string;
   lastSeen: string;
   sessionCount: number;
+  temporaryAccessUntil?: string;
+  temporaryAccessGrantedAt?: string;
+  temporaryAccessDurationMinutes?: number;
 }
 
 export interface AppSetting {

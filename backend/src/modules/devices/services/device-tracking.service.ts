@@ -225,9 +225,14 @@ export class DeviceTrackingService {
   }
 
   async approveDevice(deviceId: number): Promise<void> {
+    // First update the status to approved
     await this.userDeviceRepository.update(deviceId, {
       status: 'approved',
     });
+
+    // Then revoke any temporary access
+    await this.revokeTemporaryAccess(deviceId);
+
     this.logger.log(`Device ${deviceId} has been approved`);
   }
 
@@ -248,6 +253,62 @@ export class DeviceTrackingService {
       deviceName: newName,
     });
     this.logger.log(`Device ${deviceId} has been renamed to "${newName}"`);
+  }
+
+  async grantTemporaryAccess(deviceId: number, durationMinutes: number): Promise<void> {
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + durationMinutes * 60 * 1000);
+
+    await this.userDeviceRepository.update(deviceId, {
+      temporaryAccessUntil: expiresAt,
+      temporaryAccessGrantedAt: now,
+      temporaryAccessDurationMinutes: durationMinutes,
+    });
+
+    this.logger.log(`Granted temporary access to device ${deviceId} for ${durationMinutes} minutes (expires at ${expiresAt.toISOString()})`);
+  }
+
+  async revokeTemporaryAccess(deviceId: number): Promise<void> {
+    await this.userDeviceRepository
+      .createQueryBuilder()
+      .update(UserDevice)
+      .set({ 
+        temporaryAccessUntil: () => 'NULL',
+        temporaryAccessGrantedAt: () => 'NULL',
+        temporaryAccessDurationMinutes: () => 'NULL'
+      })
+      .where('id = :deviceId', { deviceId })
+      .execute();
+
+    this.logger.log(`Revoked temporary access for device ${deviceId}`);
+  }
+
+  async isTemporaryAccessValid(device: UserDevice): Promise<boolean> {
+    if (!device.temporaryAccessUntil) {
+      return false;
+    }
+
+    const now = new Date();
+    const isValid = device.temporaryAccessUntil > now;
+
+    if (!isValid) {
+      // Temporary access has expired, clean it up
+      await this.revokeTemporaryAccess(device.id);
+      this.logger.log(`Temporary access expired for device ${device.id}, cleaned up`);
+    }
+
+    return isValid;
+  }
+
+  async getTemporaryAccessTimeLeft(device: UserDevice): Promise<number | null> {
+    if (!device.temporaryAccessUntil) {
+      return null;
+    }
+
+    const now = new Date();
+    const timeLeft = device.temporaryAccessUntil.getTime() - now.getTime();
+    
+    return timeLeft > 0 ? Math.ceil(timeLeft / (60 * 1000)) : 0; // Return minutes left
   }
 
   async clearSessionKey(sessionKey: string): Promise<void> {
