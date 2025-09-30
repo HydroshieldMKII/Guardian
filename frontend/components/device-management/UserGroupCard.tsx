@@ -100,9 +100,11 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
                   </h3>
                   <p className="text-xs sm:text-sm text-muted-foreground">
                     {group.devices.length} device{group.devices.length !== 1 ? 's' : ''}
-                    {group.pendingCount > 0 && ` • ${group.pendingCount} pending`}
-                    {group.approvedCount > 0 && ` • ${group.approvedCount} approved`}
-                    {group.rejectedCount > 0 && ` • ${group.rejectedCount} rejected`}
+                    {group.pendingCount > 0 && (
+                      <span className="text-yellow-600 dark:text-yellow-400">
+                        {" • "}{group.pendingCount} pending
+                      </span>
+                    )}
                   </p>
                 </div>
                 <div className="hidden sm:flex">

@@ -1,21 +1,16 @@
 import React from 'react';
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { 
   CheckCircle, 
   XCircle, 
   Trash2,
-  Edit2,
-  Save,
-  X,
   RefreshCw,
   Timer,
   Eye,
-  Clock,
-  Info,
   Monitor,
   MapPin,
-  Activity
+  Activity,
+  Clock
 } from "lucide-react";
 import { UserDevice, AppSetting } from '@/types';
 import { getDeviceIcon, DeviceStatus, ClickableIP } from './SharedComponents';
@@ -83,7 +78,6 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
           </div>
         </div>
       )}
-
       {/* Mobile-first layout */}
       <div className="space-y-4 sm:space-y-0">
         {/* Mobile: Stacked layout */}
@@ -96,55 +90,11 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between gap-3 mb-1">
-                  {editingDevice === device.id ? (
-                    <div className="flex items-center gap-2 flex-1">
-                      <Input
-                        value={newDeviceName}
-                        onChange={(e) => onNewDeviceNameChange(e.target.value)}
-                        className="text-sm flex-1"
-                        placeholder="Enter device name"
-                      />
-                      <Button
-                        size="sm"
-                        variant="default"
-                        onClick={() => onRename(device.id, newDeviceName)}
-                        disabled={!newDeviceName.trim() || actionLoading === device.id}
-                        className="px-2"
-                      >
-                        {actionLoading === device.id ? (
-                          <RefreshCw className="w-3 h-3 animate-spin" />
-                        ) : (
-                          <Save className="w-3 h-3" />
-                        )}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={onCancelEdit}
-                        disabled={actionLoading === device.id}
-                        className="px-2"
-                      >
-                        <X className="w-3 h-3" />
-                      </Button>
-                    </div>
-                  ) : (
-                    <>
-                      <h4 className="font-semibold text-foreground truncate text-base">
-                        {device.deviceName || device.deviceIdentifier}
-                      </h4>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => onEdit(device)}
-                        className="px-1 h-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                        title="Rename device"
-                      >
-                        <Edit2 className="w-3 h-3" />
-                      </Button>
-                    </>
-                  )}
+                  <h4 className="font-semibold text-foreground truncate text-base">
+                    {device.deviceName || device.deviceIdentifier}
+                  </h4>
+                  <DeviceStatus device={device} />
                 </div>
-                <DeviceStatus device={device} />
               </div>
             </div>
           </div>
@@ -257,73 +207,56 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
                       </>
                     )}
                   </Button>
-                ) : (
-                  shouldShowGrantTempAccess(device) && (
-                    <Button
-                      variant="default"
-                      size="sm"
-                      onClick={() => onGrantTempAccess(device.id)}
-                      disabled={actionLoading === device.id}
-                      className="w-full text-sm px-4 py-2.5 bg-blue-600 text-white hover:bg-blue-700 font-medium shadow-sm hover:shadow-md transition-all"
-                    >
-                      {actionLoading === device.id ? (
-                        <RefreshCw className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <>
-                          <Timer className="w-4 h-4 mr-1.5" />
-                          <span>Grant Temp Access</span>
-                        </>
-                      )}
-                    </Button>
-                  )
-                )}
-                <div className="flex justify-center">
+                ) : shouldShowGrantTempAccess(device) ? (
                   <Button
-                    variant="ghost"
+                    variant="default"
                     size="sm"
-                    onClick={() => onDelete(device)}
+                    onClick={() => onGrantTempAccess(device.id)}
                     disabled={actionLoading === device.id}
-                    className="text-xs text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-900/20"
+                    className="w-full text-sm px-4 py-2.5 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white font-medium shadow-sm hover:shadow-md transition-all"
+                  >
+                    <Timer className="w-4 h-4 mr-1.5" />
+                    <span>Grant Temp Access</span>
+                  </Button>
+                ) : null}
+              </div>
+            ) : device.status === "rejected" ? (
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={() => onToggleApproval(device)}
+                    disabled={actionLoading === device.id}
+                    className="bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white text-xs px-3 py-2"
                   >
                     {actionLoading === device.id ? (
                       <RefreshCw className="w-3 h-3 animate-spin" />
                     ) : (
                       <>
-                        <Trash2 className="w-3 h-3 mr-1.5" />
+                        <CheckCircle className="w-3 h-3 mr-1" />
+                        <span>Approve</span>
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => onDelete(device)}
+                    disabled={actionLoading === device.id}
+                    className="text-xs px-3 py-2 bg-red-600 dark:bg-red-700 text-white hover:bg-red-700 dark:hover:bg-red-800"
+                  >
+                    {actionLoading === device.id ? (
+                      <RefreshCw className="w-3 h-3 animate-spin" />
+                    ) : (
+                      <>
+                        <Trash2 className="w-3 h-3 mr-1" />
                         <span>Delete</span>
                       </>
                     )}
                   </Button>
                 </div>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                <Button
-                  variant={device.status === "approved" ? "default" : "default"}
-                  size="sm"
-                  onClick={() => onToggleApproval(device)}
-                  disabled={actionLoading === device.id}
-                  className={`w-full text-sm px-4 py-2.5 font-medium shadow-sm hover:shadow-md transition-all ${
-                    device.status === "approved" 
-                      ? "bg-red-600 text-white hover:bg-red-700"
-                      : "bg-green-600 hover:bg-green-700 text-white"
-                  }`}
-                >
-                  {actionLoading === device.id ? (
-                    <RefreshCw className="w-4 h-4 animate-spin" />
-                  ) : device.status === "approved" ? (
-                    <>
-                      <XCircle className="w-4 h-4 mr-1.5" />
-                      <span>Reject</span>
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle className="w-4 h-4 mr-1.5" />
-                      <span>Approve</span>
-                    </>
-                  )}
-                </Button>
-                {/* Temporary Access Button */}
+                {/* Temporary Access Button for Rejected Devices */}
                 {hasTemporaryAccess(device) ? (
                   <Button
                     variant="default"
@@ -341,274 +274,288 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
                       </>
                     )}
                   </Button>
-                ) : (
-                  shouldShowGrantTempAccess(device) && (
-                    <Button
-                      variant="default"
-                      size="sm"
-                      onClick={() => onGrantTempAccess(device.id)}
-                      disabled={actionLoading === device.id}
-                      className="w-full text-sm px-4 py-2.5 bg-blue-600 text-white hover:bg-blue-700 font-medium shadow-sm hover:shadow-md transition-all"
-                    >
-                      {actionLoading === device.id ? (
-                        <RefreshCw className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <>
-                          <Timer className="w-4 h-4 mr-1.5" />
-                          <span>Grant Temp Access</span>
-                        </>
-                      )}
-                    </Button>
-                  )
-                )}
-                <div className="flex justify-center">
+                ) : shouldShowGrantTempAccess(device) ? (
                   <Button
-                    variant="ghost"
+                    variant="default"
                     size="sm"
-                    onClick={() => onDelete(device)}
+                    onClick={() => onGrantTempAccess(device.id)}
                     disabled={actionLoading === device.id}
-                    className="text-xs text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-900/20"
+                    className="w-full text-sm px-4 py-2.5 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white font-medium shadow-sm hover:shadow-md transition-all"
                   >
-                    {actionLoading === device.id ? (
-                      <RefreshCw className="w-3 h-3 animate-spin" />
-                    ) : (
-                      <>
-                        <Trash2 className="w-3 h-3 mr-1.5" />
-                        <span>Delete</span>
-                      </>
-                    )}
+                    <Timer className="w-4 h-4 mr-1.5" />
+                    <span>Grant Temp Access</span>
                   </Button>
-                </div>
+                ) : null}
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onToggleApproval(device)}
+                  disabled={actionLoading === device.id}
+                  className="border-red-600 text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-700 dark:hover:bg-red-900/20 text-xs px-3 py-2"
+                >
+                  {actionLoading === device.id ? (
+                    <RefreshCw className="w-3 h-3 animate-spin" />
+                  ) : (
+                    <>
+                      <XCircle className="w-3 h-3 mr-1" />
+                      <span>Reject</span>
+                    </>
+                  )}
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => onDelete(device)}
+                  disabled={actionLoading === device.id}
+                  className="text-xs px-3 py-2 bg-red-600 dark:bg-red-700 text-white hover:bg-red-700 dark:hover:bg-red-800"
+                >
+                  {actionLoading === device.id ? (
+                    <RefreshCw className="w-3 h-3 animate-spin" />
+                  ) : (
+                    <>
+                      <Trash2 className="w-3 h-3 mr-1" />
+                      <span>Delete</span>
+                    </>
+                  )}
+                </Button>
               </div>
             )}
           </div>
         </div>
 
-        {/* Desktop: Inline layout - TODO: Add desktop layout matching original */}
-        <div className="hidden sm:block">
-          {/* Keep existing desktop layout for now */}
-          <div className="p-4 pb-2 sm:pb-4">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              {/* Device identification */}
-              <div className="flex items-center space-x-3 min-w-0 flex-1">
-                {getDeviceIcon(device.devicePlatform, device.deviceProduct)}
-                <div className="min-w-0 flex-1">
-                  {editingDevice === device.id ? (
-                    <div className="flex items-center gap-2">
-                      <Input
-                        value={newDeviceName}
-                        onChange={(e) => onNewDeviceNameChange(e.target.value)}
-                        className="text-sm flex-1"
-                        placeholder="Enter device name"
-                      />
-                      <Button
-                        size="sm"
-                        variant="default"
-                        onClick={() => onRename(device.id, newDeviceName)}
-                        disabled={!newDeviceName.trim() || actionLoading === device.id}
-                        className="px-2"
-                      >
-                        {actionLoading === device.id ? (
-                          <RefreshCw className="w-3 h-3 animate-spin" />
-                        ) : (
-                          <Save className="w-3 h-3" />
-                        )}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={onCancelEdit}
-                        disabled={actionLoading === device.id}
-                        className="px-2"
-                      >
-                        <X className="w-3 h-3" />
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2">
-                      <h4 className="font-medium text-sm sm:text-base text-foreground truncate flex-1">
-                        {device.deviceName || device.deviceIdentifier}
-                      </h4>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => onEdit(device)}
-                        className="px-1 h-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                        title="Rename device"
-                      >
-                        <Edit2 className="w-3 h-3" />
-                      </Button>
-                    </div>
-                  )}
-                  <p className="text-xs sm:text-sm text-muted-foreground truncate mt-1">
-                    {device.devicePlatform && device.deviceProduct ? 
-                      `${device.devicePlatform} • ${device.deviceProduct}` : 
-                      device.devicePlatform || device.deviceProduct || "Unknown Device"
-                    }
-                    {device.deviceVersion && ` • v${device.deviceVersion}`}
-                  </p>
+        {/* Desktop: Side-by-side layout */}
+        <div className="hidden sm:flex sm:items-start sm:justify-between sm:gap-6 p-4 pt-5">
+          <div className="flex-1 min-w-0">
+            {/* Device Header */}
+            <div className="flex items-center justify-between gap-3 mb-3">
+              <div className="flex items-center space-x-3 flex-1 min-w-0">
+                <div className="flex-shrink-0">
+                  {getDeviceIcon(device.devicePlatform, device.deviceProduct)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-semibold text-foreground truncate text-base">
+                    {device.deviceName || device.deviceIdentifier}
+                  </h4>
                 </div>
               </div>
-
-              {/* Status badge - Desktop */}
-              <div className="flex items-center gap-2">
+              <div className="flex-shrink-0">
                 <DeviceStatus device={device} />
               </div>
             </div>
-          </div>
-
-          {/* Device details - Desktop grid */}
-          <div className="px-4 pb-2">
-            <div className="grid grid-cols-4 gap-4 text-sm">
-              <div>
-                <span className="text-muted-foreground">IP Address:</span>
-                <div className="font-medium truncate mt-0.5">
-                  <ClickableIP ipAddress={device.ipAddress} />
-                </div>
+            {/* Device Info Grid - Desktop */}
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div className="flex items-center gap-2 p-2 bg-muted/20 rounded-lg">
+                <Monitor className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                <span className="truncate font-medium text-foreground">
+                  {device.devicePlatform || "Unknown Platform"}
+                </span>
               </div>
-              <div>
-                <span className="text-muted-foreground">Sessions:</span>
-                <div className="font-medium mt-0.5">{device.sessionCount}</div>
+              <div className="flex items-center gap-2 p-2 bg-muted/20 rounded-lg">
+                <MapPin className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                <ClickableIP ipAddress={device.ipAddress} />
               </div>
-              <div>
-                <span className="text-muted-foreground">First Seen:</span>
-                <div className="font-medium mt-0.5">
-                  {new Date(device.firstSeen).toLocaleDateString()}
-                </div>
+              <div className="flex items-center gap-2 p-2 bg-muted/20 rounded-lg">
+                <Activity className="w-4 h-4 text-muted-foreground" />
+                <span className="font-medium text-foreground">
+                  {device.sessionCount} streams
+                </span>
               </div>
-              <div>
-                <span className="text-muted-foreground">Last Seen:</span>
-                <div className="font-medium mt-0.5">
+              <div className="flex items-center gap-2 p-2 bg-muted/20 rounded-lg">
+                <Clock className="w-4 h-4 text-muted-foreground" />
+                <span className="font-medium text-foreground">
                   {new Date(device.lastSeen).toLocaleDateString()}
-                </div>
+                </span>
               </div>
             </div>
           </div>
 
-          {/* Action buttons - Desktop */}
-          <div className="px-4 pb-4">
-            <div className="flex gap-2 items-center justify-between">
-              {/* Primary actions */}
-              <div className="flex gap-2">
-                {device.status === "pending" && (
-                  <>
-                    <Button
-                      size="sm"
-                      variant="default"
-                      onClick={() => onApprove(device)}
-                      disabled={actionLoading === device.id}
-                      className="bg-green-600 hover:bg-green-700 text-white text-xs"
-                    >
-                      {actionLoading === device.id ? (
-                        <RefreshCw className="w-3 h-3 animate-spin" />
-                      ) : (
-                        <CheckCircle className="w-3 h-3 mr-1" />
-                      )}
-                      Approve
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => onReject(device)}
-                      disabled={actionLoading === device.id}
-                      className="border-red-600 text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-700 dark:hover:bg-red-900/20 text-xs"
-                    >
-                      {actionLoading === device.id ? (
-                        <RefreshCw className="w-3 h-3 animate-spin" />
-                      ) : (
-                        <XCircle className="w-3 h-3 mr-1" />
-                      )}
-                      Reject
-                    </Button>
-                  </>
-                )}
+          {/* Action Buttons - Desktop (Right side) */}
+          <div className="flex flex-col gap-3 min-w-0 w-52">
+            {/* Details Button */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onShowDetails(device)}
+              className="text-sm px-3 py-2 w-full font-medium shadow-sm hover:shadow-md transition-all"
+            >
+              <Eye className="w-4 h-4 mr-2" />
+              View Details
+            </Button>
 
-                {device.status !== "pending" && (
+            {/* Action Buttons Row */}
+            {device.status === "pending" ? (
+              <div className="space-y-2">
+                <div className="flex gap-2">
                   <Button
+                    variant="default"
                     size="sm"
-                    variant={device.status === "approved" ? "outline" : "default"}
-                    onClick={() => onToggleApproval(device)}
+                    onClick={() => onApprove(device)}
                     disabled={actionLoading === device.id}
-                    className={`text-xs ${
-                      device.status === "approved"
-                        ? "border-red-600 text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-700 dark:hover:bg-red-900/20"
-                        : "bg-green-600 hover:bg-green-700 text-white"
-                    }`}
+                    className="bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white text-sm px-3 py-2 flex-1 font-medium shadow-sm hover:shadow-md transition-all"
                   >
                     {actionLoading === device.id ? (
-                      <RefreshCw className="w-3 h-3 animate-spin" />
-                    ) : device.status === "approved" ? (
-                      <XCircle className="w-3 h-3 mr-1" />
+                      <RefreshCw className="w-4 h-4 animate-spin" />
                     ) : (
-                      <CheckCircle className="w-3 h-3 mr-1" />
+                      <>
+                        <CheckCircle className="w-4 h-4 mr-1" />
+                        Approve
+                      </>
                     )}
-                    {device.status === "approved" ? "Reject" : "Approve"}
                   </Button>
-                )}
-              </div>
-
-              {/* Secondary actions */}
-              <div className="flex gap-1">
-                {/* Temporary Access Controls */}
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={() => onReject(device)}
+                    disabled={actionLoading === device.id}
+                    className="bg-red-600 text-white hover:bg-red-700 text-sm px-3 py-2 flex-1 font-medium shadow-sm hover:shadow-md transition-all"
+                  >
+                    {actionLoading === device.id ? (
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <>
+                        <XCircle className="w-4 h-4 mr-1" />
+                        Reject
+                      </>
+                    )}
+                  </Button>
+                </div>
+                {/* Temporary Access Button */}
                 {hasTemporaryAccess(device) ? (
                   <Button
+                    variant="default"
                     size="sm"
-                    variant="outline"
                     onClick={() => onRevokeTempAccess(device.id)}
                     disabled={actionLoading === device.id}
-                    className="text-xs"
+                    className="w-full text-xs px-2 py-1 bg-orange-600 text-white hover:bg-orange-700"
                   >
                     {actionLoading === device.id ? (
                       <RefreshCw className="w-3 h-3 animate-spin" />
                     ) : (
-                      <Clock className="w-3 h-3 mr-1" />
-                    )}
-                    Revoke Access
-                  </Button>
-                ) : (
-                  shouldShowGrantTempAccess(device) && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => onGrantTempAccess(device.id)}
-                      disabled={actionLoading === device.id}
-                      className="text-xs border-blue-600 text-blue-600 hover:bg-blue-50 dark:border-blue-700 dark:text-blue-700 dark:hover:bg-blue-900/20"
-                    >
-                      {actionLoading === device.id ? (
-                        <RefreshCw className="w-3 h-3 animate-spin" />
-                      ) : (
+                      <>
                         <Timer className="w-3 h-3 mr-1" />
-                      )}
-                      Grant Temp Access
-                    </Button>
-                  )
-                )}
-
-                {/* Details and Delete */}
+                        Revoke Temp
+                      </>
+                    )}
+                  </Button>
+                ) : shouldShowGrantTempAccess(device) ? (
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={() => onGrantTempAccess(device.id)}
+                    disabled={actionLoading === device.id}
+                    className="w-full text-xs px-2 py-1 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white"
+                  >
+                    <Timer className="w-3 h-3 mr-1" />
+                    Temp Access
+                  </Button>
+                ) : null}
+              </div>
+            ) : device.status === "rejected" ? (
+              <div className="space-y-2">
+                <div className="flex gap-1">
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={() => onToggleApproval(device)}
+                    disabled={actionLoading === device.id}
+                    className="bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white text-xs px-2 py-1 flex-1"
+                  >
+                    {actionLoading === device.id ? (
+                      <RefreshCw className="w-3 h-3 animate-spin" />
+                    ) : (
+                      <>
+                        <CheckCircle className="w-3 h-3 mr-1" />
+                        Approve
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => onDelete(device)}
+                    disabled={actionLoading === device.id}
+                    className="text-xs px-2 py-1 bg-red-600 dark:bg-red-700 text-white hover:bg-red-700 dark:hover:bg-red-800"
+                  >
+                    {actionLoading === device.id ? (
+                      <RefreshCw className="w-3 h-3 animate-spin" />
+                    ) : (
+                      <>
+                        <Trash2 className="w-3 h-3 mr-1" />
+                        Delete
+                      </>
+                    )}
+                  </Button>
+                </div>
+                {/* Temporary Access Button for Rejected Devices */}
+                {hasTemporaryAccess(device) ? (
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={() => onRevokeTempAccess(device.id)}
+                    disabled={actionLoading === device.id}
+                    className="w-full text-xs px-2 py-1 bg-orange-600 text-white hover:bg-orange-700"
+                  >
+                    {actionLoading === device.id ? (
+                      <RefreshCw className="w-3 h-3 animate-spin" />
+                    ) : (
+                      <>
+                        <Timer className="w-3 h-3 mr-1" />
+                        Revoke Temp
+                      </>
+                    )}
+                  </Button>
+                ) : shouldShowGrantTempAccess(device) ? (
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={() => onGrantTempAccess(device.id)}
+                    disabled={actionLoading === device.id}
+                    className="w-full text-xs px-2 py-1 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white"
+                  >
+                    <Timer className="w-3 h-3 mr-1" />
+                    Temp Access
+                  </Button>
+                ) : null}
+              </div>
+            ) : (
+              <div className="flex gap-1">
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
-                  onClick={() => onShowDetails(device)}
-                  className="px-2 h-8 text-xs"
-                >
-                  <Eye className="w-3 h-3" />
-                </Button>
-                
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onDelete(device)}
+                  onClick={() => onToggleApproval(device)}
                   disabled={actionLoading === device.id}
-                  className="px-2 h-8 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-900/20"
+                  className="border-red-600 text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-700 dark:hover:bg-red-900/20 text-xs px-2 py-1 flex-1"
                 >
                   {actionLoading === device.id ? (
                     <RefreshCw className="w-3 h-3 animate-spin" />
                   ) : (
-                    <Trash2 className="w-3 h-3" />
+                    <>
+                      <XCircle className="w-3 h-3 mr-1" />
+                      Reject
+                    </>
+                  )}
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => onDelete(device)}
+                  disabled={actionLoading === device.id}
+                  className="text-xs px-2 py-1 bg-red-600 dark:bg-red-700 text-white hover:bg-red-700 dark:hover:bg-red-800"
+                >
+                  {actionLoading === device.id ? (
+                    <RefreshCw className="w-3 h-3 animate-spin" />
+                  ) : (
+                    <>
+                      <Trash2 className="w-3 h-3 mr-1" />
+                      Delete
+                    </>
                   )}
                 </Button>
               </div>
-            </div>
+            )}
           </div>
         </div>
       </div>
