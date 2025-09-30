@@ -24,7 +24,7 @@ import {
   Signal,
   Download,
 } from "lucide-react";
-import { StreamsList } from "./streams-list";
+import StreamsList from "./streams-list";
 import { DeviceManagement } from "./device-management";
 
 import { DashboardStats, UnifiedDashboardData, PlexStatus } from "@/types";
