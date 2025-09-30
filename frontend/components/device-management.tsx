@@ -1076,26 +1076,9 @@ const DeviceManagement = memo(({
                               </div>
                             </div>
                             
-                            {/* Mobile: Stack badges vertically, Desktop: Horizontal */}
-                            <div className="flex flex-wrap gap-1 sm:gap-2 sm:ml-2">
-                              <div className="sm:hidden">
-                                {group.user.preference && getUserPreferenceBadge(group.user.preference.defaultBlock)}
-                              </div>
-                              {group.pendingCount > 0 && (
-                                <Badge variant="secondary" className="bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 text-xs">
-                                  {group.pendingCount} pending
-                                </Badge>
-                              )}
-                              {group.approvedCount > 0 && (
-                                <Badge variant="secondary" className="bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 text-xs">
-                                  {group.approvedCount} approved
-                                </Badge>
-                              )}
-                              {group.rejectedCount > 0 && (
-                                <Badge variant="secondary" className="bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 text-xs">
-                                  {group.rejectedCount} rejected
-                                </Badge>
-                              )}
+                            {/* Mobile: Show preference badge */}
+                            <div className="sm:hidden">
+                              {group.user.preference && getUserPreferenceBadge(group.user.preference.defaultBlock)}
                             </div>
                           </div>
                         </div>
@@ -1194,18 +1177,11 @@ const DeviceManagement = memo(({
                                             {getDeviceIcon(device.devicePlatform, device.deviceProduct)}
                                           </div>
                                           <div className="flex-1 min-w-0">
-                                            <h4 className="font-semibold text-foreground truncate text-base mb-1">
-                                              {device.deviceName || device.deviceIdentifier}
-                                            </h4>
-                                            <div className="flex items-center gap-2">
-                                              <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                                                device.status === 'approved' ? 'bg-green-500' :
-                                                device.status === 'rejected' ? 'bg-red-500' :
-                                                'bg-yellow-500'
-                                              }`} />
-                                              <span className="text-xs font-medium text-muted-foreground capitalize">
-                                                {device.status}
-                                              </span>
+                                            <div className="flex items-center justify-between gap-3 mb-1">
+                                              <h4 className="font-semibold text-foreground truncate text-base">
+                                                {device.deviceName || device.deviceIdentifier}
+                                              </h4>
+                                              {getDeviceStatus(device)}
                                             </div>
                                           </div>
                                         </div>
@@ -1442,17 +1418,19 @@ const DeviceManagement = memo(({
                                     <div className="hidden sm:flex sm:items-start sm:justify-between sm:gap-6 p-4 pt-5">
                                       <div className="flex-1 min-w-0">
                                         {/* Device Header */}
-                                        <div className="flex items-center space-x-3 mb-3">
-                                          <div className="flex-shrink-0">
-                                            {getDeviceIcon(device.devicePlatform, device.deviceProduct)}
-                                          </div>
-                                          <div className="flex-1 min-w-0">
-                                            <h4 className="font-semibold text-foreground truncate text-base mb-1">
-                                              {device.deviceName || device.deviceIdentifier}
-                                            </h4>
-                                            <div className="flex items-center gap-2">
-                                              {getDeviceStatus(device)}
+                                        <div className="flex items-center justify-between gap-3 mb-3">
+                                          <div className="flex items-center space-x-3 flex-1 min-w-0">
+                                            <div className="flex-shrink-0">
+                                              {getDeviceIcon(device.devicePlatform, device.deviceProduct)}
                                             </div>
+                                            <div className="flex-1 min-w-0">
+                                              <h4 className="font-semibold text-foreground truncate text-base">
+                                                {device.deviceName || device.deviceIdentifier}
+                                              </h4>
+                                            </div>
+                                          </div>
+                                          <div className="flex-shrink-0">
+                                            {getDeviceStatus(device)}
                                           </div>
                                         </div>
                                         {/* Device Info Grid - Desktop */}
