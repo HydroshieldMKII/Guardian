@@ -366,38 +366,39 @@ const DeviceManagement = memo(({
       const { userId, deviceIdentifier } = navigationTarget;
       
       // First expand the user if not already expanded
-      if (!expandedUsers.has(userId)) {
+      const wasExpanded = expandedUsers.has(userId);
+      if (!wasExpanded) {
         const newExpanded = new Set(expandedUsers);
         newExpanded.add(userId);
         setExpandedUsers(newExpanded);
       }
       
-      // Use setTimeout to allow for DOM updates
+      // Use appropriate delay based on whether expansion is needed
+      const delay = wasExpanded ? 100 : 600; // Longer delay if we need to wait for expansion
+      
       setTimeout(() => {
-        // Scroll to user first
-        const userElement = document.querySelector(`[data-user-id="${userId}"]`);
-        if (userElement) {
-          userElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        const deviceElement = document.querySelector(`[data-device-identifier="${deviceIdentifier}"]`);
+        if (deviceElement) {
+          // Scroll directly to the device with some padding above
+          deviceElement.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'center',
+            inline: 'nearest'
+          });
           
-          // Then scroll to device after user is visible
+          // Add highlight effect
           setTimeout(() => {
-            const deviceElement = document.querySelector(`[data-device-identifier="${deviceIdentifier}"]`);
-            if (deviceElement) {
-              deviceElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-              
-              // Add highlight effect
-              deviceElement.classList.add('ring-2', 'ring-blue-500', 'ring-opacity-75');
-              setTimeout(() => {
-                deviceElement.classList.remove('ring-2', 'ring-blue-500', 'ring-opacity-75');
-                // Call completion callback
-                if (onNavigationComplete) {
-                  onNavigationComplete();
-                }
-              }, 1000);
-            }
-          }, 500); // Wait for user expansion animation
+            deviceElement.classList.add('ring-2', 'ring-blue-500', 'ring-opacity-75');
+            setTimeout(() => {
+              deviceElement.classList.remove('ring-2', 'ring-blue-500', 'ring-opacity-75');
+              // Call completion callback
+              if (onNavigationComplete) {
+                onNavigationComplete();
+              }
+            }, 1500);
+          }, 200); // Small delay before highlighting
         }
-      }, 100); // Wait for state update
+      }, delay);
     }
   }, [navigationTarget, userGroups.length, onNavigationComplete]);
 
