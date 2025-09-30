@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const BACKEND_URL = process.env.NODE_ENV === "production" 
-  ? "http://backend:3001" 
-  : "http://localhost:3001";
+const BACKEND_URL = process.env.DEPLOYMENT_MODE === "standalone" 
+  ? "http://localhost:3001" 
+  : "http://backend:3001";
 
 export async function GET() {
   try {
