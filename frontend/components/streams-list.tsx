@@ -9,7 +9,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Tv,
   RefreshCw,
@@ -225,7 +224,7 @@ export default function StreamsList({
         </div>
 
         {error ? (
-          <div className="flex flex-col items-center justify-center h-32 sm:h-40 text-red-600 dark:text-red-700 text-center">
+          <div className="flex flex-col items-center justify-center py-16 text-red-600 dark:text-red-700 text-center">
             <AlertCircle className="w-8 h-8 mb-2" />
             <p className="text-sm font-medium mb-1">Connection Error</p>
             <p className="text-xs text-muted-foreground px-4">{error}</p>
@@ -239,43 +238,38 @@ export default function StreamsList({
             </Button>
           </div>
         ) : filteredStreams.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-[70vh] max-h-[700px] sm:max-h-[800px] lg:max-h-[900px] text-muted-foreground text-center">
+          <div className="flex items-center justify-center py-16 text-muted-foreground">
             {searchTerm ? (
               <>
-                <Search className="w-8 h-8 mb-2" />
-                <p className="text-sm font-medium mb-1">No streams found</p>
-                <p className="text-xs text-muted-foreground">
-                  Try adjusting your search terms
-                </p>
+                <Search className="w-6 h-6 mr-2" />
+                No streams match your search
               </>
             ) : (
               <>
-                <Pause className="w-8 h-8 mb-2" />
-                <p className="text-sm font-medium mb-1">No Active Streams</p>
+                <Pause className="w-6 h-6 mr-2" />
+                No active streams
               </>
             )}
           </div>
         ) : (
-          <ScrollArea className="h-[70vh] max-h-[700px] sm:max-h-[800px] lg:max-h-[900px]">
-            <div className="space-y-3 sm:space-y-4">
-              {filteredStreams.map((stream, index) => (
-                <StreamCard
-                  key={stream.sessionKey || index}
-                  stream={stream}
-                  index={index}
-                  isExpanded={expandedStream === stream.sessionKey}
-                  isRevoking={revokingAuth === stream.sessionKey}
-                  onToggleExpand={() =>
-                    setExpandedStream(
-                      expandedStream === stream.sessionKey ? null : stream.sessionKey
-                    )
-                  }
-                  onRemoveAccess={() => setConfirmRemoveStream(stream)}
-                  onNavigateToDevice={onNavigateToDevice}
-                />
-              ))}
-            </div>
-          </ScrollArea>
+          <div className="space-y-3 sm:space-y-4">
+            {filteredStreams.map((stream, index) => (
+              <StreamCard
+                key={stream.sessionKey || index}
+                stream={stream}
+                index={index}
+                isExpanded={expandedStream === stream.sessionKey}
+                isRevoking={revokingAuth === stream.sessionKey}
+                onToggleExpand={() =>
+                  setExpandedStream(
+                    expandedStream === stream.sessionKey ? null : stream.sessionKey
+                  )
+                }
+                onRemoveAccess={() => setConfirmRemoveStream(stream)}
+                onNavigateToDevice={onNavigateToDevice}
+              />
+            ))}
+          </div>
         )}
       </CardContent>
 

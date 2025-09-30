@@ -115,9 +115,9 @@ export class SessionTerminationService {
       if (device.status === 'rejected') {
         // Check if rejected device has valid temporary access
         if (await this.deviceTrackingService.isTemporaryAccessValid(device)) {
-          this.logger.debug(
-            `Rejected device ${deviceIdentifier} for user ${userId} has valid temporary access, allowing session.`,
-          );
+          // this.logger.debug(
+          //   `Rejected device ${deviceIdentifier} for user ${userId} has valid temporary access, allowing session.`,
+          // );
           return false; // Don't stop - temporary access overrides rejection
         }
         
