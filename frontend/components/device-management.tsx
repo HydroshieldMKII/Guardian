@@ -640,6 +640,7 @@ const DeviceManagement = memo(({
 
   // Validate if duration is reasonable (not more than 1 year)
   const isValidDuration = (value: number, unit: 'minutes' | 'hours' | 'days' | 'weeks'): boolean => {
+    if (value <= 0) return false; // Invalid if empty or zero
     const totalMinutes = convertToMinutes(value, unit);
     const oneYearInMinutes = 365 * 24 * 60; // 525,600 minutes
     return totalMinutes > 0 && totalMinutes <= oneYearInMinutes;
@@ -1536,7 +1537,7 @@ const DeviceManagement = memo(({
                                             ) : null}
                                           </div>
                                         ) : device.status === "rejected" ? (
-                                          <div className="space-y-1">
+                                          <div className="space-y-2">
                                             <div className="flex gap-1">
                                               <Button
                                                 variant="default"
@@ -1937,15 +1938,20 @@ const DeviceManagement = memo(({
               <label className="text-sm font-medium text-foreground">Duration</label>
               <div className="mt-2 flex gap-2">
                 <Input
-                  type="number"
-                  min="1"
-                  max="999"
-                  value={durationValue}
+                  type="text"
+                  value={durationValue === 0 ? '' : durationValue.toString()}
                   onChange={(e) => {
-                    const value = parseInt(e.target.value) || 1;
-                    setDurationValue(Math.max(1, Math.min(999, value)));
+                    const value = e.target.value;
+                    if (value === '') {
+                      setDurationValue(0);
+                    } else if (/^\d+$/.test(value)) {
+                      const numValue = parseInt(value);
+                      if (numValue >= 1 && numValue <= 999) {
+                        setDurationValue(numValue);
+                      }
+                    }
                   }}
-                  className="flex-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  className="flex-1"
                   placeholder="Enter duration"
                 />
                 <DropdownMenu>
@@ -2028,9 +2034,14 @@ const DeviceManagement = memo(({
               </div>
               
                 <div className="mt-3">
-                {!isValidDuration(durationValue, durationUnit) && (
+                {!isValidDuration(durationValue, durationUnit) && durationValue > 0 && (
                   <p className="text-xs text-red-600">
                   Duration is too long (maximum: 1 year)
+                  </p>
+                )}
+                {durationValue <= 0 && (
+                  <p className="text-xs text-red-600">
+                  Please enter a valid duration
                   </p>
                 )}
                 </div>
