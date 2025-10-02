@@ -136,7 +136,7 @@ Guardian is configurable via its web interface. Access the Settings page to cust
 
 - **Device Management**: Default action when new devices attempt to stream. `Block` provides maximum security by requiring manual approval
 - **Session Monitoring**: How often to update sessions and enforce rules with your Plex server. Lower values provide faster blocking but use more resources. It has no impact on how often the dashboard refreshes. Default: `10s`
-- **Default Page**: Choose which page loads when opening Guardian
+- **Default Page**: Choose the landing page when opening Guardian
 - **Blocked User Message**: Customize the message shown to blocked users when their stream is terminated
 - **Maintenance & Updates**: Automatically check for new Guardian releases when the app loads. Updates are never installed automatically and will only show a notification when a new version is available
 
