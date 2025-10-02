@@ -142,8 +142,8 @@ Guardian is configurable via its web interface. Access the Settings page to cust
 
 ### Device Cleanup
 
-- **Automatic Cleanup**: Removes devices that haven't streamed for a specified period, keeping your device list clean and relevant
-- **Inactivity Threshold**: Number of days without streaming activity before a device is automatically removed. Device will lose all settings and data (default: `30`)
+- **Automatic Cleanup**: Removes devices that haven't streamed for a specified period, keeping your device list clean and relevant. Device will lose all settings and data.
+- **Inactivity Threshold**: Number of days without streaming activity before a device is automatically deleted. (default: `30`)
 
 ### Database Management
 
@@ -159,7 +159,7 @@ Guardian is configurable via its web interface. Access the Settings page to cust
 
 ## Updating
 
-Always back up data before updating.
+Always back up data before updating. You can export your database from the settings page.
 
 ```bash
 docker compose pull
