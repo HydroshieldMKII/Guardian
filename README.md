@@ -143,12 +143,17 @@ Guardian is configurable via its web interface. Access the Settings page to cust
 ### Device Cleanup
 
 - **Automatic Cleanup**: Removes devices that haven't streamed for a specified period, keeping your device list clean and relevant
-- **Inactivity Threshold**: Number of days without streaming activity before a device is automatically removed. Device will lose all settings and data (default: 30 days)
+- **Inactivity Threshold**: Number of days without streaming activity before a device is automatically removed. Device will lose all settings and data (default: `30`)
 
 ### Database Management
 
-- **Export/Import**: Create JSON backups of all Guardian data (settings, devices, preferences) for migration or disaster recovery. The export contains sensitive information, so handle it securely.
-- **Administrative Tools**: Dangerous operations that permanently modify your database - reset entire database, clear stream counts, or delete all device records
+- **Export/Import**: Create JSON backups of all Guardian data (settings, devices, preferences) for migration or disaster recovery. The export contains sensitive information like your Plex token, so handle it securely.
+
+### Administrative Tools
+
+- **Reset Stream Counts**: Clears the session count statistics for all devices while preserving device records and settings. This only affects the tracking numbers displayed in the interface
+- **Delete All Devices**: Permanently removes all device records from the database. This will delete all device-specific settings, approval status, and session history. Users will need to be re-approved when they next attempt to stream
+- **Reset Entire Database**: Completely wipes all Guardian data including settings, devices, user preferences, and sessions. This returns Guardian to its initial state as if freshly installed. Default settings will be restored and all configuration must be redone
 
 ---
 
