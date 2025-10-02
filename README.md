@@ -23,6 +23,7 @@ It helps you monitor activity, control device access, and ensure only authorized
 - [Contributing](#contributing)
 
 ---
+<img width="1280" height="599" alt="Guardian" src="https://github.com/user-attachments/assets/f2ab7b82-d589-45db-98de-ff0fb6c01bd1" />
 
 ## Features
 
