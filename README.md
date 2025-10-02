@@ -23,6 +23,7 @@ It helps you monitor activity, control device access, and ensure only authorized
 - [Contributing](#contributing)
 
 ---
+
 <img width="1280" height="599" alt="Guardian" src="https://github.com/user-attachments/assets/f2ab7b82-d589-45db-98de-ff0fb6c01bd1" />
 
 ## Features
@@ -123,30 +124,31 @@ docker compose up -d --force-recreate
 
 ## Application Settings
 
-Guardian is configurable via its web interface.
+Guardian is configurable via its web interface. Access the Settings page to customize behavior for your specific needs.
 
 ### Plex Integration
 
-- **Server IP/Port**: Plex host (default port `32400`)
-- **Authentication Token**: Required. [What is this?](https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/)
-- **SSL/TLS Options**: Enable HTTPS and certificate validation if needed
+- **Server IP/Port**: Your Plex server's network address and port. (default port `32400`)
+- **Authentication Token**: Required for Guardian to communicate with your Plex server. [What is this?](https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/)
+- **SSL/TLS Options**: Enable secure HTTPS connections and certificate validation. Only needed if your Plex server requires HTTPS
 
 ### Guardian Behavior
 
-- **Device Management**: Default action for new devices (`Block` recommended)
-- **Session Monitoring**: Refresh interval (default: 10s)
-- **User Experience**: Custom block messages, default landing page
-- **Maintenance & Updates**: Enable update checking
+- **Device Management**: Default action when new devices attempt to stream. `Block` provides maximum security by requiring manual approval
+- **Session Monitoring**: How often to update sessions and enforce rules with your Plex server. Lower values provide faster blocking but use more resources. It has no impact on how often the dashboard refreshes. Default: `10s`
+- **Default Page**: Choose which page loads when opening Guardian
+- **Blocked User Message**: Customize the message shown to blocked users when their stream is terminated
+- **Maintenance & Updates**: Automatically check for new Guardian releases when the app loads. Updates are never installed automatically and will only show a notification when a new version is available
 
 ### Device Cleanup
 
-- Enable automatic cleanup of inactive devices
-- Configurable inactivity threshold (default: 30 days)
+- **Automatic Cleanup**: Removes devices that haven't streamed for a specified period, keeping your device list clean and relevant
+- **Inactivity Threshold**: Number of days without streaming activity before a device is automatically removed. Device will lose all settings and data (default: 30 days)
 
 ### Database Management
 
-- Export/Import JSON backups
-- Administrative tools: reset database, reset counts, delete devices
+- **Export/Import**: Create JSON backups of all Guardian data (settings, devices, preferences) for migration or disaster recovery. The export contains sensitive information, so handle it securely.
+- **Administrative Tools**: Dangerous operations that permanently modify your database - reset entire database, clear stream counts, or delete all device records
 
 ---
 
