@@ -41,7 +41,7 @@ export class DashboardService {
       // Check Plex status and fetch settings in parallel
       const [plexStatus, settings] = await Promise.all([
         this.configService.getPlexConfigurationStatus(),
-        this.configService.getAllSettings(),
+        this.configService.getPublicSettings(),
       ]);
 
       // If Plex is not properly configured, return minimal data but still include settings
