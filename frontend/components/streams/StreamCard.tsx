@@ -59,7 +59,7 @@ export const StreamCard: React.FC<StreamCardProps> = ({
             <div className="flex items-center gap-1 bg-muted px-2 py-1 rounded-full min-w-0">
               {getDeviceIcon(stream.Player?.platform)}
               <span className="truncate max-w-[100px] sm:max-w-[120px]">
-                {stream.Player?.title?.split(" ")[0] || "Device"}
+                {stream.Player?.title || "Device"}
               </span>
             </div>
           </div>
