@@ -66,9 +66,9 @@ export function Dashboard() {
     } catch (error) {
       console.error("Failed to fetch dashboard stats:", error);
       setPlexStatus({
-        configured: true,
+        configured: false,
         hasValidCredentials: false,
-        connectionStatus: "Failed to fetch dashboard data",
+        connectionStatus: "Backend connection error: Cannot connect to Guardian backend service",
       });
     } finally {
       setLoading(false);

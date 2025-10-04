@@ -36,7 +36,24 @@ const ICON_MAP = {
 export function PlexErrorHandler({ plexStatus, onShowSettings }: PlexErrorHandlerProps) {
   // Determine the appropriate display configuration based on the error
   const getErrorInfo = () => {
-    // Check if not configured first
+    // Check for backend connection errors FIRST (before checking configured status)
+    const status = plexStatus?.connectionStatus || "";
+    
+    if (status.includes("Backend connection error") || 
+        status.includes("Failed to fetch dashboard data") ||
+        status.includes("Cannot connect to Guardian backend") ||
+        status.includes("Backend server is not reachable")) {
+      return {
+        title: "Backend Connection Error",
+        description: "Cannot communicate with the Guardian backend. Please check if the backend service is running.",
+        icon: AlertTriangle,
+        iconColor: "text-red-600 dark:text-red-400",
+        iconBg: "bg-red-100 dark:bg-red-900/20",
+        showChecklist: false
+      };
+    }
+
+    // Check if not configured (only if it's not a backend error)
     if (!plexStatus?.configured) {
       const config = ERROR_DISPLAY_CONFIG[PlexErrorCode.NOT_CONFIGURED];
       return {
@@ -45,11 +62,7 @@ export function PlexErrorHandler({ plexStatus, onShowSettings }: PlexErrorHandle
       };
     }
 
-    // Try to extract errorCode from connectionStatus
-    const status = plexStatus?.connectionStatus || "";
     
-    // The status now contains "ERRORCODE: message" format from backend
-    // Parse the error code from the beginning of the status string
     let errorCode: PlexErrorCode | null = null;
     
     // Check for the specific error codes that our backend now returns
@@ -67,15 +80,6 @@ export function PlexErrorHandler({ plexStatus, onShowSettings }: PlexErrorHandle
       errorCode = PlexErrorCode.NETWORK_ERROR;
     } else if (status.startsWith("PLEX_UNKNOWN_ERROR:")) {
       errorCode = PlexErrorCode.UNKNOWN_ERROR;
-    } else if (status.includes("Backend connection error")) {
-      return {
-        title: "Backend Connection Error",
-        description: "Cannot communicate with the Guardian backend. Please check if the backend service is running.",
-        icon: AlertTriangle,
-        iconColor: "text-red-600 dark:text-red-400",
-        iconBg: "bg-red-100 dark:bg-red-900/20",
-        showChecklist: false
-      };
     }
 
     // If we found an error code, use the configured display
