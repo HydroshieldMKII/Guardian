@@ -546,13 +546,18 @@ export class ConfigService {
               where: { key: setting.key }
             });
 
+            if (existing && setting.key === 'APP_VERSION' && this.isVersionNewer(CURRENT_APP_VERSION, existing.value)) {
+              this.logger.log("Skipping import of APP_VERSION to avoid downgrading the app version");
+              continue;
+            }
+
             this.logger.debug('Importing setting:', setting.key, 'Existing:', !!existing);
 
             if (existing) {
               existing.value = setting.value;
               existing.description = setting.description || existing.description;
               await this.settingsRepository.save(existing);
-                          imported++;
+              imported++;
             }else{
               this.logger.warn(`Skipping unknown setting ${setting.key}`);
             }
