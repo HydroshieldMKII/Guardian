@@ -1433,6 +1433,18 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
                       Check for Updates
                     </Button>
                   </div>
+                  {/* Documentation Link */}
+                  <div className="pt-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => window.open('https://github.com/HydroshieldMKII/Guardian?tab=readme-ov-file#application-settings', '_blank')}
+                      className="h-6 text-xs text-muted-foreground hover:text-foreground"
+                    >
+                      <BookOpen className="h-3 w-3 mr-1" />
+                      Documentation
+                    </Button>
+                  </div>
                   </div>
                   {versionInfo.isVersionMismatch ? (
                     <>
