@@ -417,9 +417,9 @@ export class ConfigService {
         req.on('timeout', () => {
           req.destroy();
           resolve(createPlexError(
-            PlexErrorCode.CONNECTION_TIMEOUT,
-            'Connection timeout',
-            'Check IP address, port and network settings'
+              PlexErrorCode.CONNECTION_REFUSED,
+              'Plex server is unreachable',
+              'Check if Plex server is running and accessible'
           ));
         });
 
