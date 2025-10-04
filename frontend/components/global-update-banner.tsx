@@ -75,7 +75,7 @@ export function GlobalUpdateBanner() {
             </Button>
             <Button
               size="sm"
-              onClick={() => window.open('https://github.com/HydroshieldMKII/Guardian?tab=readme-ov-file#update-guardian', '_blank')}
+              onClick={() => window.open('https://github.com/HydroshieldMKII/Guardian?tab=readme-ov-file#updating', '_blank')}
               className="bg-blue-700 hover:bg-blue-800 text-white text-xs px-3 py-1 h-auto"
             >
               <Download className="h-3 w-3 mr-1" />
