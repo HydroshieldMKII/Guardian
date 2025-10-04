@@ -66,7 +66,7 @@ export function Dashboard() {
     } catch (error) {
       console.error("Failed to fetch dashboard stats:", error);
       setPlexStatus({
-        configured: false,
+        configured: true,
         hasValidCredentials: false,
         connectionStatus: "Failed to fetch dashboard data",
       });

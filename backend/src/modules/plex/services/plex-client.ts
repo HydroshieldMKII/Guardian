@@ -2,6 +2,12 @@ import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import * as http from 'http';
 import * as https from 'https';
 import { ConfigService } from '../../config/services/config.service';
+import { 
+  PlexErrorCode, 
+  PlexResponse, 
+  createPlexError, 
+  createPlexSuccess 
+} from '../../../types/plex-errors';
 
 @Injectable()
 export class PlexClient {
@@ -164,64 +170,77 @@ export class PlexClient {
     this.logger.log(`Terminated session ${sessionKey}`);
   }
 
-  async testConnection(): Promise<{
-    ok: boolean;
-    status: number;
-    message?: string;
-  }> {
+  async testConnection(): Promise<PlexResponse> {
     try {
       await this.validateConfiguration();
       const response = await this.request('/');
-      return {
-        ok: response.ok,
-        status: response.status,
-        message: response.ok ? 'Connection successful' : 'Connection failed',
-      };
+      
+      if (response.ok) {
+        return createPlexSuccess('Connection successful');
+      } else {
+        return createPlexError(
+          PlexErrorCode.SERVER_ERROR,
+          `Plex server returned error: ${response.status}`,
+          `HTTP ${response.status}`
+        );
+      }
     } catch (error) {
       this.logger.error('Connection test failed:', error);
 
       // Handle specific SSL/TLS errors
       if (error.code === 'ERR_TLS_CERT_ALTNAME_INVALID') {
-        return {
-          ok: false,
-          status: 0,
-          message:
-            'SSL certificate error: Hostname/IP does not match certificate. Enable "Ignore SSL certificate errors" or use HTTP instead.',
-        };
+        return createPlexError(
+          PlexErrorCode.CERT_ERROR,
+          'SSL certificate error: Hostname/IP does not match certificate',
+          'Enable "Ignore SSL certificate errors" or use HTTP instead'
+        );
       }
 
       if (error.code && error.code.startsWith('ERR_TLS_')) {
-        return {
-          ok: false,
-          status: 0,
-          message: `SSL/TLS error: ${error.message}. Consider enabling "Ignore SSL certificate errors" or using HTTP.`,
-        };
+        return createPlexError(
+          PlexErrorCode.SSL_ERROR,
+          'SSL/TLS connection error',
+          'Consider enabling "Ignore SSL certificate errors" or using HTTP'
+        );
       }
 
-      // Handle connection refused, timeout, etc.
-      if (error.code === 'ECONNREFUSED') {
-        return {
-          ok: false,
-          status: 0,
-          message:
-            'Connection refused. Check if Plex server is running and accessible.',
-        };
+      // Handle connection refused/unreachable - normalize EHOSTUNREACH to same as ECONNREFUSED
+      if (error.code === 'ECONNREFUSED' || error.code === 'EHOSTUNREACH') {
+        return createPlexError(
+          PlexErrorCode.CONNECTION_REFUSED,
+          'Plex server is unreachable',
+          'Check if Plex server is running and accessible'
+        );
       }
 
-      if (error.code === 'ECONNRESET' || error.message.includes('timeout')) {
-        return {
-          ok: false,
-          status: 0,
-          message:
-            'Connection timeout. Check server address, port and SSL settings.',
-        };
+      // Handle timeout errors - normalize all timeout types
+      if (
+        error.code === 'ECONNRESET' || 
+        error.code === 'ETIMEDOUT' ||
+        error.message.includes('timeout') ||
+        error.message === 'Request timeout'
+      ) {
+        return createPlexError(
+          PlexErrorCode.CONNECTION_TIMEOUT,
+          'Connection timeout',
+          'Check server address, port and network settings'
+        );
       }
 
-      return {
-        ok: false,
-        status: 0,
-        message: `Connection failed: ${error.message}`,
-      };
+      // Handle authentication errors
+      if (error.message.includes('401') || error.message.includes('Unauthorized')) {
+        return createPlexError(
+          PlexErrorCode.AUTH_FAILED,
+          'Authentication failed',
+          'Check your Plex token'
+        );
+      }
+
+      return createPlexError(
+        PlexErrorCode.NETWORK_ERROR,
+        'Connection failed',
+        error.message
+      );
     }
   }
 }

@@ -6,6 +6,12 @@ import { UserDevice } from '../../../entities/user-device.entity';
 import { UserPreference } from '../../../entities/user-preference.entity';
 import * as http from 'http';
 import * as https from 'https';
+import { 
+  PlexErrorCode, 
+  PlexResponse, 
+  createPlexError, 
+  createPlexSuccess 
+} from '../../../types/plex-errors';
 
 // App version
 const CURRENT_APP_VERSION = '1.1.7';
@@ -319,7 +325,7 @@ export class ConfigService {
     return results;
   }
 
-  async testPlexConnection(): Promise<{ success: boolean; message: string }> {
+  async testPlexConnection(): Promise<PlexResponse> {
     try {
       const ip = await this.getSetting('PLEX_SERVER_IP');
       const port = await this.getSetting('PLEX_SERVER_PORT');
@@ -328,10 +334,10 @@ export class ConfigService {
       const ignoreCertErrors = await this.getSetting('IGNORE_CERT_ERRORS');
 
       if (!ip || !port || !token) {
-        return {
-          success: false,
-          message: 'Missing required Plex configuration (IP, Port, or Token)',
-        };
+        return createPlexError(
+          PlexErrorCode.NOT_CONFIGURED,
+          'Missing required Plex configuration (IP, Port, or Token)'
+        );
       }
 
       // Create a HTTP/HTTPS request to test the connection
@@ -353,50 +359,68 @@ export class ConfigService {
 
         const req = httpModule.request(options, (res: any) => {
           if (res.statusCode === 200) {
-            resolve({
-              success: true,
-              message: 'Successfully connected to Plex server',
-            });
+            resolve(createPlexSuccess('Successfully connected to Plex server'));
+          } else if (res.statusCode === 401) {
+            resolve(createPlexError(
+              PlexErrorCode.AUTH_FAILED,
+              'Authentication failed - check your Plex token',
+              `HTTP ${res.statusCode}: ${res.statusMessage}`
+            ));
           } else {
-            resolve({
-              success: false,
-              message: `Connection failed with status: ${res.statusCode}`,
-            });
+            resolve(createPlexError(
+              PlexErrorCode.SERVER_ERROR,
+              `Plex server returned an error: ${res.statusCode} ${res.statusMessage}`,
+              `HTTP ${res.statusCode}: ${res.statusMessage}`
+            ));
           }
         });
 
         req.on('error', (error: any) => {
-          let message = `Connection failed: ${error.message}`;
-
-          // Handle specific SSL/TLS errors with helpful messages
+          // Handle specific error types with appropriate error codes
           if (error.code === 'ERR_TLS_CERT_ALTNAME_INVALID') {
-            message =
-              'SSL certificate error: Hostname/IP does not match certificate. Enable "Ignore SSL certificate errors" or use HTTP instead.';
+            resolve(createPlexError(
+              PlexErrorCode.CERT_ERROR,
+              'SSL certificate error: Hostname/IP does not match certificate',
+              'Enable "Ignore SSL certificate errors" or use HTTP instead'
+            ));
           } else if (error.code && error.code.startsWith('ERR_TLS_')) {
-            message = `SSL/TLS error: ${error.message}. Consider enabling "Ignore SSL certificate errors" or using HTTP.`;
-          } else if (error.code === 'ECONNREFUSED') {
-            message =
-              'Connection refused. Check if Plex server is running and accessible.';
+            resolve(createPlexError(
+              PlexErrorCode.SSL_ERROR,
+              'SSL/TLS connection error',
+              'Consider enabling "Ignore SSL certificate errors" or using HTTP'
+            ));
+          } else if (error.code === 'ECONNREFUSED' || error.code === 'EHOSTUNREACH') {
+            resolve(createPlexError(
+              PlexErrorCode.CONNECTION_REFUSED,
+              'Plex server is unreachable',
+              'Check if Plex server is running and accessible'
+            ));
           } else if (
             error.code === 'ECONNRESET' ||
+            error.code === 'ETIMEDOUT' ||
             error.message.includes('timeout')
           ) {
-            message =
-              'Connection timeout. Check server address, port and SSL settings.';
+            resolve(createPlexError(
+              PlexErrorCode.CONNECTION_TIMEOUT,
+              'Connection timeout',
+              'Check server address, port and network settings'
+            ));
+          } else {
+            resolve(createPlexError(
+              PlexErrorCode.NETWORK_ERROR,
+              'Network error connecting to Plex server',
+              error.message
+            ));
           }
-
-          resolve({
-            success: false,
-            message: message,
-          });
         });
 
         req.on('timeout', () => {
           req.destroy();
-          resolve({
-            success: false,
-            message: 'Connection timeout - check IP and port',
-          });
+          resolve(createPlexError(
+            PlexErrorCode.CONNECTION_TIMEOUT,
+            'Connection timeout',
+            'Check IP address, port and network settings'
+          ));
         });
 
         req.setTimeout(10000);
@@ -404,10 +428,11 @@ export class ConfigService {
       });
     } catch (error) {
       this.logger.error('Error testing Plex connection:', error);
-      return {
-        success: false,
-        message: `Connection test failed: ${error.message}`,
-      };
+      return createPlexError(
+        PlexErrorCode.UNKNOWN_ERROR,
+        'Unexpected error testing Plex connection',
+        error.message
+      );
     }
   }
 
@@ -436,10 +461,19 @@ export class ConfigService {
       // Test connection to determine status
       const connectionResult = await this.testPlexConnection();
 
+      // Format the connection status to include error code for frontend parsing
+      let connectionStatus: string;
+      if (connectionResult.success) {
+        connectionStatus = connectionResult.message || 'Connected successfully';
+      } else {
+        // Include the error code in the status for frontend parsing
+        connectionStatus = `${connectionResult.errorCode}: ${connectionResult.message}`;
+      }
+
       return {
         configured: true,
         hasValidCredentials: connectionResult.success,
-        connectionStatus: connectionResult.message,
+        connectionStatus,
       };
     } catch (error) {
       this.logger.error('Error checking Plex configuration status:', error);

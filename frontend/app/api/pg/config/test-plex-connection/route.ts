@@ -10,32 +10,23 @@ export async function POST() {
       },
     });
 
-    if (!response.ok) {
-      throw new Error(`Backend responded with ${response.status}`);
-    }
-
     const data = await response.json();
-    return NextResponse.json(data);
+    
+    // Always return the backend response as-is to preserve error structure
+    return NextResponse.json(data, { 
+      status: response.ok ? 200 : response.status 
+    });
+    
   } catch (error: any) {
     console.error("Failed to test Plex connection:", error);
     
-    // Handle specific connection errors
-    let errorMessage = "Failed to test connection";
-    
-    if (error.cause?.code === 'ECONNREFUSED' || error.message?.includes('ECONNREFUSED')) {
-      errorMessage = "Backend server is not reachable. Please ensure the backend service is running.";
-    } else if (error.message?.includes('fetch failed')) {
-      errorMessage = "Unable to connect to backend service. Please check if the backend is running and accessible.";
-    } else if (error.message?.includes('timeout')) {
-      errorMessage = "Backend service timeout. The service may be overloaded or not responding.";
-    } else if (error.message?.includes('Backend responded with')) {
-      errorMessage = `Backend service error: ${error.message}`;
-    }
-
+    // Return a structured error response for backend connection issues
     return NextResponse.json(
       {
         success: false,
-        message: errorMessage,
+        errorCode: "BACKEND_CONNECTION_ERROR",
+        message: "Cannot connect to Guardian backend",
+        details: "Please ensure the backend service is running and accessible"
       },
       { status: 500 }
     );

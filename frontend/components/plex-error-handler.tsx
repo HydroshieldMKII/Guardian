@@ -17,64 +17,57 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { PlexStatus } from "@/types";
+import { PlexErrorCode, ERROR_DISPLAY_CONFIG } from "@/types/plex-errors";
 
 interface PlexErrorHandlerProps {
   plexStatus: PlexStatus | null;
   onShowSettings: () => void;
 }
 
+// Icon mapping for display config
+const ICON_MAP = {
+  Server,
+  Settings,
+  WifiOff,
+  Shield,
+  AlertTriangle,
+};
+
 export function PlexErrorHandler({ plexStatus, onShowSettings }: PlexErrorHandlerProps) {
-  // Determine the appropriate title, description, and icon based on the error
+  // Determine the appropriate display configuration based on the error
   const getErrorInfo = () => {
-    const status = plexStatus?.connectionStatus || "Not configured";
-    
-    // Check for specific error types
+    // Check if not configured first
     if (!plexStatus?.configured) {
+      const config = ERROR_DISPLAY_CONFIG[PlexErrorCode.NOT_CONFIGURED];
       return {
-        title: "Plex Configuration Required",
-        description: "Guardian needs to connect to your Plex Media Server to monitor streams and manage devices.",
-        icon: Server,
-        iconColor: "text-amber-600 dark:text-amber-400",
-        iconBg: "bg-amber-100 dark:bg-amber-900/20",
-        showChecklist: true
+        ...config,
+        icon: ICON_MAP[config.iconName as keyof typeof ICON_MAP]
       };
-    } else if (status.includes("Connection refused") || status.includes("ECONNREFUSED")) {
-      return {
-        title: "Plex Server Unreachable",
-        description: "Cannot connect to your Plex server. Please check if Plex is running and the network settings are correct.",
-        icon: WifiOff,
-        iconColor: "text-red-600 dark:text-red-400",
-        iconBg: "bg-red-100 dark:bg-red-900/20",
-        showChecklist: false
-      };
-    } else if (status.includes("timeout") || status.includes("ECONNRESET")) {
-      return {
-        title: "Connection Timeout",
-        description: "The connection to your Plex server is timing out. Please verify your IP address, port, and network settings.",
-        icon: WifiOff,
-        iconColor: "text-orange-600 dark:text-orange-400",
-        iconBg: "bg-orange-100 dark:bg-orange-900/20",
-        showChecklist: false
-      };
-    } else if (status.includes("SSL") || status.includes("TLS") || status.includes("certificate")) {
-      return {
-        title: "SSL Connection Issue",
-        description: "There's an SSL/TLS certificate problem. Try disabling SSL or enabling 'Ignore SSL certificate errors' in settings.",
-        icon: Shield,
-        iconColor: "text-orange-600 dark:text-orange-400",
-        iconBg: "bg-orange-100 dark:bg-orange-900/20",
-        showChecklist: false
-      };
-    } else if (status.includes("401") || status.includes("Unauthorized")) {
-      return {
-        title: "Authentication Failed",
-        description: "Your Plex authentication token is invalid or expired. Please update your Plex token in the settings.",
-        icon: Shield,
-        iconColor: "text-red-600 dark:text-red-400",
-        iconBg: "bg-red-100 dark:bg-red-900/20",
-        showChecklist: false
-      };
-    } else if (status.includes("Failed to fetch")) {
+    }
+
+    // Try to extract errorCode from connectionStatus
+    const status = plexStatus?.connectionStatus || "";
+    
+    // The status now contains "ERRORCODE: message" format from backend
+    // Parse the error code from the beginning of the status string
+    let errorCode: PlexErrorCode | null = null;
+    
+    // Check for the specific error codes that our backend now returns
+    if (status.startsWith("PLEX_CONNECTION_REFUSED:")) {
+      errorCode = PlexErrorCode.CONNECTION_REFUSED;
+    } else if (status.startsWith("PLEX_CONNECTION_TIMEOUT:")) {
+      errorCode = PlexErrorCode.CONNECTION_TIMEOUT;
+    } else if (status.startsWith("PLEX_AUTH_FAILED:") || status.startsWith("PLEX_UNAUTHORIZED:")) {
+      errorCode = PlexErrorCode.AUTH_FAILED;
+    } else if (status.startsWith("PLEX_SSL_ERROR:") || status.startsWith("PLEX_CERT_ERROR:")) {
+      errorCode = status.startsWith("PLEX_CERT_ERROR:") ? PlexErrorCode.CERT_ERROR : PlexErrorCode.SSL_ERROR;
+    } else if (status.startsWith("PLEX_SERVER_ERROR:")) {
+      errorCode = PlexErrorCode.SERVER_ERROR;
+    } else if (status.startsWith("PLEX_NETWORK_ERROR:")) {
+      errorCode = PlexErrorCode.NETWORK_ERROR;
+    } else if (status.startsWith("PLEX_UNKNOWN_ERROR:")) {
+      errorCode = PlexErrorCode.UNKNOWN_ERROR;
+    } else if (status.includes("Backend connection error")) {
       return {
         title: "Backend Connection Error",
         description: "Cannot communicate with the Guardian backend. Please check if the backend service is running.",
@@ -83,16 +76,26 @@ export function PlexErrorHandler({ plexStatus, onShowSettings }: PlexErrorHandle
         iconBg: "bg-red-100 dark:bg-red-900/20",
         showChecklist: false
       };
-    } else {
+    }
+
+    // If we found an error code, use the configured display
+    if (errorCode && ERROR_DISPLAY_CONFIG[errorCode]) {
+      const config = ERROR_DISPLAY_CONFIG[errorCode];
       return {
-        title: "Plex Connection Issue",
-        description: "There's a problem connecting to your Plex server. Please check your configuration and try again.",
-        icon: Server,
-        iconColor: "text-amber-600 dark:text-amber-400",
-        iconBg: "bg-amber-100 dark:bg-amber-900/20",
-        showChecklist: false
+        ...config,
+        icon: ICON_MAP[config.iconName as keyof typeof ICON_MAP]
       };
     }
+
+    // Fallback for unknown errors
+    return {
+      title: "Oops! Something Went Wrong",
+      description: "Something went wrong with Guardian. Please check your setup and try again.",
+      icon: Server,
+      iconColor: "text-amber-600 dark:text-amber-400",
+      iconBg: "bg-amber-100 dark:bg-amber-900/20",
+      showChecklist: false
+    };
   };
 
   const errorInfo = getErrorInfo();
