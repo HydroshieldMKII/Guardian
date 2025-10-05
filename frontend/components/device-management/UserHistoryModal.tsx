@@ -22,16 +22,24 @@ import {
 import { config } from '@/lib/config';
 import { ClickableIP } from './SharedComponents';
 
+interface UserDevice {
+  id: number;
+  userId: string;
+  deviceIdentifier: string;
+  deviceName?: string;
+  devicePlatform?: string;
+  deviceProduct?: string;
+  deviceVersion?: string;
+  status: string;
+  sessionCount: number;
+}
+
 interface SessionHistoryEntry {
   id: number;
   sessionKey: string;
   userId: string;
   username?: string;
-  deviceIdentifier: string;
-  deviceName?: string;
-  devicePlatform?: string;
-  deviceProduct?: string;
-  deviceTitle?: string;
+  userDevice?: UserDevice;
   deviceAddress?: string;
   contentTitle?: string;
   contentType?: string;
@@ -119,7 +127,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
   };
 
   const getDeviceDisplayName = (session: SessionHistoryEntry) => {
-    return session.deviceName || session.deviceTitle || session.deviceProduct || 'Unknown Device';
+    return session.userDevice?.deviceName || session.userDevice?.deviceProduct || 'Unknown Device';
   };
 
   const filteredSessions = sessions.filter(session =>
@@ -129,9 +137,9 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
   );
 
   const handleDeviceClick = (session: SessionHistoryEntry) => {
-    if (onNavigateToDevice && userId) {
+    if (onNavigateToDevice && userId && session.userDevice?.deviceIdentifier) {
       onClose(); // Close the modal first
-      onNavigateToDevice(userId, session.deviceIdentifier);
+      onNavigateToDevice(userId, session.userDevice.deviceIdentifier);
     }
   };
 
@@ -221,9 +229,9 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
 
                     {/* Platform */}
                     <div className="flex-1 min-w-[80px] min-w-0">
-                      {session.devicePlatform && (
+                      {session.userDevice?.devicePlatform && (
                         <div className="text-xs text-muted-foreground capitalize truncate">
-                          {session.devicePlatform}
+                          {session.userDevice.devicePlatform}
                         </div>
                       )}
                     </div>

@@ -4,7 +4,10 @@ import {
   Column,
   CreateDateColumn,
   Index,
+  ManyToOne,
+  JoinColumn,
 } from 'typeorm';
+import { UserDevice } from './user-device.entity';
 
 @Entity('session_history')
 @Index(['userId', 'startedAt'])
@@ -21,20 +24,13 @@ export class SessionHistory {
   @Column({ name: 'username', nullable: true })
   username: string;
 
-  @Column({ name: 'device_identifier' })
-  deviceIdentifier: string;
+  // Foreign key to UserDevice
+  @Column({ name: 'user_device_id', nullable: true })
+  userDeviceId: number;
 
-  @Column({ name: 'device_name', nullable: true })
-  deviceName: string;
-
-  @Column({ name: 'device_platform', nullable: true })
-  devicePlatform: string;
-
-  @Column({ name: 'device_product', nullable: true })
-  deviceProduct: string;
-
-  @Column({ name: 'device_title', nullable: true })
-  deviceTitle: string;
+  @ManyToOne(() => UserDevice, { eager: false })
+  @JoinColumn({ name: 'user_device_id' })
+  userDevice: UserDevice;
 
   @Column({ name: 'device_address', nullable: true })
   deviceAddress: string;

@@ -111,6 +111,7 @@ export class ActiveSessionService {
   async getActiveSessions(): Promise<SessionHistory[]> {
     return this.sessionHistoryRepository
       .createQueryBuilder('session')
+      .leftJoinAndSelect('session.userDevice', 'device')
       .where('session.endedAt IS NULL') // Only get active sessions (no end date)
       .orderBy('session.startedAt', 'DESC')
       .getMany();
@@ -143,17 +144,22 @@ export class ActiveSessionService {
         .andWhere('session.endedAt IS NULL')
         .getOne();
 
+      // Find the UserDevice to get the foreign key
+      let userDevice: UserDevice | null = null;
+      if (user?.id && player?.machineIdentifier) {
+        userDevice = await this.userDeviceRepository.findOne({
+          where: {
+            userId: user.id,
+            deviceIdentifier: player.machineIdentifier,
+          },
+        });
+      }
+
       const sessionData_partial = {
         sessionKey: sessionData.sessionKey,
         ...(user?.id && { userId: user.id }),
         ...(user?.title && { username: user.title }),
-        ...(player?.machineIdentifier && {
-          deviceIdentifier: player.machineIdentifier,
-        }),
-        ...(player?.device && { deviceName: player.device }),
-        ...(player?.platform && { devicePlatform: player.platform }),
-        ...(player?.product && { deviceProduct: player.product }),
-        ...(player?.title && { deviceTitle: player.title }),
+        ...(userDevice?.id && { userDeviceId: userDevice.id }),
         ...(player?.address && { deviceAddress: player.address }),
         ...(player?.state && { playerState: player.state }),
         ...(sessionData.title && { contentTitle: sessionData.title }),
@@ -225,32 +231,8 @@ export class ActiveSessionService {
     try {
       const sessions = await this.getActiveSessions();
 
-      const deviceSessionCounts = new Map<string, number>();
-      const deviceCustomNames = new Map<string, string>();
-      
-      for (const session of sessions) {
-        if (session.userId && session.deviceIdentifier) {
-          const key = `${session.userId}-${session.deviceIdentifier}`;
-          if (!deviceSessionCounts.has(key)) {
-            const device = await this.userDeviceRepository.findOne({
-              where: {
-                userId: session.userId,
-                deviceIdentifier: session.deviceIdentifier,
-              },
-            });
-            deviceSessionCounts.set(key, device?.sessionCount || 0);
-            // Store custom device name if it exists
-            if (device?.deviceName) {
-              deviceCustomNames.set(key, device.deviceName);
-            }
-          }
-        }
-      }
-
       const transformedSessions = sessions.map((session) => {
-        const deviceKey = `${session.userId}-${session.deviceIdentifier}`;
-        const sessionCount = deviceSessionCounts.get(deviceKey) || 0;
-        const customDeviceName = deviceCustomNames.get(deviceKey);
+        const device = session.userDevice;
         
         return {
           sessionKey: session.sessionKey,
@@ -259,14 +241,14 @@ export class ActiveSessionService {
             title: session.username,
           },
           Player: {
-            machineIdentifier: session.deviceIdentifier,
-            platform: session.devicePlatform,
-            product: session.deviceProduct,
-            title: customDeviceName,
-            device: session.deviceName,
+            machineIdentifier: device?.deviceIdentifier || 'Unknown',
+            platform: device?.devicePlatform || 'Unknown',
+            product: device?.deviceProduct || 'Unknown',
+            title: device?.deviceName || device?.deviceProduct || 'Unknown Device',
+            device: device?.deviceName || 'Unknown',
             address: session.deviceAddress,
             state: session.playerState as 'playing' | 'paused' | 'buffering',
-            originalTitle: session.deviceTitle,
+            originalTitle: device?.deviceName || device?.deviceProduct || 'Unknown',
           },
           Media:
             session.videoResolution || session.bitrate || session.container
@@ -284,7 +266,7 @@ export class ActiveSessionService {
             id: session.sessionKey,
             bandwidth: session.bandwidth,
             location: session.sessionLocation as 'lan' | 'wan',
-            sessionCount: sessionCount,
+            sessionCount: device?.sessionCount || 0,
           },
           title: session.contentTitle,
           grandparentTitle: session.grandparentTitle,
@@ -316,6 +298,7 @@ export class ActiveSessionService {
     try {
       const queryBuilder = this.sessionHistoryRepository
         .createQueryBuilder('session')
+        .leftJoinAndSelect('session.userDevice', 'device')
         .where('session.userId = :userId', { userId })
         .orderBy('session.startedAt', 'DESC')
         .take(limit);
@@ -326,44 +309,7 @@ export class ActiveSessionService {
         queryBuilder.andWhere('session.endedAt IS NOT NULL');
       }
       
-      const sessions = await queryBuilder.getMany();
-
-      // Enrich sessions with custom device names
-      const deviceCustomNames = new Map<string, string>();
-      
-      for (const session of sessions) {
-        if (session.userId && session.deviceIdentifier) {
-          const key = `${session.userId}-${session.deviceIdentifier}`;
-          if (!deviceCustomNames.has(key)) {
-            const device = await this.userDeviceRepository.findOne({
-              where: {
-                userId: session.userId,
-                deviceIdentifier: session.deviceIdentifier,
-              },
-            });
-            // Store custom device name if it exists
-            if (device?.deviceName) {
-              deviceCustomNames.set(key, device.deviceName);
-            }
-          }
-        }
-      }
-
-      // Update sessions with custom device names
-      return sessions.map(session => {
-        const deviceKey = `${session.userId}-${session.deviceIdentifier}`;
-        const customDeviceName = deviceCustomNames.get(deviceKey);
-        
-        if (customDeviceName) {
-          // Create a new object with the custom device name
-          return {
-            ...session,
-            deviceName: customDeviceName
-          };
-        }
-        
-        return session;
-      });
+      return await queryBuilder.getMany();
     } catch (error) {
       this.logger.error(`Failed to get session history for user ${userId}:`, error);
       throw error;
