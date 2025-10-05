@@ -288,7 +288,7 @@ export class PlexClient {
       .createQueryBuilder()
       .update(SessionHistory)
       .set({ endedAt: () => 'CURRENT_TIMESTAMP', terminated: true })
-      .where('user_device_id = :deviceId AND endedAt IS NULL', { deviceId: device?.id })
+      .where('user_device_id = :deviceId AND session_key = :deviceSessionKey', { deviceId: device?.id, deviceSessionKey: device?.currentSessionKey })
       .execute();
     }, 10000); // Delay to allow Plex server to process termination
 
