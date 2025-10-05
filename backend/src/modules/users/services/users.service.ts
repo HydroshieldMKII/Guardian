@@ -136,7 +136,46 @@ export class UsersService {
     return defaultBlock;
   }
 
-  async syncUsersFromPlexTV(): Promise<{ updated: number; created: number; errors: number }> {
+    private parseUsersFromXML(xmlString: string): any[] {
+    try {
+      const users: any[] = [];
+      const userMatches = xmlString.match(/<User[^>]*>/g);
+      
+      if (!userMatches) {
+        this.logger.debug('No User elements found in XML response');
+        return [];
+      }
+
+      for (const userMatch of userMatches) {
+        const user: any = {};
+        
+        // Extract attributes from the User element
+        const idMatch = userMatch.match(/id="([^"]*)"/);
+        const usernameMatch = userMatch.match(/username="([^"]*)"/) || userMatch.match(/title="([^"]*)"/);
+        const thumbMatch = userMatch.match(/thumb="([^"]*)"/);
+        const friendlyNameMatch = userMatch.match(/friendlyName="([^"]*)"/);
+
+        if (idMatch) user.id = idMatch[1];
+        if (usernameMatch) user.username = usernameMatch[1];
+        if (thumbMatch) user.thumb = thumbMatch[1];
+        if (friendlyNameMatch) user.friendlyName = friendlyNameMatch[1];
+
+        users.push(user);
+      }
+
+      this.logger.debug(`Parsed ${users.length} users from XML response`);
+      return users;
+    } catch (error) {
+      this.logger.error('Failed to parse XML response:', error);
+      return [];
+    }
+  }
+
+  async syncUsersFromPlexTV(): Promise<{
+    updated: number;
+    created: number;
+    errors: number;
+  }> {
     let updated = 0;
     let created = 0;
     let errors = 0;
@@ -147,12 +186,24 @@ export class UsersService {
       // Fetch users from Plex.tv
       const response = await this.plexClient.getPlexUsers();
       
-      if (!response || !response.users) {
+      if (!response) {
         this.logger.warn('No users data received from Plex.tv API');
         return { updated: 0, created: 0, errors: 1 };
       }
 
-      const users = Array.isArray(response.users) ? response.users : [response.users];
+      // Parse XML response
+      let users: any[] = [];
+      if (typeof response === 'string') {
+        this.logger.debug('Parsing XML response from Plex.tv');
+        users = this.parseUsersFromXML(response);
+      } else if (response.users) {
+        users = Array.isArray(response.users) ? response.users : [response.users];
+      }
+
+      if (!users || users.length === 0) {
+        this.logger.warn('No users found in Plex.tv API response');
+        return { updated: 0, created: 0, errors: 1 };
+      }
       this.logger.log(`Received ${users.length} users from Plex.tv`);
 
       // Process each user
@@ -173,15 +224,23 @@ export class UsersService {
             where: { userId },
           });
 
+          // Prepare user data for upsert
+          const userData = {
+            userId,
+            username,
+            avatarUrl,
+            // Only set defaultBlock for new users, preserve existing preference
+            ...(existingUser ? {} : { defaultBlock: null }),
+          };
+
+          // Include id for existing users to avoid the TypeORM error
+          if (existingUser) {
+            userData['id'] = existingUser.id;
+          }
+
           // Upsert user preference (insert or update)
           await this.userPreferenceRepository.upsert(
-            {
-              userId,
-              username,
-              avatarUrl,
-              // Only set defaultBlock for new users, preserve existing preference
-              ...(existingUser ? {} : { defaultBlock: null }),
-            },
+            userData,
             {
               conflictPaths: ['userId'],
               skipUpdateIfNoValuesChanged: true,

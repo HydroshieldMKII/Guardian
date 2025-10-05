@@ -235,12 +235,13 @@ export class PlexClient {
       const url = `https://plex.tv/api/users?X-Plex-Token=${encodeURIComponent(token)}`;
 
       this.logger.debug('Fetching Plex users from Plex.tv API');
+      
       const response = await this.externalRequest(url);
-      this.logger.debug(`Plex users response status: ${response.status}`);
-      this.logger.debug(`Plex users response body: ${JSON.stringify(response.json(), null, 2)}`);
 
+
+      const responseText = response.text();
       this.logger.debug('Successfully fetched Plex users');
-      return response.json();
+      return responseText;
     } catch (error) {
       this.logger.error('Error in getPlexUsers:', error);
       throw error;
