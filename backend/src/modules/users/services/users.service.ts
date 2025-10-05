@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { UserPreference } from '../../../entities/user-preference.entity';
 import { UserDevice } from '../../../entities/user-device.entity';
 import { ConfigService } from '../../config/services/config.service';
+import { PlexClient } from '../../plex/services/plex-client';
 
 @Injectable()
 export class UsersService {
@@ -16,6 +17,8 @@ export class UsersService {
     private readonly userDeviceRepository: Repository<UserDevice>,
     @Inject(forwardRef(() => ConfigService))
     private readonly configService: ConfigService,
+    @Inject(forwardRef(() => PlexClient))
+    private readonly plexClient: PlexClient,
   ) {}
 
   // Get all users with preferences
@@ -131,5 +134,88 @@ export class UsersService {
       'PLEX_GUARD_DEFAULT_BLOCK',
     );
     return defaultBlock;
+  }
+
+  async syncUsersFromPlexTV(): Promise<{ updated: number; created: number; errors: number }> {
+    let updated = 0;
+    let created = 0;
+    let errors = 0;
+
+    try {
+      this.logger.log('Starting Plex Home users sync from Plex.tv API...');
+      
+      // Fetch users from Plex.tv
+      const response = await this.plexClient.getPlexUsers();
+      
+      if (!response || !response.users) {
+        this.logger.warn('No users data received from Plex.tv API');
+        return { updated: 0, created: 0, errors: 1 };
+      }
+
+      const users = Array.isArray(response.users) ? response.users : [response.users];
+      this.logger.log(`Received ${users.length} users from Plex.tv`);
+
+      // Process each user
+      for (const user of users) {
+        try {
+          const userId = String(user.id);
+          const username = user.username || user.title || user.friendlyName;
+          const avatarUrl = user.thumb;
+
+          if (!userId) {
+            this.logger.warn('Skipping user with no ID', user);
+            errors++;
+            continue;
+          }
+
+          // Check if user exists to track creates vs updates
+          const existingUser = await this.userPreferenceRepository.findOne({
+            where: { userId },
+          });
+
+          // Upsert user preference (insert or update)
+          await this.userPreferenceRepository.upsert(
+            {
+              userId,
+              username,
+              avatarUrl,
+              // Only set defaultBlock for new users, preserve existing preference
+              ...(existingUser ? {} : { defaultBlock: null }),
+            },
+            {
+              conflictPaths: ['userId'],
+              skipUpdateIfNoValuesChanged: true,
+            },
+          );
+
+          if (!existingUser) {
+            created++;
+            this.logger.log(`Created new user: ${userId} (${username})`);
+          } else {
+            // Check if anything actually changed
+            const hasChanges = 
+              (username && existingUser.username !== username) ||
+              (avatarUrl && existingUser.avatarUrl !== avatarUrl);
+            
+            if (hasChanges) {
+              updated++;
+              this.logger.debug(`Updated user: ${userId} (${username})`);
+            }
+          }
+        } catch (userError) {
+          this.logger.error(`Error processing user:`, userError);
+          errors++;
+        }
+      }
+
+      this.logger.log(
+        `Plex Home users sync completed: ${created} created, ${updated} updated, ${errors} errors`,
+      );
+
+      return { updated, created, errors };
+    } catch (error) {
+      this.logger.error('Failed to sync users from Plex.tv:', error);
+      return { updated, created, errors: errors + 1 };
+    }
   }
 }

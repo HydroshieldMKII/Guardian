@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { SessionsController } from './sessions.controller';
 import { ActiveSessionService } from './services/active-session.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -9,7 +9,7 @@ import { DeviceTrackingModule } from '../devices/services/device-tracking.module
 @Module({
   imports: [
     TypeOrmModule.forFeature([ActiveSession, UserDevice]),
-    DeviceTrackingModule,
+    forwardRef(() => DeviceTrackingModule),
   ],
   controllers: [SessionsController],
   providers: [ActiveSessionService],

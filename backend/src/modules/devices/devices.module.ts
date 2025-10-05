@@ -9,7 +9,7 @@ import { PlexModule } from '../plex/plex.module';
 @Module({
   imports: [
     TypeOrmModule.forFeature([UserDevice]),
-    UsersModule,
+    forwardRef(() => UsersModule),
     forwardRef(() => PlexModule),
   ],
   controllers: [DevicesController],

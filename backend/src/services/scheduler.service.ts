@@ -38,6 +38,7 @@ export class SchedulerService implements OnModuleInit {
     // Perform tasks on startup
     await this.handleSessionUpdates();
     await this.performDeviceCleanup();
+    await this.syncPlexUsers();
   }
 
   private async setupDynamicSessionUpdatesCron() {
@@ -156,6 +157,34 @@ export class SchedulerService implements OnModuleInit {
       await this.performDeviceCleanup();
     } catch (error) {
       this.logger.error('Error during scheduled device cleanup:', error);
+    }
+  }
+
+  // Sync Plex Home users every 30 minutes
+  @Cron('0 */30 * * * *', {
+    name: 'syncPlexUsers',
+  })
+  async handlePlexUserSync() {
+    await this.syncPlexUsers();
+  }
+
+  private async syncPlexUsers() {
+    try {
+      // Check if Plex is configured before attempting sync
+      const token = await this.configService.getSetting('PLEX_TOKEN');
+
+      if (!token) {
+        this.logger.debug('Skipping Plex users sync - Plex token not configured');
+        return;
+      }
+
+      this.logger.log('Syncing Plex Home users from Plex.tv...');
+      const result = await this.usersService.syncUsersFromPlexTV();
+      this.logger.log(
+        `Plex users sync completed: ${result.created} created, ${result.updated} updated, ${result.errors} errors`,
+      );
+    } catch (error) {
+      this.logger.error('Error during Plex users sync:', error);
     }
   }
 }

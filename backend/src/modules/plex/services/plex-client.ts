@@ -148,6 +148,105 @@ export class PlexClient {
     return response.json();
   }
 
+  private async externalRequest(
+    url: string,
+    options: {
+      method?: string;
+      body?: string;
+      headers?: Record<string, string>;
+    } = {},
+  ): Promise<any> {
+    return new Promise((resolve, reject) => {
+      const urlObj = new URL(url);
+
+      const requestOptions = {
+        hostname: urlObj.hostname,
+        port: urlObj.port || 443,
+        path: urlObj.pathname + urlObj.search,
+        method: options.method || 'GET',
+        headers: {
+          Accept: 'application/json',
+          'X-Plex-Client-Identifier': 'Guardian',
+          ...options.headers,
+        },
+      };
+
+      const req = https.request(requestOptions, (res) => {
+        let data = '';
+
+        res.on('data', (chunk) => {
+          data += chunk;
+        });
+
+        res.on('end', () => {
+          if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
+            try {
+              const jsonData = data ? JSON.parse(data) : {};
+              resolve({
+                ok: true,
+                status: res.statusCode,
+                json: () => jsonData,
+                text: () => data,
+              });
+            } catch (parseError) {
+              resolve({
+                ok: true,
+                status: res.statusCode,
+                json: () => ({}),
+                text: () => data,
+              });
+            }
+          } else {
+            const error = new Error(
+              `HTTP ${res.statusCode}: ${res.statusMessage} - ${data}`,
+            );
+            this.logger.error(`External request failed for ${url}:`, error);
+            reject(error);
+          }
+        });
+      });
+
+      req.on('error', (error) => {
+        this.logger.error(`External request failed for ${url}:`, error);
+        reject(error);
+      });
+
+      req.setTimeout(15000, () => {
+        req.destroy();
+        reject(new Error('External request timeout'));
+      });
+
+      if (options.body) {
+        req.write(options.body);
+      }
+
+      req.end();
+    });
+  }
+
+  async getPlexUsers(): Promise<any> {
+    try {
+      const { token } = await this.getConfig();
+
+      if (!token) {
+        throw new Error('Plex token is required to fetch users');
+      }
+
+      const url = `https://plex.tv/api/users?X-Plex-Token=${encodeURIComponent(token)}`;
+
+      this.logger.debug('Fetching Plex users from Plex.tv API');
+      const response = await this.externalRequest(url);
+      this.logger.debug(`Plex users response status: ${response.status}`);
+      this.logger.debug(`Plex users response body: ${JSON.stringify(response.json(), null, 2)}`);
+
+      this.logger.debug('Successfully fetched Plex users');
+      return response.json();
+    } catch (error) {
+      this.logger.error('Error in getPlexUsers:', error);
+      throw error;
+    }
+  }
+
   async terminateSession(
     sessionKey: string,
     reason: string = 'Session terminated',
