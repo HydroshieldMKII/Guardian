@@ -3,6 +3,7 @@ export { DeviceCard } from './DeviceCard';
 export { DeviceDetailsModal } from './DeviceDetailsModal';
 export { TemporaryAccessModal } from './TemporaryAccessModal';
 export { ConfirmationModal } from './ConfirmationModal';
+export { UserHistoryModal } from './UserHistoryModal';
 export { 
   ClickableIP, 
   UserAvatar, 

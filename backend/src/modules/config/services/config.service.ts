@@ -14,7 +14,7 @@ import {
 } from '../../../types/plex-errors';
 
 // App version
-const CURRENT_APP_VERSION = '1.1.8';
+const CURRENT_APP_VERSION = '1.1.9';
 
 export interface ConfigSettingDto {
   key: string;
@@ -546,8 +546,10 @@ export class ConfigService {
               where: { key: setting.key }
             });
 
-            if (existing && setting.key === 'APP_VERSION' && this.isVersionNewer(CURRENT_APP_VERSION, existing.value)) {
-              this.logger.log("Skipping import of APP_VERSION to avoid downgrading the app version");
+            // Skip importing APP_VERSION if the import file has an older version than the current code
+            if (setting.key === 'APP_VERSION' && this.compareVersions(setting.value, CURRENT_APP_VERSION) < 0) {
+              this.logger.log(`Skipping import of APP_VERSION (${setting.value}) to avoid downgrading from current version (${CURRENT_APP_VERSION})`);
+              skipped++;
               continue;
             }
 
@@ -653,12 +655,14 @@ export class ConfigService {
         where: { key: 'APP_VERSION' },
       });
 
-      if (versionSetting && this.isVersionNewer(CURRENT_APP_VERSION, versionSetting.value)) {
+      if (versionSetting && this.compareVersions(CURRENT_APP_VERSION, versionSetting.value) > 0) {
         this.logger.log(`Updating app version from ${versionSetting.value} to: ${CURRENT_APP_VERSION}`);
         versionSetting.value = CURRENT_APP_VERSION;
         await this.settingsRepository.save(versionSetting);
         this.logger.log('App version updated successfully');
-      }else{
+      } else if (versionSetting && this.compareVersions(CURRENT_APP_VERSION, versionSetting.value) < 0) {
+        this.logger.error(`WARNING: Current app version ${CURRENT_APP_VERSION} is older than your data version ${versionSetting.value}. Please check your installation.`);
+      } else {
         this.logger.log(`App version is up to date: ${CURRENT_APP_VERSION}`);
       }
     } catch (error) {
@@ -666,32 +670,24 @@ export class ConfigService {
     }
   }
 
-  private isVersionNewer(codeVersion: string, databaseVersion: string): boolean {
-    const parseVersion = (version: string) => {
+  private compareVersions(version1: string, version2: string): number {
+    const parseVersion = (version: string): number[] => {
       return version.split('.').map(v => parseInt(v) || 0);
     };
 
-    const newV = parseVersion(codeVersion);
-    const currentV = parseVersion(databaseVersion);
+    const v1Parts = parseVersion(version1);
+    const v2Parts = parseVersion(version2);
+    const maxLength = Math.max(v1Parts.length, v2Parts.length);
 
-    for (let i = 0; i < Math.max(newV.length, currentV.length); i++) {
-      const newPart = newV[i] || 0;
-      const currentPart = currentV[i] || 0;
-      
-      // code version > database version
-      if (newPart > currentPart){
-        // this.logger.log(`Current app version ${codeVersion} is newer than your data version ${databaseVersion}. Updating to the latest version.`);
-        return true;
-      }
+    for (let i = 0; i < maxLength; i++) {
+      const v1Part = v1Parts[i] || 0;
+      const v2Part = v2Parts[i] || 0;
 
-      // code version < database version
-      if (newPart < currentPart){
-        this.logger.error(`WARNING: Current app version ${codeVersion} is older than your data version ${databaseVersion}. Please check your installation.`);
-        return false;
-      }
+      if (v1Part > v2Part) return 1;
+      if (v1Part < v2Part) return -1;
     }
-    
-    return false; // versions are equal
+
+    return 0; // versions are equal
   }
 
   async getVersionInfo(): Promise<{ 
@@ -701,7 +697,8 @@ export class ConfigService {
     isVersionMismatch: boolean;
   }> {
     const dbVersion = await this.getSetting('APP_VERSION') || CURRENT_APP_VERSION;
-    const isVersionMismatch = this.isVersionNewer(dbVersion, CURRENT_APP_VERSION);
+    // Version mismatch occurs when database version > current code version (downgrade scenario)
+    const isVersionMismatch = this.compareVersions(dbVersion, CURRENT_APP_VERSION) > 0;
     
     return {
       version: CURRENT_APP_VERSION,

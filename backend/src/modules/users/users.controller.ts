@@ -23,6 +23,11 @@ export class UsersController {
     return await this.usersService.getAllUsers();
   }
 
+  @Get('hidden/list')
+  async getHiddenUsers(): Promise<UserPreference[]> {
+    return await this.usersService.getHiddenUsers();
+  }
+
   @Get(':userId')
   async getUserPreference(
     @Param('userId') userId: string,
@@ -43,6 +48,45 @@ export class UsersController {
 
     return {
       message: 'User preference updated successfully',
+      preference,
+    };
+  }
+
+  @Post(':userId/hide')
+  @HttpCode(HttpStatus.OK)
+  async hideUser(
+    @Param('userId') userId: string,
+  ): Promise<{ message: string; preference: UserPreference }> {
+    const preference = await this.usersService.hideUser(userId);
+
+    return {
+      message: 'User hidden successfully',
+      preference,
+    };
+  }
+
+  @Post(':userId/show')
+  @HttpCode(HttpStatus.OK)
+  async showUser(
+    @Param('userId') userId: string,
+  ): Promise<{ message: string; preference: UserPreference }> {
+    const preference = await this.usersService.showUser(userId);
+
+    return {
+      message: 'User shown successfully',
+      preference,
+    };
+  }
+
+  @Post(':userId/toggle-visibility')
+  @HttpCode(HttpStatus.OK)
+  async toggleUserVisibility(
+    @Param('userId') userId: string,
+  ): Promise<{ message: string; preference: UserPreference }> {
+    const preference = await this.usersService.toggleUserVisibility(userId);
+
+    return {
+      message: `User ${preference.hidden ? 'hidden' : 'shown'} successfully`,
       preference,
     };
   }

@@ -13,8 +13,8 @@ import { ConfigModule } from '../config/config.module';
   imports: [
     TypeOrmModule.forFeature([UserDevice]),
     forwardRef(() => DevicesModule),
-    SessionsModule,
-    UsersModule,
+    forwardRef(() => SessionsModule),
+    forwardRef(() => UsersModule),
     ConfigModule,
   ],
   providers: [PlexService, PlexClient, SessionTerminationService],

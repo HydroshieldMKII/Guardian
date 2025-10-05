@@ -10,7 +10,7 @@ import { ConfigModule } from './modules/config/config.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { SchedulerService } from './services/scheduler.service';
 import { UserDevice } from './entities/user-device.entity';
-import { ActiveSession } from './entities/active-session.entity';
+import { SessionHistory } from './entities/session-history.entity';
 import { UserPreference } from './entities/user-preference.entity';
 import { AppSettings } from './entities/app-settings.entity';
 import { config } from './config/app.config';
@@ -24,7 +24,7 @@ import * as path from 'path';
       database:
         process.env.DATABASE_PATH ||
         path.join(process.cwd(), config.database.path),
-      entities: [UserDevice, ActiveSession, UserPreference, AppSettings],
+      entities: [UserDevice, SessionHistory, UserPreference, AppSettings],
       synchronize: true,
       logging: config.database.logging,
     }),

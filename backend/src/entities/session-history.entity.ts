@@ -3,45 +3,37 @@ import {
   PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
-  UpdateDateColumn,
   Index,
+  ManyToOne,
+  JoinColumn,
 } from 'typeorm';
+import { UserDevice } from './user-device.entity';
 
-@Entity('active_sessions')
-@Index(['sessionKey'], { unique: true })
-export class ActiveSession {
+@Entity('session_history')
+@Index(['userId', 'startedAt'])
+export class SessionHistory {
   @PrimaryGeneratedColumn()
   id: number;
 
   @Column({ name: 'session_key' })
   sessionKey: string;
 
-  @Column({ name: 'user_id', nullable: true })
+  @Column({ name: 'user_id' })
   userId: string;
 
   @Column({ name: 'username', nullable: true })
   username: string;
 
-  @Column({ name: 'device_identifier', nullable: true })
-  deviceIdentifier: string;
+  // Foreign key to UserDevice
+  @Column({ name: 'user_device_id', nullable: true })
+  userDeviceId: number;
 
-  @Column({ name: 'device_name', nullable: true })
-  deviceName: string;
-
-  @Column({ name: 'device_platform', nullable: true })
-  devicePlatform: string;
-
-  @Column({ name: 'device_product', nullable: true })
-  deviceProduct: string;
-
-  @Column({ name: 'device_title', nullable: true })
-  deviceTitle: string;
+  @ManyToOne(() => UserDevice, { eager: false })
+  @JoinColumn({ name: 'user_device_id' })
+  userDevice: UserDevice;
 
   @Column({ name: 'device_address', nullable: true })
   deviceAddress: string;
-
-  @Column({ name: 'player_state', nullable: true })
-  playerState: string;
 
   @Column({ name: 'content_title', nullable: true })
   contentTitle: string;
@@ -91,16 +83,16 @@ export class ActiveSession {
   @Column({ name: 'bandwidth', nullable: true })
   bandwidth: number;
 
-  @CreateDateColumn({ name: 'created_at' })
-  createdAt: Date;
+  @CreateDateColumn({ name: 'started_at' })
+  startedAt: Date;
 
-  @UpdateDateColumn({ name: 'updated_at' })
-  updatedAt: Date;
-
-  @Column({
-    name: 'last_activity',
+  @Column({ 
+    name: 'ended_at',
     type: 'datetime',
-    default: () => 'CURRENT_TIMESTAMP',
+    nullable: true
   })
-  lastActivity: Date;
+  endedAt?: Date;
+
+  @Column({ name: 'player_state', nullable: true })
+  playerState: string;
 }

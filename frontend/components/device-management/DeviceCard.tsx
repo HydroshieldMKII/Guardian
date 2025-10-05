@@ -13,7 +13,7 @@ import {
   Clock
 } from "lucide-react";
 import { UserDevice, AppSetting } from '@/types';
-import { getDeviceIcon, DeviceStatus, ClickableIP } from './SharedComponents';
+import { getDeviceIcon, ClickableIP } from './SharedComponents';
 import { useDeviceUtils } from '@/hooks/device-management/useDeviceUtils';
 
 interface DeviceCardProps {
@@ -59,6 +59,7 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
 
   return (
     <div
+      id={`device-${device.id}`}
       className="relative group bg-gradient-to-br from-card to-card/80 rounded-xl border shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden backdrop-blur-sm"
       data-device-identifier={device.deviceIdentifier}
     >
@@ -85,7 +86,6 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
                   <h4 className="font-semibold text-foreground truncate text-base">
                     {device.deviceName || device.deviceIdentifier}
                   </h4>
-                  <DeviceStatus device={device} />
                 </div>
               </div>
             </div>
@@ -332,9 +332,6 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
                     {device.deviceName || device.deviceIdentifier}
                   </h4>
                 </div>
-              </div>
-              <div className="flex-shrink-0">
-                <DeviceStatus device={device} />
               </div>
             </div>
             {/* Device Info Grid - Desktop */}

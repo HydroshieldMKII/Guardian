@@ -30,7 +30,6 @@ async function bootstrap() {
   await app.listen(config.app.port);
 
   console.log(`✅ Guardian server is running on port ${config.app.port}`);
-  console.log(`🔧 Configure Plex settings through the web interface to get started`);
 
   const cleanup = () => {
     console.log('Shutting down Guardian server...');

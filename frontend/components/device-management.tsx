@@ -17,6 +17,13 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Users,
   RefreshCw,
   Wifi,
@@ -28,15 +35,21 @@ import {
   Settings,
   CheckCircle,
   XCircle,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 
 // Hooks
 import { useDeviceActions } from "@/hooks/device-management/useDeviceActions";
 import { useUserPreferences } from "@/hooks/device-management/useUserPreferences";
 import { useDeviceUtils } from "@/hooks/device-management/useDeviceUtils";
+import { useToast } from "@/hooks/use-toast";
 
 // Types
 import { UserDevice, UserPreference, AppSetting } from "@/types";
+
+// API
+import { apiClient } from "@/lib/api";
 
 // Components
 import { UserGroupCard } from "@/components/device-management/UserGroupCard";
@@ -44,6 +57,8 @@ import { DeviceCard } from "@/components/device-management/DeviceCard";
 import { DeviceDetailsModal } from "@/components/device-management/DeviceDetailsModal";
 import { TemporaryAccessModal } from "@/components/device-management/TemporaryAccessModal";
 import { ConfirmationModal } from "@/components/device-management/ConfirmationModal";
+import { UserHistoryModal } from "@/components/device-management/UserHistoryModal";
+import { UserAvatar } from "@/components/device-management/SharedComponents";
 
 // User-Device group interface
 interface UserDeviceGroup {
@@ -56,6 +71,7 @@ interface UserDeviceGroup {
   pendingCount: number;
   approvedCount: number;
   rejectedCount: number;
+  lastSeen?: Date;
 }
 
 // Skeleton components for loading states
@@ -147,6 +163,10 @@ const DeviceManagement = memo(({
   const [editingDevice, setEditingDevice] = useState<number | null>(null);
   const [newDeviceName, setNewDeviceName] = useState("");
   const [temporaryAccessDevice, setTemporaryAccessDevice] = useState<number | null>(null);
+  const [hiddenUsersModalOpen, setHiddenUsersModalOpen] = useState(false);
+  const [hiddenUsers, setHiddenUsers] = useState<UserPreference[]>([]);
+  const [userHistoryModalOpen, setUserHistoryModalOpen] = useState(false);
+  const [selectedHistoryUser, setSelectedHistoryUser] = useState<{userId: string, username?: string} | null>(null);
 
   // Confirmation dialog states
   const [confirmAction, setConfirmAction] = useState<ConfirmActionData | null>(null);
@@ -155,6 +175,7 @@ const DeviceManagement = memo(({
   const deviceActions = useDeviceActions();
   const userPreferences = useUserPreferences();
   const deviceUtils = useDeviceUtils();
+  const { toast } = useToast();
 
   // Local storage keys for sorting preferences
   const USER_SORT_BY_KEY = "guardian-unified-sort-by";
@@ -179,8 +200,8 @@ const DeviceManagement = memo(({
   };
   
   // Sorting state with localStorage initialization
-  const [sortBy, setSortBy] = useState<"username" | "deviceCount" | "pendingCount">(
-    () => getStoredValue(USER_SORT_BY_KEY, "pendingCount") as "username" | "deviceCount" | "pendingCount"
+  const [sortBy, setSortBy] = useState<"username" | "deviceCount" | "pendingCount" | "lastSeen">(
+    () => getStoredValue(USER_SORT_BY_KEY, "pendingCount") as "username" | "deviceCount" | "pendingCount" | "lastSeen"
   );
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">(
     () => getStoredValue(USER_SORT_ORDER_KEY, "desc") as "asc" | "desc"
@@ -237,6 +258,14 @@ const DeviceManagement = memo(({
         if (!group.user.username && device.username) {
           group.user.username = device.username;
         }
+        
+        // Update lastSeen to the most recent device activity
+        if (device.lastSeen) {
+          const deviceLastSeen = new Date(device.lastSeen);
+          if (!group.lastSeen || deviceLastSeen > group.lastSeen) {
+            group.lastSeen = deviceLastSeen;
+          }
+        }
       });
       
       // Add users without devices (users with preferences but no devices yet)
@@ -256,18 +285,24 @@ const DeviceManagement = memo(({
         }
       });
       
-      // Convert to array and sort devices within each group
-      const groups = Array.from(deviceGroups.values()).map(group => ({
-        ...group,
-        devices: group.devices.sort((a, b) => {
-          // Sort devices by status (pending first, then by last seen)
-          if (a.status !== b.status) {
-            const statusOrder = { pending: 0, approved: 1, rejected: 2 };
-            return statusOrder[a.status] - statusOrder[b.status];
-          }
-          return new Date(b.lastSeen).getTime() - new Date(a.lastSeen).getTime();
+      // Convert to array and filter out hidden users
+      const groups = Array.from(deviceGroups.values())
+        .filter(group => {
+          // Filter out users that are explicitly marked as hidden
+          // Include users with no preference (not hidden) or users with preference that are not hidden
+          return !group.user.preference || !group.user.preference.hidden;
         })
-      }));
+        .map(group => ({
+          ...group,
+          devices: group.devices.sort((a, b) => {
+            // Sort devices by status (pending first, then by last seen)
+            if (a.status !== b.status) {
+              const statusOrder = { pending: 0, approved: 1, rejected: 2 };
+              return statusOrder[a.status] - statusOrder[b.status];
+            }
+            return new Date(b.lastSeen).getTime() - new Date(a.lastSeen).getTime();
+          })
+        }));
       
       setUserGroups(groups);
       setLoading(false);
@@ -379,6 +414,11 @@ const DeviceManagement = memo(({
           valueA = a.pendingCount;
           valueB = b.pendingCount;
           break;
+        case "lastSeen":
+          // Use lastSeen date, fallback to 0 (epoch) if no devices
+          valueA = a.lastSeen ? a.lastSeen.getTime() : 0;
+          valueB = b.lastSeen ? b.lastSeen.getTime() : 0;
+          break;
         default:
           valueA = (a.user.username || a.user.userId).toLowerCase();
           valueB = (b.user.username || b.user.userId).toLowerCase();
@@ -386,7 +426,7 @@ const DeviceManagement = memo(({
       }
 
       // For numeric values, use numeric comparison
-      if (sortBy === "deviceCount" || sortBy === "pendingCount") {
+      if (sortBy === "deviceCount" || sortBy === "pendingCount" || sortBy === "lastSeen") {
         const comparison = valueA - valueB;
         return sortOrder === "asc" ? comparison : -comparison;
       }
@@ -413,6 +453,112 @@ const DeviceManagement = memo(({
     if (success) {
       handleRefresh();
     }
+  };
+
+  // User visibility toggle handler
+  const handleToggleUserVisibility = async (userId: string) => {
+    try {
+      const user = usersData?.find(u => u.userId === userId) || hiddenUsers.find(u => u.userId === userId);
+      const isCurrentlyHidden = user?.hidden || false;
+      const username = user?.username || userId;
+      
+      await apiClient.toggleUserVisibility(userId);
+      
+      if (isCurrentlyHidden) {
+        // User was hidden, now showing
+        toast({
+          title: "User Shown",
+          description: `${username} is now visible in the user list`,
+          variant: "success",
+        });
+      } else {
+        // User was visible, now hiding
+        toast({
+          title: "User Hidden",
+          description: `${username} has been hidden from the user list. You can manage hidden users at the bottom of the user list.`,
+          variant: "success",
+        });
+      }
+      
+      handleRefresh(); // Refresh to get updated user data
+      // If modal is open, refresh hidden users list
+      if (hiddenUsersModalOpen) {
+        await loadHiddenUsers();
+      }
+    } catch (error) {
+      console.error('Failed to toggle user visibility:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update user visibility",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleShowHistory = (userId: string) => {
+    // Find the username for this userId
+    const userGroup = userGroups.find(group => group.user.userId === userId);
+    const username = userGroup?.user.username || userGroup?.user.preference?.username;
+    
+    setSelectedHistoryUser({ userId, username });
+    setUserHistoryModalOpen(true);
+  };
+
+  const handleNavigateToDeviceFromHistory = (userId: string, deviceIdentifier: string) => {
+    // Expand the user group
+    setExpandedUsers(prev => new Set(prev).add(userId));
+    
+    // Find the device to verify it exists
+    const device = userGroups
+      .find(group => group.user.userId === userId)
+      ?.devices.find(d => d.deviceIdentifier === deviceIdentifier);
+    
+    if (device) {
+      const wasExpanded = expandedUsers.has(userId);
+      const delay = wasExpanded ? 100 : 600;
+      
+      setTimeout(() => {
+        const deviceElement = document.querySelector(`[data-device-identifier="${deviceIdentifier}"]`);
+        if (deviceElement) {
+
+          deviceElement.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'center',
+            inline: 'nearest'
+          });
+          
+          // Add highlight effect
+          setTimeout(() => {
+            deviceElement.classList.add('ring-2', 'ring-blue-500', 'ring-opacity-75');
+            setTimeout(() => {
+              deviceElement.classList.remove('ring-2', 'ring-blue-500', 'ring-opacity-75');
+            }, 1500);
+          }, 200);
+        }
+      }, delay);
+    } else {
+      toast({
+        title: "Device Not Found",
+        description: "The device may have been removed or is no longer available.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Load hidden users for modal
+  const loadHiddenUsers = async () => {
+    try {
+      const hiddenUsersData = await apiClient.getHiddenUsers<UserPreference[]>();
+      setHiddenUsers(hiddenUsersData);
+    } catch (error) {
+      console.error('Failed to load hidden users:', error);
+    }
+  };
+
+  // Open hidden users modal
+  const openHiddenUsersModal = async () => {
+    await loadHiddenUsers();
+    setHiddenUsersModalOpen(true);
   };
 
   // Device action handlers
@@ -661,6 +807,7 @@ const DeviceManagement = memo(({
                   />
                   <span>Refresh</span>
                 </Button>
+
               </div>
             </div>
           </div>
@@ -690,6 +837,7 @@ const DeviceManagement = memo(({
                         {sortBy === "username" && "Username"}
                         {sortBy === "deviceCount" && "Device Count"}
                         {sortBy === "pendingCount" && "Pending Count"}
+                        {sortBy === "lastSeen" && "Last Stream"}
                         <ArrowUpDown className="ml-1 h-3 w-3" />
                       </Button>
                     </DropdownMenuTrigger>
@@ -702,6 +850,9 @@ const DeviceManagement = memo(({
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => setSortBy("pendingCount")}>
                         Pending Count
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setSortBy("lastSeen")}>
+                        Last Stream
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -772,6 +923,8 @@ const DeviceManagement = memo(({
                   newDeviceName={newDeviceName}
                   onToggleExpansion={toggleUserExpansion}
                   onUpdateUserPreference={handleUpdateUserPreference}
+                  onToggleUserVisibility={handleToggleUserVisibility}
+                  onShowHistory={handleShowHistory}
                   onEdit={startEditing}
                   onCancelEdit={cancelEditing}
                   onRename={handleRename}
@@ -786,6 +939,18 @@ const DeviceManagement = memo(({
                   shouldShowGrantTempAccess={shouldShowGrantTempAccess}
                 />
               ))}
+              
+              {/* Show Hidden Users Button */}
+              <div className="mt-6 pt-4 border-t border-border">
+                <Button
+                  variant="outline"
+                  onClick={openHiddenUsersModal}
+                  className="w-full text-sm"
+                >
+                  <EyeOff className="w-4 h-4 mr-2" />
+                  Show Hidden Users
+                </Button>
+              </div>
             </div>
           )}
         </CardContent>
@@ -820,6 +985,68 @@ const DeviceManagement = memo(({
         actionLoading={actionLoading}
         onConfirm={handleConfirmAction}
         onCancel={() => setConfirmAction(null)}
+      />
+
+      {/* Hidden Users Modal */}
+      <Dialog open={hiddenUsersModalOpen} onOpenChange={setHiddenUsersModalOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center">
+              <EyeOff className="w-5 h-5 mr-2" />
+              Hidden Users
+            </DialogTitle>
+            <DialogDescription>
+              These users are hidden from the main list. Click "Show" to make them visible again.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-3">
+            {hiddenUsers.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <Users className="w-8 h-8 mx-auto mb-2" />
+                <p>No hidden users found</p>
+              </div>
+            ) : (
+              hiddenUsers.map((user) => (
+                <div
+                  key={user.userId}
+                  className="flex items-center justify-between p-3 border rounded-lg bg-muted/30"
+                >
+                  <div className="flex items-center space-x-3">
+                    <UserAvatar 
+                      userId={user.userId}
+                      username={user.username}
+                      avatarUrl={user.avatarUrl}
+                    />
+                    <div>
+                      <p className="font-medium">{user.username || "Unknown username"}</p>
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    onClick={() => handleToggleUserVisibility(user.userId)}
+                    className="ml-4"
+                  >
+                    <Eye className="w-4 h-4 mr-1" />
+                    Show
+                  </Button>
+                </div>
+              ))
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* User History Modal */}
+      <UserHistoryModal
+        userId={selectedHistoryUser?.userId || null}
+        username={selectedHistoryUser?.username}
+        isOpen={userHistoryModalOpen}
+        onClose={() => {
+          setUserHistoryModalOpen(false);
+          setSelectedHistoryUser(null);
+        }}
+        onNavigateToDevice={handleNavigateToDeviceFromHistory}
       />
     </>
   );

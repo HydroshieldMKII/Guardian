@@ -7,7 +7,11 @@ import {
   Settings,
   CheckCircle,
   XCircle,
-  Monitor
+  Monitor,
+  EyeOff,
+  Eye,
+  History,
+  SquareUser
 } from "lucide-react";
 import { UserDevice, UserPreference, AppSetting } from '@/types';
 import { UserAvatar, getUserPreferenceBadge } from './SharedComponents';
@@ -35,6 +39,8 @@ interface UserGroupCardProps {
   newDeviceName: string;
   onToggleExpansion: (userId: string) => void;
   onUpdateUserPreference: (userId: string, defaultBlock: boolean | null) => void;
+  onToggleUserVisibility?: (userId: string) => void;
+  onShowHistory?: (userId: string) => void;
   onEdit: (device: UserDevice) => void;
   onCancelEdit: () => void;
   onRename: (deviceId: number, newName: string) => void;
@@ -58,6 +64,8 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
   newDeviceName,
   onToggleExpansion,
   onUpdateUserPreference,
+  onToggleUserVisibility,
+  onShowHistory,
   onEdit,
   onCancelEdit,
   onRename,
@@ -122,13 +130,63 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
         
         <CollapsibleContent>
           <div className="p-3 sm:p-4 space-y-4">
-            {/* User Preference Controls */}
-            <div className="flex flex-col gap-3 p-3 bg-muted/30 rounded-lg">
-              <div className="flex items-center space-x-2">
-                <Settings className="w-4 h-4 flex-shrink-0" />
-                <span className="text-sm font-medium">Default Device Policy:</span>
+            {/* User Actions Card */}
+            {(onToggleUserVisibility || onShowHistory) && (
+              <div className="flex flex-col gap-3 p-3 bg-muted/30 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <SquareUser className="w-4 h-4 flex-shrink-0" />
+                    <span className="text-sm font-medium">User Actions:</span>
+                  </div>
+                  <div className="flex gap-2">
+                    {onToggleUserVisibility && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onToggleUserVisibility(group.user.userId)}
+                        className="text-xs px-2 py-1"
+                        title={group.user.preference?.hidden ? "Show user" : "Hide user"}
+                      >
+                        {group.user.preference?.hidden ? (
+                          <>
+                            <Eye className="w-3 h-3 sm:mr-1" />
+                            <span className="hidden sm:inline">Show</span>
+                          </>
+                        ) : (
+                          <>
+                            <EyeOff className="w-3 h-3 sm:mr-1" />
+                            <span className="hidden sm:inline">Hide</span>
+                          </>
+                        )}
+                      </Button>
+                    )}
+                    {onShowHistory && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onShowHistory(group.user.userId)}
+                        className="text-xs px-2 py-1"
+                        title="Show user history"
+                      >
+                        <History className="w-3 h-3 sm:mr-1" />
+                        <span className="hidden sm:inline">History</span>
+                      </Button>
+                    )}
+                  </div>
+                </div>
               </div>
-              <div className="grid grid-cols-3 gap-2">
+            )}
+
+            {/* Device Policy Card */}
+            <div className="flex flex-col gap-3 p-3 bg-muted/30 rounded-lg">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div className="flex items-center space-x-2">
+                  <Settings className="w-4 h-4 flex-shrink-0" />
+                  <span className="text-sm font-medium">Default Device Policy:</span>
+                </div>
+                
+                {/* Policy buttons - mobile: full width grid, desktop: inline flex */}
+                <div className="grid grid-cols-3 gap-2 sm:flex sm:gap-2">
                 <Button
                   variant={!group.user.preference || group.user.preference.defaultBlock === null ? "default" : "outline"}
                   size="sm"
@@ -167,6 +225,7 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
                   <span className="hidden sm:inline">Block</span>
                   <span className="sm:hidden">Block</span>
                 </Button>
+                </div>
               </div>
             </div>
 

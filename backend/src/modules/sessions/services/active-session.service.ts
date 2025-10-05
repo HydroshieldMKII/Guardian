@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { ActiveSession } from '../../../entities/active-session.entity';
+import { SessionHistory } from '../../../entities/session-history.entity';
 import { UserDevice } from '../../../entities/user-device.entity';
 import { DeviceTrackingService } from '../../devices/services/device-tracking.service';
 
@@ -48,8 +48,8 @@ export class ActiveSessionService {
   private readonly logger = new Logger(ActiveSessionService.name);
 
   constructor(
-    @InjectRepository(ActiveSession)
-    private activeSessionRepository: Repository<ActiveSession>,
+    @InjectRepository(SessionHistory)
+    private sessionHistoryRepository: Repository<SessionHistory>,
     @InjectRepository(UserDevice)
     private userDeviceRepository: Repository<UserDevice>,
     private deviceTrackingService: DeviceTrackingService,
@@ -65,25 +65,31 @@ export class ActiveSessionService {
         .map((s) => s.sessionKey)
         .filter(Boolean);
 
-      // Get sessions that are about to be removed (devices that stopped streaming)
-      const endingSessions = await this.activeSessionRepository
+      // Get sessions that are about to end (not in current sessions but exist in DB without endedAt)
+      const endingSessions = await this.sessionHistoryRepository
         .createQueryBuilder('session')
-        .select('session.sessionKey')
         .where('session.sessionKey NOT IN (:...sessionKeys)', {
           sessionKeys: currentSessionKeys,
         })
+        .andWhere('session.endedAt IS NULL')
         .getMany();
 
       const endingSessionKeys = endingSessions.map(s => s.sessionKey);
 
-      // Remove sessions that are no longer active
-      await this.activeSessionRepository
-        .createQueryBuilder()
-        .delete()
-        .where('session_key NOT IN (:...sessionKeys)', {
-          sessionKeys: currentSessionKeys,
-        })
-        .execute();
+      // Mark ended sessions with endedAt timestamp and update player state
+      if (endingSessionKeys.length > 0) {
+        await this.sessionHistoryRepository
+          .createQueryBuilder()
+          .update(SessionHistory)
+          .set({ 
+            endedAt: new Date(),
+            playerState: 'stopped'
+          })
+          .where('sessionKey IN (:...sessionKeys)', {
+            sessionKeys: endingSessionKeys,
+          })
+          .execute();
+      }
       
       // Clear session keys from devices for ended sessions only
       for (const sessionKey of endingSessionKeys) {
@@ -102,10 +108,13 @@ export class ActiveSessionService {
     }
   }
 
-  async getActiveSessions(): Promise<ActiveSession[]> {
-    return this.activeSessionRepository.find({
-      order: { lastActivity: 'DESC' },
-    });
+  async getActiveSessions(): Promise<SessionHistory[]> {
+    return this.sessionHistoryRepository
+      .createQueryBuilder('session')
+      .leftJoinAndSelect('session.userDevice', 'device')
+      .where('session.endedAt IS NULL') // Only get active sessions (no end date)
+      .orderBy('session.startedAt', 'DESC')
+      .getMany();
   }
 
   private extractSessionsFromData(data: any): PlexSessionData[] {
@@ -128,22 +137,29 @@ export class ActiveSessionService {
       const player = sessionData.Player;
       const session = sessionData.Session;
 
-      // Check if session exists
-      const existingSession = await this.activeSessionRepository.findOne({
-        where: { sessionKey: sessionData.sessionKey },
-      });
+      // Check if session exists (active session = no endedAt)
+      const existingSession = await this.sessionHistoryRepository
+        .createQueryBuilder('session')
+        .where('session.sessionKey = :sessionKey', { sessionKey: sessionData.sessionKey })
+        .andWhere('session.endedAt IS NULL')
+        .getOne();
+
+      // Find the UserDevice to get the foreign key
+      let userDevice: UserDevice | null = null;
+      if (user?.id && player?.machineIdentifier) {
+        userDevice = await this.userDeviceRepository.findOne({
+          where: {
+            userId: user.id,
+            deviceIdentifier: player.machineIdentifier,
+          },
+        });
+      }
 
       const sessionData_partial = {
         sessionKey: sessionData.sessionKey,
         ...(user?.id && { userId: user.id }),
         ...(user?.title && { username: user.title }),
-        ...(player?.machineIdentifier && {
-          deviceIdentifier: player.machineIdentifier,
-        }),
-        ...(player?.device && { deviceName: player.device }),
-        ...(player?.platform && { devicePlatform: player.platform }),
-        ...(player?.product && { deviceProduct: player.product }),
-        ...(player?.title && { deviceTitle: player.title }),
+        ...(userDevice?.id && { userDeviceId: userDevice.id }),
         ...(player?.address && { deviceAddress: player.address }),
         ...(player?.state && { playerState: player.state }),
         ...(sessionData.title && { contentTitle: sessionData.title }),
@@ -170,17 +186,21 @@ export class ActiveSessionService {
         ...(media?.audioCodec && { audioCodec: media.audioCodec }),
         ...(session?.location && { sessionLocation: session.location }),
         ...(session?.bandwidth && { bandwidth: session.bandwidth }),
-        lastActivity: new Date(),
       };
 
       if (existingSession) {
-        await this.activeSessionRepository.update(
-          { sessionKey: sessionData.sessionKey },
-          sessionData_partial,
-        );
+        // Update existing active session 
+        await this.sessionHistoryRepository
+          .createQueryBuilder()
+          .update(SessionHistory)
+          .set(sessionData_partial)
+          .where('sessionKey = :sessionKey', { sessionKey: sessionData.sessionKey })
+          .andWhere('endedAt IS NULL')
+          .execute();
       } else {
-        await this.activeSessionRepository.save(
-          this.activeSessionRepository.create(sessionData_partial),
+        // Create new session (startedAt will be auto-generated, no endedAt)
+        await this.sessionHistoryRepository.save(
+          this.sessionHistoryRepository.create(sessionData_partial),
         );
       }
     } catch (error) {
@@ -192,41 +212,27 @@ export class ActiveSessionService {
   }
 
   async removeSession(sessionKey: string): Promise<void> {
-    await this.activeSessionRepository.delete({ sessionKey });
+    // Mark session as ended and update player state
+    await this.sessionHistoryRepository
+      .createQueryBuilder()
+      .update(SessionHistory)
+      .set({ 
+        endedAt: new Date(),
+        playerState: 'stopped'
+      })
+      .where('sessionKey = :sessionKey', { sessionKey })
+      .andWhere('endedAt IS NULL')
+      .execute();
     await this.deviceTrackingService.clearSessionKey(sessionKey);
-    this.logger.log(`Removed session ${sessionKey} from database and cleared device session key`);
+    this.logger.log(`Ended session ${sessionKey} and cleared device session key`);
   }
 
   async getActiveSessionsFormatted(): Promise<any> {
     try {
       const sessions = await this.getActiveSessions();
 
-      const deviceSessionCounts = new Map<string, number>();
-      const deviceCustomNames = new Map<string, string>();
-      
-      for (const session of sessions) {
-        if (session.userId && session.deviceIdentifier) {
-          const key = `${session.userId}-${session.deviceIdentifier}`;
-          if (!deviceSessionCounts.has(key)) {
-            const device = await this.userDeviceRepository.findOne({
-              where: {
-                userId: session.userId,
-                deviceIdentifier: session.deviceIdentifier,
-              },
-            });
-            deviceSessionCounts.set(key, device?.sessionCount || 0);
-            // Store custom device name if it exists
-            if (device?.deviceName) {
-              deviceCustomNames.set(key, device.deviceName);
-            }
-          }
-        }
-      }
-
       const transformedSessions = sessions.map((session) => {
-        const deviceKey = `${session.userId}-${session.deviceIdentifier}`;
-        const sessionCount = deviceSessionCounts.get(deviceKey) || 0;
-        const customDeviceName = deviceCustomNames.get(deviceKey);
+        const device = session.userDevice;
         
         return {
           sessionKey: session.sessionKey,
@@ -235,14 +241,14 @@ export class ActiveSessionService {
             title: session.username,
           },
           Player: {
-            machineIdentifier: session.deviceIdentifier,
-            platform: session.devicePlatform,
-            product: session.deviceProduct,
-            title: customDeviceName,
-            device: session.deviceName,
+            machineIdentifier: device?.deviceIdentifier || 'Unknown',
+            platform: device?.devicePlatform || 'Unknown',
+            product: device?.deviceProduct || 'Unknown',
+            title: device?.deviceName || device?.deviceProduct || 'Unknown Device',
+            device: device?.deviceName || 'Unknown',
             address: session.deviceAddress,
             state: session.playerState as 'playing' | 'paused' | 'buffering',
-            originalTitle: session.deviceTitle,
+            originalTitle: device?.deviceName || device?.deviceProduct || 'Unknown',
           },
           Media:
             session.videoResolution || session.bitrate || session.container
@@ -260,7 +266,7 @@ export class ActiveSessionService {
             id: session.sessionKey,
             bandwidth: session.bandwidth,
             location: session.sessionLocation as 'lan' | 'wan',
-            sessionCount: sessionCount,
+            sessionCount: device?.sessionCount || 0,
           },
           title: session.contentTitle,
           grandparentTitle: session.grandparentTitle,
@@ -282,6 +288,44 @@ export class ActiveSessionService {
       };
     } catch (error: any) {
       this.logger.error('Error getting active sessions formatted', error);
+      throw error;
+    }
+  }
+
+
+
+  async getUserSessionHistory(userId: string, limit: number = 50, includeActive: boolean = false): Promise<SessionHistory[]> {
+    try {
+      const queryBuilder = this.sessionHistoryRepository
+        .createQueryBuilder('session')
+        .leftJoinAndSelect('session.userDevice', 'device')
+        .where('session.userId = :userId', { userId })
+        .orderBy('session.startedAt', 'DESC')
+        .take(limit);
+      
+      // By default, only return completed sessions (with endedAt)
+      if (!includeActive) {
+        queryBuilder.andWhere('session.endedAt IS NOT NULL');
+      }
+      
+      return await queryBuilder.getMany();
+    } catch (error) {
+      this.logger.error(`Failed to get session history for user ${userId}:`, error);
+      throw error;
+    }
+  }
+
+  async deleteSessionHistory(sessionId: number): Promise<void> {
+    try {
+      const result = await this.sessionHistoryRepository.delete(sessionId);
+      
+      if (result.affected === 0) {
+        throw new Error(`Session history with ID ${sessionId} not found`);
+      }
+      
+      this.logger.log(`Deleted session history with ID: ${sessionId}`);
+    } catch (error) {
+      this.logger.error(`Failed to delete session history ${sessionId}:`, error);
       throw error;
     }
   }

@@ -59,6 +59,23 @@ class ApiClient {
   async getDashboardData<T>(): Promise<T> {
     return this.get<T>("/dashboard");
   }
+
+  // User visibility methods
+  async getHiddenUsers<T>(): Promise<T> {
+    return this.get<T>("/users/hidden/list");
+  }
+
+  async hideUser<T>(userId: string): Promise<T> {
+    return this.post<T>(`/users/${userId}/hide`);
+  }
+
+  async showUser<T>(userId: string): Promise<T> {
+    return this.post<T>(`/users/${userId}/show`);
+  }
+
+  async toggleUserVisibility<T>(userId: string): Promise<T> {
+    return this.post<T>(`/users/${userId}/toggle-visibility`);
+  }
 }
 
 export const apiClient = new ApiClient(config.api.baseUrl);
