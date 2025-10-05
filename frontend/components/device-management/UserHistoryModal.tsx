@@ -136,12 +136,12 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
         
         <div className="flex flex-col gap-4 flex-1 overflow-hidden">
           {/* Search and Refresh */}
-          <div className="flex gap-3">
+          <div className="flex gap-3 px-1 pt-1">
             <Input
               placeholder="Search by title, device, or IP address..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="flex-1 mx-1"
+              className="flex-1"
             />
             <Button
               variant="outline"
@@ -232,7 +232,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
                     </div>
 
                     {/* Action */}
-                    <div className="flex-1 min-w-[80px] flex justify-center">
+                    <div className="flex-1 min-w-[80px] flex justify-start">
                       <Button
                         variant="ghost"
                         size="sm"
