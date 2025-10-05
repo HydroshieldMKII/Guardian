@@ -26,49 +26,26 @@ export class UsersService {
     return await this.userPreferenceRepository.find();
   }
 
-  // Update user info directly from session data (called during session processing)
+  // Create user if not exists
   async updateUserFromSessionData(userId: string, username?: string, avatarUrl?: string): Promise<void> {
     if (!userId) return;
 
     try {
-      // Find existing user preference
-      let preference = await this.userPreferenceRepository.findOne({
+      // Check if user preference exists
+      const preference = await this.userPreferenceRepository.findOne({
         where: { userId },
       });
 
-      let needsUpdate = false;
-      let isNewUser = false;
-
       if (!preference) {
         // Create new user preference if it doesn't exist
-        preference = this.userPreferenceRepository.create({
+        const newPreference = this.userPreferenceRepository.create({
           userId,
           username,
-          avatarUrl,
           defaultBlock: null, // null means use global default
         });
-        isNewUser = true;
-        needsUpdate = true;
-      } else {
-        // Update existing preference if data has changed
-        if (avatarUrl && preference.avatarUrl !== avatarUrl) {
-          preference.avatarUrl = avatarUrl;
-          needsUpdate = true;
-        }
         
-        if (username && !preference.username) {
-          preference.username = username;
-          needsUpdate = true;
-        }
-      }
-
-      if (needsUpdate) {
-        await this.userPreferenceRepository.save(preference);
-        if (isNewUser) {
-          this.logger.debug(`Created new user preference: ${userId} (${username})`);
-        } else {
-          this.logger.debug(`Updated user info: ${userId} (${username})`);
-        }
+        await this.userPreferenceRepository.save(newPreference);
+        this.logger.debug(`Created new user preference: ${userId} (${username})`);
       }
     } catch (error) {
       this.logger.error(`Error updating user from session data: ${userId}`, error);
