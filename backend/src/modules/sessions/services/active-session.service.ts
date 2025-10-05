@@ -304,7 +304,6 @@ export class ActiveSessionService {
         .take(limit);
       
       // By default, only return completed sessions (with endedAt)
-      // Set includeActive=true to include currently active sessions
       if (!includeActive) {
         queryBuilder.andWhere('session.endedAt IS NOT NULL');
       }
