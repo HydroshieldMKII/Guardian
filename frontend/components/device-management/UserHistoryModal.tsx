@@ -16,7 +16,8 @@ import {
   Eye,
   X,
   ChevronRight,
-  RefreshCw
+  RefreshCw,
+  Radio
 } from "lucide-react";
 import { config } from '@/lib/config';
 
@@ -66,7 +67,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
 
     setLoading(true);
     try {
-      const response = await fetch(`${config.api.baseUrl}/sessions/history/${userId}?limit=100`);
+      const response = await fetch(`${config.api.baseUrl}/sessions/history/${userId}?limit=100&includeActive=true`);
       if (response.ok) {
         const data = await response.json();
         // Sort by most recent first (startedAt descending)
@@ -181,7 +182,14 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
 
                 {/* Session Rows */}
                 {filteredSessions.map((session) => (
-                  <div key={session.id} className="grid grid-cols-7 gap-4 p-3 hover:bg-muted/30 transition-colors min-w-[800px]">
+                  <div 
+                    key={session.id} 
+                    className={`grid grid-cols-7 gap-4 p-3 transition-colors min-w-[800px] ${
+                      !session.endedAt 
+                        ? 'bg-green-50 hover:bg-green-100 border-l-4 border-l-green-500' 
+                        : 'hover:bg-muted/30'
+                    }`}
+                  >
                     {/* Content Title */}
                     <div className="flex-1 min-w-[200px] min-w-0">
                       <div className="font-medium truncate">
@@ -226,8 +234,15 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
 
                     {/* Ended */}
                     <div className="flex-1 min-w-[140px] min-w-0">
-                      <div className="text-sm">
-                        {session.endedAt ? formatDate(session.endedAt) : 'In Progress'}
+                      <div className="flex items-center gap-2 text-sm">
+                        {session.endedAt ? (
+                          formatDate(session.endedAt)
+                        ) : (
+                          <>
+                            <Radio className="w-4 h-4 text-green-500 animate-pulse" />
+                            <span className="text-green-700 font-medium">Active Now</span>
+                          </>
+                        )}
                       </div>
                     </div>
 

@@ -1,7 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { ActiveSession } from '../../../entities/active-session.entity';
 import { SessionHistory } from '../../../entities/session-history.entity';
 import { UserDevice } from '../../../entities/user-device.entity';
 import { DeviceTrackingService } from '../../devices/services/device-tracking.service';
@@ -49,8 +48,6 @@ export class ActiveSessionService {
   private readonly logger = new Logger(ActiveSessionService.name);
 
   constructor(
-    @InjectRepository(ActiveSession)
-    private activeSessionRepository: Repository<ActiveSession>,
     @InjectRepository(SessionHistory)
     private sessionHistoryRepository: Repository<SessionHistory>,
     @InjectRepository(UserDevice)
@@ -68,29 +65,28 @@ export class ActiveSessionService {
         .map((s) => s.sessionKey)
         .filter(Boolean);
 
-      // Get full session data that are about to be removed (devices that stopped streaming)
-      const endingSessions = await this.activeSessionRepository
+      // Get sessions that are about to end (not in current sessions but exist in DB without endedAt)
+      const endingSessions = await this.sessionHistoryRepository
         .createQueryBuilder('session')
         .where('session.sessionKey NOT IN (:...sessionKeys)', {
           sessionKeys: currentSessionKeys,
         })
+        .andWhere('session.endedAt IS NULL')
         .getMany();
 
       const endingSessionKeys = endingSessions.map(s => s.sessionKey);
 
-      // Save ended sessions to history before removing them
-      for (const endedSession of endingSessions) {
-        await this.saveSessionToHistory(endedSession);
+      // Mark ended sessions with endedAt timestamp
+      if (endingSessionKeys.length > 0) {
+        await this.sessionHistoryRepository
+          .createQueryBuilder()
+          .update(SessionHistory)
+          .set({ endedAt: new Date() })
+          .where('sessionKey IN (:...sessionKeys)', {
+            sessionKeys: endingSessionKeys,
+          })
+          .execute();
       }
-
-      // Remove sessions that are no longer active
-      await this.activeSessionRepository
-        .createQueryBuilder()
-        .delete()
-        .where('session_key NOT IN (:...sessionKeys)', {
-          sessionKeys: currentSessionKeys,
-        })
-        .execute();
       
       // Clear session keys from devices for ended sessions only
       for (const sessionKey of endingSessionKeys) {
@@ -109,10 +105,12 @@ export class ActiveSessionService {
     }
   }
 
-  async getActiveSessions(): Promise<ActiveSession[]> {
-    return this.activeSessionRepository.find({
-      order: { lastActivity: 'DESC' },
-    });
+  async getActiveSessions(): Promise<SessionHistory[]> {
+    return this.sessionHistoryRepository
+      .createQueryBuilder('session')
+      .where('session.endedAt IS NULL') // Only get active sessions (no end date)
+      .orderBy('session.startedAt', 'DESC')
+      .getMany();
   }
 
   private extractSessionsFromData(data: any): PlexSessionData[] {
@@ -135,10 +133,12 @@ export class ActiveSessionService {
       const player = sessionData.Player;
       const session = sessionData.Session;
 
-      // Check if session exists
-      const existingSession = await this.activeSessionRepository.findOne({
-        where: { sessionKey: sessionData.sessionKey },
-      });
+      // Check if session exists (active session = no endedAt)
+      const existingSession = await this.sessionHistoryRepository
+        .createQueryBuilder('session')
+        .where('session.sessionKey = :sessionKey', { sessionKey: sessionData.sessionKey })
+        .andWhere('session.endedAt IS NULL')
+        .getOne();
 
       const sessionData_partial = {
         sessionKey: sessionData.sessionKey,
@@ -177,17 +177,21 @@ export class ActiveSessionService {
         ...(media?.audioCodec && { audioCodec: media.audioCodec }),
         ...(session?.location && { sessionLocation: session.location }),
         ...(session?.bandwidth && { bandwidth: session.bandwidth }),
-        lastActivity: new Date(),
       };
 
       if (existingSession) {
-        await this.activeSessionRepository.update(
-          { sessionKey: sessionData.sessionKey },
-          sessionData_partial,
-        );
+        // Update existing active session 
+        await this.sessionHistoryRepository
+          .createQueryBuilder()
+          .update(SessionHistory)
+          .set(sessionData_partial)
+          .where('sessionKey = :sessionKey', { sessionKey: sessionData.sessionKey })
+          .andWhere('endedAt IS NULL')
+          .execute();
       } else {
-        await this.activeSessionRepository.save(
-          this.activeSessionRepository.create(sessionData_partial),
+        // Create new session (startedAt will be auto-generated, no endedAt)
+        await this.sessionHistoryRepository.save(
+          this.sessionHistoryRepository.create(sessionData_partial),
         );
       }
     } catch (error) {
@@ -199,9 +203,16 @@ export class ActiveSessionService {
   }
 
   async removeSession(sessionKey: string): Promise<void> {
-    await this.activeSessionRepository.delete({ sessionKey });
+    // Mark session as ended instead of deleting
+    await this.sessionHistoryRepository
+      .createQueryBuilder()
+      .update(SessionHistory)
+      .set({ endedAt: new Date() })
+      .where('sessionKey = :sessionKey', { sessionKey })
+      .andWhere('endedAt IS NULL')
+      .execute();
     await this.deviceTrackingService.clearSessionKey(sessionKey);
-    this.logger.log(`Removed session ${sessionKey} from database and cleared device session key`);
+    this.logger.log(`Ended session ${sessionKey} and cleared device session key`);
   }
 
   async getActiveSessionsFormatted(): Promise<any> {
@@ -293,45 +304,23 @@ export class ActiveSessionService {
     }
   }
 
-  private async saveSessionToHistory(session: ActiveSession): Promise<void> {
+
+
+  async getUserSessionHistory(userId: string, limit: number = 50, includeActive: boolean = false): Promise<SessionHistory[]> {
     try {
-      // Check if this session already exists in history
-      const existingHistory = await this.sessionHistoryRepository.findOne({
-        where: { sessionKey: session.sessionKey }
-      });
-
-      if (existingHistory) {
-        // Update end time if it doesn't exist
-        if (!existingHistory.endedAt) {
-          existingHistory.endedAt = new Date();
-          await this.sessionHistoryRepository.save(existingHistory);
-        }
-        return;
-      }
-
-      // Create new history entry using destructuring and spread (clean and type-safe)
-      const { id, createdAt, updatedAt, lastActivity, ...sessionData } = session;
+      const queryBuilder = this.sessionHistoryRepository
+        .createQueryBuilder('session')
+        .where('session.userId = :userId', { userId })
+        .orderBy('session.startedAt', 'DESC')
+        .take(limit);
       
-      const sessionHistory = this.sessionHistoryRepository.create({
-        ...sessionData,
-        startedAt: createdAt,
-        endedAt: new Date(),
-      });
-
-      await this.sessionHistoryRepository.save(sessionHistory);
-      this.logger.debug(`Saved session ${session.sessionKey} to history for user ${session.userId}`);
-    } catch (error) {
-      this.logger.error(`Failed to save session ${session.sessionKey} to history:`, error);
-    }
-  }
-
-  async getUserSessionHistory(userId: string, limit: number = 50): Promise<SessionHistory[]> {
-    try {
-      return await this.sessionHistoryRepository.find({
-        where: { userId },
-        order: { startedAt: 'DESC' },
-        take: limit
-      });
+      // By default, only return completed sessions (with endedAt)
+      // Set includeActive=true to include currently active sessions
+      if (!includeActive) {
+        queryBuilder.andWhere('session.endedAt IS NOT NULL');
+      }
+      
+      return await queryBuilder.getMany();
     } catch (error) {
       this.logger.error(`Failed to get session history for user ${userId}:`, error);
       throw error;

@@ -15,9 +15,11 @@ export class SessionsController {
   @Get('history/:userId')
   async getUserSessionHistory(
     @Param('userId') userId: string,
-    @Query('limit') limit?: string
+    @Query('limit') limit?: string,
+    @Query('includeActive') includeActive?: string
   ): Promise<SessionHistory[]> {
     const limitNum = limit ? parseInt(limit, 10) : 50;
-    return this.activeSessionService.getUserSessionHistory(userId, limitNum);
+    const includeActiveFlag = includeActive === 'true';
+    return this.activeSessionService.getUserSessionHistory(userId, limitNum, includeActiveFlag);
   }
 }

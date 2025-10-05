@@ -95,7 +95,7 @@ export class SessionHistory {
     type: 'datetime',
     nullable: true
   })
-  endedAt: Date;
+  endedAt?: Date;
 
   @Column({ name: 'player_state', nullable: true })
   playerState: string;
