@@ -71,6 +71,7 @@ interface UserDeviceGroup {
   pendingCount: number;
   approvedCount: number;
   rejectedCount: number;
+  lastSeen?: Date;
 }
 
 // Skeleton components for loading states
@@ -199,8 +200,8 @@ const DeviceManagement = memo(({
   };
   
   // Sorting state with localStorage initialization
-  const [sortBy, setSortBy] = useState<"username" | "deviceCount" | "pendingCount">(
-    () => getStoredValue(USER_SORT_BY_KEY, "pendingCount") as "username" | "deviceCount" | "pendingCount"
+  const [sortBy, setSortBy] = useState<"username" | "deviceCount" | "pendingCount" | "lastSeen">(
+    () => getStoredValue(USER_SORT_BY_KEY, "pendingCount") as "username" | "deviceCount" | "pendingCount" | "lastSeen"
   );
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">(
     () => getStoredValue(USER_SORT_ORDER_KEY, "desc") as "asc" | "desc"
@@ -256,6 +257,14 @@ const DeviceManagement = memo(({
         // Use device username if user preference doesn't have it
         if (!group.user.username && device.username) {
           group.user.username = device.username;
+        }
+        
+        // Update lastSeen to the most recent device activity
+        if (device.lastSeen) {
+          const deviceLastSeen = new Date(device.lastSeen);
+          if (!group.lastSeen || deviceLastSeen > group.lastSeen) {
+            group.lastSeen = deviceLastSeen;
+          }
         }
       });
       
@@ -405,6 +414,11 @@ const DeviceManagement = memo(({
           valueA = a.pendingCount;
           valueB = b.pendingCount;
           break;
+        case "lastSeen":
+          // Use lastSeen date, fallback to 0 (epoch) if no devices
+          valueA = a.lastSeen ? a.lastSeen.getTime() : 0;
+          valueB = b.lastSeen ? b.lastSeen.getTime() : 0;
+          break;
         default:
           valueA = (a.user.username || a.user.userId).toLowerCase();
           valueB = (b.user.username || b.user.userId).toLowerCase();
@@ -412,7 +426,7 @@ const DeviceManagement = memo(({
       }
 
       // For numeric values, use numeric comparison
-      if (sortBy === "deviceCount" || sortBy === "pendingCount") {
+      if (sortBy === "deviceCount" || sortBy === "pendingCount" || sortBy === "lastSeen") {
         const comparison = valueA - valueB;
         return sortOrder === "asc" ? comparison : -comparison;
       }
@@ -823,6 +837,7 @@ const DeviceManagement = memo(({
                         {sortBy === "username" && "Username"}
                         {sortBy === "deviceCount" && "Device Count"}
                         {sortBy === "pendingCount" && "Pending Count"}
+                        {sortBy === "lastSeen" && "Last Stream"}
                         <ArrowUpDown className="ml-1 h-3 w-3" />
                       </Button>
                     </DropdownMenuTrigger>
@@ -835,6 +850,9 @@ const DeviceManagement = memo(({
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => setSortBy("pendingCount")}>
                         Pending Count
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setSortBy("lastSeen")}>
+                        Last Stream
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
