@@ -7,6 +7,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Card } from "@/components/ui/card";
 import { 
   Clock,
   Monitor,
@@ -263,119 +264,231 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
                 <p>{searchTerm ? 'No sessions found matching your search' : 'No streaming history found'}</p>
               </div>
             ) : (
-              <div className="divide-y min-w-max">
-                {/* Header */}
-                <div className="grid grid-cols-8 gap-1 p-2 bg-muted text-sm font-medium sticky top-0 z-10 min-w-max">
-                  <div className="min-w-[180px]">Content</div>
-                  <div className="min-w-[100px]">Device</div>
-                  <div className="min-w-[40px]">Platform</div>
-                  <div className="min-w-[100px]">IP Address</div>
-                  <div className="min-w-[110px]">Started</div>
-                  <div className="min-w-[110px]">Ended</div>
-                  <div className="min-w-[80px]">Duration</div>
-                  <div className="min-w-[80px]">Actions</div>
-                </div>
+              <>
+                {/* Desktop Table View */}
+                <div className="hidden md:block divide-y">
+                  {/* Header */}
+                  <div className="grid grid-cols-8 gap-2 p-3 bg-muted text-sm font-medium sticky top-0 z-10">
+                    <div>Content</div>
+                    <div>Device</div>
+                    <div>Platform</div>
+                    <div>IP Address</div>
+                    <div>Started</div>
+                    <div>Ended</div>
+                    <div>Duration</div>
+                    <div>Actions</div>
+                  </div>
 
-                {/* Session Rows */}
-                {filteredSessions.map((session) => (
-                  <div 
-                    key={session.id} 
-                    className={`grid grid-cols-8 gap-1 p-2 transition-colors min-w-max ${
-                      !session.endedAt 
-                        ? 'bg-green-50/20 hover:bg-green-50/30 border-l-4 border-l-green-500' 
-                        : 'hover:bg-muted/30'
-                    }`}
-                  >
-                    {/* Content Title */}
-                    <div className="min-w-[180px] overflow-hidden">
-                      <div className="font-medium truncate">
-                        {formatTitle(session)}
-                      </div>
-                      {session.year && (
-                        <div className="text-xs text-muted-foreground">
-                          {session.year}
+                  {/* Desktop Session Rows */}
+                  {filteredSessions.map((session) => (
+                    <div 
+                      key={session.id} 
+                      className={`grid grid-cols-8 gap-2 p-3 transition-colors ${
+                        !session.endedAt 
+                          ? 'bg-green-50/20 hover:bg-green-50/30 border-l-4 border-l-green-500' 
+                          : 'hover:bg-muted/30'
+                      }`}
+                    >
+                      {/* Content Title */}
+                      <div className="overflow-hidden">
+                        <div className="font-medium break-words">
+                          {formatTitle(session)}
                         </div>
-                      )}
-                    </div>
-
-                    {/* Device */}
-                    <div className="min-w-[100px] overflow-hidden">
-                      <div className="truncate text-sm">
-                        {getDeviceDisplayName(session)}
-                      </div>
-                    </div>
-
-                    {/* Platform */}
-                    <div className="min-w-[60px] overflow-hidden">
-                      {session.userDevice?.devicePlatform && (
-                        <div className="text-xs text-muted-foreground capitalize truncate">
-                          {session.userDevice.devicePlatform}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* IP Address */}
-                    <div className="min-w-[100px] overflow-hidden">
-                      <div className="text-sm font-mono truncate">
-                        <ClickableIP ipAddress={session.deviceAddress} />
-                      </div>
-                    </div>
-
-                    {/* Started */}
-                    <div className="min-w-[110px] overflow-hidden">
-                      <div className="text-sm truncate">
-                        {formatDate(session.startedAt)}
-                      </div>
-                    </div>
-
-                    {/* Ended */}
-                    <div className="min-w-[110px] overflow-hidden">
-                      <div className="flex items-center gap-1 text-sm">
-                        {session.endedAt ? (
-                          <span className="truncate">{formatDate(session.endedAt)}</span>
-                        ) : (
-                          <>
-                            <Radio className="w-3 h-3 text-green-500 animate-pulse flex-shrink-0" />
-                            <span className="text-green-700 font-medium truncate">Active</span>
-                          </>
+                        {session.year && (
+                          <div className="text-xs text-muted-foreground">
+                            {session.year}
+                          </div>
                         )}
                       </div>
-                    </div>
 
-                    {/* Duration */}
-                    <div className="min-w-[80px] overflow-hidden">
-                      <div className="text-sm font-mono truncate">
-                        {formatDuration(session)}
+                      {/* Device */}
+                      <div className="overflow-hidden">
+                        <div className="text-sm break-words">
+                          {getDeviceDisplayName(session)}
+                        </div>
                       </div>
-                    </div>
 
-                    {/* Actions */}
-                    <div className="min-w-[80px] flex justify-start gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDeviceClick(session)}
-                        className="h-8 w-8 p-0"
-                        title="Scroll to Device"
-                      >
-                        <UserRoundSearch className="w-4 h-4" />
-                      </Button>
-                      {/* Only show delete button for completed sessions */}
-                      {session.endedAt && (
+                      {/* Platform */}
+                      <div className="overflow-hidden">
+                        {session.userDevice?.devicePlatform && (
+                          <div className="text-xs text-muted-foreground capitalize">
+                            {session.userDevice.devicePlatform}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* IP Address */}
+                      <div className="overflow-hidden">
+                        <div className="text-sm font-mono">
+                          <ClickableIP ipAddress={session.deviceAddress} />
+                        </div>
+                      </div>
+
+                      {/* Started */}
+                      <div className="overflow-hidden">
+                        <div className="text-sm">
+                          {formatDate(session.startedAt)}
+                        </div>
+                      </div>
+
+                      {/* Ended */}
+                      <div className="overflow-hidden">
+                        <div className="flex items-center gap-1 text-sm">
+                          {session.endedAt ? (
+                            <span>{formatDate(session.endedAt)}</span>
+                          ) : (
+                            <>
+                              <Radio className="w-3 h-3 text-green-500 animate-pulse flex-shrink-0" />
+                              <span className="text-green-700 font-medium">Active</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Duration */}
+                      <div className="overflow-hidden">
+                        <div className="text-sm font-mono">
+                          {formatDuration(session)}
+                        </div>
+                      </div>
+
+                      {/* Actions */}
+                      <div className="flex justify-start gap-1">
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleDeleteClick(session)}
-                          className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                          title="Delete Session"
+                          onClick={() => handleDeviceClick(session)}
+                          className="h-8 w-8 p-0"
+                          title="Scroll to Device"
                         >
-                          <Trash2 className="w-4 h-4" />
+                          <UserRoundSearch className="w-4 h-4" />
                         </Button>
-                      )}
+                        {/* Only show delete button for completed sessions */}
+                        {session.endedAt && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteClick(session)}
+                            className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                            title="Delete Session"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+
+                {/* Mobile Card View */}
+                <div className="md:hidden space-y-3">
+                  {filteredSessions.map((session) => (
+                    <Card 
+                      key={session.id} 
+                      className={`p-4 transition-colors ${
+                        !session.endedAt 
+                          ? 'bg-green-50/20 hover:bg-green-50/30 border-l-4 border-l-green-500' 
+                          : 'hover:bg-muted/30'
+                      }`}
+                    >
+                      {/* Title and Active Status */}
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-sm break-words">
+                            {formatTitle(session)}
+                          </div>
+                          {session.year && (
+                            <div className="text-xs text-muted-foreground mt-1">
+                              {session.year}
+                            </div>
+                          )}
+                        </div>
+                        {!session.endedAt && (
+                          <div className="flex items-center gap-1 ml-2 flex-shrink-0">
+                            <Radio className="w-3 h-3 text-green-500 animate-pulse" />
+                            <span className="text-xs text-green-700 font-medium">Active</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Device and Platform */}
+                      <div className="space-y-2 mb-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-muted-foreground">Device:</span>
+                          <span className="text-sm break-words text-right max-w-[60%]">
+                            {getDeviceDisplayName(session)}
+                          </span>
+                        </div>
+                        {session.userDevice?.devicePlatform && (
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs text-muted-foreground">Platform:</span>
+                            <span className="text-sm capitalize">
+                              {session.userDevice.devicePlatform}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Timing Information */}
+                      <div className="space-y-2 mb-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-muted-foreground">Started:</span>
+                          <span className="text-sm break-words text-right max-w-[60%]">
+                            {formatDate(session.startedAt)}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-muted-foreground">Ended:</span>
+                          <span className="text-sm break-words text-right max-w-[60%]">
+                            {session.endedAt ? formatDate(session.endedAt) : 'Active Now'}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-muted-foreground">Duration:</span>
+                          <span className="text-sm font-mono">
+                            {formatDuration(session)}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* IP Address */}
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-xs text-muted-foreground">IP Address:</span>
+                        <div className="text-sm font-mono">
+                          <ClickableIP ipAddress={session.deviceAddress} />
+                        </div>
+                      </div>
+
+                      {/* Actions */}
+                      <div className="flex justify-end gap-2 pt-2 border-t">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeviceClick(session)}
+                          className="h-8 px-3 text-xs"
+                          title="Scroll to Device"
+                        >
+                          <UserRoundSearch className="w-3 h-3 mr-1" />
+                          Find Device
+                        </Button>
+                        {/* Only show delete button for completed sessions */}
+                        {session.endedAt && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteClick(session)}
+                            className="h-8 px-3 text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
+                            title="Delete Session"
+                          >
+                            <Trash2 className="w-3 h-3 mr-1" />
+                            Delete
+                          </Button>
+                        )}
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              </>
             )}
           </div>
 
