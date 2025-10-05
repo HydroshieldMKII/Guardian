@@ -180,7 +180,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
             ) : (
               <div className="divide-y min-w-max">
                 {/* Header */}
-                <div className="grid grid-cols-7 gap-4 p-3 bg-muted/50 text-sm font-medium sticky top-0 z-10 min-w-[800px]">
+                <div className="grid grid-cols-7 gap-4 p-3 bg-muted text-sm font-medium sticky top-0 z-10 min-w-[800px]">
                   <div className="flex-1 min-w-[200px]">Content</div>
                   <div className="flex-1 min-w-[120px]">Device</div>
                   <div className="flex-1 min-w-[80px]">Platform</div>

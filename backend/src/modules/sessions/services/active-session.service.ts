@@ -326,7 +326,44 @@ export class ActiveSessionService {
         queryBuilder.andWhere('session.endedAt IS NOT NULL');
       }
       
-      return await queryBuilder.getMany();
+      const sessions = await queryBuilder.getMany();
+
+      // Enrich sessions with custom device names
+      const deviceCustomNames = new Map<string, string>();
+      
+      for (const session of sessions) {
+        if (session.userId && session.deviceIdentifier) {
+          const key = `${session.userId}-${session.deviceIdentifier}`;
+          if (!deviceCustomNames.has(key)) {
+            const device = await this.userDeviceRepository.findOne({
+              where: {
+                userId: session.userId,
+                deviceIdentifier: session.deviceIdentifier,
+              },
+            });
+            // Store custom device name if it exists
+            if (device?.deviceName) {
+              deviceCustomNames.set(key, device.deviceName);
+            }
+          }
+        }
+      }
+
+      // Update sessions with custom device names
+      return sessions.map(session => {
+        const deviceKey = `${session.userId}-${session.deviceIdentifier}`;
+        const customDeviceName = deviceCustomNames.get(deviceKey);
+        
+        if (customDeviceName) {
+          // Create a new object with the custom device name
+          return {
+            ...session,
+            deviceName: customDeviceName
+          };
+        }
+        
+        return session;
+      });
     } catch (error) {
       this.logger.error(`Failed to get session history for user ${userId}:`, error);
       throw error;
