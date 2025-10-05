@@ -10,7 +10,8 @@ import {
   Monitor,
   EyeOff,
   Eye,
-  History
+  History,
+  SquareUser
 } from "lucide-react";
 import { UserDevice, UserPreference, AppSetting } from '@/types';
 import { UserAvatar, getUserPreferenceBadge } from './SharedComponents';
@@ -134,7 +135,7 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
               <div className="flex flex-col gap-3 p-3 bg-muted/30 rounded-lg">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
-                    <Monitor className="w-4 h-4 flex-shrink-0" />
+                    <SquareUser className="w-4 h-4 flex-shrink-0" />
                     <span className="text-sm font-medium">User Actions:</span>
                   </div>
                   <div className="flex gap-2">
