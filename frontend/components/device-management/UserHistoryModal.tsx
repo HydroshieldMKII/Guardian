@@ -325,15 +325,18 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
                       >
                         <UserRoundSearch className="w-4 h-4" />
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDeleteClick(session)}
-                        className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                        title="Delete Session"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                      {/* Only show delete button for completed sessions */}
+                      {session.endedAt && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteClick(session)}
+                          className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                          title="Delete Session"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      )}
                     </div>
                   </div>
                 ))}

@@ -212,7 +212,7 @@ export class UsersService {
     let errors = 0;
 
     try {
-      this.logger.log('Starting Plex Home users sync from Plex.tv API...');
+      this.logger.log('Starting Plex users sync from Plex.tv API...');
       
       // Fetch users from Plex.tv
       const response = await this.plexClient.getPlexUsers();
@@ -269,7 +269,7 @@ export class UsersService {
             userData['id'] = existingUser.id;
           }
 
-          // Upsert user preference (insert or update)
+          // Upsert user preference
           await this.userPreferenceRepository.upsert(
             userData,
             {
@@ -299,7 +299,7 @@ export class UsersService {
       }
 
       this.logger.log(
-        `Plex Home users sync completed: ${created} created, ${updated} updated, ${errors} errors`,
+        `Plex users sync completed: ${created} created, ${updated} updated, ${errors} errors`,
       );
 
       return { updated, created, errors };
