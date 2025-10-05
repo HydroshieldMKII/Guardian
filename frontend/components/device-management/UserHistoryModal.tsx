@@ -102,9 +102,18 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
   };
 
   const formatTitle = (session: SessionHistoryEntry) => {
-    if (session.grandparentTitle && session.parentTitle) {
-      return `${session.grandparentTitle} - ${session.parentTitle}`;
+    if (session.contentType === 'episode' && session.grandparentTitle) {
+      // For TV episodes: "Series - Season X - Episode Title"
+      const parts = [session.grandparentTitle];
+      if (session.parentTitle) {
+        parts.push(session.parentTitle);
+      }
+      if (session.contentTitle) {
+        parts.push(session.contentTitle);
+      }
+      return parts.join(' - ');
     }
+    // For movies or other content
     return session.contentTitle || 'Unknown Title';
   };
 
