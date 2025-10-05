@@ -267,6 +267,7 @@ export class PlexClient {
       method: 'GET',
     });
 
+
     this.logger.log(`Terminated session ${sessionKey}`);
   }
 

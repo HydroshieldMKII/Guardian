@@ -93,6 +93,9 @@ export class SessionHistory {
   })
   endedAt?: Date;
 
+  @Column({ name: 'terminated', default: false })
+  terminated: boolean;
+
   @Column({ name: 'player_state', nullable: true })
   playerState: string;
 }

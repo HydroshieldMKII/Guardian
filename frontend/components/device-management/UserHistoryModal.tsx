@@ -52,6 +52,7 @@ interface SessionHistoryEntry {
   year?: number;
   startedAt: string;
   endedAt?: string;
+  terminated?: boolean;
   thumb?: string;
   art?: string;
 }
@@ -286,6 +287,8 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
                       className={`grid grid-cols-8 gap-2 p-3 transition-colors ${
                         !session.endedAt 
                           ? 'bg-green-50/20 hover:bg-green-50/30 border-l-4 border-l-green-500' 
+                          : session.terminated
+                          ? 'bg-red-50/20 hover:bg-red-50/30 border-l-4 border-l-red-500'
                           : 'hover:bg-muted/30'
                       }`}
                     >
@@ -335,7 +338,15 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
                       <div className="overflow-hidden">
                         <div className="flex items-center gap-1 text-sm">
                           {session.endedAt ? (
-                            <span>{formatDate(session.endedAt)}</span>
+                            <>
+                              <span>{formatDate(session.endedAt)}</span>
+                              {session.terminated && (
+                                <>
+                                  <X className="w-3 h-3 text-red-500 flex-shrink-0 ml-1" />
+                                  <span className="text-red-700 font-medium text-xs">Terminated</span>
+                                </>
+                              )}
+                            </>
                           ) : (
                             <>
                               <Radio className="w-3 h-3 text-green-500 animate-pulse flex-shrink-0" />
@@ -388,6 +399,8 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
                       className={`p-4 transition-colors ${
                         !session.endedAt 
                           ? 'bg-green-50/20 hover:bg-green-50/30 border-l-4 border-l-green-500' 
+                          : session.terminated
+                          ? 'bg-red-50/20 hover:bg-red-50/30 border-l-4 border-l-red-500'
                           : 'hover:bg-muted/30'
                       }`}
                     >
@@ -403,10 +416,15 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
                             </div>
                           )}
                         </div>
-                        {!session.endedAt && (
+                        {!session.endedAt ? (
                           <div className="flex items-center gap-1 ml-2 flex-shrink-0">
                             <Radio className="w-3 h-3 text-green-500 animate-pulse" />
                             <span className="text-xs text-green-700 font-medium">Active</span>
+                          </div>
+                        ) : session.terminated && (
+                          <div className="flex items-center gap-1 ml-2 flex-shrink-0">
+                            <X className="w-3 h-3 text-red-500" />
+                            <span className="text-xs text-red-700 font-medium">Terminated</span>
                           </div>
                         )}
                       </div>
@@ -439,9 +457,18 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
                         </div>
                         <div className="flex items-center justify-between">
                           <span className="text-xs text-muted-foreground">Ended:</span>
-                          <span className="text-sm break-words text-right max-w-[60%]">
-                            {session.endedAt ? formatDate(session.endedAt) : 'Active Now'}
-                          </span>
+                          <div className="text-sm break-words text-right max-w-[60%]">
+                            {session.endedAt ? (
+                              <div className="flex items-center gap-1 justify-end">
+                                <span>{formatDate(session.endedAt)}</span>
+                                {session.terminated && (
+                                  <X className="w-3 h-3 text-red-500 flex-shrink-0" />
+                                )}
+                              </div>
+                            ) : (
+                              'Active Now'
+                            )}
+                          </div>
                         </div>
                         <div className="flex items-center justify-between">
                           <span className="text-xs text-muted-foreground">Duration:</span>

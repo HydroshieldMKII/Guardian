@@ -3,6 +3,7 @@ import { DeviceTrackingService } from './services/device-tracking.service';
 import { UserDevice } from '../../entities/user-device.entity';
 import { PlexClient } from '../plex/services/plex-client';
 import { SessionTerminationService } from '../plex/services/session-termination.service';
+import { ActiveSessionService } from '../sessions/services/active-session.service';
 
 @Controller('devices')
 export class DevicesController {
@@ -11,7 +12,8 @@ export class DevicesController {
   constructor(
     private readonly deviceTrackingService: DeviceTrackingService, 
     private readonly plexClient: PlexClient,
-    private readonly sessionTerminationService: SessionTerminationService
+    private readonly sessionTerminationService: SessionTerminationService,
+    private readonly activeSessionService: ActiveSessionService
   ) {}
 
   @Get()
@@ -109,6 +111,8 @@ export class DevicesController {
     if (sessionKeyToTerminate) {
       try {
         await this.plexClient.terminateSession(sessionKeyToTerminate);
+        // Mark the session as terminated in session history
+        await this.activeSessionService.removeSession(sessionKeyToTerminate, true);
         this.logger.log(`Successfully terminated session ${sessionKeyToTerminate} for device ${deviceIdentifier}`);
       } catch (error) {
         // Check if it's a 404 error (session already ended or not found)
@@ -116,7 +120,11 @@ export class DevicesController {
           this.logger.warn(
             `Session ${sessionKeyToTerminate} was already terminated or not found (404) - treating as success`
           );
-          // Treat 404 as success since session termination is working through automatic system
+          try {
+            await this.activeSessionService.removeSession(sessionKeyToTerminate, true);
+          } catch (dbError) {
+            this.logger.warn(`Could not mark session as terminated in DB: ${dbError.message}`);
+          }
         } else {
           this.logger.error(
             `Failed to terminate session ${sessionKeyToTerminate} for device ${deviceIdentifier}: ${error.message}`

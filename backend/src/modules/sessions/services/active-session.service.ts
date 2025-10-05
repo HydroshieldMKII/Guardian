@@ -211,20 +211,59 @@ export class ActiveSessionService {
     }
   }
 
-  async removeSession(sessionKey: string): Promise<void> {
+  async removeSession(sessionKey: string, terminated: boolean = false): Promise<void> {
+    // First, try to find session by sessionKey
+    let existingSession = await this.sessionHistoryRepository.findOne({
+      where: { sessionKey }
+    });
+
+    let actualSessionKey = sessionKey;
+
+    // If session not found by sessionKey, try to find by device identifier
+    if (!existingSession) {
+      this.logger.debug(`Session ${sessionKey} not found by sessionKey, checking if it's a device identifier`);
+      
+      // Check if sessionKey is actually a device identifier
+      const device = await this.userDeviceRepository.findOne({
+        where: { deviceIdentifier: sessionKey },
+        select: ['id', 'deviceIdentifier', 'currentSessionKey']
+      });
+      if (device && device.currentSessionKey) {
+        this.logger.debug(`Found device with identifier ${sessionKey}, actual session key: ${device.currentSessionKey}`);
+        actualSessionKey = device.currentSessionKey;
+        existingSession = await this.sessionHistoryRepository.findOne({
+          where: { sessionKey: actualSessionKey }
+        });
+      }
+    }
+
+    if (!existingSession) {
+      this.logger.warn(`Session ${sessionKey} (actual: ${actualSessionKey}) not found in database for termination`);
+      await this.deviceTrackingService.clearSessionKey(sessionKey);
+      return;
+    }
+
     // Mark session as ended and update player state
-    await this.sessionHistoryRepository
+    const result = await this.sessionHistoryRepository
       .createQueryBuilder()
       .update(SessionHistory)
       .set({ 
         endedAt: new Date(),
-        playerState: 'stopped'
+        terminated: terminated,
+        playerState: terminated ? 'terminated' : 'stopped'
       })
-      .where('sessionKey = :sessionKey', { sessionKey })
-      .andWhere('endedAt IS NULL')
+      .where('sessionKey = :sessionKey', { sessionKey: actualSessionKey })
       .execute();
+    
+    this.logger.debug(`Update result for session ${sessionKey} (actual: ${actualSessionKey}): affected rows = ${result.affected}, terminated = ${terminated}`);
+    
     await this.deviceTrackingService.clearSessionKey(sessionKey);
-    this.logger.log(`Ended session ${sessionKey} and cleared device session key`);
+    
+    if (terminated) {
+      this.logger.log(`Terminated session ${sessionKey} (actual: ${actualSessionKey}) and cleared device session key`);
+    } else {
+      this.logger.log(`Ended session ${sessionKey} (actual: ${actualSessionKey}) and cleared device session key`);
+    }
   }
 
   async getActiveSessionsFormatted(): Promise<any> {
