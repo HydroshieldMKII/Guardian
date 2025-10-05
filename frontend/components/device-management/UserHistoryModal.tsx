@@ -259,9 +259,9 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
                 <span className="ml-2">Loading history...</span>
               </div>
             ) : filteredSessions.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-32 text-muted-foreground">
+              <div className="flex flex-col items-center justify-center h-32 text-muted-foreground text-center">
                 <Clock className="w-8 h-8 mb-2" />
-                <p>{searchTerm ? 'No sessions found matching your search' : 'No streaming history found'}</p>
+                <p className="text-center">{searchTerm ? 'No sessions found matching your search' : 'No streaming history found'}</p>
               </div>
             ) : (
               <>
