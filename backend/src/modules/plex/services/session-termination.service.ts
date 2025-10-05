@@ -20,7 +20,6 @@ export class SessionTerminationService {
     @InjectRepository(UserDevice)
     private userDeviceRepository: Repository<UserDevice>,
     private plexClient: PlexClient,
-    private activeSessionService: ActiveSessionService,
     private usersService: UsersService,
     @Inject(forwardRef(() => ConfigService))
     private configService: ConfigService,
@@ -147,32 +146,8 @@ export class SessionTerminationService {
       );
 
       await this.plexClient.terminateSession(sessionKey, reason);
-
-      // Remove session from database and mark as terminated
-      try {
-        await this.activeSessionService.removeSession(sessionKey, true);
-      } catch (dbError) {
-        this.logger.warn(
-          `Failed to remove session ${sessionKey} from database`,
-          dbError,
-        );
-      }
+      this.logger.log(`Successfully terminated session ${sessionKey}`);
     } catch (error) {
-      // Check if it's a 404 error (session already ended)
-      if (error.message && error.message.includes('404')) {
-        this.logger.warn(`Session ${sessionKey} was already terminated or not found`);
-        // Still try to clean up from database and mark as terminated
-        try {
-          await this.activeSessionService.removeSession(sessionKey, true);
-        } catch (dbError) {
-          this.logger.warn(
-            `Failed to remove session ${sessionKey} from database after 404`,
-            dbError,
-          );
-        }
-        return; // Don't throw error for 404s
-      }
-      
       this.logger.error(`Failed to terminate session ${sessionKey}`, error);
       throw error;
     }

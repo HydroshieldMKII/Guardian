@@ -111,8 +111,6 @@ export class DevicesController {
     if (sessionKeyToTerminate) {
       try {
         await this.plexClient.terminateSession(sessionKeyToTerminate);
-        // Mark the session as terminated in session history
-        await this.activeSessionService.removeSession(sessionKeyToTerminate, true);
         this.logger.log(`Successfully terminated session ${sessionKeyToTerminate} for device ${deviceIdentifier}`);
       } catch (error) {
         // Check if it's a 404 error (session already ended or not found)
@@ -120,11 +118,6 @@ export class DevicesController {
           this.logger.warn(
             `Session ${sessionKeyToTerminate} was already terminated or not found (404) - treating as success`
           );
-          try {
-            await this.activeSessionService.removeSession(sessionKeyToTerminate, true);
-          } catch (dbError) {
-            this.logger.warn(`Could not mark session as terminated in DB: ${dbError.message}`);
-          }
         } else {
           this.logger.error(
             `Failed to terminate session ${sessionKeyToTerminate} for device ${deviceIdentifier}: ${error.message}`

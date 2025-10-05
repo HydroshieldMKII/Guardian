@@ -9,6 +9,12 @@ import {
   createPlexSuccess 
 } from '../../../types/plex-errors';
 
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { SessionHistory } from '../../../entities/session-history.entity';
+
+import { UserDevice } from '../../../entities/user-device.entity';
+
 @Injectable()
 export class PlexClient {
   private readonly logger = new Logger(PlexClient.name);
@@ -16,6 +22,10 @@ export class PlexClient {
   constructor(
     @Inject(forwardRef(() => ConfigService))
     private configService: ConfigService,
+    @InjectRepository(SessionHistory)
+    private sessionHistoryRepository: Repository<SessionHistory>,
+    @InjectRepository(UserDevice)
+    private userDeviceRepository: Repository<UserDevice>,
   ) {}
 
   private async getConfig() {
@@ -249,17 +259,17 @@ export class PlexClient {
   }
 
   async terminateSession(
-    sessionKey: string,
+    deviceIdentifier: string,
     reason: string = 'Session terminated',
   ): Promise<void> {
 
-    if (!sessionKey) {
-      this.logger.warn('No session key provided for termination');
+    if (!deviceIdentifier) {
+      this.logger.warn('No device identifier provided for termination');
       return;
     }
 
     const params = new URLSearchParams({
-      sessionId: sessionKey,
+      sessionId: deviceIdentifier,
       reason: reason,
     });
 
@@ -267,8 +277,22 @@ export class PlexClient {
       method: 'GET',
     });
 
+    // Get device by identifier
+    const device = await this.userDeviceRepository.findOne({
+      where: { deviceIdentifier },
+    });
 
-    this.logger.log(`Terminated session ${sessionKey}`);
+    // Mark all active sessions for this device as ended + terminated
+    setTimeout(async () => {
+      await this.sessionHistoryRepository
+      .createQueryBuilder()
+      .update(SessionHistory)
+      .set({ endedAt: () => 'CURRENT_TIMESTAMP', terminated: true })
+      .where('user_device_id = :deviceId AND endedAt IS NULL', { deviceId: device?.id })
+      .execute();
+    }, 10000); // Delay to allow Plex server to process termination
+
+    this.logger.log(`Terminated session ${deviceIdentifier}`);
   }
 
   async testConnection(): Promise<PlexResponse> {

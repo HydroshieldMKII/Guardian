@@ -340,12 +340,6 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
                           {session.endedAt ? (
                             <>
                               <span>{formatDate(session.endedAt)}</span>
-                              {session.terminated && (
-                                <>
-                                  <X className="w-3 h-3 text-red-500 flex-shrink-0 ml-1" />
-                                  <span className="text-red-700 font-medium text-xs">Terminated</span>
-                                </>
-                              )}
                             </>
                           ) : (
                             <>
