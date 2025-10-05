@@ -7,7 +7,7 @@ import {
   User, 
   RefreshCw, 
   X, 
-  Eye, 
+  UserRoundSearch, 
   ChevronDown, 
   ChevronUp 
 } from "lucide-react";
@@ -118,7 +118,7 @@ export const StreamCard: React.FC<StreamCardProps> = ({
               className="h-6 w-6 p-0 text-muted-foreground hover:text-blue-600"
               title="View device details"
             >
-              <Eye className="w-3 h-3" />
+              <UserRoundSearch className="w-3 h-3" />
             </Button>
 
             <Button

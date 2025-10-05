@@ -315,4 +315,19 @@ export class ActiveSessionService {
       throw error;
     }
   }
+
+  async deleteSessionHistory(sessionId: number): Promise<void> {
+    try {
+      const result = await this.sessionHistoryRepository.delete(sessionId);
+      
+      if (result.affected === 0) {
+        throw new Error(`Session history with ID ${sessionId} not found`);
+      }
+      
+      this.logger.log(`Deleted session history with ID: ${sessionId}`);
+    } catch (error) {
+      this.logger.error(`Failed to delete session history ${sessionId}:`, error);
+      throw error;
+    }
+  }
 }

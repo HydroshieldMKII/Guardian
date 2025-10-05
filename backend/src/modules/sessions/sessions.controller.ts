@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
+import { Controller, Get, Param, Query, Delete } from '@nestjs/common';
 import { ActiveSessionService } from './services/active-session.service';
 import { PlexSessionsResponse } from '../../types/plex.types';
 import { SessionHistory } from '../../entities/session-history.entity';
@@ -21,5 +21,14 @@ export class SessionsController {
     const limitNum = limit ? parseInt(limit, 10) : 50;
     const includeActiveFlag = includeActive === 'true';
     return this.activeSessionService.getUserSessionHistory(userId, limitNum, includeActiveFlag);
+  }
+
+  @Delete('history/:sessionId')
+  async deleteSessionHistory(
+    @Param('sessionId') sessionId: string
+  ): Promise<{ success: boolean }> {
+    const sessionIdNum = parseInt(sessionId, 10);
+    await this.activeSessionService.deleteSessionHistory(sessionIdNum);
+    return { success: true };
   }
 }

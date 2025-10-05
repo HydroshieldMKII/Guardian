@@ -15,12 +15,15 @@ import {
   Play,
   Eye,
   X,
-  ChevronRight,
+  UserRoundSearch,
   RefreshCw,
-  Radio
+  Radio,
+  Trash2
 } from "lucide-react";
 import { config } from '@/lib/config';
 import { ClickableIP } from './SharedComponents';
+import { ConfirmationModal } from '@/components/ui/confirmation-modal';
+import { useToast } from '@/hooks/use-toast';
 
 interface UserDevice {
   id: number;
@@ -70,6 +73,9 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
   const [sessions, setSessions] = useState<SessionHistoryEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [sessionToDelete, setSessionToDelete] = useState<SessionHistoryEntry | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const { toast } = useToast();
 
   const fetchUserHistory = async () => {
     if (!userId) return;
@@ -143,6 +149,50 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
     }
   };
 
+  const handleDeleteClick = (session: SessionHistoryEntry) => {
+    setSessionToDelete(session);
+  };
+
+  const confirmDelete = async () => {
+    if (!sessionToDelete) return;
+
+    setDeleteLoading(true);
+    try {
+      const response = await fetch(`${config.api.baseUrl}/sessions/history/${sessionToDelete.id}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        // Remove the session from the local state
+        setSessions(prev => prev.filter(s => s.id !== sessionToDelete.id));
+        setSessionToDelete(null);
+        toast({
+          title: "Session Deleted",
+          description: "The session history has been successfully deleted.",
+          variant: "success",
+        });
+      } else {
+        toast({
+          title: "Delete Failed", 
+          description: "Failed to delete session history. Please try again.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Delete Failed",
+        description: "An error occurred while deleting the session history.",
+        variant: "destructive", 
+      });
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  const cancelDelete = () => {
+    setSessionToDelete(null);
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="!max-w-[95vw] !w-[95vw] max-h-[90vh] h-[90vh] overflow-hidden flex flex-col" style={{ width: '95vw !important', maxWidth: '95vw !important', minWidth: '95vw' }}>
@@ -195,7 +245,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
                   <div className="flex-1 min-w-[120px]">IP Address</div>
                   <div className="flex-1 min-w-[140px]">Started</div>
                   <div className="flex-1 min-w-[140px]">Ended</div>
-                  <div className="flex-1 min-w-[80px]">Action</div>
+                  <div className="flex-1 min-w-[120px]">Actions</div>
                 </div>
 
                 {/* Session Rows */}
@@ -264,8 +314,8 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
                       </div>
                     </div>
 
-                    {/* Action */}
-                    <div className="flex-1 min-w-[80px] flex justify-start">
+                    {/* Actions */}
+                    <div className="flex-1 min-w-[120px] flex justify-start gap-1">
                       <Button
                         variant="ghost"
                         size="sm"
@@ -273,7 +323,16 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
                         className="h-8 w-8 p-0"
                         title="Scroll to Device"
                       >
-                        <ChevronRight className="w-4 h-4" />
+                        <UserRoundSearch className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDeleteClick(session)}
+                        className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                        title="Delete Session"
+                      >
+                        <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>
                   </div>
@@ -291,6 +350,22 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
           )}
         </div>
       </DialogContent>
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={!!sessionToDelete}
+        onClose={cancelDelete}
+        onConfirm={confirmDelete}
+        title="Delete Session History"
+        description={
+          sessionToDelete 
+            ? `Are you sure you want to delete this session history for "${formatTitle(sessionToDelete)}"? This action cannot be undone.`
+            : ''
+        }
+        confirmText="Delete"
+        cancelText="Cancel"
+        variant="destructive"
+      />
     </Dialog>
   );
 };
