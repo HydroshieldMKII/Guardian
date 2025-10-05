@@ -136,6 +136,33 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
     return session.userDevice?.deviceName || session.userDevice?.deviceProduct || 'Unknown Device';
   };
 
+  const formatDuration = (session: SessionHistoryEntry) => {
+    if (!session.endedAt) {
+      return 'N/A';
+    }
+
+    const startTime = new Date(session.startedAt).getTime();
+    const endTime = new Date(session.endedAt).getTime();
+    const durationMs = endTime - startTime;
+
+    if (durationMs < 0) return 'Unknown';
+
+    const seconds = Math.floor(durationMs / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+
+    if (hours > 0) {
+      const remainingMinutes = minutes % 60;
+      const remainingSeconds = seconds % 60;
+      return `${hours}h ${remainingMinutes}m ${remainingSeconds}s`;
+    } else if (minutes > 0) {
+      const remainingSeconds = seconds % 60;
+      return `${minutes}m ${remainingSeconds}s`;
+    } else {
+      return `${seconds}s`;
+    }
+  };
+
   const filteredSessions = sessions.filter(session =>
     formatTitle(session).toLowerCase().includes(searchTerm.toLowerCase()) ||
     getDeviceDisplayName(session).toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -238,13 +265,14 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
             ) : (
               <div className="divide-y min-w-max">
                 {/* Header */}
-                <div className="grid grid-cols-7 gap-4 p-3 bg-muted text-sm font-medium sticky top-0 z-10 min-w-[800px]">
+                <div className="grid grid-cols-8 gap-4 p-3 bg-muted text-sm font-medium sticky top-0 z-10 min-w-[900px]">
                   <div className="flex-1 min-w-[200px]">Content</div>
                   <div className="flex-1 min-w-[120px]">Device</div>
                   <div className="flex-1 min-w-[80px]">Platform</div>
                   <div className="flex-1 min-w-[120px]">IP Address</div>
                   <div className="flex-1 min-w-[140px]">Started</div>
                   <div className="flex-1 min-w-[140px]">Ended</div>
+                  <div className="flex-1 min-w-[100px]">Duration</div>
                   <div className="flex-1 min-w-[120px]">Actions</div>
                 </div>
 
@@ -252,7 +280,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
                 {filteredSessions.map((session) => (
                   <div 
                     key={session.id} 
-                    className={`grid grid-cols-7 gap-4 p-3 transition-colors min-w-[800px] ${
+                    className={`grid grid-cols-8 gap-4 p-3 transition-colors min-w-[900px] ${
                       !session.endedAt 
                         ? 'bg-green-50/20 hover:bg-green-50/30 border-l-4 border-l-green-500' 
                         : 'hover:bg-muted/30'
@@ -311,6 +339,13 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
                             <span className="text-green-700 font-medium">Active Now</span>
                           </>
                         )}
+                      </div>
+                    </div>
+
+                    {/* Duration */}
+                    <div className="flex-1 min-w-[100px] min-w-0">
+                      <div className="text-sm font-mono">
+                        {formatDuration(session)}
                       </div>
                     </div>
 
