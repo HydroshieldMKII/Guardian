@@ -43,6 +43,7 @@ import {
 import { useDeviceActions } from "@/hooks/device-management/useDeviceActions";
 import { useUserPreferences } from "@/hooks/device-management/useUserPreferences";
 import { useDeviceUtils } from "@/hooks/device-management/useDeviceUtils";
+import { useToast } from "@/hooks/use-toast";
 
 // Types
 import { UserDevice, UserPreference, AppSetting } from "@/types";
@@ -170,6 +171,7 @@ const DeviceManagement = memo(({
   const deviceActions = useDeviceActions();
   const userPreferences = useUserPreferences();
   const deviceUtils = useDeviceUtils();
+  const { toast } = useToast();
 
   // Local storage keys for sorting preferences
   const USER_SORT_BY_KEY = "guardian-unified-sort-by";
@@ -439,7 +441,28 @@ const DeviceManagement = memo(({
   // User visibility toggle handler
   const handleToggleUserVisibility = async (userId: string) => {
     try {
+      const user = usersData?.find(u => u.userId === userId) || hiddenUsers.find(u => u.userId === userId);
+      const isCurrentlyHidden = user?.hidden || false;
+      const username = user?.username || userId;
+      
       await apiClient.toggleUserVisibility(userId);
+      
+      if (isCurrentlyHidden) {
+        // User was hidden, now showing
+        toast({
+          title: "User Shown",
+          description: `${username} is now visible in the user list`,
+          variant: "success",
+        });
+      } else {
+        // User was visible, now hiding
+        toast({
+          title: "User Hidden",
+          description: `${username} has been hidden from the user list. You can manage hidden users at the bottom of the user list.`,
+          variant: "success",
+        });
+      }
+      
       handleRefresh(); // Refresh to get updated user data
       // If modal is open, refresh hidden users list
       if (hiddenUsersModalOpen) {
@@ -447,6 +470,11 @@ const DeviceManagement = memo(({
       }
     } catch (error) {
       console.error('Failed to toggle user visibility:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update user visibility",
+        variant: "destructive",
+      });
     }
   };
 
