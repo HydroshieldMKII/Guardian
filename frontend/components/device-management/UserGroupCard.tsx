@@ -149,12 +149,12 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
                       >
                         {group.user.preference?.hidden ? (
                           <>
-                            <Eye className="w-3 h-3 mr-1" />
+                            <Eye className="w-3 h-3 sm:mr-1" />
                             <span className="hidden sm:inline">Show</span>
                           </>
                         ) : (
                           <>
-                            <EyeOff className="w-3 h-3 mr-1" />
+                            <EyeOff className="w-3 h-3 sm:mr-1" />
                             <span className="hidden sm:inline">Hide</span>
                           </>
                         )}
@@ -168,7 +168,7 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
                         className="text-xs px-2 py-1"
                         title="Show user history"
                       >
-                        <History className="w-3 h-3 mr-1" />
+                        <History className="w-3 h-3 sm:mr-1" />
                         <span className="hidden sm:inline">History</span>
                       </Button>
                     )}
@@ -179,13 +179,14 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
 
             {/* Device Policy Card */}
             <div className="flex flex-col gap-3 p-3 bg-muted/30 rounded-lg">
-              <div className="flex items-center space-x-2">
-                <Settings className="w-4 h-4 flex-shrink-0" />
-                <span className="text-sm font-medium">Default Device Policy:</span>
-              </div>
-              
-              {/* Policy buttons - full width on all devices */}
-              <div className="grid grid-cols-3 gap-2">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div className="flex items-center space-x-2">
+                  <Settings className="w-4 h-4 flex-shrink-0" />
+                  <span className="text-sm font-medium">Default Device Policy:</span>
+                </div>
+                
+                {/* Policy buttons - mobile: full width grid, desktop: inline flex */}
+                <div className="grid grid-cols-3 gap-2 sm:flex sm:gap-2">
                 <Button
                   variant={!group.user.preference || group.user.preference.defaultBlock === null ? "default" : "outline"}
                   size="sm"
@@ -224,6 +225,7 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
                   <span className="hidden sm:inline">Block</span>
                   <span className="sm:hidden">Block</span>
                 </Button>
+                </div>
               </div>
             </div>
 
