@@ -186,7 +186,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
                     key={session.id} 
                     className={`grid grid-cols-7 gap-4 p-3 transition-colors min-w-[800px] ${
                       !session.endedAt 
-                        ? 'bg-green-50 hover:bg-green-100 border-l-4 border-l-green-500' 
+                        ? 'bg-green-50/20 hover:bg-green-50/30 border-l-4 border-l-green-500' 
                         : 'hover:bg-muted/30'
                     }`}
                   >
