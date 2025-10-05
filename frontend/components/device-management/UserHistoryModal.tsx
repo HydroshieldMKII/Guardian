@@ -20,6 +20,7 @@ import {
   Radio
 } from "lucide-react";
 import { config } from '@/lib/config';
+import { ClickableIP } from './SharedComponents';
 
 interface SessionHistoryEntry {
   id: number;
@@ -230,7 +231,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
                     {/* IP Address */}
                     <div className="flex-1 min-w-[120px] min-w-0">
                       <div className="text-sm font-mono truncate">
-                        {session.deviceAddress || 'Unknown'}
+                        <ClickableIP ipAddress={session.deviceAddress} />
                       </div>
                     </div>
 

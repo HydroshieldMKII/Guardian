@@ -76,12 +76,15 @@ export class ActiveSessionService {
 
       const endingSessionKeys = endingSessions.map(s => s.sessionKey);
 
-      // Mark ended sessions with endedAt timestamp
+      // Mark ended sessions with endedAt timestamp and update player state
       if (endingSessionKeys.length > 0) {
         await this.sessionHistoryRepository
           .createQueryBuilder()
           .update(SessionHistory)
-          .set({ endedAt: new Date() })
+          .set({ 
+            endedAt: new Date(),
+            playerState: 'stopped'
+          })
           .where('sessionKey IN (:...sessionKeys)', {
             sessionKeys: endingSessionKeys,
           })
@@ -203,11 +206,14 @@ export class ActiveSessionService {
   }
 
   async removeSession(sessionKey: string): Promise<void> {
-    // Mark session as ended instead of deleting
+    // Mark session as ended and update player state
     await this.sessionHistoryRepository
       .createQueryBuilder()
       .update(SessionHistory)
-      .set({ endedAt: new Date() })
+      .set({ 
+        endedAt: new Date(),
+        playerState: 'stopped'
+      })
       .where('sessionKey = :sessionKey', { sessionKey })
       .andWhere('endedAt IS NULL')
       .execute();
