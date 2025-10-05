@@ -265,29 +265,29 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
             ) : (
               <div className="divide-y min-w-max">
                 {/* Header */}
-                <div className="grid grid-cols-8 gap-4 p-3 bg-muted text-sm font-medium sticky top-0 z-10 min-w-[900px]">
-                  <div className="flex-1 min-w-[200px]">Content</div>
-                  <div className="flex-1 min-w-[120px]">Device</div>
-                  <div className="flex-1 min-w-[80px]">Platform</div>
-                  <div className="flex-1 min-w-[120px]">IP Address</div>
-                  <div className="flex-1 min-w-[140px]">Started</div>
-                  <div className="flex-1 min-w-[140px]">Ended</div>
-                  <div className="flex-1 min-w-[100px]">Duration</div>
-                  <div className="flex-1 min-w-[120px]">Actions</div>
+                <div className="grid grid-cols-8 gap-1 p-2 bg-muted text-sm font-medium sticky top-0 z-10 min-w-max">
+                  <div className="min-w-[180px]">Content</div>
+                  <div className="min-w-[100px]">Device</div>
+                  <div className="min-w-[40px]">Platform</div>
+                  <div className="min-w-[100px]">IP Address</div>
+                  <div className="min-w-[110px]">Started</div>
+                  <div className="min-w-[110px]">Ended</div>
+                  <div className="min-w-[80px]">Duration</div>
+                  <div className="min-w-[80px]">Actions</div>
                 </div>
 
                 {/* Session Rows */}
                 {filteredSessions.map((session) => (
                   <div 
                     key={session.id} 
-                    className={`grid grid-cols-8 gap-4 p-3 transition-colors min-w-[900px] ${
+                    className={`grid grid-cols-8 gap-1 p-2 transition-colors min-w-max ${
                       !session.endedAt 
                         ? 'bg-green-50/20 hover:bg-green-50/30 border-l-4 border-l-green-500' 
                         : 'hover:bg-muted/30'
                     }`}
                   >
                     {/* Content Title */}
-                    <div className="flex-1 min-w-[200px] min-w-0">
+                    <div className="min-w-[180px] overflow-hidden">
                       <div className="font-medium truncate">
                         {formatTitle(session)}
                       </div>
@@ -299,14 +299,14 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
                     </div>
 
                     {/* Device */}
-                    <div className="flex-1 min-w-[120px] min-w-0">
+                    <div className="min-w-[100px] overflow-hidden">
                       <div className="truncate text-sm">
                         {getDeviceDisplayName(session)}
                       </div>
                     </div>
 
                     {/* Platform */}
-                    <div className="flex-1 min-w-[80px] min-w-0">
+                    <div className="min-w-[60px] overflow-hidden">
                       {session.userDevice?.devicePlatform && (
                         <div className="text-xs text-muted-foreground capitalize truncate">
                           {session.userDevice.devicePlatform}
@@ -315,42 +315,42 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
                     </div>
 
                     {/* IP Address */}
-                    <div className="flex-1 min-w-[120px] min-w-0">
+                    <div className="min-w-[100px] overflow-hidden">
                       <div className="text-sm font-mono truncate">
                         <ClickableIP ipAddress={session.deviceAddress} />
                       </div>
                     </div>
 
                     {/* Started */}
-                    <div className="flex-1 min-w-[140px] min-w-0">
-                      <div className="text-sm">
+                    <div className="min-w-[110px] overflow-hidden">
+                      <div className="text-sm truncate">
                         {formatDate(session.startedAt)}
                       </div>
                     </div>
 
                     {/* Ended */}
-                    <div className="flex-1 min-w-[140px] min-w-0">
-                      <div className="flex items-center gap-2 text-sm">
+                    <div className="min-w-[110px] overflow-hidden">
+                      <div className="flex items-center gap-1 text-sm">
                         {session.endedAt ? (
-                          formatDate(session.endedAt)
+                          <span className="truncate">{formatDate(session.endedAt)}</span>
                         ) : (
                           <>
-                            <Radio className="w-4 h-4 text-green-500 animate-pulse" />
-                            <span className="text-green-700 font-medium">Active Now</span>
+                            <Radio className="w-3 h-3 text-green-500 animate-pulse flex-shrink-0" />
+                            <span className="text-green-700 font-medium truncate">Active</span>
                           </>
                         )}
                       </div>
                     </div>
 
                     {/* Duration */}
-                    <div className="flex-1 min-w-[100px] min-w-0">
-                      <div className="text-sm font-mono">
+                    <div className="min-w-[80px] overflow-hidden">
+                      <div className="text-sm font-mono truncate">
                         {formatDuration(session)}
                       </div>
                     </div>
 
                     {/* Actions */}
-                    <div className="flex-1 min-w-[120px] flex justify-start gap-1">
+                    <div className="min-w-[80px] flex justify-start gap-1">
                       <Button
                         variant="ghost"
                         size="sm"
