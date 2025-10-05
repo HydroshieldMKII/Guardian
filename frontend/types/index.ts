@@ -102,6 +102,7 @@ export interface UserPreference {
   username?: string;
   avatarUrl?: string;
   defaultBlock: boolean | null;
+  hidden: boolean;
   createdAt: string;
   updatedAt: string;
 }

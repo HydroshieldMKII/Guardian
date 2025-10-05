@@ -17,6 +17,13 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Users,
   RefreshCw,
   Wifi,
@@ -28,6 +35,8 @@ import {
   Settings,
   CheckCircle,
   XCircle,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 
 // Hooks
@@ -37,6 +46,9 @@ import { useDeviceUtils } from "@/hooks/device-management/useDeviceUtils";
 
 // Types
 import { UserDevice, UserPreference, AppSetting } from "@/types";
+
+// API
+import { apiClient } from "@/lib/api";
 
 // Components
 import { UserGroupCard } from "@/components/device-management/UserGroupCard";
@@ -147,6 +159,8 @@ const DeviceManagement = memo(({
   const [editingDevice, setEditingDevice] = useState<number | null>(null);
   const [newDeviceName, setNewDeviceName] = useState("");
   const [temporaryAccessDevice, setTemporaryAccessDevice] = useState<number | null>(null);
+  const [hiddenUsersModalOpen, setHiddenUsersModalOpen] = useState(false);
+  const [hiddenUsers, setHiddenUsers] = useState<UserPreference[]>([]);
 
   // Confirmation dialog states
   const [confirmAction, setConfirmAction] = useState<ConfirmActionData | null>(null);
@@ -256,18 +270,24 @@ const DeviceManagement = memo(({
         }
       });
       
-      // Convert to array and sort devices within each group
-      const groups = Array.from(deviceGroups.values()).map(group => ({
-        ...group,
-        devices: group.devices.sort((a, b) => {
-          // Sort devices by status (pending first, then by last seen)
-          if (a.status !== b.status) {
-            const statusOrder = { pending: 0, approved: 1, rejected: 2 };
-            return statusOrder[a.status] - statusOrder[b.status];
-          }
-          return new Date(b.lastSeen).getTime() - new Date(a.lastSeen).getTime();
+      // Convert to array and filter out hidden users
+      const groups = Array.from(deviceGroups.values())
+        .filter(group => {
+          // Filter out users that are explicitly marked as hidden
+          // Include users with no preference (not hidden) or users with preference that are not hidden
+          return !group.user.preference || !group.user.preference.hidden;
         })
-      }));
+        .map(group => ({
+          ...group,
+          devices: group.devices.sort((a, b) => {
+            // Sort devices by status (pending first, then by last seen)
+            if (a.status !== b.status) {
+              const statusOrder = { pending: 0, approved: 1, rejected: 2 };
+              return statusOrder[a.status] - statusOrder[b.status];
+            }
+            return new Date(b.lastSeen).getTime() - new Date(a.lastSeen).getTime();
+          })
+        }));
       
       setUserGroups(groups);
       setLoading(false);
@@ -413,6 +433,36 @@ const DeviceManagement = memo(({
     if (success) {
       handleRefresh();
     }
+  };
+
+  // User visibility toggle handler
+  const handleToggleUserVisibility = async (userId: string) => {
+    try {
+      await apiClient.toggleUserVisibility(userId);
+      handleRefresh(); // Refresh to get updated user data
+      // If modal is open, refresh hidden users list
+      if (hiddenUsersModalOpen) {
+        await loadHiddenUsers();
+      }
+    } catch (error) {
+      console.error('Failed to toggle user visibility:', error);
+    }
+  };
+
+  // Load hidden users for modal
+  const loadHiddenUsers = async () => {
+    try {
+      const hiddenUsersData = await apiClient.getHiddenUsers<UserPreference[]>();
+      setHiddenUsers(hiddenUsersData);
+    } catch (error) {
+      console.error('Failed to load hidden users:', error);
+    }
+  };
+
+  // Open hidden users modal
+  const openHiddenUsersModal = async () => {
+    await loadHiddenUsers();
+    setHiddenUsersModalOpen(true);
   };
 
   // Device action handlers
@@ -661,6 +711,7 @@ const DeviceManagement = memo(({
                   />
                   <span>Refresh</span>
                 </Button>
+
               </div>
             </div>
           </div>
@@ -772,6 +823,7 @@ const DeviceManagement = memo(({
                   newDeviceName={newDeviceName}
                   onToggleExpansion={toggleUserExpansion}
                   onUpdateUserPreference={handleUpdateUserPreference}
+                  onToggleUserVisibility={handleToggleUserVisibility}
                   onEdit={startEditing}
                   onCancelEdit={cancelEditing}
                   onRename={handleRename}
@@ -786,6 +838,18 @@ const DeviceManagement = memo(({
                   shouldShowGrantTempAccess={shouldShowGrantTempAccess}
                 />
               ))}
+              
+              {/* Show Hidden Users Button */}
+              <div className="mt-6 pt-4 border-t border-border">
+                <Button
+                  variant="outline"
+                  onClick={openHiddenUsersModal}
+                  className="w-full text-sm"
+                >
+                  <EyeOff className="w-4 h-4 mr-2" />
+                  Show Hidden Users
+                </Button>
+              </div>
             </div>
           )}
         </CardContent>
@@ -821,6 +885,55 @@ const DeviceManagement = memo(({
         onConfirm={handleConfirmAction}
         onCancel={() => setConfirmAction(null)}
       />
+
+      {/* Hidden Users Modal */}
+      <Dialog open={hiddenUsersModalOpen} onOpenChange={setHiddenUsersModalOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center">
+              <EyeOff className="w-5 h-5 mr-2" />
+              Hidden Users
+            </DialogTitle>
+            <DialogDescription>
+              These users are hidden from the main list. Click "Show" to make them visible again.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-3">
+            {hiddenUsers.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <Users className="w-8 h-8 mx-auto mb-2" />
+                <p>No hidden users found</p>
+              </div>
+            ) : (
+              hiddenUsers.map((user) => (
+                <div
+                  key={user.userId}
+                  className="flex items-center justify-between p-3 border rounded-lg bg-muted/30"
+                >
+                  <div className="flex items-center space-x-3">
+                    <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
+                      <Users className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className="font-medium">{user.username || user.userId}</p>
+                      <p className="text-sm text-muted-foreground">ID: {user.userId}</p>
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    onClick={() => handleToggleUserVisibility(user.userId)}
+                    className="ml-4"
+                  >
+                    <Eye className="w-4 h-4 mr-1" />
+                    Show
+                  </Button>
+                </div>
+              ))
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 });

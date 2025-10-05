@@ -25,6 +25,9 @@ export class UserPreference {
   @Column({ name: 'default_block', type: 'boolean', nullable: true })
   defaultBlock: boolean | null; // true, false, or null for global default
 
+  @Column({ name: 'hidden', type: 'boolean', default: false })
+  hidden: boolean; 
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 

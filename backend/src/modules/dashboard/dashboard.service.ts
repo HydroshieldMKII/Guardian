@@ -69,7 +69,7 @@ export class DashboardService {
           this.deviceTrackingService.getPendingDevices(),
           this.deviceTrackingService.getApprovedDevices(),
           this.deviceTrackingService.getProcessedDevices(),
-          this.usersService.getAllUsers(),
+          this.usersService.getAllUsers(true),
         ]);
 
       // Calculate stats

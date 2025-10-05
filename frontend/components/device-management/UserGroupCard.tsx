@@ -7,7 +7,9 @@ import {
   Settings,
   CheckCircle,
   XCircle,
-  Monitor
+  Monitor,
+  EyeOff,
+  Eye
 } from "lucide-react";
 import { UserDevice, UserPreference, AppSetting } from '@/types';
 import { UserAvatar, getUserPreferenceBadge } from './SharedComponents';
@@ -35,6 +37,7 @@ interface UserGroupCardProps {
   newDeviceName: string;
   onToggleExpansion: (userId: string) => void;
   onUpdateUserPreference: (userId: string, defaultBlock: boolean | null) => void;
+  onToggleUserVisibility?: (userId: string) => void;
   onEdit: (device: UserDevice) => void;
   onCancelEdit: () => void;
   onRename: (deviceId: number, newName: string) => void;
@@ -58,6 +61,7 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
   newDeviceName,
   onToggleExpansion,
   onUpdateUserPreference,
+  onToggleUserVisibility,
   onEdit,
   onCancelEdit,
   onRename,
@@ -124,9 +128,32 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
           <div className="p-3 sm:p-4 space-y-4">
             {/* User Preference Controls */}
             <div className="flex flex-col gap-3 p-3 bg-muted/30 rounded-lg">
-              <div className="flex items-center space-x-2">
-                <Settings className="w-4 h-4 flex-shrink-0" />
-                <span className="text-sm font-medium">Default Device Policy:</span>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <Settings className="w-4 h-4 flex-shrink-0" />
+                  <span className="text-sm font-medium">Default Device Policy:</span>
+                </div>
+                {onToggleUserVisibility && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => onToggleUserVisibility(group.user.userId)}
+                    className="text-xs px-2 py-1"
+                    title={group.user.preference?.hidden ? "Show user" : "Hide user"}
+                  >
+                    {group.user.preference?.hidden ? (
+                      <>
+                        <Eye className="w-3 h-3 mr-1" />
+                        <span className="hidden sm:inline">Show</span>
+                      </>
+                    ) : (
+                      <>
+                        <EyeOff className="w-3 h-3 mr-1" />
+                        <span className="hidden sm:inline">Hide</span>
+                      </>
+                    )}
+                  </Button>
+                )}
               </div>
               <div className="grid grid-cols-3 gap-2">
                 <Button
