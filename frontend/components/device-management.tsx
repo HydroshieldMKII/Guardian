@@ -56,6 +56,7 @@ import { DeviceCard } from "@/components/device-management/DeviceCard";
 import { DeviceDetailsModal } from "@/components/device-management/DeviceDetailsModal";
 import { TemporaryAccessModal } from "@/components/device-management/TemporaryAccessModal";
 import { ConfirmationModal } from "@/components/device-management/ConfirmationModal";
+import { UserAvatar } from "@/components/device-management/SharedComponents";
 
 // User-Device group interface
 interface UserDeviceGroup {
@@ -912,12 +913,13 @@ const DeviceManagement = memo(({
                   className="flex items-center justify-between p-3 border rounded-lg bg-muted/30"
                 >
                   <div className="flex items-center space-x-3">
-                    <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
-                      <Users className="w-4 h-4" />
-                    </div>
+                    <UserAvatar 
+                      userId={user.userId}
+                      username={user.username}
+                      avatarUrl={user.avatarUrl}
+                    />
                     <div>
-                      <p className="font-medium">{user.username || user.userId}</p>
-                      <p className="text-sm text-muted-foreground">ID: {user.userId}</p>
+                      <p className="font-medium">{user.username || "Unknown username"}</p>
                     </div>
                   </div>
                   <Button
