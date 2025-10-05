@@ -450,6 +450,11 @@ const DeviceManagement = memo(({
     }
   };
 
+  const handleShowHistory = (userId: string) => {
+    console.log('Show history for user:', userId);
+    // TODO: Implement user history modal/page
+  };
+
   // Load hidden users for modal
   const loadHiddenUsers = async () => {
     try {
@@ -825,6 +830,7 @@ const DeviceManagement = memo(({
                   onToggleExpansion={toggleUserExpansion}
                   onUpdateUserPreference={handleUpdateUserPreference}
                   onToggleUserVisibility={handleToggleUserVisibility}
+                  onShowHistory={handleShowHistory}
                   onEdit={startEditing}
                   onCancelEdit={cancelEditing}
                   onRename={handleRename}
