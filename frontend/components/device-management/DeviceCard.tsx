@@ -59,6 +59,7 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
 
   return (
     <div
+      id={`device-${device.id}`}
       className="relative group bg-gradient-to-br from-card to-card/80 rounded-xl border shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden backdrop-blur-sm"
       data-device-identifier={device.deviceIdentifier}
     >

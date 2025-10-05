@@ -57,6 +57,7 @@ import { DeviceCard } from "@/components/device-management/DeviceCard";
 import { DeviceDetailsModal } from "@/components/device-management/DeviceDetailsModal";
 import { TemporaryAccessModal } from "@/components/device-management/TemporaryAccessModal";
 import { ConfirmationModal } from "@/components/device-management/ConfirmationModal";
+import { UserHistoryModal } from "@/components/device-management/UserHistoryModal";
 import { UserAvatar } from "@/components/device-management/SharedComponents";
 
 // User-Device group interface
@@ -163,6 +164,8 @@ const DeviceManagement = memo(({
   const [temporaryAccessDevice, setTemporaryAccessDevice] = useState<number | null>(null);
   const [hiddenUsersModalOpen, setHiddenUsersModalOpen] = useState(false);
   const [hiddenUsers, setHiddenUsers] = useState<UserPreference[]>([]);
+  const [userHistoryModalOpen, setUserHistoryModalOpen] = useState(false);
+  const [selectedHistoryUser, setSelectedHistoryUser] = useState<{userId: string, username?: string} | null>(null);
 
   // Confirmation dialog states
   const [confirmAction, setConfirmAction] = useState<ConfirmActionData | null>(null);
@@ -479,8 +482,53 @@ const DeviceManagement = memo(({
   };
 
   const handleShowHistory = (userId: string) => {
-    console.log('Show history for user:', userId);
-    // TODO: Implement user history modal/page
+    // Find the username for this userId
+    const userGroup = userGroups.find(group => group.user.userId === userId);
+    const username = userGroup?.user.username || userGroup?.user.preference?.username;
+    
+    setSelectedHistoryUser({ userId, username });
+    setUserHistoryModalOpen(true);
+  };
+
+  const handleNavigateToDeviceFromHistory = (userId: string, deviceIdentifier: string) => {
+    // Expand the user group
+    setExpandedUsers(prev => new Set(prev).add(userId));
+    
+    // Find the device to verify it exists
+    const device = userGroups
+      .find(group => group.user.userId === userId)
+      ?.devices.find(d => d.deviceIdentifier === deviceIdentifier);
+    
+    if (device) {
+      const wasExpanded = expandedUsers.has(userId);
+      const delay = wasExpanded ? 100 : 600;
+      
+      setTimeout(() => {
+        const deviceElement = document.querySelector(`[data-device-identifier="${deviceIdentifier}"]`);
+        if (deviceElement) {
+
+          deviceElement.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'center',
+            inline: 'nearest'
+          });
+          
+          // Add highlight effect
+          setTimeout(() => {
+            deviceElement.classList.add('ring-2', 'ring-blue-500', 'ring-opacity-75');
+            setTimeout(() => {
+              deviceElement.classList.remove('ring-2', 'ring-blue-500', 'ring-opacity-75');
+            }, 1500);
+          }, 200);
+        }
+      }, delay);
+    } else {
+      toast({
+        title: "Device Not Found",
+        description: "The device may have been removed or is no longer available.",
+        variant: "destructive",
+      });
+    }
   };
 
   // Load hidden users for modal
@@ -970,6 +1018,18 @@ const DeviceManagement = memo(({
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* User History Modal */}
+      <UserHistoryModal
+        userId={selectedHistoryUser?.userId || null}
+        username={selectedHistoryUser?.username}
+        isOpen={userHistoryModalOpen}
+        onClose={() => {
+          setUserHistoryModalOpen(false);
+          setSelectedHistoryUser(null);
+        }}
+        onNavigateToDevice={handleNavigateToDeviceFromHistory}
+      />
     </>
   );
 });

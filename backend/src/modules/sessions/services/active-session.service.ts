@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ActiveSession } from '../../../entities/active-session.entity';
+import { SessionHistory } from '../../../entities/session-history.entity';
 import { UserDevice } from '../../../entities/user-device.entity';
 import { DeviceTrackingService } from '../../devices/services/device-tracking.service';
 
@@ -50,6 +51,8 @@ export class ActiveSessionService {
   constructor(
     @InjectRepository(ActiveSession)
     private activeSessionRepository: Repository<ActiveSession>,
+    @InjectRepository(SessionHistory)
+    private sessionHistoryRepository: Repository<SessionHistory>,
     @InjectRepository(UserDevice)
     private userDeviceRepository: Repository<UserDevice>,
     private deviceTrackingService: DeviceTrackingService,
@@ -65,16 +68,20 @@ export class ActiveSessionService {
         .map((s) => s.sessionKey)
         .filter(Boolean);
 
-      // Get sessions that are about to be removed (devices that stopped streaming)
+      // Get full session data that are about to be removed (devices that stopped streaming)
       const endingSessions = await this.activeSessionRepository
         .createQueryBuilder('session')
-        .select('session.sessionKey')
         .where('session.sessionKey NOT IN (:...sessionKeys)', {
           sessionKeys: currentSessionKeys,
         })
         .getMany();
 
       const endingSessionKeys = endingSessions.map(s => s.sessionKey);
+
+      // Save ended sessions to history before removing them
+      for (const endedSession of endingSessions) {
+        await this.saveSessionToHistory(endedSession);
+      }
 
       // Remove sessions that are no longer active
       await this.activeSessionRepository
@@ -282,6 +289,51 @@ export class ActiveSessionService {
       };
     } catch (error: any) {
       this.logger.error('Error getting active sessions formatted', error);
+      throw error;
+    }
+  }
+
+  private async saveSessionToHistory(session: ActiveSession): Promise<void> {
+    try {
+      // Check if this session already exists in history
+      const existingHistory = await this.sessionHistoryRepository.findOne({
+        where: { sessionKey: session.sessionKey }
+      });
+
+      if (existingHistory) {
+        // Update end time if it doesn't exist
+        if (!existingHistory.endedAt) {
+          existingHistory.endedAt = new Date();
+          await this.sessionHistoryRepository.save(existingHistory);
+        }
+        return;
+      }
+
+      // Create new history entry using destructuring and spread (clean and type-safe)
+      const { id, createdAt, updatedAt, lastActivity, ...sessionData } = session;
+      
+      const sessionHistory = this.sessionHistoryRepository.create({
+        ...sessionData,
+        startedAt: createdAt,
+        endedAt: new Date(),
+      });
+
+      await this.sessionHistoryRepository.save(sessionHistory);
+      this.logger.debug(`Saved session ${session.sessionKey} to history for user ${session.userId}`);
+    } catch (error) {
+      this.logger.error(`Failed to save session ${session.sessionKey} to history:`, error);
+    }
+  }
+
+  async getUserSessionHistory(userId: string, limit: number = 50): Promise<SessionHistory[]> {
+    try {
+      return await this.sessionHistoryRepository.find({
+        where: { userId },
+        order: { startedAt: 'DESC' },
+        take: limit
+      });
+    } catch (error) {
+      this.logger.error(`Failed to get session history for user ${userId}:`, error);
       throw error;
     }
   }
