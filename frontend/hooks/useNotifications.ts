@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Notification, NotificationData } from "@/types";
 
-// Mock data for demonstration - in a real app, this would come from your backend
+// Mock data for demonstration
 const mockNotifications: Notification[] = [
   {
     id: "1",
