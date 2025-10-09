@@ -120,3 +120,18 @@ export interface UnifiedDashboardData {
   users: UserPreference[];
   stats: DashboardStats;
 }
+
+export interface Notification {
+  id: string;
+  userId: string;
+  username: string;
+  deviceName: string;
+  date: Date;
+  read: boolean;
+  type: 'block' | 'info' | 'warning';
+}
+
+export interface NotificationData {
+  notifications: Notification[];
+  unreadCount: number;
+}
