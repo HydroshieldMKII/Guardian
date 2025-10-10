@@ -137,30 +137,17 @@ export function Dashboard() {
   // Set up notification click handler
   useEffect(() => {
     const handleNotificationClick = (notification: Notification) => {
-      if (!notification) {
-        console.error('Notification click handler called without notification object');
-        return;
+      if (!notification?.sessionHistoryId || !notification?.userId) {
+        return; // Only handle notifications with sessionHistoryId
       }
       
-      if (notification.sessionHistoryId && notification.userId) {
-        // Set up the modal to open with the specific session
-        setNotificationHistoryUser({ 
-          userId: notification.userId, 
-          username: notification.username 
-        });
-        setNotificationScrollToSessionId(notification.sessionHistoryId);
-        setNotificationHistoryModalOpen(true);
-      } else {
-        // For notifications without sessionHistoryId, just open the user history without scrolling
-        if (notification.userId) {
-          setNotificationHistoryUser({ 
-            userId: notification.userId, 
-            username: notification.username 
-          });
-          setNotificationScrollToSessionId(null);
-          setNotificationHistoryModalOpen(true);
-        }
-      }
+      // Set up the modal to open with the specific session
+      setNotificationHistoryUser({ 
+        userId: notification.userId, 
+        username: notification.username 
+      });
+      setNotificationScrollToSessionId(notification.sessionHistoryId);
+      setNotificationHistoryModalOpen(true);
     };
 
     setNotificationClickHandler(handleNotificationClick);

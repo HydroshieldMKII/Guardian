@@ -48,9 +48,13 @@ function NotificationItem({ notification, onMarkAsRead, onRemove, onClick }: Not
     >
       <div className="flex items-start justify-between gap-2">
         <div 
-          className="flex-1 min-w-0 cursor-pointer hover:bg-accent/30 rounded p-1 -m-1 transition-colors"
-          onClick={() => onClick?.(notification)}
-          title="Click to view session history"
+          className={`flex-1 min-w-0 rounded p-1 -m-1 transition-colors ${
+            notification.sessionHistoryId 
+              ? 'cursor-pointer hover:bg-accent/30' 
+              : 'cursor-default'
+          }`}
+          onClick={() => notification.sessionHistoryId && onClick?.(notification)}
+          title={notification.sessionHistoryId ? "Click to view session history" : ""}
         >
           <div className="flex items-center gap-2 mb-1">
             {!notification.read && (

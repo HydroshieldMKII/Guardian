@@ -80,6 +80,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [sessionToDelete, setSessionToDelete] = useState<SessionHistoryEntry | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const sessionsListRef = React.useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
   const fetchUserHistory = async () => {
@@ -113,47 +114,10 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
     }
   }, [isOpen, userId]);
 
-  // Scroll to specific session after sessions are loaded
+  // Debug scrollToSessionId changes
   useEffect(() => {
-    if (scrollToSessionId && sessions.length > 0 && !loading) {
-      console.log('Scrolling to session ID:', scrollToSessionId, 'Found sessions:', sessions.length);
-      setTimeout(() => {
-        const sessionElement = document.querySelector(`[data-session-id="${scrollToSessionId}"]`);
-        if (sessionElement) {
-          console.log('Found session element, scrolling to it');
-          sessionElement.scrollIntoView({ 
-            behavior: 'smooth', 
-            block: 'center',
-            inline: 'nearest'
-          });
-          
-          // Add highlight effect
-          setTimeout(() => {
-            sessionElement.classList.add('bg-blue-100', 'border-2', 'border-blue-400', 'shadow-lg');
-            setTimeout(() => {
-              sessionElement.classList.remove('bg-blue-100', 'border-2', 'border-blue-400', 'shadow-lg');
-            }, 2000);
-          }, 200);
-        } else {
-          console.log('Session element not found for ID:', scrollToSessionId);
-          // Show error toast when session is not found
-          toast({
-            title: "Session Not Found",
-            description: `The requested session (ID: ${scrollToSessionId}) could not be found in the history. It may have been deleted or is no longer available.`,
-            variant: "destructive",
-          });
-        }
-      }, 300); // Give time for modal to render
-    } else if (scrollToSessionId && sessions.length === 0 && !loading) {
-      console.log('Scroll requested but no sessions loaded yet. scrollToSessionId:', scrollToSessionId);
-      // Show error toast when no sessions are loaded but we're looking for a specific one
-      toast({
-        title: "Session Not Found",
-        description: `No session history found for this user. The requested session (ID: ${scrollToSessionId}) may have been deleted.`,
-        variant: "destructive",
-      });
-    }
-  }, [scrollToSessionId, sessions, loading, toast]);
+    console.log('UserHistoryModal: scrollToSessionId changed to:', scrollToSessionId);
+  }, [scrollToSessionId]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -183,6 +147,86 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
     return session.userDevice?.deviceName || session.userDevice?.deviceProduct || 'Unknown Device';
   };
 
+  // Filter sessions based on search term
+  const filteredSessions = React.useMemo(() => {
+    return sessions.filter(session =>
+      formatTitle(session).toLowerCase().includes(searchTerm.toLowerCase()) ||
+      getDeviceDisplayName(session).toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (session.deviceAddress || '').toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [sessions, searchTerm]);
+
+    // Scroll to specific session after sessions are loaded
+  useEffect(() => {
+    if (scrollToSessionId && sessions.length > 0 && !loading && sessionsListRef.current) {
+      console.log('Scrolling to session ID:', scrollToSessionId);
+      
+      // Check if session exists in data first
+      const sessionExistsInData = sessions.some(s => s.id === scrollToSessionId);
+      if (!sessionExistsInData) {
+        return; // Session doesn't exist, nothing to scroll to
+      }
+
+      // Check if session is visible after filtering
+      const sessionIsVisible = filteredSessions.some(s => s.id === scrollToSessionId);
+      if (!sessionIsVisible) {
+        return; // Session is filtered out, nothing to scroll to
+      }
+
+      // Function to scroll to and highlight the session
+      const scrollToSession = () => {
+        const sessionElement = sessionsListRef.current?.querySelector(`[data-session-id="${scrollToSessionId}"]`);
+        if (sessionElement) {
+          console.log('Found session element, scrolling and highlighting');
+          
+          // Scroll to element
+          sessionElement.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'center',
+            inline: 'nearest'
+          });
+          
+          // Add highlight
+          requestAnimationFrame(() => {
+            sessionElement.classList.add('border-2', 'border-blue-400', 'shadow-lg');
+            setTimeout(() => {
+              sessionElement.classList.remove('border-2', 'border-blue-400', 'shadow-lg');
+            }, 2000);
+          });
+          return true;
+        }
+        return false;
+      };
+
+      // Try to find and scroll to the session immediately
+      if (scrollToSession()) {
+        return; // Found it, we're done
+      }
+
+      // If not found immediately, wait for DOM to update
+      const observer = new MutationObserver(() => {
+        if (scrollToSession()) {
+          observer.disconnect();
+        }
+      });
+
+      observer.observe(sessionsListRef.current, {
+        childList: true,
+        subtree: true
+      });
+
+      // Cleanup after 3 seconds
+      const cleanup = setTimeout(() => {
+        observer.disconnect();
+      }, 3000);
+
+      return () => {
+        observer.disconnect();
+        clearTimeout(cleanup);
+      };
+    }
+  }, [scrollToSessionId, sessions, filteredSessions, loading]);
+
   const formatDuration = (session: SessionHistoryEntry) => {
     if (!session.endedAt) {
       return 'N/A';
@@ -210,11 +254,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
     }
   };
 
-  const filteredSessions = sessions.filter(session =>
-    formatTitle(session).toLowerCase().includes(searchTerm.toLowerCase()) ||
-    getDeviceDisplayName(session).toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (session.deviceAddress || '').toLowerCase().includes(searchTerm.toLowerCase())
-  );
+
 
   const handleDeviceClick = (session: SessionHistoryEntry) => {
     if (onNavigateToDevice && userId && session.userDevice?.deviceIdentifier) {
@@ -301,7 +341,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
           </div>
 
           {/* Sessions List */}
-          <div className="flex-1 overflow-auto border rounded-md">
+          <div ref={sessionsListRef} className="flex-1 overflow-auto border rounded-md">
             {loading ? (
               <div className="flex items-center justify-center h-32">
                 <RefreshCw className="w-6 h-6 animate-spin" />
