@@ -1,9 +1,10 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { SessionHistory } from '../../../entities/session-history.entity';
 import { UserDevice } from '../../../entities/user-device.entity';
 import { DeviceTrackingService } from '../../devices/services/device-tracking.service';
+import { PlexClient } from '../../plex/services/plex-client';
 
 interface PlexSessionData {
   sessionKey: string;
@@ -53,6 +54,8 @@ export class ActiveSessionService {
     @InjectRepository(UserDevice)
     private userDeviceRepository: Repository<UserDevice>,
     private deviceTrackingService: DeviceTrackingService,
+    @Inject(forwardRef(() => PlexClient))
+    private plexClient: PlexClient,
   ) {}
 
   // Update active sessions in the database based on the latest sessions data from Plex

@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, X } from "lucide-react";
+import { BellRing, X, CheckCheck, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -67,7 +67,7 @@ function NotificationItem({ notification, onMarkAsRead, onRemove }: Notification
               className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
               title="Mark as read"
             >
-              <div className="w-3 h-3 rounded-full border border-current" />
+              <Check className="h-3 w-3" />
             </Button>
           )}
           <Button
@@ -75,7 +75,7 @@ function NotificationItem({ notification, onMarkAsRead, onRemove }: Notification
             size="sm"
             onClick={() => onRemove(notification.id)}
             className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
-            title="Remove notification"
+            title="Delete notification"
           >
             <X className="h-3 w-3" />
           </Button>
@@ -86,7 +86,7 @@ function NotificationItem({ notification, onMarkAsRead, onRemove }: Notification
 }
 
 export function NotificationMenu() {
-  const { notifications, unreadCount, markAsRead, removeNotification, clearAll } = useNotifications();
+  const { notifications, unreadCount, markAsRead, removeNotification, markAllAsRead, clearAll } = useNotifications();
 
   return (
     <DropdownMenu>
@@ -97,7 +97,7 @@ export function NotificationMenu() {
           className="h-8 w-8 rounded-full relative"
           title="Notifications"
         >
-          <Bell className="h-4 w-4" />
+          <BellRing className="h-4 w-4" />
           {unreadCount > 0 && (
             <Badge
               variant="destructive"
@@ -114,20 +114,34 @@ export function NotificationMenu() {
             Notifications
           </DropdownMenuLabel>
           {notifications.length > 0 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={clearAll}
-              className="text-xs text-muted-foreground hover:text-foreground h-auto p-1"
-            >
-              Clear all
-            </Button>
+            <div className="flex items-center gap-2">
+              {unreadCount > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={markAllAsRead}
+                  className="text-xs text-muted-foreground hover:text-foreground h-auto p-1 flex items-center gap-1"
+                  title="Mark all as read"
+                >
+                  <CheckCheck className="h-3 w-3" />
+                  Mark all as read
+                </Button>
+              )}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={clearAll}
+                className="text-xs text-muted-foreground hover:text-foreground h-auto p-1"
+              >
+                Clear all
+              </Button>
+            </div>
           )}
         </div>
         
         {notifications.length === 0 ? (
           <div className="p-8 text-center">
-            <Bell className="h-8 w-8 mx-auto text-muted-foreground mb-2 opacity-50" />
+            <BellRing className="h-8 w-8 mx-auto text-muted-foreground mb-2 opacity-50" />
             <p className="text-sm text-muted-foreground">No notifications</p>
           </div>
         ) : (

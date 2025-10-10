@@ -2,11 +2,12 @@ import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UserDevice } from '../../../entities/user-device.entity';
+import { SessionHistory } from '../../../entities/session-history.entity';
 import { PlexClient } from './plex-client';
-import { ActiveSessionService } from '../../sessions/services/active-session.service';
 import { UsersService } from '../../users/services/users.service';
 import { ConfigService } from '../../config/services/config.service';
 import { DeviceTrackingService } from '../../devices/services/device-tracking.service';
+import { NotificationsService } from '../../notifications/services/notifications.service';
 import {
   PlexSessionsResponse,
   SessionTerminationResult,
@@ -19,12 +20,16 @@ export class SessionTerminationService {
   constructor(
     @InjectRepository(UserDevice)
     private userDeviceRepository: Repository<UserDevice>,
+    @InjectRepository(SessionHistory)
+    private sessionHistoryRepository: Repository<SessionHistory>,
     private plexClient: PlexClient,
     private usersService: UsersService,
     @Inject(forwardRef(() => ConfigService))
     private configService: ConfigService,
     @Inject(forwardRef(() => DeviceTrackingService))
     private deviceTrackingService: DeviceTrackingService,
+    @Inject(forwardRef(() => NotificationsService))
+    private notificationsService: NotificationsService,
   ) {}
 
   async stopUnapprovedSessions(
@@ -50,13 +55,33 @@ export class SessionTerminationService {
             // console.log('Terminating unapproved session:', session);
 
             if (sessionKey) {
+              const username = session.User?.title || 'Unknown';
+              const deviceName = session.Player?.title || 'Unknown Device';
+              const userId = session.User?.id || 'unknown';
+
+              // Terminate the session
               await this.terminateSession(sessionKey);
               stoppedSessions.push(sessionKey);
 
-              this.logger.warn(`Stopped unapproved session: ${session.Session?.id}`);
-              const username = session.User?.title || 'Unknown';
-              const deviceName = session.Player?.title || 'Unknown Device';
+              // Create notification for the terminated session
+              try {
+                const sessionHistory = await this.sessionHistoryRepository.findOne({
+                  where: { sessionKey }
+                });
+                
+                await this.notificationsService.createStreamBlockedNotification(
+                  userId,
+                  username,
+                  deviceName,
+                  sessionHistory?.id
+                );
 
+                this.logger.log(`Created notification for terminated session: ${username} on ${deviceName}`);
+              } catch (notificationError) {
+                this.logger.error(`Failed to create notification for terminated session ${sessionKey}`, notificationError);
+              }
+
+              this.logger.warn(`Stopped unapproved session: ${session.Session?.id}`);
               this.logger.warn(
                 `Stopped unapproved session: ${username} on ${deviceName} (Session: ${sessionKey})`,
               );
