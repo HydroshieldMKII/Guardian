@@ -17,6 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import {
   User,
   Bell,
+  BellRing,
   Shield,
   Server,
   Save,
@@ -64,6 +65,12 @@ const settingsSections = [
     title: "Plex Integration",
     description: "Configure Plex server connection and settings",
     icon: Server,
+  },
+  {
+    id: "notifications",
+    title: "Notification Settings",
+    description: "Configure notification behavior and preferences",
+    icon: BellRing,
   },
   {
     id: "database",
@@ -729,6 +736,8 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
         "PLEXGUARD_STOPMSG",
         "DEFAULT_PAGE",
         "AUTO_CHECK_UPDATES",
+      ],
+      notifications: [
         "AUTO_MARK_NOTIFICATION_READ",
       ],
     };
@@ -1054,6 +1063,26 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
 
               {/* Device Cleanup Settings Group */}
               {renderDeviceCleanupSettings()}
+            </div>
+          </div>
+        );
+
+      case "notifications":
+        return (
+          <div className="space-y-6">
+            <div>
+              <h3 className="text-lg font-medium">Notification Settings</h3>
+              <p className="text-sm text-muted-foreground">
+                Configure how notifications behave and interact with your workflow.
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              {getSettingsByCategory("notifications").map((setting) => (
+                <Card key={setting.key} className="p-4">
+                  {renderSettingField(setting)}
+                </Card>
+              ))}
             </div>
           </div>
         );
