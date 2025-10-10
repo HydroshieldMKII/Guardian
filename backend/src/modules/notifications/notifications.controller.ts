@@ -47,10 +47,10 @@ export class NotificationsController {
     return { message: 'All notifications marked as read' };
   }
 
-  @Delete(':id')
-  async deleteNotification(@Param('id') id: number) {
-    await this.notificationsService.deleteNotification(id);
-    return { message: 'Notification deleted successfully' };
+  @Patch('mark-all-read')
+  async markAllAsRead() {
+    await this.notificationsService.markAllAsRead();
+    return { message: 'All notifications marked as read' };
   }
 
   @Delete('user/:userId/clear-all')
@@ -59,15 +59,15 @@ export class NotificationsController {
     return { message: 'All notifications cleared for user' };
   }
 
-  @Patch('mark-all-read')
-  async markAllAsRead() {
-    await this.notificationsService.markAllAsRead();
-    return { message: 'All notifications marked as read' };
-  }
-
   @Delete('clear-all')
   async clearAll() {
     await this.notificationsService.clearAll();
     return { message: 'All notifications cleared' };
+  }
+
+  @Delete(':id')
+  async deleteNotification(@Param('id') id: number) {
+    await this.notificationsService.deleteNotification(id);
+    return { message: 'Notification deleted successfully' };
   }
 }

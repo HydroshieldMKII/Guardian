@@ -129,10 +129,10 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
           
           // Add highlight effect
           setTimeout(() => {
-            sessionElement.classList.add('ring-2', 'ring-blue-500', 'ring-opacity-75');
+            sessionElement.classList.add('bg-blue-100', 'border-2', 'border-blue-400', 'shadow-lg');
             setTimeout(() => {
-              sessionElement.classList.remove('ring-2', 'ring-blue-500', 'ring-opacity-75');
-            }, 1500);
+              sessionElement.classList.remove('bg-blue-100', 'border-2', 'border-blue-400', 'shadow-lg');
+            }, 2000);
           }, 200);
         } else {
           console.log('Session element not found for ID:', scrollToSessionId);

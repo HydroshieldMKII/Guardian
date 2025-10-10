@@ -51,7 +51,8 @@ export class SessionTerminationService {
           const shouldStop = await this.shouldStopSession(session);
 
           if (shouldStop) {
-            const sessionId = session.Session?.id;
+            const sessionId = session.Session?.id; // Device identifier for termination
+            const sessionKey = session.sessionKey; // Session key for history lookup
             // console.log('Terminating unapproved session:', session);
 
             if (sessionId) {
@@ -59,15 +60,22 @@ export class SessionTerminationService {
               const deviceName = session.Player?.title || 'Unknown Device';
               const userId = session.User?.id || 'unknown';
 
-              // Terminate the session
+              // Terminate the session 
               await this.terminateSession(sessionId);
               stoppedSessions.push(sessionId);
 
               // Create notification for the terminated session
               try {
                 const sessionHistory = await this.sessionHistoryRepository.findOne({
-                  where: { sessionKey: sessionId }
+                  where: { sessionKey: sessionKey },
+                  relations: ['userPreference', 'userDevice']
                 });
+                
+                if (sessionHistory) {
+                  this.logger.log(`Found session history with ID: ${sessionHistory.id} for sessionKey: ${sessionKey}`);
+                } else {
+                  this.logger.warn(`No session history found for sessionKey: ${sessionKey} (device: ${sessionId})`);
+                }
                 
                 await this.notificationsService.createStreamBlockedNotification(
                   userId,
@@ -76,9 +84,9 @@ export class SessionTerminationService {
                   sessionHistory?.id
                 );
 
-                this.logger.log(`Created notification for terminated session: ${username} on ${deviceName}`);
+                this.logger.log(`Created notification for terminated session: ${username} on ${deviceName} (sessionHistoryId: ${sessionHistory?.id || 'null'})`);
               } catch (notificationError) {
-                this.logger.error(`Failed to create notification for terminated session ${sessionId}`, notificationError);
+                this.logger.error(`Failed to create notification for terminated session ${sessionKey}`, notificationError);
               }
 
               this.logger.warn(`Stopped unapproved session: ${session.Session?.id}`);

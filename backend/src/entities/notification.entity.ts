@@ -21,11 +21,15 @@ export class Notification {
   userId: string;
 
   @Column({ name: 'session_history_id', nullable: true })
-  sessionHistoryId: number;
+  sessionHistoryId?: number;
 
-  @ManyToOne(() => SessionHistory, { eager: false, nullable: true })
+  @ManyToOne(() => SessionHistory, { 
+    eager: false, 
+    nullable: true,
+    onDelete: 'SET NULL'
+  })
   @JoinColumn({ name: 'session_history_id' })
-  sessionHistory: SessionHistory;
+  sessionHistory?: SessionHistory;
 
   @Column({ name: 'text', type: 'text' })
   text: string;

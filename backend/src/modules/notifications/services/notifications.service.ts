@@ -151,6 +151,6 @@ export class NotificationsService {
   }
 
   async clearAll(): Promise<void> {
-    await this.notificationRepository.delete({});
+    await this.notificationRepository.clear();
   }
 }
