@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Dialog,
   DialogContent,
@@ -75,6 +76,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
   onNavigateToDevice,
   scrollToSessionId,
 }) => {
+  const router = useRouter();
   const [sessions, setSessions] = useState<SessionHistoryEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -257,9 +259,15 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
 
 
   const handleDeviceClick = (session: SessionHistoryEntry) => {
+    onClose();
+    
     if (onNavigateToDevice && userId && session.userDevice?.deviceIdentifier) {
-      onClose(); // Close the modal first
+      // Use prop-based navigation when available (dashboard context)
       onNavigateToDevice(userId, session.userDevice.deviceIdentifier);
+    } else if (userId && session.userDevice?.deviceIdentifier) {
+      // Use router navigation when no prop available (global context)
+      // Navigate to dashboard with both userId and deviceIdentifier as query parameters
+      router.push(`/?userId=${encodeURIComponent(userId)}&deviceId=${encodeURIComponent(session.userDevice.deviceIdentifier)}`);
     }
   };
 

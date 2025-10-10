@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Card,
   CardContent,
@@ -31,6 +31,7 @@ import { useVersion } from "@/contexts/version-context";
 
 export function Dashboard() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { versionInfo, checkForUpdatesIfEnabled } = useVersion();
 
   const [dashboardData, setDashboardData] = useState<UnifiedDashboardData | null>(null);
@@ -105,6 +106,21 @@ export function Dashboard() {
   useEffect(() => {
     refreshDashboard();
   }, []);
+
+  // Handle URL parameters for device navigation
+  useEffect(() => {
+    const userId = searchParams.get('userId');
+    const deviceId = searchParams.get('deviceId');
+    
+    if (userId && deviceId) {
+      // Switch to devices tab and set navigation target
+      setActiveTab("devices");
+      setNavigationTarget({ userId, deviceIdentifier: deviceId });
+      
+      // Clean up URL parameters
+      router.replace('/', { scroll: false });
+    }
+  }, [searchParams, router]);
 
   // Check for updates automatically when dashboard loads
   useEffect(() => {
