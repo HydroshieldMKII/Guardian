@@ -54,7 +54,7 @@ function NotificationItem({ notification, onMarkAsRead, onRemove, onClick }: Not
               : 'cursor-default'
           }`}
           onClick={() => notification.sessionHistoryId && onClick?.(notification)}
-          title={notification.sessionHistoryId ? "Click to view session history" : ""}
+          title={notification.sessionHistoryId ? "Click to view in session history" : "The session history is not available for this notification"}
         >
           <div className="flex items-center gap-2 mb-1">
             {!notification.read && (

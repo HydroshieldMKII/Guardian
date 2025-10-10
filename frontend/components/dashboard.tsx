@@ -28,12 +28,11 @@ import { apiClient } from "@/lib/api";
 import { config } from "@/lib/config";
 import { useVersion } from "@/contexts/version-context";
 import { useNotificationContext } from "@/contexts/notification-context";
-import { UserHistoryModal } from "@/components/device-management/UserHistoryModal";
 
 export function Dashboard() {
   const router = useRouter();
   const { versionInfo, checkForUpdatesIfEnabled } = useVersion();
-  const { setNotifications, setNotificationClickHandler, updateNotifications } = useNotificationContext();
+  const { setNotifications } = useNotificationContext();
   const [dashboardData, setDashboardData] = useState<UnifiedDashboardData | null>(null);
   const [stats, setStats] = useState<DashboardStats>({
     activeStreams: 0,
@@ -47,11 +46,6 @@ export function Dashboard() {
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [initialTabSet, setInitialTabSet] = useState(false);
   const [navigationTarget, setNavigationTarget] = useState<{userId: string, deviceIdentifier: string} | null>(null);
-  
-  // User History Modal state for notifications
-  const [notificationHistoryModalOpen, setNotificationHistoryModalOpen] = useState(false);
-  const [notificationHistoryUser, setNotificationHistoryUser] = useState<{userId: string, username?: string} | null>(null);
-  const [notificationScrollToSessionId, setNotificationScrollToSessionId] = useState<number | null>(null);
 
   const handleShowSettings = () => {
     router.push('/settings');
@@ -134,52 +128,7 @@ export function Dashboard() {
     return () => clearInterval(interval);
   }, [autoRefresh]);
 
-  // Set up notification click handler
-  useEffect(() => {
-    const handleNotificationClick = (notification: Notification) => {
-      if (!notification?.sessionHistoryId || !notification?.userId) {
-        return; // Only handle notifications with sessionHistoryId
-      }
-      
-      // Open the modal immediately
-      setNotificationHistoryUser({ 
-        userId: notification.userId, 
-        username: notification.username 
-      });
-      setNotificationScrollToSessionId(notification.sessionHistoryId);
-      setNotificationHistoryModalOpen(true);
-      
-      // Check if auto-mark as read is enabled and mark as read in background
-      const autoMarkReadSetting = dashboardData?.settings?.find(s => s.key === 'AUTO_MARK_NOTIFICATION_READ');
-      const shouldAutoMarkRead = autoMarkReadSetting?.value === 'true';
-      
-      if (shouldAutoMarkRead && !notification.read) {
-        // Update UI immediately
-        updateNotifications(prev =>
-          prev.map(n =>
-            n.id === notification.id
-              ? { ...n, read: true }
-              : n
-          )
-        );
-        
-        // Make API call in background
-        apiClient.markNotificationAsRead(notification.id).catch(error => {
-          console.error('Failed to mark notification as read:', error);
-          // Revert the UI change if API call fails
-          updateNotifications(prev =>
-            prev.map(n =>
-              n.id === notification.id
-                ? { ...n, read: false }
-                : n
-            )
-          );
-        });
-      }
-    };
 
-    setNotificationClickHandler(handleNotificationClick);
-  }, [setNotificationClickHandler, dashboardData, updateNotifications]);
 
   if (loading) {
     // Loading dots animation
@@ -336,19 +285,6 @@ export function Dashboard() {
           />
         )}
       </div>
-
-      {/* User History Modal for notifications */}
-      <UserHistoryModal
-        userId={notificationHistoryUser?.userId || null}
-        username={notificationHistoryUser?.username}
-        isOpen={notificationHistoryModalOpen}
-        onClose={() => {
-          setNotificationHistoryModalOpen(false);
-          setNotificationHistoryUser(null);
-          setNotificationScrollToSessionId(null);
-        }}
-        scrollToSessionId={notificationScrollToSessionId}
-      />
     </div>
   );
 }
