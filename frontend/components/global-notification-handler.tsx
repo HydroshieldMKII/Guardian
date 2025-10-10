@@ -8,7 +8,7 @@ import { config } from "@/lib/config";
 import { Notification, AppSetting } from "@/types";
 
 export function GlobalNotificationHandler() {
-  const { setNotificationClickHandler, updateNotifications, setNotifications } = useNotificationContext();
+  const { setNotificationClickHandler, updateNotifications, notifications, setNotifications } = useNotificationContext();
   
   // User History Modal state for notifications
   const [notificationHistoryModalOpen, setNotificationHistoryModalOpen] = useState(false);
@@ -33,25 +33,30 @@ export function GlobalNotificationHandler() {
     fetchSettings();
   }, []);
 
-  // Fetch notifications periodically
+  // Independent notification fetching - consistent across all pages
   useEffect(() => {
     const fetchNotifications = async () => {
       try {
-        // Use the same dashboard API to get notifications in the correct format
-        const dashboardData = await apiClient.getDashboardData<any>();
-        if (dashboardData?.notifications) {
-          setNotifications(dashboardData.notifications);
-        }
+        const notificationData = await apiClient.getAllNotifications<any[]>();
+        
+        // Format to match what the context expects
+        const unreadCount = notificationData.filter(n => !n.read).length;
+        const formattedData = {
+          data: notificationData,
+          unreadCount: unreadCount
+        };
+        
+        setNotifications(formattedData);
       } catch (error) {
         console.error('Failed to fetch notifications:', error);
       }
     };
 
-    // Fetch immediately
+    // Fetch immediately on mount
     fetchNotifications();
 
-    // Set up interval to fetch notifications every 30 seconds
-    const interval = setInterval(fetchNotifications, 30000);
+    // Set up interval to fetch notifications
+    const interval = setInterval(fetchNotifications, 6000);
     
     return () => clearInterval(interval);
   }, [setNotifications]);

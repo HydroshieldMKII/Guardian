@@ -118,10 +118,6 @@ export interface UnifiedDashboardData {
     processed: UserDevice[];
   };
   users: UserPreference[];
-  notifications: {
-    data: Notification[];
-    unreadCount: number;
-  };
   stats: DashboardStats;
 }
 

@@ -27,12 +27,12 @@ import { DashboardStats, UnifiedDashboardData, PlexStatus, Notification } from "
 import { apiClient } from "@/lib/api";
 import { config } from "@/lib/config";
 import { useVersion } from "@/contexts/version-context";
-import { useNotificationContext } from "@/contexts/notification-context";
+
 
 export function Dashboard() {
   const router = useRouter();
   const { versionInfo, checkForUpdatesIfEnabled } = useVersion();
-  const { setNotifications } = useNotificationContext();
+
   const [dashboardData, setDashboardData] = useState<UnifiedDashboardData | null>(null);
   const [stats, setStats] = useState<DashboardStats>({
     activeStreams: 0,
@@ -65,10 +65,6 @@ export function Dashboard() {
       setPlexStatus(newDashboardData.plexStatus);
       setStats(newDashboardData.stats);
       
-      // Update notifications in context
-      if (newDashboardData.notifications) {
-        setNotifications(newDashboardData.notifications);
-      }
       
     } catch (error) {
       console.error("Failed to fetch dashboard stats:", error);
