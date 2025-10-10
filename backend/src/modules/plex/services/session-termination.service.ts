@@ -51,22 +51,22 @@ export class SessionTerminationService {
           const shouldStop = await this.shouldStopSession(session);
 
           if (shouldStop) {
-            const sessionKey = session.Session?.id;
+            const sessionId = session.Session?.id;
             // console.log('Terminating unapproved session:', session);
 
-            if (sessionKey) {
+            if (sessionId) {
               const username = session.User?.title || 'Unknown';
               const deviceName = session.Player?.title || 'Unknown Device';
               const userId = session.User?.id || 'unknown';
 
               // Terminate the session
-              await this.terminateSession(sessionKey);
-              stoppedSessions.push(sessionKey);
+              await this.terminateSession(sessionId);
+              stoppedSessions.push(sessionId);
 
               // Create notification for the terminated session
               try {
                 const sessionHistory = await this.sessionHistoryRepository.findOne({
-                  where: { sessionKey }
+                  where: { sessionKey: sessionId }
                 });
                 
                 await this.notificationsService.createStreamBlockedNotification(
@@ -78,12 +78,12 @@ export class SessionTerminationService {
 
                 this.logger.log(`Created notification for terminated session: ${username} on ${deviceName}`);
               } catch (notificationError) {
-                this.logger.error(`Failed to create notification for terminated session ${sessionKey}`, notificationError);
+                this.logger.error(`Failed to create notification for terminated session ${sessionId}`, notificationError);
               }
 
               this.logger.warn(`Stopped unapproved session: ${session.Session?.id}`);
               this.logger.warn(
-                `Stopped unapproved session: ${username} on ${deviceName} (Session: ${sessionKey})`,
+                `Stopped unapproved session: ${username} on ${deviceName} (Session: ${sessionId})`,
               );
             } else {
               this.logger.warn(

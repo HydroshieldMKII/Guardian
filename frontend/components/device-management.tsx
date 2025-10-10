@@ -167,6 +167,7 @@ const DeviceManagement = memo(({
   const [hiddenUsers, setHiddenUsers] = useState<UserPreference[]>([]);
   const [userHistoryModalOpen, setUserHistoryModalOpen] = useState(false);
   const [selectedHistoryUser, setSelectedHistoryUser] = useState<{userId: string, username?: string} | null>(null);
+  const [scrollToSessionId, setScrollToSessionId] = useState<number | null>(null);
 
   // Confirmation dialog states
   const [confirmAction, setConfirmAction] = useState<ConfirmActionData | null>(null);
@@ -357,6 +358,8 @@ const DeviceManagement = memo(({
       }, delay);
     }
   }, [navigationTarget, userGroups.length, expandedUsers, onNavigationComplete]);
+
+
 
   const handleRefresh = () => {
     if (onRefresh) {
@@ -1054,8 +1057,10 @@ const DeviceManagement = memo(({
         onClose={() => {
           setUserHistoryModalOpen(false);
           setSelectedHistoryUser(null);
+          setScrollToSessionId(null);
         }}
         onNavigateToDevice={handleNavigateToDeviceFromHistory}
+        scrollToSessionId={scrollToSessionId}
       />
     </>
   );

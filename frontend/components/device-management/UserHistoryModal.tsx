@@ -4,6 +4,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -63,6 +64,7 @@ interface UserHistoryModalProps {
   isOpen: boolean;
   onClose: () => void;
   onNavigateToDevice?: (userId: string, deviceIdentifier: string) => void;
+  scrollToSessionId?: number | null;
 }
 
 export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
@@ -71,6 +73,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
   isOpen,
   onClose,
   onNavigateToDevice,
+  scrollToSessionId,
 }) => {
   const [sessions, setSessions] = useState<SessionHistoryEntry[]>([]);
   const [loading, setLoading] = useState(false);
@@ -109,6 +112,48 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
       fetchUserHistory();
     }
   }, [isOpen, userId]);
+
+  // Scroll to specific session after sessions are loaded
+  useEffect(() => {
+    if (scrollToSessionId && sessions.length > 0 && !loading) {
+      console.log('Scrolling to session ID:', scrollToSessionId, 'Found sessions:', sessions.length);
+      setTimeout(() => {
+        const sessionElement = document.querySelector(`[data-session-id="${scrollToSessionId}"]`);
+        if (sessionElement) {
+          console.log('Found session element, scrolling to it');
+          sessionElement.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'center',
+            inline: 'nearest'
+          });
+          
+          // Add highlight effect
+          setTimeout(() => {
+            sessionElement.classList.add('ring-2', 'ring-blue-500', 'ring-opacity-75');
+            setTimeout(() => {
+              sessionElement.classList.remove('ring-2', 'ring-blue-500', 'ring-opacity-75');
+            }, 1500);
+          }, 200);
+        } else {
+          console.log('Session element not found for ID:', scrollToSessionId);
+          // Show error toast when session is not found
+          toast({
+            title: "Session Not Found",
+            description: `The requested session (ID: ${scrollToSessionId}) could not be found in the history. It may have been deleted or is no longer available.`,
+            variant: "destructive",
+          });
+        }
+      }, 300); // Give time for modal to render
+    } else if (scrollToSessionId && sessions.length === 0 && !loading) {
+      console.log('Scroll requested but no sessions loaded yet. scrollToSessionId:', scrollToSessionId);
+      // Show error toast when no sessions are loaded but we're looking for a specific one
+      toast({
+        title: "Session Not Found",
+        description: `No session history found for this user. The requested session (ID: ${scrollToSessionId}) may have been deleted.`,
+        variant: "destructive",
+      });
+    }
+  }, [scrollToSessionId, sessions, loading, toast]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -230,6 +275,9 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
             <Clock className="w-5 h-5" />
             Streaming History - {username || userId}
           </DialogTitle>
+          <DialogDescription>
+            View and manage streaming session history for this user. Active sessions are highlighted in green.
+          </DialogDescription>
         </DialogHeader>
         
         <div className="flex flex-col gap-4 flex-1 overflow-hidden">
@@ -283,7 +331,8 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
                   {/* Desktop Session Rows */}
                   {filteredSessions.map((session) => (
                     <div 
-                      key={session.id} 
+                      key={session.id}
+                      data-session-id={session.id}
                       className={`grid grid-cols-8 gap-2 p-3 transition-colors ${
                         !session.endedAt 
                           ? 'bg-green-50/20 hover:bg-green-50/30 border-l-4 border-l-green-500' 
@@ -389,7 +438,8 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
                 <div className="md:hidden space-y-3">
                   {filteredSessions.map((session) => (
                     <Card 
-                      key={session.id} 
+                      key={session.id}
+                      data-session-id={session.id}
                       className={`p-4 transition-colors ${
                         !session.endedAt 
                           ? 'bg-green-50/20 hover:bg-green-50/30 border-l-4 border-l-green-500' 

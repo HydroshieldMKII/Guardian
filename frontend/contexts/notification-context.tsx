@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, ReactNode } from "react";
+import React, { createContext, useContext, useState, useRef, ReactNode } from "react";
 import { Notification } from "@/types";
 
 interface NotificationContextType {
@@ -8,6 +8,8 @@ interface NotificationContextType {
   unreadCount: number;
   setNotifications: (data: { data: Notification[]; unreadCount: number }) => void;
   updateNotifications: (updater: (prev: Notification[]) => Notification[]) => void;
+  onNotificationClick?: (notification: Notification) => void;
+  setNotificationClickHandler: (handler: (notification: Notification) => void) => void;
 }
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
@@ -25,6 +27,7 @@ export function NotificationProvider({ children, initialData }: NotificationProv
     initialData?.data || []
   );
   const [unreadCount, setUnreadCount] = useState(initialData?.unreadCount || 0);
+  const notificationClickHandlerRef = useRef<((notification: Notification) => void) | undefined>(undefined);
 
   const setNotifications = (data: { data: Notification[]; unreadCount: number }) => {
     // Convert createdAt strings to Date objects
@@ -46,6 +49,18 @@ export function NotificationProvider({ children, initialData }: NotificationProv
     });
   };
 
+  const setNotificationClickHandler = (handler: (notification: Notification) => void) => {
+    notificationClickHandlerRef.current = handler;
+  };
+
+  const handleNotificationClick = (notification: Notification) => {
+    if (notificationClickHandlerRef.current) {
+      notificationClickHandlerRef.current(notification);
+    } else {
+      console.warn('No notification click handler set');
+    }
+  };
+
   return (
     <NotificationContext.Provider
       value={{
@@ -53,6 +68,8 @@ export function NotificationProvider({ children, initialData }: NotificationProv
         unreadCount,
         setNotifications,
         updateNotifications,
+        onNotificationClick: handleNotificationClick,
+        setNotificationClickHandler,
       }}
     >
       {children}

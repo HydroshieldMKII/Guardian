@@ -20,9 +20,10 @@ interface NotificationItemProps {
   notification: Notification;
   onMarkAsRead: (id: number) => void;
   onRemove: (id: number) => void;
+  onClick?: (notification: Notification) => void;
 }
 
-function NotificationItem({ notification, onMarkAsRead, onRemove }: NotificationItemProps) {
+function NotificationItem({ notification, onMarkAsRead, onRemove, onClick }: NotificationItemProps) {
   const formatDate = (date: Date) => {
     const now = new Date();
     const diff = now.getTime() - date.getTime();
@@ -46,7 +47,11 @@ function NotificationItem({ notification, onMarkAsRead, onRemove }: Notification
       }`}
     >
       <div className="flex items-start justify-between gap-2">
-        <div className="flex-1 min-w-0">
+        <div 
+          className="flex-1 min-w-0 cursor-pointer hover:bg-accent/30 rounded p-1 -m-1 transition-colors"
+          onClick={() => onClick?.(notification)}
+          title="Click to view session history"
+        >
           <div className="flex items-center gap-2 mb-1">
             {!notification.read && (
               <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0" />
@@ -87,7 +92,7 @@ function NotificationItem({ notification, onMarkAsRead, onRemove }: Notification
 }
 
 export function NotificationMenu() {
-  const { notifications, unreadCount, updateNotifications } = useNotificationContext();
+  const { notifications, unreadCount, updateNotifications, onNotificationClick } = useNotificationContext();
 
   // Mark notification as read
   const markAsRead = async (id: number) => {
@@ -204,6 +209,7 @@ export function NotificationMenu() {
                   notification={notification}
                   onMarkAsRead={markAsRead}
                   onRemove={removeNotification}
+                  onClick={onNotificationClick}
                 />
               ))}
             </div>

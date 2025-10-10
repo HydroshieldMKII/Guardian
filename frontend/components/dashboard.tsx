@@ -23,16 +23,17 @@ import StreamsList from "./streams-list";
 import { DeviceManagement } from "./device-management";
 import { PlexErrorHandler } from "./plex-error-handler";
 
-import { DashboardStats, UnifiedDashboardData, PlexStatus } from "@/types";
+import { DashboardStats, UnifiedDashboardData, PlexStatus, Notification } from "@/types";
 import { apiClient } from "@/lib/api";
 import { config } from "@/lib/config";
 import { useVersion } from "@/contexts/version-context";
 import { useNotificationContext } from "@/contexts/notification-context";
+import { UserHistoryModal } from "@/components/device-management/UserHistoryModal";
 
 export function Dashboard() {
   const router = useRouter();
   const { versionInfo, checkForUpdatesIfEnabled } = useVersion();
-  const { setNotifications } = useNotificationContext();
+  const { setNotifications, setNotificationClickHandler } = useNotificationContext();
   const [dashboardData, setDashboardData] = useState<UnifiedDashboardData | null>(null);
   const [stats, setStats] = useState<DashboardStats>({
     activeStreams: 0,
@@ -46,6 +47,11 @@ export function Dashboard() {
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [initialTabSet, setInitialTabSet] = useState(false);
   const [navigationTarget, setNavigationTarget] = useState<{userId: string, deviceIdentifier: string} | null>(null);
+  
+  // User History Modal state for notifications
+  const [notificationHistoryModalOpen, setNotificationHistoryModalOpen] = useState(false);
+  const [notificationHistoryUser, setNotificationHistoryUser] = useState<{userId: string, username?: string} | null>(null);
+  const [notificationScrollToSessionId, setNotificationScrollToSessionId] = useState<number | null>(null);
 
   const handleShowSettings = () => {
     router.push('/settings');
@@ -127,6 +133,38 @@ export function Dashboard() {
     const interval = setInterval(() => refreshDashboard(true), config.app.refreshInterval);
     return () => clearInterval(interval);
   }, [autoRefresh]);
+
+  // Set up notification click handler
+  useEffect(() => {
+    const handleNotificationClick = (notification: Notification) => {
+      if (!notification) {
+        console.error('Notification click handler called without notification object');
+        return;
+      }
+      
+      if (notification.sessionHistoryId && notification.userId) {
+        // Set up the modal to open with the specific session
+        setNotificationHistoryUser({ 
+          userId: notification.userId, 
+          username: notification.username 
+        });
+        setNotificationScrollToSessionId(notification.sessionHistoryId);
+        setNotificationHistoryModalOpen(true);
+      } else {
+        // For notifications without sessionHistoryId, just open the user history without scrolling
+        if (notification.userId) {
+          setNotificationHistoryUser({ 
+            userId: notification.userId, 
+            username: notification.username 
+          });
+          setNotificationScrollToSessionId(null);
+          setNotificationHistoryModalOpen(true);
+        }
+      }
+    };
+
+    setNotificationClickHandler(handleNotificationClick);
+  }, [setNotificationClickHandler]);
 
   if (loading) {
     // Loading dots animation
@@ -283,6 +321,19 @@ export function Dashboard() {
           />
         )}
       </div>
+
+      {/* User History Modal for notifications */}
+      <UserHistoryModal
+        userId={notificationHistoryUser?.userId || null}
+        username={notificationHistoryUser?.username}
+        isOpen={notificationHistoryModalOpen}
+        onClose={() => {
+          setNotificationHistoryModalOpen(false);
+          setNotificationHistoryUser(null);
+          setNotificationScrollToSessionId(null);
+        }}
+        scrollToSessionId={notificationScrollToSessionId}
+      />
     </div>
   );
 }
