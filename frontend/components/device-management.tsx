@@ -200,8 +200,8 @@ const DeviceManagement = memo(({
   };
   
   // Sorting state with localStorage initialization
-  const [sortBy, setSortBy] = useState<"username" | "deviceCount" | "pendingCount" | "lastSeen">(
-    () => getStoredValue(USER_SORT_BY_KEY, "pendingCount") as "username" | "deviceCount" | "pendingCount" | "lastSeen"
+  const [sortBy, setSortBy] = useState<"username" | "deviceCount" | "pendingCount" | "lastSeen" | "streamCount">(
+    () => getStoredValue(USER_SORT_BY_KEY, "pendingCount") as "username" | "deviceCount" | "pendingCount" | "lastSeen" | "streamCount"
   );
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">(
     () => getStoredValue(USER_SORT_ORDER_KEY, "desc") as "asc" | "desc"
@@ -419,6 +419,11 @@ const DeviceManagement = memo(({
           valueA = a.lastSeen ? a.lastSeen.getTime() : 0;
           valueB = b.lastSeen ? b.lastSeen.getTime() : 0;
           break;
+        case "streamCount":
+          // Sum up session counts across all devices for each user
+          valueA = a.devices.reduce((total, device) => total + (device.sessionCount || 0), 0);
+          valueB = b.devices.reduce((total, device) => total + (device.sessionCount || 0), 0);
+          break;
         default:
           valueA = (a.user.username || a.user.userId).toLowerCase();
           valueB = (b.user.username || b.user.userId).toLowerCase();
@@ -426,7 +431,7 @@ const DeviceManagement = memo(({
       }
 
       // For numeric values, use numeric comparison
-      if (sortBy === "deviceCount" || sortBy === "pendingCount" || sortBy === "lastSeen") {
+      if (sortBy === "deviceCount" || sortBy === "pendingCount" || sortBy === "lastSeen" || sortBy === "streamCount") {
         const comparison = valueA - valueB;
         return sortOrder === "asc" ? comparison : -comparison;
       }
@@ -838,6 +843,7 @@ const DeviceManagement = memo(({
                         {sortBy === "deviceCount" && "Device Count"}
                         {sortBy === "pendingCount" && "Pending Count"}
                         {sortBy === "lastSeen" && "Last Stream"}
+                        {sortBy === "streamCount" && "Stream Count"}
                         <ArrowUpDown className="ml-1 h-3 w-3" />
                       </Button>
                     </DropdownMenuTrigger>
@@ -853,6 +859,9 @@ const DeviceManagement = memo(({
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => setSortBy("lastSeen")}>
                         Last Stream
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setSortBy("streamCount")}>
+                        Stream Count
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
