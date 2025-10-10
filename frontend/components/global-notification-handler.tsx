@@ -16,22 +16,7 @@ export function GlobalNotificationHandler() {
   const [notificationScrollToSessionId, setNotificationScrollToSessionId] = useState<number | null>(null);
   const [settings, setSettings] = useState<AppSetting[]>([]);
 
-  // Fetch settings to check auto-mark-as-read preference
-  useEffect(() => {
-    const fetchSettings = async () => {
-      try {
-        const response = await fetch(`${config.api.baseUrl}/config`);
-        if (response.ok) {
-          const data = await response.json();
-          setSettings(data);
-        }
-      } catch (error) {
-        console.error('Failed to fetch settings for notification handler:', error);
-      }
-    };
-
-    fetchSettings();
-  }, []);
+  // Settings are now fetched together with notifications in the main useEffect below
 
   // Independent notification fetching - consistent across all pages
   useEffect(() => {
@@ -52,11 +37,30 @@ export function GlobalNotificationHandler() {
       }
     };
 
+    const fetchSettings = async () => {
+      try {
+        const response = await fetch(`${config.api.baseUrl}/config`);
+        if (response.ok) {
+          const data = await response.json();
+          setSettings(data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch settings for notification handler:', error);
+      }
+    };
+
+    const fetchAll = async () => {
+      await Promise.all([
+        fetchNotifications(),
+        fetchSettings()
+      ]);
+    };
+
     // Fetch immediately on mount
-    fetchNotifications();
+    fetchAll();
 
     // Set up interval to fetch notifications
-    const interval = setInterval(fetchNotifications, 6000);
+    const interval = setInterval(fetchAll, 6000);
     
     return () => {clearInterval(interval);};
   }, [setNotifications]);
