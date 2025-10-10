@@ -120,6 +120,12 @@ export class ConfigService {
       type: 'string' as const,
       private: false,
       },
+      {
+      key: 'AUTO_MARK_NOTIFICATION_READ',
+      value: 'true',
+      description: 'Automatically mark notifications as read when clicked',
+      type: 'boolean' as const,
+      },
     ];
 
     // Update version number on startup if current version is higher

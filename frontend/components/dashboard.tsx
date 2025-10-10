@@ -33,7 +33,7 @@ import { UserHistoryModal } from "@/components/device-management/UserHistoryModa
 export function Dashboard() {
   const router = useRouter();
   const { versionInfo, checkForUpdatesIfEnabled } = useVersion();
-  const { setNotifications, setNotificationClickHandler } = useNotificationContext();
+  const { setNotifications, setNotificationClickHandler, updateNotifications } = useNotificationContext();
   const [dashboardData, setDashboardData] = useState<UnifiedDashboardData | null>(null);
   const [stats, setStats] = useState<DashboardStats>({
     activeStreams: 0,
@@ -141,17 +141,45 @@ export function Dashboard() {
         return; // Only handle notifications with sessionHistoryId
       }
       
-      // Set up the modal to open with the specific session
+      // Open the modal immediately
       setNotificationHistoryUser({ 
         userId: notification.userId, 
         username: notification.username 
       });
       setNotificationScrollToSessionId(notification.sessionHistoryId);
       setNotificationHistoryModalOpen(true);
+      
+      // Check if auto-mark as read is enabled and mark as read in background
+      const autoMarkReadSetting = dashboardData?.settings?.find(s => s.key === 'AUTO_MARK_NOTIFICATION_READ');
+      const shouldAutoMarkRead = autoMarkReadSetting?.value === 'true';
+      
+      if (shouldAutoMarkRead && !notification.read) {
+        // Update UI immediately
+        updateNotifications(prev =>
+          prev.map(n =>
+            n.id === notification.id
+              ? { ...n, read: true }
+              : n
+          )
+        );
+        
+        // Make API call in background
+        apiClient.markNotificationAsRead(notification.id).catch(error => {
+          console.error('Failed to mark notification as read:', error);
+          // Revert the UI change if API call fails
+          updateNotifications(prev =>
+            prev.map(n =>
+              n.id === notification.id
+                ? { ...n, read: false }
+                : n
+            )
+          );
+        });
+      }
     };
 
     setNotificationClickHandler(handleNotificationClick);
-  }, [setNotificationClickHandler]);
+  }, [setNotificationClickHandler, dashboardData, updateNotifications]);
 
   if (loading) {
     // Loading dots animation

@@ -116,6 +116,10 @@ const getSettingInfo = (setting: AppSetting): { label: string; description: stri
       label: 'Automatic update checking',
       description: 'Automatically check for new releases when you open the app'
     },
+    'AUTO_MARK_NOTIFICATION_READ': {
+      label: 'Auto-mark notifications as read',
+      description: 'Automatically mark notifications as read when you click on them'
+    },
   };
   
   const info = settingInfoMap[setting.key];
@@ -305,6 +309,11 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
         case 'AUTO_CHECK_UPDATES':
           if (typeof setting.value !== 'boolean') {
             errors.push('Auto check updates must be a boolean value');
+          }
+          break;
+        case 'AUTO_MARK_NOTIFICATION_READ':
+          if (typeof setting.value !== 'boolean') {
+            errors.push('Auto mark notification read must be a boolean value');
           }
           break;
           default:
@@ -720,6 +729,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
         "PLEXGUARD_STOPMSG",
         "DEFAULT_PAGE",
         "AUTO_CHECK_UPDATES",
+        "AUTO_MARK_NOTIFICATION_READ",
       ],
     };
 
