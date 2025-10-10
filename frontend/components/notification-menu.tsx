@@ -12,8 +12,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useNotifications } from "@/hooks/useNotifications";
+import { useNotificationContext } from "@/contexts/notification-context";
 import { Notification } from "@/types";
+import { apiClient } from "@/lib/api";
 
 interface NotificationItemProps {
   notification: Notification;
@@ -86,7 +87,57 @@ function NotificationItem({ notification, onMarkAsRead, onRemove }: Notification
 }
 
 export function NotificationMenu() {
-  const { notifications, unreadCount, markAsRead, removeNotification, markAllAsRead, clearAll } = useNotifications();
+  const { notifications, unreadCount, updateNotifications } = useNotificationContext();
+
+  // Mark notification as read
+  const markAsRead = async (id: number) => {
+    try {
+      await apiClient.markNotificationAsRead(id);
+      updateNotifications(prev =>
+        prev.map(notification =>
+          notification.id === id
+            ? { ...notification, read: true }
+            : notification
+        )
+      );
+    } catch (err) {
+      console.error('Failed to mark notification as read:', err);
+    }
+  };
+
+  // Remove notification
+  const removeNotification = async (id: number) => {
+    try {
+      await apiClient.deleteNotification(id);
+      updateNotifications(prev =>
+        prev.filter(notification => notification.id !== id)
+      );
+    } catch (err) {
+      console.error('Failed to delete notification:', err);
+    }
+  };
+
+  // Mark all as read
+  const markAllAsRead = async () => {
+    try {
+      await apiClient.markAllNotificationsAsRead();
+      updateNotifications(prev =>
+        prev.map(notification => ({ ...notification, read: true }))
+      );
+    } catch (err) {
+      console.error('Failed to mark all notifications as read:', err);
+    }
+  };
+
+  // Clear all notifications
+  const clearAll = async () => {
+    try {
+      await apiClient.clearAllNotifications();
+      updateNotifications(() => []);
+    } catch (err) {
+      console.error('Failed to clear all notifications:', err);
+    }
+  };
 
   return (
     <DropdownMenu>

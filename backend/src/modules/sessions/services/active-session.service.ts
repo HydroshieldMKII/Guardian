@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { SessionHistory } from '../../../entities/session-history.entity';
 import { UserDevice } from '../../../entities/user-device.entity';
+import { UserPreference } from '../../../entities/user-preference.entity';
 import { DeviceTrackingService } from '../../devices/services/device-tracking.service';
 import { PlexClient } from '../../plex/services/plex-client';
 
@@ -53,6 +54,8 @@ export class ActiveSessionService {
     private sessionHistoryRepository: Repository<SessionHistory>,
     @InjectRepository(UserDevice)
     private userDeviceRepository: Repository<UserDevice>,
+    @InjectRepository(UserPreference)
+    private userPreferenceRepository: Repository<UserPreference>,
     private deviceTrackingService: DeviceTrackingService,
     @Inject(forwardRef(() => PlexClient))
     private plexClient: PlexClient,
@@ -159,10 +162,29 @@ export class ActiveSessionService {
         });
       }
 
+      // Find or create UserPreference to get the foreign key
+      let userPreference: UserPreference | null = null;
+      if (user?.id) {
+        userPreference = await this.userPreferenceRepository.findOne({
+          where: { userId: user.id },
+        });
+        
+        // If no UserPreference exists for this user, create one
+        if (!userPreference && user.title) {
+          userPreference = await this.userPreferenceRepository.save(
+            this.userPreferenceRepository.create({
+              userId: user.id,
+              username: user.title,
+              defaultBlock: false,
+              hidden: false,
+            })
+          );
+        }
+      }
+
       const sessionData_partial = {
         sessionKey: sessionData.sessionKey,
         ...(user?.id && { userId: user.id }),
-        ...(user?.title && { username: user.title }),
         ...(userDevice?.id && { userDeviceId: userDevice.id }),
         ...(player?.address && { deviceAddress: player.address }),
         ...(player?.state && { playerState: player.state }),

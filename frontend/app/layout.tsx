@@ -7,6 +7,7 @@ import { GlobalUpdateBanner } from "@/components/global-update-banner";
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "@/hooks/use-theme";
 import { VersionProvider } from "@/contexts/version-context";
+import { NotificationProvider } from "@/contexts/notification-context";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -60,13 +61,15 @@ export default function RootLayout({
         />
         <ThemeProvider defaultTheme="dark" storageKey="guardian-ui-theme">
           <VersionProvider>
-            <ErrorBoundary>
-              <GlobalVersionMismatchBanner />
-              <GlobalUpdateBanner />
-              <Navbar />
-              {children}
-            </ErrorBoundary>
-            <Toaster />
+            <NotificationProvider>
+              <ErrorBoundary>
+                <GlobalVersionMismatchBanner />
+                <GlobalUpdateBanner />
+                <Navbar />
+                {children}
+              </ErrorBoundary>
+              <Toaster />
+            </NotificationProvider>
           </VersionProvider>
         </ThemeProvider>
       </body>

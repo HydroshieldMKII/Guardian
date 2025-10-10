@@ -3,6 +3,7 @@ import { ActiveSessionService } from '../sessions/services/active-session.servic
 import { DeviceTrackingService } from '../devices/services/device-tracking.service';
 import { ConfigService } from '../config/services/config.service';
 import { UsersService } from '../users/services/users.service';
+import { NotificationsService } from '../notifications/services/notifications.service';
 
 export interface DashboardData {
   plexStatus: {
@@ -19,6 +20,10 @@ export interface DashboardData {
     processed: any[];
   };
   users: any[];
+  notifications: {
+    data: any[];
+    unreadCount: number;
+  };
   stats: {
     activeStreams: number;
     totalDevices: number;
@@ -34,6 +39,7 @@ export class DashboardService {
     private readonly deviceTrackingService: DeviceTrackingService,
     private readonly configService: ConfigService,
     private readonly usersService: UsersService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async getDashboardData(): Promise<DashboardData> {
@@ -52,6 +58,10 @@ export class DashboardService {
           sessions: { MediaContainer: { size: 0, Metadata: [] } },
           devices: { all: [], pending: [], approved: [], processed: [] },
           users: [],
+          notifications: {
+            data: [],
+            unreadCount: 0,
+          },
           stats: {
             activeStreams: 0,
             totalDevices: 0,
@@ -62,7 +72,7 @@ export class DashboardService {
       }
 
       // Fetch all data in parallel
-      const [sessions, allDevices, pendingDevices, approvedDevices, processedDevices, users] = 
+      const [sessions, allDevices, pendingDevices, approvedDevices, processedDevices, users, notifications] = 
         await Promise.all([
           this.activeSessionService.getActiveSessionsFormatted(),
           this.deviceTrackingService.getAllDevices(),
@@ -70,6 +80,7 @@ export class DashboardService {
           this.deviceTrackingService.getApprovedDevices(),
           this.deviceTrackingService.getProcessedDevices(),
           this.usersService.getAllUsers(true),
+          this.notificationsService.getAllNotifications(),
         ]);
 
       // Calculate stats
@@ -79,6 +90,9 @@ export class DashboardService {
         pendingDevices: pendingDevices.length,
         approvedDevices: approvedDevices.length,
       };
+
+      // Calculate notification stats
+      const unreadCount = notifications.filter(n => !n.read).length;
 
       return {
         plexStatus,
@@ -91,6 +105,10 @@ export class DashboardService {
           processed: processedDevices,
         },
         users,
+        notifications: {
+          data: notifications.slice(0, 100), // Limit to 100 latest
+          unreadCount,
+        },
         stats,
       };
     } catch (error) {
