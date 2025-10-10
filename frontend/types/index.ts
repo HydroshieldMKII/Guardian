@@ -122,13 +122,15 @@ export interface UnifiedDashboardData {
 }
 
 export interface Notification {
-  id: string;
+  id: number;
   userId: string;
   username: string;
   deviceName: string;
-  date: Date;
+  text: string;
+  type: 'block' | 'info' | 'warning' | 'error';
   read: boolean;
-  type: 'block' | 'info' | 'warning';
+  createdAt: Date;
+  sessionHistoryId?: number;
 }
 
 export interface NotificationData {

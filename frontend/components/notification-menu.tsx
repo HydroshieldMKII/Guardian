@@ -17,8 +17,8 @@ import { Notification } from "@/types";
 
 interface NotificationItemProps {
   notification: Notification;
-  onMarkAsRead: (id: string) => void;
-  onRemove: (id: string) => void;
+  onMarkAsRead: (id: number) => void;
+  onRemove: (id: number) => void;
 }
 
 function NotificationItem({ notification, onMarkAsRead, onRemove }: NotificationItemProps) {
@@ -51,12 +51,11 @@ function NotificationItem({ notification, onMarkAsRead, onRemove }: Notification
               <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0" />
             )}
             <span className="text-xs text-muted-foreground">
-              {formatDate(notification.date)}
+              {formatDate(notification.createdAt)}
             </span>
           </div>
           <p className="text-sm leading-relaxed">
-            User <span className="font-medium">{notification.username}</span> attempted to stream on{" "}
-            <span className="font-medium">{notification.deviceName}</span> but was blocked
+            {notification.text}
           </p>
         </div>
         <div className="flex items-center gap-1 flex-shrink-0">

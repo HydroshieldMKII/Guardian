@@ -1,151 +1,113 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Notification, NotificationData } from "@/types";
+import { Notification } from "@/types";
+import { apiClient } from "@/lib/api";
 
-// Mock data for demonstration
-const mockNotifications: Notification[] = [
-  {
-    id: "1",
-    userId: "user123",
-    username: "john_doe",
-    deviceName: "John's iPhone",
-    date: new Date(Date.now() - 5 * 60 * 1000), // 5 minutes ago
-    read: false,
-    type: "block",
-  },
-  {
-    id: "2",
-    userId: "user456",
-    username: "sarah_smith",
-    deviceName: "Sarah's MacBook Pro",
-    date: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
-    read: false,
-    type: "block",
-  },
-  {
-    id: "3",
-    userId: "user789",
-    username: "mike_wilson",
-    deviceName: "Mike's Android TV",
-    date: new Date(Date.now() - 24 * 60 * 60 * 1000), // 1 day ago
-    read: true,
-    type: "block",
-  },
-  {
-    id: "4",
-    userId: "user101",
-    username: "emily_brown",
-    deviceName: "Emily's iPad",
-    date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), // 3 days ago
-    read: true,
-    type: "block",
-  },
-  {
-    id: "5",
-    userId: "user202",
-    username: "alex_jones",
-    deviceName: "Alex's Fire TV Stick",
-    date: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000), // 4 days ago
-    read: false,
-    type: "block",
-  },
-  {
-    id: "6",
-    userId: "user303",
-    username: "lisa_wang",
-    deviceName: "Lisa's Roku Ultra",
-    date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000), // 5 days ago
-    read: true,
-    type: "block",
-  },
-  {
-    id: "7",
-    userId: "user404",
-    username: "david_clark",
-    deviceName: "David's Xbox Series X",
-    date: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000), // 6 days ago
-    read: false,
-    type: "block",
-  },
-  {
-    id: "8",
-    userId: "user505",
-    username: "maria_garcia",
-    deviceName: "Maria's Samsung Smart TV",
-    date: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // 7 days ago
-    read: true,
-    type: "block",
-  },
-];
+
 
 export function useNotifications() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Initialize with mock data
-  useEffect(() => {
-    // Simulate loading delay
-    const timer = setTimeout(() => {
-      setNotifications(mockNotifications);
+  // Fetch notifications from API
+  const fetchNotifications = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      const data = await apiClient.getAllNotifications<Notification[]>();
+      
+      // Convert createdAt strings to Date objects
+      const processedNotifications = data.map(notification => ({
+        ...notification,
+        createdAt: new Date(notification.createdAt),
+      }));
+      
+      setNotifications(processedNotifications);
+    } catch (err) {
+      console.error('Failed to fetch notifications:', err);
+      setError('Failed to load notifications');
+      // Fallback to empty array on error
+      setNotifications([]);
+    } finally {
       setIsLoading(false);
-    }, 100);
-
-    return () => clearTimeout(timer);
+    }
   }, []);
+
+  // Initial load
+  useEffect(() => {
+    fetchNotifications();
+  }, [fetchNotifications]);
 
   // Calculate unread count
   const unreadCount = notifications.filter(n => !n.read).length;
 
   // Mark notification as read
-  const markAsRead = useCallback((id: string) => {
-    setNotifications(prev =>
-      prev.map(notification =>
-        notification.id === id
-          ? { ...notification, read: true }
-          : notification
-      )
-    );
+  const markAsRead = useCallback(async (id: number) => {
+    try {
+      await apiClient.markNotificationAsRead(id);
+      setNotifications(prev =>
+        prev.map(notification =>
+          notification.id === id
+            ? { ...notification, read: true }
+            : notification
+        )
+      );
+    } catch (err) {
+      console.error('Failed to mark notification as read:', err);
+    }
   }, []);
 
   // Remove notification
-  const removeNotification = useCallback((id: string) => {
-    setNotifications(prev =>
-      prev.filter(notification => notification.id !== id)
-    );
+  const removeNotification = useCallback(async (id: number) => {
+    try {
+      await apiClient.deleteNotification(id);
+      setNotifications(prev =>
+        prev.filter(notification => notification.id !== id)
+      );
+    } catch (err) {
+      console.error('Failed to delete notification:', err);
+    }
   }, []);
 
   // Mark all as read
-  const markAllAsRead = useCallback(() => {
-    setNotifications(prev =>
-      prev.map(notification => ({ ...notification, read: true }))
-    );
+  const markAllAsRead = useCallback(async () => {
+    try {
+      await apiClient.markAllNotificationsAsRead();
+      setNotifications(prev =>
+        prev.map(notification => ({ ...notification, read: true }))
+      );
+    } catch (err) {
+      console.error('Failed to mark all notifications as read:', err);
+    }
   }, []);
 
   // Clear all notifications
-  const clearAll = useCallback(() => {
-    setNotifications([]);
+  const clearAll = useCallback(async () => {
+    try {
+      await apiClient.clearAllNotifications();
+      setNotifications([]);
+    } catch (err) {
+      console.error('Failed to clear all notifications:', err);
+    }
   }, []);
 
-  // Add new notification (for future use)
-  const addNotification = useCallback((notification: Omit<Notification, 'id' | 'date'>) => {
-    const newNotification: Notification = {
-      ...notification,
-      id: Math.random().toString(36).substr(2, 9),
-      date: new Date(),
-    };
-    
-    setNotifications(prev => [newNotification, ...prev]);
-  }, []);
+  // Refresh notifications 
+  const refreshNotifications = useCallback(() => {
+    fetchNotifications();
+  }, [fetchNotifications]);
 
   return {
     notifications,
     unreadCount,
     isLoading,
+    error,
     markAsRead,
     removeNotification,
     markAllAsRead,
     clearAll,
-    addNotification,
+    refreshNotifications,
   };
 }

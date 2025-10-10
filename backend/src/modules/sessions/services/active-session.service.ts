@@ -112,6 +112,7 @@ export class ActiveSessionService {
     return this.sessionHistoryRepository
       .createQueryBuilder('session')
       .leftJoinAndSelect('session.userDevice', 'device')
+      .leftJoinAndSelect('session.userPreference', 'userPreference')
       .where('session.endedAt IS NULL') // Only get active sessions (no end date)
       .orderBy('session.startedAt', 'DESC')
       .getMany();
@@ -222,7 +223,7 @@ export class ActiveSessionService {
           sessionKey: session.sessionKey,
           User: {
             id: session.userId,
-            title: session.username,
+            title: session.userPreference?.username || 'Unknown User',
           },
           Player: {
             machineIdentifier: device?.deviceIdentifier || 'Unknown',

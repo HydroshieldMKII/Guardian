@@ -8,11 +8,13 @@ import { HealthModule } from './modules/health/health.module';
 import { UsersModule } from './modules/users/users.module';
 import { ConfigModule } from './modules/config/config.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 import { SchedulerService } from './services/scheduler.service';
 import { UserDevice } from './entities/user-device.entity';
 import { SessionHistory } from './entities/session-history.entity';
 import { UserPreference } from './entities/user-preference.entity';
 import { AppSettings } from './entities/app-settings.entity';
+import { Notification } from './entities/notification.entity';
 import { config } from './config/app.config';
 import * as path from 'path';
 
@@ -24,7 +26,7 @@ import * as path from 'path';
       database:
         process.env.DATABASE_PATH ||
         path.join(process.cwd(), config.database.path),
-      entities: [UserDevice, SessionHistory, UserPreference, AppSettings],
+      entities: [UserDevice, SessionHistory, UserPreference, AppSettings, Notification],
       synchronize: true,
       logging: config.database.logging,
     }),
@@ -35,6 +37,7 @@ import * as path from 'path';
     UsersModule,
     ConfigModule,
     DashboardModule,
+    NotificationsModule,
   ],
   providers: [SchedulerService],
 })
