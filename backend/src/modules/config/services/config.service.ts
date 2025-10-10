@@ -14,7 +14,7 @@ import {
 } from '../../../types/plex-errors';
 
 // App version
-const CURRENT_APP_VERSION = '1.1.9';
+const CURRENT_APP_VERSION = '1.2.0';
 
 export interface ConfigSettingDto {
   key: string;

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useRef, ReactNode } from "react";
+import React, { createContext, useContext, useState, useRef, ReactNode, useCallback } from "react";
 import { Notification } from "@/types";
 
 interface NotificationContextType {
@@ -29,7 +29,7 @@ export function NotificationProvider({ children, initialData }: NotificationProv
   const [unreadCount, setUnreadCount] = useState(initialData?.unreadCount || 0);
   const notificationClickHandlerRef = useRef<((notification: Notification) => void) | undefined>(undefined);
 
-  const setNotifications = (data: { data: Notification[]; unreadCount: number }) => {
+  const setNotifications = useCallback((data: { data: Notification[]; unreadCount: number }) => {
     // Convert createdAt strings to Date objects
     const processedNotifications = data.data.map(notification => ({
       ...notification,
@@ -37,9 +37,9 @@ export function NotificationProvider({ children, initialData }: NotificationProv
     }));
     setNotificationsState(processedNotifications);
     setUnreadCount(data.unreadCount);
-  };
+  }, []);
 
-  const updateNotifications = (updater: (prev: Notification[]) => Notification[]) => {
+  const updateNotifications = useCallback((updater: (prev: Notification[]) => Notification[]) => {
     setNotificationsState(prev => {
       const updated = updater(prev);
       // Recalculate unread count
@@ -47,11 +47,11 @@ export function NotificationProvider({ children, initialData }: NotificationProv
       setUnreadCount(newUnreadCount);
       return updated;
     });
-  };
+  }, []);
 
-  const setNotificationClickHandler = (handler: (notification: Notification) => void) => {
+  const setNotificationClickHandler = useCallback((handler: (notification: Notification) => void) => {
     notificationClickHandlerRef.current = handler;
-  };
+  }, []);
 
   const handleNotificationClick = (notification: Notification) => {
     if (notificationClickHandlerRef.current) {

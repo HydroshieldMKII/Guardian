@@ -58,7 +58,7 @@ export function GlobalNotificationHandler() {
     // Set up interval to fetch notifications
     const interval = setInterval(fetchNotifications, 6000);
     
-    return () => clearInterval(interval);
+    return () => {clearInterval(interval);};
   }, [setNotifications]);
 
   // Set up global notification click handler
