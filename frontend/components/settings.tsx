@@ -1512,7 +1512,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
               {renderSectionContent(activeSection)}
 
               {/* Save Button - Only show for configurable sections */}
-              {(activeSection === "plex" || activeSection === "guardian") && (
+              {(activeSection === "plex" || activeSection === "guardian" || activeSection === "notifications") && (
                 <>
                   <Separator className="my-6" />
                   <div className="flex justify-end space-x-2">
