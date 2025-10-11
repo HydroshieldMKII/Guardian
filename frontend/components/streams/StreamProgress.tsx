@@ -12,11 +12,11 @@ export const StreamProgress: React.FC<StreamProgressProps> = ({ session }) => {
 
   return (
     <div className="mb-3">
-      <div className="flex items-center justify-between text-xs text-muted-foreground mb-1 gap-2">
-        <span className="flex-shrink-0">
+      <div className="flex items-center justify-between text-xs mb-1 gap-2">
+        <span className="flex-shrink-0 px-2 py-1 rounded-md bg-black/30 text-white font-medium">
           {formatDuration(session.viewOffset)}
         </span>
-        <span className="flex-shrink-0">
+        <span className="flex-shrink-0 px-2 py-1 rounded-md bg-black/30 text-white font-medium">
           {formatDuration(session.duration)}
         </span>
       </div>
