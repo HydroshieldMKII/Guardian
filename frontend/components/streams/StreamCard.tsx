@@ -36,23 +36,35 @@ export const StreamCard: React.FC<StreamCardProps> = ({
   onRemoveAccess,
   onNavigateToDevice,
 }) => {
-  // Thumbnail as primary, fallback to art
-  const mediaUrl = stream.thumbnailUrl || stream.artUrl || '';
+  // Separate thumbnail and art URLs
+  const thumbnailUrl = stream.thumbnailUrl || '';
+  const artUrl = stream.artUrl || '';
+  
   return (
     <div
       key={stream.sessionKey || index}
       className="relative p-3 sm:p-4 rounded-lg border bg-card shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden"
+      style={{
+        backgroundImage: artUrl ? `url(${artUrl})` : 'none',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+      }}
     >
+      {/* Background overlay for better text readability */}
+      {artUrl && (
+        <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/50 to-black/30 backdrop-blur-[0.5px]" />
+      )}
       {/* Responsive header */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-3 gap-3">
         <div className="flex gap-3 flex-1 min-w-0">
           {/* Thumbnail */}
-          <div className="flex-shrink-0">
-            <div className="relative w-16 h-24 sm:w-20 sm:h-30 rounded-md overflow-hidden bg-muted border">
-              {mediaUrl ? (
+          <div className="flex-shrink-0 relative z-10">
+            <div className="relative w-16 h-24 sm:w-20 sm:h-30 rounded-md overflow-hidden bg-muted border shadow-lg">
+              {thumbnailUrl ? (
                 <>
                   <img
-                    src={mediaUrl}
+                    src={thumbnailUrl}
                     alt={getContentTitle(stream)}
                     className="w-full h-full object-cover"
                     onError={(e) => {
@@ -77,20 +89,20 @@ export const StreamCard: React.FC<StreamCardProps> = ({
           </div>
           
           {/* Content info */}
-          <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-foreground mb-1 text-sm sm:text-base break-words leading-tight">
+          <div className="flex-1 min-w-0 relative z-10">
+            <h3 className={`font-semibold mb-1 text-sm sm:text-base break-words leading-tight ${artUrl ? 'text-white' : 'text-foreground'}`}>
               {getContentTitle(stream)}
             </h3>
 
           {/* Primary info row */}
-          <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground my-2 flex-wrap">
-            <div className="flex items-center gap-1 bg-muted px-2 py-1 rounded-full min-w-0">
+          <div className="flex items-center gap-2 text-xs sm:text-sm my-2 flex-wrap">
+            <div className={`flex items-center gap-1 px-2 py-1 rounded-full min-w-0 ${artUrl ? 'bg-black/30 text-white' : 'bg-muted text-muted-foreground'}`}>
               <User className="w-3 h-3 flex-shrink-0" />
               <span className="truncate max-w-[120px] sm:max-w-[150px]">
                 {stream.User?.title || "Unknown"}
               </span>
             </div>
-            <div className="flex items-center gap-1 bg-muted px-2 py-1 rounded-full min-w-0">
+            <div className={`flex items-center gap-1 px-2 py-1 rounded-full min-w-0 ${artUrl ? 'bg-black/30 text-white' : 'bg-muted text-muted-foreground'}`}>
               {getDeviceIcon(stream.Player?.platform)}
               <span className="truncate max-w-[100px] sm:max-w-[120px]">
                 {stream.Player?.title || "Device"}
@@ -104,7 +116,7 @@ export const StreamCard: React.FC<StreamCardProps> = ({
         </div>
 
         {/* Status and actions */}
-        <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-2 w-full sm:w-auto order-first sm:order-last">
+        <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-2 w-full sm:w-auto order-first sm:order-last relative z-10">
           <Badge
             variant={
               stream.Player?.state === "playing"
@@ -131,7 +143,7 @@ export const StreamCard: React.FC<StreamCardProps> = ({
                 !stream.User?.id ||
                 !stream.Player?.machineIdentifier
               }
-              className="h-6 w-6 p-0 text-muted-foreground text-red-600"
+              className={`h-6 w-6 p-0 ${artUrl ? 'text-red-400 hover:text-red-300' : 'text-red-600 hover:text-red-700'}`}
               title={isRevoking ? "Removing access..." : "Remove access"}
             >
               {isRevoking ? (
@@ -150,7 +162,7 @@ export const StreamCard: React.FC<StreamCardProps> = ({
                 }
               }}
               disabled={!stream.User?.id || !stream.Player?.machineIdentifier}
-              className="h-6 w-6 p-0 text-muted-foreground hover:text-blue-600"
+              className={`h-6 w-6 p-0 ${artUrl ? 'text-blue-400 hover:text-blue-300' : 'text-muted-foreground hover:text-blue-600'}`}
               title="View device details"
             >
               <UserRoundSearch className="w-3 h-3" />
@@ -160,7 +172,7 @@ export const StreamCard: React.FC<StreamCardProps> = ({
               variant="ghost"
               size="sm"
               onClick={onToggleExpand}
-              className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+              className={`h-6 w-6 p-0 ${artUrl ? 'text-white hover:text-gray-200' : 'text-muted-foreground hover:text-foreground'}`}
             >
               {isExpanded ? (
                 <ChevronUp className="w-4 h-4" />
@@ -173,11 +185,13 @@ export const StreamCard: React.FC<StreamCardProps> = ({
       </div>
 
       {/* Progress Bar */}
-      <StreamProgress session={stream} />
+      <div className="relative z-10">
+        <StreamProgress session={stream} />
+      </div>
 
       {/* Expandable details */}
       {isExpanded && (
-        <div className="space-y-3 pt-3 border-t border-border animate-in slide-in-from-top-2 duration-200">
+        <div className={`space-y-3 pt-3 border-t animate-in slide-in-from-top-2 duration-200 relative z-10 ${artUrl ? 'border-white/30' : 'border-border'}`}>
           <StreamQualityDetails session={stream} />
           <StreamDeviceInfo session={stream} />
         </div>
