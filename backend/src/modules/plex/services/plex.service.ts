@@ -18,11 +18,45 @@ export class PlexService {
 
   async getActiveSessions(): Promise<PlexSessionsResponse> {
     try {
-      return await this.plexClient.getSessions();
+      const sessions = await this.plexClient.getSessions();
+      
+      // Add media URLs to session data
+      if (sessions?.MediaContainer?.Metadata) {
+        sessions.MediaContainer.Metadata = sessions.MediaContainer.Metadata.map(session => ({
+          ...session,
+          thumbnailUrl: session.thumb ? this.buildMediaUrl('thumb', session.thumb) : undefined,
+          artUrl: session.art ? this.buildMediaUrl('art', session.art) : undefined,
+        }));
+      }
+      
+      return sessions;
     } catch (error: any) {
       this.logger.error('Error fetching sessions', error);
       throw error;
     }
+  }
+
+  private buildMediaUrl(type: 'thumb' | 'art', mediaPath: string): string {
+    if (!mediaPath) return '';
+    
+    // Parse the media path to extract ratingKey and timestamp
+    const pathMatch = mediaPath.match(/\/library\/metadata\/(\d+)\/(thumb|art)(?:\/(\d+))?/);
+    
+    if (!pathMatch) {
+      this.logger.warn(`Invalid media path format: ${mediaPath}`);
+      return '';
+    }
+
+    const [, ratingKey, , timestamp] = pathMatch;
+    
+    // Build the proxy Nextjs URL that points to our media controller
+    let proxyUrl = `/api/pg/plex/media/${type}/${ratingKey}`;
+    
+    if (timestamp) {
+      proxyUrl += `?t=${timestamp}`;
+    }
+    
+    return proxyUrl;
   }
 
   async updateActiveSessions(): Promise<PlexSessionsResponse> {

@@ -9,14 +9,14 @@ import {
   X, 
   UserRoundSearch, 
   ChevronDown, 
-  ChevronUp 
+  ChevronUp,
+  Image
 } from "lucide-react";
 import { getContentTitle, getDeviceIcon } from './SharedComponents';
 import { StreamQuality, StreamQualityDetails } from './StreamQuality';
 import { StreamDeviceInfo } from './StreamDeviceInfo';
 import { StreamProgress } from './StreamProgress';
 import { PlexSession } from "@/types";
-
 interface StreamCardProps {
   stream: PlexSession;
   index: number;
@@ -36,6 +36,8 @@ export const StreamCard: React.FC<StreamCardProps> = ({
   onRemoveAccess,
   onNavigateToDevice,
 }) => {
+  // Thumbnail as primary, fallback to art
+  const mediaUrl = stream.thumbnailUrl || stream.artUrl || '';
   return (
     <div
       key={stream.sessionKey || index}
@@ -43,10 +45,36 @@ export const StreamCard: React.FC<StreamCardProps> = ({
     >
       {/* Responsive header */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-3 gap-3">
-        <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-foreground mb-1 text-sm sm:text-base break-words leading-tight">
-            {getContentTitle(stream)}
-          </h3>
+        <div className="flex gap-3 flex-1 min-w-0">
+          {/* Thumbnail */}
+          {mediaUrl && (
+            <div className="flex-shrink-0">
+              <div className="relative w-16 h-24 sm:w-20 sm:h-30 rounded-md overflow-hidden bg-muted border">
+                <img
+                  src={mediaUrl}
+                  alt={getContentTitle(stream)}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.style.display = 'none';
+                    const fallback = target.parentElement?.querySelector('.thumbnail-fallback') as HTMLElement;
+                    if (fallback) {
+                      fallback.style.display = 'flex';
+                    }
+                  }}
+                />
+                <div className="thumbnail-fallback absolute inset-0 hidden items-center justify-center bg-muted">
+                  <Image className="w-6 h-6 text-muted-foreground" />
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {/* Content info */}
+          <div className="flex-1 min-w-0">
+            <h3 className="font-semibold text-foreground mb-1 text-sm sm:text-base break-words leading-tight">
+              {getContentTitle(stream)}
+            </h3>
 
           {/* Primary info row */}
           <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground my-2 flex-wrap">
@@ -64,8 +92,9 @@ export const StreamCard: React.FC<StreamCardProps> = ({
             </div>
           </div>
 
-          {/* Quality info row - compact */}
-          <StreamQuality session={stream} />
+            {/* Quality info row - compact */}
+            <StreamQuality session={stream} />
+          </div>
         </div>
 
         {/* Status and actions */}
