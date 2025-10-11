@@ -138,6 +138,12 @@ export class ConfigService {
       description: 'Enable background artwork',
       type: 'boolean' as const,
       },
+      {
+      key: 'CUSTOM_PLEX_URL',
+      value: '',
+      description: 'Custom Plex web URL for opening content (leave empty to use configured server)',
+      type: 'string' as const,
+      },
     ];
 
     // Update version number on startup if current version is higher

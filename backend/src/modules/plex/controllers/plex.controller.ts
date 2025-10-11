@@ -1,12 +1,16 @@
 import { Controller, Get, Param, Res, Query, Logger } from '@nestjs/common';
 import type { Response } from 'express';
 import { PlexClient } from '../services/plex-client';
+import { PlexService } from '../services/plex.service';
 
 @Controller('plex')
 export class PlexController {
   private readonly logger = new Logger(PlexController.name);
 
-  constructor(private readonly plexClient: PlexClient) {}
+  constructor(
+    private readonly plexClient: PlexClient,
+    private readonly plexService: PlexService
+  ) {}
 
   @Get('media/:type/:ratingKey')
   async getMedia(
@@ -40,6 +44,17 @@ export class PlexController {
     } catch (error) {
       this.logger.error(`Failed to fetch ${type} for ratingKey ${ratingKey}:`, error);
       return res.status(500).json({ error: 'Failed to fetch media' });
+    }
+  }
+
+  @Get('web-url')
+  async getPlexWebUrl() {
+    try {
+      const webUrl = await this.plexService.getPlexWebUrl();
+      return { webUrl };
+    } catch (error) {
+      this.logger.error('Failed to get Plex web URL:', error);
+      return { webUrl: null, error: 'Failed to get Plex web URL' };
     }
   }
 }

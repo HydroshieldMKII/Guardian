@@ -101,6 +101,34 @@ export class PlexService {
     return proxyUrl;
   }
 
+  async getPlexWebUrl(): Promise<string> {
+    try {
+      // Check for custom URL first
+      const customUrl = await this.configService.getSetting('CUSTOM_PLEX_URL');
+      if (customUrl && customUrl.trim()) {
+        return customUrl.trim();
+      }
+
+      // Build URL from server configuration
+      const [ip, port, useSSL] = await Promise.all([
+        this.configService.getSetting('PLEX_SERVER_IP'),
+        this.configService.getSetting('PLEX_SERVER_PORT'),
+        this.configService.getSetting('USE_SSL')
+      ]);
+
+      if (!ip || !port) {
+        throw new Error('Plex server IP and port not configured');
+      }
+
+      const protocol = (useSSL === 'true' || useSSL === true) ? 'https' : 'http';
+      return `${protocol}://${ip}:${port}`;
+      
+    } catch (error) {
+      this.logger.error('Error getting Plex web URL:', error);
+      throw error;
+    }
+  }
+
   async updateActiveSessions(): Promise<PlexSessionsResponse> {
     try {
       const sessions = await this.getActiveSessions();

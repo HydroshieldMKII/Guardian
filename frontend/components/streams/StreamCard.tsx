@@ -17,6 +17,8 @@ import { StreamQuality, StreamQualityDetails } from './StreamQuality';
 import { StreamDeviceInfo } from './StreamDeviceInfo';
 import { StreamProgress } from './StreamProgress';
 import { PlexSession } from "@/types";
+import {config} from "../../lib/config";
+
 interface StreamCardProps {
   stream: PlexSession;
   index: number;
@@ -40,8 +42,9 @@ export const StreamCard: React.FC<StreamCardProps> = ({
   const thumbnailUrl = stream.thumbnailUrl || '';
   const artUrl = stream.artUrl || '';
   
-  // Open content in Plex
-  const openInPlex = () => {
+  // Function to open content in Plex
+  const openInPlex = async () => {
+    // Extract ratingKey from thumb or art path
     let ratingKey = stream.ratingKey;
     if (!ratingKey && (stream.thumb || stream.art)) {
       const mediaPath = stream.thumb || stream.art || '';
@@ -56,26 +59,37 @@ export const StreamCard: React.FC<StreamCardProps> = ({
       return;
     }
     
-    // Get server info
-    const plexServerUrl = `${window.location.protocol}//${window.location.hostname}:32400`;
-    const serverIdentifier = stream.serverMachineIdentifier;
-    
-    if (!serverIdentifier) {
-      console.warn('No server machine identifier available');
-      // Fallback to direct library access
-      window.open(`${plexServerUrl}/web/index.html`, '_blank');
-      return;
+    try {
+      // Get the proper Plex web URL from backend
+      const response = await fetch(`${config.api.baseUrl}/plex/web-url`);
+      const data = await response.json();
+      
+      if (!data.webUrl) {
+        console.warn('No Plex web URL available');
+        return;
+      }
+      
+      const serverIdentifier = stream.serverMachineIdentifier;
+      
+      if (!serverIdentifier) {
+        console.error('No server machine identifier available');
+        return;
+      }
+      
+      // Use the correct server-specific URL format
+      const plexUrl = `${data.webUrl}/web/index.html#!/server/${serverIdentifier}/details?key=%2Flibrary%2Fmetadata%2F${ratingKey}`;
+
+      console.debug('Opening Plex URL:', plexUrl);
+      console.debug('Base URL:', data.webUrl);
+      console.debug('Server ID:', serverIdentifier);
+      console.debug('Rating Key:', ratingKey);
+
+      // Open in new tab
+      window.open(plexUrl, '_blank');
+      
+    } catch (error) {
+      console.error('Failed to get Plex web URL:', error);
     }
-    
-    // Use the correct server-specific URL format
-    const plexUrl = `${plexServerUrl}/web/index.html#!/server/${serverIdentifier}/details?key=%2Flibrary%2Fmetadata%2F${ratingKey}`;
-    
-    console.log('Opening Plex URL:', plexUrl);
-    console.log('Server ID:', serverIdentifier);
-    console.log('Rating Key:', ratingKey);
-    
-    // Open in new tab
-    window.open(plexUrl, '_blank');
   };
   
   return (

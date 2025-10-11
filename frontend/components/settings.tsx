@@ -123,6 +123,10 @@ const getSettingInfo = (setting: AppSetting): { label: string; description: stri
       label: 'Show background artwork',
       description: 'Display background artwork for active streams'
     },
+    'CUSTOM_PLEX_URL': {
+      label: 'Custom Plex web URL',
+      description: 'Custom URL for opening Plex content (e.g., https://app.plex.tv). Leave empty to use configured server settings.'
+    },
     'DEFAULT_PAGE': {
       label: 'Default page on startup',
       description: 'Choose which page to display when the app loads'
@@ -742,6 +746,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
         "PLEX_GUARD_DEFAULT_BLOCK",
         "ENABLE_MEDIA_THUMBNAILS",
         "ENABLE_MEDIA_ARTWORK",
+        "CUSTOM_PLEX_URL",
         "DEFAULT_PAGE",
         "PLEXGUARD_STOPMSG",
         "PLEXGUARD_REFRESH_INTERVAL",
