@@ -41,22 +41,10 @@ export class NotificationsController {
     return await this.notificationsService.markAsRead(id);
   }
 
-  @Patch('user/:userId/mark-all-read')
-  async markAllAsReadForUser(@Param('userId') userId: string) {
-    await this.notificationsService.markAllAsReadForUser(userId);
-    return { message: 'All notifications marked as read' };
-  }
-
   @Patch('mark-all-read')
   async markAllAsRead() {
     await this.notificationsService.markAllAsRead();
     return { message: 'All notifications marked as read' };
-  }
-
-  @Delete('user/:userId/clear-all')
-  async clearAllForUser(@Param('userId') userId: string) {
-    await this.notificationsService.clearAllForUser(userId);
-    return { message: 'All notifications cleared for user' };
   }
 
   @Delete('clear-all')

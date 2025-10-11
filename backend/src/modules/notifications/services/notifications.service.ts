@@ -118,23 +118,12 @@ export class NotificationsService {
     return await this.notificationRepository.save(notification);
   }
 
-  async markAllAsReadForUser(userId: string): Promise<void> {
-    await this.notificationRepository.update(
-      { userId, read: false },
-      { read: true }
-    );
-  }
-
   async deleteNotification(notificationId: number): Promise<void> {
     const result = await this.notificationRepository.delete(notificationId);
     
     if (result.affected === 0) {
       throw new NotFoundException(`Notification with ID ${notificationId} not found`);
     }
-  }
-
-  async clearAllForUser(userId: string): Promise<void> {
-    await this.notificationRepository.delete({ userId });
   }
 
   async getUnreadCountForUser(userId: string): Promise<number> {
