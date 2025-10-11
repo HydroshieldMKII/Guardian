@@ -126,6 +126,18 @@ export class ConfigService {
       description: 'Automatically mark notifications as read when clicked',
       type: 'boolean' as const,
       },
+      {
+      key: 'ENABLE_MEDIA_THUMBNAILS',
+      value: 'true',
+      description: 'Enable media thumbnails',
+      type: 'boolean' as const,
+      },
+      {
+      key: 'ENABLE_MEDIA_ARTWORK',
+      value: 'true',
+      description: 'Enable background artwork',
+      type: 'boolean' as const,
+      },
     ];
 
     // Update version number on startup if current version is higher

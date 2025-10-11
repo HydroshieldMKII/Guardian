@@ -36,7 +36,7 @@ export const StreamCard: React.FC<StreamCardProps> = ({
   onRemoveAccess,
   onNavigateToDevice,
 }) => {
-  // Separate thumbnail and art URLs
+  // Separate thumbnail and art URLs 
   const thumbnailUrl = stream.thumbnailUrl || '';
   const artUrl = stream.artUrl || '';
   

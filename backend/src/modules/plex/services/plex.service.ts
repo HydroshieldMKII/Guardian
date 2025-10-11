@@ -4,6 +4,7 @@ import { SessionTerminationService } from './session-termination.service';
 import { PlexSessionsResponse } from '../../../types/plex.types';
 import { DeviceTrackingService } from '../../devices/services/device-tracking.service';
 import { ActiveSessionService } from '../../sessions/services/active-session.service';
+import { ConfigService } from '../../config/services/config.service';
 import { config } from '../../../config/app.config';
 
 @Injectable()
@@ -15,18 +16,25 @@ export class PlexService {
     private readonly sessionTerminationService: SessionTerminationService,
     private readonly deviceTrackingService: DeviceTrackingService,
     private readonly activeSessionService: ActiveSessionService,
+    private readonly configService: ConfigService,
   ) {}
 
   async getActiveSessions(): Promise<PlexSessionsResponse> {
     try {
       const sessions = await this.plexClient.getSessions();
       
-      // Add media URLs to session data
-      if (sessions?.MediaContainer?.Metadata) {
+      // Check if media thumbnails and artwork are enabled
+      const [enableThumbnails, enableArtwork] = await Promise.all([
+        this.configService.getSetting('ENABLE_MEDIA_THUMBNAILS'),
+        this.configService.getSetting('ENABLE_MEDIA_ARTWORK'),
+      ]);
+      
+      // Add media URLs to session data if enbaled
+      if (sessions?.MediaContainer?.Metadata && (enableThumbnails || enableArtwork)) {
         sessions.MediaContainer.Metadata = sessions.MediaContainer.Metadata.map(session => ({
           ...session,
-          thumbnailUrl: session.thumb ? this.buildMediaUrl('thumb', session.thumb) : undefined,
-          artUrl: session.art ? this.buildMediaUrl('art', session.art) : undefined,
+          thumbnailUrl: (enableThumbnails && session.thumb) ? this.buildMediaUrl('thumb', session.thumb) : undefined,
+          artUrl: (enableArtwork && session.art) ? this.buildMediaUrl('art', session.art) : undefined,
         }));
       }
       

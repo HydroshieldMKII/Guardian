@@ -115,6 +115,14 @@ const getSettingInfo = (setting: AppSetting): { label: string; description: stri
       label: 'Device inactivity threshold (days)',
       description: 'Number of days a device can be inactive before it\'s automatically removed. Cleanup runs every hour.'
     },
+    'ENABLE_MEDIA_THUMBNAILS': {
+      label: 'Show media thumbnails',
+      description: 'Display movie/show poster thumbnails on the left side of stream cards. Disable to reduce bandwidth usage.'
+    },
+    'ENABLE_MEDIA_ARTWORK': {
+      label: 'Show background artwork',
+      description: 'Display background artwork in stream cards for a cinematic appearance. Disable to improve performance and reduce bandwidth usage.'
+    },
     'DEFAULT_PAGE': {
       label: 'Default page on startup',
       description: 'Choose which page to display when the app loads'
@@ -324,7 +332,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
           }
           break;
           default:
-            console.warn(`No validation rules for setting: ${setting.key}`);
+            //console.warn(`No validation rules for setting: ${setting.key}`);
             break;
       }
     }
@@ -731,20 +739,30 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
         // IGNORE_CERT_ERRORS will be handled specially with USE_SSL
       ],
       guardian: [
-        "PLEXGUARD_REFRESH_INTERVAL",
-        "PLEX_GUARD_DEFAULT_BLOCK",
-        "PLEXGUARD_STOPMSG",
-        "DEFAULT_PAGE",
         "AUTO_CHECK_UPDATES",
+        "PLEX_GUARD_DEFAULT_BLOCK",
+        "AUTO_MARK_NOTIFICATION_READ",
+        "ENABLE_MEDIA_THUMBNAILS",
+        "ENABLE_MEDIA_ARTWORK",
+        "DEFAULT_PAGE",
+        "PLEXGUARD_STOPMSG",
+        "PLEXGUARD_REFRESH_INTERVAL",
       ],
       notifications: [
-        "AUTO_MARK_NOTIFICATION_READ",
       ],
     };
 
-    return settings.filter(
+    const filteredSettings = settings.filter(
       (setting) => categoryMap[category]?.includes(setting.key) || false
     );
+    
+    // Sort settings according to the order defined in categoryMap
+    const categoryKeys = categoryMap[category] || [];
+    return filteredSettings.sort((a, b) => {
+      const aIndex = categoryKeys.indexOf(a.key);
+      const bIndex = categoryKeys.indexOf(b.key);
+      return aIndex - bIndex;
+    });
   };
 
   const renderSettingField = (setting: AppSetting) => {
