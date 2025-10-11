@@ -335,6 +335,34 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
             errors.push('Auto mark notification read must be a boolean value');
           }
           break;
+        case 'CUSTOM_PLEX_URL':
+          if (setting.value && setting.value.trim().length > 0) {
+            const urlValue = setting.value.trim();
+            
+            // Check if it starts with http:// or https://
+            if (!urlValue.startsWith('http://') && !urlValue.startsWith('https://')) {
+              errors.push('Custom Plex URL must start with http:// or https://');
+              break;
+            }
+            
+            // Try to parse as URL to validate format
+            try {
+              const url = new URL(urlValue);
+              
+              // Check domain validity 
+              const hostParts = url.hostname.split('.');
+              const hasValidDomain = hostParts.length >= 2 && 
+                                   hostParts.every(part => part.length > 0) && 
+                                   url.hostname.includes('.');
+              
+              if (!hasValidDomain) {
+                errors.push('Custom Plex URL must contain a valid domain with extension (e.g., plex.example.com)');
+              }
+            } catch (error) {
+              errors.push('Custom Plex URL must be a valid URL format (e.g., https://app.plex.tv)');
+            }
+          }
+          break;
           default:
             //console.warn(`No validation rules for setting: ${setting.key}`);
             break;
@@ -374,9 +402,10 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
       // Validate settings
       const validationErrors = validateSettings(settingsToUpdate);
       if (validationErrors.length > 0) {
-        setConnectionStatus({
-          success: false,
-          message: `Validation error: ${validationErrors.join(", ")}`,
+        toast({
+          title: "Error saving settings",
+          description: validationErrors.join("; \n"),
+          variant: "destructive",
         });
         return;
       }
