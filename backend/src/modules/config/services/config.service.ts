@@ -68,7 +68,7 @@ export class ConfigService {
       },
       {
       key: 'IGNORE_CERT_ERRORS',
-      value: 'true',
+      value: 'false',
       description: 'Ignore SSL certificate errors',
       type: 'boolean' as const,
       },
