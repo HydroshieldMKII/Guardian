@@ -109,19 +109,19 @@ const getSettingInfo = (setting: AppSetting): { label: string; description: stri
     'PLEX_GUARD_DEFAULT_BLOCK': { label: 'Default behavior for new devices' },
     'DEVICE_CLEANUP_ENABLED': { 
       label: 'Automatic device cleanup',
-      description: 'When enabled, devices that haven\'t streamed for the specified number of days will be automatically removed and require approval again.'
+      description: 'When enabled, devices that haven\'t streamed for the specified number of days will be automatically deleted and require approval again.'
     },
     'DEVICE_CLEANUP_INTERVAL_DAYS': { 
       label: 'Device inactivity threshold (days)',
-      description: 'Number of days a device can be inactive before it\'s automatically removed. Cleanup runs every hour.'
+      description: 'Number of days a device can be inactive before it\'s automatically deleted.'
     },
     'ENABLE_MEDIA_THUMBNAILS': {
       label: 'Show media thumbnails',
-      description: 'Display movie/show poster thumbnails on the left side of stream cards. Disable to reduce bandwidth usage.'
+      description: 'Display thumbnails for active streams'
     },
     'ENABLE_MEDIA_ARTWORK': {
       label: 'Show background artwork',
-      description: 'Display background artwork in stream cards for a cinematic appearance. Disable to improve performance and reduce bandwidth usage.'
+      description: 'Display background artwork for active streams'
     },
     'DEFAULT_PAGE': {
       label: 'Default page on startup',
@@ -740,7 +740,6 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
       guardian: [
         "AUTO_CHECK_UPDATES",
         "PLEX_GUARD_DEFAULT_BLOCK",
-        "AUTO_MARK_NOTIFICATION_READ",
         "ENABLE_MEDIA_THUMBNAILS",
         "ENABLE_MEDIA_ARTWORK",
         "DEFAULT_PAGE",
