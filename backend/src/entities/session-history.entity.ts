@@ -8,6 +8,7 @@ import {
   JoinColumn,
 } from 'typeorm';
 import { UserDevice } from './user-device.entity';
+import { UserPreference } from './user-preference.entity';
 
 @Entity('session_history')
 @Index(['userId', 'startedAt'])
@@ -18,11 +19,13 @@ export class SessionHistory {
   @Column({ name: 'session_key' })
   sessionKey: string;
 
-  @Column({ name: 'user_id' })
+    @Column({ name: 'user_id' })
   userId: string;
 
-  @Column({ name: 'username', nullable: true })
-  username: string;
+  // Foreign key to UserPreference to get user info (username, etc.)
+  @ManyToOne(() => UserPreference, { eager: false, nullable: true })
+  @JoinColumn({ name: 'user_id', referencedColumnName: 'userId' })
+  userPreference?: UserPreference;
 
   // Foreign key to UserDevice
   @Column({ name: 'user_device_id', nullable: true })

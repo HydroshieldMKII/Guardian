@@ -1,9 +1,11 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { SessionHistory } from '../../../entities/session-history.entity';
 import { UserDevice } from '../../../entities/user-device.entity';
+import { UserPreference } from '../../../entities/user-preference.entity';
 import { DeviceTrackingService } from '../../devices/services/device-tracking.service';
+import { PlexClient } from '../../plex/services/plex-client';
 
 interface PlexSessionData {
   sessionKey: string;
@@ -52,7 +54,11 @@ export class ActiveSessionService {
     private sessionHistoryRepository: Repository<SessionHistory>,
     @InjectRepository(UserDevice)
     private userDeviceRepository: Repository<UserDevice>,
+    @InjectRepository(UserPreference)
+    private userPreferenceRepository: Repository<UserPreference>,
     private deviceTrackingService: DeviceTrackingService,
+    @Inject(forwardRef(() => PlexClient))
+    private plexClient: PlexClient,
   ) {}
 
   // Update active sessions in the database based on the latest sessions data from Plex
@@ -112,6 +118,7 @@ export class ActiveSessionService {
     return this.sessionHistoryRepository
       .createQueryBuilder('session')
       .leftJoinAndSelect('session.userDevice', 'device')
+      .leftJoinAndSelect('session.userPreference', 'userPreference')
       .where('session.endedAt IS NULL') // Only get active sessions (no end date)
       .orderBy('session.startedAt', 'DESC')
       .getMany();
@@ -155,10 +162,29 @@ export class ActiveSessionService {
         });
       }
 
+      // Find or create UserPreference to get the foreign key
+      let userPreference: UserPreference | null = null;
+      if (user?.id) {
+        userPreference = await this.userPreferenceRepository.findOne({
+          where: { userId: user.id },
+        });
+        
+        // If no UserPreference exists for this user, create one
+        if (!userPreference && user.title) {
+          userPreference = await this.userPreferenceRepository.save(
+            this.userPreferenceRepository.create({
+              userId: user.id,
+              username: user.title,
+              defaultBlock: null, // null means use global default
+              hidden: false,
+            })
+          );
+        }
+      }
+
       const sessionData_partial = {
         sessionKey: sessionData.sessionKey,
         ...(user?.id && { userId: user.id }),
-        ...(user?.title && { username: user.title }),
         ...(userDevice?.id && { userDeviceId: userDevice.id }),
         ...(player?.address && { deviceAddress: player.address }),
         ...(player?.state && { playerState: player.state }),
@@ -222,7 +248,7 @@ export class ActiveSessionService {
           sessionKey: session.sessionKey,
           User: {
             id: session.userId,
-            title: session.username,
+            title: session.userPreference?.username || 'Unknown User',
           },
           Player: {
             machineIdentifier: device?.deviceIdentifier || 'Unknown',

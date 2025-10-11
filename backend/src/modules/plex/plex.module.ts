@@ -9,6 +9,8 @@ import { DevicesModule } from '../devices/devices.module';
 import { SessionsModule } from '../sessions/sessions.module';
 import { UsersModule } from '../users/users.module';
 import { ConfigModule } from '../config/config.module';
+import { NotificationsModule } from '../notifications/notifications.module';
+import { PlexController } from './controllers/plex.controller';
 
 @Module({
   imports: [
@@ -17,7 +19,9 @@ import { ConfigModule } from '../config/config.module';
     forwardRef(() => SessionsModule),
     forwardRef(() => UsersModule),
     ConfigModule,
+    forwardRef(() => NotificationsModule),
   ],
+  controllers: [PlexController],
   providers: [PlexService, PlexClient, SessionTerminationService],
   exports: [PlexService, PlexClient, SessionTerminationService],
 })

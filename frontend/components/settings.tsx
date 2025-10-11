@@ -17,6 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import {
   User,
   Bell,
+  BellRing,
   Shield,
   Server,
   Save,
@@ -66,6 +67,12 @@ const settingsSections = [
     icon: Server,
   },
   {
+    id: "notifications",
+    title: "Notification Settings",
+    description: "Configure notification behavior and preferences",
+    icon: BellRing,
+  },
+  {
     id: "database",
     title: "Database Management",
     description: "Export and import database settings and data",
@@ -102,11 +109,23 @@ const getSettingInfo = (setting: AppSetting): { label: string; description: stri
     'PLEX_GUARD_DEFAULT_BLOCK': { label: 'Default behavior for new devices' },
     'DEVICE_CLEANUP_ENABLED': { 
       label: 'Automatic device cleanup',
-      description: 'When enabled, devices that haven\'t streamed for the specified number of days will be automatically removed and require approval again.'
+      description: 'When enabled, devices that haven\'t streamed for the specified number of days will be automatically deleted and require approval again.'
     },
     'DEVICE_CLEANUP_INTERVAL_DAYS': { 
       label: 'Device inactivity threshold (days)',
-      description: 'Number of days a device can be inactive before it\'s automatically removed. Cleanup runs every hour.'
+      description: 'Number of days a device can be inactive before it\'s automatically deleted.'
+    },
+    'ENABLE_MEDIA_THUMBNAILS': {
+      label: 'Show media thumbnails',
+      description: 'Display thumbnails for active streams'
+    },
+    'ENABLE_MEDIA_ARTWORK': {
+      label: 'Show background artwork',
+      description: 'Display background artwork for active streams'
+    },
+    'CUSTOM_PLEX_URL': {
+      label: 'Custom Plex web URL',
+      description: 'Custom URL for opening Plex content (e.g., https://app.plex.tv). Leave empty to use configured server settings.'
     },
     'DEFAULT_PAGE': {
       label: 'Default page on startup',
@@ -115,6 +134,10 @@ const getSettingInfo = (setting: AppSetting): { label: string; description: stri
     'AUTO_CHECK_UPDATES': {
       label: 'Automatic update checking',
       description: 'Automatically check for new releases when you open the app'
+    },
+    'AUTO_MARK_NOTIFICATION_READ': {
+      label: 'Auto-mark notifications as read',
+      description: 'Automatically mark notifications as read when you click on them'
     },
   };
   
@@ -307,8 +330,41 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
             errors.push('Auto check updates must be a boolean value');
           }
           break;
+        case 'AUTO_MARK_NOTIFICATION_READ':
+          if (typeof setting.value !== 'boolean') {
+            errors.push('Auto mark notification read must be a boolean value');
+          }
+          break;
+        case 'CUSTOM_PLEX_URL':
+          if (setting.value && setting.value.trim().length > 0) {
+            const urlValue = setting.value.trim();
+            
+            // Check if it starts with http:// or https://
+            if (!urlValue.startsWith('http://') && !urlValue.startsWith('https://')) {
+              errors.push('Custom Plex URL must start with http:// or https://');
+              break;
+            }
+            
+            // Try to parse as URL to validate format
+            try {
+              const url = new URL(urlValue);
+              
+              // Check domain validity 
+              const hostParts = url.hostname.split('.');
+              const hasValidDomain = hostParts.length >= 2 && 
+                                   hostParts.every(part => part.length > 0) && 
+                                   url.hostname.includes('.');
+              
+              if (!hasValidDomain) {
+                errors.push('Custom Plex URL must contain a valid domain with extension (e.g., plex.example.com)');
+              }
+            } catch (error) {
+              errors.push('Custom Plex URL must be a valid URL format (e.g., https://app.plex.tv)');
+            }
+          }
+          break;
           default:
-            console.warn(`No validation rules for setting: ${setting.key}`);
+            //console.warn(`No validation rules for setting: ${setting.key}`);
             break;
       }
     }
@@ -346,9 +402,10 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
       // Validate settings
       const validationErrors = validateSettings(settingsToUpdate);
       if (validationErrors.length > 0) {
-        setConnectionStatus({
-          success: false,
-          message: `Validation error: ${validationErrors.join(", ")}`,
+        toast({
+          title: "Error saving settings",
+          description: validationErrors.join("; \n"),
+          variant: "destructive",
         });
         return;
       }
@@ -712,20 +769,33 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
         "PLEX_SERVER_IP",
         "PLEX_SERVER_PORT",
         "USE_SSL",
-        // IGNORE_CERT_ERRORS will be handled specially with USE_SSL
       ],
       guardian: [
-        "PLEXGUARD_REFRESH_INTERVAL",
-        "PLEX_GUARD_DEFAULT_BLOCK",
-        "PLEXGUARD_STOPMSG",
-        "DEFAULT_PAGE",
         "AUTO_CHECK_UPDATES",
+        "PLEX_GUARD_DEFAULT_BLOCK",
+        "ENABLE_MEDIA_THUMBNAILS",
+        "ENABLE_MEDIA_ARTWORK",
+        "CUSTOM_PLEX_URL",
+        "DEFAULT_PAGE",
+        "PLEXGUARD_STOPMSG",
+        "PLEXGUARD_REFRESH_INTERVAL",
+      ],
+      notifications: [
+        "AUTO_MARK_NOTIFICATION_READ"
       ],
     };
 
-    return settings.filter(
+    const filteredSettings = settings.filter(
       (setting) => categoryMap[category]?.includes(setting.key) || false
     );
+    
+    // Sort settings according to the order defined in categoryMap
+    const categoryKeys = categoryMap[category] || [];
+    return filteredSettings.sort((a, b) => {
+      const aIndex = categoryKeys.indexOf(a.key);
+      const bIndex = categoryKeys.indexOf(b.key);
+      return aIndex - bIndex;
+    });
   };
 
   const renderSettingField = (setting: AppSetting) => {
@@ -1044,6 +1114,26 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
 
               {/* Device Cleanup Settings Group */}
               {renderDeviceCleanupSettings()}
+            </div>
+          </div>
+        );
+
+      case "notifications":
+        return (
+          <div className="space-y-6">
+            <div>
+              <h3 className="text-lg font-medium">Notification Settings</h3>
+              <p className="text-sm text-muted-foreground">
+                Configure how notifications behave and interact with your workflow.
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              {getSettingsByCategory("notifications").map((setting) => (
+                <Card key={setting.key} className="p-4">
+                  {renderSettingField(setting)}
+                </Card>
+              ))}
             </div>
           </div>
         );
@@ -1473,7 +1563,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
               {renderSectionContent(activeSection)}
 
               {/* Save Button - Only show for configurable sections */}
-              {(activeSection === "plex" || activeSection === "guardian") && (
+              {(activeSection === "plex" || activeSection === "guardian" || activeSection === "notifications") && (
                 <>
                   <Separator className="my-6" />
                   <div className="flex justify-end space-x-2">

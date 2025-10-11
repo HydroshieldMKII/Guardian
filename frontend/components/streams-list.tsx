@@ -85,8 +85,6 @@ export default function StreamsList({
     }
   }, [sessionsData, fetchStreamsData, updateStreamsFromProps]);
 
-
-
   // Handle auto-refresh toggle  
   const handleAutoRefreshToggle = () => {
     onAutoRefreshChange(!autoRefresh);

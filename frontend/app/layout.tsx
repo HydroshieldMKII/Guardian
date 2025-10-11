@@ -4,9 +4,11 @@ import { ErrorBoundary } from "@/components/error-boundary";
 import { Navbar } from "@/components/navbar";
 import { GlobalVersionMismatchBanner } from "@/components/global-version-mismatch-banner";
 import { GlobalUpdateBanner } from "@/components/global-update-banner";
+import { GlobalNotificationHandler } from "@/components/global-notification-handler";
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "@/hooks/use-theme";
 import { VersionProvider } from "@/contexts/version-context";
+import { NotificationProvider } from "@/contexts/notification-context";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -60,13 +62,16 @@ export default function RootLayout({
         />
         <ThemeProvider defaultTheme="dark" storageKey="guardian-ui-theme">
           <VersionProvider>
-            <ErrorBoundary>
-              <GlobalVersionMismatchBanner />
-              <GlobalUpdateBanner />
-              <Navbar />
-              {children}
-            </ErrorBoundary>
-            <Toaster />
+            <NotificationProvider>
+              <ErrorBoundary>
+                <GlobalVersionMismatchBanner />
+                <GlobalUpdateBanner />
+                <Navbar />
+                <GlobalNotificationHandler />
+                {children}
+              </ErrorBoundary>
+              <Toaster />
+            </NotificationProvider>
           </VersionProvider>
         </ThemeProvider>
       </body>

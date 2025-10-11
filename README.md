@@ -126,34 +126,46 @@ docker compose up -d --force-recreate
 
 Guardian is configurable via its web interface. Access the Settings page to customize behavior for your specific needs.
 
-### Plex Integration
+### Plex Server Configuration
 
-- **Server IP/Port**: Your Plex server's network address and port. (default port `32400`)
-- **Authentication Token**: Required for Guardian to communicate with your Plex server. [What is this?](https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/)
-- **SSL/TLS Options**: Enable secure HTTPS connections and certificate validation. Only needed if your Plex server requires HTTPS
+Configure your connection to the Plex Media Server.
 
-### Guardian Behavior
+- **Authentication token**: Required for Guardian to communicate with your Plex server. [What is this?](https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/)
+- **Plex server IP address**: Your Plex server's network address
+- **Plex server port**: Your Plex server's port (default `32400`)
+- **Enable SSL**: Use SSL for Plex connection
+- **Ignore SSL certificate errors (not recommended with public domains or on public networks)**: Ignore SSL certificate errors
 
-- **Device Management**: Default action when new devices attempt to stream. `Block` provides maximum security by requiring manual approval
-- **Session Monitoring**: How often to update sessions and enforce rules with your Plex server. Lower values provide faster blocking but use more resources. It has no impact on how often the dashboard refreshes. Default: `10s`
-- **Default Page**: Choose the landing page when opening Guardian
-- **Blocked User Message**: Customize the message shown to blocked users when their stream is terminated
-- **Maintenance & Updates**: Automatically check for new Guardian releases when you open the app. Updates are never installed automatically and will only show a notification when a new version is available
+### Guardian Configuration
 
-### Device Cleanup
+Configure Guardian behavior and monitoring settings.
 
-- **Automatic Cleanup**: Removes devices that haven't streamed for a specified period, keeping your device list clean and relevant. Device will lose all settings and data.
-- **Inactivity Threshold**: Number of days without streaming activity before a device is automatically deleted. (default: `30`)
+- **Automatic update checking**: Automatically check for new releases when you open the app. Updates are never applied automatically, you will only be notified if a new version is available.
+- **Default behavior for new devices**: Block new devices by default. Provides maximum security by requiring manual approval
+- **Show media thumbnails**: Display thumbnails for active streams
+- **Show background artwork**: Display background artwork for active streams
+- **Custom Plex web URL**: Custom URL for opening Plex content (e.g., https://app.plex.tv). Leave empty to use configured server settings
+- **Default page on startup**: Choose which page to display when the app loads
+- **Message**: Message shown when blocking streams
+- **Refresh interval**: Refresh interval for fetching session info and enforcing bans (seconds)
+- **Automatic device cleanup**: When enabled, devices that haven't streamed for the specified number of days will be automatically deleted and require approval again. You can specify the inactivity threshold below
+- **Device inactivity threshold (days)**: Number of days a device can be inactive before it's automatically deleted. (default: `30`)
+
+### Notification Settings
+
+Configure how notifications behave and interact with your workflow.
+
+- **Auto-mark notifications as read**: Automatically mark notifications as read when you click on them
 
 ### Database Management
 
-- **Export/Import**: Create JSON backups of all Guardian data (settings, devices, preferences) for migration or disaster recovery. The export contains sensitive information like your Plex token, so handle it securely.
+- **Export/Import**: Create JSON backups of all Guardian data (settings, devices, preferences) for migration or recovery. The export contains sensitive information like your Plex token, so handle it securely. Note that importing a database will only merge data (overwriting existing records or adding new ones) and will not delete any existing records
 
 ### Administrative Tools
 
-- **Reset Stream Counts**: Clears the session count statistics for all devices while preserving device records and settings. This only affects the tracking numbers displayed in the interface
-- **Delete All Devices**: Permanently removes all device records from the database. This will delete all device-specific settings, approval status, and session history. Users will need to be re-approved when they next attempt to stream
-- **Reset Entire Database**: Completely wipes all Guardian data including settings, devices, user preferences, and sessions. This returns Guardian to its initial state as if freshly installed. Default settings will be restored and all configuration must be redone
+- **Reset Stream Counts**: Clears the streams count statistics for all devices while preserving device and settings.
+- **Delete All Devices**: Permanently removes all device records from the app. This will delete all device-specific settings, approval status, and session history. Users will need to be re-approved when they next attempt to stream
+- **Reset Entire Database**: Completely wipes all Guardian data including settings, devices, user preferences, sessions history and notifications. This returns Guardian to its initial state as if freshly installed. Default settings will be restored and all configuration must be redone
 
 ---
 

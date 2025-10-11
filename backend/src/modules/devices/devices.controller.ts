@@ -2,8 +2,6 @@ import { Controller, Get, Post, Param, ParseIntPipe, Body, Logger, HttpException
 import { DeviceTrackingService } from './services/device-tracking.service';
 import { UserDevice } from '../../entities/user-device.entity';
 import { PlexClient } from '../plex/services/plex-client';
-import { SessionTerminationService } from '../plex/services/session-termination.service';
-import { ActiveSessionService } from '../sessions/services/active-session.service';
 
 @Controller('devices')
 export class DevicesController {
@@ -12,8 +10,6 @@ export class DevicesController {
   constructor(
     private readonly deviceTrackingService: DeviceTrackingService, 
     private readonly plexClient: PlexClient,
-    private readonly sessionTerminationService: SessionTerminationService,
-    private readonly activeSessionService: ActiveSessionService
   ) {}
 
   @Get()

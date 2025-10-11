@@ -88,7 +88,7 @@ export const useStreamActions = () => {
         
         toast({
           title: "Access Revoked",
-          description: `Successfully revoked access for ${deviceName} (${userName}). The stream has been terminated.`,
+          description: `Successfully revoked access for ${deviceName} (${userName}). The stream will be terminated shortly.`,
           variant: "success",
         });
         

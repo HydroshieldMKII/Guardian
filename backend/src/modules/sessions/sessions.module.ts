@@ -4,12 +4,15 @@ import { ActiveSessionService } from './services/active-session.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { SessionHistory } from '../../entities/session-history.entity';
 import { UserDevice } from '../../entities/user-device.entity';
+import { UserPreference } from '../../entities/user-preference.entity';
 import { DeviceTrackingModule } from '../devices/services/device-tracking.module';
+import { PlexModule } from '../plex/plex.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([SessionHistory, UserDevice]),
+    TypeOrmModule.forFeature([SessionHistory, UserDevice, UserPreference]),
     forwardRef(() => DeviceTrackingModule),
+    forwardRef(() => PlexModule),
   ],
   controllers: [SessionsController],
   providers: [ActiveSessionService],

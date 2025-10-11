@@ -52,6 +52,13 @@ class ApiClient {
     });
   }
 
+  async patch<T>(endpoint: string, data?: any): Promise<T> {
+    return this.request<T>(endpoint, {
+      method: "PATCH",
+      body: data ? JSON.stringify(data) : undefined,
+    });
+  }
+
   async delete<T>(endpoint: string): Promise<T> {
     return this.request<T>(endpoint, { method: "DELETE" });
   }
@@ -75,6 +82,35 @@ class ApiClient {
 
   async toggleUserVisibility<T>(userId: string): Promise<T> {
     return this.post<T>(`/users/${userId}/toggle-visibility`);
+  }
+
+  // Notification methods
+  async getAllNotifications<T>(): Promise<T> {
+    return this.get<T>("/notifications");
+  }
+
+  async getNotificationsForUser<T>(userId: string): Promise<T> {
+    return this.get<T>(`/notifications/user/${userId}`);
+  }
+
+  async getUnreadCount<T>(userId: string): Promise<T> {
+    return this.get<T>(`/notifications/user/${userId}/unread-count`);
+  }
+
+  async markNotificationAsRead<T>(notificationId: number): Promise<T> {
+    return this.patch<T>(`/notifications/${notificationId}/read`);
+  }
+
+  async markAllNotificationsAsRead<T>(): Promise<T> {
+    return this.patch<T>(`/notifications/mark-all-read`);
+  }
+
+  async deleteNotification<T>(notificationId: number): Promise<T> {
+    return this.delete<T>(`/notifications/${notificationId}`);
+  }
+
+  async clearAllNotifications<T>(): Promise<T> {
+    return this.delete<T>(`/notifications/clear-all`);
   }
 }
 

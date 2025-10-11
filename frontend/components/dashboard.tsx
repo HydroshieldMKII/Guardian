@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, useCallback } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Card,
   CardContent,
@@ -23,14 +23,17 @@ import StreamsList from "./streams-list";
 import { DeviceManagement } from "./device-management";
 import { PlexErrorHandler } from "./plex-error-handler";
 
-import { DashboardStats, UnifiedDashboardData, PlexStatus } from "@/types";
+import { DashboardStats, UnifiedDashboardData, PlexStatus, Notification } from "@/types";
 import { apiClient } from "@/lib/api";
 import { config } from "@/lib/config";
 import { useVersion } from "@/contexts/version-context";
 
+
 export function Dashboard() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { versionInfo, checkForUpdatesIfEnabled } = useVersion();
+
   const [dashboardData, setDashboardData] = useState<UnifiedDashboardData | null>(null);
   const [stats, setStats] = useState<DashboardStats>({
     activeStreams: 0,
@@ -49,7 +52,7 @@ export function Dashboard() {
     router.push('/settings');
   };
 
-  const refreshDashboard = async (silent = false) => {
+  const refreshDashboard = useCallback(async (silent = false) => {
     try {
       if (!silent) {
         setLoading(true);
@@ -63,6 +66,7 @@ export function Dashboard() {
       setPlexStatus(newDashboardData.plexStatus);
       setStats(newDashboardData.stats);
       
+      
     } catch (error) {
       console.error("Failed to fetch dashboard stats:", error);
       setPlexStatus({
@@ -73,7 +77,7 @@ export function Dashboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   // Set initial tab only once when dashboard data is first available
   useEffect(() => {
@@ -103,6 +107,21 @@ export function Dashboard() {
     refreshDashboard();
   }, []);
 
+  // Handle URL parameters for device navigation
+  useEffect(() => {
+    const userId = searchParams.get('userId');
+    const deviceId = searchParams.get('deviceId');
+    
+    if (userId && deviceId) {
+      // Switch to devices tab and set navigation target
+      setActiveTab("devices");
+      setNavigationTarget({ userId, deviceIdentifier: deviceId });
+      
+      // Clean up URL parameters
+      router.replace('/', { scroll: false });
+    }
+  }, [searchParams, router]);
+
   // Check for updates automatically when dashboard loads
   useEffect(() => {
     checkForUpdatesIfEnabled();
@@ -119,7 +138,9 @@ export function Dashboard() {
     
     const interval = setInterval(() => refreshDashboard(true), config.app.refreshInterval);
     return () => clearInterval(interval);
-  }, [autoRefresh]);
+  }, [autoRefresh, refreshDashboard]);
+
+
 
   if (loading) {
     // Loading dots animation

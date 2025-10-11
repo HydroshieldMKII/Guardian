@@ -153,6 +153,79 @@ export class PlexClient {
     });
   }
 
+  async requestMedia(endpoint: string): Promise<Buffer | null> {
+    await this.validateConfiguration();
+    const { ip, port, token, useSSL, ignoreCertErrors } = await this.getConfig();
+    const baseUrl = `${useSSL ? 'https' : 'http'}://${ip}:${port}`;
+
+    return new Promise((resolve, reject) => {
+      const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
+      const hasQuery = cleanEndpoint.includes('?');
+      const tokenParam = `X-Plex-Token=${encodeURIComponent(token)}`;
+      const fullEndpoint = hasQuery
+        ? `${cleanEndpoint}&${tokenParam}`
+        : `${cleanEndpoint}?${tokenParam}`;
+
+      const fullUrl = `${baseUrl}/${fullEndpoint}`;
+      const urlObj = new URL(fullUrl);
+
+      const requestOptions = {
+        hostname: urlObj.hostname,
+        port: urlObj.port,
+        path: urlObj.pathname + urlObj.search,
+        method: 'GET',
+        headers: {
+          'X-Plex-Client-Identifier': 'Guardian',
+        },
+        rejectUnauthorized: !ignoreCertErrors,
+      };
+
+      const httpModule = useSSL ? https : http;
+
+      const req = httpModule.request(requestOptions, (res) => {
+        if (res.statusCode !== 200) {
+          this.logger.warn(`Media request failed with status ${res.statusCode} for ${endpoint}`);
+          return resolve(null);
+        }
+
+        const chunks: Buffer[] = [];
+        
+        res.on('data', (chunk: Buffer) => {
+          chunks.push(chunk);
+        });
+
+        res.on('end', () => {
+          const buffer = Buffer.concat(chunks);
+          resolve(buffer);
+        });
+      });
+
+      req.on('error', (error) => {
+        this.logger.error(`Error requesting media ${endpoint}:`, error);
+        resolve(null);
+      });
+
+      req.setTimeout(10000, () => {
+        this.logger.warn(`Timeout requesting media ${endpoint}`);
+        req.destroy();
+        resolve(null);
+      });
+
+      req.end();
+    });
+  }
+
+  async getServerIdentity(): Promise<string | null> {
+    try {
+      const response = await this.request('/');
+      const data = await response.json();
+      return data?.MediaContainer?.machineIdentifier || null;
+    } catch (error) {
+      this.logger.error('Error getting server identity:', error);
+      return null;
+    }
+  }
+
   async getSessions(): Promise<any> {
     const response = await this.request('status/sessions');
     return response.json();

@@ -2,11 +2,12 @@ import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UserDevice } from '../../../entities/user-device.entity';
+import { SessionHistory } from '../../../entities/session-history.entity';
 import { PlexClient } from './plex-client';
-import { ActiveSessionService } from '../../sessions/services/active-session.service';
 import { UsersService } from '../../users/services/users.service';
 import { ConfigService } from '../../config/services/config.service';
 import { DeviceTrackingService } from '../../devices/services/device-tracking.service';
+import { NotificationsService } from '../../notifications/services/notifications.service';
 import {
   PlexSessionsResponse,
   SessionTerminationResult,
@@ -19,12 +20,16 @@ export class SessionTerminationService {
   constructor(
     @InjectRepository(UserDevice)
     private userDeviceRepository: Repository<UserDevice>,
+    @InjectRepository(SessionHistory)
+    private sessionHistoryRepository: Repository<SessionHistory>,
     private plexClient: PlexClient,
     private usersService: UsersService,
     @Inject(forwardRef(() => ConfigService))
     private configService: ConfigService,
     @Inject(forwardRef(() => DeviceTrackingService))
     private deviceTrackingService: DeviceTrackingService,
+    @Inject(forwardRef(() => NotificationsService))
+    private notificationsService: NotificationsService,
   ) {}
 
   async stopUnapprovedSessions(
@@ -46,19 +51,47 @@ export class SessionTerminationService {
           const shouldStop = await this.shouldStopSession(session);
 
           if (shouldStop) {
-            const sessionKey = session.Session?.id;
+            const sessionId = session.Session?.id; // Device identifier for termination
+            const sessionKey = session.sessionKey; // Session key for history lookup
             // console.log('Terminating unapproved session:', session);
 
-            if (sessionKey) {
-              await this.terminateSession(sessionKey);
-              stoppedSessions.push(sessionKey);
-
-              this.logger.warn(`Stopped unapproved session: ${session.Session?.id}`);
+            if (sessionId) {
               const username = session.User?.title || 'Unknown';
               const deviceName = session.Player?.title || 'Unknown Device';
+              const userId = session.User?.id || 'unknown';
 
+              // Terminate the session 
+              await this.terminateSession(sessionId);
+              stoppedSessions.push(sessionId);
+
+              // Create notification for the terminated session
+              try {
+                const sessionHistory = await this.sessionHistoryRepository.findOne({
+                  where: { sessionKey: sessionKey },
+                  relations: ['userPreference', 'userDevice']
+                });
+                
+                if (sessionHistory) {
+                  this.logger.log(`Found session history with ID: ${sessionHistory.id} for sessionKey: ${sessionKey}`);
+                } else {
+                  this.logger.warn(`No session history found for sessionKey: ${sessionKey} (device: ${sessionId})`);
+                }
+                
+                await this.notificationsService.createStreamBlockedNotification(
+                  userId,
+                  username,
+                  deviceName,
+                  sessionHistory?.id
+                );
+
+                this.logger.log(`Created notification for terminated session: ${username} on ${deviceName} (sessionHistoryId: ${sessionHistory?.id || 'null'})`);
+              } catch (notificationError) {
+                this.logger.error(`Failed to create notification for terminated session ${sessionKey}`, notificationError);
+              }
+
+              this.logger.warn(`Stopped unapproved session: ${session.Session?.id}`);
               this.logger.warn(
-                `Stopped unapproved session: ${username} on ${deviceName} (Session: ${sessionKey})`,
+                `Stopped unapproved session: ${username} on ${deviceName} (Session: ${sessionId})`,
               );
             } else {
               this.logger.warn(

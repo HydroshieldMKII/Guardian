@@ -31,12 +31,19 @@ export interface PlexSession {
   title?: string;
   grandparentTitle?: string;
   parentTitle?: string;
+  parentYear?: number;
   year?: number;
   duration?: number;
   viewOffset?: number;
   type?: string;
   thumb?: string;
   art?: string;
+  ratingKey?: string;
+  parentRatingKey?: string;
+  serverMachineIdentifier?: string;
+  // Backend-generated media URLs
+  thumbnailUrl?: string;
+  artUrl?: string;
 }
 
 export interface StreamsResponse {
@@ -119,4 +126,21 @@ export interface UnifiedDashboardData {
   };
   users: UserPreference[];
   stats: DashboardStats;
+}
+
+export interface Notification {
+  id: number;
+  userId: string;
+  username: string;
+  deviceName: string;
+  text: string;
+  type: 'block' | 'info' | 'warning' | 'error';
+  read: boolean;
+  createdAt: Date;
+  sessionHistoryId?: number;
+}
+
+export interface NotificationData {
+  notifications: Notification[];
+  unreadCount: number;
 }

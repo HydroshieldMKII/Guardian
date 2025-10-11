@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Settings, Moon, Sun } from "lucide-react";
 import { useTheme } from "@/hooks/use-theme";
 import { useVersion } from "@/contexts/version-context";
+import { NotificationMenu } from "@/components/notification-menu";
 
 export function Navbar() {
   const { theme, toggleTheme } = useTheme();
@@ -18,7 +19,7 @@ export function Navbar() {
           <span className="font-bold text-xl">Guardian</span>
         </Link>
 
-        {/* Right side with theme toggle and profile */}
+        {/* Right side with theme toggle, notifications, and settings */}
         <div className="flex items-center space-x-2 pr-10">
           {/* Theme Toggle Button */}
           <Button
@@ -34,6 +35,9 @@ export function Navbar() {
               <Moon className="h-4 w-4" />
             )}
           </Button>
+
+          {/* Notification Menu */}
+          <NotificationMenu />
 
           {/* Settings Button */}
           <Button

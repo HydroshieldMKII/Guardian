@@ -12,9 +12,11 @@ import {
   createPlexError, 
   createPlexSuccess 
 } from '../../../types/plex-errors';
+import { SessionHistory } from 'src/entities/session-history.entity';
+import { Notification } from 'src/entities/notification.entity';
 
 // App version
-const CURRENT_APP_VERSION = '1.1.9';
+const CURRENT_APP_VERSION = '1.2.0';
 
 export interface ConfigSettingDto {
   key: string;
@@ -66,7 +68,7 @@ export class ConfigService {
       },
       {
       key: 'IGNORE_CERT_ERRORS',
-      value: 'true',
+      value: 'false',
       description: 'Ignore SSL certificate errors',
       type: 'boolean' as const,
       },
@@ -119,6 +121,30 @@ export class ConfigService {
       description: 'Current application version',
       type: 'string' as const,
       private: false,
+      },
+      {
+      key: 'AUTO_MARK_NOTIFICATION_READ',
+      value: 'true',
+      description: 'Automatically mark notifications as read when clicked',
+      type: 'boolean' as const,
+      },
+      {
+      key: 'ENABLE_MEDIA_THUMBNAILS',
+      value: 'true',
+      description: 'Enable media thumbnails',
+      type: 'boolean' as const,
+      },
+      {
+      key: 'ENABLE_MEDIA_ARTWORK',
+      value: 'true',
+      description: 'Enable background artwork',
+      type: 'boolean' as const,
+      },
+      {
+      key: 'CUSTOM_PLEX_URL',
+      value: '',
+      description: 'Custom Plex web URL for opening content (leave empty to use configured server)',
+      type: 'string' as const,
       },
     ];
 
@@ -713,10 +739,23 @@ export class ConfigService {
     try {
       this.logger.warn('RESETTING ALL DATABASE TABLES');
       
-      // Clear all tables
-      await this.settingsRepository.manager.getRepository(UserDevice).clear();
-      await this.settingsRepository.manager.getRepository(UserPreference).clear();
-      await this.settingsRepository.manager.getRepository(AppSettings).clear();
+      await this.settingsRepository.manager.transaction(async transactionalEntityManager => {
+        
+        await transactionalEntityManager.getRepository(SessionHistory).clear();
+        this.logger.debug('Session history table cleared');
+        
+        await transactionalEntityManager.getRepository(Notification).clear();
+        this.logger.debug('Notifications table cleared');
+
+        await transactionalEntityManager.getRepository(UserPreference).clear();
+        this.logger.debug('User preferences table cleared');
+        
+        await transactionalEntityManager.getRepository(UserDevice).clear();
+        this.logger.debug('User devices table cleared');
+        
+        await transactionalEntityManager.getRepository(AppSettings).clear();
+        this.logger.debug('App settings table cleared');
+      });
       
       // Reinitialize default settings
       await this.initializeDefaultSettings();
@@ -724,7 +763,7 @@ export class ConfigService {
       // Clear cache
       this.cache.clear();
       
-      this.logger.warn('Database reset completed - all data has been deleted');
+      this.logger.warn('Database reset completed - all data has been deleted and default settings restored');
     } catch (error) {
       this.logger.error('Failed to reset database:', error);
       throw new Error(`Database reset failed: ${error.message}`);
@@ -762,10 +801,18 @@ export class ConfigService {
         .getRepository(UserDevice)
         .count();
       
-      // Delete all devices
-      await this.settingsRepository.manager.getRepository(UserDevice).clear();
+      await this.settingsRepository.manager.transaction(async transactionalEntityManager => {
+        await transactionalEntityManager.getRepository(SessionHistory).clear();
+        this.logger.debug('Session history cleared');
+        
+        await transactionalEntityManager.getRepository(Notification).clear();
+        this.logger.debug('Notifications cleared');
       
-      this.logger.warn(`All ${deviceCount} devices have been deleted`);
+        await transactionalEntityManager.getRepository(UserDevice).clear();
+        this.logger.debug('User devices cleared');
+      });
+      
+      this.logger.warn(`All ${deviceCount} devices and related data have been deleted`);
     } catch (error) {
       this.logger.error('Failed to delete all devices:', error);
       throw new Error(`Device deletion failed: ${error.message}`);

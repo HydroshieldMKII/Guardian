@@ -22,7 +22,7 @@ export class UserPreference {
   @Column({ name: 'avatar_url', nullable: true })
   avatarUrl: string;
 
-  @Column({ name: 'default_block', type: 'boolean', nullable: true })
+  @Column({ name: 'default_block', type: 'boolean', nullable: true})
   defaultBlock: boolean | null; // true, false, or null for global default
 
   @Column({ name: 'hidden', type: 'boolean', default: false })
