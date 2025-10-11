@@ -1,6 +1,6 @@
 "use client";
 
-import { BellRing, X, CheckCheck, Check } from "lucide-react";
+import { BellRing,Bell, X, CheckCheck, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -11,7 +11,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { useNotificationContext } from "@/contexts/notification-context";
 import { Notification } from "@/types";
 import { apiClient } from "@/lib/api";
@@ -157,7 +156,11 @@ export function NotificationMenu() {
           className="h-8 w-8 rounded-full relative"
           title="Notifications"
         >
-          <BellRing className="h-4 w-4" />
+          {notifications.length > 0 ? (
+            <BellRing className="h-4 w-4" />
+          ) : (
+            <Bell className="h-4 w-4" />
+          )}
           {unreadCount > 0 && (
             <Badge
               variant="destructive"
