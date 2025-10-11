@@ -31,6 +31,7 @@ export interface PlexSession {
   title?: string;
   grandparentTitle?: string;
   parentTitle?: string;
+  parentYear?: number;
   year?: number;
   duration?: number;
   viewOffset?: number;
@@ -38,6 +39,7 @@ export interface PlexSession {
   thumb?: string;
   art?: string;
   ratingKey?: string;
+  parentRatingKey?: string;
   serverMachineIdentifier?: string;
   // Backend-generated media URLs
   thumbnailUrl?: string;

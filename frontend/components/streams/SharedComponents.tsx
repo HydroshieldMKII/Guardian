@@ -86,6 +86,24 @@ export const getContentTitle = (session: any) => {
   if (session.type === "movie") {
     return `${session.title} (${session.year})`;
   }
+  if (session.type === "track") {
+    // For music tracks: Artist - Album - Song Title (Year)
+    let title = "";
+    
+    if (session.grandparentTitle) {
+      // Artist - Song Title
+      title = `${session.grandparentTitle} - ${session.title}`;
+    } else {
+      // Fallback to just the song title
+      title = session.title;
+    }
+    
+    if (session.parentYear) {
+      title += ` (${session.parentYear})`;
+    }
+    
+    return title;
+  }
   return session.title || "Unknown Title";
 };
 

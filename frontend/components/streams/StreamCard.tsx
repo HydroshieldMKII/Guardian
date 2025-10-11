@@ -44,14 +44,12 @@ export const StreamCard: React.FC<StreamCardProps> = ({
   
   // Function to open content in Plex
   const openInPlex = async () => {
-    // Extract ratingKey from thumb or art path
+    // For music tracks, use the album's ratingKey (parentRatingKey) instead of the track's ratingKey
     let ratingKey = stream.ratingKey;
-    if (!ratingKey && (stream.thumb || stream.art)) {
-      const mediaPath = stream.thumb || stream.art || '';
-      const match = mediaPath.match(/\/library\/metadata\/(\d+)/);
-      if (match) {
-        ratingKey = match[1];
-      }
+    
+    if (stream.type === 'track' && stream.parentRatingKey) {
+      // Use album's rating key for music tracks if present
+      ratingKey = stream.parentRatingKey;
     }
     
     if (!ratingKey) {
@@ -76,13 +74,8 @@ export const StreamCard: React.FC<StreamCardProps> = ({
         return;
       }
       
-      // Use the correct server-specific URL format
+      // Use the server-specific URL format
       const plexUrl = `${data.webUrl}/web/index.html#!/server/${serverIdentifier}/details?key=%2Flibrary%2Fmetadata%2F${ratingKey}`;
-
-      console.debug('Opening Plex URL:', plexUrl);
-      console.debug('Base URL:', data.webUrl);
-      console.debug('Server ID:', serverIdentifier);
-      console.debug('Rating Key:', ratingKey);
 
       // Open in new tab
       window.open(plexUrl, '_blank');
@@ -136,11 +129,11 @@ export const StreamCard: React.FC<StreamCardProps> = ({
           
           {/* Content info */}
           <div className="flex-1 min-w-0 relative z-10">
-            <div className={`inline-block px-2 py-1 rounded-md cursor-pointer transition-all duration-200 ${artUrl ? 'bg-black/20 text-white hover:bg-black/30' : 'bg-indigo-50 dark:bg-indigo-950/30 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-950/50'}`}>
+            <div className={`inline-block px-2 py-1 rounded-md cursor-pointer transition-all duration-200 ${artUrl ? 'bg-black/20 text-white hover:bg-black/30' : 'bg-transparent text-black dark:text-white hover:bg-black/10 dark:hover:bg-white/10'}`}>
               <h3 
                 onClick={openInPlex}
                 className="font-semibold text-sm sm:text-base break-words leading-tight"
-                title="Click to open in Plex"
+                title={stream.type === 'track' ? "Click to open album in Plex" : "Click to open in Plex"}
               >
                 {getContentTitle(stream)}
               </h3>
