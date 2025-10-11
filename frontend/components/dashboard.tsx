@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Card,
@@ -52,7 +52,7 @@ export function Dashboard() {
     router.push('/settings');
   };
 
-  const refreshDashboard = async (silent = false) => {
+  const refreshDashboard = useCallback(async (silent = false) => {
     try {
       if (!silent) {
         setLoading(true);
@@ -77,7 +77,7 @@ export function Dashboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   // Set initial tab only once when dashboard data is first available
   useEffect(() => {
@@ -138,7 +138,7 @@ export function Dashboard() {
     
     const interval = setInterval(() => refreshDashboard(true), config.app.refreshInterval);
     return () => clearInterval(interval);
-  }, [autoRefresh]);
+  }, [autoRefresh, refreshDashboard]);
 
 
 

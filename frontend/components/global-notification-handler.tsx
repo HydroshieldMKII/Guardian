@@ -16,9 +16,7 @@ export function GlobalNotificationHandler() {
   const [notificationScrollToSessionId, setNotificationScrollToSessionId] = useState<number | null>(null);
   const [settings, setSettings] = useState<AppSetting[]>([]);
 
-  // Settings are now fetched together with notifications in the main useEffect below
-
-  // Independent notification fetching - consistent across all pages
+  // Independent notification fetching
   useEffect(() => {
     const fetchNotifications = async () => {
       try {
@@ -56,13 +54,16 @@ export function GlobalNotificationHandler() {
       ]);
     };
 
-    // Fetch immediately on mount
+    // Fetch notification and settings immediately on mount
     fetchAll();
 
-    // Set up interval to fetch notifications
-    const interval = setInterval(fetchAll, 6000);
-    
-    return () => {clearInterval(interval);};
+    const intervalNotification = setInterval(fetchNotifications, 6000);
+    const intervalSetting = setInterval(fetchSettings, 10000);
+
+    return () => {
+      clearInterval(intervalNotification);
+      clearInterval(intervalSetting);
+    };
   }, [setNotifications]);
 
   // Set up global notification click handler
