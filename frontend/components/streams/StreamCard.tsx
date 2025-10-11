@@ -136,23 +136,25 @@ export const StreamCard: React.FC<StreamCardProps> = ({
           
           {/* Content info */}
           <div className="flex-1 min-w-0 relative z-10">
-            <h3 
-              onClick={openInPlex}
-              className={`font-semibold mb-1 text-sm sm:text-base break-words leading-tight cursor-pointer hover:underline transition-colors ${artUrl ? 'text-white hover:text-blue-200' : 'text-foreground hover:text-blue-600'}`}
-              title="Click to open in Plex"
-            >
-              {getContentTitle(stream)}
-            </h3>
+            <div className={`inline-block px-2 py-1 rounded-md cursor-pointer transition-all duration-200 ${artUrl ? 'bg-black/20 text-white hover:bg-black/30' : 'bg-indigo-50 dark:bg-indigo-950/30 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-950/50'}`}>
+              <h3 
+                onClick={openInPlex}
+                className="font-semibold text-sm sm:text-base break-words leading-tight"
+                title="Click to open in Plex"
+              >
+                {getContentTitle(stream)}
+              </h3>
+            </div>
 
           {/* Primary info row */}
           <div className="flex items-center gap-2 text-xs sm:text-sm my-2 flex-wrap">
-            <div className={`flex items-center gap-1 px-2 py-1 rounded-full min-w-0 ${artUrl ? 'bg-black/30 text-white' : 'bg-muted text-muted-foreground'}`}>
+            <div className={`flex items-center gap-1 px-2 py-1 rounded-full min-w-0 transition-colors ${artUrl ? 'bg-black/30 text-white' : 'bg-orange-50 dark:bg-orange-950/30 text-orange-700 dark:text-orange-300'}`}>
               <User className="w-3 h-3 flex-shrink-0" />
               <span className="truncate max-w-[120px] sm:max-w-[150px]">
                 {stream.User?.title || "Unknown"}
               </span>
             </div>
-            <div className={`flex items-center gap-1 px-2 py-1 rounded-full min-w-0 ${artUrl ? 'bg-black/30 text-white' : 'bg-muted text-muted-foreground'}`}>
+            <div className={`flex items-center gap-1 px-2 py-1 rounded-full min-w-0 transition-colors ${artUrl ? 'bg-black/30 text-white' : 'bg-cyan-50 dark:bg-cyan-950/30 text-cyan-700 dark:text-cyan-300'}`}>
               {getDeviceIcon(stream.Player?.platform)}
               <span className="truncate max-w-[100px] sm:max-w-[120px]">
                 {stream.Player?.title || "Device"}
@@ -167,33 +169,27 @@ export const StreamCard: React.FC<StreamCardProps> = ({
 
         {/* Status and actions */}
         <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-2 w-full sm:w-auto order-first sm:order-last relative z-10">
-          <Badge
-            variant={
-              stream.Player?.state === "playing"
-                ? "default"
-                : "secondary"
-            }
-            className="flex items-center text-xs"
-          >
+          <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs transition-all duration-200 ${
+            stream.Player?.state === "playing" 
+              ? (artUrl ? 'bg-black/30 text-white' : 'bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-300')
+              : (artUrl ? 'bg-black/30 text-white' : 'bg-yellow-50 dark:bg-yellow-950/30 text-yellow-700 dark:text-yellow-300')
+          }`}>
             {stream.Player?.state === "playing" ? (
-              <Play className="w-3 h-3 mr-1" />
+              <Play className="w-3 h-3" />
             ) : (
-              <Pause className="w-3 h-3 mr-1" />
+              <Pause className="w-3 h-3" />
             )}
-            {stream.Player?.state || "unknown"}
-          </Badge>
+            <span>{stream.Player?.state || "unknown"}</span>
+          </div>
           
           <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onRemoveAccess}
-              disabled={
-                isRevoking ||
-                !stream.User?.id ||
-                !stream.Player?.machineIdentifier
-              }
-              className={`h-6 w-6 p-0 ${artUrl ? 'text-red-400 hover:text-red-300' : 'text-red-600 hover:text-red-700'}`}
+            <div 
+              onClick={!isRevoking && stream.User?.id && stream.Player?.machineIdentifier ? onRemoveAccess : undefined}
+              className={`flex items-center justify-center w-6 h-6 rounded-full transition-all duration-200 cursor-pointer ${
+                isRevoking || !stream.User?.id || !stream.Player?.machineIdentifier 
+                  ? 'opacity-50 cursor-not-allowed' 
+                  : (artUrl ? 'bg-black/30 text-white hover:bg-red-500/30' : 'bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-950/50')
+              }`}
               title={isRevoking ? "Removing access..." : "Remove access"}
             >
               {isRevoking ? (
@@ -201,35 +197,34 @@ export const StreamCard: React.FC<StreamCardProps> = ({
               ) : (
                 <X className="w-3 h-3" />
               )}
-            </Button>
+            </div>
 
-            <Button
-              variant="ghost"
-              size="sm"
+            <div 
               onClick={() => {
                 if (onNavigateToDevice && stream.User?.id && stream.Player?.machineIdentifier) {
                   onNavigateToDevice(stream.User.id, stream.Player.machineIdentifier);
                 }
               }}
-              disabled={!stream.User?.id || !stream.Player?.machineIdentifier}
-              className={`h-6 w-6 p-0 ${artUrl ? 'text-blue-400 hover:text-blue-300' : 'text-muted-foreground hover:text-blue-600'}`}
+              className={`flex items-center justify-center w-6 h-6 rounded-full transition-all duration-200 cursor-pointer ${
+                !stream.User?.id || !stream.Player?.machineIdentifier 
+                  ? 'opacity-50 cursor-not-allowed' 
+                  : (artUrl ? 'bg-black/30 text-white hover:bg-blue-500/30' : 'bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-950/50')
+              }`}
               title="View device details"
             >
               <UserRoundSearch className="w-3 h-3" />
-            </Button>
+            </div>
 
-            <Button
-              variant="ghost"
-              size="sm"
+            <div 
               onClick={onToggleExpand}
-              className={`h-6 w-6 p-0 ${artUrl ? 'text-white hover:text-gray-200' : 'text-muted-foreground hover:text-foreground'}`}
+              className={`flex items-center justify-center w-6 h-6 rounded-full transition-all duration-200 cursor-pointer ${artUrl ? 'bg-black/30 text-white hover:bg-white/20' : 'bg-gray-50 dark:bg-gray-950/30 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-950/50'}`}
             >
               {isExpanded ? (
                 <ChevronUp className="w-4 h-4" />
               ) : (
                 <ChevronDown className="w-4 h-4" />
               )}
-            </Button>
+            </div>
           </div>
         </div>
       </div>

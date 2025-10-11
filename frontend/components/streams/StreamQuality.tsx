@@ -52,49 +52,49 @@ export const StreamQualityDetails: React.FC<StreamQualityDetailsProps> = ({ sess
   if (!quality) return null;
 
   return (
-    <div className="space-y-2">
-      <h4 className="text-sm font-medium text-foreground mb-2">Stream Quality</h4>
+    <div className="space-y-2 bg-muted/30 dark:bg-muted/20 p-3 rounded-md border border-border/50">
+      <h4 className="text-sm font-semibold text-foreground/90 dark:text-foreground mb-2">Stream Quality</h4>
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
-        <div className="flex items-center gap-2 bg-muted p-2 rounded min-w-0">
-          <Video className="w-3 h-3 flex-shrink-0 text-blue-500" />
+        <div className="flex items-center gap-2 bg-card p-2 rounded-md border border-border/30 min-w-0">
+          <Video className="w-3 h-3 flex-shrink-0 text-blue-600 dark:text-blue-400" />
           <div className="min-w-0 flex-1">
-            <div className="font-medium">Resolution</div>
-            <div className="truncate">{quality.resolution}</div>
+            <div className="font-semibold text-foreground/80 dark:text-foreground/70">Resolution</div>
+            <div className="truncate text-foreground/60 dark:text-foreground/50 font-medium">{quality.resolution}</div>
           </div>
         </div>
-        <div className="flex items-center gap-2 bg-muted p-2 rounded min-w-0">
-          <Signal className="w-3 h-3 flex-shrink-0 text-green-500" />
+        <div className="flex items-center gap-2 bg-card p-2 rounded-md border border-border/30 min-w-0">
+          <Signal className="w-3 h-3 flex-shrink-0 text-green-600 dark:text-green-400" />
           <div className="min-w-0 flex-1">
-            <div className="font-medium">Bitrate</div>
-            <div className="truncate">{quality.bitrate}</div>
+            <div className="font-semibold text-foreground/80 dark:text-foreground/70">Bitrate</div>
+            <div className="truncate text-foreground/60 dark:text-foreground/50 font-medium">{quality.bitrate}</div>
           </div>
         </div>
-        <div className="flex items-center gap-2 bg-muted p-2 rounded min-w-0">
-          <Wifi className="w-3 h-3 flex-shrink-0 text-purple-500" />
+        <div className="flex items-center gap-2 bg-card p-2 rounded-md border border-border/30 min-w-0">
+          <Wifi className="w-3 h-3 flex-shrink-0 text-purple-600 dark:text-purple-400" />
           <div className="min-w-0 flex-1">
-            <div className="font-medium">Bandwidth</div>
-            <div className="truncate">{quality.bandwidth}</div>
+            <div className="font-semibold text-foreground/80 dark:text-foreground/70">Bandwidth</div>
+            <div className="truncate text-foreground/60 dark:text-foreground/50 font-medium">{quality.bandwidth}</div>
           </div>
         </div>
-        <div className="flex items-center gap-2 bg-muted p-2 rounded min-w-0">
-          <Video className="w-3 h-3 flex-shrink-0 text-orange-500" />
+        <div className="flex items-center gap-2 bg-card p-2 rounded-md border border-border/30 min-w-0">
+          <Video className="w-3 h-3 flex-shrink-0 text-orange-600 dark:text-orange-400" />
           <div className="min-w-0 flex-1">
-            <div className="font-medium">Video Codec</div>
-            <div className="truncate">{quality.videoCodec}</div>
+            <div className="font-semibold text-foreground/80 dark:text-foreground/70">Video Codec</div>
+            <div className="truncate text-foreground/60 dark:text-foreground/50 font-medium">{quality.videoCodec}</div>
           </div>
         </div>
-        <div className="flex items-center gap-2 bg-muted p-2 rounded min-w-0">
-          <Headphones className="w-3 h-3 flex-shrink-0 text-red-500" />
+        <div className="flex items-center gap-2 bg-card p-2 rounded-md border border-border/30 min-w-0">
+          <Headphones className="w-3 h-3 flex-shrink-0 text-red-600 dark:text-red-400" />
           <div className="min-w-0 flex-1">
-            <div className="font-medium">Audio Codec</div>
-            <div className="truncate">{quality.audioCodec}</div>
+            <div className="font-semibold text-foreground/80 dark:text-foreground/70">Audio Codec</div>
+            <div className="truncate text-foreground/60 dark:text-foreground/50 font-medium">{quality.audioCodec}</div>
           </div>
         </div>
-        <div className="flex items-center gap-2 bg-muted p-2 rounded min-w-0">
-          <HardDrive className="w-3 h-3 flex-shrink-0 text-gray-500" />
+        <div className="flex items-center gap-2 bg-card p-2 rounded-md border border-border/30 min-w-0">
+          <HardDrive className="w-3 h-3 flex-shrink-0 text-gray-600 dark:text-gray-400" />
           <div className="min-w-0 flex-1">
-            <div className="font-medium">Container</div>
-            <div className="truncate">{quality.container}</div>
+            <div className="font-semibold text-foreground/80 dark:text-foreground/70">Container</div>
+            <div className="truncate text-foreground/60 dark:text-foreground/50 font-medium">{quality.container}</div>
           </div>
         </div>
       </div>
