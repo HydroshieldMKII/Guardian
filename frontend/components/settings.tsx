@@ -736,7 +736,6 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
         "PLEX_SERVER_IP",
         "PLEX_SERVER_PORT",
         "USE_SSL",
-        // IGNORE_CERT_ERRORS will be handled specially with USE_SSL
       ],
       guardian: [
         "AUTO_CHECK_UPDATES",
@@ -749,6 +748,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
         "PLEXGUARD_REFRESH_INTERVAL",
       ],
       notifications: [
+        "AUTO_MARK_NOTIFICATION_READ"
       ],
     };
 
