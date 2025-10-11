@@ -224,6 +224,12 @@ export class DeviceTrackingService {
     });
   }
 
+  async findDeviceByIdentifier(deviceIdentifier: string): Promise<UserDevice | null> {
+    return this.userDeviceRepository.findOne({
+      where: { deviceIdentifier },
+    });
+  }
+
   async approveDevice(deviceId: number): Promise<void> {
     // First update the status to approved
     await this.userDeviceRepository.update(deviceId, {

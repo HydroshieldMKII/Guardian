@@ -61,14 +61,34 @@ export class PlexService {
         this.configService.getSetting('ENABLE_MEDIA_ARTWORK'),
       ]);
       
-      // Add media URLs and server identifier to session data
+      // Add media URLs, server identifier, and device session count to session data
       if (sessions?.MediaContainer?.Metadata) {
-        sessions.MediaContainer.Metadata = sessions.MediaContainer.Metadata.map(session => ({
-          ...session,
-          serverMachineIdentifier: serverIdentifier,
-          thumbnailUrl: (enableThumbnails && session.thumb) ? this.buildMediaUrl('thumb', session.thumb) : undefined,
-          artUrl: (enableArtwork && session.art) ? this.buildMediaUrl('art', session.art) : undefined,
-        }));
+        sessions.MediaContainer.Metadata = await Promise.all(
+          sessions.MediaContainer.Metadata.map(async session => {
+            let sessionCount = 0;
+            
+            // Get device session count if available
+            if (session.Player?.machineIdentifier) {
+              try {
+                const device = await this.deviceTrackingService.findDeviceByIdentifier(session.Player.machineIdentifier);
+                sessionCount = device?.sessionCount || 0;
+              } catch (error) {
+                this.logger.warn(`Failed to get session count for device ${session.Player.machineIdentifier}:`, error);
+              }
+            }
+
+            return {
+              ...session,
+              serverMachineIdentifier: serverIdentifier,
+              thumbnailUrl: (enableThumbnails && session.thumb) ? this.buildMediaUrl('thumb', session.thumb) : undefined,
+              artUrl: (enableArtwork && session.art) ? this.buildMediaUrl('art', session.art) : undefined,
+              Session: {
+                ...session.Session,
+                sessionCount,
+              },
+            };
+          })
+        );
       }
       
       return sessions;
