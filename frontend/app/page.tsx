@@ -7,7 +7,7 @@ function DashboardWrapper() {
 
 export default function Home() {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense fallback={<></>}>
       <DashboardWrapper />
     </Suspense>
   );
