@@ -175,7 +175,7 @@ export class ActiveSessionService {
             this.userPreferenceRepository.create({
               userId: user.id,
               username: user.title,
-              defaultBlock: false,
+              defaultBlock: null, // null means use global default
               hidden: false,
             })
           );
