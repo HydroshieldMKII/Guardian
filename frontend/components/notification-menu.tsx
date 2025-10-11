@@ -156,7 +156,7 @@ export function NotificationMenu() {
           className="h-8 w-8 rounded-full relative"
           title="Notifications"
         >
-          {notifications.length > 0 ? (
+          {unreadCount > 0 ? (
             <BellRing className="h-4 w-4" />
           ) : (
             <Bell className="h-4 w-4" />
