@@ -47,28 +47,34 @@ export const StreamCard: React.FC<StreamCardProps> = ({
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-3 gap-3">
         <div className="flex gap-3 flex-1 min-w-0">
           {/* Thumbnail */}
-          {mediaUrl && (
-            <div className="flex-shrink-0">
-              <div className="relative w-16 h-24 sm:w-20 sm:h-30 rounded-md overflow-hidden bg-muted border">
-                <img
-                  src={mediaUrl}
-                  alt={getContentTitle(stream)}
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.style.display = 'none';
-                    const fallback = target.parentElement?.querySelector('.thumbnail-fallback') as HTMLElement;
-                    if (fallback) {
-                      fallback.style.display = 'flex';
-                    }
-                  }}
-                />
-                <div className="thumbnail-fallback absolute inset-0 hidden items-center justify-center bg-muted">
+          <div className="flex-shrink-0">
+            <div className="relative w-16 h-24 sm:w-20 sm:h-30 rounded-md overflow-hidden bg-muted border">
+              {mediaUrl ? (
+                <>
+                  <img
+                    src={mediaUrl}
+                    alt={getContentTitle(stream)}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.style.display = 'none';
+                      const fallback = target.parentElement?.querySelector('.thumbnail-fallback') as HTMLElement;
+                      if (fallback) {
+                        fallback.style.display = 'flex';
+                      }
+                    }}
+                  />
+                  <div className="thumbnail-fallback absolute inset-0 hidden items-center justify-center bg-muted">
+                    <Image className="w-6 h-6 text-muted-foreground" />
+                  </div>
+                </>
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center bg-muted">
                   <Image className="w-6 h-6 text-muted-foreground" />
                 </div>
-              </div>
+              )}
             </div>
-          )}
+          </div>
           
           {/* Content info */}
           <div className="flex-1 min-w-0">

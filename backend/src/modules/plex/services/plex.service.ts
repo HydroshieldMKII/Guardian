@@ -4,6 +4,7 @@ import { SessionTerminationService } from './session-termination.service';
 import { PlexSessionsResponse } from '../../../types/plex.types';
 import { DeviceTrackingService } from '../../devices/services/device-tracking.service';
 import { ActiveSessionService } from '../../sessions/services/active-session.service';
+import { config } from '../../../config/app.config';
 
 @Injectable()
 export class PlexService {
@@ -49,8 +50,8 @@ export class PlexService {
 
     const [, ratingKey, , timestamp] = pathMatch;
     
-    // Build the proxy Nextjs URL that points to our media controller
-    let proxyUrl = `/api/pg/plex/media/${type}/${ratingKey}`;
+    // Build the proxy URL that points to our media controller
+    let proxyUrl = `${config.api.baseUrl}/plex/media/${type}/${ratingKey}`;
     
     if (timestamp) {
       proxyUrl += `?t=${timestamp}`;

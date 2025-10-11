@@ -3,6 +3,7 @@ import { ActiveSessionService } from '../sessions/services/active-session.servic
 import { DeviceTrackingService } from '../devices/services/device-tracking.service';
 import { ConfigService } from '../config/services/config.service';
 import { UsersService } from '../users/services/users.service';
+import { PlexService } from '../plex/services/plex.service';
 
 export interface DashboardData {
   plexStatus: {
@@ -35,6 +36,7 @@ export class DashboardService {
     private readonly deviceTrackingService: DeviceTrackingService,
     private readonly configService: ConfigService,
     private readonly usersService: UsersService,
+    private readonly plexService: PlexService,
   ) {}
 
   async getDashboardData(): Promise<DashboardData> {
@@ -65,7 +67,7 @@ export class DashboardService {
       // Fetch all data in parallel
       const [sessions, allDevices, pendingDevices, approvedDevices, processedDevices, users] = 
         await Promise.all([
-          this.activeSessionService.getActiveSessionsFormatted(),
+          this.plexService.getActiveSessions(),
           this.deviceTrackingService.getAllDevices(),
           this.deviceTrackingService.getPendingDevices(),
           this.deviceTrackingService.getApprovedDevices(),
