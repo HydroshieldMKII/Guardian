@@ -37,6 +37,8 @@ export interface PlexSession {
   type?: string;
   thumb?: string;
   art?: string;
+  ratingKey?: string;
+  serverMachineIdentifier?: string;
   // Backend-generated media URLs
   thumbnailUrl?: string;
   artUrl?: string;

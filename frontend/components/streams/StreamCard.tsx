@@ -40,6 +40,44 @@ export const StreamCard: React.FC<StreamCardProps> = ({
   const thumbnailUrl = stream.thumbnailUrl || '';
   const artUrl = stream.artUrl || '';
   
+  // Open content in Plex
+  const openInPlex = () => {
+    let ratingKey = stream.ratingKey;
+    if (!ratingKey && (stream.thumb || stream.art)) {
+      const mediaPath = stream.thumb || stream.art || '';
+      const match = mediaPath.match(/\/library\/metadata\/(\d+)/);
+      if (match) {
+        ratingKey = match[1];
+      }
+    }
+    
+    if (!ratingKey) {
+      console.warn('No rating key found for stream');
+      return;
+    }
+    
+    // Get server info
+    const plexServerUrl = `${window.location.protocol}//${window.location.hostname}:32400`;
+    const serverIdentifier = stream.serverMachineIdentifier;
+    
+    if (!serverIdentifier) {
+      console.warn('No server machine identifier available');
+      // Fallback to direct library access
+      window.open(`${plexServerUrl}/web/index.html`, '_blank');
+      return;
+    }
+    
+    // Use the correct server-specific URL format
+    const plexUrl = `${plexServerUrl}/web/index.html#!/server/${serverIdentifier}/details?key=%2Flibrary%2Fmetadata%2F${ratingKey}`;
+    
+    console.log('Opening Plex URL:', plexUrl);
+    console.log('Server ID:', serverIdentifier);
+    console.log('Rating Key:', ratingKey);
+    
+    // Open in new tab
+    window.open(plexUrl, '_blank');
+  };
+  
   return (
     <div
       key={stream.sessionKey || index}
@@ -84,7 +122,11 @@ export const StreamCard: React.FC<StreamCardProps> = ({
           
           {/* Content info */}
           <div className="flex-1 min-w-0 relative z-10">
-            <h3 className={`font-semibold mb-1 text-sm sm:text-base break-words leading-tight ${artUrl ? 'text-white' : 'text-foreground'}`}>
+            <h3 
+              onClick={openInPlex}
+              className={`font-semibold mb-1 text-sm sm:text-base break-words leading-tight cursor-pointer hover:underline transition-colors ${artUrl ? 'text-white hover:text-blue-200' : 'text-foreground hover:text-blue-600'}`}
+              title="Click to open in Plex"
+            >
               {getContentTitle(stream)}
             </h3>
 

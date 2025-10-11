@@ -10,6 +10,8 @@ import { config } from '../../../config/app.config';
 @Injectable()
 export class PlexService {
   private readonly logger = new Logger(PlexService.name);
+  private serverIdentifierCache: string | null = null;
+  private serverIdentifierPromise: Promise<string | null> | null = null;
 
   constructor(
     private readonly plexClient: PlexClient,
@@ -19,9 +21,39 @@ export class PlexService {
     private readonly configService: ConfigService,
   ) {}
 
+  private async getServerIdentifier(): Promise<string | null> {
+    // Return cached value if available
+    if (this.serverIdentifierCache) {
+      return this.serverIdentifierCache;
+    }
+
+    // If there's already a request in progress, wait for it
+    if (this.serverIdentifierPromise) {
+      return this.serverIdentifierPromise;
+    }
+
+    // Create new request and cache the promise
+    this.serverIdentifierPromise = this.plexClient.getServerIdentity()
+      .then(identifier => {
+        this.serverIdentifierCache = identifier;
+        this.serverIdentifierPromise = null; // Clear the promise once resolved
+        return identifier;
+      })
+      .catch(error => {
+        this.logger.error('Failed to get server identifier:', error);
+        this.serverIdentifierPromise = null; // Clear the promise on error
+        return null;
+      });
+
+    return this.serverIdentifierPromise;
+  }
+
   async getActiveSessions(): Promise<PlexSessionsResponse> {
     try {
-      const sessions = await this.plexClient.getSessions();
+      const [sessions, serverIdentifier] = await Promise.all([
+        this.plexClient.getSessions(),
+        this.getServerIdentifier()
+      ]);
       
       // Check if media thumbnails and artwork are enabled
       const [enableThumbnails, enableArtwork] = await Promise.all([
@@ -29,10 +61,11 @@ export class PlexService {
         this.configService.getSetting('ENABLE_MEDIA_ARTWORK'),
       ]);
       
-      // Add media URLs to session data if enbaled
-      if (sessions?.MediaContainer?.Metadata && (enableThumbnails || enableArtwork)) {
+      // Add media URLs and server identifier to session data
+      if (sessions?.MediaContainer?.Metadata) {
         sessions.MediaContainer.Metadata = sessions.MediaContainer.Metadata.map(session => ({
           ...session,
+          serverMachineIdentifier: serverIdentifier,
           thumbnailUrl: (enableThumbnails && session.thumb) ? this.buildMediaUrl('thumb', session.thumb) : undefined,
           artUrl: (enableArtwork && session.art) ? this.buildMediaUrl('art', session.art) : undefined,
         }));

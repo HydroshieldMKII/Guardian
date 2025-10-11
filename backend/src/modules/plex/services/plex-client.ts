@@ -215,6 +215,17 @@ export class PlexClient {
     });
   }
 
+  async getServerIdentity(): Promise<string | null> {
+    try {
+      const response = await this.request('/');
+      const data = await response.json();
+      return data?.MediaContainer?.machineIdentifier || null;
+    } catch (error) {
+      this.logger.error('Error getting server identity:', error);
+      return null;
+    }
+  }
+
   async getSessions(): Promise<any> {
     const response = await this.request('status/sessions');
     return response.json();
