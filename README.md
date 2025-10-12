@@ -144,7 +144,7 @@ Configure Guardian behavior and monitoring settings.
 - **Default behavior for new devices**: Block new devices by default. Provides maximum security by requiring manual approval
 - **Show media thumbnails**: Display thumbnails for active streams
 - **Show background artwork**: Display background artwork for active streams
-- **Custom Plex web URL**: Custom URL or IP address for opening Plex content (e.g., https://app.plex.tv or https://plex.mydomain.com). Leave empty to use configured server settings
+- **Custom Plex web URL**: Custom URL or IP address for opening Plex content (e.g., https://app.plex.tv or `https://plex.mydomain.com`). Leave empty to use configured server settings
 - **Default page on startup**: Choose which page to display when the app loads
 - **Message**: Message shown when blocking streams
 - **Refresh interval**: Refresh interval for fetching session info and enforcing bans. This as no effect on the dashboard refresh rate. (default: `10` (seconds)
