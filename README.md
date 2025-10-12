@@ -140,16 +140,16 @@ Configure your connection to the Plex Media Server.
 
 Configure Guardian behavior and monitoring settings.
 
-- **Automatic update checking**: Automatically check for new releases when you open the app. Updates are never applied automatically, you will only be notified if a new version is available.
+- **Automatic update checking**: Automatically check for new releases when you open the app. Updates are never applied automatically, you will only be notified if a new version is available
 - **Default behavior for new devices**: Block new devices by default. Provides maximum security by requiring manual approval
 - **Show media thumbnails**: Display thumbnails for active streams
 - **Show background artwork**: Display background artwork for active streams
-- **Custom Plex web URL**: Custom URL for opening Plex content (e.g., https://app.plex.tv). Leave empty to use configured server settings
+- **Custom Plex web URL**: Custom URL or IP address for opening Plex content (e.g., https://app.plex.tv or https://plex.mydomain.com). Leave empty to use configured server settings
 - **Default page on startup**: Choose which page to display when the app loads
 - **Message**: Message shown when blocking streams
-- **Refresh interval**: Refresh interval for fetching session info and enforcing bans (seconds)
-- **Automatic device cleanup**: When enabled, devices that haven't streamed for the specified number of days will be automatically deleted and require approval again. You can specify the inactivity threshold below
-- **Device inactivity threshold (days)**: Number of days a device can be inactive before it's automatically deleted. (default: `30`)
+- **Refresh interval**: Refresh interval for fetching session info and enforcing bans. This as no effect on the dashboard refresh rate. (default: `10` (seconds)
+- **Automatic device cleanup**: When enabled, devices that haven't streamed for the specified number of days will be automatically deleted and require approval again. You can specify the inactivity threshold with the setting below
+- **Device inactivity threshold (days)**: Number of days a device can be inactive before it's automatically deleted. (default: `30` (days))
 
 ### Notification Settings
 
@@ -159,13 +159,13 @@ Configure how notifications behave and interact with your workflow.
 
 ### Database Management
 
-- **Export/Import**: Create JSON backups of all Guardian data (settings, devices, preferences) for migration or recovery. The export contains sensitive information like your Plex token, so handle it securely. Note that importing a database will only merge data (overwriting existing records or adding new ones) and will not delete any existing records
+- **Export/Import**: Create JSON backups of all Guardian data (settings, devices, preferences) for migration or recovery. The export contains sensitive information like your Plex token, so handle it securely. It doesnt include include sessions history and notifications. Note that importing a database will only merge data (overwriting existing records or adding new ones) and will not delete any existing records.
 
 ### Administrative Tools
 
 - **Reset Stream Counts**: Clears the streams count statistics for all devices while preserving device and settings.
-- **Delete All Devices**: Permanently removes all device records from the app. This will delete all device-specific settings, approval status, and session history. Users will need to be re-approved when they next attempt to stream
-- **Reset Entire Database**: Completely wipes all Guardian data including settings, devices, user preferences, sessions history and notifications. This returns Guardian to its initial state as if freshly installed. Default settings will be restored and all configuration must be redone
+- **Delete All Devices**: Permanently removes all device records from the app. This will delete all device-specific data, notifications and sessions history. Users will need to be re-approved when they next attempt to stream
+- **Reset Entire Database**: Completely wipes all Guardian data including settings, devices, user preferences, sessions history and notifications. This returns Guardian to its initial state as if freshly installed. Default settings will be restored and all configuration must be redone. Recommended before importing a backup for a clean install
 
 ---
 
