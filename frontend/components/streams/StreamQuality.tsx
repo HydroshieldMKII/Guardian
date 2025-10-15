@@ -51,36 +51,42 @@ export const StreamQualityDetails: React.FC<StreamQualityDetailsProps> = ({ sess
   
   if (!quality) return null;
 
+  const isMusic = session.type === "track";
+
   return (
     <div className="space-y-2 bg-muted/30 dark:bg-muted/20 p-3 rounded-md border border-border/50">
       <h4 className="text-sm font-semibold text-foreground/90 dark:text-foreground mb-2">Stream Quality</h4>
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
-        <div className="flex items-center gap-2 bg-card p-2 rounded-md border border-border/30 min-w-0">
-          <Video className="w-3 h-3 flex-shrink-0 text-blue-600 dark:text-blue-400" />
-          <div className="min-w-0 flex-1">
-            <div className="font-semibold text-foreground/80 dark:text-foreground/70">Resolution</div>
-            <div className="truncate text-foreground/60 dark:text-foreground/50 font-medium">{quality.resolution}</div>
-          </div>
-        </div>
+      <div className={`grid gap-2 text-xs ${isMusic ? 'grid-cols-1 sm:grid-cols-3' : 'grid-cols-2 sm:grid-cols-3'}`}>
+        {!isMusic && (
+          <>
+            <div className="flex items-center gap-2 bg-card p-2 rounded-md border border-border/30 min-w-0">
+              <Video className="w-3 h-3 flex-shrink-0 text-blue-600 dark:text-blue-400" />
+              <div className="min-w-0 flex-1">
+                <div className="font-semibold text-foreground/80 dark:text-foreground/70">Resolution</div>
+                <div className="truncate text-foreground/60 dark:text-foreground/50 font-medium">{quality.resolution}</div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 bg-card p-2 rounded-md border border-border/30 min-w-0">
+              <Wifi className="w-3 h-3 flex-shrink-0 text-purple-600 dark:text-purple-400" />
+              <div className="min-w-0 flex-1">
+                <div className="font-semibold text-foreground/80 dark:text-foreground/70">Bandwidth</div>
+                <div className="truncate text-foreground/60 dark:text-foreground/50 font-medium">{quality.bandwidth}</div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 bg-card p-2 rounded-md border border-border/30 min-w-0">
+              <Video className="w-3 h-3 flex-shrink-0 text-orange-600 dark:text-orange-400" />
+              <div className="min-w-0 flex-1">
+                <div className="font-semibold text-foreground/80 dark:text-foreground/70">Video Codec</div>
+                <div className="truncate text-foreground/60 dark:text-foreground/50 font-medium">{quality.videoCodec}</div>
+              </div>
+            </div>
+          </>
+        )}
         <div className="flex items-center gap-2 bg-card p-2 rounded-md border border-border/30 min-w-0">
           <Signal className="w-3 h-3 flex-shrink-0 text-green-600 dark:text-green-400" />
           <div className="min-w-0 flex-1">
             <div className="font-semibold text-foreground/80 dark:text-foreground/70">Bitrate</div>
             <div className="truncate text-foreground/60 dark:text-foreground/50 font-medium">{quality.bitrate}</div>
-          </div>
-        </div>
-        <div className="flex items-center gap-2 bg-card p-2 rounded-md border border-border/30 min-w-0">
-          <Wifi className="w-3 h-3 flex-shrink-0 text-purple-600 dark:text-purple-400" />
-          <div className="min-w-0 flex-1">
-            <div className="font-semibold text-foreground/80 dark:text-foreground/70">Bandwidth</div>
-            <div className="truncate text-foreground/60 dark:text-foreground/50 font-medium">{quality.bandwidth}</div>
-          </div>
-        </div>
-        <div className="flex items-center gap-2 bg-card p-2 rounded-md border border-border/30 min-w-0">
-          <Video className="w-3 h-3 flex-shrink-0 text-orange-600 dark:text-orange-400" />
-          <div className="min-w-0 flex-1">
-            <div className="font-semibold text-foreground/80 dark:text-foreground/70">Video Codec</div>
-            <div className="truncate text-foreground/60 dark:text-foreground/50 font-medium">{quality.videoCodec}</div>
           </div>
         </div>
         <div className="flex items-center gap-2 bg-card p-2 rounded-md border border-border/30 min-w-0">
