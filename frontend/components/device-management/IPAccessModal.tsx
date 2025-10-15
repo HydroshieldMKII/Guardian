@@ -168,7 +168,7 @@ export const IPAccessModal: React.FC<IPAccessModalProps> = ({
                 <button
                   key={type}
                   onClick={() => setNetworkPolicy(type)}
-                  className={`p-3 rounded-lg border transition-all duration-200 text-left ${
+                  className={`p-3 rounded-lg border transition-all duration-200 text-left cursor-pointer ${
                     networkPolicy === type
                       ? 'border-primary bg-primary/5 shadow-sm'
                       : 'border-border hover:border-primary/50 hover:bg-muted/50'
@@ -208,7 +208,7 @@ export const IPAccessModal: React.FC<IPAccessModalProps> = ({
                 <button
                   key={type}
                   onClick={() => setIpAccessPolicy(type)}
-                  className={`p-3 rounded-lg border transition-all duration-200 text-left ${
+                  className={`p-3 rounded-lg border transition-all duration-200 text-left cursor-pointer ${
                     ipAccessPolicy === type
                       ? 'border-primary bg-primary/5 shadow-sm'
                       : 'border-border hover:border-primary/50 hover:bg-muted/50'
