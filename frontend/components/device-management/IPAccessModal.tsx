@@ -153,13 +153,15 @@ export const IPAccessModal: React.FC<IPAccessModalProps> = ({
         <div className="space-y-6">
           {/* Network Policy Section */}
           <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <Network className="w-4 h-4 text-primary" />
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+              {/* <Network className="w-4 h-4 text-primary" /> */}
               <h3 className="font-semibold text-sm">Network Policy</h3>
-            </div>
-            <p className="text-xs text-muted-foreground">
+              </div>
+              <p className="text-xs text-muted-foreground">
               Control whether streaming is allowed from local network, internet, or both
-            </p>
+              </p>
+            </div>
             
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {(['both', 'lan', 'wan'] as const).map((type) => (
@@ -191,13 +193,15 @@ export const IPAccessModal: React.FC<IPAccessModalProps> = ({
 
           {/* IP Access Policy Section */}
           <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <Globe className="w-4 h-4 text-primary" />
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+              {/* <Globe className="w-4 h-4 text-primary" /> */}
               <h3 className="font-semibold text-sm">IP Access Policy</h3>
-            </div>
-            <p className="text-xs text-muted-foreground">
+              </div>
+              <p className="text-xs text-muted-foreground">
               Restrict streaming to specific IP addresses or ranges
-            </p>
+              </p>
+            </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {(['all', 'restricted'] as const).map((type) => (
@@ -304,8 +308,8 @@ export const IPAccessModal: React.FC<IPAccessModalProps> = ({
 
           {/* Current Device IPs Info */}
           {userDevices.length > 0 && (
-            <div className="space-y-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-              <Label className="text-xs font-medium text-blue-800 dark:text-blue-200">
+            <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+              <Label className="text-xs font-medium text-blue-800 dark:text-blue-200 block mb-1">
                 Current Device IPs for {user.username || user.userId}:
               </Label>
               <div className="flex flex-wrap gap-1">
