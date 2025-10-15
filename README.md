@@ -31,20 +31,33 @@ It helps you monitor activity, control device access, and ensure only authorized
 ### Device Security & Access Control
 
 - Automatic session termination for unapproved devices
-- Per-user default blocking rules
-- Global default blocking for new devices
+- Global and per-user default blocking rules
+- IP-based access controls (LAN-only, WAN-only, or specific IP/CIDR ranges)
+- Temporary device access with automatic expiration
 
 ### Real-time Monitoring & Tracking
 
 - Live session tracking (Plex and Plexamp)
 - Device details: platform, product, version, IP address, last seen
-- Active stream monitoring: title, quality, duration
+- Active stream monitoring: title, quality, duration, progress
+- Session history with filtering and search
+- Individual session management
+- Stream termination controls
+
+### User Interface & Experience
+
+- Customizable blocking messages for different violation scenarios
+- Media thumbnails and background artwork display
+- Custom Plex web URL integration for seamless content access
+- Responsive design with mobile and desktop optimized views
 
 ### Configuration & Flexibility
 
 - Adjustable monitoring intervals
-- SSL/TLS support
+- SSL/TLS support with certificate validation controls
 - Database export and import for backup and migration
+- Automatic device cleanup based on inactivity periods
+- Administrative tools for database management
 
 ---
 
