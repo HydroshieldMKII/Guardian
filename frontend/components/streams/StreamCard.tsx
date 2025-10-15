@@ -176,21 +176,24 @@ export const StreamCard: React.FC<StreamCardProps> = ({
           </div>
           
           <div className="flex items-center gap-2">
-            <div 
-              onClick={!isRevoking && stream.User?.id && stream.Player?.machineIdentifier ? onRemoveAccess : undefined}
-              className={`flex items-center justify-center w-6 h-6 rounded-full transition-all duration-200 cursor-pointer ${
-                isRevoking || !stream.User?.id || !stream.Player?.machineIdentifier 
-                  ? 'opacity-50 cursor-not-allowed' 
-                  : (artUrl ? 'bg-black/30 text-white hover:bg-red-500/30' : 'bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-950/50')
-              }`}
-              title={isRevoking ? "Removing access..." : "Remove access"}
-            >
-              {isRevoking ? (
-                <RefreshCw className="w-3 h-3 animate-spin" />
-              ) : (
-                <X className="w-3 h-3" />
-              )}
-            </div>
+            {/* Only show Remove Access button for non-Plexamp streams */}
+            {stream.Player?.product !== "Plexamp" && (
+              <div 
+                onClick={!isRevoking && stream.User?.id && stream.Player?.machineIdentifier ? onRemoveAccess : undefined}
+                className={`flex items-center justify-center w-6 h-6 rounded-full transition-all duration-200 cursor-pointer ${
+                  isRevoking || !stream.User?.id || !stream.Player?.machineIdentifier 
+                    ? 'opacity-50 cursor-not-allowed' 
+                    : (artUrl ? 'bg-black/30 text-white hover:bg-red-500/30' : 'bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-950/50')
+                }`}
+                title={isRevoking ? "Removing access..." : "Remove access"}
+              >
+                {isRevoking ? (
+                  <RefreshCw className="w-3 h-3 animate-spin" />
+                ) : (
+                  <X className="w-3 h-3" />
+                )}
+              </div>
+            )}
 
             <div 
               onClick={() => {
