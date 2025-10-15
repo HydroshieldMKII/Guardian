@@ -10,6 +10,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { 
   Clock,
   Monitor,
@@ -80,6 +82,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
   const [sessions, setSessions] = useState<SessionHistoryEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [showTerminatedOnly, setShowTerminatedOnly] = useState(false);
   const [sessionToDelete, setSessionToDelete] = useState<SessionHistoryEntry | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const sessionsListRef = React.useRef<HTMLDivElement>(null);
@@ -149,14 +152,21 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
     return session.userDevice?.deviceName || session.userDevice?.deviceProduct || 'Unknown Device';
   };
 
-  // Filter sessions based on search term
+  // Filter sessions based on search term and terminated filter
   const filteredSessions = React.useMemo(() => {
-    return sessions.filter(session =>
-      formatTitle(session).toLowerCase().includes(searchTerm.toLowerCase()) ||
-      getDeviceDisplayName(session).toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (session.deviceAddress || '').toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }, [sessions, searchTerm]);
+    return sessions.filter(session => {
+      // Apply search filter
+      const matchesSearch = 
+        formatTitle(session).toLowerCase().includes(searchTerm.toLowerCase()) ||
+        getDeviceDisplayName(session).toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (session.deviceAddress || '').toLowerCase().includes(searchTerm.toLowerCase());
+      
+      // Apply terminated filter
+      const matchesTerminated = showTerminatedOnly ? session.terminated === true : true;
+      
+      return matchesSearch && matchesTerminated;
+    });
+  }, [sessions, searchTerm, showTerminatedOnly]);
 
     // Scroll to specific session after sessions are loaded
   useEffect(() => {
@@ -329,23 +339,35 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
         </DialogHeader>
         
         <div className="flex flex-col gap-4 flex-1 overflow-hidden">
-          {/* Search and Refresh */}
-          <div className="flex gap-3 px-1 pt-1">
+          {/* Search, Filter and Refresh */}
+          <div className="flex flex-col sm:flex-row gap-3 px-1 pt-1">
             <Input
               placeholder="Search by title, device, or IP address..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="flex-1"
             />
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={fetchUserHistory}
-              disabled={loading}
-              className="flex-shrink-0"
-            >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            </Button>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="terminated-filter"
+                  checked={showTerminatedOnly}
+                  onCheckedChange={setShowTerminatedOnly}
+                />
+                <Label htmlFor="terminated-filter" className="text-sm whitespace-nowrap">
+                  Terminated only
+                </Label>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={fetchUserHistory}
+                disabled={loading}
+                className="flex-shrink-0"
+              >
+                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              </Button>
+            </div>
           </div>
 
           {/* Sessions List */}
@@ -358,7 +380,12 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
             ) : filteredSessions.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-32 text-muted-foreground text-center">
                 <Clock className="w-8 h-8 mb-2" />
-                <p className="text-center">{searchTerm ? 'No sessions found matching your search' : 'No streaming history found'}</p>
+                <p className="text-center">
+                  {searchTerm || showTerminatedOnly 
+                    ? 'No sessions found matching your filters' 
+                    : 'No streaming history found'
+                  }
+                </p>
               </div>
             ) : (
               <>
@@ -553,9 +580,6 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
                             {session.endedAt ? (
                               <div className="flex items-center gap-1 justify-end">
                                 <span>{formatDate(session.endedAt)}</span>
-                                {session.terminated && (
-                                  <X className="w-3 h-3 text-red-500 flex-shrink-0" />
-                                )}
                               </div>
                             ) : (
                               'Active Now'
@@ -615,7 +639,13 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
           {!loading && filteredSessions.length > 0 && (
             <div className="text-sm text-muted-foreground text-center">
               Showing {filteredSessions.length} session{filteredSessions.length !== 1 ? 's' : ''}
-              {searchTerm && ` matching "${searchTerm}"`}
+              {(searchTerm || showTerminatedOnly) && (
+                <span>
+                  {' '}matching filters
+                  {searchTerm && ` "${searchTerm}"`}
+                  {showTerminatedOnly && ' (terminated only)'}
+                </span>
+              )}
             </div>
           )}
         </div>
