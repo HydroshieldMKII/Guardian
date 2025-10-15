@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { 
@@ -11,11 +11,13 @@ import {
   EyeOff,
   Eye,
   History,
-  SquareUser
+  SquareUser,
+  Shield
 } from "lucide-react";
 import { UserDevice, UserPreference, AppSetting } from '@/types';
 import { UserAvatar, getUserPreferenceBadge } from './SharedComponents';
 import { DeviceCard } from './DeviceCard';
+import { IPAccessModal } from './IPAccessModal';
 
 // User-Device group interface
 interface UserDeviceGroup {
@@ -39,6 +41,7 @@ interface UserGroupCardProps {
   newDeviceName: string;
   onToggleExpansion: (userId: string) => void;
   onUpdateUserPreference: (userId: string, defaultBlock: boolean | null) => void;
+  onUpdateUserIPPolicy?: (userId: string, updates: Partial<UserPreference>) => void;
   onToggleUserVisibility?: (userId: string) => void;
   onShowHistory?: (userId: string) => void;
   onEdit: (device: UserDevice) => void;
@@ -64,6 +67,7 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
   newDeviceName,
   onToggleExpansion,
   onUpdateUserPreference,
+  onUpdateUserIPPolicy,
   onToggleUserVisibility,
   onShowHistory,
   onEdit,
@@ -79,6 +83,8 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
   onNewDeviceNameChange,
   shouldShowGrantTempAccess,
 }) => {
+  const [showIPModal, setShowIPModal] = useState(false);
+
   return (
     <Collapsible
       open={isExpanded}
@@ -131,7 +137,7 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
         <CollapsibleContent>
           <div className="p-3 sm:p-4 space-y-4">
             {/* User Actions Card */}
-            {(onToggleUserVisibility || onShowHistory) && (
+            {(onToggleUserVisibility || onShowHistory || onUpdateUserIPPolicy) && (
               <div className="bg-gradient-to-r from-card to-card/50 border rounded-lg p-4 shadow-sm">
                 <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                   {/* Actions Label */}
@@ -141,12 +147,22 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
                     </div>
                     <div>
                       <h4 className="font-semibold text-sm text-foreground">User Actions</h4>
-                      <p className="text-xs text-muted-foreground">Manage user visibility and history</p>
+                      <p className="text-xs text-muted-foreground">Manage user visibility, history, and access policies</p>
                     </div>
                   </div>
                   
                   {/* Action Buttons */}
                   <div className="flex items-center bg-muted/50 rounded-lg p-1 gap-1">
+                    {onUpdateUserIPPolicy && (
+                      <button
+                        onClick={() => setShowIPModal(true)}
+                        className="text-xs px-3 py-2 rounded-md transition-all duration-200 flex items-center cursor-pointer text-muted-foreground hover:text-foreground hover:bg-background/50"
+                        title="Configure IP and network access policies"
+                      >
+                        <Shield className="w-3 h-3 mr-2" />
+                        IP Policy
+                      </button>
+                    )}
                     {onToggleUserVisibility && (
                       <button
                         onClick={() => onToggleUserVisibility(group.user.userId)}
@@ -169,7 +185,7 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
                     {onShowHistory && (
                       <button
                         onClick={() => onShowHistory(group.user.userId)}
-                        className="text-xs px-3 py-2 rounded-md transition-all duration-200 flex items-center cursor-pointer text-muted-foreground hover:text-foreground hover:bg-background/50"
+                        className="text-xs px-3 py-2 rounded-md transition-all duration-200 flex items-center cursor-pointer text-muted-foreground hover:bg-background/50"
                         title="Show user history"
                       >
                         <History className="w-3 h-3 mr-2" />
@@ -269,6 +285,17 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
           </div>
         </CollapsibleContent>
       </div>
+
+      {/* IP Access Modal */}
+      {onUpdateUserIPPolicy && (
+        <IPAccessModal
+          isOpen={showIPModal}
+          onClose={() => setShowIPModal(false)}
+          user={group.user}
+          userDevices={group.devices}
+          onSave={onUpdateUserIPPolicy}
+        />
+      )}
     </Collapsible>
   );
 };

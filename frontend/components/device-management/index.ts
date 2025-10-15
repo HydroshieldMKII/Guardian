@@ -4,6 +4,7 @@ export { DeviceDetailsModal } from './DeviceDetailsModal';
 export { TemporaryAccessModal } from './TemporaryAccessModal';
 export { ConfirmationModal } from './ConfirmationModal';
 export { UserHistoryModal } from './UserHistoryModal';
+export { IPAccessModal } from './IPAccessModal';
 export { 
   ClickableIP, 
   UserAvatar, 

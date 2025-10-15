@@ -14,6 +14,12 @@ interface UpdateUserPreferenceDto {
   defaultBlock: boolean | null;
 }
 
+interface UpdateUserIPPolicyDto {
+  networkPolicy?: 'both' | 'lan' | 'wan';
+  ipAccessPolicy?: 'all' | 'restricted';
+  allowedIPs?: string[];
+}
+
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
@@ -87,6 +93,23 @@ export class UsersController {
 
     return {
       message: `User ${preference.hidden ? 'hidden' : 'shown'} successfully`,
+      preference,
+    };
+  }
+
+  @Post(':userId/ip-policy')
+  @HttpCode(HttpStatus.OK)
+  async updateUserIPPolicy(
+    @Param('userId') userId: string,
+    @Body() updateIPPolicyDto: UpdateUserIPPolicyDto,
+  ): Promise<{ message: string; preference: UserPreference }> {
+    const preference = await this.usersService.updateUserIPPolicy(
+      userId,
+      updateIPPolicyDto,
+    );
+
+    return {
+      message: 'User IP policy updated successfully',
       preference,
     };
   }

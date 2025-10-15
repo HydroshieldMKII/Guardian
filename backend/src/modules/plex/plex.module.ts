@@ -5,6 +5,7 @@ import { PlexClient } from './services/plex-client';
 import { SessionTerminationService } from './services/session-termination.service';
 import { UserDevice } from '../../entities/user-device.entity';
 import { SessionHistory } from '../../entities/session-history.entity';
+import { UserPreference } from '../../entities/user-preference.entity';
 import { DevicesModule } from '../devices/devices.module';
 import { SessionsModule } from '../sessions/sessions.module';
 import { UsersModule } from '../users/users.module';
@@ -14,7 +15,7 @@ import { PlexController } from './controllers/plex.controller';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([UserDevice, SessionHistory]),
+    TypeOrmModule.forFeature([UserDevice, SessionHistory, UserPreference]),
     forwardRef(() => DevicesModule),
     forwardRef(() => SessionsModule),
     forwardRef(() => UsersModule),

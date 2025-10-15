@@ -110,6 +110,10 @@ export interface UserPreference {
   avatarUrl?: string;
   defaultBlock: boolean | null;
   hidden: boolean;
+  // IP/Network access policies
+  networkPolicy: 'both' | 'lan' | 'wan';
+  ipAccessPolicy: 'all' | 'restricted';
+  allowedIPs?: string[];
   createdAt: string;
   updatedAt: string;
 }

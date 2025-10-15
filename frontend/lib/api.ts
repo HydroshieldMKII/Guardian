@@ -84,6 +84,10 @@ class ApiClient {
     return this.post<T>(`/users/${userId}/toggle-visibility`);
   }
 
+  async updateUserIPPolicy<T>(userId: string, updates: any): Promise<T> {
+    return this.post<T>(`/users/${userId}/ip-policy`, updates);
+  }
+
   // Notification methods
   async getAllNotifications<T>(): Promise<T> {
     return this.get<T>("/notifications");

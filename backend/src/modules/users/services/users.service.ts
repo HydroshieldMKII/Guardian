@@ -152,6 +152,42 @@ export class UsersService {
     return savedPreference;
   }
 
+  async updateUserIPPolicy(
+    userId: string,
+    updates: {
+      networkPolicy?: 'both' | 'lan' | 'wan';
+      ipAccessPolicy?: 'all' | 'restricted';
+      allowedIPs?: string[];
+    },
+  ): Promise<UserPreference> {
+    let preference = await this.userPreferenceRepository.findOne({
+      where: { userId },
+    });
+
+    if (preference) {
+      // Update existing preference
+      if (updates.networkPolicy !== undefined) {
+        preference.networkPolicy = updates.networkPolicy;
+      }
+      if (updates.ipAccessPolicy !== undefined) {
+        preference.ipAccessPolicy = updates.ipAccessPolicy;
+      }
+      if (updates.allowedIPs !== undefined) {
+        preference.allowedIPs = updates.allowedIPs;
+      }
+      this.logger.log(
+        `Updating IP policy for user: ${userId}`,
+        JSON.stringify(updates),
+      );
+    } else {
+      throw new Error('User preference not found. Does the user exist?');
+    }
+
+    // Save the preference
+    const savedPreference = await this.userPreferenceRepository.save(preference);
+    return savedPreference;
+  }
+
   async getEffectiveDefaultBlock(userId: string): Promise<boolean> {
     const preference = await this.getUserPreference(userId);
 
