@@ -11,9 +11,6 @@ export class AppSettings {
   @Column({ type: 'text', nullable: true })
   value: string;
 
-  @Column({ nullable: true })
-  description: string;
-
   @Column({ default: 'string' })
   type: 'string' | 'number' | 'boolean' | 'json';
 

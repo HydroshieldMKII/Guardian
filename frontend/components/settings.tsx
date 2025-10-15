@@ -43,7 +43,6 @@ interface AppSetting {
   id: number;
   key: string;
   value: string;
-  description: string;
   type: "string" | "number" | "boolean" | "json";
   private: boolean;
   updatedAt: string;
@@ -95,10 +94,30 @@ const settingsSections = [
 // Function to get setting label and description
 const getSettingInfo = (setting: AppSetting): { label: string; description: string } => {
   const settingInfoMap: Record<string, { label: string; description?: string }> = {
-    'PLEX_SERVER_IP': { label: 'Plex server IP address' },
-    'PLEX_SERVER_PORT': { label: 'Plex server port' },
-    'PLEX_TOKEN': { label: 'Authentication token' },
-    'PLEXGUARD_REFRESH_INTERVAL': { label: 'Refresh interval' },
+    'PLEX_SERVER_IP': { 
+      label: 'Plex server IP address',
+      description: 'IP address or hostname of your Plex Media Server'
+    },
+    'PLEX_SERVER_PORT': { 
+      label: 'Plex server port',
+      description: 'Port number for connecting to Plex (default: 32400)'
+    },
+    'PLEX_TOKEN': { 
+      label: 'Authentication token',
+      description: 'Plex authentication token for secure API access'
+    },
+    'USE_SSL': {
+      label: 'Enable SSL',
+      description: 'Use HTTPS instead of HTTP for Plex server connections'
+    },
+    'IGNORE_CERT_ERRORS': {
+      label: 'Ignore SSL certificate errors',
+      description: 'Skip SSL certificate validation (not recommended for production)'
+    },
+    'PLEXGUARD_REFRESH_INTERVAL': { 
+      label: 'Refresh interval',
+      description: 'How often to check for active sessions and enforce policies (seconds)'
+    },
     'MSG_DEVICE_PENDING': { 
       label: 'Device pending approval message',
       description: 'Message displayed when a device is waiting for approval'
@@ -119,7 +138,10 @@ const getSettingInfo = (setting: AppSetting): { label: string; description: stri
       label: 'IP not allowed message',
       description: 'Message displayed when the IP address is not in the allowed list'
     },
-    'PLEX_GUARD_DEFAULT_BLOCK': { label: 'Default behavior for new devices' },
+    'PLEX_GUARD_DEFAULT_BLOCK': { 
+      label: 'Default behavior for new devices',
+      description: 'Whether new devices should be blocked by default until manually approved'
+    },
     'DEVICE_CLEANUP_ENABLED': { 
       label: 'Automatic device cleanup',
       description: 'When enabled, devices that haven\'t streamed for the specified number of days will be automatically deleted and require approval again.'
@@ -156,7 +178,7 @@ const getSettingInfo = (setting: AppSetting): { label: string; description: stri
   
   const info = settingInfoMap[setting.key];
   const label = info?.label || setting.key.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
-  const description = info?.description || setting.description;
+  const description = info?.description || '';
   
   return { label, description };
 };
@@ -990,7 +1012,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
             <div className="space-y-0.5">
               <Label>Enable SSL</Label>
               <p className="text-xs text-muted-foreground">
-                {useSSLSetting.description}
+                Use HTTPS instead of HTTP for Plex server connections
               </p>
             </div>
             <Switch
@@ -1014,7 +1036,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
                 <p
                   className={`text-xs ${!isSSLEnabled ? "text-muted-foreground/60" : "text-muted-foreground"}`}
                 >
-                  {ignoreCertSetting.description}
+                  Skip SSL certificate validation (not recommended for production)
                 </p>
               </div>
               <Switch
