@@ -178,53 +178,54 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
             )}
 
             {/* Device Policy Card */}
-            <div className="flex flex-col gap-3 p-3 bg-muted/30 rounded-lg">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                <div className="flex items-center space-x-2">
-                  <Settings className="w-4 h-4 flex-shrink-0" />
-                  <span className="text-sm font-medium">Default Device Policy:</span>
+            <div className="bg-gradient-to-r from-card to-card/50 border rounded-lg p-4 shadow-sm">
+              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                {/* Policy Label */}
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 bg-primary/10 rounded-lg">
+                    <Settings className="w-4 h-4 text-primary" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-sm text-foreground">Default Device Policy</h4>
+                    <p className="text-xs text-muted-foreground">How new devices should be handled</p>
+                  </div>
                 </div>
                 
-                {/* Policy buttons - mobile: full width grid, desktop: inline flex */}
-                <div className="grid grid-cols-3 gap-2 sm:flex sm:gap-2">
-                <Button
-                  variant={!group.user.preference || group.user.preference.defaultBlock === null ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => onUpdateUserPreference(group.user.userId, null)}
-                  className="text-xs px-2 py-1"
-                >
-                  <Settings className="w-3 h-3 mr-1" />
-                  <span className="hidden sm:inline">Global</span>
-                  <span className="sm:hidden">Global</span>
-                </Button>
-                <Button
-                  variant={group.user.preference?.defaultBlock === false ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => onUpdateUserPreference(group.user.userId, false)}
-                  className={`text-xs px-2 py-1 ${
-                    group.user.preference?.defaultBlock === false
-                      ? "bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white"
-                      : ""
-                  }`}
-                >
-                  <CheckCircle className="w-3 h-3 mr-1" />
-                  <span className="hidden sm:inline">Allow</span>
-                  <span className="sm:hidden">Allow</span>
-                </Button>
-                <Button
-                  variant={group.user.preference?.defaultBlock === true ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => onUpdateUserPreference(group.user.userId, true)}
-                  className={`text-xs px-2 py-1 ${
-                    group.user.preference?.defaultBlock === true
-                      ? "bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-600 text-white"
-                      : ""
-                  }`}
-                >
-                  <XCircle className="w-3 h-3 mr-1" />
-                  <span className="hidden sm:inline">Block</span>
-                  <span className="sm:hidden">Block</span>
-                </Button>
+                {/* Policy Toggle Buttons */}
+                <div className="flex items-center bg-muted/50 rounded-lg p-1 gap-1">
+                  <button
+                    onClick={() => onUpdateUserPreference(group.user.userId, null)}
+                    className={`text-xs px-3 py-2 rounded-md transition-all duration-200 flex items-center cursor-pointer ${
+                      !group.user.preference || group.user.preference.defaultBlock === null
+                        ? "bg-gray-200 text-black shadow-sm font-medium hover:bg-gray-100"
+                        : "text-muted-foreground hover:text-foreground hover:bg-background/50"
+                    }`}
+                  >
+                    <Settings className="w-3 h-3 mr-2" />
+                    Global
+                  </button>
+                  <button
+                    onClick={() => onUpdateUserPreference(group.user.userId, false)}
+                    className={`text-xs px-3 py-2 rounded-md transition-all duration-200 flex items-center cursor-pointer ${
+                      group.user.preference?.defaultBlock === false
+                        ? "bg-green-600 text-white shadow-sm font-medium hover:bg-green-600"
+                        : "text-muted-foreground hover:text-foreground hover:bg-background/50"
+                    }`}
+                  >
+                    <CheckCircle className="w-3 h-3 mr-2" />
+                    Allow
+                  </button>
+                  <button
+                    onClick={() => onUpdateUserPreference(group.user.userId, true)}
+                    className={`text-xs px-3 py-2 rounded-md transition-all duration-200 flex items-center cursor-pointer ${
+                      group.user.preference?.defaultBlock === true
+                        ? "bg-red-700 text-white shadow-sm font-medium hover:bg-red-600"
+                        : "text-muted-foreground hover:text-foreground hover:bg-background/50"
+                    }`}
+                  >
+                    <XCircle className="w-3 h-3 mr-2" />
+                    Block
+                  </button>
                 </div>
               </div>
             </div>
