@@ -132,45 +132,49 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
           <div className="p-3 sm:p-4 space-y-4">
             {/* User Actions Card */}
             {(onToggleUserVisibility || onShowHistory) && (
-              <div className="flex flex-col gap-3 p-3 bg-muted/30 rounded-lg">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <SquareUser className="w-4 h-4 flex-shrink-0" />
-                    <span className="text-sm font-medium">User Actions:</span>
+              <div className="bg-gradient-to-r from-card to-card/50 border rounded-lg p-4 shadow-sm">
+                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                  {/* Actions Label */}
+                  <div className="flex items-center space-x-3">
+                    <div className="p-2 bg-primary/10 rounded-lg">
+                      <SquareUser className="w-4 h-4 text-primary" />
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-sm text-foreground">User Actions</h4>
+                      <p className="text-xs text-muted-foreground">Manage user visibility and history</p>
+                    </div>
                   </div>
-                  <div className="flex gap-2">
+                  
+                  {/* Action Buttons */}
+                  <div className="flex items-center bg-muted/50 rounded-lg p-1 gap-1">
                     {onToggleUserVisibility && (
-                      <Button
-                        variant="outline"
-                        size="sm"
+                      <button
                         onClick={() => onToggleUserVisibility(group.user.userId)}
-                        className="text-xs px-2 py-1"
+                        className="text-xs px-3 py-2 rounded-md transition-all duration-200 flex items-center cursor-pointer text-muted-foreground hover:text-foreground hover:bg-background/50"
                         title={group.user.preference?.hidden ? "Show user" : "Hide user"}
                       >
                         {group.user.preference?.hidden ? (
                           <>
-                            <Eye className="w-3 h-3 sm:mr-1" />
-                            <span className="hidden sm:inline">Show</span>
+                            <Eye className="w-3 h-3 mr-2" />
+                            Show
                           </>
                         ) : (
                           <>
-                            <EyeOff className="w-3 h-3 sm:mr-1" />
-                            <span className="hidden sm:inline">Hide</span>
+                            <EyeOff className="w-3 h-3 mr-2" />
+                            Hide
                           </>
                         )}
-                      </Button>
+                      </button>
                     )}
                     {onShowHistory && (
-                      <Button
-                        variant="outline"
-                        size="sm"
+                      <button
                         onClick={() => onShowHistory(group.user.userId)}
-                        className="text-xs px-2 py-1"
+                        className="text-xs px-3 py-2 rounded-md transition-all duration-200 flex items-center cursor-pointer text-muted-foreground hover:text-foreground hover:bg-background/50"
                         title="Show user history"
                       >
-                        <History className="w-3 h-3 sm:mr-1" />
-                        <span className="hidden sm:inline">History</span>
-                      </Button>
+                        <History className="w-3 h-3 mr-2" />
+                        History
+                      </button>
                     )}
                   </div>
                 </div>
