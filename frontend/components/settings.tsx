@@ -1642,7 +1642,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => window.open('https://github.com/HydroshieldMKII/Guardian?tab=readme-ov-file#application-settings', '_blank')}
+                      onClick={() => window.open('https://github.com/HydroshieldMKII/Guardian', '_blank')}
                       className="h-6 text-xs text-muted-foreground hover:text-foreground"
                     >
                       <BookOpen className="h-3 w-3 mr-1" />
