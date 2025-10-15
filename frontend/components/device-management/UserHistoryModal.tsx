@@ -179,12 +179,6 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
         return; // Session doesn't exist, nothing to scroll to
       }
 
-      // Check if session is visible after filtering
-      const sessionIsVisible = filteredSessions.some(s => s.id === scrollToSessionId);
-      if (!sessionIsVisible) {
-        return; // Session is filtered out, nothing to scroll to
-      }
-
       // Function to scroll to and highlight the session
       const scrollToSession = () => {
         const sessionElement = sessionsListRef.current?.querySelector(`[data-session-id="${scrollToSessionId}"]`);
@@ -237,7 +231,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
         clearTimeout(cleanup);
       };
     }
-  }, [scrollToSessionId, sessions, filteredSessions, loading]);
+  }, [scrollToSessionId, sessions, loading]);
 
   const formatDuration = (session: SessionHistoryEntry) => {
     if (!session.endedAt) {

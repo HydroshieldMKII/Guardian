@@ -57,12 +57,12 @@ export function GlobalNotificationHandler() {
     // Fetch notification and settings immediately on mount
     fetchAll();
 
-    const intervalNotification = setInterval(fetchNotifications, 6000);
-    const intervalSetting = setInterval(fetchSettings, 10000);
+    const intervalNotification = setInterval(fetchNotifications, 10000);
+    // const intervalSetting = setInterval(fetchSettings, 10000);
 
     return () => {
       clearInterval(intervalNotification);
-      clearInterval(intervalSetting);
+      // clearInterval(intervalSetting);
     };
   }, [setNotifications]);
 

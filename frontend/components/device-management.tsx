@@ -463,6 +463,25 @@ const DeviceManagement = memo(({
     }
   };
 
+  // User IP policy update handler
+  const handleUpdateUserIPPolicy = async (userId: string, updates: Partial<UserPreference>) => {
+    const success = await userPreferences.updateUserIPPolicy(userId, updates);
+    if (success) {
+      handleRefresh();
+      toast({
+        title: "IP Policy Updated",
+        description: `Access policies have been updated for this user`,
+        variant: "success",
+      });
+    } else {
+      toast({
+        title: "Update Failed", 
+        description: "Failed to update IP access policies",
+        variant: "destructive",
+      });
+    }
+  };
+
   // User visibility toggle handler
   const handleToggleUserVisibility = async (userId: string) => {
     try {
@@ -935,6 +954,7 @@ const DeviceManagement = memo(({
                   newDeviceName={newDeviceName}
                   onToggleExpansion={toggleUserExpansion}
                   onUpdateUserPreference={handleUpdateUserPreference}
+                  onUpdateUserIPPolicy={handleUpdateUserIPPolicy}
                   onToggleUserVisibility={handleToggleUserVisibility}
                   onShowHistory={handleShowHistory}
                   onEdit={startEditing}

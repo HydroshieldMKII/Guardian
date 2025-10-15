@@ -51,6 +51,18 @@ export class NotificationsService {
     sessionHistoryId?: number
   ): Promise<Notification> {
     const text = `User ${username} attempted to stream on ${deviceName} but was blocked`;
+
+    //Mark in session history the stream was terminated
+    if (sessionHistoryId) {
+      const session = await this.sessionHistoryRepository.findOne({
+        where: { id: sessionHistoryId }
+      });
+
+      if (session) {
+        session.terminated = true;
+        await this.sessionHistoryRepository.save(session);
+      }
+    }
     
     return await this.createNotification({
       userId,

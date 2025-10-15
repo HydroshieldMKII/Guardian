@@ -28,6 +28,16 @@ export class UserPreference {
   @Column({ name: 'hidden', type: 'boolean', default: false })
   hidden: boolean; 
 
+  // IP/Network access policies
+  @Column({ name: 'network_policy', type: 'varchar', default: 'both' })
+  networkPolicy: 'both' | 'lan' | 'wan'; // Default: both LAN and WAN allowed
+
+  @Column({ name: 'ip_access_policy', type: 'varchar', default: 'all' })
+  ipAccessPolicy: 'all' | 'restricted'; // Default: all IPs allowed
+
+  @Column({ name: 'allowed_ips', type: 'json', nullable: true })
+  allowedIPs: string[]; // IP addresses or ranges
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 

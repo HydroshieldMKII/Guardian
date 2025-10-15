@@ -160,8 +160,8 @@ export class SchedulerService implements OnModuleInit {
     }
   }
 
-  // Sync Plex users every 30 minutes
-  @Cron('0 */30 * * * *', {
+  // Sync Plex users every hour
+  @Cron('0 0 * * * *', {
     name: 'syncPlexUsers',
   })
   async handlePlexUserSync() {

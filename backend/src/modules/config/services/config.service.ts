@@ -16,12 +16,11 @@ import { SessionHistory } from 'src/entities/session-history.entity';
 import { Notification } from 'src/entities/notification.entity';
 
 // App version
-const CURRENT_APP_VERSION = '1.2.0';
+const CURRENT_APP_VERSION = '1.2.1';
 
 export interface ConfigSettingDto {
   key: string;
   value: string;
-  description?: string;
   type?: 'string' | 'number' | 'boolean' | 'json';
   private?: boolean;
 }
@@ -44,106 +43,108 @@ export class ConfigService {
       {
       key: 'PLEX_TOKEN',
       value: '',
-      description: 'Plex server authentication token',
       type: 'string' as const,
       private: true,
       },
       {
       key: 'PLEX_SERVER_IP',
       value: '',
-      description: 'Plex server IP address',
       type: 'string' as const,
       },
       {
       key: 'PLEX_SERVER_PORT',
       value: '32400',
-      description: 'Plex server port',
       type: 'string' as const,
       },
       {
       key: 'USE_SSL',
       value: 'false',
-      description: 'Use SSL for Plex connection',
       type: 'boolean' as const,
       },
       {
       key: 'IGNORE_CERT_ERRORS',
       value: 'false',
-      description: 'Ignore SSL certificate errors',
       type: 'boolean' as const,
       },
       {
       key: 'PLEXGUARD_REFRESH_INTERVAL',
       value: '10',
-      description: 'Refresh interval for fetching session info and enforcing bans (seconds)',
       type: 'number' as const,
       },
       {
       key: 'PLEX_GUARD_DEFAULT_BLOCK',
       value: 'true',
-      description: 'Block new devices by default',
       type: 'boolean' as const,
       },
       {
-      key: 'PLEXGUARD_STOPMSG',
-      value:
-        'This device must be approved by the server owner. Please contact the server administrator for more information.',
-      description: 'Message shown when blocking streams',
+      key: 'MSG_DEVICE_PENDING',
+      value: 'Device Pending Approval. The server owner must approve this device before it can be used.',
+      type: 'string' as const,
+      },
+      {
+      key: 'MSG_DEVICE_REJECTED',
+      value: 'You are not authorized to use this device. Please contact the server administrator for more information.',
+      type: 'string' as const,
+      },
+      {
+      key: 'MSG_IP_LAN_ONLY',
+      value: 'Only LAN access is allowed',
+      type: 'string' as const,
+      },
+      {
+      key: 'MSG_IP_WAN_ONLY',
+      value: 'Only WAN access is allowed',
+      type: 'string' as const,
+      },
+      {
+      key: 'MSG_IP_NOT_ALLOWED',
+      value: 'Your current IP address is not in the allowed list',
       type: 'string' as const,
       },
       {
       key: 'DEVICE_CLEANUP_ENABLED',
       value: 'false',
-      description: 'Automatically remove inactive devices',
       type: 'boolean' as const,
       },
       {
       key: 'DEVICE_CLEANUP_INTERVAL_DAYS',
       value: '30',
-      description: 'Days of inactivity before device removal',
       type: 'number' as const,
       },
       {
       key: 'DEFAULT_PAGE',
       value: 'devices',
-      description: 'Default page to show when app loads',
       type: 'string' as const,
       },
       {
       key: 'AUTO_CHECK_UPDATES',
       value: 'false',
-      description: 'Automatically check for updates on app launch',
       type: 'boolean' as const,
       },
       {
       key: 'APP_VERSION',
       value: CURRENT_APP_VERSION,
-      description: 'Current application version',
       type: 'string' as const,
       private: false,
       },
       {
       key: 'AUTO_MARK_NOTIFICATION_READ',
       value: 'true',
-      description: 'Automatically mark notifications as read when clicked',
       type: 'boolean' as const,
       },
       {
       key: 'ENABLE_MEDIA_THUMBNAILS',
       value: 'true',
-      description: 'Enable media thumbnails',
       type: 'boolean' as const,
       },
       {
       key: 'ENABLE_MEDIA_ARTWORK',
       value: 'true',
-      description: 'Enable background artwork',
       type: 'boolean' as const,
       },
       {
       key: 'CUSTOM_PLEX_URL',
       value: '',
-      description: 'Custom Plex web URL for opening content (leave empty to use configured server)',
       type: 'string' as const,
       },
     ];
@@ -159,11 +160,6 @@ export class ConfigService {
       if (!existing) {
         await this.settingsRepository.save(setting);
         this.logger.log(`Initialized default setting: ${setting.key}`);
-      } else {
-        // Always update description in case it changed
-        existing.description = setting.description;
-        await this.settingsRepository.save(existing);
-        this.logger.log(`Updated description for existing setting: ${setting.key}`);
       }
     }
 
@@ -239,7 +235,6 @@ export class ConfigService {
     return settings.map((setting) => ({
       id: setting.id,
       key: setting.key,
-      description: setting.description,
       type: setting.type,
       private: setting.private,
       updatedAt: setting.updatedAt,
@@ -583,7 +578,6 @@ export class ConfigService {
 
             if (existing) {
               existing.value = setting.value;
-              existing.description = setting.description || existing.description;
               await this.settingsRepository.save(existing);
               imported++;
             }else{
@@ -816,6 +810,28 @@ export class ConfigService {
     } catch (error) {
       this.logger.error('Failed to delete all devices:', error);
       throw new Error(`Device deletion failed: ${error.message}`);
+    }
+  }
+
+  async clearAllSessionHistory(): Promise<void> {
+    try {
+      this.logger.warn('CLEARING ALL SESSION HISTORY per user request');
+      
+      // Get count before deletion for logging
+      const sessionCount = await this.settingsRepository.manager
+        .getRepository(SessionHistory)
+        .count();
+      
+      await this.settingsRepository.manager.transaction(async transactionalEntityManager => {
+        // Clear all session history
+        await transactionalEntityManager.getRepository(SessionHistory).clear();
+        this.logger.debug('Session history cleared');
+      });
+      
+      this.logger.warn(`All ${sessionCount} session history records have been cleared`);
+    } catch (error) {
+      this.logger.error('Failed to clear session history:', error);
+      throw new Error(`Session history clearing failed: ${error.message}`);
     }
   }
 }

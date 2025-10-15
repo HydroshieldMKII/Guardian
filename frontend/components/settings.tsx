@@ -43,7 +43,6 @@ interface AppSetting {
   id: number;
   key: string;
   value: string;
-  description: string;
   type: "string" | "number" | "boolean" | "json";
   private: boolean;
   updatedAt: string;
@@ -61,16 +60,22 @@ const settingsSections = [
     icon: Shield,
   },
   {
-    id: "plex",
-    title: "Plex Integration",
-    description: "Configure Plex server connection and settings",
-    icon: Server,
+    id: "customization",
+    title: "Customization",
+    description: "Customize user interface, messages, and experience",
+    icon: User,
   },
   {
     id: "notifications",
     title: "Notification Settings",
     description: "Configure notification behavior and preferences",
     icon: BellRing,
+  },
+  {
+    id: "plex",
+    title: "Plex Integration",
+    description: "Configure Plex server connection and settings",
+    icon: Server,
   },
   {
     id: "database",
@@ -84,29 +89,59 @@ const settingsSections = [
     description: "Dangerous operations for database management",
     icon: AlertTriangle,
   },
-  // {
-  //   id: "notifications",
-  //   title: "Notifications",
-  //   description: "Configure notification preferences and alert settings",
-  //   icon: Bell,
-  // },
-  // {
-  //   id: "profile",
-  //   title: "Profile",
-  //   description: "Manage your account profile and personal information",
-  //   icon: User,
-  // },
 ];
 
 // Function to get setting label and description
 const getSettingInfo = (setting: AppSetting): { label: string; description: string } => {
   const settingInfoMap: Record<string, { label: string; description?: string }> = {
-    'PLEX_SERVER_IP': { label: 'Plex server IP address' },
-    'PLEX_SERVER_PORT': { label: 'Plex server port' },
-    'PLEX_TOKEN': { label: 'Authentication token' },
-    'PLEXGUARD_REFRESH_INTERVAL': { label: 'Refresh interval' },
-    'PLEXGUARD_STOPMSG': { label: 'Message' },
-    'PLEX_GUARD_DEFAULT_BLOCK': { label: 'Default behavior for new devices' },
+    'PLEX_SERVER_IP': { 
+      label: 'Plex server IP address',
+      description: 'IP address or hostname of your Plex Media Server'
+    },
+    'PLEX_SERVER_PORT': { 
+      label: 'Plex server port',
+      description: 'Port number for connecting to Plex (default: 32400)'
+    },
+    'PLEX_TOKEN': { 
+      label: 'Authentication token',
+      description: 'Plex authentication token for secure API access'
+    },
+    'USE_SSL': {
+      label: 'Enable SSL',
+      description: 'Use HTTPS instead of HTTP for Plex server connections'
+    },
+    'IGNORE_CERT_ERRORS': {
+      label: 'Ignore SSL certificate errors',
+      description: 'Skip SSL certificate validation (not recommended for production)'
+    },
+    'PLEXGUARD_REFRESH_INTERVAL': { 
+      label: 'Refresh interval',
+      description: 'How often to check for active sessions and enforce policies (seconds)'
+    },
+    'MSG_DEVICE_PENDING': { 
+      label: 'Device pending approval message',
+      description: 'Message displayed when a device is waiting for approval'
+    },
+    'MSG_DEVICE_REJECTED': { 
+      label: 'Device rejected message',
+      description: 'Message displayed when a device has been rejected'
+    },
+    'MSG_IP_LAN_ONLY': { 
+      label: 'LAN-only access message',
+      description: 'Message displayed when only LAN access is allowed'
+    },
+    'MSG_IP_WAN_ONLY': { 
+      label: 'WAN-only access message',
+      description: 'Message displayed when only WAN access is allowed'
+    },
+    'MSG_IP_NOT_ALLOWED': { 
+      label: 'IP not allowed message',
+      description: 'Message displayed when the IP address is not in the allowed list'
+    },
+    'PLEX_GUARD_DEFAULT_BLOCK': { 
+      label: 'Default behavior for new devices',
+      description: 'Whether new devices should be blocked by default until manually approved'
+    },
     'DEVICE_CLEANUP_ENABLED': { 
       label: 'Automatic device cleanup',
       description: 'When enabled, devices that haven\'t streamed for the specified number of days will be automatically deleted and require approval again.'
@@ -143,7 +178,7 @@ const getSettingInfo = (setting: AppSetting): { label: string; description: stri
   
   const info = settingInfoMap[setting.key];
   const label = info?.label || setting.key.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
-  const description = info?.description || setting.description;
+  const description = info?.description || '';
   
   return { label, description };
 };
@@ -178,6 +213,9 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
   const [showResetDatabaseModal, setShowResetDatabaseModal] = useState(false);
   const [showResetStreamCountsModal, setShowResetStreamCountsModal] = useState(false);
   const [showDeleteAllDevicesModal, setShowDeleteAllDevicesModal] = useState(false);
+  const [clearingSessionHistory, setClearingSessionHistory] = useState(false);
+  const [showClearSessionHistoryModal, setShowClearSessionHistoryModal] = useState(false);
+  const [showUnsavedChangesModal, setShowUnsavedChangesModal] = useState(false);
   
   const { toast } = useToast();
 
@@ -762,6 +800,34 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
     }
   };
 
+  const handleClearSessionHistory = async () => {
+    setClearingSessionHistory(true);
+    try {
+      const response = await fetch(`${config.api.baseUrl}/config/scripts/clear-session-history`, {
+        method: 'POST',
+      });
+
+      if (response.ok) {
+        toast({
+          title: "Session history cleared successfully",
+          description: "All session history records have been removed from the database",
+          variant: "success",
+        });
+      } else {
+        throw new Error('Failed to clear session history');
+      }
+    } catch (error) {
+      toast({
+        title: "Failed to clear session history",
+        description: error instanceof Error ? error.message : "Unknown error occurred",
+        variant: "destructive",
+      });
+    } finally {
+      setClearingSessionHistory(false);
+      setShowClearSessionHistoryModal(false);
+    }
+  };
+
   const getSettingsByCategory = (category: string) => {
     const categoryMap: Record<string, string[]> = {
       plex: [
@@ -773,12 +839,18 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
       guardian: [
         "AUTO_CHECK_UPDATES",
         "PLEX_GUARD_DEFAULT_BLOCK",
+        "PLEXGUARD_REFRESH_INTERVAL",
+      ],
+      customization: [
         "ENABLE_MEDIA_THUMBNAILS",
         "ENABLE_MEDIA_ARTWORK",
         "CUSTOM_PLEX_URL",
         "DEFAULT_PAGE",
-        "PLEXGUARD_STOPMSG",
-        "PLEXGUARD_REFRESH_INTERVAL",
+        "MSG_DEVICE_PENDING",
+        "MSG_DEVICE_REJECTED",
+        "MSG_IP_LAN_ONLY",
+        "MSG_IP_WAN_ONLY",
+        "MSG_IP_NOT_ALLOWED",
       ],
       notifications: [
         "AUTO_MARK_NOTIFICATION_READ"
@@ -971,7 +1043,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
             <div className="space-y-0.5">
               <Label>Enable SSL</Label>
               <p className="text-xs text-muted-foreground">
-                {useSSLSetting.description}
+                Use HTTPS instead of HTTP for Plex server connections
               </p>
             </div>
             <Switch
@@ -995,7 +1067,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
                 <p
                   className={`text-xs ${!isSSLEnabled ? "text-muted-foreground/60" : "text-muted-foreground"}`}
                 >
-                  {ignoreCertSetting.description}
+                  Skip SSL certificate validation (not recommended for production)
                 </p>
               </div>
               <Switch
@@ -1138,6 +1210,26 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
           </div>
         );
 
+      case "customization":
+        return (
+          <div className="space-y-6">
+            <div>
+              <h3 className="text-lg font-medium">Customization Settings</h3>
+              <p className="text-sm text-muted-foreground">
+                Customize the user interface, blocking messages, and overall user experience.
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              {getSettingsByCategory("customization").map((setting) => (
+                <Card key={setting.key} className="p-4">
+                  {renderSettingField(setting)}
+                </Card>
+              ))}
+            </div>
+          </div>
+        );
+
       case "database":
         return (
           <div className="space-y-6">
@@ -1255,6 +1347,33 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
                     )}
                     {resettingStreamCounts ? "Resetting..." : "Reset Stream Counts"}
                     </Button>
+                </div>
+              </Card>
+
+              {/* Clear Session History */}
+              <Card className="p-4">
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="text-sm font-medium flex items-center">
+                      Clear All Session History
+                    </h4>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Permanently remove all session history records from the database. This will clear viewing history for all users.
+                    </p>
+                  </div>
+                  <Button
+                    onClick={() => setShowClearSessionHistoryModal(true)}
+                    disabled={clearingSessionHistory}
+                    size="sm"
+                    variant="outline"
+                  >
+                    {clearingSessionHistory ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <XCircle className="w-4 h-4 mr-2" />
+                    )}
+                    {clearingSessionHistory ? "Clearing..." : "Clear Session History"}
+                  </Button>
                 </div>
               </Card>
 
@@ -1414,6 +1533,23 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
     });
   };
 
+  const handleBackWithConfirmation = () => {
+    if (hasChanges()) {
+      setShowUnsavedChangesModal(true);
+    } else {
+      onBack?.();
+    }
+  };
+
+  const handleConfirmBack = () => {
+    setShowUnsavedChangesModal(false);
+    onBack?.();
+  };
+
+  const handleCancelBack = () => {
+    setShowUnsavedChangesModal(false);
+  };
+
   return (
     <div className="min-h-[calc(100vh-3.5rem)]">
       <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-8">
@@ -1423,7 +1559,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
             <Button
               variant="ghost"
               size="sm"
-              onClick={onBack}
+              onClick={handleBackWithConfirmation}
               className="text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
@@ -1441,6 +1577,41 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
             Configure your Guardian dashboard and preferences
           </p>
         </div>
+
+        {/* Unsaved Changes Banner */}
+        {hasChanges() && (
+          <div className="mb-6">
+            <Card className="border-amber-600 bg-amber-50 dark:border-amber-700 dark:bg-amber-950/20">
+              <CardContent>
+                <div className="flex items-center gap-3">
+                  <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0" />
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-amber-800 dark:text-amber-200 mb-1">
+                      Unsaved Changes
+                    </h3>
+                    <p className="text-sm text-amber-600 dark:text-amber-300">
+                      You have unsaved changes. Make sure to save your settings before leaving this page.
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleSave}
+                    disabled={saving}
+                    className="border-amber-600 text-amber-600 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-700 dark:hover:bg-amber-900/20"
+                  >
+                    {saving ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Save className="h-4 w-4 mr-2" />
+                    )}
+                    Save Changes
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         {/* Backend Error Display */}
         {backendError && (
@@ -1528,7 +1699,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => window.open('https://github.com/HydroshieldMKII/Guardian?tab=readme-ov-file#application-settings', '_blank')}
+                      onClick={() => window.open('https://github.com/HydroshieldMKII/Guardian', '_blank')}
                       className="h-6 text-xs text-muted-foreground hover:text-foreground"
                     >
                       <BookOpen className="h-3 w-3 mr-1" />
@@ -1563,7 +1734,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
               {renderSectionContent(activeSection)}
 
               {/* Save Button - Only show for configurable sections */}
-              {(activeSection === "plex" || activeSection === "guardian" || activeSection === "notifications") && (
+              {(activeSection === "plex" || activeSection === "guardian" || activeSection === "notifications" || activeSection === "customization") && (
                 <>
                   <Separator className="my-6" />
                   <div className="flex justify-end space-x-2">
@@ -1645,6 +1816,30 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
         description="This will permanently remove all device records from the database. Devices will need to be detected again on their next stream attempt. Device preferences will be lost. This action cannot be undone."
         confirmText="Delete All Devices"
         cancelText="Cancel"
+        variant="destructive"
+      />
+
+      {/* Clear Session History Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={showClearSessionHistoryModal}
+        onClose={() => setShowClearSessionHistoryModal(false)}
+        onConfirm={handleClearSessionHistory}
+        title="Clear All Session History"
+        description="This will permanently remove all session history records from the database. This includes viewing history, timestamps, and session metadata for all users. This action cannot be undone."
+        confirmText="Clear Session History"
+        cancelText="Cancel"
+        variant="destructive"
+      />
+
+      {/* Unsaved Changes Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={showUnsavedChangesModal}
+        onClose={handleCancelBack}
+        onConfirm={handleConfirmBack}
+        title="Unsaved Changes"
+        description="You have unsaved changes that will be lost if you leave this page. Are you sure you want to continue without saving?"
+        confirmText="Leave Without Saving"
+        cancelText="Stay and keep editing"
         variant="destructive"
       />
     </div>

@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UserDevice } from '../../../entities/user-device.entity';
 import { SessionHistory } from '../../../entities/session-history.entity';
+import { UserPreference } from '../../../entities/user-preference.entity';
 import { PlexClient } from './plex-client';
 import { UsersService } from '../../users/services/users.service';
 import { ConfigService } from '../../config/services/config.service';
@@ -22,6 +23,8 @@ export class SessionTerminationService {
     private userDeviceRepository: Repository<UserDevice>,
     @InjectRepository(SessionHistory)
     private sessionHistoryRepository: Repository<SessionHistory>,
+    @InjectRepository(UserPreference)
+    private userPreferenceRepository: Repository<UserPreference>,
     private plexClient: PlexClient,
     private usersService: UsersService,
     @Inject(forwardRef(() => ConfigService))
@@ -31,6 +34,115 @@ export class SessionTerminationService {
     @Inject(forwardRef(() => NotificationsService))
     private notificationsService: NotificationsService,
   ) {}
+
+  // IP validation utilities
+  private isValidIPv4(ip: string): boolean {
+    const ipRegex = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+    return ipRegex.test(ip.trim());
+  }
+
+  private isValidCIDR(cidr: string): boolean {
+    const cidrRegex = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\/(?:[0-9]|[1-2][0-9]|3[0-2])$/;
+    return cidrRegex.test(cidr.trim());
+  }
+
+  private isPrivateIP(ip: string): boolean {
+    if (!this.isValidIPv4(ip)) return false;
+    const parts = ip.split('.').map(Number);
+    const [a, b] = parts;
+    return (
+      a === 10 ||
+      (a === 172 && b >= 16 && b <= 31) ||
+      (a === 192 && b === 168) ||
+      a === 127
+    );
+  }
+
+  private getNetworkType(ip: string): 'lan' | 'wan' | 'unknown' {
+    if (!this.isValidIPv4(ip)) return 'unknown';
+    return this.isPrivateIP(ip) ? 'lan' : 'wan';
+  }
+
+  private ipToNumber(ip: string): number {
+    return ip.split('.').reduce((acc, octet) => (acc << 8) + parseInt(octet), 0) >>> 0;
+  }
+
+  private isIPInCIDR(ip: string, cidr: string): boolean {
+    if (!this.isValidIPv4(ip) || !this.isValidCIDR(cidr)) return false;
+    const [network, prefixLength] = cidr.split('/');
+    const ipNum = this.ipToNumber(ip);
+    const networkNum = this.ipToNumber(network);
+    const mask = ((0xffffffff << (32 - parseInt(prefixLength))) >>> 0);
+    return (ipNum & mask) === (networkNum & mask);
+  }
+
+  private isIPAllowed(clientIP: string, allowedIPs: string[]): boolean {
+    if (!this.isValidIPv4(clientIP)) return false;
+    if (!allowedIPs.length) return true;
+
+    for (const allowed of allowedIPs) {
+      const trimmed = allowed.trim();
+      if (this.isValidIPv4(trimmed)) {
+        if (clientIP === trimmed) return true;
+      } else if (this.isValidCIDR(trimmed)) {
+        if (this.isIPInCIDR(clientIP, trimmed)) return true;
+      }
+    }
+    return false;
+  }
+
+  private async validateIPAccess(session: any): Promise<{ allowed: boolean; reason?: string }> {
+    try {
+      const userId = session.User?.id || session.User?.uuid;
+      const clientIP = session.Player?.address;
+
+      if (!userId) {
+        return { allowed: true }; // No user ID, can't validate
+      }
+
+      if (!clientIP || !this.isValidIPv4(clientIP)) {
+        return { allowed: false, reason: 'Invalid or missing client IP address from Plex' };
+      }
+
+      // Get user preferences
+      const userPreference = await this.userPreferenceRepository.findOne({
+        where: { userId },
+      });
+
+      if (!userPreference) {
+        return { allowed: true }; // No preferences set, allow access
+      }
+
+      const networkPolicy = userPreference.networkPolicy || 'both';
+      const ipAccessPolicy = userPreference.ipAccessPolicy || 'all';
+      const allowedIPs = userPreference.allowedIPs || [];
+
+      const networkType = this.getNetworkType(clientIP);
+
+      // Check network policy
+      if (networkPolicy === 'lan' && networkType !== 'lan') {
+        const message = await this.configService.getSetting('MSG_IP_LAN_ONLY') as string || 'Only LAN access is allowed';
+        return { allowed: false, reason: message };
+      }
+      if (networkPolicy === 'wan' && networkType !== 'wan') {
+        const message = await this.configService.getSetting('MSG_IP_WAN_ONLY') as string || 'Only WAN access is allowed';
+        return { allowed: false, reason: message };
+      }
+
+      // Check IP access policy
+      if (ipAccessPolicy === 'restricted') {
+        if (!this.isIPAllowed(clientIP, allowedIPs)) {
+          const message = await this.configService.getSetting('MSG_IP_NOT_ALLOWED') as string || 'Your current IP address is not in the allowed list';
+          return { allowed: false, reason: message };
+        }
+      }
+
+      return { allowed: true };
+    } catch (error) {
+      this.logger.error('Error validating IP access', error);
+      return { allowed: true }; // Allow on error to be safe
+    }
+  }
 
   async stopUnapprovedSessions(
     sessionsData: PlexSessionsResponse,
@@ -48,9 +160,9 @@ export class SessionTerminationService {
 
       for (const session of sessions) {
         try {
-          const shouldStop = await this.shouldStopSession(session);
+          const shouldStopResult = await this.shouldStopSession(session);
 
-          if (shouldStop) {
+          if (shouldStopResult.shouldStop) {
             const sessionId = session.Session?.id; // Device identifier for termination
             const sessionKey = session.sessionKey; // Session key for history lookup
             // console.log('Terminating unapproved session:', session);
@@ -61,7 +173,7 @@ export class SessionTerminationService {
               const userId = session.User?.id || 'unknown';
 
               // Terminate the session 
-              await this.terminateSession(sessionId);
+              await this.terminateSession(sessionId, shouldStopResult.reason);
               stoppedSessions.push(sessionId);
 
               // Create notification for the terminated session
@@ -89,9 +201,10 @@ export class SessionTerminationService {
                 this.logger.error(`Failed to create notification for terminated session ${sessionKey}`, notificationError);
               }
 
-              this.logger.warn(`Stopped unapproved session: ${session.Session?.id}`);
+              const reason = shouldStopResult.reason || 'Unapproved Device';
+              this.logger.warn(`Stopped session: ${session.Session?.id} - Reason: ${reason}`);
               this.logger.warn(
-                `Stopped unapproved session: ${username} on ${deviceName} (Session: ${sessionId})`,
+                `Stopped session: ${username} on ${deviceName} (Session: ${sessionId}) - Reason: ${reason}`,
               );
             } else {
               this.logger.warn(
@@ -118,7 +231,7 @@ export class SessionTerminationService {
     }
   }
 
-  private async shouldStopSession(session: any): Promise<boolean> {
+  private async shouldStopSession(session: any): Promise<{ shouldStop: boolean; reason?: string }> {
     try {
       const userId = session.User?.id || session.User?.uuid;
       const deviceIdentifier = session.Player?.machineIdentifier;
@@ -127,7 +240,21 @@ export class SessionTerminationService {
         this.logger.warn(
           'Session missing user ID or device identifier, cannot determine approval status',
         );
-        return false;
+        return { shouldStop: false };
+      }
+
+      // If stream is a Plexamp, always allow
+      if (session.Player?.product === 'Plexamp') {
+        return { shouldStop: false };
+      }
+
+      // First, validate IP access policies
+      const ipValidation = await this.validateIPAccess(session);
+      if (!ipValidation.allowed) {
+        this.logger.warn(
+          `IP access denied for user ${userId}: ${ipValidation.reason}`,
+        );
+        return { shouldStop: true, reason: `${ipValidation.reason}` };
       }
 
       // Check if device is approved
@@ -139,9 +266,14 @@ export class SessionTerminationService {
       if (!device || device.status === 'pending') {
         // Check if device has valid temporary access
         if (device && await this.deviceTrackingService.isTemporaryAccessValid(device)) {
-          return false; // Don't stop - temporary access is valid
+          return { shouldStop: false }; // Don't stop - temporary access is valid
         }
-        return await this.usersService.getEffectiveDefaultBlock(userId);
+        const shouldBlock = await this.usersService.getEffectiveDefaultBlock(userId);
+        if (shouldBlock) {
+          const message = await this.configService.getSetting('MSG_DEVICE_PENDING') as string || 'Device Pending Approval. The server owner must approve this device before it can be used.';
+          return { shouldStop: true, reason: message };
+        }
+        return { shouldStop: false };
       }
 
       if (device.status === 'rejected') {
@@ -150,28 +282,28 @@ export class SessionTerminationService {
           // this.logger.debug(
           //   `Rejected device ${deviceIdentifier} for user ${userId} has valid temporary access, allowing session.`,
           // );
-          return false; // Don't stop - temporary access overrides rejection
+          return { shouldStop: false }; // Don't stop - temporary access overrides rejection
         }
         
         this.logger.warn(
           `Device ${deviceIdentifier} for user ${userId} is explicitly rejected.`,
         );
-        return true; // Always stop if device is rejected and no temporary access
+        const message = await this.configService.getSetting('MSG_DEVICE_REJECTED') as string || 'You are not authorized to use this device. Please contact the server administrator for more information.';
+        return { shouldStop: true, reason: message };
       }
 
-      return false; // no terminate if device is approved
+      return { shouldStop: false }; // no terminate if device is approved
     } catch (error) {
       this.logger.error('Error checking session approval status', error);
-      return false; // Don't stop on error to be safe
+      return { shouldStop: false }; // Don't stop on error to be safe
     }
   }
 
   async terminateSession(sessionKey: string, reason?: string): Promise<void> {
     try {
       if (!reason) {
-        reason =
-          ((await this.configService.getSetting('PLEXGUARD_STOPMSG')) as string) ||
-          'This device must be approved by the server owner. Please contact the server administrator for more information.';
+        // Fallback to generic device pending message if no specific reason provided
+        reason = await this.configService.getSetting('MSG_DEVICE_PENDING') as string || 'This device must be approved by the server owner. Please contact the server administrator for more information.';
       }
 
       this.logger.log(
