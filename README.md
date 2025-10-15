@@ -142,14 +142,23 @@ Configure Guardian behavior and monitoring settings.
 
 - **Automatic update checking**: Automatically check for new releases when you open the app. Updates are never applied automatically, you will only be notified if a new version is available
 - **Default behavior for new devices**: Block new devices by default. Provides maximum security by requiring manual approval
-- **Show media thumbnails**: Display thumbnails for active streams
-- **Show background artwork**: Display background artwork for active streams
-- **Custom Plex web URL**: Custom URL or IP address for opening Plex content (e.g., https://app.plex.tv or `https://plex.mydomain.com`). Leave empty to use configured server settings
-- **Default page on startup**: Choose which page to display when the app loads
-- **Message**: Message shown when blocking streams
-- **Refresh interval**: Refresh interval for fetching session info and enforcing bans. This as no effect on the dashboard refresh rate. (default: `10` (seconds)
+- **Refresh interval**: Refresh interval for fetching session info and enforcing bans. This as no effect on the dashboard refresh rate. (default: `10` (seconds))
 - **Automatic device cleanup**: When enabled, devices that haven't streamed for the specified number of days will be automatically deleted and require approval again. You can specify the inactivity threshold with the setting below
 - **Device inactivity threshold (days)**: Number of days a device can be inactive before it's automatically deleted. (default: `30` (days))
+
+### Customization
+
+Customize the user interface, blocking messages, and overall user experience.
+
+- **Show media thumbnails**: Display thumbnails for active streams
+- **Show background artwork**: Display background artwork for active streams
+- **Custom Plex web URL**: Custom URL for opening Plex content (e.g., https://app.plex.tv). Leave empty to use configured server settings
+- **Default page on startup**: Choose which page to display when the app loads
+- **Device pending approval message**: Message displayed when a device is waiting for approval
+- **Device rejected message**: Message displayed when a device has been rejected
+- **LAN-only access message**: Message displayed when only LAN access is allowed
+- **WAN-only access message**: Message displayed when only WAN access is allowed
+- **IP not allowed message**: Message displayed when the IP address is not in the allowed list 
 
 ### Notification Settings
 
