@@ -213,6 +213,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
   const [showResetDatabaseModal, setShowResetDatabaseModal] = useState(false);
   const [showResetStreamCountsModal, setShowResetStreamCountsModal] = useState(false);
   const [showDeleteAllDevicesModal, setShowDeleteAllDevicesModal] = useState(false);
+  const [showUnsavedChangesModal, setShowUnsavedChangesModal] = useState(false);
   
   const { toast } = useToast();
 
@@ -1475,6 +1476,23 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
     });
   };
 
+  const handleBackWithConfirmation = () => {
+    if (hasChanges()) {
+      setShowUnsavedChangesModal(true);
+    } else {
+      onBack?.();
+    }
+  };
+
+  const handleConfirmBack = () => {
+    setShowUnsavedChangesModal(false);
+    onBack?.();
+  };
+
+  const handleCancelBack = () => {
+    setShowUnsavedChangesModal(false);
+  };
+
   return (
     <div className="min-h-[calc(100vh-3.5rem)]">
       <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-8">
@@ -1484,7 +1502,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
             <Button
               variant="ghost"
               size="sm"
-              onClick={onBack}
+              onClick={handleBackWithConfirmation}
               className="text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
@@ -1502,6 +1520,41 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
             Configure your Guardian dashboard and preferences
           </p>
         </div>
+
+        {/* Unsaved Changes Banner */}
+        {hasChanges() && (
+          <div className="mb-6">
+            <Card className="border-amber-600 bg-amber-50 dark:border-amber-700 dark:bg-amber-950/20">
+              <CardContent>
+                <div className="flex items-center gap-3">
+                  <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0" />
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-amber-800 dark:text-amber-200 mb-1">
+                      Unsaved Changes
+                    </h3>
+                    <p className="text-sm text-amber-600 dark:text-amber-300">
+                      You have unsaved changes. Make sure to save your settings before leaving this page.
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleSave}
+                    disabled={saving}
+                    className="border-amber-600 text-amber-600 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-700 dark:hover:bg-amber-900/20"
+                  >
+                    {saving ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Save className="h-4 w-4 mr-2" />
+                    )}
+                    Save Changes
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         {/* Backend Error Display */}
         {backendError && (
@@ -1706,6 +1759,18 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
         description="This will permanently remove all device records from the database. Devices will need to be detected again on their next stream attempt. Device preferences will be lost. This action cannot be undone."
         confirmText="Delete All Devices"
         cancelText="Cancel"
+        variant="destructive"
+      />
+
+      {/* Unsaved Changes Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={showUnsavedChangesModal}
+        onClose={handleCancelBack}
+        onConfirm={handleConfirmBack}
+        title="Unsaved Changes"
+        description="You have unsaved changes that will be lost if you leave this page. Are you sure you want to continue without saving?"
+        confirmText="Leave Without Saving"
+        cancelText="Stay and keep editing"
         variant="destructive"
       />
     </div>
