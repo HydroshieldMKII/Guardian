@@ -88,6 +88,7 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
     >
       {/* Status indicator stripe */}
       <div className={`absolute top-0 left-0 w-full h-1 ${
+        isPlexAmpDevice(device) ? 'bg-gradient-to-r from-purple-500 to-violet-500' :
         device.status === 'approved' ? 'bg-gradient-to-r from-green-500 to-emerald-500' :
         device.status === 'rejected' ? 'bg-gradient-to-r from-red-500 to-rose-500' :
         'bg-gradient-to-r from-yellow-500 to-amber-500'
