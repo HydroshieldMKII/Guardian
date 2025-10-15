@@ -64,6 +64,22 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
            device.deviceName?.toLowerCase().includes('plexamp');
   };
 
+  // Get device type badge
+  const getDeviceTypeBadge = () => {
+    if (isPlexAmpDevice(device)) {
+      return (
+        <Badge variant="outline" className="text-xs bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-700">
+          Plex Amp
+        </Badge>
+      );
+    }
+    return (
+      <Badge variant="outline" className="text-xs bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-700">
+        Plex
+      </Badge>
+    );
+  };
+
   return (
     <div
       id={`device-${device.id}`}
@@ -99,15 +115,16 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
               </div>
             </div>
             
-            {/* Temporary Access Badge - Mobile (aligned left, under device header) */}
-            {hasTemporaryAccess(device) && (
-              <div className="flex justify-start">
-                <Badge variant="outline" className="text-xs bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-700">
+            {/* Badges - Mobile */}
+            <div className="flex justify-start gap-2">
+              {getDeviceTypeBadge()}
+              {hasTemporaryAccess(device) && (
+                <Badge variant="outline" className="text-xs bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 border-orange-200 dark:border-orange-700">
                   <Timer className="w-3 h-3 mr-1" />
                   {getTemporaryAccessTimeLeft(device)}
                 </Badge>
-              </div>
-            )}
+              )}
+            </div>
           </div>          {/* Device Info Grid - Mobile */}
           <div className="grid grid-cols-1 gap-3 text-sm">
             <div className="flex items-center justify-between p-2.5 bg-muted/30 rounded-lg">
@@ -368,15 +385,16 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
                   </h4>
                 </div>
               </div>
-              {/* Temporary Access Badge - Desktop */}
-              {hasTemporaryAccess(device) && (
-                <div className="flex-shrink-0">
-                  <Badge variant="outline" className="text-xs bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-700">
+              {/* Badges - Desktop */}
+              <div className="flex-shrink-0 flex gap-2">
+                {getDeviceTypeBadge()}
+                {hasTemporaryAccess(device) && (
+                  <Badge variant="outline" className="text-xs bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 border-orange-200 dark:border-orange-700">
                     <Timer className="w-3 h-3 mr-1" />
                     {getTemporaryAccessTimeLeft(device)}
                   </Badge>
-                </div>
-              )}
+                )}
+              </div>
             </div>
             {/* Device Info Grid - Desktop */}
             <div className="grid grid-cols-2 gap-3 text-sm">
