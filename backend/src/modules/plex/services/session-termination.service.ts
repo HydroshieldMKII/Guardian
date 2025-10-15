@@ -297,9 +297,7 @@ export class SessionTerminationService {
   async terminateSession(sessionKey: string, reason?: string): Promise<void> {
     try {
       if (!reason) {
-        reason =
-          ((await this.configService.getSetting('PLEXGUARD_STOPMSG')) as string) ||
-          'This device must be approved by the server owner. Please contact the server administrator for more information.';
+        reason = 'This device must be approved by the server owner. Please contact the server administrator for more information.';
       }
 
       this.logger.log(
