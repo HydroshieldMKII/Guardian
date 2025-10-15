@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import { UserDevice } from '../../../entities/user-device.entity';
+import { SessionHistory } from '../../../entities/session-history.entity';
 import { UsersService } from '../../users/services/users.service';
 import {
   PlexSession,
@@ -250,8 +251,24 @@ export class DeviceTrackingService {
   }
 
   async deleteDevice(deviceId: number): Promise<void> {
-    await this.userDeviceRepository.delete(deviceId);
-    this.logger.log(`Device ${deviceId} has been deleted`);
+    try {
+      await this.userDeviceRepository.manager.transaction(async transactionalEntityManager => {
+        await transactionalEntityManager
+          .getRepository(SessionHistory)
+          .delete({ userDeviceId: deviceId });
+        
+        this.logger.debug(`Session history deleted for device ${deviceId}`);
+        
+        await transactionalEntityManager
+          .getRepository(UserDevice)
+          .delete(deviceId);
+      });
+      
+      this.logger.log(`Device ${deviceId} and its related data have been deleted`);
+    } catch (error) {
+      this.logger.error(`Failed to delete device ${deviceId}:`, error);
+      throw new Error(`Device deletion failed: ${error.message}`);
+    }
   }
 
   async renameDevice(deviceId: number, newName: string): Promise<void> {
