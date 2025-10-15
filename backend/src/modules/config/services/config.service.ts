@@ -812,4 +812,26 @@ export class ConfigService {
       throw new Error(`Device deletion failed: ${error.message}`);
     }
   }
+
+  async clearAllSessionHistory(): Promise<void> {
+    try {
+      this.logger.warn('CLEARING ALL SESSION HISTORY per user request');
+      
+      // Get count before deletion for logging
+      const sessionCount = await this.settingsRepository.manager
+        .getRepository(SessionHistory)
+        .count();
+      
+      await this.settingsRepository.manager.transaction(async transactionalEntityManager => {
+        // Clear all session history
+        await transactionalEntityManager.getRepository(SessionHistory).clear();
+        this.logger.debug('Session history cleared');
+      });
+      
+      this.logger.warn(`All ${sessionCount} session history records have been cleared`);
+    } catch (error) {
+      this.logger.error('Failed to clear session history:', error);
+      throw new Error(`Session history clearing failed: ${error.message}`);
+    }
+  }
 }

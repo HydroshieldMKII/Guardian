@@ -213,6 +213,8 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
   const [showResetDatabaseModal, setShowResetDatabaseModal] = useState(false);
   const [showResetStreamCountsModal, setShowResetStreamCountsModal] = useState(false);
   const [showDeleteAllDevicesModal, setShowDeleteAllDevicesModal] = useState(false);
+  const [clearingSessionHistory, setClearingSessionHistory] = useState(false);
+  const [showClearSessionHistoryModal, setShowClearSessionHistoryModal] = useState(false);
   const [showUnsavedChangesModal, setShowUnsavedChangesModal] = useState(false);
   
   const { toast } = useToast();
@@ -798,6 +800,34 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
     }
   };
 
+  const handleClearSessionHistory = async () => {
+    setClearingSessionHistory(true);
+    try {
+      const response = await fetch(`${config.api.baseUrl}/config/scripts/clear-session-history`, {
+        method: 'POST',
+      });
+
+      if (response.ok) {
+        toast({
+          title: "Session history cleared successfully",
+          description: "All session history records have been removed from the database",
+          variant: "success",
+        });
+      } else {
+        throw new Error('Failed to clear session history');
+      }
+    } catch (error) {
+      toast({
+        title: "Failed to clear session history",
+        description: error instanceof Error ? error.message : "Unknown error occurred",
+        variant: "destructive",
+      });
+    } finally {
+      setClearingSessionHistory(false);
+      setShowClearSessionHistoryModal(false);
+    }
+  };
+
   const getSettingsByCategory = (category: string) => {
     const categoryMap: Record<string, string[]> = {
       plex: [
@@ -1320,6 +1350,33 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
                 </div>
               </Card>
 
+              {/* Clear Session History */}
+              <Card className="p-4">
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="text-sm font-medium flex items-center">
+                      Clear All Session History
+                    </h4>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Permanently remove all session history records from the database. This will clear viewing history for all users.
+                    </p>
+                  </div>
+                  <Button
+                    onClick={() => setShowClearSessionHistoryModal(true)}
+                    disabled={clearingSessionHistory}
+                    size="sm"
+                    variant="outline"
+                  >
+                    {clearingSessionHistory ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <XCircle className="w-4 h-4 mr-2" />
+                    )}
+                    {clearingSessionHistory ? "Clearing..." : "Clear Session History"}
+                  </Button>
+                </div>
+              </Card>
+
               {/* Delete All Devices */}
               <Card className="p-4 border-red-200 dark:border-red-800">
                 <div className="space-y-4">
@@ -1758,6 +1815,18 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
         title="Delete All Devices"
         description="This will permanently remove all device records from the database. Devices will need to be detected again on their next stream attempt. Device preferences will be lost. This action cannot be undone."
         confirmText="Delete All Devices"
+        cancelText="Cancel"
+        variant="destructive"
+      />
+
+      {/* Clear Session History Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={showClearSessionHistoryModal}
+        onClose={() => setShowClearSessionHistoryModal(false)}
+        onConfirm={handleClearSessionHistory}
+        title="Clear All Session History"
+        description="This will permanently remove all session history records from the database. This includes viewing history, timestamps, and session metadata for all users. This action cannot be undone."
+        confirmText="Clear Session History"
         cancelText="Cancel"
         variant="destructive"
       />

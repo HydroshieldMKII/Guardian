@@ -359,7 +359,7 @@ export class DeviceTrackingService {
     await this.sessionHistoryRepository
           .createQueryBuilder()
           .update(SessionHistory)
-          .set({ endedAt: () => 'CURRENT_TIMESTAMP', terminated: true })
+          .set({ endedAt: () => 'CURRENT_TIMESTAMP'})
           .where('session_key = :sessionKey', { sessionKey })
           .execute();
       

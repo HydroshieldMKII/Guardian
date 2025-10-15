@@ -202,4 +202,17 @@ export class ConfigController {
       );
     }
   }
+
+  @Post('scripts/clear-session-history')
+  async clearSessionHistory() {
+    try {
+      await this.configService.clearAllSessionHistory();
+      return { message: 'Session history cleared successfully' };
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Failed to clear session history',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
 }
