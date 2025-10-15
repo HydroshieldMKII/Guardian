@@ -58,6 +58,12 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
 }) => {
   const { hasTemporaryAccess, getTemporaryAccessTimeLeft } = useDeviceUtils();
 
+  // Helper function to identify Plex Amp devices
+  const isPlexAmpDevice = (device: UserDevice) => {
+    return device.deviceProduct?.toLowerCase().includes('plexamp') || 
+           device.deviceName?.toLowerCase().includes('plexamp');
+  };
+
   return (
     <div
       id={`device-${device.id}`}
@@ -156,7 +162,25 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
             </Button>
 
             {/* Action Buttons Row */}
-            {device.status === "pending" ? (
+            {isPlexAmpDevice(device) ? (
+              // Plex Amp devices - only show delete button
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => onDelete(device)}
+                disabled={actionLoading === device.id}
+                className="text-sm px-4 py-2.5 w-full bg-red-600 dark:bg-red-700 text-white hover:bg-red-700 dark:hover:bg-red-800"
+              >
+                {actionLoading === device.id ? (
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    <span>Delete</span>
+                  </>
+                )}
+              </Button>
+            ) : device.status === "pending" ? (
               <div className="space-y-3">
                 <div className="grid grid-cols-2 gap-3">
                   <Button
@@ -395,7 +419,25 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
             </Button>
 
             {/* Action Buttons Row */}
-            {device.status === "pending" ? (
+            {isPlexAmpDevice(device) ? (
+              // Plex Amp devices - only show delete button
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => onDelete(device)}
+                disabled={actionLoading === device.id}
+                className="text-sm px-3 py-2 w-full bg-red-600 dark:bg-red-700 text-white hover:bg-red-700 dark:hover:bg-red-800"
+              >
+                {actionLoading === device.id ? (
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Delete
+                  </>
+                )}
+              </Button>
+            ) : device.status === "pending" ? (
               <div className="space-y-2">
                 <div className="flex gap-2">
                   <Button
