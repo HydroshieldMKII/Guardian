@@ -85,10 +85,33 @@ export class ConfigService {
       type: 'boolean' as const,
       },
       {
-      key: 'PLEXGUARD_STOPMSG',
-      value:
-        'This device must be approved by the server owner. Please contact the server administrator for more information.',
-      description: 'Message shown when blocking streams',
+      key: 'MSG_DEVICE_PENDING',
+      value: 'Device Pending Approval. The server owner must approve this device before it can be used.',
+      description: 'Message displayed when a device is pending approval',
+      type: 'string' as const,
+      },
+      {
+      key: 'MSG_DEVICE_REJECTED',
+      value: 'You are not authorized to use this device. Please contact the server administrator for more information.',
+      description: 'Message displayed when a device is rejected',
+      type: 'string' as const,
+      },
+      {
+      key: 'MSG_IP_LAN_ONLY',
+      value: 'Only LAN access is allowed',
+      description: 'Message displayed when only LAN access is permitted',
+      type: 'string' as const,
+      },
+      {
+      key: 'MSG_IP_WAN_ONLY',
+      value: 'Only WAN access is allowed',
+      description: 'Message displayed when only WAN access is permitted',
+      type: 'string' as const,
+      },
+      {
+      key: 'MSG_IP_NOT_ALLOWED',
+      value: 'Your current IP address is not in the allowed list',
+      description: 'Message displayed when IP address is not in the allowed list',
       type: 'string' as const,
       },
       {

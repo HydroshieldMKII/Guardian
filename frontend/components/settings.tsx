@@ -61,16 +61,22 @@ const settingsSections = [
     icon: Shield,
   },
   {
-    id: "plex",
-    title: "Plex Integration",
-    description: "Configure Plex server connection and settings",
-    icon: Server,
+    id: "customization",
+    title: "Customization",
+    description: "Customize user interface, messages, and experience",
+    icon: User,
   },
   {
     id: "notifications",
     title: "Notification Settings",
     description: "Configure notification behavior and preferences",
     icon: BellRing,
+  },
+  {
+    id: "plex",
+    title: "Plex Integration",
+    description: "Configure Plex server connection and settings",
+    icon: Server,
   },
   {
     id: "database",
@@ -84,18 +90,6 @@ const settingsSections = [
     description: "Dangerous operations for database management",
     icon: AlertTriangle,
   },
-  // {
-  //   id: "notifications",
-  //   title: "Notifications",
-  //   description: "Configure notification preferences and alert settings",
-  //   icon: Bell,
-  // },
-  // {
-  //   id: "profile",
-  //   title: "Profile",
-  //   description: "Manage your account profile and personal information",
-  //   icon: User,
-  // },
 ];
 
 // Function to get setting label and description
@@ -105,7 +99,26 @@ const getSettingInfo = (setting: AppSetting): { label: string; description: stri
     'PLEX_SERVER_PORT': { label: 'Plex server port' },
     'PLEX_TOKEN': { label: 'Authentication token' },
     'PLEXGUARD_REFRESH_INTERVAL': { label: 'Refresh interval' },
-    'PLEXGUARD_STOPMSG': { label: 'Message' },
+    'MSG_DEVICE_PENDING': { 
+      label: 'Device pending approval message',
+      description: 'Message displayed when a device is waiting for approval'
+    },
+    'MSG_DEVICE_REJECTED': { 
+      label: 'Device rejected message',
+      description: 'Message displayed when a device has been rejected'
+    },
+    'MSG_IP_LAN_ONLY': { 
+      label: 'LAN-only access message',
+      description: 'Message displayed when only LAN access is allowed'
+    },
+    'MSG_IP_WAN_ONLY': { 
+      label: 'WAN-only access message',
+      description: 'Message displayed when only WAN access is allowed'
+    },
+    'MSG_IP_NOT_ALLOWED': { 
+      label: 'IP not allowed message',
+      description: 'Message displayed when the IP address is not in the allowed list'
+    },
     'PLEX_GUARD_DEFAULT_BLOCK': { label: 'Default behavior for new devices' },
     'DEVICE_CLEANUP_ENABLED': { 
       label: 'Automatic device cleanup',
@@ -773,12 +786,18 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
       guardian: [
         "AUTO_CHECK_UPDATES",
         "PLEX_GUARD_DEFAULT_BLOCK",
+        "PLEXGUARD_REFRESH_INTERVAL",
+      ],
+      customization: [
         "ENABLE_MEDIA_THUMBNAILS",
         "ENABLE_MEDIA_ARTWORK",
         "CUSTOM_PLEX_URL",
         "DEFAULT_PAGE",
-        "PLEXGUARD_STOPMSG",
-        "PLEXGUARD_REFRESH_INTERVAL",
+        "MSG_DEVICE_PENDING",
+        "MSG_DEVICE_REJECTED",
+        "MSG_IP_LAN_ONLY",
+        "MSG_IP_WAN_ONLY",
+        "MSG_IP_NOT_ALLOWED",
       ],
       notifications: [
         "AUTO_MARK_NOTIFICATION_READ"
@@ -1130,6 +1149,26 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
 
             <div className="space-y-4">
               {getSettingsByCategory("notifications").map((setting) => (
+                <Card key={setting.key} className="p-4">
+                  {renderSettingField(setting)}
+                </Card>
+              ))}
+            </div>
+          </div>
+        );
+
+      case "customization":
+        return (
+          <div className="space-y-6">
+            <div>
+              <h3 className="text-lg font-medium">Customization Settings</h3>
+              <p className="text-sm text-muted-foreground">
+                Customize the user interface, blocking messages, and overall user experience.
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              {getSettingsByCategory("customization").map((setting) => (
                 <Card key={setting.key} className="p-4">
                   {renderSettingField(setting)}
                 </Card>
@@ -1563,7 +1602,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
               {renderSectionContent(activeSection)}
 
               {/* Save Button - Only show for configurable sections */}
-              {(activeSection === "plex" || activeSection === "guardian" || activeSection === "notifications") && (
+              {(activeSection === "plex" || activeSection === "guardian" || activeSection === "notifications" || activeSection === "customization") && (
                 <>
                   <Separator className="my-6" />
                   <div className="flex justify-end space-x-2">

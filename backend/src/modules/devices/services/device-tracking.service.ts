@@ -17,6 +17,8 @@ export class DeviceTrackingService {
   constructor(
     @InjectRepository(UserDevice)
     private userDeviceRepository: Repository<UserDevice>,
+    @InjectRepository(SessionHistory)
+    private sessionHistoryRepository: Repository<SessionHistory>,
     private usersService: UsersService,
   ) {}
 
@@ -352,6 +354,14 @@ export class DeviceTrackingService {
       .set({ currentSessionKey: () => 'NULL' })
       .where('current_session_key = :sessionKey', { sessionKey })
       .execute();
+
+    // Find in session history and mark terminated at true
+    await this.sessionHistoryRepository
+          .createQueryBuilder()
+          .update(SessionHistory)
+          .set({ endedAt: () => 'CURRENT_TIMESTAMP', terminated: true })
+          .where('session_key = :sessionKey', { sessionKey })
+          .execute();
       
     this.logger.debug(`Cleared session key for ${result.affected || 0} device(s) that stopped streaming (session: ${sessionKey})`);
   

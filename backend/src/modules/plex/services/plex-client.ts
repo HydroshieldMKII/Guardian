@@ -350,22 +350,7 @@ export class PlexClient {
       method: 'GET',
     });
 
-    // Get device by identifier
-    const device = await this.userDeviceRepository.findOne({
-      where: { deviceIdentifier },
-    });
-
-    // Mark all active sessions for this device as ended + terminated
-    setTimeout(async () => {
-      await this.sessionHistoryRepository
-      .createQueryBuilder()
-      .update(SessionHistory)
-      .set({ endedAt: () => 'CURRENT_TIMESTAMP', terminated: true })
-      .where('user_device_id = :deviceId AND session_key = :deviceSessionKey', { deviceId: device?.id, deviceSessionKey: device?.currentSessionKey })
-      .execute();
-    }, 10000); // Delay to allow Plex server to process termination
-
-    this.logger.log(`Terminated session ${deviceIdentifier}`);
+    this.logger.log(`Terminate session requested to Plex for ${deviceIdentifier}`);
   }
 
   async testConnection(): Promise<PlexResponse> {

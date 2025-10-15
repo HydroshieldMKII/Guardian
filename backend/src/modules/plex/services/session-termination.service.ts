@@ -121,16 +121,19 @@ export class SessionTerminationService {
 
       // Check network policy
       if (networkPolicy === 'lan' && networkType !== 'lan') {
-        return { allowed: false, reason: 'Only LAN access is allowed' };
+        const message = await this.configService.getSetting('MSG_IP_LAN_ONLY') as string || 'Only LAN access is allowed';
+        return { allowed: false, reason: message };
       }
       if (networkPolicy === 'wan' && networkType !== 'wan') {
-        return { allowed: false, reason: 'Only WAN access is allowed' };
+        const message = await this.configService.getSetting('MSG_IP_WAN_ONLY') as string || 'Only WAN access is allowed';
+        return { allowed: false, reason: message };
       }
 
       // Check IP access policy
       if (ipAccessPolicy === 'restricted') {
         if (!this.isIPAllowed(clientIP, allowedIPs)) {
-          return { allowed: false, reason: 'Your current IP address is not in the allowed list' };
+          const message = await this.configService.getSetting('MSG_IP_NOT_ALLOWED') as string || 'Your current IP address is not in the allowed list';
+          return { allowed: false, reason: message };
         }
       }
 
@@ -266,10 +269,11 @@ export class SessionTerminationService {
           return { shouldStop: false }; // Don't stop - temporary access is valid
         }
         const shouldBlock = await this.usersService.getEffectiveDefaultBlock(userId);
-        return { 
-          shouldStop: shouldBlock, 
-          reason: shouldBlock ? 'Device Pending Approval. The server owner must approve this device before it can be used.' : undefined 
-        };
+        if (shouldBlock) {
+          const message = await this.configService.getSetting('MSG_DEVICE_PENDING') as string || 'Device Pending Approval. The server owner must approve this device before it can be used.';
+          return { shouldStop: true, reason: message };
+        }
+        return { shouldStop: false };
       }
 
       if (device.status === 'rejected') {
@@ -284,7 +288,8 @@ export class SessionTerminationService {
         this.logger.warn(
           `Device ${deviceIdentifier} for user ${userId} is explicitly rejected.`,
         );
-        return { shouldStop: true, reason: 'You are not authorized to use this device. Please contact the server administrator for more information.' };
+        const message = await this.configService.getSetting('MSG_DEVICE_REJECTED') as string || 'You are not authorized to use this device. Please contact the server administrator for more information.';
+        return { shouldStop: true, reason: message };
       }
 
       return { shouldStop: false }; // no terminate if device is approved
@@ -297,7 +302,8 @@ export class SessionTerminationService {
   async terminateSession(sessionKey: string, reason?: string): Promise<void> {
     try {
       if (!reason) {
-        reason = 'This device must be approved by the server owner. Please contact the server administrator for more information.';
+        // Fallback to generic device pending message if no specific reason provided
+        reason = await this.configService.getSetting('MSG_DEVICE_PENDING') as string || 'This device must be approved by the server owner. Please contact the server administrator for more information.';
       }
 
       this.logger.log(
