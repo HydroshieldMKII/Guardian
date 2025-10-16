@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Notification } from '../../../entities/notification.entity';
 import { SessionHistory } from '../../../entities/session-history.entity';
+import { ConfigService } from '../../config/services/config.service';
 
 export interface CreateNotificationDto {
   userId: string;
@@ -30,6 +31,7 @@ export class NotificationsService {
     private notificationRepository: Repository<Notification>,
     @InjectRepository(SessionHistory)
     private sessionHistoryRepository: Repository<SessionHistory>,
+    private configService: ConfigService,
   ) {}
 
   async createNotification(createDto: CreateNotificationDto): Promise<Notification> {
@@ -117,13 +119,21 @@ export class NotificationsService {
     }));
   }
 
-  async markAsRead(notificationId: number): Promise<Notification> {
+  async markAsRead(notificationId: number, forced: boolean = false): Promise<Notification> {
     const notification = await this.notificationRepository.findOne({
       where: { id: notificationId }
     });
 
     if (!notification) {
       throw new NotFoundException(`Notification with ID ${notificationId} not found`);
+    }
+    
+    // Check if auto-mark as read is enabled
+    if (!forced) {
+      const autoMarkRead = await this.configService.getSetting('AUTO_MARK_NOTIFICATION_READ');
+      if (!autoMarkRead) {
+        return notification;
+      }
     }
 
     notification.read = true;
