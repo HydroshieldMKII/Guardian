@@ -281,7 +281,7 @@ update
 
 - Verify Plex is running and reachable
 - Confirm Plex token is valid
-- Check logs for details
+- Check logs for misconfigurations or errors
 
 ### Docker Logs
 
@@ -291,6 +291,8 @@ docker compose logs -f backend
 ```
 
 ### Proxmox Logs
+
+Go into the LXC console then:
 
 ```bash
 systemctl status guardian-backend
