@@ -15,11 +15,16 @@ It helps you monitor activity, control device access, and ensure only authorized
 - [Features](#features)
 - [Installation](#installation)
   - [Docker (Recommended)](#docker-recommended)
+  - [Proxmox](#proxmox)
   - [Unraid](#unraid)
 - [Configuration](#configuration)
 - [Application Settings](#application-settings)
 - [Updating](#updating)
+   - [Docker](#docker)
+   - [Proxmox](#proxmox-1)
 - [Troubleshooting](#troubleshooting)
+   - [Docker Logs](#docker-logs)
+   - [Proxmox Logs](#proxmox-logs)
 - [Contributing](#contributing)
 
 ---
@@ -93,6 +98,31 @@ It helps you monitor activity, control device access, and ensure only authorized
 
 ---
 
+### Proxmox
+
+You can run Guardian in a lightweight LXC container using the community script.
+
+**Prerequisites**
+
+- Proxmox VE server
+- Plex Media Server running and accessible
+- Plex authentication token
+
+**Steps**
+
+1. Run the automated installation script:
+   ```bash
+   bash -c "$(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/guardian.sh)"
+   ```
+
+2. Follow the interactive prompts to configure the container.
+
+3. Once deployed, access Guardian at `http://[CONTAINER-IP]:3000`.
+
+For more details and configuration options, see the [community script documentation](https://community-scripts.github.io/ProxmoxVE/scripts?id=guardian).
+
+---
+
 ### Unraid
 
 **Prerequisites**
@@ -122,16 +152,43 @@ It helps you monitor activity, control device access, and ensure only authorized
 
 ## Configuration
 
-Guardian supports optional environment variables in `.env`:
+Guardian can be customized using environment variables in a `.env` file for Docker deployments or through the web interface settings.
 
-- `PLEXGUARD_FRONTEND_PORT`: Frontend port (default `3000`)
-- `VERSION`: Docker image version (default `latest`, or use e.g. `v1.2.3`)
+### Environment Variables
 
-Apply changes by recreating containers:
+Create a `.env` file to customize Guardian's behavior:
 
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `PLEXGUARD_FRONTEND_PORT` | Port for the web interface | `3000` |
+| `VERSION` | Docker image version to use | `latest` |
+
+**Example `.env` file:**
+```bash
+PLEXGUARD_FRONTEND_PORT=3456
+VERSION=v1.2.3
+```
+
+### File Locations
+
+- **Docker**: Place `.env` in the same directory as `docker-compose.yml`
+- **Proxmox**: Place `.env` at `/opt/guardian/.env`
+
+### Applying Changes
+
+After modifying environment variables, restart Guardian:
+
+**Docker:**
 ```bash
 docker compose up -d --force-recreate
 ```
+
+**Proxmox:**
+```bash
+systemctl restart guardian-backend guardian-frontend
+```
+
+> **Note**: Most configuration is done through Guardian's web interface after installation. Environment variables are primarily for deployment customization.
 
 ---
 
@@ -195,9 +252,27 @@ Configure how notifications behave and interact with your workflow.
 
 Always back up data before updating. You can export your database from the settings page.
 
+### Docker
+
+You can automate this task with Watchtower, or do it manually:
+
 ```bash
 docker compose pull
 docker compose up -d
+```
+
+### Proxmox
+
+If you used the community script to install Guardian, you can update it by running:
+
+```bash
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/guardian.sh)" -u
+```
+
+or type in the LXC console:
+
+```bash
+update
 ```
 
 ---
@@ -206,11 +281,20 @@ docker compose up -d
 
 - Verify Plex is running and reachable
 - Confirm Plex token is valid
-- Check logs for details:
+- Check logs for details
+
+### Docker Logs
 
 ```bash
 docker compose ps
 docker compose logs -f backend
+```
+
+### Proxmox Logs
+
+```bash
+systemctl status guardian-backend
+systemctl status guardian-frontend
 ```
 
 If issues persist, open an issue on [GitHub](https://github.com/HydroshieldMKII/Guardian/issues).
