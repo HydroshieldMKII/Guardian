@@ -81,7 +81,7 @@ export const getProgressPercentage = (
 // Utility function to get formatted content title
 export const getContentTitle = (session: any) => {
   if (session.type === "episode" && session.grandparentTitle) {
-    return `${session.grandparentTitle} - ${session.parentTitle} ${session.title}`;
+    return `${session.grandparentTitle} - ${session.parentTitle}: ${session.title}`;
   }
   if (session.type === "movie") {
     return `${session.title} (${session.year})`;

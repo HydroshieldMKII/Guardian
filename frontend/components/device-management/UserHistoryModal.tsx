@@ -59,6 +59,7 @@ interface SessionHistoryEntry {
   terminated?: boolean;
   thumb?: string;
   art?: string;
+  product?: string;
 }
 
 interface UserHistoryModalProps {
@@ -134,22 +135,37 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
 
   const formatTitle = (session: SessionHistoryEntry) => {
     if (session.contentType === 'episode' && session.grandparentTitle) {
-      // For TV episodes: "Series - Season X - Episode Title"
-      const parts = [session.grandparentTitle];
-      if (session.parentTitle) {
-        parts.push(session.parentTitle);
+      // For TV episodes: "Series - Season X: Episode Title"
+      let result = session.grandparentTitle;
+      if (session.parentTitle && session.contentTitle) {
+        result += ` - ${session.parentTitle}: ${session.contentTitle}`;
+      } else if (session.parentTitle) {
+        result += ` - ${session.parentTitle}`;
+      } else if (session.contentTitle) {
+        result += ` - ${session.contentTitle}`;
       }
-      if (session.contentTitle) {
-        parts.push(session.contentTitle);
-      }
-      return parts.join(' - ');
+      return result;
     }
+
     // For movies or other content
     return session.contentTitle || 'Unknown Title';
   };
 
   const getDeviceDisplayName = (session: SessionHistoryEntry) => {
     return session.userDevice?.deviceName || session.userDevice?.deviceProduct || 'Unknown Device';
+  };
+
+  const formatProduct = (session: SessionHistoryEntry) => {
+    const product = session.product || session.userDevice?.deviceProduct;
+    if (!product) return 'Unknown';
+    
+    // Check if it's Plex Amp based on product name
+    if (product.toLowerCase() === 'plexamp') {
+      return 'Plex Amp';
+    }
+    
+    // Default to Plex for most cases
+    return 'Plex';
   };
 
   // Filter sessions based on search term and terminated filter
@@ -383,32 +399,32 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
               </div>
             ) : (
               <>
-                {/* Desktop Table View */}
+                  {/* Desktop Table View */}
                 <div className="hidden md:block divide-y">
                   {/* Header */}
-                  <div className="grid grid-cols-8 gap-2 p-3 bg-muted text-sm font-medium sticky top-0 z-10">
+                  <div className="grid gap-2 p-3 bg-muted text-sm font-medium sticky top-0 z-10" style={{ gridTemplateColumns: '2fr 1.2fr 0.8fr 0.8fr 1.2fr 1.4fr 1.4fr 0.8fr 0.8fr' }}>
                     <div>Content</div>
                     <div>Device</div>
                     <div>Platform</div>
+                    <div>Product</div>
                     <div>IP Address</div>
                     <div>Started</div>
                     <div>Ended</div>
                     <div>Duration</div>
                     <div>Actions</div>
-                  </div>
-
-                  {/* Desktop Session Rows */}
+                  </div>                  {/* Desktop Session Rows */}
                   {filteredSessions.map((session) => (
                     <div 
                       key={session.id}
                       data-session-id={session.id}
-                      className={`grid grid-cols-8 gap-2 p-3 transition-colors ${
+                      className={`grid gap-2 p-3 transition-colors ${
                         !session.endedAt 
                           ? 'bg-green-50/20 hover:bg-green-50/30 border-l-4 border-l-green-500' 
                           : session.terminated
                           ? 'bg-red-50/20 hover:bg-red-50/30 border-l-4 border-l-red-500'
                           : 'hover:bg-muted/30'
                       }`}
+                      style={{ gridTemplateColumns: '2fr 1.2fr 0.8fr 0.8fr 1.2fr 1.4fr 1.4fr 0.8fr 0.8fr' }}
                     >
                       {/* Content Title */}
                       <div className="overflow-hidden">
@@ -436,6 +452,13 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
                             {session.userDevice.devicePlatform}
                           </div>
                         )}
+                      </div>
+
+                      {/* Product */}
+                      <div className="overflow-hidden">
+                        <div className="text-xs text-muted-foreground">
+                          {formatProduct(session)}
+                        </div>
                       </div>
 
                       {/* IP Address */}
@@ -558,6 +581,12 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
                             </span>
                           </div>
                         )}
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-muted-foreground">Product:</span>
+                          <span className="text-sm">
+                            {formatProduct(session)}
+                          </span>
+                        </div>
                       </div>
 
                       {/* Timing Information */}
