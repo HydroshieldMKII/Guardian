@@ -70,7 +70,7 @@ export class NotificationsService {
           text = `${username} stream was blocked - "${deviceName}" tried to stream on LAN access (WAN-only policy)`;
           break;
         case 'IP_POLICY_NOT_ALLOWED':
-          text = `${username} stream was blocked - "${deviceName}" IP not in allowed list (restricted IP policy)`;
+          text = `${username} stream was blocked - "${deviceName}" IP is not in the allowed list (restricted IP policy)`;
           break;
         default:
           text = `${username} stream was blocked on "${deviceName}" - ${stopCode}`;
