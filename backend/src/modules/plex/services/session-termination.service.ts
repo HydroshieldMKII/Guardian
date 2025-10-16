@@ -91,7 +91,7 @@ export class SessionTerminationService {
     return false;
   }
 
-  private async validateIPAccess(session: any): Promise<{ allowed: boolean; reason?: string }> {
+  private async validateIPAccess(session: any): Promise<{ allowed: boolean; reason?: string; stopCode?: string }> {
     try {
       const userId = session.User?.id || session.User?.uuid;
       const clientIP = session.Player?.address;
@@ -122,18 +122,18 @@ export class SessionTerminationService {
       // Check network policy
       if (networkPolicy === 'lan' && networkType !== 'lan') {
         const message = await this.configService.getSetting('MSG_IP_LAN_ONLY') as string || 'Only LAN access is allowed';
-        return { allowed: false, reason: message };
+        return { allowed: false, reason: message, stopCode: 'IP_POLICY_LAN_ONLY' };
       }
       if (networkPolicy === 'wan' && networkType !== 'wan') {
         const message = await this.configService.getSetting('MSG_IP_WAN_ONLY') as string || 'Only WAN access is allowed';
-        return { allowed: false, reason: message };
+        return { allowed: false, reason: message, stopCode: 'IP_POLICY_WAN_ONLY' };
       }
 
       // Check IP access policy
       if (ipAccessPolicy === 'restricted') {
         if (!this.isIPAllowed(clientIP, allowedIPs)) {
           const message = await this.configService.getSetting('MSG_IP_NOT_ALLOWED') as string || 'Your current IP address is not in the allowed list';
-          return { allowed: false, reason: message };
+          return { allowed: false, reason: message, stopCode: 'IP_POLICY_NOT_ALLOWED' };
         }
       }
 
@@ -171,9 +171,11 @@ export class SessionTerminationService {
               const username = session.User?.title || 'Unknown';
               const deviceName = session.Player?.title || 'Unknown Device';
               const userId = session.User?.id || 'unknown';
+              const reason = shouldStopResult.reason;
+              const stopCode = shouldStopResult.stopCode;
 
               // Terminate the session 
-              await this.terminateSession(sessionId, shouldStopResult.reason);
+              await this.terminateSession(sessionId, reason);
               stoppedSessions.push(sessionId);
 
               // Create notification for the terminated session
@@ -186,22 +188,21 @@ export class SessionTerminationService {
                 if (sessionHistory) {
                   this.logger.log(`Found session history with ID: ${sessionHistory.id} for sessionKey: ${sessionKey}`);
                 } else {
-                  this.logger.warn(`No session history found for sessionKey: ${sessionKey} (device: ${sessionId})`);
+                  this.logger.error(`No session history found for sessionKey: ${sessionKey} (device: ${sessionId})`);
                 }
                 
                 await this.notificationsService.createStreamBlockedNotification(
                   userId,
                   username,
                   deviceName,
+                  stopCode,
                   sessionHistory?.id
                 );
 
-                this.logger.log(`Created notification for terminated session: ${username} on ${deviceName} (sessionHistoryId: ${sessionHistory?.id || 'null'})`);
+                this.logger.log(`Created notification for terminated session: ${username} on ${deviceName} (reason: ${reason}, sessionHistoryId: ${sessionHistory?.id || 'null'})`);
               } catch (notificationError) {
                 this.logger.error(`Failed to create notification for terminated session ${sessionKey}`, notificationError);
               }
-
-              const reason = shouldStopResult.reason || 'Unapproved Device';
               this.logger.warn(`Stopped session: ${session.Session?.id} - Reason: ${reason}`);
               this.logger.warn(
                 `Stopped session: ${username} on ${deviceName} (Session: ${sessionId}) - Reason: ${reason}`,
@@ -231,7 +232,7 @@ export class SessionTerminationService {
     }
   }
 
-  private async shouldStopSession(session: any): Promise<{ shouldStop: boolean; reason?: string }> {
+  private async shouldStopSession(session: any): Promise<{ shouldStop: boolean; reason?: string; stopCode?: string }> {
     try {
       const userId = session.User?.id || session.User?.uuid;
       const deviceIdentifier = session.Player?.machineIdentifier;
@@ -254,7 +255,11 @@ export class SessionTerminationService {
         this.logger.warn(
           `IP access denied for user ${userId}: ${ipValidation.reason}`,
         );
-        return { shouldStop: true, reason: `${ipValidation.reason}` };
+        return { 
+          shouldStop: true, 
+          reason: `${ipValidation.reason}`,
+          stopCode: ipValidation.stopCode
+        };
       }
 
       // Check if device is approved
@@ -271,7 +276,7 @@ export class SessionTerminationService {
         const shouldBlock = await this.usersService.getEffectiveDefaultBlock(userId);
         if (shouldBlock) {
           const message = await this.configService.getSetting('MSG_DEVICE_PENDING') as string || 'Device Pending Approval. The server owner must approve this device before it can be used.';
-          return { shouldStop: true, reason: message };
+          return { shouldStop: true, reason: message, stopCode: 'DEVICE_PENDING' };
         }
         return { shouldStop: false };
       }
@@ -289,7 +294,7 @@ export class SessionTerminationService {
           `Device ${deviceIdentifier} for user ${userId} is explicitly rejected.`,
         );
         const message = await this.configService.getSetting('MSG_DEVICE_REJECTED') as string || 'You are not authorized to use this device. Please contact the server administrator for more information.';
-        return { shouldStop: true, reason: message };
+        return { shouldStop: true, reason: message, stopCode: 'DEVICE_REJECTED' };
       }
 
       return { shouldStop: false }; // no terminate if device is approved

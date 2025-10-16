@@ -50,9 +50,36 @@ export class NotificationsService {
     userId: string,
     username: string,
     deviceName: string,
+    stopCode?: string,
     sessionHistoryId?: number
   ): Promise<Notification> {
-    const text = `User ${username} attempted to stream on ${deviceName} but was blocked`;
+    let text: string;
+    
+    if (stopCode) {
+      switch (stopCode) {
+        case 'DEVICE_PENDING':
+          text = `${username} blocked - device "${deviceName}" pending approval`;
+          break;
+        case 'DEVICE_REJECTED':
+          text = `${username} blocked - device "${deviceName}" rejected`;
+          break;
+        case 'IP_POLICY_LAN_ONLY':
+          text = `${username} blocked - "${deviceName}" tried WAN access (LAN-only policy)`;
+          break;
+        case 'IP_POLICY_WAN_ONLY':
+          text = `${username} blocked - "${deviceName}" tried LAN access (WAN-only policy)`;
+          break;
+        case 'IP_POLICY_NOT_ALLOWED':
+          text = `${username} blocked - "${deviceName}" IP not in allowed list`;
+          break;
+        default:
+          text = `${username} blocked on "${deviceName}" - ${stopCode}`;
+          break;
+      }
+    } else {
+      // Fallback to generic message if no stop code provided
+      text = `${username} blocked - streaming attempt on "${deviceName}"`;
+    }
 
     //Mark in session history the stream was terminated
     if (sessionHistoryId) {
