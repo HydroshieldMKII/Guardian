@@ -29,7 +29,8 @@ It helps you monitor activity, control device access, and ensure only authorized
 
 ---
 
-<img width="1280" height="599" alt="Guardian" src="https://github.com/user-attachments/assets/f2ab7b82-d589-45db-98de-ff0fb6c01bd1" />
+<img width="1280" height="600" alt="guardian_1" src="https://github.com/user-attachments/assets/83bfd0fc-6bb7-4aa8-b3d6-ce45243e6de1" />
+<img width="1280" height="599" alt="guardian_2" src="https://github.com/user-attachments/assets/f88d3957-d07c-495d-9d95-0868e30510a3" />
 
 ## Features
 
