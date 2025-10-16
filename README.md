@@ -47,8 +47,6 @@ It helps you monitor activity, control device access, and ensure only authorized
 - Device details: platform, product, version, IP address, last seen
 - Active stream monitoring: title, quality, duration, progress
 - Session history with filtering and search
-- Individual session management
-- Stream termination controls
 
 ### User Interface & Experience
 
@@ -63,7 +61,7 @@ It helps you monitor activity, control device access, and ensure only authorized
 - SSL/TLS support with certificate validation controls
 - Database export and import for backup and migration
 - Automatic device cleanup based on inactivity periods
-- Administrative tools for database management
+- Administrative tools for database management from the UI
 
 ---
 
