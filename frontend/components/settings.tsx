@@ -459,6 +459,9 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
       if (response.ok) {
         await fetchSettings(); // Refresh settings
 
+        // Dispatch event to notify notification handler of settings change
+        window.dispatchEvent(new CustomEvent('settingsUpdated', { detail: settingsToUpdate }));
+
         // Show success toast
         toast({
           title: "Settings saved",

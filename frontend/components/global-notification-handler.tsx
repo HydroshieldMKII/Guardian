@@ -56,13 +56,18 @@ export function GlobalNotificationHandler() {
 
     // Fetch notification and settings immediately on mount
     fetchAll();
-
     const intervalNotification = setInterval(fetchNotifications, 10000);
-    // const intervalSetting = setInterval(fetchSettings, 10000);
+
+    // Listen for settings updates from the setting component
+    const handleSettingsUpdate = () => {
+      fetchSettings();
+    };
+    
+    window.addEventListener('settingsUpdated', handleSettingsUpdate);
 
     return () => {
       clearInterval(intervalNotification);
-      // clearInterval(intervalSetting);
+      window.removeEventListener('settingsUpdated', handleSettingsUpdate);
     };
   }, [setNotifications]);
 
