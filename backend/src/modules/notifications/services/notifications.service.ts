@@ -58,27 +58,27 @@ export class NotificationsService {
     if (stopCode) {
       switch (stopCode) {
         case 'DEVICE_PENDING':
-          text = `${username} blocked - device "${deviceName}" pending approval`;
+          text = `${username} stream was blocked - device "${deviceName}" needs approval`;
           break;
         case 'DEVICE_REJECTED':
-          text = `${username} blocked - device "${deviceName}" rejected`;
+          text = `${username} stream was blocked - device "${deviceName}" is explicitly rejected`;
           break;
         case 'IP_POLICY_LAN_ONLY':
-          text = `${username} blocked - "${deviceName}" tried WAN access (LAN-only policy)`;
+          text = `${username} stream was blocked - "${deviceName}" tried to stream on WAN access (LAN-only policy)`;
           break;
         case 'IP_POLICY_WAN_ONLY':
-          text = `${username} blocked - "${deviceName}" tried LAN access (WAN-only policy)`;
+          text = `${username} stream was blocked - "${deviceName}" tried to stream on LAN access (WAN-only policy)`;
           break;
         case 'IP_POLICY_NOT_ALLOWED':
-          text = `${username} blocked - "${deviceName}" IP not in allowed list`;
+          text = `${username} stream was blocked - "${deviceName}" IP not in allowed list (restricted IP policy)`;
           break;
         default:
-          text = `${username} blocked on "${deviceName}" - ${stopCode}`;
+          text = `${username} stream was blocked on "${deviceName}" - ${stopCode}`;
           break;
       }
     } else {
       // Fallback to generic message if no stop code provided
-      text = `${username} blocked - streaming attempt on "${deviceName}"`;
+      text = `${username} stream was blocked on "${deviceName}"`;
     }
 
     //Mark in session history the stream was terminated
