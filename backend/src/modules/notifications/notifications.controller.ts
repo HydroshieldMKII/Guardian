@@ -9,7 +9,6 @@ import {
   Query,
 } from '@nestjs/common';
 import { NotificationsService } from './services/notifications.service';
-import type { CreateNotificationDto } from './services/notifications.service';
 
 @Controller('notifications')
 export class NotificationsController {
@@ -29,11 +28,6 @@ export class NotificationsController {
   async getUnreadCount(@Param('userId') userId: string) {
     const count = await this.notificationsService.getUnreadCountForUser(userId);
     return { unreadCount: count };
-  }
-
-  @Post()
-  async createNotification(@Body() createDto: CreateNotificationDto) {
-    return await this.notificationsService.createNotification(createDto);
   }
 
   @Patch(':id/read')
