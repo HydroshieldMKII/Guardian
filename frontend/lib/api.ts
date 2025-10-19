@@ -102,6 +102,10 @@ class ApiClient {
   }
 
   async markNotificationAsRead<T>(notificationId: number): Promise<T> {
+    return this.patch<T>(`/notifications/${notificationId}/read/force`);
+  }
+
+  async markNotificationAsReadAuto<T>(notificationId: number): Promise<T> {
     return this.patch<T>(`/notifications/${notificationId}/read`);
   }
 

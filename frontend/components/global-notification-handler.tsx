@@ -101,7 +101,7 @@ export function GlobalNotificationHandler() {
         );
         
         // Make API call in background
-        apiClient.markNotificationAsRead(notification.id).catch(error => {
+        apiClient.markNotificationAsReadAuto(notification.id).catch(error => {
           console.error('Failed to mark notification as read:', error);
           // Revert the UI change if API call fails
           updateNotifications(prev =>

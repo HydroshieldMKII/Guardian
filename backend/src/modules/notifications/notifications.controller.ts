@@ -35,6 +35,11 @@ export class NotificationsController {
     return await this.notificationsService.markAsRead(id);
   }
 
+  @Patch(':id/read/force')
+  async markAsReadForced(@Param('id') id: number) {
+    return await this.notificationsService.markAsRead(id, true);
+  }
+
   @Patch('mark-all-read')
   async markAllAsRead() {
     await this.notificationsService.markAllAsRead();
