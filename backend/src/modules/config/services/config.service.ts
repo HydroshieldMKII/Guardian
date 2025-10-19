@@ -6,17 +6,17 @@ import { UserDevice } from '../../../entities/user-device.entity';
 import { UserPreference } from '../../../entities/user-preference.entity';
 import * as http from 'http';
 import * as https from 'https';
-import { 
-  PlexErrorCode, 
-  PlexResponse, 
-  createPlexError, 
-  createPlexSuccess 
+import {
+  PlexErrorCode,
+  PlexResponse,
+  createPlexError,
+  createPlexSuccess,
 } from '../../../types/plex-errors';
 import { SessionHistory } from 'src/entities/session-history.entity';
 import { Notification } from 'src/entities/notification.entity';
 
 // App version
-const CURRENT_APP_VERSION = '1.2.1';
+const CURRENT_APP_VERSION = '1.2.2';
 
 export interface ConfigSettingDto {
   key: string;
@@ -41,111 +41,113 @@ export class ConfigService {
   private async initializeDefaultSettings() {
     const defaultSettings = [
       {
-      key: 'PLEX_TOKEN',
-      value: '',
-      type: 'string' as const,
-      private: true,
+        key: 'PLEX_TOKEN',
+        value: '',
+        type: 'string' as const,
+        private: true,
       },
       {
-      key: 'PLEX_SERVER_IP',
-      value: '',
-      type: 'string' as const,
+        key: 'PLEX_SERVER_IP',
+        value: '',
+        type: 'string' as const,
       },
       {
-      key: 'PLEX_SERVER_PORT',
-      value: '32400',
-      type: 'string' as const,
+        key: 'PLEX_SERVER_PORT',
+        value: '32400',
+        type: 'string' as const,
       },
       {
-      key: 'USE_SSL',
-      value: 'false',
-      type: 'boolean' as const,
+        key: 'USE_SSL',
+        value: 'false',
+        type: 'boolean' as const,
       },
       {
-      key: 'IGNORE_CERT_ERRORS',
-      value: 'false',
-      type: 'boolean' as const,
+        key: 'IGNORE_CERT_ERRORS',
+        value: 'false',
+        type: 'boolean' as const,
       },
       {
-      key: 'PLEXGUARD_REFRESH_INTERVAL',
-      value: '10',
-      type: 'number' as const,
+        key: 'PLEXGUARD_REFRESH_INTERVAL',
+        value: '10',
+        type: 'number' as const,
       },
       {
-      key: 'PLEX_GUARD_DEFAULT_BLOCK',
-      value: 'true',
-      type: 'boolean' as const,
+        key: 'PLEX_GUARD_DEFAULT_BLOCK',
+        value: 'true',
+        type: 'boolean' as const,
       },
       {
-      key: 'MSG_DEVICE_PENDING',
-      value: 'Device Pending Approval. The server owner must approve this device before it can be used.',
-      type: 'string' as const,
+        key: 'MSG_DEVICE_PENDING',
+        value:
+          'Device Pending Approval. The server owner must approve this device before it can be used.',
+        type: 'string' as const,
       },
       {
-      key: 'MSG_DEVICE_REJECTED',
-      value: 'You are not authorized to use this device. Please contact the server administrator for more information.',
-      type: 'string' as const,
+        key: 'MSG_DEVICE_REJECTED',
+        value:
+          'You are not authorized to use this device. Please contact the server administrator for more information.',
+        type: 'string' as const,
       },
       {
-      key: 'MSG_IP_LAN_ONLY',
-      value: 'Only LAN access is allowed',
-      type: 'string' as const,
+        key: 'MSG_IP_LAN_ONLY',
+        value: 'Only LAN access is allowed',
+        type: 'string' as const,
       },
       {
-      key: 'MSG_IP_WAN_ONLY',
-      value: 'Only WAN access is allowed',
-      type: 'string' as const,
+        key: 'MSG_IP_WAN_ONLY',
+        value: 'Only WAN access is allowed',
+        type: 'string' as const,
       },
       {
-      key: 'MSG_IP_NOT_ALLOWED',
-      value: 'Your current IP address is not in the allowed list',
-      type: 'string' as const,
+        key: 'MSG_IP_NOT_ALLOWED',
+        value: 'Your current IP address is not in the allowed list',
+        type: 'string' as const,
       },
       {
-      key: 'DEVICE_CLEANUP_ENABLED',
-      value: 'false',
-      type: 'boolean' as const,
+        key: 'DEVICE_CLEANUP_ENABLED',
+        value: 'false',
+        type: 'boolean' as const,
       },
       {
-      key: 'DEVICE_CLEANUP_INTERVAL_DAYS',
-      value: '30',
-      type: 'number' as const,
+        key: 'DEVICE_CLEANUP_INTERVAL_DAYS',
+        value: '30',
+        type: 'number' as const,
       },
       {
-      key: 'DEFAULT_PAGE',
-      value: 'devices',
-      type: 'string' as const,
+        key: 'DEFAULT_PAGE',
+        value: 'devices',
+        type: 'string' as const,
       },
       {
-      key: 'AUTO_CHECK_UPDATES',
-      value: 'false',
-      type: 'boolean' as const,
+        key: 'AUTO_CHECK_UPDATES',
+        value: 'false',
+        type: 'boolean' as const,
       },
       {
-      key: 'APP_VERSION',
-      value: CURRENT_APP_VERSION,
-      type: 'string' as const,
-      private: false,
+        key: 'APP_VERSION',
+        value: CURRENT_APP_VERSION,
+        type: 'string' as const,
+        private: false,
       },
       {
-      key: 'AUTO_MARK_NOTIFICATION_READ',
-      value: 'true',
-      type: 'boolean' as const,
+        key: 'AUTO_MARK_NOTIFICATION_READ',
+        value: 'true',
+        type: 'boolean' as const,
       },
       {
-      key: 'ENABLE_MEDIA_THUMBNAILS',
-      value: 'true',
-      type: 'boolean' as const,
+        key: 'ENABLE_MEDIA_THUMBNAILS',
+        value: 'true',
+        type: 'boolean' as const,
       },
       {
-      key: 'ENABLE_MEDIA_ARTWORK',
-      value: 'true',
-      type: 'boolean' as const,
+        key: 'ENABLE_MEDIA_ARTWORK',
+        value: 'true',
+        type: 'boolean' as const,
       },
       {
-      key: 'CUSTOM_PLEX_URL',
-      value: '',
-      type: 'string' as const,
+        key: 'CUSTOM_PLEX_URL',
+        value: '',
+        type: 'string' as const,
       },
     ];
 
@@ -211,11 +213,14 @@ export class ConfigService {
   private notifyConfigChange(key: string) {
     const listeners = this.configChangeListeners.get(key);
     if (listeners) {
-      listeners.forEach(callback => {
+      listeners.forEach((callback) => {
         try {
           callback();
         } catch (error) {
-          this.logger.error(`Error calling config change listener for ${key}:`, error);
+          this.logger.error(
+            `Error calling config change listener for ${key}:`,
+            error,
+          );
         }
       });
     }
@@ -267,7 +272,7 @@ export class ConfigService {
     return value;
   }
 
-    async updateSetting(key: string, value: any): Promise<AppSettings> {
+  async updateSetting(key: string, value: any): Promise<AppSettings> {
     // Validate DEVICE_CLEANUP_INTERVAL_DAYS setting
     if (key === 'DEVICE_CLEANUP_INTERVAL_DAYS') {
       const numValue = Number(value);
@@ -275,7 +280,9 @@ export class ConfigService {
         throw new Error('Device cleanup interval must be a number');
       }
       if (!Number.isInteger(numValue)) {
-        throw new Error('Device cleanup interval must be a whole number (no decimals)');
+        throw new Error(
+          'Device cleanup interval must be a whole number (no decimals)',
+        );
       }
       if (numValue < 1) {
         throw new Error('Device cleanup interval must be at least 1 day');
@@ -357,7 +364,7 @@ export class ConfigService {
       if (!ip || !port || !token) {
         return createPlexError(
           PlexErrorCode.NOT_CONFIGURED,
-          'Missing required Plex configuration (IP, Port, or Token)'
+          'Missing required Plex configuration (IP, Port, or Token)',
         );
       }
 
@@ -382,66 +389,85 @@ export class ConfigService {
           if (res.statusCode === 200) {
             resolve(createPlexSuccess('Successfully connected to Plex server'));
           } else if (res.statusCode === 401) {
-            resolve(createPlexError(
-              PlexErrorCode.AUTH_FAILED,
-              'Authentication failed - check your Plex token',
-              `HTTP ${res.statusCode}: ${res.statusMessage}`
-            ));
+            resolve(
+              createPlexError(
+                PlexErrorCode.AUTH_FAILED,
+                'Authentication failed - check your Plex token',
+                `HTTP ${res.statusCode}: ${res.statusMessage}`,
+              ),
+            );
           } else {
-            resolve(createPlexError(
-              PlexErrorCode.SERVER_ERROR,
-              `Plex server returned an error: ${res.statusCode} ${res.statusMessage}`,
-              `HTTP ${res.statusCode}: ${res.statusMessage}`
-            ));
+            resolve(
+              createPlexError(
+                PlexErrorCode.SERVER_ERROR,
+                `Plex server returned an error: ${res.statusCode} ${res.statusMessage}`,
+                `HTTP ${res.statusCode}: ${res.statusMessage}`,
+              ),
+            );
           }
         });
 
         req.on('error', (error: any) => {
           // Handle specific error types with appropriate error codes
           if (error.code === 'ERR_TLS_CERT_ALTNAME_INVALID') {
-            resolve(createPlexError(
-              PlexErrorCode.CERT_ERROR,
-              'SSL certificate error: Hostname/IP does not match certificate',
-              'Enable "Ignore SSL certificate errors" or use HTTP instead'
-            ));
+            resolve(
+              createPlexError(
+                PlexErrorCode.CERT_ERROR,
+                'SSL certificate error: Hostname/IP does not match certificate',
+                'Enable "Ignore SSL certificate errors" or use HTTP instead',
+              ),
+            );
           } else if (error.code && error.code.startsWith('ERR_TLS_')) {
-            resolve(createPlexError(
-              PlexErrorCode.SSL_ERROR,
-              'SSL/TLS connection error',
-              'Consider enabling "Ignore SSL certificate errors" or using HTTP'
-            ));
-          } else if (error.code === 'ECONNREFUSED' || error.code === 'EHOSTUNREACH') {
-            resolve(createPlexError(
-              PlexErrorCode.CONNECTION_REFUSED,
-              'Plex server is unreachable',
-              'Check if Plex server is running and accessible'
-            ));
+            resolve(
+              createPlexError(
+                PlexErrorCode.SSL_ERROR,
+                'SSL/TLS connection error',
+                'Consider enabling "Ignore SSL certificate errors" or using HTTP',
+              ),
+            );
+          } else if (
+            error.code === 'ECONNREFUSED' ||
+            error.code === 'EHOSTUNREACH'
+          ) {
+            resolve(
+              createPlexError(
+                PlexErrorCode.CONNECTION_REFUSED,
+                'Plex server is unreachable',
+                'Check if Plex server is running and accessible',
+              ),
+            );
           } else if (
             error.code === 'ECONNRESET' ||
             error.code === 'ETIMEDOUT' ||
             error.message.includes('timeout')
           ) {
-            resolve(createPlexError(
-              PlexErrorCode.CONNECTION_TIMEOUT,
-              'Connection timeout',
-              'Check server address, port and network settings'
-            ));
+            resolve(
+              createPlexError(
+                PlexErrorCode.CONNECTION_TIMEOUT,
+                'Connection timeout',
+                'Check server address, port and network settings',
+              ),
+            );
           } else {
-            resolve(createPlexError(
-              PlexErrorCode.NETWORK_ERROR,
-              'Network error connecting to Plex server',
-              error.message
-            ));
+            resolve(
+              createPlexError(
+                PlexErrorCode.NETWORK_ERROR,
+                'Network error connecting to Plex server',
+                error.message,
+              ),
+            );
           }
         });
 
         req.on('timeout', () => {
           req.destroy();
-          resolve(createPlexError(
+          resolve(
+            createPlexError(
               PlexErrorCode.CONNECTION_REFUSED,
               'Plex server is unreachable',
-              'Check if Plex server is running and accessible'
-          ));
+              'Check if Plex server is running and accessible',
+            ),
+          );
         });
 
         req.setTimeout(10000);
@@ -452,7 +478,7 @@ export class ConfigService {
       return createPlexError(
         PlexErrorCode.UNKNOWN_ERROR,
         'Unexpected error testing Plex connection',
-        error.message
+        error.message,
       );
     }
   }
@@ -509,9 +535,7 @@ export class ConfigService {
   async exportDatabase(): Promise<string> {
     try {
       this.logger.log('Starting database export...');
-      // Get all data from all tables 
-
-
+      // Get all data from all tables
 
       const [settings, userDevices, userPreferences] = await Promise.all([
         this.settingsRepository.find(),
@@ -532,8 +556,10 @@ export class ConfigService {
         },
       };
 
-      this.logger.log(`Database export completed: ${settings.length} settings, ${userDevices.length} devices, ${userPreferences.length} preferences`);
-      
+      this.logger.log(
+        `Database export completed: ${settings.length} settings, ${userDevices.length} devices, ${userPreferences.length} preferences`,
+      );
+
       return JSON.stringify(exportData, null, 2);
     } catch (error) {
       this.logger.error('Error exporting database:', error);
@@ -541,7 +567,9 @@ export class ConfigService {
     }
   }
 
-  async importDatabase(importData: any): Promise<{ imported: number; skipped: number }> {
+  async importDatabase(
+    importData: any,
+  ): Promise<{ imported: number; skipped: number }> {
     try {
       this.logger.log('Starting database import...');
 
@@ -564,23 +592,33 @@ export class ConfigService {
         for (const setting of data.settings) {
           try {
             const existing = await this.settingsRepository.findOne({
-              where: { key: setting.key }
+              where: { key: setting.key },
             });
 
             // Skip importing APP_VERSION if the import file has an older version than the current code
-            if (setting.key === 'APP_VERSION' && this.compareVersions(setting.value, CURRENT_APP_VERSION) < 0) {
-              this.logger.log(`Skipping import of APP_VERSION (${setting.value}) to avoid downgrading from current version (${CURRENT_APP_VERSION})`);
+            if (
+              setting.key === 'APP_VERSION' &&
+              this.compareVersions(setting.value, CURRENT_APP_VERSION) < 0
+            ) {
+              this.logger.log(
+                `Skipping import of APP_VERSION (${setting.value}) to avoid downgrading from current version (${CURRENT_APP_VERSION})`,
+              );
               skipped++;
               continue;
             }
 
-            this.logger.debug('Importing setting:', setting.key, 'Existing:', !!existing);
+            this.logger.debug(
+              'Importing setting:',
+              setting.key,
+              'Existing:',
+              !!existing,
+            );
 
             if (existing) {
               existing.value = setting.value;
               await this.settingsRepository.save(existing);
               imported++;
-            }else{
+            } else {
               this.logger.warn(`Skipping unknown setting ${setting.key}`);
             }
           } catch (error) {
@@ -592,32 +630,43 @@ export class ConfigService {
 
       // Import user devices
       if (data.userDevices && Array.isArray(data.userDevices)) {
-        const deviceRepo = this.settingsRepository.manager.getRepository(UserDevice);
+        const deviceRepo =
+          this.settingsRepository.manager.getRepository(UserDevice);
         for (const device of data.userDevices) {
           try {
             const existing = await deviceRepo.findOne({
-              where: { 
-                userId: device.userId, 
-                deviceIdentifier: device.deviceIdentifier 
-              }
+              where: {
+                userId: device.userId,
+                deviceIdentifier: device.deviceIdentifier,
+              },
             });
 
-            this.logger.debug(`Importing device ${device.deviceIdentifier} for user ${device.userId}, existing:`, !!existing);
+            this.logger.debug(
+              `Importing device ${device.deviceIdentifier} for user ${device.userId}, existing:`,
+              !!existing,
+            );
 
             if (!existing) {
               const newDevice = deviceRepo.create(device);
               await deviceRepo.save(newDevice);
               imported++;
-              this.logger.debug(`Created new device: ${device.deviceIdentifier}`);
+              this.logger.debug(
+                `Created new device: ${device.deviceIdentifier}`,
+              );
             } else {
               // Update existing device with new data
               Object.assign(existing, device);
               await deviceRepo.save(existing);
               imported++;
-              this.logger.debug(`Updated existing device: ${device.deviceIdentifier}`);
+              this.logger.debug(
+                `Updated existing device: ${device.deviceIdentifier}`,
+              );
             }
           } catch (error) {
-            this.logger.warn(`Failed to import device ${device.deviceIdentifier}:`, error);
+            this.logger.warn(
+              `Failed to import device ${device.deviceIdentifier}:`,
+              error,
+            );
             skipped++;
           }
         }
@@ -625,30 +674,41 @@ export class ConfigService {
 
       // Import user preferences
       if (data.userPreferences && Array.isArray(data.userPreferences)) {
-        const prefRepo = this.settingsRepository.manager.getRepository(UserPreference);
+        const prefRepo =
+          this.settingsRepository.manager.getRepository(UserPreference);
         for (const pref of data.userPreferences) {
           try {
             const existing = await prefRepo.findOne({
-              where: { userId: pref.userId }
+              where: { userId: pref.userId },
             });
 
-            this.logger.debug(`Importing preference for user ${pref.userId}, existing:`, !!existing);
+            this.logger.debug(
+              `Importing preference for user ${pref.userId}, existing:`,
+              !!existing,
+            );
 
             if (!existing) {
               const newPref = prefRepo.create(pref);
               await prefRepo.save(newPref);
               imported++;
-              this.logger.debug(`Created new preference for user: ${pref.userId}`);
+              this.logger.debug(
+                `Created new preference for user: ${pref.userId}`,
+              );
             } else {
               // Update existing preference
               existing.defaultBlock = pref.defaultBlock;
               existing.username = pref.username || existing.username;
               await prefRepo.save(existing);
               imported++;
-              this.logger.debug(`Updated existing preference for user: ${pref.userId}`);
+              this.logger.debug(
+                `Updated existing preference for user: ${pref.userId}`,
+              );
             }
           } catch (error) {
-            this.logger.warn(`Failed to import preference for user ${pref.userId}:`, error);
+            this.logger.warn(
+              `Failed to import preference for user ${pref.userId}:`,
+              error,
+            );
             skipped++;
           }
         }
@@ -657,11 +717,13 @@ export class ConfigService {
       // Refresh cache after import
       await this.loadCache();
 
-      this.logger.log(`Database import completed: ${imported} items imported, ${skipped} items skipped`);
-      
-      return { 
-        imported, 
-        skipped
+      this.logger.log(
+        `Database import completed: ${imported} items imported, ${skipped} items skipped`,
+      );
+
+      return {
+        imported,
+        skipped,
       };
     } catch (error) {
       this.logger.error('Error importing database:', error);
@@ -675,13 +737,23 @@ export class ConfigService {
         where: { key: 'APP_VERSION' },
       });
 
-      if (versionSetting && this.compareVersions(CURRENT_APP_VERSION, versionSetting.value) > 0) {
-        this.logger.log(`Updating app version from ${versionSetting.value} to: ${CURRENT_APP_VERSION}`);
+      if (
+        versionSetting &&
+        this.compareVersions(CURRENT_APP_VERSION, versionSetting.value) > 0
+      ) {
+        this.logger.log(
+          `Updating app version from ${versionSetting.value} to: ${CURRENT_APP_VERSION}`,
+        );
         versionSetting.value = CURRENT_APP_VERSION;
         await this.settingsRepository.save(versionSetting);
         this.logger.log('App version updated successfully');
-      } else if (versionSetting && this.compareVersions(CURRENT_APP_VERSION, versionSetting.value) < 0) {
-        this.logger.error(`WARNING: Current app version ${CURRENT_APP_VERSION} is older than your data version ${versionSetting.value}. Please check your installation.`);
+      } else if (
+        versionSetting &&
+        this.compareVersions(CURRENT_APP_VERSION, versionSetting.value) < 0
+      ) {
+        this.logger.error(
+          `WARNING: Current app version ${CURRENT_APP_VERSION} is older than your data version ${versionSetting.value}. Please check your installation.`,
+        );
       } else {
         this.logger.log(`App version is up to date: ${CURRENT_APP_VERSION}`);
       }
@@ -692,7 +764,7 @@ export class ConfigService {
 
   private compareVersions(version1: string, version2: string): number {
     const parseVersion = (version: string): number[] => {
-      return version.split('.').map(v => parseInt(v) || 0);
+      return version.split('.').map((v) => parseInt(v) || 0);
     };
 
     const v1Parts = parseVersion(version1);
@@ -710,16 +782,18 @@ export class ConfigService {
     return 0; // versions are equal
   }
 
-  async getVersionInfo(): Promise<{ 
-    version: string; 
-    databaseVersion: string; 
+  async getVersionInfo(): Promise<{
+    version: string;
+    databaseVersion: string;
     codeVersion: string;
     isVersionMismatch: boolean;
   }> {
-    const dbVersion = await this.getSetting('APP_VERSION') || CURRENT_APP_VERSION;
+    const dbVersion =
+      (await this.getSetting('APP_VERSION')) || CURRENT_APP_VERSION;
     // Version mismatch occurs when database version > current code version (downgrade scenario)
-    const isVersionMismatch = this.compareVersions(dbVersion, CURRENT_APP_VERSION) > 0;
-    
+    const isVersionMismatch =
+      this.compareVersions(dbVersion, CURRENT_APP_VERSION) > 0;
+
     return {
       version: CURRENT_APP_VERSION,
       databaseVersion: dbVersion,
@@ -732,32 +806,39 @@ export class ConfigService {
   async resetDatabase(): Promise<void> {
     try {
       this.logger.warn('RESETTING ALL DATABASE TABLES');
-      
-      await this.settingsRepository.manager.transaction(async transactionalEntityManager => {
-        
-        await transactionalEntityManager.getRepository(SessionHistory).clear();
-        this.logger.debug('Session history table cleared');
-        
-        await transactionalEntityManager.getRepository(Notification).clear();
-        this.logger.debug('Notifications table cleared');
 
-        await transactionalEntityManager.getRepository(UserPreference).clear();
-        this.logger.debug('User preferences table cleared');
-        
-        await transactionalEntityManager.getRepository(UserDevice).clear();
-        this.logger.debug('User devices table cleared');
-        
-        await transactionalEntityManager.getRepository(AppSettings).clear();
-        this.logger.debug('App settings table cleared');
-      });
-      
+      await this.settingsRepository.manager.transaction(
+        async (transactionalEntityManager) => {
+          await transactionalEntityManager
+            .getRepository(SessionHistory)
+            .clear();
+          this.logger.debug('Session history table cleared');
+
+          await transactionalEntityManager.getRepository(Notification).clear();
+          this.logger.debug('Notifications table cleared');
+
+          await transactionalEntityManager
+            .getRepository(UserPreference)
+            .clear();
+          this.logger.debug('User preferences table cleared');
+
+          await transactionalEntityManager.getRepository(UserDevice).clear();
+          this.logger.debug('User devices table cleared');
+
+          await transactionalEntityManager.getRepository(AppSettings).clear();
+          this.logger.debug('App settings table cleared');
+        },
+      );
+
       // Reinitialize default settings
       await this.initializeDefaultSettings();
-      
+
       // Clear cache
       this.cache.clear();
-      
-      this.logger.warn('Database reset completed - all data has been deleted and default settings restored');
+
+      this.logger.warn(
+        'Database reset completed - all data has been deleted and default settings restored',
+      );
     } catch (error) {
       this.logger.error('Failed to reset database:', error);
       throw new Error(`Database reset failed: ${error.message}`);
@@ -767,19 +848,21 @@ export class ConfigService {
   async resetStreamCounts(): Promise<void> {
     try {
       this.logger.warn('Resetting all device stream counts');
-      
+
       // Reset session count and clear current session keys for all devices
       const result = await this.settingsRepository.manager
         .getRepository(UserDevice)
         .createQueryBuilder()
         .update(UserDevice)
-        .set({ 
+        .set({
           sessionCount: 0,
-          currentSessionKey: () => 'NULL'
+          currentSessionKey: () => 'NULL',
         })
         .execute();
-      
-      this.logger.log(`Stream counts reset for ${result.affected || 0} devices`);
+
+      this.logger.log(
+        `Stream counts reset for ${result.affected || 0} devices`,
+      );
     } catch (error) {
       this.logger.error('Failed to reset stream counts:', error);
       throw new Error(`Stream count reset failed: ${error.message}`);
@@ -789,24 +872,30 @@ export class ConfigService {
   async deleteAllDevices(): Promise<void> {
     try {
       this.logger.warn('DELETING ALL DEVICES per user request');
-      
+
       // Get count before deletion for logging
       const deviceCount = await this.settingsRepository.manager
         .getRepository(UserDevice)
         .count();
-      
-      await this.settingsRepository.manager.transaction(async transactionalEntityManager => {
-        await transactionalEntityManager.getRepository(SessionHistory).clear();
-        this.logger.debug('Session history cleared');
-        
-        await transactionalEntityManager.getRepository(Notification).clear();
-        this.logger.debug('Notifications cleared');
-      
-        await transactionalEntityManager.getRepository(UserDevice).clear();
-        this.logger.debug('User devices cleared');
-      });
-      
-      this.logger.warn(`All ${deviceCount} devices and related data have been deleted`);
+
+      await this.settingsRepository.manager.transaction(
+        async (transactionalEntityManager) => {
+          await transactionalEntityManager
+            .getRepository(SessionHistory)
+            .clear();
+          this.logger.debug('Session history cleared');
+
+          await transactionalEntityManager.getRepository(Notification).clear();
+          this.logger.debug('Notifications cleared');
+
+          await transactionalEntityManager.getRepository(UserDevice).clear();
+          this.logger.debug('User devices cleared');
+        },
+      );
+
+      this.logger.warn(
+        `All ${deviceCount} devices and related data have been deleted`,
+      );
     } catch (error) {
       this.logger.error('Failed to delete all devices:', error);
       throw new Error(`Device deletion failed: ${error.message}`);
@@ -816,19 +905,25 @@ export class ConfigService {
   async clearAllSessionHistory(): Promise<void> {
     try {
       this.logger.warn('CLEARING ALL SESSION HISTORY per user request');
-      
+
       // Get count before deletion for logging
       const sessionCount = await this.settingsRepository.manager
         .getRepository(SessionHistory)
         .count();
-      
-      await this.settingsRepository.manager.transaction(async transactionalEntityManager => {
-        // Clear all session history
-        await transactionalEntityManager.getRepository(SessionHistory).clear();
-        this.logger.debug('Session history cleared');
-      });
-      
-      this.logger.warn(`All ${sessionCount} session history records have been cleared`);
+
+      await this.settingsRepository.manager.transaction(
+        async (transactionalEntityManager) => {
+          // Clear all session history
+          await transactionalEntityManager
+            .getRepository(SessionHistory)
+            .clear();
+          this.logger.debug('Session history cleared');
+        },
+      );
+
+      this.logger.warn(
+        `All ${sessionCount} session history records have been cleared`,
+      );
     } catch (error) {
       this.logger.error('Failed to clear session history:', error);
       throw new Error(`Session history clearing failed: ${error.message}`);
