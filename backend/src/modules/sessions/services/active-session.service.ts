@@ -188,6 +188,7 @@ export class ActiveSessionService {
         ...(userDevice?.id && { userDeviceId: userDevice.id }),
         ...(player?.address && { deviceAddress: player.address }),
         ...(player?.state && { playerState: player.state }),
+        ...(player?.product && { product: player.product }),
         ...(sessionData.title && { contentTitle: sessionData.title }),
         ...(sessionData.type && { contentType: sessionData.type }),
         ...(sessionData.grandparentTitle && {

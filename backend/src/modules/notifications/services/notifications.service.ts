@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Notification } from '../../../entities/notification.entity';
 import { SessionHistory } from '../../../entities/session-history.entity';
+import { ConfigService } from '../../config/services/config.service';
 
 export interface CreateNotificationDto {
   userId: string;
@@ -30,6 +31,7 @@ export class NotificationsService {
     private notificationRepository: Repository<Notification>,
     @InjectRepository(SessionHistory)
     private sessionHistoryRepository: Repository<SessionHistory>,
+    private configService: ConfigService,
   ) {}
 
   async createNotification(createDto: CreateNotificationDto): Promise<Notification> {
@@ -48,9 +50,36 @@ export class NotificationsService {
     userId: string,
     username: string,
     deviceName: string,
+    stopCode?: string,
     sessionHistoryId?: number
   ): Promise<Notification> {
-    const text = `User ${username} attempted to stream on ${deviceName} but was blocked`;
+    let text: string;
+    
+    if (stopCode) {
+      switch (stopCode) {
+        case 'DEVICE_PENDING':
+          text = `${username} stream was blocked - device "${deviceName}" needs approval`;
+          break;
+        case 'DEVICE_REJECTED':
+          text = `${username} stream was blocked - device "${deviceName}" is explicitly rejected`;
+          break;
+        case 'IP_POLICY_LAN_ONLY':
+          text = `${username} stream was blocked - "${deviceName}" tried to stream on WAN access (LAN-only policy)`;
+          break;
+        case 'IP_POLICY_WAN_ONLY':
+          text = `${username} stream was blocked - "${deviceName}" tried to stream on LAN access (WAN-only policy)`;
+          break;
+        case 'IP_POLICY_NOT_ALLOWED':
+          text = `${username} stream was blocked - "${deviceName}" IP is not in the allowed list (restricted IP policy)`;
+          break;
+        default:
+          text = `${username} stream was blocked on "${deviceName}" - ${stopCode}`;
+          break;
+      }
+    } else {
+      // Fallback to generic message if no stop code provided
+      text = `${username} stream was blocked on "${deviceName}"`;
+    }
 
     //Mark in session history the stream was terminated
     if (sessionHistoryId) {
@@ -117,13 +146,21 @@ export class NotificationsService {
     }));
   }
 
-  async markAsRead(notificationId: number): Promise<Notification> {
+  async markAsRead(notificationId: number, forced: boolean = false): Promise<Notification> {
     const notification = await this.notificationRepository.findOne({
       where: { id: notificationId }
     });
 
     if (!notification) {
       throw new NotFoundException(`Notification with ID ${notificationId} not found`);
+    }
+    
+    // Check if auto-mark as read is enabled
+    if (!forced) {
+      const autoMarkRead = await this.configService.getSetting('AUTO_MARK_NOTIFICATION_READ');
+      if (!autoMarkRead) {
+        return notification;
+      }
     }
 
     notification.read = true;

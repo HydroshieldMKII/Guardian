@@ -33,7 +33,7 @@ import {
   ChevronDown,
   Activity,
   ExternalLink,
-  BookOpen
+  BookOpen,
 } from "lucide-react";
 import { config } from "../lib/config";
 import { useVersion } from "@/contexts/version-context";
@@ -92,94 +92,112 @@ const settingsSections = [
 ];
 
 // Function to get setting label and description
-const getSettingInfo = (setting: AppSetting): { label: string; description: string } => {
-  const settingInfoMap: Record<string, { label: string; description?: string }> = {
-    'PLEX_SERVER_IP': { 
-      label: 'Plex server IP address',
-      description: 'IP address or hostname of your Plex Media Server'
+const getSettingInfo = (
+  setting: AppSetting
+): { label: string; description: string } => {
+  const settingInfoMap: Record<
+    string,
+    { label: string; description?: string }
+  > = {
+    PLEX_SERVER_IP: {
+      label: "Plex server IP address",
+      description: "IP address or hostname of your Plex Media Server",
     },
-    'PLEX_SERVER_PORT': { 
-      label: 'Plex server port',
-      description: 'Port number for connecting to Plex (default: 32400)'
+    PLEX_SERVER_PORT: {
+      label: "Plex server port",
+      description: "Port number for connecting to Plex (default: 32400)",
     },
-    'PLEX_TOKEN': { 
-      label: 'Authentication token',
-      description: 'Plex authentication token for secure API access'
+    PLEX_TOKEN: {
+      label: "Authentication token",
+      description: "Plex authentication token for secure API access",
     },
-    'USE_SSL': {
-      label: 'Enable SSL',
-      description: 'Use HTTPS instead of HTTP for Plex server connections'
+    USE_SSL: {
+      label: "Enable SSL",
+      description: "Use HTTPS instead of HTTP for Plex server connections",
     },
-    'IGNORE_CERT_ERRORS': {
-      label: 'Ignore SSL certificate errors',
-      description: 'Skip SSL certificate validation (not recommended for production)'
+    IGNORE_CERT_ERRORS: {
+      label: "Ignore SSL certificate errors",
+      description:
+        "Skip SSL certificate validation (not recommended for production)",
     },
-    'PLEXGUARD_REFRESH_INTERVAL': { 
-      label: 'Refresh interval',
-      description: 'How often to check for active sessions and enforce policies (seconds)'
+    PLEXGUARD_REFRESH_INTERVAL: {
+      label: "Refresh interval",
+      description:
+        "How often to check for active sessions and enforce policies (seconds)",
     },
-    'MSG_DEVICE_PENDING': { 
-      label: 'Device pending approval message',
-      description: 'Message displayed when a device is waiting for approval'
+    MSG_DEVICE_PENDING: {
+      label: "Device pending approval message",
+      description: "Message displayed when a device is waiting for approval",
     },
-    'MSG_DEVICE_REJECTED': { 
-      label: 'Device rejected message',
-      description: 'Message displayed when a device has been rejected'
+    MSG_DEVICE_REJECTED: {
+      label: "Device rejected message",
+      description: "Message displayed when a device has been rejected",
     },
-    'MSG_IP_LAN_ONLY': { 
-      label: 'LAN-only access message',
-      description: 'Message displayed when only LAN access is allowed'
+    MSG_IP_LAN_ONLY: {
+      label: "LAN-only access message",
+      description: "Message displayed when only LAN access is allowed",
     },
-    'MSG_IP_WAN_ONLY': { 
-      label: 'WAN-only access message',
-      description: 'Message displayed when only WAN access is allowed'
+    MSG_IP_WAN_ONLY: {
+      label: "WAN-only access message",
+      description: "Message displayed when only WAN access is allowed",
     },
-    'MSG_IP_NOT_ALLOWED': { 
-      label: 'IP not allowed message',
-      description: 'Message displayed when the IP address is not in the allowed list'
+    MSG_IP_NOT_ALLOWED: {
+      label: "IP not allowed message",
+      description:
+        "Message displayed when the IP address is not in the allowed list",
     },
-    'PLEX_GUARD_DEFAULT_BLOCK': { 
-      label: 'Default behavior for new devices',
-      description: 'Whether new devices should be blocked by default until manually approved'
+    PLEX_GUARD_DEFAULT_BLOCK: {
+      label: "Default behavior for new devices",
+      description:
+        "Whether new devices should be blocked by default until manually approved",
     },
-    'DEVICE_CLEANUP_ENABLED': { 
-      label: 'Automatic device cleanup',
-      description: 'When enabled, devices that haven\'t streamed for the specified number of days will be automatically deleted and require approval again.'
+    DEVICE_CLEANUP_ENABLED: {
+      label: "Automatic device cleanup",
+      description:
+        "When enabled, devices that haven't streamed for the specified number of days will be automatically deleted and require approval again.",
     },
-    'DEVICE_CLEANUP_INTERVAL_DAYS': { 
-      label: 'Device inactivity threshold (days)',
-      description: 'Number of days a device can be inactive before it\'s automatically deleted.'
+    DEVICE_CLEANUP_INTERVAL_DAYS: {
+      label: "Device inactivity threshold (days)",
+      description:
+        "Number of days a device can be inactive before it's automatically deleted.",
     },
-    'ENABLE_MEDIA_THUMBNAILS': {
-      label: 'Show media thumbnails',
-      description: 'Display thumbnails for active streams'
+    ENABLE_MEDIA_THUMBNAILS: {
+      label: "Show media thumbnails",
+      description: "Display thumbnails for active streams",
     },
-    'ENABLE_MEDIA_ARTWORK': {
-      label: 'Show background artwork',
-      description: 'Display background artwork for active streams'
+    ENABLE_MEDIA_ARTWORK: {
+      label: "Show background artwork",
+      description: "Display background artwork for active streams",
     },
-    'CUSTOM_PLEX_URL': {
-      label: 'Custom Plex web URL',
-      description: 'Custom URL for opening Plex content (e.g., https://app.plex.tv). Leave empty to use configured server settings.'
+    CUSTOM_PLEX_URL: {
+      label: "Custom Plex web URL",
+      description:
+        "Custom URL for opening Plex content (e.g., https://app.plex.tv). Leave empty to use configured server settings.",
     },
-    'DEFAULT_PAGE': {
-      label: 'Default page on startup',
-      description: 'Choose which page to display when the app loads'
+    DEFAULT_PAGE: {
+      label: "Default page on startup",
+      description: "Choose which page to display when the app loads",
     },
-    'AUTO_CHECK_UPDATES': {
-      label: 'Automatic update checking',
-      description: 'Automatically check for new releases when you open the app'
+    AUTO_CHECK_UPDATES: {
+      label: "Automatic update checking",
+      description: "Automatically check for new releases when you open the app",
     },
-    'AUTO_MARK_NOTIFICATION_READ': {
-      label: 'Auto-mark notifications as read',
-      description: 'Automatically mark notifications as read when you click on them'
+    AUTO_MARK_NOTIFICATION_READ: {
+      label: "Auto-mark notifications as read",
+      description:
+        "Automatically mark notifications as read when you click on them",
     },
   };
-  
+
   const info = settingInfoMap[setting.key];
-  const label = info?.label || setting.key.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
-  const description = info?.description || '';
-  
+  const label =
+    info?.label ||
+    setting.key
+      .replace(/_/g, " ")
+      .toLowerCase()
+      .replace(/\b\w/g, (l) => l.toUpperCase());
+  const description = info?.description || "";
+
   return { label, description };
 };
 
@@ -193,9 +211,16 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
   const [exportingDatabase, setExportingDatabase] = useState(false);
   const [importingDatabase, setImportingDatabase] = useState(false);
   const [backendError, setBackendError] = useState<string | null>(null);
-  const { versionInfo, updateInfo, refreshVersionInfo, checkForUpdatesIfEnabled, checkForUpdatesManually } = useVersion();
+  const {
+    versionInfo,
+    updateInfo,
+    refreshVersionInfo,
+    checkForUpdatesIfEnabled,
+    checkForUpdatesManually,
+  } = useVersion();
   const [checkingUpdates, setCheckingUpdates] = useState(false);
-  const [showVersionMismatchModal, setShowVersionMismatchModal] = useState(false);
+  const [showVersionMismatchModal, setShowVersionMismatchModal] =
+    useState(false);
   const [pendingImportFile, setPendingImportFile] = useState<File | null>(null);
   const [versionMismatchInfo, setVersionMismatchInfo] = useState<{
     currentVersion: string;
@@ -205,18 +230,21 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
     success: boolean;
     message: string;
   } | null>(null);
-  
+
   // Admin tools state
   const [resettingDatabase, setResettingDatabase] = useState(false);
   const [resettingStreamCounts, setResettingStreamCounts] = useState(false);
   const [deletingAllDevices, setDeletingAllDevices] = useState(false);
   const [showResetDatabaseModal, setShowResetDatabaseModal] = useState(false);
-  const [showResetStreamCountsModal, setShowResetStreamCountsModal] = useState(false);
-  const [showDeleteAllDevicesModal, setShowDeleteAllDevicesModal] = useState(false);
+  const [showResetStreamCountsModal, setShowResetStreamCountsModal] =
+    useState(false);
+  const [showDeleteAllDevicesModal, setShowDeleteAllDevicesModal] =
+    useState(false);
   const [clearingSessionHistory, setClearingSessionHistory] = useState(false);
-  const [showClearSessionHistoryModal, setShowClearSessionHistoryModal] = useState(false);
+  const [showClearSessionHistoryModal, setShowClearSessionHistoryModal] =
+    useState(false);
   const [showUnsavedChangesModal, setShowUnsavedChangesModal] = useState(false);
-  
+
   const { toast } = useToast();
 
   useEffect(() => {
@@ -237,11 +265,11 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
 
   const checkForUpdates = async () => {
     if (!versionInfo?.version) return;
-    
+
     setCheckingUpdates(true);
     try {
       const result = await checkForUpdatesManually();
-      
+
       if (result) {
         if (result.hasUpdate) {
           // Show update available message
@@ -261,15 +289,17 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
       } else {
         toast({
           title: "Update check failed",
-          description: "Unable to check for updates. You may be rate limited by GitHub. Please slow down your requests and try again later.",
+          description:
+            "Unable to check for updates. You may be rate limited by GitHub. Please slow down your requests and try again later.",
           variant: "destructive",
         });
       }
     } catch (error) {
-      console.error('Failed to check for updates:', error);
+      console.error("Failed to check for updates:", error);
       toast({
         title: "Update check failed",
-        description: "Unable to check for updates. Please check your internet connection.",
+        description:
+          "Unable to check for updates. Please check your internet connection.",
         variant: "destructive",
       });
     } finally {
@@ -293,9 +323,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
           } else if (setting.type === "number") {
             initialFormData[setting.key] = parseFloat(setting.value);
           } else {
-            initialFormData[setting.key] = setting.private
-              ? ""
-              : setting.value;
+            initialFormData[setting.key] = setting.private ? "" : setting.value;
           }
         });
         setFormData(initialFormData);
@@ -322,91 +350,103 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
     settingsToUpdate: { key: string; value: any }[]
   ) => {
     const errors: string[] = [];
-    
+
     for (const setting of settingsToUpdate) {
       switch (setting.key) {
-        case 'PLEX_SERVER_PORT':
+        case "PLEX_SERVER_PORT":
           const port = Number(setting.value);
           if (isNaN(port) || port < 1 || port > 65535) {
-            errors.push('Port must be a number between 1 and 65535');
+            errors.push("Port must be a number between 1 and 65535");
           }
           break;
-        case 'PLEXGUARD_REFRESH_INTERVAL':
+        case "PLEXGUARD_REFRESH_INTERVAL":
           const interval = Number(setting.value);
           if (isNaN(interval) || interval < 1) {
-            errors.push('Refresh interval must be a positive number');
+            errors.push("Refresh interval must be a positive number");
           }
           break;
-        case 'PLEX_SERVER_IP':
+        case "PLEX_SERVER_IP":
           if (!setting.value || setting.value.trim().length === 0) {
-            errors.push('Plex server IP is required');
+            errors.push("Plex server IP is required");
           }
           break;
-        case 'PLEX_TOKEN':
+        case "PLEX_TOKEN":
           if (!setting.value || setting.value.trim().length === 0) {
-            errors.push('Plex token is required');
+            errors.push("Plex token is required");
           }
           break;
-        case 'DEVICE_CLEANUP_INTERVAL_DAYS':
+        case "DEVICE_CLEANUP_INTERVAL_DAYS":
           const cleanupDays = Number(setting.value);
           if (isNaN(cleanupDays)) {
-            errors.push('Device cleanup interval must be a number');
+            errors.push("Device cleanup interval must be a number");
           } else if (!Number.isInteger(cleanupDays)) {
-            errors.push('Device cleanup interval must be a whole number (no decimals)');
+            errors.push(
+              "Device cleanup interval must be a whole number (no decimals)"
+            );
           } else if (cleanupDays < 1) {
-            errors.push('Device cleanup interval must be at least 1 day');
+            errors.push("Device cleanup interval must be at least 1 day");
           }
           break;
-        case 'DEFAULT_PAGE':
-          const validPages = ['devices', 'streams'];
+        case "DEFAULT_PAGE":
+          const validPages = ["devices", "streams"];
           if (!validPages.includes(String(setting.value))) {
             errors.push('Default page must be either "devices" or "streams"');
           }
           break;
-        case 'AUTO_CHECK_UPDATES':
-          if (typeof setting.value !== 'boolean') {
-            errors.push('Auto check updates must be a boolean value');
+        case "AUTO_CHECK_UPDATES":
+          if (typeof setting.value !== "boolean") {
+            errors.push("Auto check updates must be a boolean value");
           }
           break;
-        case 'AUTO_MARK_NOTIFICATION_READ':
-          if (typeof setting.value !== 'boolean') {
-            errors.push('Auto mark notification read must be a boolean value');
+        case "AUTO_MARK_NOTIFICATION_READ":
+          if (typeof setting.value !== "boolean") {
+            errors.push("Auto mark notification read must be a boolean value");
           }
           break;
-        case 'CUSTOM_PLEX_URL':
+        case "CUSTOM_PLEX_URL":
           if (setting.value && setting.value.trim().length > 0) {
             const urlValue = setting.value.trim();
-            
+
             // Check if it starts with http:// or https://
-            if (!urlValue.startsWith('http://') && !urlValue.startsWith('https://')) {
-              errors.push('Custom Plex URL must start with http:// or https://');
+            if (
+              !urlValue.startsWith("http://") &&
+              !urlValue.startsWith("https://")
+            ) {
+              errors.push(
+                "Custom Plex URL must start with http:// or https://"
+              );
               break;
             }
-            
+
             // Try to parse as URL to validate format
             try {
               const url = new URL(urlValue);
-              
-              // Check domain validity 
-              const hostParts = url.hostname.split('.');
-              const hasValidDomain = hostParts.length >= 2 && 
-                                   hostParts.every(part => part.length > 0) && 
-                                   url.hostname.includes('.');
-              
+
+              // Check domain validity
+              const hostParts = url.hostname.split(".");
+              const hasValidDomain =
+                hostParts.length >= 2 &&
+                hostParts.every((part) => part.length > 0) &&
+                url.hostname.includes(".");
+
               if (!hasValidDomain) {
-                errors.push('Custom Plex URL must contain a valid domain with extension (e.g., plex.example.com)');
+                errors.push(
+                  "Custom Plex URL must contain a valid domain with extension (e.g., plex.example.com)"
+                );
               }
             } catch (error) {
-              errors.push('Custom Plex URL must be a valid URL format (e.g., https://app.plex.tv)');
+              errors.push(
+                "Custom Plex URL must be a valid URL format (e.g., https://app.plex.tv)"
+              );
             }
           }
           break;
-          default:
-            //console.warn(`No validation rules for setting: ${setting.key}`);
-            break;
+        default:
+          //console.warn(`No validation rules for setting: ${setting.key}`);
+          break;
       }
     }
-    
+
     return errors;
   };
 
@@ -459,10 +499,15 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
       if (response.ok) {
         await fetchSettings(); // Refresh settings
 
+        // Dispatch event to notify notification handler of settings change
+        window.dispatchEvent(
+          new CustomEvent("settingsUpdated", { detail: settingsToUpdate })
+        );
+
         // Show success toast
         toast({
           title: "Settings saved",
-          description: `Successfully updated ${settingsToUpdate.length} setting${settingsToUpdate.length !== 1 ? 's' : ''}`,
+          description: `Successfully updated ${settingsToUpdate.length} setting${settingsToUpdate.length !== 1 ? "s" : ""}`,
           variant: "success",
         });
 
@@ -471,7 +516,8 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
       } else {
         // Handle save error
         const errorData = await response.json().catch(() => ({}));
-        const errorMessage = errorData.error || `Server error (${response.status})`;
+        const errorMessage =
+          errorData.error || `Server error (${response.status})`;
         toast({
           title: "Failed to save settings",
           description: errorMessage,
@@ -495,7 +541,8 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
     if (hasPlexChanges()) {
       toast({
         title: "Pending Changes Detected",
-        description: "Please save your Plex settings before testing the connection to ensure accurate results.",
+        description:
+          "Please save your Plex settings before testing the connection to ensure accurate results.",
         variant: "warning",
       });
       return;
@@ -503,9 +550,12 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
 
     setTestingConnection(true);
     try {
-      const response = await fetch(`${config.api.baseUrl}/config/test-plex-connection`, {
-        method: "POST",
-      });
+      const response = await fetch(
+        `${config.api.baseUrl}/config/test-plex-connection`,
+        {
+          method: "POST",
+        }
+      );
 
       if (response.ok) {
         const result = await response.json();
@@ -513,7 +563,8 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
       } else {
         // Try to get the error message from the response
         const errorData = await response.json().catch(() => ({}));
-        const errorMessage = errorData.message || `Server error (${response.status})`;
+        const errorMessage =
+          errorData.message || `Server error (${response.status})`;
         setConnectionStatus({
           success: false,
           message: errorMessage,
@@ -525,7 +576,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
         success: false,
         message: errorMessage,
       });
-      
+
       // Only show toast if it's a network/backend error (unable to reach server)
       toast({
         title: "Network Error",
@@ -540,19 +591,21 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
   const handleExportDatabase = async () => {
     setExportingDatabase(true);
     try {
-      const response = await fetch(`${config.api.baseUrl}/config/database/export`);
-      
+      const response = await fetch(
+        `${config.api.baseUrl}/config/database/export`
+      );
+
       if (response.ok) {
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
+        const a = document.createElement("a");
         a.href = url;
-        a.download = `guardian-backup-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+        a.download = `guardian-backup-${new Date().toISOString().replace(/[:.]/g, "-")}.json`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         window.URL.revokeObjectURL(url);
-        
+
         toast({
           title: "Export successful",
           description: "Database backup downloaded successfully",
@@ -582,7 +635,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
       // Read and validate the file
       const fileContent = await file.text();
       let importData;
-      
+
       try {
         importData = JSON.parse(fileContent);
       } catch (parseError) {
@@ -597,7 +650,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
       // Check version compatibility
       const importVersion = importData.version;
       const currentVersion = versionInfo?.version;
-      
+
       if (importVersion && currentVersion && importVersion !== currentVersion) {
         // Show modal instead of native confirm - with a small delay to ensure file dialog closes
         setTimeout(() => {
@@ -610,7 +663,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
         }, 100);
         return;
       }
-      
+
       // Proceed with import if no version mismatch
       setImportingDatabase(true);
       await performDatabaseImport(file);
@@ -628,28 +681,34 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
   const performDatabaseImport = async (file: File) => {
     try {
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append("file", file);
 
-      const response = await fetch(`${config.api.baseUrl}/config/database/import`, {
-        method: "POST",
-        body: formData,
-      });
-      
+      const response = await fetch(
+        `${config.api.baseUrl}/config/database/import`,
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
+
       if (response.ok) {
         const result = await response.json();
         const importData = JSON.parse(await file.text());
         const importVersion = importData.version;
         const currentVersion = versionInfo?.version;
-        
+
         const successMessage = `Successfully imported ${result.imported.imported} items, ${result.imported.skipped} items skipped`;
-        const versionMessage = importVersion && currentVersion !== importVersion ? ` (Version: ${importVersion} → ${currentVersion})` : '';
-        
+        const versionMessage =
+          importVersion && currentVersion !== importVersion
+            ? ` (Version: ${importVersion} → ${currentVersion})`
+            : "";
+
         toast({
           title: "Import successful",
           description: successMessage + versionMessage,
           variant: "success",
         });
-        
+
         // Refresh settings and version info after import
         await fetchSettings();
         await refreshVersionInfo();
@@ -695,13 +754,13 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
     });
   };
 
-    const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     // Reset the input value immediately to close the file dialog
-    event.target.value = '';
-    
+    event.target.value = "";
+
     if (file) {
-      if (file.type === 'application/json' || file.name.endsWith('.json')) {
+      if (file.type === "application/json" || file.name.endsWith(".json")) {
         handleImportDatabase(file);
       } else {
         toast({
@@ -717,25 +776,30 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
   const handleResetDatabase = async () => {
     setResettingDatabase(true);
     try {
-      const response = await fetch(`${config.api.baseUrl}/config/scripts/reset-database`, {
-        method: 'POST',
-      });
+      const response = await fetch(
+        `${config.api.baseUrl}/config/scripts/reset-database`,
+        {
+          method: "POST",
+        }
+      );
 
       if (response.ok) {
         toast({
           title: "Database reset successfully",
-          description: "All data has been cleared and default settings restored",
+          description:
+            "All data has been cleared and default settings restored",
           variant: "success",
         });
         // Refresh settings after reset
         await fetchSettings();
       } else {
-        throw new Error('Failed to reset database');
+        throw new Error("Failed to reset database");
       }
     } catch (error) {
       toast({
         title: "Failed to reset database",
-        description: error instanceof Error ? error.message : "Unknown error occurred",
+        description:
+          error instanceof Error ? error.message : "Unknown error occurred",
         variant: "destructive",
       });
     } finally {
@@ -747,9 +811,12 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
   const handleResetStreamCounts = async () => {
     setResettingStreamCounts(true);
     try {
-      const response = await fetch(`${config.api.baseUrl}/config/scripts/reset-stream-counts`, {
-        method: 'POST',
-      });
+      const response = await fetch(
+        `${config.api.baseUrl}/config/scripts/reset-stream-counts`,
+        {
+          method: "POST",
+        }
+      );
 
       if (response.ok) {
         toast({
@@ -758,12 +825,13 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
           variant: "success",
         });
       } else {
-        throw new Error('Failed to reset stream counts');
+        throw new Error("Failed to reset stream counts");
       }
     } catch (error) {
       toast({
         title: "Failed to reset stream counts",
-        description: error instanceof Error ? error.message : "Unknown error occurred",
+        description:
+          error instanceof Error ? error.message : "Unknown error occurred",
         variant: "destructive",
       });
     } finally {
@@ -775,9 +843,12 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
   const handleDeleteAllDevices = async () => {
     setDeletingAllDevices(true);
     try {
-      const response = await fetch(`${config.api.baseUrl}/config/scripts/delete-all-devices`, {
-        method: 'POST',
-      });
+      const response = await fetch(
+        `${config.api.baseUrl}/config/scripts/delete-all-devices`,
+        {
+          method: "POST",
+        }
+      );
 
       if (response.ok) {
         toast({
@@ -786,12 +857,13 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
           variant: "success",
         });
       } else {
-        throw new Error('Failed to delete all devices');
+        throw new Error("Failed to delete all devices");
       }
     } catch (error) {
       toast({
         title: "Failed to delete all devices",
-        description: error instanceof Error ? error.message : "Unknown error occurred",
+        description:
+          error instanceof Error ? error.message : "Unknown error occurred",
         variant: "destructive",
       });
     } finally {
@@ -803,23 +875,28 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
   const handleClearSessionHistory = async () => {
     setClearingSessionHistory(true);
     try {
-      const response = await fetch(`${config.api.baseUrl}/config/scripts/clear-session-history`, {
-        method: 'POST',
-      });
+      const response = await fetch(
+        `${config.api.baseUrl}/config/scripts/clear-session-history`,
+        {
+          method: "POST",
+        }
+      );
 
       if (response.ok) {
         toast({
           title: "Session history cleared successfully",
-          description: "All session history records have been removed from the database",
+          description:
+            "All session history records have been removed from the database",
           variant: "success",
         });
       } else {
-        throw new Error('Failed to clear session history');
+        throw new Error("Failed to clear session history");
       }
     } catch (error) {
       toast({
         title: "Failed to clear session history",
-        description: error instanceof Error ? error.message : "Unknown error occurred",
+        description:
+          error instanceof Error ? error.message : "Unknown error occurred",
         variant: "destructive",
       });
     } finally {
@@ -830,12 +907,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
 
   const getSettingsByCategory = (category: string) => {
     const categoryMap: Record<string, string[]> = {
-      plex: [
-        "PLEX_TOKEN",
-        "PLEX_SERVER_IP",
-        "PLEX_SERVER_PORT",
-        "USE_SSL",
-      ],
+      plex: ["PLEX_TOKEN", "PLEX_SERVER_IP", "PLEX_SERVER_PORT", "USE_SSL"],
       guardian: [
         "AUTO_CHECK_UPDATES",
         "PLEX_GUARD_DEFAULT_BLOCK",
@@ -852,15 +924,13 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
         "MSG_IP_WAN_ONLY",
         "MSG_IP_NOT_ALLOWED",
       ],
-      notifications: [
-        "AUTO_MARK_NOTIFICATION_READ"
-      ],
+      notifications: ["AUTO_MARK_NOTIFICATION_READ"],
     };
 
     const filteredSettings = settings.filter(
       (setting) => categoryMap[category]?.includes(setting.key) || false
     );
-    
+
     // Sort settings according to the order defined in categoryMap
     const categoryKeys = categoryMap[category] || [];
     return filteredSettings.sort((a, b) => {
@@ -879,9 +949,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
         <div className="flex items-center justify-between">
           <div className="space-y-0.5">
             <Label>{label}</Label>
-            <p className="text-xs text-muted-foreground">
-              {description}
-            </p>
+            <p className="text-xs text-muted-foreground">{description}</p>
           </div>
           <Switch
             checked={Boolean(value)}
@@ -898,9 +966,9 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
     if (setting.key === "DEFAULT_PAGE") {
       const options = [
         { value: "devices", label: "Device Management", icon: Shield },
-        { value: "streams", label: "Active Streams", icon: Activity }
+        { value: "streams", label: "Active Streams", icon: Activity },
       ];
-      
+
       return (
         <div className="space-y-2">
           <Label>{label}</Label>
@@ -942,10 +1010,12 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
                 : e.target.value;
             handleInputChange(setting.key, newValue);
           }}
-          placeholder={
-            setting.private && !value ? "••••••••••••••••••••" : ""
+          placeholder={setting.private && !value ? "••••••••••••••••••••" : ""}
+          className={
+            setting.type === "number"
+              ? "[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              : ""
           }
-          className={setting.type === "number" ? "[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" : ""}
         />
         <p className="text-xs text-muted-foreground">{description}</p>
       </div>
@@ -953,14 +1023,20 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
   };
 
   const renderDeviceCleanupSettings = () => {
-    const cleanupEnabledSetting = settings.find((s) => s.key === "DEVICE_CLEANUP_ENABLED");
-    const cleanupIntervalSetting = settings.find((s) => s.key === "DEVICE_CLEANUP_INTERVAL_DAYS");
+    const cleanupEnabledSetting = settings.find(
+      (s) => s.key === "DEVICE_CLEANUP_ENABLED"
+    );
+    const cleanupIntervalSetting = settings.find(
+      (s) => s.key === "DEVICE_CLEANUP_INTERVAL_DAYS"
+    );
 
     if (!cleanupEnabledSetting || !cleanupIntervalSetting) return null;
 
     const isCleanupEnabled = Boolean(formData["DEVICE_CLEANUP_ENABLED"]);
-    const { label: enabledLabel, description: enabledDescription } = getSettingInfo(cleanupEnabledSetting);
-    const { label: intervalLabel, description: intervalDescription } = getSettingInfo(cleanupIntervalSetting);
+    const { label: enabledLabel, description: enabledDescription } =
+      getSettingInfo(cleanupEnabledSetting);
+    const { label: intervalLabel, description: intervalDescription } =
+      getSettingInfo(cleanupIntervalSetting);
 
     return (
       <Card className="p-4">
@@ -987,7 +1063,9 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
             className={`ml-4 pl-4 border-l-2 ${isCleanupEnabled ? "border-border" : "border-muted"}`}
           >
             <div className="space-y-2">
-              <Label className={!isCleanupEnabled ? "text-muted-foreground" : ""}>
+              <Label
+                className={!isCleanupEnabled ? "text-muted-foreground" : ""}
+              >
                 {intervalLabel}
               </Label>
               <Input
@@ -1007,7 +1085,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
                 }}
                 onKeyDown={(e) => {
                   // Prevent decimal input
-                  if (e.key === '.' || e.key === ',') {
+                  if (e.key === "." || e.key === ",") {
                     e.preventDefault();
                   }
                 }}
@@ -1062,12 +1140,13 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label className={!isSSLEnabled ? "text-muted-foreground" : ""}>
-                  Ignore SSL certificate errors (not recommended with public domaines or on public networks)
+                  Ignore SSL certificate errors
                 </Label>
                 <p
                   className={`text-xs ${!isSSLEnabled ? "text-muted-foreground/60" : "text-muted-foreground"}`}
                 >
-                  Skip SSL certificate validation (not recommended for production)
+                  Skip SSL certificate validation (not recommended with public
+                  domaines or on public networks)
                 </p>
               </div>
               <Switch
@@ -1196,7 +1275,8 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
             <div>
               <h3 className="text-lg font-medium">Notification Settings</h3>
               <p className="text-sm text-muted-foreground">
-                Configure how notifications behave and interact with your workflow.
+                Configure how notifications behave and interact with your
+                workflow.
               </p>
             </div>
 
@@ -1216,7 +1296,8 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
             <div>
               <h3 className="text-lg font-medium">Customization Settings</h3>
               <p className="text-sm text-muted-foreground">
-                Customize the user interface, blocking messages, and overall user experience.
+                Customize the user interface, blocking messages, and overall
+                user experience.
               </p>
             </div>
 
@@ -1236,7 +1317,8 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
             <div>
               <h3 className="text-lg font-medium">Database Management</h3>
               <p className="text-sm text-muted-foreground">
-                Export and import your Guardian database for backup and migration purposes.
+                Export and import your Guardian database for backup and
+                migration purposes.
               </p>
             </div>
 
@@ -1247,7 +1329,9 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
                   <div>
                     <h4 className="text-sm font-medium">Export Database</h4>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Download a backup of your Guardian database. This includes all settings, user devices, preferences, and active sessions.
+                      Download a backup of your Guardian database. This includes
+                      all settings, user devices, preferences, and active
+                      sessions.
                     </p>
                   </div>
                   <Button
@@ -1273,7 +1357,8 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
                   <div>
                     <h4 className="text-sm font-medium">Import Database</h4>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Import a Guardian database backup. This will merge the imported data with existing data.
+                      Import a Guardian database backup. This will merge the
+                      imported data with existing data.
                     </p>
                   </div>
                   <div className="flex items-center space-x-2">
@@ -1291,7 +1376,9 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
                       size="sm"
                       variant="outline"
                       className="cursor-pointer"
-                      onClick={() => document.getElementById('database-import')?.click()}
+                      onClick={() =>
+                        document.getElementById("database-import")?.click()
+                      }
                     >
                       {importingDatabase ? (
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -1302,8 +1389,9 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
                     </Button>
                   </div>
                   <div className="text-xs text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/20 p-2 rounded border">
-                    <strong>Warning:</strong> Importing a database will merge data with your current database. 
-                    Consider exporting your current database first as a backup.
+                    <strong>Warning:</strong> Importing a database will merge
+                    data with your current database. Consider exporting your
+                    current database first as a backup.
                   </div>
                 </div>
               </Card>
@@ -1331,22 +1419,25 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
                       Reset Stream Counts
                     </h4>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Reset session counts for all devices. This will not delete devices.
+                      Reset session counts for all devices. This will not delete
+                      devices.
                     </p>
                   </div>
-                    <Button
+                  <Button
                     onClick={() => setShowResetStreamCountsModal(true)}
                     disabled={resettingStreamCounts}
                     size="sm"
                     variant="outline"
-                    >
+                  >
                     {resettingStreamCounts ? (
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                     ) : (
                       <RefreshCw className="w-4 h-4 mr-2" />
                     )}
-                    {resettingStreamCounts ? "Resetting..." : "Reset Stream Counts"}
-                    </Button>
+                    {resettingStreamCounts
+                      ? "Resetting..."
+                      : "Reset Stream Counts"}
+                  </Button>
                 </div>
               </Card>
 
@@ -1358,7 +1449,8 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
                       Clear All Session History
                     </h4>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Permanently remove all session history records from the database. This will clear viewing history for all users.
+                      Permanently remove all session history records from the
+                      database. This will clear viewing history for all users.
                     </p>
                   </div>
                   <Button
@@ -1372,7 +1464,9 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
                     ) : (
                       <XCircle className="w-4 h-4 mr-2" />
                     )}
-                    {clearingSessionHistory ? "Clearing..." : "Clear Session History"}
+                    {clearingSessionHistory
+                      ? "Clearing..."
+                      : "Clear Session History"}
                   </Button>
                 </div>
               </Card>
@@ -1415,12 +1509,15 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
                       Reset Entire Database
                     </h4>
                     <p className="text-xs text-muted-foreground mt-1">
-                      <strong>DANGER:</strong> This will permanently delete ALL data including settings, devices, user preferences, and sessions. Default settings will be restored.
+                      <strong>DANGER:</strong> This will permanently delete ALL
+                      data including settings, devices, user preferences, and
+                      sessions. Default settings will be restored.
                     </p>
                   </div>
                   <div className="text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 p-3 rounded border border-red-200 dark:border-red-800">
-                    <strong> IRREVERSIBLE ACTION:</strong> This will completely wipe your Guardian database. 
-                    Export your database first if you want to keep any data. This action cannot be undone.
+                    <strong> IRREVERSIBLE ACTION:</strong> This will completely
+                    wipe your Guardian database. Export your database first if
+                    you want to keep any data. This action cannot be undone.
                   </div>
                   <Button
                     onClick={() => setShowResetDatabaseModal(true)}
@@ -1508,15 +1605,15 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
   const hasPlexChanges = () => {
     const plexKeys = [
       "PLEX_TOKEN",
-      "PLEX_SERVER_IP", 
+      "PLEX_SERVER_IP",
       "PLEX_SERVER_PORT",
       "USE_SSL",
-      "IGNORE_CERT_ERRORS"
+      "IGNORE_CERT_ERRORS",
     ];
-    
+
     return Object.entries(formData).some(([key, value]) => {
       if (!plexKeys.includes(key)) return false;
-      
+
       const originalSetting = settings.find((s) => s.key === key);
       if (!originalSetting) return false;
 
@@ -1590,7 +1687,8 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
                       Unsaved Changes
                     </h3>
                     <p className="text-sm text-amber-600 dark:text-amber-300">
-                      You have unsaved changes. Make sure to save your settings before leaving this page.
+                      You have unsaved changes. Make sure to save your settings
+                      before leaving this page.
                     </p>
                   </div>
                   <Button
@@ -1671,58 +1769,78 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
                 </button>
               ))}
             </CardContent>
-            
+
             {/* Version Information */}
             {versionInfo && (
               <div className="px-4 py-3 border-t border-border">
                 <div className="text-xs text-muted-foreground space-y-2">
                   <div className="font-medium text-foreground">
-                  {/* Update Check Button */}
-                  <div className="pt-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={checkForUpdates}
-                      disabled={checkingUpdates}
-                      className="h-6 text-xs text-muted-foreground hover:text-foreground"
-                    >
-                      {checkingUpdates ? (
-                        <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                      ) : (
-                        <RefreshCw className="h-3 w-3 mr-1" />
-                      )}
-                      Check for Updates
-                    </Button>
-                  </div>
-                  {/* Documentation Link */}
-                  <div className="pt-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => window.open('https://github.com/HydroshieldMKII/Guardian', '_blank')}
-                      className="h-6 text-xs text-muted-foreground hover:text-foreground"
-                    >
-                      <BookOpen className="h-3 w-3 mr-1" />
-                      Documentation
-                    </Button>
-                  </div>
+                    {/* Update Check Button */}
+                    <div className="pt-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={checkForUpdates}
+                        disabled={checkingUpdates}
+                        className="h-6 text-xs text-muted-foreground hover:text-foreground"
+                      >
+                        {checkingUpdates ? (
+                          <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                        ) : (
+                          <RefreshCw className="h-3 w-3 mr-1" />
+                        )}
+                        Check for Updates
+                      </Button>
+                    </div>
+                    {/* Documentation Link */}
+                    <div className="pt-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() =>
+                          window.open(
+                            "https://github.com/HydroshieldMKII/Guardian",
+                            "_blank"
+                          )
+                        }
+                        className="h-6 text-xs text-muted-foreground hover:text-foreground"
+                      >
+                        <BookOpen className="h-3 w-3 mr-1" />
+                        Documentation
+                      </Button>
+                    </div>
                   </div>
                   {versionInfo.isVersionMismatch ? (
                     <>
-                        <div className={versionInfo.databaseVersion < versionInfo.codeVersion ? "ml-2 text-red-600 dark:text-red-400" : "ml-2"}>
+                      <div
+                        className={
+                          versionInfo.databaseVersion < versionInfo.codeVersion
+                            ? "ml-2 text-red-600 dark:text-red-400"
+                            : "ml-2"
+                        }
+                      >
                         Database version: v{versionInfo.databaseVersion}
-                        </div>
-                        <div className={versionInfo.codeVersion < versionInfo.databaseVersion ? "ml-2 text-red-600 dark:text-red-400" : "ml-2"}>
+                      </div>
+                      <div
+                        className={
+                          versionInfo.codeVersion < versionInfo.databaseVersion
+                            ? "ml-2 text-red-600 dark:text-red-400"
+                            : "ml-2"
+                        }
+                      >
                         App Version: v{versionInfo.codeVersion}
-                        </div>
+                      </div>
                     </>
                   ) : (
                     <>
-                      <div className="ml-2">Database version {versionInfo.databaseVersion}</div>
-                      <div className="ml-2">App Version {versionInfo.version}</div>
+                      <div className="ml-2">
+                        Database version {versionInfo.databaseVersion}
+                      </div>
+                      <div className="ml-2">
+                        App Version {versionInfo.version}
+                      </div>
                     </>
                   )}
-                
                 </div>
               </div>
             )}
@@ -1734,7 +1852,10 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
               {renderSectionContent(activeSection)}
 
               {/* Save Button - Only show for configurable sections */}
-              {(activeSection === "plex" || activeSection === "guardian" || activeSection === "notifications" || activeSection === "customization") && (
+              {(activeSection === "plex" ||
+                activeSection === "guardian" ||
+                activeSection === "notifications" ||
+                activeSection === "customization") && (
                 <>
                   <Separator className="my-6" />
                   <div className="flex justify-end space-x-2">

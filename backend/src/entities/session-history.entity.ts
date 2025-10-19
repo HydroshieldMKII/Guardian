@@ -101,4 +101,7 @@ export class SessionHistory {
 
   @Column({ name: 'player_state', nullable: true })
   playerState: string;
+
+  @Column({ name: 'product', nullable: true })
+  product: string;
 }

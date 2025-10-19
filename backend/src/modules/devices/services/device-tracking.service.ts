@@ -401,6 +401,11 @@ export class DeviceTrackingService {
       );
     }
 
+    // Delete session history for inactive devices
+    const inactiveDeviceIds = inactiveDevices.map(device => device.id);
+    await this.sessionHistoryRepository.delete({ userDeviceId: In(inactiveDeviceIds) });
+    this.logger.log(`Deleted session history for ${inactiveDevices.length} inactive device(s)`);
+
     // Delete the inactive devices
     const deviceIds = inactiveDevices.map(device => device.id);
     await this.userDeviceRepository.delete({ id: In(deviceIds) });
