@@ -1,6 +1,6 @@
 "use client";
 
-import { BellRing,Bell, X, CheckCheck, Check } from "lucide-react";
+import { BellRing, Bell, X, CheckCheck, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -22,7 +22,12 @@ interface NotificationItemProps {
   onClick?: (notification: Notification) => void;
 }
 
-function NotificationItem({ notification, onMarkAsRead, onRemove, onClick }: NotificationItemProps) {
+function NotificationItem({
+  notification,
+  onMarkAsRead,
+  onRemove,
+  onClick,
+}: NotificationItemProps) {
   const formatDate = (date: Date) => {
     const now = new Date();
     const diff = now.getTime() - date.getTime();
@@ -30,7 +35,9 @@ function NotificationItem({ notification, onMarkAsRead, onRemove, onClick }: Not
     const hours = Math.floor(diff / 3600000);
     const days = Math.floor(diff / 86400000);
 
-    if (minutes < 60) {
+    if (minutes < 2) {
+      return "now";
+    } else if (minutes < 60) {
       return `${minutes}m ago`;
     } else if (hours < 24) {
       return `${hours}h ago`;
@@ -46,14 +53,20 @@ function NotificationItem({ notification, onMarkAsRead, onRemove, onClick }: Not
       }`}
     >
       <div className="flex items-start justify-between gap-2">
-        <div 
+        <div
           className={`flex-1 min-w-0 rounded p-1 -m-1 transition-colors ${
-            notification.sessionHistoryId 
-              ? 'cursor-pointer hover:bg-accent/30' 
-              : 'cursor-default'
+            notification.sessionHistoryId
+              ? "cursor-pointer hover:bg-accent/30"
+              : "cursor-default"
           }`}
-          onClick={() => notification.sessionHistoryId && onClick?.(notification)}
-          title={notification.sessionHistoryId ? "Click to view in session history" : "The session history is not available for this notification"}
+          onClick={() =>
+            notification.sessionHistoryId && onClick?.(notification)
+          }
+          title={
+            notification.sessionHistoryId
+              ? "Click to view in session history"
+              : "The session history is not available for this notification"
+          }
         >
           <div className="flex items-center gap-2 mb-1">
             {!notification.read && (
@@ -63,9 +76,7 @@ function NotificationItem({ notification, onMarkAsRead, onRemove, onClick }: Not
               {formatDate(notification.createdAt)}
             </span>
           </div>
-          <p className="text-sm leading-relaxed">
-            {notification.text}
-          </p>
+          <p className="text-sm leading-relaxed">{notification.text}</p>
         </div>
         <div className="flex items-center gap-1 flex-shrink-0">
           {!notification.read && (
@@ -95,21 +106,26 @@ function NotificationItem({ notification, onMarkAsRead, onRemove, onClick }: Not
 }
 
 export function NotificationMenu() {
-  const { notifications, unreadCount, updateNotifications, onNotificationClick } = useNotificationContext();
+  const {
+    notifications,
+    unreadCount,
+    updateNotifications,
+    onNotificationClick,
+  } = useNotificationContext();
 
   // Mark notification as read
   const markAsRead = async (id: number) => {
     try {
       await apiClient.markNotificationAsRead(id);
-      updateNotifications(prev =>
-        prev.map(notification =>
+      updateNotifications((prev) =>
+        prev.map((notification) =>
           notification.id === id
             ? { ...notification, read: true }
             : notification
         )
       );
     } catch (err) {
-      console.error('Failed to mark notification as read:', err);
+      console.error("Failed to mark notification as read:", err);
     }
   };
 
@@ -117,11 +133,11 @@ export function NotificationMenu() {
   const removeNotification = async (id: number) => {
     try {
       await apiClient.deleteNotification(id);
-      updateNotifications(prev =>
-        prev.filter(notification => notification.id !== id)
+      updateNotifications((prev) =>
+        prev.filter((notification) => notification.id !== id)
       );
     } catch (err) {
-      console.error('Failed to delete notification:', err);
+      console.error("Failed to delete notification:", err);
     }
   };
 
@@ -129,11 +145,11 @@ export function NotificationMenu() {
   const markAllAsRead = async () => {
     try {
       await apiClient.markAllNotificationsAsRead();
-      updateNotifications(prev =>
-        prev.map(notification => ({ ...notification, read: true }))
+      updateNotifications((prev) =>
+        prev.map((notification) => ({ ...notification, read: true }))
       );
     } catch (err) {
-      console.error('Failed to mark all notifications as read:', err);
+      console.error("Failed to mark all notifications as read:", err);
     }
   };
 
@@ -143,7 +159,7 @@ export function NotificationMenu() {
       await apiClient.clearAllNotifications();
       updateNotifications(() => []);
     } catch (err) {
-      console.error('Failed to clear all notifications:', err);
+      console.error("Failed to clear all notifications:", err);
     }
   };
 
@@ -201,7 +217,7 @@ export function NotificationMenu() {
             </div>
           )}
         </div>
-        
+
         {notifications.length === 0 ? (
           <div className="p-8 text-center">
             <BellRing className="h-8 w-8 mx-auto text-muted-foreground mb-2 opacity-50" />
