@@ -215,6 +215,37 @@ const DeviceManagement = memo(
       }
     };
 
+    // Format duration in minutes to a human-readable format
+    const formatDuration = (minutes: number): string => {
+      if (minutes < 60) {
+        return `${minutes} minute${minutes !== 1 ? 's' : ''}`;
+      } else if (minutes < 1440) { // Less than 24 hours
+        const hours = Math.floor(minutes / 60);
+        const remainingMinutes = minutes % 60;
+        if (remainingMinutes === 0) {
+          return `${hours} hour${hours !== 1 ? 's' : ''}`;
+        } else {
+          return `${hours} hour${hours !== 1 ? 's' : ''} and ${remainingMinutes} minute${remainingMinutes !== 1 ? 's' : ''}`;
+        }
+      } else if (minutes < 10080) { // Less than 7 days
+        const days = Math.floor(minutes / 1440);
+        const remainingHours = Math.floor((minutes % 1440) / 60);
+        if (remainingHours === 0) {
+          return `${days} day${days !== 1 ? 's' : ''}`;
+        } else {
+          return `${days} day${days !== 1 ? 's' : ''} and ${remainingHours} hour${remainingHours !== 1 ? 's' : ''}`;
+        }
+      } else { // 7 days or more
+        const weeks = Math.floor(minutes / 10080);
+        const remainingDays = Math.floor((minutes % 10080) / 1440);
+        if (remainingDays === 0) {
+          return `${weeks} week${weeks !== 1 ? 's' : ''}`;
+        } else {
+          return `${weeks} week${weeks !== 1 ? 's' : ''} and ${remainingDays} day${remainingDays !== 1 ? 's' : ''}`;
+        }
+      }
+    };
+
     // Sorting state with localStorage initialization
     const [sortBy, setSortBy] = useState<
       "username" | "deviceCount" | "pendingCount" | "lastSeen" | "streamCount"
@@ -783,7 +814,7 @@ const DeviceManagement = memo(
           setTemporaryAccessDevice(null);
           toast({
             title: "Temporary Access Granted",
-            description: `Temporary access granted for ${durationMinutes} minutes`,
+            description: `Temporary access granted for ${formatDuration(durationMinutes)}`,
             variant: "success",
           });
         }
@@ -798,6 +829,11 @@ const DeviceManagement = memo(
         const success = await deviceActions.revokeTemporaryAccess(deviceId);
         if (success) {
           setTimeout(handleRefresh, 100);
+          toast({
+            title: "Temporary Access Revoked",
+            description: "Temporary access has been successfully revoked",
+            variant: "success",
+          });
         }
       } finally {
         setActionLoading(null);
