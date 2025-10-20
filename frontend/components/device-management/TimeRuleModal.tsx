@@ -5,6 +5,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { ConfirmationModal } from "@/components/ui/confirmation-modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -118,6 +119,8 @@ export function TimeRuleModal({
   const [creatingRule, setCreatingRule] = useState(false);
   const [creatingPreset, setCreatingPreset] = useState(false);
   const [deletingAllRules, setDeletingAllRules] = useState(false);
+  const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
+  const [showPresetConfirm, setShowPresetConfirm] = useState<string | null>(null);
   const [newRule, setNewRule] = useState<NewRuleForm>({
     deviceIdentifier: deviceIdentifier || undefined,
     ruleName: "",
@@ -379,74 +382,20 @@ export function TimeRuleModal({
     }
   };
 
-  const createWeekdaysOnlyPreset = async () => {
-    if (creatingPreset) {
-      console.log("Already creating preset, ignoring duplicate request");
-      return;
-    }
-
-    setCreatingPreset(true);
-    try {
-      console.log("Creating weekdays preset for user:", userId);
-      const createdRules = await createPreset(
-        userId,
-        "weekdays-only",
-        deviceIdentifier
-      );
-
-      setRules(createdRules.map((rule) => ({ ...rule, isEditing: false })));
-      toast({
-        title: "Preset Created",
-        description: "Weekdays preset created successfully applied",
-      });
-    } catch (error: any) {
-      console.error("Error creating weekdays preset:", error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to create weekdays preset",
-        variant: "destructive",
-      });
-    } finally {
-      setCreatingPreset(false);
-    }
+    const createWeekdaysOnlyPreset = () => {
+    setShowPresetConfirm("weekdays-only");
   };
 
-  const createWeekendsOnlyPreset = async () => {
-    if (creatingPreset) {
-      console.log("Already creating preset, ignoring duplicate request");
-      return;
-    }
-
-    setCreatingPreset(true);
-    try {
-      console.log("Creating weekends preset for user:", userId);
-      const createdRules = await createPreset(
-        userId,
-        "weekends-only",
-        deviceIdentifier
-      );
-
-      setRules(createdRules.map((rule) => ({ ...rule, isEditing: false })));
-      toast({
-        title: "Preset Created",
-        description: "Weekends-only preset successfully applied",
-        variant: "success",
-      });
-    } catch (error: any) {
-      console.error("Error creating weekends preset:", error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to create weekends preset",
-        variant: "destructive",
-      });
-    } finally {
-      setCreatingPreset(false);
-    }
+  const createWeekendsOnlyPreset = () => {
+    setShowPresetConfirm("weekends-only");
   };
 
-  const deleteAllRules = async () => {
+  const deleteAllRules = () => {
     if (rules.length === 0) return;
+    setShowDeleteAllConfirm(true);
+  };
 
+  const confirmDeleteAllRules = async () => {
     setDeletingAllRules(true);
     try {
       // Delete all rules
@@ -466,11 +415,47 @@ export function TimeRuleModal({
       });
     } finally {
       setDeletingAllRules(false);
+      setShowDeleteAllConfirm(false);
+    }
+  };
+
+  const confirmCreatePreset = async (presetType: string) => {
+    if (creatingPreset) {
+      console.log("Already creating preset, ignoring duplicate request");
+      return;
+    }
+
+    setCreatingPreset(true);
+    try {
+      console.log(`Creating ${presetType} preset for user:`, userId);
+      const createdRules = await createPreset(
+        userId,
+        presetType as 'weekdays-only' | 'weekends-only',
+        deviceIdentifier
+      );
+
+      setRules(createdRules.map((rule) => ({ ...rule, isEditing: false })));
+      toast({
+        title: "Preset Applied",
+        description: `${presetType === 'weekdays-only' ? 'Weekdays' : 'Weekends'} preset successfully applied`,
+        variant: "success",
+      });
+    } catch (error: any) {
+      console.error(`Error creating ${presetType} preset:`, error);
+      toast({
+        title: "Error",
+        description: error.message || `Failed to create ${presetType} preset`,
+        variant: "destructive",
+      });
+    } finally {
+      setCreatingPreset(false);
+      setShowPresetConfirm(null);
     }
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <>
+      <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-[95vw] w-full sm:max-w-[1100px] max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -719,7 +704,10 @@ export function TimeRuleModal({
                       : rule;
 
                   return (
-                    <Card key={rule.id}>
+                    <Card
+                      key={rule.id}
+                      className={!rule.enabled ? "opacity-50" : ""}
+                    >
                       <CardContent className="px-4 py-3">
                         {rule.isEditing ? (
                           <div className="space-y-4">
@@ -881,7 +869,9 @@ export function TimeRuleModal({
                           <div className="flex items-start justify-between gap-4">
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                <span className="font-medium truncate">
+                                <span
+                                  className={`font-medium truncate ${!rule.enabled ? "text-muted-foreground" : ""}`}
+                                >
                                   {rule.ruleName}
                                 </span>
                                 <div className="flex gap-1 flex-shrink-0">
@@ -892,24 +882,20 @@ export function TimeRuleModal({
                                         : "default"
                                     }
                                     className={`text-xs text-white ${
-                                      rule.action === "allow"
-                                        ? "bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 border-green-600"
-                                        : "bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800 border-red-600"
+                                      !rule.enabled
+                                        ? "bg-gray-400 hover:bg-gray-500 dark:bg-gray-600 dark:hover:bg-gray-700 border-gray-400"
+                                        : rule.action === "allow"
+                                          ? "bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 border-green-600"
+                                          : "bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800 border-red-600"
                                     }`}
                                   >
                                     {rule.action}
                                   </Badge>
-                                  <Badge
-                                    variant={
-                                      rule.enabled ? "default" : "secondary"
-                                    }
-                                    className="text-xs"
-                                  >
-                                    {rule.enabled ? "Enabled" : "Disabled"}
-                                  </Badge>
                                 </div>
                               </div>
-                              <p className="text-sm text-muted-foreground">
+                              <p
+                                className={`text-sm ${!rule.enabled ? "text-muted-foreground/60" : "text-muted-foreground"}`}
+                              >
                                 {getDayLabel(rule.dayOfWeek)} • {rule.startTime}{" "}
                                 - {rule.endTime}
                               </p>
@@ -989,5 +975,28 @@ export function TimeRuleModal({
         </div>
       </DialogContent>
     </Dialog>
+
+    {/* Delete All Confirmation Dialog */}
+    <ConfirmationModal
+      isOpen={showDeleteAllConfirm}
+      onClose={() => setShowDeleteAllConfirm(false)}
+      onConfirm={confirmDeleteAllRules}
+      title="Delete All Time Rules?"
+      description="This action will permanently delete all existing time rules for this user. This cannot be undone."
+      confirmText="Delete All"
+      variant="destructive"
+    />
+
+    {/* Preset Confirmation Dialog */}
+    <ConfirmationModal
+      isOpen={!!showPresetConfirm}
+      onClose={() => setShowPresetConfirm(null)}
+      onConfirm={() => confirmCreatePreset(showPresetConfirm!)}
+      title={`Apply ${showPresetConfirm} Preset?`}
+      description={`This will delete all existing time rules and create new ones for ${showPresetConfirm?.toLowerCase()}. This action cannot be undone.`}
+      confirmText="Apply Preset"
+      variant="default"
+    />
+    </>
   );
 }
