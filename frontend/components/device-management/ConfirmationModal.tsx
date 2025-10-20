@@ -77,9 +77,9 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
         };
       case "delete":
         return {
-          variant: "destructive" as const,
+          variant: "outline" as const,
           className:
-            "w-full sm:w-auto bg-red-600 dark:bg-red-700 text-white hover:bg-red-700 dark:hover:bg-red-800",
+            "w-full sm:w-auto border-red-600 text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-700 dark:hover:bg-red-900/20",
         };
       default:
         return {
@@ -148,7 +148,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
           <div className="flex items-center gap-3 mb-2">
             {getDeviceIcon(
               confirmAction.device.devicePlatform,
-              confirmAction.device.deviceProduct,
+              confirmAction.device.deviceProduct
             )}
             <div className="min-w-0 flex-1">
               <div className="text-sm font-medium text-foreground truncate">
