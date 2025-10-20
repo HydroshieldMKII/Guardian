@@ -51,11 +51,11 @@ interface UserGroupCardProps {
   onToggleExpansion: (userId: string) => void;
   onUpdateUserPreference: (
     userId: string,
-    defaultBlock: boolean | null,
+    defaultBlock: boolean | null
   ) => void;
   onUpdateUserIPPolicy?: (
     userId: string,
-    updates: Partial<UserPreference>,
+    updates: Partial<UserPreference>
   ) => void;
   onToggleUserVisibility?: (userId: string) => void;
   onShowHistory?: (userId: string) => void;
