@@ -117,7 +117,7 @@ export function TimeRuleModal({
   const [updatingRuleId, setUpdatingRuleId] = useState<number | null>(null);
   const [deletingRuleId, setDeletingRuleId] = useState<number | null>(null);
   const [creatingRule, setCreatingRule] = useState(false);
-  const [creatingPreset, setCreatingPreset] = useState(false);
+  const [creatingPreset, setCreatingPreset] = useState<string | null>(null); // Track which preset is being created
   const [deletingAllRules, setDeletingAllRules] = useState(false);
   const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
   const [showPresetConfirm, setShowPresetConfirm] = useState<string | null>(
@@ -448,7 +448,7 @@ export function TimeRuleModal({
       return;
     }
 
-    setCreatingPreset(true);
+    setCreatingPreset(presetType);
     try {
       console.log(`Creating ${presetType} preset for user:`, userId);
       const createdRules = await createPreset(
@@ -475,7 +475,7 @@ export function TimeRuleModal({
         variant: "destructive",
       });
     } finally {
-      setCreatingPreset(false);
+      setCreatingPreset(null);
       setShowPresetConfirm(null);
     }
   };
@@ -510,11 +510,14 @@ export function TimeRuleModal({
                     variant="outline"
                     size="sm"
                     onClick={createWeekdaysOnlyPreset}
-                    disabled={creatingPreset || creatingRule}
+                    disabled={!!creatingPreset || creatingRule}
                     className="text-xs"
                   >
-                    {creatingPreset ? (
-                      <div className="w-3 h-3 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
+                    {creatingPreset === "weekdays-only" ? (
+                      <>
+                        <div className="w-3 h-3 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin mr-1" />
+                        Applying...
+                      </>
                     ) : (
                       "Weekdays Only"
                     )}
@@ -523,11 +526,14 @@ export function TimeRuleModal({
                     variant="outline"
                     size="sm"
                     onClick={createWeekendsOnlyPreset}
-                    disabled={creatingPreset || creatingRule}
+                    disabled={!!creatingPreset || creatingRule}
                     className="text-xs"
                   >
-                    {creatingPreset ? (
-                      <div className="w-3 h-3 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
+                    {creatingPreset === "weekends-only" ? (
+                      <>
+                        <div className="w-3 h-3 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin mr-1" />
+                        Applying...
+                      </>
                     ) : (
                       "Weekends Only"
                     )}
@@ -1018,6 +1024,7 @@ export function TimeRuleModal({
         description="This action will permanently delete all existing time rules for this user. This cannot be undone."
         confirmText="Delete All"
         variant="destructive"
+        loading={deletingAllRules}
       />
 
       {/* Preset Confirmation Dialog */}
@@ -1029,6 +1036,7 @@ export function TimeRuleModal({
         description={`This will delete all existing time rules and create new ones for ${showPresetConfirm?.toLowerCase()}. This action cannot be undone.`}
         confirmText="Apply Preset"
         variant="default"
+        loading={creatingPreset === showPresetConfirm}
       />
     </>
   );

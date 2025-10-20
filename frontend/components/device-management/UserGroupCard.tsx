@@ -47,6 +47,7 @@ interface UserGroupCardProps {
   editingDevice: number | null;
   newDeviceName: string;
   hasTimeSchedules?: boolean;
+  updatingUserPreference?: string | null; // Track which user's preference is being updated
   onToggleExpansion: (userId: string) => void;
   onUpdateUserPreference: (
     userId: string,
@@ -80,6 +81,7 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
   editingDevice,
   newDeviceName,
   hasTimeSchedules = false,
+  updatingUserPreference,
   onToggleExpansion,
   onUpdateUserPreference,
   onUpdateUserIPPolicy,
@@ -295,14 +297,19 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
                     onClick={() =>
                       onUpdateUserPreference(group.user.userId, null)
                     }
+                    disabled={updatingUserPreference === group.user.userId}
                     className={`text-xs px-3 py-2 rounded-md transition-all duration-200 flex items-center cursor-pointer ${
                       !group.user.preference ||
                       group.user.preference.defaultBlock === null
                         ? "bg-gray-200 text-black shadow-sm font-medium hover:bg-gray-100"
                         : "text-foreground hover:text-foreground hover:bg-background/50"
-                    }`}
+                    } ${updatingUserPreference === group.user.userId ? "opacity-50 cursor-not-allowed" : ""}`}
                   >
-                    <Settings className="w-3 h-3 mr-2" />
+                    {updatingUserPreference === group.user.userId ? (
+                      <div className="w-3 h-3 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin mr-2" />
+                    ) : (
+                      <Settings className="w-3 h-3 mr-2" />
+                    )}
                     Global{" "}
                     {!configLoading &&
                       `(${getGlobalDefaultBlock() ? "Block" : "Allow"})`}
@@ -311,26 +318,36 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
                     onClick={() =>
                       onUpdateUserPreference(group.user.userId, false)
                     }
+                    disabled={updatingUserPreference === group.user.userId}
                     className={`text-xs px-3 py-2 rounded-md transition-all duration-200 flex items-center cursor-pointer ${
                       group.user.preference?.defaultBlock === false
                         ? "bg-green-600 text-white shadow-sm font-medium hover:bg-green-600"
                         : "text-foreground hover:text-foreground hover:bg-background/50"
-                    }`}
+                    } ${updatingUserPreference === group.user.userId ? "opacity-50 cursor-not-allowed" : ""}`}
                   >
-                    <CheckCircle className="w-3 h-3 mr-2" />
+                    {updatingUserPreference === group.user.userId ? (
+                      <div className="w-3 h-3 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin mr-2" />
+                    ) : (
+                      <CheckCircle className="w-3 h-3 mr-2" />
+                    )}
                     Allow
                   </button>
                   <button
                     onClick={() =>
                       onUpdateUserPreference(group.user.userId, true)
                     }
+                    disabled={updatingUserPreference === group.user.userId}
                     className={`text-xs px-3 py-2 rounded-md transition-all duration-200 flex items-center cursor-pointer ${
                       group.user.preference?.defaultBlock === true
                         ? "bg-red-600 dark:bg-red-700 text-white shadow-sm font-medium hover:bg-red-700 dark:hover:bg-red-800"
                         : "text-foreground hover:text-foreground hover:bg-background/50"
-                    }`}
+                    } ${updatingUserPreference === group.user.userId ? "opacity-50 cursor-not-allowed" : ""}`}
                   >
-                    <XCircle className="w-3 h-3 mr-2" />
+                    {updatingUserPreference === group.user.userId ? (
+                      <div className="w-3 h-3 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin mr-2" />
+                    ) : (
+                      <XCircle className="w-3 h-3 mr-2" />
+                    )}
                     Block
                   </button>
                 </div>

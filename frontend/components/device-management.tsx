@@ -195,6 +195,7 @@ const DeviceManagement = memo(
       Record<string, boolean>
     >({});
     const [loadingTimeRules, setLoadingTimeRules] = useState(false);
+    const [updatingUserPreference, setUpdatingUserPreference] = useState<string | null>(null);
 
     // Confirmation dialog states
     const [confirmAction, setConfirmAction] =
@@ -615,12 +616,38 @@ const DeviceManagement = memo(
       userId: string,
       defaultBlock: boolean | null
     ) => {
-      const success = await userPreferences.updateUserPreference(
-        userId,
-        defaultBlock
-      );
-      if (success) {
-        handleRefresh();
+      setUpdatingUserPreference(userId);
+      try {
+        const success = await userPreferences.updateUserPreference(
+          userId,
+          defaultBlock
+        );
+        if (success) {
+          // Refresh data without clearing time rule status to prevent "Scheduled" tag flickering
+          if (onRefresh) {
+            onRefresh();
+          }
+          toast({
+            title: "Device Policy Updated",
+            description: `Default device policy has been updated successfully`,
+            variant: "success",
+          });
+        } else {
+          toast({
+            title: "Update Failed",
+            description: "Failed to update device policy",
+            variant: "destructive",
+          });
+        }
+      } catch (error) {
+        console.error("Error updating user preference:", error);
+        toast({
+          title: "Update Failed",
+          description: "Failed to update device policy",
+          variant: "destructive",
+        });
+      } finally {
+        setUpdatingUserPreference(null);
       }
     };
 
@@ -1286,6 +1313,7 @@ const DeviceManagement = memo(
                     hasTimeSchedules={
                       userTimeRuleStatus[group.user.userId] || false
                     }
+                    updatingUserPreference={updatingUserPreference}
                     onToggleExpansion={toggleUserExpansion}
                     onUpdateUserPreference={handleUpdateUserPreference}
                     onUpdateUserIPPolicy={handleUpdateUserIPPolicy}
