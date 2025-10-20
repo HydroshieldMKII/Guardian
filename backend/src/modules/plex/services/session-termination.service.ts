@@ -307,7 +307,32 @@ export class SessionTerminationService {
           stopCode: ipValidation.stopCode,
         };
       }
+      const isTimeAllowed = await this.timePolicyService.isTimeScheduleAllowed(
+        userId,
+        deviceIdentifier,
+      );
+      if (!isTimeAllowed) {
+        const timePolicySummary = await this.timePolicyService.getPolicySummary(
+          userId,
+          deviceIdentifier,
+        );
+        this.logger.warn(
+          `Device ${deviceIdentifier} for user ${userId} is blocked by time policy: ${timePolicySummary}`,
+        );
 
+        // Get the configured message or use a detailed default
+        const configMessage = (await this.configService.getSetting(
+          'MSG_TIME_RESTRICTED',
+        )) as string;
+
+        return {
+          shouldStop: true,
+          reason:
+            configMessage ||
+            `Streaming is not allowed at this time due to time restrictions (Policy: ${timePolicySummary})`,
+          stopCode: 'TIME_RESTRICTED',
+        };
+      }
       // Check if device is approved
       const device = await this.userDeviceRepository.findOne({
         where: { userId, deviceIdentifier },
@@ -360,34 +385,6 @@ export class SessionTerminationService {
           shouldStop: true,
           reason: message,
           stopCode: 'DEVICE_REJECTED',
-        };
-      }
-
-      // Device is approved, now check time-based policies
-      const isTimeAllowed = await this.timePolicyService.isTimeScheduleAllowed(
-        userId,
-        deviceIdentifier,
-      );
-      if (!isTimeAllowed) {
-        const timePolicySummary = await this.timePolicyService.getPolicySummary(
-          userId,
-          deviceIdentifier,
-        );
-        this.logger.warn(
-          `Device ${deviceIdentifier} for user ${userId} is blocked by time policy: ${timePolicySummary}`,
-        );
-
-        // Get the configured message or use a detailed default
-        const configMessage = (await this.configService.getSetting(
-          'MSG_TIME_RESTRICTED',
-        )) as string;
-
-        return {
-          shouldStop: true,
-          reason:
-            configMessage ||
-            `Streaming is not allowed at this time due to time restrictions (Policy: ${timePolicySummary})`,
-          stopCode: 'TIME_RESTRICTED',
         };
       }
 

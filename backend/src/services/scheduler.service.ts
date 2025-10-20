@@ -1,6 +1,5 @@
 import {
   Injectable,
-  Logger,
   OnModuleInit,
   Inject,
   forwardRef,
@@ -11,6 +10,7 @@ import { PlexService } from '../modules/plex/services/plex.service';
 import { ConfigService } from '../modules/config/services/config.service';
 import { DeviceTrackingService } from '../modules/devices/services/device-tracking.service';
 import { UsersService } from '../modules/users/services/users.service';
+import { Logger } from '@nestjs/common';
 
 @Injectable()
 export class SchedulerService implements OnModuleInit {

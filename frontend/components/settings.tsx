@@ -86,7 +86,7 @@ const settingsSections = [
 
 // Function to get setting label and description
 const getSettingInfo = (
-  setting: AppSetting,
+  setting: AppSetting
 ): { label: string; description: string } => {
   const settingInfoMap: Record<
     string,
@@ -170,6 +170,11 @@ const getSettingInfo = (
       label: "Custom Plex web URL",
       description:
         "Custom URL for opening Plex content (e.g., https://app.plex.tv). Leave empty to use configured server settings.",
+    },
+    TIMEZONE: {
+      label: "Timezone",
+      description:
+        "Set the timezone for scheduling and time-based restrictions.",
     },
     DEFAULT_PAGE: {
       label: "Default page on startup",
@@ -324,7 +329,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
   };
 
   const validateSettings = (
-    settingsToUpdate: { key: string; value: any }[],
+    settingsToUpdate: { key: string; value: any }[]
   ) => {
     const errors: string[] = [];
 
@@ -358,7 +363,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
             errors.push("Device cleanup interval must be a number");
           } else if (!Number.isInteger(cleanupDays)) {
             errors.push(
-              "Device cleanup interval must be a whole number (no decimals)",
+              "Device cleanup interval must be a whole number (no decimals)"
             );
           } else if (cleanupDays < 1) {
             errors.push("Device cleanup interval must be at least 1 day");
@@ -390,7 +395,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
               !urlValue.startsWith("https://")
             ) {
               errors.push(
-                "Custom Plex URL must start with http:// or https://",
+                "Custom Plex URL must start with http:// or https://"
               );
               break;
             }
@@ -408,12 +413,12 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
 
               if (!hasValidDomain) {
                 errors.push(
-                  "Custom Plex URL must contain a valid domain with extension (e.g., plex.example.com)",
+                  "Custom Plex URL must contain a valid domain with extension (e.g., plex.example.com)"
                 );
               }
             } catch (error) {
               errors.push(
-                "Custom Plex URL must be a valid URL format (e.g., https://app.plex.tv)",
+                "Custom Plex URL must be a valid URL format (e.g., https://app.plex.tv)"
               );
             }
           }
@@ -478,7 +483,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
 
         // Dispatch event to notify notification handler of settings change
         window.dispatchEvent(
-          new CustomEvent("settingsUpdated", { detail: settingsToUpdate }),
+          new CustomEvent("settingsUpdated", { detail: settingsToUpdate })
         );
 
         // Show success toast
@@ -531,7 +536,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
         `${config.api.baseUrl}/config/test-plex-connection`,
         {
           method: "POST",
-        },
+        }
       );
 
       if (response.ok) {
@@ -569,7 +574,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
     setExportingDatabase(true);
     try {
       const response = await fetch(
-        `${config.api.baseUrl}/config/database/export`,
+        `${config.api.baseUrl}/config/database/export`
       );
 
       if (response.ok) {
@@ -665,7 +670,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
         {
           method: "POST",
           body: formData,
-        },
+        }
       );
 
       if (response.ok) {
@@ -757,7 +762,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
         `${config.api.baseUrl}/config/scripts/reset-database`,
         {
           method: "POST",
-        },
+        }
       );
 
       if (response.ok) {
@@ -792,7 +797,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
         `${config.api.baseUrl}/config/scripts/reset-stream-counts`,
         {
           method: "POST",
-        },
+        }
       );
 
       if (response.ok) {
@@ -824,7 +829,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
         `${config.api.baseUrl}/config/scripts/delete-all-devices`,
         {
           method: "POST",
-        },
+        }
       );
 
       if (response.ok) {
@@ -856,7 +861,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
         `${config.api.baseUrl}/config/scripts/clear-session-history`,
         {
           method: "POST",
-        },
+        }
       );
 
       if (response.ok) {
@@ -889,6 +894,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
         "AUTO_CHECK_UPDATES",
         "PLEX_GUARD_DEFAULT_BLOCK",
         "PLEXGUARD_REFRESH_INTERVAL",
+        "TIMEZONE",
       ],
       customization: [
         "ENABLE_MEDIA_THUMBNAILS",
@@ -906,7 +912,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
     };
 
     const filteredSettings = settings.filter(
-      (setting) => categoryMap[category]?.includes(setting.key) || false,
+      (setting) => categoryMap[category]?.includes(setting.key) || false
     );
 
     // Sort settings according to the order defined in categoryMap
@@ -969,6 +975,79 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
       );
     }
 
+    if (setting.key === "TIMEZONE") {
+      // Generate timezone options with UTC offsets and current time
+      const generateTimezoneOptions = () => {
+        const timezones = [];
+        const now = new Date();
+
+        // Generate UTC offsets from -12 to +14
+        for (let offset = -12; offset <= 14; offset++) {
+          const offsetHours = offset;
+
+          // Calculate current time for this offset
+          const utcTime = new Date(
+            now.getTime() + now.getTimezoneOffset() * 60000
+          );
+          const timezoneTime = new Date(
+            utcTime.getTime() + offsetHours * 3600000
+          );
+          const timeString = timezoneTime.toLocaleTimeString("en-US", {
+            hour12: false,
+            hour: "2-digit",
+            minute: "2-digit",
+          });
+
+          // Format offset string
+          const offsetString =
+            offset >= 0
+              ? `+${offset.toString().padStart(2, "0")}:00`
+              : `-${Math.abs(offset).toString().padStart(2, "0")}:00`;
+          const value = offsetString;
+          const label = `UTC${offsetString} (${timeString})`;
+
+          timezones.push({ value, label });
+        }
+
+        // Sort by offset value
+        timezones.sort((a, b) => {
+          const parseOffset = (offset: string) => {
+            const [hours, minutes] = offset
+              .replace("UTC", "")
+              .split(":")
+              .map(Number);
+            return hours + minutes / 60;
+          };
+          return parseOffset(a.value) - parseOffset(b.value);
+        });
+
+        return timezones;
+      };
+
+      const timezoneOptions = generateTimezoneOptions();
+
+      return (
+        <div className="space-y-2">
+          <Label>{label}</Label>
+          <div className="relative">
+            <select
+              value={String(value || "+00:00")}
+              onChange={(e) => handleInputChange(setting.key, e.target.value)}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 pr-8 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 appearance-none cursor-pointer"
+            >
+              {timezoneOptions.map((timezone) => (
+                <option key={timezone.value} value={timezone.value}>
+                  {timezone.label}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+          </div>
+          <p className="text-xs text-muted-foreground">{description}</p>
+        </div>
+      );
+    }
+
     return (
       <div className="space-y-2">
         <Label>{label}</Label>
@@ -1002,10 +1081,10 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
 
   const renderDeviceCleanupSettings = () => {
     const cleanupEnabledSetting = settings.find(
-      (s) => s.key === "DEVICE_CLEANUP_ENABLED",
+      (s) => s.key === "DEVICE_CLEANUP_ENABLED"
     );
     const cleanupIntervalSetting = settings.find(
-      (s) => s.key === "DEVICE_CLEANUP_INTERVAL_DAYS",
+      (s) => s.key === "DEVICE_CLEANUP_INTERVAL_DAYS"
     );
 
     if (!cleanupEnabledSetting || !cleanupIntervalSetting) return null;
@@ -1084,7 +1163,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
   const renderSSLSettings = () => {
     const useSSLSetting = settings.find((s) => s.key === "USE_SSL");
     const ignoreCertSetting = settings.find(
-      (s) => s.key === "IGNORE_CERT_ERRORS",
+      (s) => s.key === "IGNORE_CERT_ERRORS"
     );
 
     if (!useSSLSetting || !ignoreCertSetting) return null;
@@ -1657,32 +1736,40 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
         {hasChanges() && (
           <div className="mb-6">
             <Card className="border-amber-600 bg-amber-50 dark:border-amber-700 dark:bg-amber-950/20">
-              <CardContent>
-                <div className="flex items-center gap-3">
-                  <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0" />
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-amber-800 dark:text-amber-200 mb-1">
-                      Unsaved Changes
-                    </h3>
-                    <p className="text-sm text-amber-600 dark:text-amber-300">
-                      You have unsaved changes. Make sure to save your settings
-                      before leaving this page.
-                    </p>
+              <CardContent className="p-4">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                  <div className="flex flex-col flex-1">
+                    <div className="flex items-start gap-3">
+                      <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-amber-800 dark:text-amber-200 mb-1">
+                          Unsaved Changes
+                        </h3>
+                      </div>
+                    </div>
+                    <div className="ml-8">
+                      <p className="text-sm text-amber-600 dark:text-amber-300">
+                        You have unsaved changes. Make sure to save your
+                        settings before leaving this page.
+                      </p>
+                    </div>
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleSave}
-                    disabled={saving}
-                    className="border-amber-600 text-amber-600 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-700 dark:hover:bg-amber-900/20"
-                  >
-                    {saving ? (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    ) : (
-                      <Save className="h-4 w-4 mr-2" />
-                    )}
-                    Save Changes
-                  </Button>
+                  <div className="w-full sm:w-auto">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleSave}
+                      disabled={saving}
+                      className="w-full sm:w-auto border-amber-600 text-amber-600 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-700 dark:hover:bg-amber-900/20"
+                    >
+                      {saving ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Save className="h-4 w-4 mr-2" />
+                      )}
+                      Save Changes
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -1778,7 +1865,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
                         onClick={() =>
                           window.open(
                             "https://github.com/HydroshieldMKII/Guardian",
-                            "_blank",
+                            "_blank"
                           )
                         }
                         className="h-6 text-xs text-muted-foreground hover:text-foreground"

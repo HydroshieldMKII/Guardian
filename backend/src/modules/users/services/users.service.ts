@@ -1,10 +1,11 @@
-import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
+import { Injectable, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UserPreference } from '../../../entities/user-preference.entity';
 import { UserDevice } from '../../../entities/user-device.entity';
 import { ConfigService } from '../../config/services/config.service';
 import { PlexClient } from '../../plex/services/plex-client';
+import { Logger } from '@nestjs/common';
 
 @Injectable()
 export class UsersService {

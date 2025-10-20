@@ -155,6 +155,11 @@ export class ConfigService {
         value: '',
         type: 'string' as const,
       },
+      {
+        key: 'TIMEZONE',
+        value: '+00:00',
+        type: 'string' as const,
+      },
     ];
 
     // Update version number on startup if current version is higher
@@ -230,6 +235,8 @@ export class ConfigService {
         }
       });
     }
+
+    // Timezone changes are now logged directly in updateSetting method
   }
 
   async getAllSettings(): Promise<AppSettings[]> {
@@ -332,7 +339,26 @@ export class ConfigService {
 
     this.cache.set(key, cacheValue);
 
-    this.logger.log(`Updated setting: ${key}`);
+    // Special logging for timezone changes
+    if (key === 'TIMEZONE') {
+      const currentTime = this.getTimeInSpecificTimezone(stringValue);
+      this.logger.log(
+        `Timezone updated to ${stringValue}. Current time in this timezone: ${currentTime.toLocaleString(
+          'en-US',
+          {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false,
+          },
+        )}`,
+      );
+    } else {
+      this.logger.log(`Updated setting: ${key}`);
+    }
 
     // Notify listeners of the config change
     this.notifyConfigChange(key);
@@ -357,6 +383,77 @@ export class ConfigService {
     }
 
     return results;
+  }
+
+  async getTimezone(): Promise<string> {
+    const timezone = await this.getSetting('TIMEZONE');
+    return timezone || '+00:00';
+  }
+
+  async getCurrentTimeInTimezone(): Promise<Date> {
+    const timezoneOffset = await this.getTimezone();
+    try {
+      // Parse UTC offset format (e.g., "+02:00", "-05:30")
+      const offsetMatch = timezoneOffset.match(/^([+-])(\d{2}):(\d{2})$/);
+      if (!offsetMatch) {
+        this.logger.warn(
+          `Invalid timezone offset format ${timezoneOffset}, falling back to UTC`,
+        );
+        return new Date();
+      }
+
+      const sign = offsetMatch[1] === '+' ? 1 : -1;
+      const hours = parseInt(offsetMatch[2], 10);
+      const minutes = parseInt(offsetMatch[3], 10);
+
+      // Calculate total offset in milliseconds
+      // UTC offset means: local time = UTC time + offset
+      // So UTC-4 means local time = UTC time + (-4 hours)
+      const offsetMs = sign * (hours * 60 + minutes) * 60 * 1000;
+
+      // Get current UTC time and apply the timezone offset
+      const now = new Date();
+      const localTime = new Date(now.getTime() + offsetMs);
+
+      return localTime;
+    } catch (error) {
+      this.logger.warn(
+        `Invalid timezone offset ${timezoneOffset}, falling back to UTC: ${error.message}`,
+      );
+      return new Date();
+    }
+  }
+
+  private getTimeInSpecificTimezone(timezoneOffset: string): Date {
+    try {
+      // Parse UTC offset format (e.g., "+02:00", "-05:30")
+      const offsetMatch = timezoneOffset.match(/^([+-])(\d{2}):(\d{2})$/);
+      if (!offsetMatch) {
+        this.logger.warn(
+          `Invalid timezone offset format ${timezoneOffset}, falling back to UTC`,
+        );
+        return new Date();
+      }
+
+      const sign = offsetMatch[1] === '+' ? 1 : -1;
+      const hours = parseInt(offsetMatch[2], 10);
+      const minutes = parseInt(offsetMatch[3], 10);
+
+      // Calculate total offset in milliseconds
+      const offsetMs = sign * (hours * 60 + minutes) * 60 * 1000;
+
+      // Get current UTC time and apply the timezone offset
+      const now = new Date();
+      const utcTime = now.getTime() + now.getTimezoneOffset() * 60000;
+      const localTime = new Date(utcTime + offsetMs);
+
+      return localTime;
+    } catch (error) {
+      this.logger.warn(
+        `Invalid timezone offset ${timezoneOffset}, falling back to UTC: ${error.message}`,
+      );
+      return new Date();
+    }
   }
 
   async testPlexConnection(): Promise<PlexResponse> {

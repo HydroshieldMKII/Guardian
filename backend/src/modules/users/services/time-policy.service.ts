@@ -1,7 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UserTimeRule } from '../../../entities/user-time-rule.entity';
+import { ConfigService } from '../../config/services/config.service';
 
 export interface CreateTimePolicyDto {
   userId: string;
@@ -26,9 +27,12 @@ export interface UpdateTimePolicyDto {
 
 @Injectable()
 export class TimePolicyService {
+  private readonly logger = new Logger(TimePolicyService.name);
+
   constructor(
     @InjectRepository(UserTimeRule)
     private readonly timeRuleRepository: Repository<UserTimeRule>,
+    private readonly configService: ConfigService,
   ) {}
 
   async createTimePolicy(
@@ -111,17 +115,29 @@ export class TimePolicyService {
       return true; // No policies = allow by default
     }
 
-    const now = new Date();
-    const currentDay = now.getDay(); // 0=Sunday, 1=Monday, etc.
-    const currentTime = now.toTimeString().slice(0, 5); // HH:mm format
+    const timezonedDate = await this.configService.getCurrentTimeInTimezone();
+    const currentDay = timezonedDate.getDay(); // 0=Sunday, 1=Monday, etc.
+    const currentTime = timezonedDate.toISOString().substring(11, 16); // Extract HH:MM from ISO string
+    const dayNames = [
+      'Sunday',
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+    ];
 
     // Check each policy (no priority sorting needed)
     for (const policy of enabledPolicies) {
-      if (this.isPolicyActive(policy, currentDay, currentTime)) {
-        return policy.action === 'allow';
+      const isActive = this.isPolicyActive(policy, currentDay, currentTime);
+      if (isActive) {
+        const result = policy.action === 'allow';
+        return result;
       }
     }
 
+    this.logger.debug(`No matching policies found - allowing by default`);
     return true; // No matching policy = allow by default
   }
 
@@ -130,6 +146,16 @@ export class TimePolicyService {
     currentDay: number,
     currentTime: string,
   ): boolean {
+    const dayNames = [
+      'Sunday',
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+    ];
+
     // Check if current day matches the policy's day
     if (policy.dayOfWeek !== currentDay) {
       return false;
@@ -139,12 +165,7 @@ export class TimePolicyService {
     const start = policy.startTime;
     const end = policy.endTime;
 
-    // Handle time range that spans midnight (e.g., 22:00 to 06:00)
-    if (start > end) {
-      return currentTime >= start || currentTime <= end;
-    } else {
-      return currentTime >= start && currentTime <= end;
-    }
+    return currentTime >= start && currentTime <= end;
   }
 
   /**
