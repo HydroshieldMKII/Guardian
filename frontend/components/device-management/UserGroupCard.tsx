@@ -206,17 +206,6 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
                         <span className="sm:hidden">Sched</span>
                       </button>
                     )}
-                    {onShowHistory && (
-                      <button
-                        onClick={() => onShowHistory(group.user.userId)}
-                        className="text-xs px-2 sm:px-3 py-2 rounded-md transition-all duration-200 flex items-center cursor-pointer text-foreground hover:bg-background/50 whitespace-nowrap"
-                        title="Show user history"
-                      >
-                        <History className="w-3 h-3 mr-1 sm:mr-2" />
-                        <span className="hidden sm:inline">History</span>
-                        <span className="sm:hidden">Hist</span>
-                      </button>
-                    )}
                     {onGrantUserTempAccess && (
                       <button
                         onClick={() => onGrantUserTempAccess(group.user.userId)}
@@ -239,6 +228,17 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
                         <Shield className="w-3 h-3 mr-1 sm:mr-2" />
                         <span className="hidden sm:inline">IP Policy</span>
                         <span className="sm:hidden">IP</span>
+                      </button>
+                    )}
+                    {onShowHistory && (
+                      <button
+                        onClick={() => onShowHistory(group.user.userId)}
+                        className="text-xs px-2 sm:px-3 py-2 rounded-md transition-all duration-200 flex items-center cursor-pointer text-foreground hover:bg-background/50 whitespace-nowrap"
+                        title="Show user history"
+                      >
+                        <History className="w-3 h-3 mr-1 sm:mr-2" />
+                        <span className="hidden sm:inline">History</span>
+                        <span className="sm:hidden">Hist</span>
                       </button>
                     )}
                     {onToggleUserVisibility && (

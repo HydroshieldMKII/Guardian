@@ -708,11 +708,11 @@ export function TimeRuleModal({
                 </Label>
                 {rules.length > 0 && (
                   <Button
-                    variant="default"
+                    variant="outline"
                     size="sm"
                     onClick={deleteAllRules}
                     disabled={deletingAllRules || loadingRules}
-                    className="flex items-center gap-1 bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800 text-white"
+                    className="flex items-center gap-1 border-red-600 text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-700 dark:hover:bg-red-900/20"
                   >
                     {deletingAllRules ? (
                       <div className="w-3 h-3 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
