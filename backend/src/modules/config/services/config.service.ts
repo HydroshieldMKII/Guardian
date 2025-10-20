@@ -90,7 +90,8 @@ export class ConfigService {
       },
       {
         key: 'MSG_TIME_RESTRICTED',
-        value: 'Streaming is not allowed at this time due to time restrictions',
+        value:
+          'Streaming is not allowed at this time due to scheduling restrictions',
         type: 'string' as const,
       },
       {
