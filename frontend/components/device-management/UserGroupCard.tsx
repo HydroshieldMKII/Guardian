@@ -1,9 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { 
-  ChevronDown, 
-  ChevronRight, 
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
+  ChevronDown,
+  ChevronRight,
   Settings,
   CheckCircle,
   XCircle,
@@ -12,12 +16,14 @@ import {
   Eye,
   History,
   SquareUser,
-  Shield
+  Shield,
+  Timer,
 } from "lucide-react";
-import { UserDevice, UserPreference, AppSetting } from '@/types';
-import { UserAvatar, getUserPreferenceBadge } from './SharedComponents';
-import { DeviceCard } from './DeviceCard';
-import { IPAccessModal } from './IPAccessModal';
+import { UserDevice, UserPreference, AppSetting } from "@/types";
+import { UserAvatar, getUserPreferenceBadge } from "./SharedComponents";
+import { DeviceCard } from "./DeviceCard";
+import { IPAccessModal } from "./IPAccessModal";
+import { useSettings } from "@/contexts/settings-context";
 
 // User-Device group interface
 interface UserDeviceGroup {
@@ -40,10 +46,17 @@ interface UserGroupCardProps {
   editingDevice: number | null;
   newDeviceName: string;
   onToggleExpansion: (userId: string) => void;
-  onUpdateUserPreference: (userId: string, defaultBlock: boolean | null) => void;
-  onUpdateUserIPPolicy?: (userId: string, updates: Partial<UserPreference>) => void;
+  onUpdateUserPreference: (
+    userId: string,
+    defaultBlock: boolean | null
+  ) => void;
+  onUpdateUserIPPolicy?: (
+    userId: string,
+    updates: Partial<UserPreference>
+  ) => void;
   onToggleUserVisibility?: (userId: string) => void;
   onShowHistory?: (userId: string) => void;
+  onGrantUserTempAccess?: (userId: string) => void;
   onEdit: (device: UserDevice) => void;
   onCancelEdit: () => void;
   onRename: (deviceId: number, newName: string) => void;
@@ -51,11 +64,9 @@ interface UserGroupCardProps {
   onReject: (device: UserDevice) => void;
   onDelete: (device: UserDevice) => void;
   onToggleApproval: (device: UserDevice) => void;
-  onGrantTempAccess: (deviceId: number) => void;
   onRevokeTempAccess: (deviceId: number) => void;
   onShowDetails: (device: UserDevice) => void;
   onNewDeviceNameChange: (name: string) => void;
-  shouldShowGrantTempAccess: (device: UserDevice) => boolean;
 }
 
 export const UserGroupCard: React.FC<UserGroupCardProps> = ({
@@ -70,6 +81,7 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
   onUpdateUserIPPolicy,
   onToggleUserVisibility,
   onShowHistory,
+  onGrantUserTempAccess,
   onEdit,
   onCancelEdit,
   onRename,
@@ -77,20 +89,19 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
   onReject,
   onDelete,
   onToggleApproval,
-  onGrantTempAccess,
   onRevokeTempAccess,
   onShowDetails,
   onNewDeviceNameChange,
-  shouldShowGrantTempAccess,
 }) => {
   const [showIPModal, setShowIPModal] = useState(false);
+  const { getGlobalDefaultBlock, loading: configLoading } = useSettings();
 
   return (
     <Collapsible
       open={isExpanded}
       onOpenChange={() => onToggleExpansion(group.user.userId)}
     >
-      <div 
+      <div
         className="rounded-lg border bg-card shadow-sm hover:shadow-md transition-shadow"
         data-user-id={group.user.userId}
       >
@@ -103,7 +114,7 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
                 ) : (
                   <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                 )}
-                <UserAvatar 
+                <UserAvatar
                   userId={group.user.userId}
                   username={group.user.username}
                   avatarUrl={group.user.preference?.avatarUrl}
@@ -113,31 +124,38 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
                     {group.user.username || group.user.userId}
                   </h3>
                   <p className="text-xs sm:text-sm text-muted-foreground">
-                    {group.devices.length} device{group.devices.length !== 1 ? 's' : ''}
+                    {group.devices.length} device
+                    {group.devices.length !== 1 ? "s" : ""}
                     {group.pendingCount > 0 && (
                       <span className="text-yellow-600 dark:text-yellow-400">
-                        {" • "}{group.pendingCount} pending
+                        {" • "}
+                        {group.pendingCount} pending
                       </span>
                     )}
                   </p>
                 </div>
                 <div className="hidden sm:flex">
-                  {group.user.preference && getUserPreferenceBadge(group.user.preference.defaultBlock)}
+                  {group.user.preference &&
+                    getUserPreferenceBadge(group.user.preference.defaultBlock)}
                 </div>
               </div>
-              
+
               {/* Mobile: Show preference badge */}
               <div className="sm:hidden">
-                {group.user.preference && getUserPreferenceBadge(group.user.preference.defaultBlock)}
+                {group.user.preference &&
+                  getUserPreferenceBadge(group.user.preference.defaultBlock)}
               </div>
             </div>
           </div>
         </CollapsibleTrigger>
-        
+
         <CollapsibleContent>
           <div className="p-3 sm:p-4 space-y-4">
             {/* User Actions Card */}
-            {(onToggleUserVisibility || onShowHistory || onUpdateUserIPPolicy) && (
+            {(onToggleUserVisibility ||
+              onShowHistory ||
+              onUpdateUserIPPolicy ||
+              onGrantUserTempAccess) && (
               <div className="bg-gradient-to-r from-card to-card/50 border rounded-lg p-4 shadow-sm">
                 <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                   {/* Actions Label */}
@@ -146,13 +164,27 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
                       <SquareUser className="w-4 h-4 text-primary" />
                     </div>
                     <div>
-                      <h4 className="font-semibold text-sm text-foreground">User Actions</h4>
-                      <p className="text-xs text-muted-foreground">Manage user visibility, history, and access policies</p>
+                      <h4 className="font-semibold text-sm text-foreground">
+                        User Actions
+                      </h4>
+                      <p className="text-xs text-muted-foreground">
+                        Manage user visibility, history, and access policies
+                      </p>
                     </div>
                   </div>
-                  
+
                   {/* Action Buttons */}
                   <div className="flex items-center bg-muted/50 rounded-lg p-1 gap-1">
+                    {onGrantUserTempAccess && (
+                      <button
+                        onClick={() => onGrantUserTempAccess(group.user.userId)}
+                        className="text-xs px-3 py-2 rounded-md transition-all duration-200 flex items-center cursor-pointer text-muted-foreground hover:text-foreground hover:bg-background/50"
+                        title="Grant temporary access to user devices"
+                      >
+                        <Timer className="w-3 h-3 mr-2" />
+                        Grant Temp Access
+                      </button>
+                    )}
                     {onUpdateUserIPPolicy && (
                       <button
                         onClick={() => setShowIPModal(true)}
@@ -165,9 +197,15 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
                     )}
                     {onToggleUserVisibility && (
                       <button
-                        onClick={() => onToggleUserVisibility(group.user.userId)}
+                        onClick={() =>
+                          onToggleUserVisibility(group.user.userId)
+                        }
                         className="text-xs px-3 py-2 rounded-md transition-all duration-200 flex items-center cursor-pointer text-muted-foreground hover:text-foreground hover:bg-background/50"
-                        title={group.user.preference?.hidden ? "Show user" : "Hide user"}
+                        title={
+                          group.user.preference?.hidden
+                            ? "Show user"
+                            : "Hide user"
+                        }
                       >
                         {group.user.preference?.hidden ? (
                           <>
@@ -206,26 +244,37 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
                     <Settings className="w-4 h-4 text-primary" />
                   </div>
                   <div>
-                    <h4 className="font-semibold text-sm text-foreground">Default Device Policy</h4>
-                    <p className="text-xs text-muted-foreground">How new devices should be handled</p>
+                    <h4 className="font-semibold text-sm text-foreground">
+                      Default Device Policy
+                    </h4>
+                    <p className="text-xs text-muted-foreground">
+                      How new devices should be handled
+                    </p>
                   </div>
                 </div>
-                
+
                 {/* Policy Toggle Buttons */}
                 <div className="flex items-center bg-muted/50 rounded-lg p-1 gap-1">
                   <button
-                    onClick={() => onUpdateUserPreference(group.user.userId, null)}
+                    onClick={() =>
+                      onUpdateUserPreference(group.user.userId, null)
+                    }
                     className={`text-xs px-3 py-2 rounded-md transition-all duration-200 flex items-center cursor-pointer ${
-                      !group.user.preference || group.user.preference.defaultBlock === null
+                      !group.user.preference ||
+                      group.user.preference.defaultBlock === null
                         ? "bg-gray-200 text-black shadow-sm font-medium hover:bg-gray-100"
                         : "text-muted-foreground hover:text-foreground hover:bg-background/50"
                     }`}
                   >
                     <Settings className="w-3 h-3 mr-2" />
-                    Global
+                    Global{" "}
+                    {!configLoading &&
+                      `(${getGlobalDefaultBlock() ? "Block" : "Allow"})`}
                   </button>
                   <button
-                    onClick={() => onUpdateUserPreference(group.user.userId, false)}
+                    onClick={() =>
+                      onUpdateUserPreference(group.user.userId, false)
+                    }
                     className={`text-xs px-3 py-2 rounded-md transition-all duration-200 flex items-center cursor-pointer ${
                       group.user.preference?.defaultBlock === false
                         ? "bg-green-600 text-white shadow-sm font-medium hover:bg-green-600"
@@ -236,7 +285,9 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
                     Allow
                   </button>
                   <button
-                    onClick={() => onUpdateUserPreference(group.user.userId, true)}
+                    onClick={() =>
+                      onUpdateUserPreference(group.user.userId, true)
+                    }
                     className={`text-xs px-3 py-2 rounded-md transition-all duration-200 flex items-center cursor-pointer ${
                       group.user.preference?.defaultBlock === true
                         ? "bg-red-700 text-white shadow-sm font-medium hover:bg-red-600"
@@ -273,11 +324,9 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
                     onReject={onReject}
                     onDelete={onDelete}
                     onToggleApproval={onToggleApproval}
-                    onGrantTempAccess={onGrantTempAccess}
                     onRevokeTempAccess={onRevokeTempAccess}
                     onShowDetails={onShowDetails}
                     onNewDeviceNameChange={onNewDeviceNameChange}
-                    shouldShowGrantTempAccess={shouldShowGrantTempAccess}
                   />
                 ))}
               </div>

@@ -37,16 +37,9 @@ import {
 } from "lucide-react";
 import { config } from "../lib/config";
 import { useVersion } from "@/contexts/version-context";
+import { useSettings } from "@/contexts/settings-context";
 import { ConfirmationModal } from "@/components/ui/confirmation-modal";
-
-interface AppSetting {
-  id: number;
-  key: string;
-  value: string;
-  type: "string" | "number" | "boolean" | "json";
-  private: boolean;
-  updatedAt: string;
-}
+import { AppSetting } from "@/types";
 
 interface SettingsFormData {
   [key: string]: string | boolean | number;
@@ -203,14 +196,12 @@ const getSettingInfo = (
 
 export function Settings({ onBack }: { onBack?: () => void } = {}) {
   const [activeSection, setActiveSection] = useState("guardian");
-  const [settings, setSettings] = useState<AppSetting[]>([]);
   const [formData, setFormData] = useState<SettingsFormData>({});
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [testingConnection, setTestingConnection] = useState(false);
   const [exportingDatabase, setExportingDatabase] = useState(false);
   const [importingDatabase, setImportingDatabase] = useState(false);
-  const [backendError, setBackendError] = useState<string | null>(null);
+  const { settings, loading, error, refreshSettings } = useSettings();
   const {
     versionInfo,
     updateInfo,
@@ -247,9 +238,10 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
 
   const { toast } = useToast();
 
+  // Initialize form data when settings are loaded
   useEffect(() => {
-    fetchSettings();
-  }, []);
+    initializeFormData();
+  }, [settings]);
 
   // Check for updates automatically when settings page loads
   useEffect(() => {
@@ -307,38 +299,19 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
     }
   };
 
-  const fetchSettings = async () => {
-    setBackendError(null);
-    try {
-      const response = await fetch(`${config.api.baseUrl}/config`);
-      if (response.ok) {
-        const data = await response.json();
-        setSettings(data);
-
-        // Initialize form data
-        const initialFormData: SettingsFormData = {};
-        data.forEach((setting: AppSetting) => {
-          if (setting.type === "boolean") {
-            initialFormData[setting.key] = setting.value === "true";
-          } else if (setting.type === "number") {
-            initialFormData[setting.key] = parseFloat(setting.value);
-          } else {
-            initialFormData[setting.key] = setting.private ? "" : setting.value;
-          }
-        });
-        setFormData(initialFormData);
-      } else {
-        // Try to get the error message from the response
-        const errorData = await response.json().catch(() => ({}));
-        setBackendError(errorData.error || `Server error (${response.status})`);
-      }
-    } catch (error) {
-      console.error("Failed to fetch settings:", error);
-      setBackendError(
-        "Unable to connect to backend service. Please ensure the backend is running."
-      );
-    } finally {
-      setLoading(false);
+  const initializeFormData = () => {
+    if (settings.length > 0) {
+      const initialFormData: SettingsFormData = {};
+      settings.forEach((setting: AppSetting) => {
+        if (setting.type === "boolean") {
+          initialFormData[setting.key] = setting.value === "true";
+        } else if (setting.type === "number") {
+          initialFormData[setting.key] = parseFloat(setting.value);
+        } else {
+          initialFormData[setting.key] = setting.private ? "" : setting.value;
+        }
+      });
+      setFormData(initialFormData);
     }
   };
 
@@ -497,7 +470,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
       });
 
       if (response.ok) {
-        await fetchSettings(); // Refresh settings
+        await refreshSettings(); // Refresh settings
 
         // Dispatch event to notify notification handler of settings change
         window.dispatchEvent(
@@ -710,7 +683,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
         });
 
         // Refresh settings and version info after import
-        await fetchSettings();
+        await refreshSettings();
         await refreshVersionInfo();
       } else {
         const errorData = await response.json().catch(() => ({}));
@@ -791,7 +764,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
           variant: "success",
         });
         // Refresh settings after reset
-        await fetchSettings();
+        await refreshSettings();
       } else {
         throw new Error("Failed to reset database");
       }
@@ -1712,7 +1685,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
         )}
 
         {/* Backend Error Display */}
-        {backendError && (
+        {error && (
           <div className="mb-6">
             <Card className="border-red-600 bg-red-50 dark:border-red-700 dark:bg-red-950/20">
               <CardContent>
@@ -1723,13 +1696,13 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
                       Backend Connection Error
                     </h3>
                     <p className="text-sm text-red-600 dark:text-red-300">
-                      {backendError}
+                      {error}
                     </p>
                   </div>
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={fetchSettings}
+                    onClick={refreshSettings}
                     className="border-red-600 text-red-600 hover:bg-red-100 dark:border-red-700 dark:text-red-700 dark:hover:bg-red-900/20"
                   >
                     <RefreshCw className="h-4 w-4 mr-2" />
@@ -1861,7 +1834,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
                   <div className="flex justify-end space-x-2">
                     <Button
                       variant="outline"
-                      onClick={fetchSettings}
+                      onClick={refreshSettings}
                       disabled={saving}
                     >
                       Cancel

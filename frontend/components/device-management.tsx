@@ -169,9 +169,10 @@ const DeviceManagement = memo(
     const [searchTerm, setSearchTerm] = useState("");
     const [editingDevice, setEditingDevice] = useState<number | null>(null);
     const [newDeviceName, setNewDeviceName] = useState("");
-    const [temporaryAccessDevice, setTemporaryAccessDevice] = useState<
-      number | null
-    >(null);
+    const [tempAccessUser, setTempAccessUser] = useState<{
+      userId: string;
+      username?: string;
+    } | null>(null);
     const [hiddenUsersModalOpen, setHiddenUsersModalOpen] = useState(false);
     const [hiddenUsers, setHiddenUsers] = useState<UserPreference[]>([]);
     const [userHistoryModalOpen, setUserHistoryModalOpen] = useState(false);
@@ -353,9 +354,31 @@ const DeviceManagement = memo(
           .map((group) => ({
             ...group,
             devices: group.devices.sort((a, b) => {
-              // Sort devices by status (pending first, then by last seen)
+              // Helper function to identify Plex Amp devices
+              const isPlexAmpDevice = (device: UserDevice) => {
+                return (
+                  device.deviceProduct?.toLowerCase().includes("plexamp") ||
+                  device.deviceName?.toLowerCase().includes("plexamp")
+                );
+              };
+
+              // PlexAmp devices always go last
+              const aIsPlexAmp = isPlexAmpDevice(a);
+              const bIsPlexAmp = isPlexAmpDevice(b);
+
+              if (aIsPlexAmp && !bIsPlexAmp) return 1; // a goes after b
+              if (!aIsPlexAmp && bIsPlexAmp) return -1; // a goes before b
+              if (aIsPlexAmp && bIsPlexAmp) {
+                // Both are PlexAmp, sort by lastSeen
+                return (
+                  new Date(b.lastSeen).getTime() -
+                  new Date(a.lastSeen).getTime()
+                );
+              }
+
+              // For non-PlexAmp devices, sort by status (pending first, then rejected, then approved)
               if (a.status !== b.status) {
-                const statusOrder = { pending: 0, approved: 1, rejected: 2 };
+                const statusOrder = { pending: 0, rejected: 1, approved: 2 };
                 return statusOrder[a.status] - statusOrder[b.status];
               }
               return (
@@ -803,26 +826,74 @@ const DeviceManagement = memo(
     };
 
     const handleGrantTemporaryAccess = async (
-      deviceId: number,
+      deviceIds: number[],
       durationMinutes: number
     ) => {
       try {
-        setActionLoading(deviceId);
-        const success = await deviceActions.grantTemporaryAccess(
-          deviceId,
-          durationMinutes
-        );
-        if (success) {
-          setTimeout(handleRefresh, 100);
-          setTemporaryAccessDevice(null);
-          toast({
-            title: "Temporary Access Granted",
-            description: `Temporary access granted for ${formatDuration(durationMinutes)}`,
-            variant: "success",
-          });
+        if (deviceIds.length === 1) {
+          // Use single device endpoint for single device
+          setActionLoading(deviceIds[0]);
+          const success = await deviceActions.grantTemporaryAccess(
+            deviceIds[0],
+            durationMinutes
+          );
+          if (!success) {
+            toast({
+              title: "Error",
+              description: `Failed to grant temporary access`,
+              variant: "destructive",
+            });
+            return;
+          }
+        } else {
+          // Use batch endpoint for multiple devices
+          setActionLoading(deviceIds[0]); // Set loading indicator
+          const result = await deviceActions.grantBatchTemporaryAccess(
+            deviceIds,
+            durationMinutes
+          );
+          if (!result.success) {
+            toast({
+              title: "Error",
+              description: `Failed to grant temporary access to devices`,
+              variant: "destructive",
+            });
+            return;
+          }
+
+          // Check if any devices failed
+          const failedDevices =
+            result.results?.filter((r: any) => !r.success) || [];
+          if (failedDevices.length > 0) {
+            toast({
+              title: "Partial Success",
+              description: `${deviceIds.length - failedDevices.length} devices granted access, ${failedDevices.length} failed`,
+              variant: "destructive",
+            });
+          }
         }
+
+        setTimeout(handleRefresh, 100);
+        setTempAccessUser(null);
+        toast({
+          title: "Temporary Access Granted",
+          description: `Temporary access granted to ${deviceIds.length} device${deviceIds.length > 1 ? "s" : ""} for ${formatDuration(durationMinutes)}`,
+          variant: "success",
+        });
       } finally {
         setActionLoading(null);
+      }
+    };
+
+    const handleGrantUserTempAccess = (userId: string) => {
+      const userGroup = userGroups.find(
+        (group) => group.user.userId === userId
+      );
+      if (userGroup) {
+        setTempAccessUser({
+          userId: userGroup.user.userId,
+          username: userGroup.user.username,
+        });
       }
     };
 
@@ -849,6 +920,14 @@ const DeviceManagement = memo(
 
     // Utility function to check if grant temp access should be shown
     const shouldShowGrantTempAccess = (device: UserDevice): boolean => {
+      // Exclude PlexAmp devices - they are not eligible for temporary access
+      if (
+        device.deviceProduct?.toLowerCase().includes("plexamp") ||
+        device.deviceName?.toLowerCase().includes("plexamp")
+      ) {
+        return false;
+      }
+
       // Only show for pending or rejected devices
       if (device.status !== "pending" && device.status !== "rejected") {
         return false;
@@ -1125,6 +1204,7 @@ const DeviceManagement = memo(
                     onUpdateUserIPPolicy={handleUpdateUserIPPolicy}
                     onToggleUserVisibility={handleToggleUserVisibility}
                     onShowHistory={handleShowHistory}
+                    onGrantUserTempAccess={handleGrantUserTempAccess}
                     onEdit={startEditing}
                     onCancelEdit={cancelEditing}
                     onRename={handleRename}
@@ -1132,11 +1212,9 @@ const DeviceManagement = memo(
                     onReject={showRejectConfirmation}
                     onDelete={showDeleteConfirmation}
                     onToggleApproval={showToggleConfirmation}
-                    onGrantTempAccess={setTemporaryAccessDevice}
                     onRevokeTempAccess={handleRevokeTemporaryAccess}
                     onShowDetails={setSelectedDevice}
                     onNewDeviceNameChange={setNewDeviceName}
-                    shouldShowGrantTempAccess={shouldShowGrantTempAccess}
                   />
                 ))}
 
@@ -1172,17 +1250,19 @@ const DeviceManagement = memo(
 
         {/* Temporary Access Modal */}
         <TemporaryAccessModal
-          device={
-            temporaryAccessDevice
-              ? userGroups
-                  .flatMap((group) => group.devices)
-                  .find((d) => d.id === temporaryAccessDevice) || null
-              : null
+          user={tempAccessUser}
+          userDevices={
+            tempAccessUser
+              ? userGroups.find(
+                  (group) => group.user.userId === tempAccessUser.userId
+                )?.devices || []
+              : []
           }
-          isOpen={!!temporaryAccessDevice}
-          onClose={() => setTemporaryAccessDevice(null)}
+          isOpen={!!tempAccessUser}
+          onClose={() => setTempAccessUser(null)}
           onGrantAccess={handleGrantTemporaryAccess}
           actionLoading={actionLoading}
+          shouldShowGrantTempAccess={shouldShowGrantTempAccess}
         />
 
         {/* Confirmation Modal */}
