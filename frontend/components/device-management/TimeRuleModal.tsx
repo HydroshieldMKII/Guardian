@@ -656,7 +656,9 @@ export function TimeRuleModal({
                   {/* Create Button */}
                   <Button
                     onClick={createRule}
-                    disabled={creatingRule || creatingPreset || !newRule.ruleName.trim()}
+                    disabled={
+                      creatingRule || creatingPreset || !newRule.ruleName.trim()
+                    }
                     className="w-full flex items-center gap-2"
                   >
                     {creatingRule ? (
@@ -682,11 +684,11 @@ export function TimeRuleModal({
               <Label className="text-sm font-medium">Existing Time Rules</Label>
               {rules.length > 0 && (
                 <Button
-                  variant="destructive"
+                  variant="default"
                   size="sm"
                   onClick={deleteAllRules}
                   disabled={deletingAllRules || loadingRules}
-                  className="flex items-center gap-1"
+                  className="flex items-center gap-1 bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800 text-white"
                 >
                   {deletingAllRules ? (
                     <div className="w-3 h-3 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
@@ -886,10 +888,14 @@ export function TimeRuleModal({
                                   <Badge
                                     variant={
                                       rule.action === "block"
-                                        ? "destructive"
+                                        ? "default"
                                         : "default"
                                     }
-                                    className="text-xs"
+                                    className={`text-xs text-white ${
+                                      rule.action === "allow"
+                                        ? "bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 border-green-600"
+                                        : "bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800 border-red-600"
+                                    }`}
                                   >
                                     {rule.action}
                                   </Badge>
