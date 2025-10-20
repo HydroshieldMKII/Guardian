@@ -377,10 +377,15 @@ export function TimeRuleModal({
     }
   };
 
-  const createWeekdaysPreset = async () => {
+    const createWeekdaysOnlyPreset = async () => {
     setCreatingPreset(true);
     try {
-      const weekdayRules = [
+      // First, delete all existing rules to avoid conflicts
+      if (rules.length > 0) {
+        await Promise.all(rules.map((rule) => deleteTimeRule(userId, rule.id)));
+      }
+
+      const allDayRules = [
         { dayOfWeek: 1, ruleName: "Monday - Allow All Day" },
         { dayOfWeek: 2, ruleName: "Tuesday - Allow All Day" },
         { dayOfWeek: 3, ruleName: "Wednesday - Allow All Day" },
@@ -391,7 +396,7 @@ export function TimeRuleModal({
       ];
 
       const createdRules: EditingRule[] = [];
-      for (const rule of weekdayRules) {
+      for (const rule of allDayRules) {
         const isWeekend = rule.dayOfWeek === 0 || rule.dayOfWeek === 6;
         const newRuleData = {
           deviceIdentifier: deviceIdentifier || undefined,
@@ -406,7 +411,7 @@ export function TimeRuleModal({
         createdRules.push({ ...createdRule, isEditing: false });
       }
 
-      setRules((prev) => [...prev, ...createdRules]);
+      setRules(createdRules);
       toast({
         title: "Preset Created",
         description:
@@ -426,6 +431,11 @@ export function TimeRuleModal({
   const createWeekendsOnlyPreset = async () => {
     setCreatingPreset(true);
     try {
+      // First, delete all existing rules to avoid conflicts
+      if (rules.length > 0) {
+        await Promise.all(rules.map((rule) => deleteTimeRule(userId, rule.id)));
+      }
+
       const weekendRules = [
         { dayOfWeek: 0, ruleName: "Sunday - Allow All Day" },
         { dayOfWeek: 6, ruleName: "Saturday - Allow All Day" },
@@ -452,7 +462,7 @@ export function TimeRuleModal({
         createdRules.push({ ...createdRule, isEditing: false });
       }
 
-      setRules((prev) => [...prev, ...createdRules]);
+      setRules(createdRules);
       toast({
         title: "Preset Created",
         description:
@@ -521,7 +531,7 @@ export function TimeRuleModal({
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={createWeekdaysPreset}
+                  onClick={createWeekdaysOnlyPreset}
                   disabled={creatingPreset || creatingRule}
                   className="text-xs"
                 >
