@@ -17,7 +17,7 @@ const proxyProcess: ReturnType<typeof spawn> | null = null;
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  
+
   app.useGlobalFilters(new GlobalExceptionFilter());
 
   app.enableCors({

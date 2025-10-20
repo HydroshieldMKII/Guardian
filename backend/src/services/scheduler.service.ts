@@ -1,9 +1,4 @@
-import {
-  Injectable,
-  OnModuleInit,
-  Inject,
-  forwardRef,
-} from '@nestjs/common';
+import { Injectable, OnModuleInit, Inject, forwardRef } from '@nestjs/common';
 import { Cron, SchedulerRegistry } from '@nestjs/schedule';
 import { CronJob } from 'cron';
 import { PlexService } from '../modules/plex/services/plex.service';
