@@ -745,7 +745,7 @@ export function TimeRuleModal({
                     return (
                       <Card
                         key={rule.id}
-                        className={!rule.enabled ? "opacity-50" : ""}
+                        className={!rule.enabled ? "bg-muted/30" : ""}
                       >
                         <CardContent className="px-4 py-3">
                           {rule.isEditing ? (
