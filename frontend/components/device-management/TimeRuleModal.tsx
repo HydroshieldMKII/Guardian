@@ -120,7 +120,9 @@ export function TimeRuleModal({
   const [creatingPreset, setCreatingPreset] = useState(false);
   const [deletingAllRules, setDeletingAllRules] = useState(false);
   const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
-  const [showPresetConfirm, setShowPresetConfirm] = useState<string | null>(null);
+  const [showPresetConfirm, setShowPresetConfirm] = useState<string | null>(
+    null
+  );
   const [newRule, setNewRule] = useState<NewRuleForm>({
     deviceIdentifier: deviceIdentifier || undefined,
     ruleName: "",
@@ -382,7 +384,7 @@ export function TimeRuleModal({
     }
   };
 
-    const createWeekdaysOnlyPreset = () => {
+  const createWeekdaysOnlyPreset = () => {
     setShowPresetConfirm("weekdays-only");
   };
 
@@ -430,14 +432,14 @@ export function TimeRuleModal({
       console.log(`Creating ${presetType} preset for user:`, userId);
       const createdRules = await createPreset(
         userId,
-        presetType as 'weekdays-only' | 'weekends-only',
+        presetType as "weekdays-only" | "weekends-only",
         deviceIdentifier
       );
 
       setRules(createdRules.map((rule) => ({ ...rule, isEditing: false })));
       toast({
         title: "Preset Applied",
-        description: `${presetType === 'weekdays-only' ? 'Weekdays' : 'Weekends'} preset successfully applied`,
+        description: `${presetType === "weekdays-only" ? "Weekdays" : "Weekends"} preset successfully applied`,
         variant: "success",
       });
     } catch (error: any) {
@@ -456,547 +458,553 @@ export function TimeRuleModal({
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-[95vw] w-full sm:max-w-[1100px] max-h-[90vh] flex flex-col">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            Manage Time Rules
-          </DialogTitle>
-          <p className="text-sm text-muted-foreground">
-            Managing time rules for <strong>{username}</strong>
-          </p>
-        </DialogHeader>
+        <DialogContent className="max-w-[95vw] w-full sm:max-w-[1100px] max-h-[90vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              Manage Time Rules
+            </DialogTitle>
+            <p className="text-sm text-muted-foreground">
+              Managing time rules for <strong>{username}</strong>
+            </p>
+          </DialogHeader>
 
-        <div className="flex flex-col lg:flex-row gap-6 flex-1 overflow-hidden min-h-0">
-          {/* Right Column - New Rules (Show first on mobile) */}
-          <div className="lg:w-1/2 flex flex-col min-h-0 space-y-4 flex-1 lg:flex-initial order-1 lg:order-2">
-            <div className="flex items-center justify-between">
-              <Label className="text-sm font-medium">Add New Time Rule</Label>
-            </div>
-
-            {/* Quick Presets */}
-            <div className="space-y-2">
-              <Label className="text-xs font-medium text-muted-foreground">
-                Quick Presets
-              </Label>
-              <div className="grid grid-cols-2 gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={createWeekdaysOnlyPreset}
-                  disabled={creatingPreset || creatingRule}
-                  className="text-xs"
-                >
-                  {creatingPreset ? (
-                    <div className="w-3 h-3 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
-                  ) : (
-                    "Weekdays Only"
-                  )}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={createWeekendsOnlyPreset}
-                  disabled={creatingPreset || creatingRule}
-                  className="text-xs"
-                >
-                  {creatingPreset ? (
-                    <div className="w-3 h-3 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
-                  ) : (
-                    "Weekends Only"
-                  )}
-                </Button>
+          <div className="flex flex-col lg:flex-row gap-6 flex-1 overflow-hidden min-h-0">
+            {/* Right Column - New Rules (Show first on mobile) */}
+            <div className="lg:w-1/2 flex flex-col min-h-0 space-y-4 flex-1 lg:flex-initial order-1 lg:order-2">
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-medium">Add New Time Rule</Label>
               </div>
-              <p className="text-xs text-muted-foreground">
-                Delete your current rules and apply a preset
-              </p>
-            </div>
 
-            <div className="flex-1 overflow-y-auto pr-2">
-              <Card>
-                <CardContent className="px-4 py-3 space-y-4">
-                  {/* Rule Name */}
-                  <div>
-                    <Label className="text-sm font-medium">Rule Name</Label>
-                    <Input
-                      value={newRule.ruleName}
-                      onChange={(e) =>
-                        setNewRule((prev) => ({
-                          ...prev,
-                          ruleName: e.target.value,
-                        }))
-                      }
-                      placeholder="e.g., Night restriction"
-                    />
-                  </div>
+              {/* Quick Presets */}
+              <div className="space-y-2">
+                <Label className="text-xs font-medium text-muted-foreground">
+                  Quick Presets
+                </Label>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={createWeekdaysOnlyPreset}
+                    disabled={creatingPreset || creatingRule}
+                    className="text-xs"
+                  >
+                    {creatingPreset ? (
+                      <div className="w-3 h-3 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
+                    ) : (
+                      "Weekdays Only"
+                    )}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={createWeekendsOnlyPreset}
+                    disabled={creatingPreset || creatingRule}
+                    className="text-xs"
+                  >
+                    {creatingPreset ? (
+                      <div className="w-3 h-3 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
+                    ) : (
+                      "Weekends Only"
+                    )}
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Delete your current rules and apply a preset
+                </p>
+              </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    {/* Action */}
+              <div className="flex-1 overflow-y-auto pr-2">
+                <Card>
+                  <CardContent className="px-4 py-3 space-y-4">
+                    {/* Rule Name */}
                     <div>
-                      <Label className="text-sm font-medium">Action</Label>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="outline"
-                            className="w-full justify-between text-sm"
-                          >
-                            {newRule.action === "block"
-                              ? "Block Access"
-                              : "Allow Access"}
-                            <ChevronDown className="w-4 h-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent
-                          align="start"
-                          className="w-[200px]"
-                        >
-                          <DropdownMenuItem
-                            onClick={() =>
-                              setNewRule((prev) => ({
-                                ...prev,
-                                action: "block",
-                              }))
-                            }
-                          >
-                            Block Access
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() =>
-                              setNewRule((prev) => ({
-                                ...prev,
-                                action: "allow",
-                              }))
-                            }
-                          >
-                            Allow Access
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      <Label className="text-sm font-medium">Rule Name</Label>
+                      <Input
+                        value={newRule.ruleName}
+                        onChange={(e) =>
+                          setNewRule((prev) => ({
+                            ...prev,
+                            ruleName: e.target.value,
+                          }))
+                        }
+                        placeholder="e.g., Night restriction"
+                      />
                     </div>
 
-                    {/* Day */}
-                    <div>
-                      <Label className="text-sm font-medium">Day</Label>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="outline"
-                            className="w-full justify-between text-sm"
+                    <div className="grid grid-cols-2 gap-4">
+                      {/* Action */}
+                      <div>
+                        <Label className="text-sm font-medium">Action</Label>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="outline"
+                              className="w-full justify-between text-sm"
+                            >
+                              {newRule.action === "block"
+                                ? "Block Access"
+                                : "Allow Access"}
+                              <ChevronDown className="w-4 h-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent
+                            align="start"
+                            className="w-[200px]"
                           >
-                            {getDayLabel(newRule.dayOfWeek)}
-                            <ChevronDown className="w-4 h-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent
-                          align="start"
-                          className="w-[160px]"
-                        >
-                          {DAYS_OF_WEEK.map((day) => (
                             <DropdownMenuItem
-                              key={day.value}
                               onClick={() =>
                                 setNewRule((prev) => ({
                                   ...prev,
-                                  dayOfWeek: day.value,
+                                  action: "block",
                                 }))
                               }
                             >
-                              {day.label}
+                              Block Access
                             </DropdownMenuItem>
-                          ))}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </div>
+                            <DropdownMenuItem
+                              onClick={() =>
+                                setNewRule((prev) => ({
+                                  ...prev,
+                                  action: "allow",
+                                }))
+                              }
+                            >
+                              Allow Access
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
 
-                  {/* Time Range */}
-                  <div>
-                    <Label className="text-sm font-medium">Time Range</Label>
-                    <div className="flex gap-2 items-center">
-                      <Input
-                        type="time"
-                        value={newRule.startTime}
-                        onChange={(e) =>
-                          setNewRule((prev) => ({
-                            ...prev,
-                            startTime: e.target.value,
-                          }))
-                        }
-                        className="flex-1"
-                      />
-                      <span className="text-sm text-muted-foreground">to</span>
-                      <Input
-                        type="time"
-                        value={newRule.endTime}
-                        onChange={(e) =>
-                          setNewRule((prev) => ({
-                            ...prev,
-                            endTime: e.target.value,
-                          }))
-                        }
-                        className="flex-1"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Create Button */}
-                  <Button
-                    onClick={createRule}
-                    disabled={
-                      creatingRule || creatingPreset || !newRule.ruleName.trim()
-                    }
-                    className="w-full flex items-center gap-2"
-                  >
-                    {creatingRule ? (
-                      <>
-                        <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
-                        Creating...
-                      </>
-                    ) : (
-                      <>
-                        <Plus className="w-4 h-4" />
-                        Create Rule
-                      </>
-                    )}
-                  </Button>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-
-          {/* Left Column - Existing Rules (Show second on mobile) */}
-          <div className="lg:w-1/2 flex flex-col min-h-0 h-[35vh] lg:h-auto order-2 lg:order-1">
-            <div className="flex items-center justify-between mb-3">
-              <Label className="text-sm font-medium">Existing Time Rules</Label>
-              {rules.length > 0 && (
-                <Button
-                  variant="default"
-                  size="sm"
-                  onClick={deleteAllRules}
-                  disabled={deletingAllRules || loadingRules}
-                  className="flex items-center gap-1 bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800 text-white"
-                >
-                  {deletingAllRules ? (
-                    <div className="w-3 h-3 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
-                  ) : (
-                    <Trash2 className="w-3 h-3" />
-                  )}
-                  {deletingAllRules ? "Deleting..." : "Delete All"}
-                </Button>
-              )}
-            </div>
-            <div className="flex-1 overflow-y-auto space-y-2 pr-2">
-              {loadingRules ? (
-                <div className="text-center py-4">Loading rules...</div>
-              ) : rules.length === 0 ? (
-                <div className="text-center py-8">
-                  <div className="text-muted-foreground">
-                    <p className="text-sm">No time rules configured yet.</p>
-                    <p className="text-xs mt-1">
-                      Create your first rule using the form on the right.
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                rules.map((rule) => {
-                  const displayData =
-                    rule.isEditing && rule.tempData
-                      ? { ...rule, ...rule.tempData }
-                      : rule;
-
-                  return (
-                    <Card
-                      key={rule.id}
-                      className={!rule.enabled ? "opacity-50" : ""}
-                    >
-                      <CardContent className="px-4 py-3">
-                        {rule.isEditing ? (
-                          <div className="space-y-4">
-                            {/* Rule Name */}
-                            <div>
-                              <Label className="text-sm font-medium">
-                                Rule Name
-                              </Label>
-                              <FocusInput
-                                value={displayData.ruleName}
-                                onChange={(value) =>
-                                  updateTempData(rule.id, {
-                                    ruleName: value,
-                                  })
+                      {/* Day */}
+                      <div>
+                        <Label className="text-sm font-medium">Day</Label>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="outline"
+                              className="w-full justify-between text-sm"
+                            >
+                              {getDayLabel(newRule.dayOfWeek)}
+                              <ChevronDown className="w-4 h-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent
+                            align="start"
+                            className="w-[160px]"
+                          >
+                            {DAYS_OF_WEEK.map((day) => (
+                              <DropdownMenuItem
+                                key={day.value}
+                                onClick={() =>
+                                  setNewRule((prev) => ({
+                                    ...prev,
+                                    dayOfWeek: day.value,
+                                  }))
                                 }
-                                placeholder="Rule name"
-                                className="w-full"
-                              />
-                            </div>
+                              >
+                                {day.label}
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </div>
 
-                            <div className="grid grid-cols-2 gap-4">
-                              {/* Action */}
+                    {/* Time Range */}
+                    <div>
+                      <Label className="text-sm font-medium">Time Range</Label>
+                      <div className="flex gap-2 items-center">
+                        <Input
+                          type="time"
+                          value={newRule.startTime}
+                          onChange={(e) =>
+                            setNewRule((prev) => ({
+                              ...prev,
+                              startTime: e.target.value,
+                            }))
+                          }
+                          className="flex-1"
+                        />
+                        <span className="text-sm text-muted-foreground">
+                          to
+                        </span>
+                        <Input
+                          type="time"
+                          value={newRule.endTime}
+                          onChange={(e) =>
+                            setNewRule((prev) => ({
+                              ...prev,
+                              endTime: e.target.value,
+                            }))
+                          }
+                          className="flex-1"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Create Button */}
+                    <Button
+                      onClick={createRule}
+                      disabled={
+                        creatingRule ||
+                        creatingPreset ||
+                        !newRule.ruleName.trim()
+                      }
+                      className="w-full flex items-center gap-2"
+                    >
+                      {creatingRule ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
+                          Creating...
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="w-4 h-4" />
+                          Create Rule
+                        </>
+                      )}
+                    </Button>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+
+            {/* Left Column - Existing Rules (Show second on mobile) */}
+            <div className="lg:w-1/2 flex flex-col min-h-0 h-[35vh] lg:h-auto order-2 lg:order-1">
+              <div className="flex items-center justify-between mb-3">
+                <Label className="text-sm font-medium">
+                  Existing Time Rules
+                </Label>
+                {rules.length > 0 && (
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={deleteAllRules}
+                    disabled={deletingAllRules || loadingRules}
+                    className="flex items-center gap-1 bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800 text-white"
+                  >
+                    {deletingAllRules ? (
+                      <div className="w-3 h-3 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
+                    ) : (
+                      <Trash2 className="w-3 h-3" />
+                    )}
+                    {deletingAllRules ? "Deleting..." : "Delete All"}
+                  </Button>
+                )}
+              </div>
+              <div className="flex-1 overflow-y-auto space-y-2 pr-2">
+                {loadingRules ? (
+                  <div className="text-center py-4">Loading rules...</div>
+                ) : rules.length === 0 ? (
+                  <div className="text-center py-8">
+                    <div className="text-muted-foreground">
+                      <p className="text-sm">No time rules configured yet.</p>
+                      <p className="text-xs mt-1">
+                        Create your first rule using the form on the right.
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  rules.map((rule) => {
+                    const displayData =
+                      rule.isEditing && rule.tempData
+                        ? { ...rule, ...rule.tempData }
+                        : rule;
+
+                    return (
+                      <Card
+                        key={rule.id}
+                        className={!rule.enabled ? "opacity-50" : ""}
+                      >
+                        <CardContent className="px-4 py-3">
+                          {rule.isEditing ? (
+                            <div className="space-y-4">
+                              {/* Rule Name */}
                               <div>
                                 <Label className="text-sm font-medium">
-                                  Action
+                                  Rule Name
                                 </Label>
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <Button
-                                      variant="outline"
-                                      className="w-full justify-between text-sm"
-                                    >
-                                      {displayData.action === "block"
-                                        ? "Block Access"
-                                        : "Allow Access"}
-                                      <ChevronDown className="w-4 h-4" />
-                                    </Button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent
-                                    align="start"
-                                    className="w-[200px]"
-                                  >
-                                    <DropdownMenuItem
-                                      onClick={() =>
-                                        updateTempData(rule.id, {
-                                          action: "block",
-                                        })
-                                      }
-                                    >
-                                      Block Access
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem
-                                      onClick={() =>
-                                        updateTempData(rule.id, {
-                                          action: "allow",
-                                        })
-                                      }
-                                    >
-                                      Allow Access
-                                    </DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
+                                <FocusInput
+                                  value={displayData.ruleName}
+                                  onChange={(value) =>
+                                    updateTempData(rule.id, {
+                                      ruleName: value,
+                                    })
+                                  }
+                                  placeholder="Rule name"
+                                  className="w-full"
+                                />
                               </div>
 
-                              {/* Day */}
-                              <div>
-                                <Label className="text-sm font-medium">
-                                  Day
-                                </Label>
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <Button
-                                      variant="outline"
-                                      className="w-full justify-between text-sm"
+                              <div className="grid grid-cols-2 gap-4">
+                                {/* Action */}
+                                <div>
+                                  <Label className="text-sm font-medium">
+                                    Action
+                                  </Label>
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button
+                                        variant="outline"
+                                        className="w-full justify-between text-sm"
+                                      >
+                                        {displayData.action === "block"
+                                          ? "Block Access"
+                                          : "Allow Access"}
+                                        <ChevronDown className="w-4 h-4" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent
+                                      align="start"
+                                      className="w-[200px]"
                                     >
-                                      {getDayLabel(displayData.dayOfWeek)}
-                                      <ChevronDown className="w-4 h-4" />
-                                    </Button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent
-                                    align="start"
-                                    className="w-[160px]"
-                                  >
-                                    {DAYS_OF_WEEK.map((day) => (
                                       <DropdownMenuItem
-                                        key={day.value}
                                         onClick={() =>
                                           updateTempData(rule.id, {
-                                            dayOfWeek: day.value,
+                                            action: "block",
                                           })
                                         }
                                       >
-                                        {day.label}
+                                        Block Access
                                       </DropdownMenuItem>
-                                    ))}
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
-                              </div>
-                            </div>
+                                      <DropdownMenuItem
+                                        onClick={() =>
+                                          updateTempData(rule.id, {
+                                            action: "allow",
+                                          })
+                                        }
+                                      >
+                                        Allow Access
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </div>
 
-                            {/* Time Range */}
-                            <div>
-                              <Label className="text-sm font-medium">
-                                Time Range
-                              </Label>
-                              <div className="flex gap-2 items-center">
-                                <FocusInput
-                                  type="time"
-                                  value={displayData.startTime}
-                                  onChange={(value) =>
-                                    updateTempData(rule.id, {
-                                      startTime: value,
-                                    })
-                                  }
-                                  className="flex-1"
-                                />
-                                <span className="text-sm text-muted-foreground">
-                                  to
-                                </span>
-                                <FocusInput
-                                  type="time"
-                                  value={displayData.endTime}
-                                  onChange={(value) =>
-                                    updateTempData(rule.id, {
-                                      endTime: value,
-                                    })
-                                  }
-                                  className="flex-1"
-                                />
-                              </div>
-                            </div>
-
-                            {/* Actions */}
-                            <div className="flex gap-2">
-                              <Button
-                                onClick={() => saveEdit(rule.id)}
-                                disabled={updatingRuleId === rule.id}
-                                size="sm"
-                                className="flex items-center gap-1"
-                              >
-                                <Save className="w-3 h-3" />
-                                {updatingRuleId === rule.id
-                                  ? "Saving..."
-                                  : "Save"}
-                              </Button>
-                              <Button
-                                variant="outline"
-                                onClick={() => cancelEdit(rule.id)}
-                                disabled={updatingRuleId === rule.id}
-                                size="sm"
-                                className="flex items-center gap-1"
-                              >
-                                <X className="w-3 h-3" />
-                                Cancel
-                              </Button>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="flex items-start justify-between gap-4">
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                <span
-                                  className={`font-medium truncate ${!rule.enabled ? "text-muted-foreground" : ""}`}
-                                >
-                                  {rule.ruleName}
-                                </span>
-                                <div className="flex gap-1 flex-shrink-0">
-                                  <Badge
-                                    variant={
-                                      rule.action === "block"
-                                        ? "default"
-                                        : "default"
-                                    }
-                                    className={`text-xs text-white ${
-                                      !rule.enabled
-                                        ? "bg-gray-400 hover:bg-gray-500 dark:bg-gray-600 dark:hover:bg-gray-700 border-gray-400"
-                                        : rule.action === "allow"
-                                          ? "bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 border-green-600"
-                                          : "bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800 border-red-600"
-                                    }`}
-                                  >
-                                    {rule.action}
-                                  </Badge>
+                                {/* Day */}
+                                <div>
+                                  <Label className="text-sm font-medium">
+                                    Day
+                                  </Label>
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button
+                                        variant="outline"
+                                        className="w-full justify-between text-sm"
+                                      >
+                                        {getDayLabel(displayData.dayOfWeek)}
+                                        <ChevronDown className="w-4 h-4" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent
+                                      align="start"
+                                      className="w-[160px]"
+                                    >
+                                      {DAYS_OF_WEEK.map((day) => (
+                                        <DropdownMenuItem
+                                          key={day.value}
+                                          onClick={() =>
+                                            updateTempData(rule.id, {
+                                              dayOfWeek: day.value,
+                                            })
+                                          }
+                                        >
+                                          {day.label}
+                                        </DropdownMenuItem>
+                                      ))}
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
                                 </div>
                               </div>
-                              <p
-                                className={`text-sm ${!rule.enabled ? "text-muted-foreground/60" : "text-muted-foreground"}`}
-                              >
-                                {getDayLabel(rule.dayOfWeek)} • {rule.startTime}{" "}
-                                - {rule.endTime}
-                              </p>
+
+                              {/* Time Range */}
+                              <div>
+                                <Label className="text-sm font-medium">
+                                  Time Range
+                                </Label>
+                                <div className="flex gap-2 items-center">
+                                  <FocusInput
+                                    type="time"
+                                    value={displayData.startTime}
+                                    onChange={(value) =>
+                                      updateTempData(rule.id, {
+                                        startTime: value,
+                                      })
+                                    }
+                                    className="flex-1"
+                                  />
+                                  <span className="text-sm text-muted-foreground">
+                                    to
+                                  </span>
+                                  <FocusInput
+                                    type="time"
+                                    value={displayData.endTime}
+                                    onChange={(value) =>
+                                      updateTempData(rule.id, {
+                                        endTime: value,
+                                      })
+                                    }
+                                    className="flex-1"
+                                  />
+                                </div>
+                              </div>
+
+                              {/* Actions */}
+                              <div className="flex gap-2">
+                                <Button
+                                  onClick={() => saveEdit(rule.id)}
+                                  disabled={updatingRuleId === rule.id}
+                                  size="sm"
+                                  className="flex items-center gap-1"
+                                >
+                                  <Save className="w-3 h-3" />
+                                  {updatingRuleId === rule.id
+                                    ? "Saving..."
+                                    : "Save"}
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  onClick={() => cancelEdit(rule.id)}
+                                  disabled={updatingRuleId === rule.id}
+                                  size="sm"
+                                  className="flex items-center gap-1"
+                                >
+                                  <X className="w-3 h-3" />
+                                  Cancel
+                                </Button>
+                              </div>
                             </div>
-                            <div className="flex items-center gap-2 flex-shrink-0">
-                              <Switch
-                                checked={rule.enabled}
-                                disabled={updatingRuleId === rule.id}
-                                onCheckedChange={async (checked) => {
-                                  setUpdatingRuleId(rule.id);
-                                  try {
-                                    await updateTimeRule(userId, rule.id, {
-                                      enabled: checked,
-                                    });
-                                    setRules((prev) =>
-                                      prev.map((r) =>
-                                        r.id === rule.id
-                                          ? { ...r, enabled: checked }
-                                          : r
-                                      )
-                                    );
-                                  } catch (error: any) {
-                                    toast({
-                                      title: "Error",
-                                      description:
-                                        error.message ||
-                                        "Failed to update rule",
-                                      variant: "destructive",
-                                    });
-                                  } finally {
-                                    setUpdatingRuleId(null);
+                          ) : (
+                            <div className="flex items-start justify-between gap-4">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                  <span
+                                    className={`font-medium truncate ${!rule.enabled ? "text-muted-foreground" : ""}`}
+                                  >
+                                    {rule.ruleName}
+                                  </span>
+                                  <div className="flex gap-1 flex-shrink-0">
+                                    <Badge
+                                      variant={
+                                        rule.action === "block"
+                                          ? "default"
+                                          : "default"
+                                      }
+                                      className={`text-xs text-white ${
+                                        !rule.enabled
+                                          ? "bg-gray-400 hover:bg-gray-500 dark:bg-gray-600 dark:hover:bg-gray-700 border-gray-400"
+                                          : rule.action === "allow"
+                                            ? "bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 border-green-600"
+                                            : "bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800 border-red-600"
+                                      }`}
+                                    >
+                                      {rule.action}
+                                    </Badge>
+                                  </div>
+                                </div>
+                                <p
+                                  className={`text-sm ${!rule.enabled ? "text-muted-foreground/60" : "text-muted-foreground"}`}
+                                >
+                                  {getDayLabel(rule.dayOfWeek)} •{" "}
+                                  {rule.startTime} - {rule.endTime}
+                                </p>
+                              </div>
+                              <div className="flex items-center gap-2 flex-shrink-0">
+                                <Switch
+                                  checked={rule.enabled}
+                                  disabled={updatingRuleId === rule.id}
+                                  onCheckedChange={async (checked) => {
+                                    setUpdatingRuleId(rule.id);
+                                    try {
+                                      await updateTimeRule(userId, rule.id, {
+                                        enabled: checked,
+                                      });
+                                      setRules((prev) =>
+                                        prev.map((r) =>
+                                          r.id === rule.id
+                                            ? { ...r, enabled: checked }
+                                            : r
+                                        )
+                                      );
+                                    } catch (error: any) {
+                                      toast({
+                                        title: "Error",
+                                        description:
+                                          error.message ||
+                                          "Failed to update rule",
+                                        variant: "destructive",
+                                      });
+                                    } finally {
+                                      setUpdatingRuleId(null);
+                                    }
+                                  }}
+                                />
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => startEdit(rule.id)}
+                                  disabled={
+                                    updatingRuleId === rule.id ||
+                                    deletingRuleId === rule.id
                                   }
-                                }}
-                              />
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => startEdit(rule.id)}
-                                disabled={
-                                  updatingRuleId === rule.id ||
-                                  deletingRuleId === rule.id
-                                }
-                              >
-                                <Edit className="w-4 h-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => deleteRule(rule.id)}
-                                disabled={
-                                  updatingRuleId === rule.id ||
-                                  deletingRuleId === rule.id
-                                }
-                              >
-                                {deletingRuleId === rule.id ? (
-                                  <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
-                                ) : (
-                                  <Trash2 className="w-4 h-4" />
-                                )}
-                              </Button>
+                                >
+                                  <Edit className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => deleteRule(rule.id)}
+                                  disabled={
+                                    updatingRuleId === rule.id ||
+                                    deletingRuleId === rule.id
+                                  }
+                                >
+                                  {deletingRuleId === rule.id ? (
+                                    <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
+                                  ) : (
+                                    <Trash2 className="w-4 h-4" />
+                                  )}
+                                </Button>
+                              </div>
                             </div>
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  );
-                })
-              )}
+                          )}
+                        </CardContent>
+                      </Card>
+                    );
+                  })
+                )}
+              </div>
             </div>
           </div>
-        </div>
-        {/* Footer */}
-        <div className="flex justify-end pt-4 border-t">
-          <Button variant="outline" onClick={onClose}>
-            Close
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
+          {/* Footer */}
+          <div className="flex justify-end pt-4 border-t">
+            <Button variant="outline" onClick={onClose}>
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
-    {/* Delete All Confirmation Dialog */}
-    <ConfirmationModal
-      isOpen={showDeleteAllConfirm}
-      onClose={() => setShowDeleteAllConfirm(false)}
-      onConfirm={confirmDeleteAllRules}
-      title="Delete All Time Rules?"
-      description="This action will permanently delete all existing time rules for this user. This cannot be undone."
-      confirmText="Delete All"
-      variant="destructive"
-    />
+      {/* Delete All Confirmation Dialog */}
+      <ConfirmationModal
+        isOpen={showDeleteAllConfirm}
+        onClose={() => setShowDeleteAllConfirm(false)}
+        onConfirm={confirmDeleteAllRules}
+        title="Delete All Time Rules?"
+        description="This action will permanently delete all existing time rules for this user. This cannot be undone."
+        confirmText="Delete All"
+        variant="destructive"
+      />
 
-    {/* Preset Confirmation Dialog */}
-    <ConfirmationModal
-      isOpen={!!showPresetConfirm}
-      onClose={() => setShowPresetConfirm(null)}
-      onConfirm={() => confirmCreatePreset(showPresetConfirm!)}
-      title={`Apply ${showPresetConfirm} Preset?`}
-      description={`This will delete all existing time rules and create new ones for ${showPresetConfirm?.toLowerCase()}. This action cannot be undone.`}
-      confirmText="Apply Preset"
-      variant="default"
-    />
+      {/* Preset Confirmation Dialog */}
+      <ConfirmationModal
+        isOpen={!!showPresetConfirm}
+        onClose={() => setShowPresetConfirm(null)}
+        onConfirm={() => confirmCreatePreset(showPresetConfirm!)}
+        title={`Apply ${showPresetConfirm} Preset?`}
+        description={`This will delete all existing time rules and create new ones for ${showPresetConfirm?.toLowerCase()}. This action cannot be undone.`}
+        confirmText="Apply Preset"
+        variant="default"
+      />
     </>
   );
 }
