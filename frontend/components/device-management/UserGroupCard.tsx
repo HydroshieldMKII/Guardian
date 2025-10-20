@@ -267,7 +267,9 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
                     }`}
                   >
                     <Settings className="w-3 h-3 mr-2" />
-                    Global {!configLoading && `(${getGlobalDefaultBlock() ? 'Block' : 'Allow'})`}
+                    Global{" "}
+                    {!configLoading &&
+                      `(${getGlobalDefaultBlock() ? "Block" : "Allow"})`}
                   </button>
                   <button
                     onClick={() =>

@@ -201,12 +201,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
   const [testingConnection, setTestingConnection] = useState(false);
   const [exportingDatabase, setExportingDatabase] = useState(false);
   const [importingDatabase, setImportingDatabase] = useState(false);
-  const {
-    settings,
-    loading,
-    error,
-    refreshSettings,
-  } = useSettings();
+  const { settings, loading, error, refreshSettings } = useSettings();
   const {
     versionInfo,
     updateInfo,
