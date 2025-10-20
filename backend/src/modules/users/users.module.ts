@@ -17,10 +17,7 @@ import { PlexModule } from '../plex/plex.module';
     forwardRef(() => ConfigModule),
     forwardRef(() => PlexModule),
   ],
-  controllers: [
-    UsersController,
-    TimeRuleController,
-  ],
+  controllers: [UsersController, TimeRuleController],
   providers: [UsersService, TimeRuleService, TimePolicyService],
   exports: [UsersService, TimeRuleService, TimePolicyService],
 })
