@@ -15,6 +15,7 @@ import { SessionHistory } from './entities/session-history.entity';
 import { UserPreference } from './entities/user-preference.entity';
 import { AppSettings } from './entities/app-settings.entity';
 import { Notification } from './entities/notification.entity';
+import { UserTimeRule } from './entities/user-time-rule.entity';
 import { config } from './config/app.config';
 import * as path from 'path';
 
@@ -26,7 +27,14 @@ import * as path from 'path';
       database:
         process.env.DATABASE_PATH ||
         path.join(process.cwd(), config.database.path),
-      entities: [UserDevice, SessionHistory, UserPreference, AppSettings, Notification],
+      entities: [
+        UserDevice,
+        SessionHistory,
+        UserPreference,
+        AppSettings,
+        Notification,
+        UserTimeRule,
+      ],
       synchronize: true,
       logging: config.database.logging,
     }),

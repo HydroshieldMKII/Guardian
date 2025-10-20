@@ -139,6 +139,10 @@ const getSettingInfo = (
       description:
         "Message displayed when the IP address is not in the allowed list",
     },
+    MSG_TIME_RESTRICTED: {
+      label: "Time restriction message",
+      description: "Message displayed when access is blocked due to time rules",
+    },
     PLEX_GUARD_DEFAULT_BLOCK: {
       label: "Default behavior for new devices",
       description:
@@ -896,6 +900,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
         "MSG_IP_LAN_ONLY",
         "MSG_IP_WAN_ONLY",
         "MSG_IP_NOT_ALLOWED",
+        "MSG_TIME_RESTRICTED",
       ],
       notifications: ["AUTO_MARK_NOTIFICATION_READ"],
     };

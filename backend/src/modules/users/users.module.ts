@@ -1,20 +1,33 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UsersController } from './users.controller';
+import { TimePolicyController } from './controllers/time-policy.controller';
+import {
+  TimeRuleController,
+  TimeRuleBatchController,
+} from './controllers/time-rule.controller';
 import { UsersService } from './services/users.service';
+import { TimePolicyService } from './services/time-policy.service';
+import { TimeRuleService } from './services/time-rule.service';
 import { UserPreference } from '../../entities/user-preference.entity';
 import { UserDevice } from '../../entities/user-device.entity';
+import { UserTimeRule } from '../../entities/user-time-rule.entity';
 import { ConfigModule } from '../config/config.module';
 import { PlexModule } from '../plex/plex.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([UserPreference, UserDevice]),
+    TypeOrmModule.forFeature([UserPreference, UserDevice, UserTimeRule]),
     forwardRef(() => ConfigModule),
     forwardRef(() => PlexModule),
   ],
-  controllers: [UsersController],
-  providers: [UsersService],
-  exports: [UsersService],
+  controllers: [
+    UsersController,
+    TimePolicyController,
+    TimeRuleController,
+    TimeRuleBatchController,
+  ],
+  providers: [UsersService, TimePolicyService, TimeRuleService],
+  exports: [UsersService, TimePolicyService, TimeRuleService],
 })
 export class UsersModule {}
