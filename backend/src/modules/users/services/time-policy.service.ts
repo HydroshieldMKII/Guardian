@@ -8,7 +8,6 @@ export interface CreateTimePolicyDto {
   userId: string;
   deviceIdentifier?: string;
   policyName: string;
-  action: 'allow' | 'block';
   daysOfWeek: number[];
   startTime: string;
   endTime: string;
@@ -18,7 +17,6 @@ export interface CreateTimePolicyDto {
 export interface UpdateTimePolicyDto {
   policyName?: string;
   enabled?: boolean;
-  action?: 'allow' | 'block';
   daysOfWeek?: number[];
   startTime?: string;
   endTime?: string;
@@ -42,7 +40,6 @@ export class TimePolicyService {
       userId: createDto.userId,
       deviceIdentifier: createDto.deviceIdentifier || undefined,
       ruleName: createDto.policyName,
-      action: createDto.action,
       dayOfWeek: createDto.daysOfWeek[0] || 0, // Take first day or default to Sunday
       startTime: createDto.startTime,
       endTime: createDto.endTime,
@@ -128,16 +125,15 @@ export class TimePolicyService {
       'Saturday',
     ];
 
-    // Check each policy (no priority sorting needed)
+    // Check each policy
     for (const policy of enabledPolicies) {
       const isActive = this.isPolicyActive(policy, currentDay, currentTime);
       if (isActive) {
-        const result = policy.action === 'allow';
-        return result;
+        // All rules are blocking rules
+        return false;
       }
     }
 
-    this.logger.debug(`No matching policies found - allowing by default`);
     return true; // No matching policy = allow by default
   }
 
@@ -187,7 +183,7 @@ export class TimePolicyService {
 
     const summaries = enabledPolicies.map((policy) => {
       const day = this.formatDayOfWeek(policy.dayOfWeek);
-      return `${policy.action.toUpperCase()}: ${day} ${policy.startTime}-${policy.endTime}`;
+      return `BLOCK: ${day} ${policy.startTime}-${policy.endTime}`;
     });
 
     return summaries.join('; ');

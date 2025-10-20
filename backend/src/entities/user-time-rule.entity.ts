@@ -27,9 +27,6 @@ export class UserTimeRule {
   @Column({ name: 'enabled', type: 'boolean', default: true })
   enabled: boolean;
 
-  @Column({ name: 'action', type: 'varchar' })
-  action: 'allow' | 'block';
-
   // Single day constraint (0=Sunday, 1=Monday, ..., 6=Saturday)
   @Column({ name: 'day_of_week', type: 'int' })
   @Check('day_of_week >= 0 AND day_of_week <= 6')

@@ -126,7 +126,7 @@ export function TimeRuleModal({
   const [newRule, setNewRule] = useState<NewRuleForm>({
     deviceIdentifier: deviceIdentifier || undefined,
     ruleName: "",
-    action: "block",
+    action: "block", // Always block
     dayOfWeek: 0,
     startTime: "10:00",
     endTime: "15:00",
@@ -169,7 +169,7 @@ export function TimeRuleModal({
       console.error("Failed to load rules:", error);
       toast({
         title: "Error",
-        description: "Failed to load time rules",
+        description: "Failed to load blocking rules",
         variant: "destructive",
       });
     } finally {
@@ -282,7 +282,6 @@ export function TimeRuleModal({
     try {
       await updateTimeRule(userId, ruleId, {
         ruleName: rule.tempData.ruleName || rule.ruleName,
-        action: rule.tempData.action || rule.action,
         dayOfWeek: rule.tempData.dayOfWeek ?? rule.dayOfWeek,
         startTime: rule.tempData.startTime || rule.startTime,
         endTime: rule.tempData.endTime || rule.endTime,
@@ -307,7 +306,7 @@ export function TimeRuleModal({
 
       toast({
         title: "Rule Updated",
-        description: "Time rule has been updated successfully",
+        description: "Blocking rule has been updated successfully",
         variant: "success",
       });
     } catch (error: any) {
@@ -328,7 +327,7 @@ export function TimeRuleModal({
       setRules((prev) => prev.filter((r) => r.id !== ruleId));
       toast({
         title: "Rule Deleted",
-        description: "Time rule has been deleted successfully",
+        description: "Blocking rule has been deleted successfully",
         variant: "success",
       });
     } catch (error: any) {
@@ -391,7 +390,7 @@ export function TimeRuleModal({
 
       toast({
         title: "Rule Created",
-        description: "Time rule has been created successfully",
+        description: "Blocking rule has been created successfully",
         variant: "success",
       });
     } catch (error: any) {
@@ -427,7 +426,7 @@ export function TimeRuleModal({
       setRules([]);
       toast({
         title: "All Rules Deleted",
-        description: `Successfully deleted ${rules.length} time rules`,
+        description: `Successfully deleted ${rules.length} blocking rules`,
         variant: "success",
       });
     } catch (error: any) {
@@ -486,10 +485,12 @@ export function TimeRuleModal({
         <DialogContent className="max-w-[95vw] w-full sm:max-w-[1100px] max-h-[90vh] flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              Manage Time Rules
+              Manage Blocking Rules
             </DialogTitle>
             <p className="text-sm text-muted-foreground">
-              Managing time rules for <strong>{username}</strong>
+              Managing blocking rules for <strong>{username}</strong>. Streaming
+              is allowed by default - add rules to block access during specific
+              times.
             </p>
           </DialogHeader>
 
@@ -497,7 +498,9 @@ export function TimeRuleModal({
             {/* Right Column - New Rules (Show first on mobile) */}
             <div className="lg:w-1/2 flex flex-col min-h-0 space-y-4 flex-1 lg:flex-initial order-1 lg:order-2">
               <div className="flex items-center justify-between">
-                <Label className="text-sm font-medium">Add New Time Rule</Label>
+                <Label className="text-sm font-medium">
+                  Add New Blocking Rule
+                </Label>
               </div>
 
               {/* Quick Presets */}
@@ -546,7 +549,9 @@ export function TimeRuleModal({
                   <CardContent className="px-4 py-3 space-y-4">
                     {/* Rule Name */}
                     <div>
-                      <Label className="text-sm font-medium">Rule Name</Label>
+                      <Label className="text-sm font-medium">
+                        Block Rule Name
+                      </Label>
                       <Input
                         value={newRule.ruleName}
                         onChange={(e) =>
@@ -555,92 +560,49 @@ export function TimeRuleModal({
                             ruleName: e.target.value,
                           }))
                         }
-                        placeholder="e.g., Night restriction"
+                        placeholder="e.g., School hours, Sleep time, Work hours"
                       />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                      {/* Action */}
-                      <div>
-                        <Label className="text-sm font-medium">Action</Label>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="outline"
-                              className="w-full justify-between text-sm"
-                            >
-                              {newRule.action === "block"
-                                ? "Block Access"
-                                : "Allow Access"}
-                              <ChevronDown className="w-4 h-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent
-                            align="start"
-                            className="w-[200px]"
+                    {/* Day */}
+                    <div>
+                      <Label className="text-sm font-medium">Day</Label>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className="w-full justify-between text-sm"
                           >
+                            {getDayLabel(newRule.dayOfWeek)}
+                            <ChevronDown className="w-4 h-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent
+                          align="start"
+                          className="w-[160px]"
+                        >
+                          {DAYS_OF_WEEK.map((day) => (
                             <DropdownMenuItem
+                              key={day.value}
                               onClick={() =>
                                 setNewRule((prev) => ({
                                   ...prev,
-                                  action: "block",
+                                  dayOfWeek: day.value,
                                 }))
                               }
                             >
-                              Block Access
+                              {day.label}
                             </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() =>
-                                setNewRule((prev) => ({
-                                  ...prev,
-                                  action: "allow",
-                                }))
-                              }
-                            >
-                              Allow Access
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-
-                      {/* Day */}
-                      <div>
-                        <Label className="text-sm font-medium">Day</Label>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="outline"
-                              className="w-full justify-between text-sm"
-                            >
-                              {getDayLabel(newRule.dayOfWeek)}
-                              <ChevronDown className="w-4 h-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent
-                            align="start"
-                            className="w-[160px]"
-                          >
-                            {DAYS_OF_WEEK.map((day) => (
-                              <DropdownMenuItem
-                                key={day.value}
-                                onClick={() =>
-                                  setNewRule((prev) => ({
-                                    ...prev,
-                                    dayOfWeek: day.value,
-                                  }))
-                                }
-                              >
-                                {day.label}
-                              </DropdownMenuItem>
-                            ))}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
+                          ))}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
 
                     {/* Time Range */}
                     <div>
-                      <Label className="text-sm font-medium">Time Range</Label>
+                      <Label className="text-sm font-medium">
+                        Block During Time Range
+                      </Label>
                       <div className="flex gap-2 items-center">
                         <Input
                           type="time"
@@ -688,7 +650,7 @@ export function TimeRuleModal({
                       ) : (
                         <>
                           <Plus className="w-4 h-4" />
-                          Create Rule
+                          Create Blocking Rule
                         </>
                       )}
                     </Button>
@@ -701,7 +663,7 @@ export function TimeRuleModal({
             <div className="lg:w-1/2 flex flex-col min-h-0 h-[35vh] lg:h-auto order-2 lg:order-1">
               <div className="flex items-center justify-between mb-3 pr-2">
                 <Label className="text-sm font-medium">
-                  Existing Time Rules
+                  Active Blocking Rules
                 </Label>
                 {rules.length > 0 && (
                   <Button
@@ -726,9 +688,10 @@ export function TimeRuleModal({
                 ) : rules.length === 0 ? (
                   <div className="text-center py-8">
                     <div className="text-muted-foreground">
-                      <p className="text-sm">No time rules configured yet.</p>
+                      <p className="text-sm">No blocking rules configured.</p>
                       <p className="text-xs mt-1">
-                        Create your first rule using the form on the right.
+                        Streaming is allowed by default. Add blocking rules to
+                        restrict access during specific time periods.
                       </p>
                     </div>
                   </div>
@@ -764,84 +727,39 @@ export function TimeRuleModal({
                                 />
                               </div>
 
-                              <div className="grid grid-cols-2 gap-4">
-                                {/* Action */}
-                                <div>
-                                  <Label className="text-sm font-medium">
-                                    Action
-                                  </Label>
-                                  <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                      <Button
-                                        variant="outline"
-                                        className="w-full justify-between text-sm"
-                                      >
-                                        {displayData.action === "block"
-                                          ? "Block Access"
-                                          : "Allow Access"}
-                                        <ChevronDown className="w-4 h-4" />
-                                      </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent
-                                      align="start"
-                                      className="w-[200px]"
+                              {/* Day */}
+                              <div>
+                                <Label className="text-sm font-medium">
+                                  Day
+                                </Label>
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button
+                                      variant="outline"
+                                      className="w-full justify-between text-sm"
                                     >
+                                      {getDayLabel(displayData.dayOfWeek)}
+                                      <ChevronDown className="w-4 h-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent
+                                    align="start"
+                                    className="w-[160px]"
+                                  >
+                                    {DAYS_OF_WEEK.map((day) => (
                                       <DropdownMenuItem
+                                        key={day.value}
                                         onClick={() =>
                                           updateTempData(rule.id, {
-                                            action: "block",
+                                            dayOfWeek: day.value,
                                           })
                                         }
                                       >
-                                        Block Access
+                                        {day.label}
                                       </DropdownMenuItem>
-                                      <DropdownMenuItem
-                                        onClick={() =>
-                                          updateTempData(rule.id, {
-                                            action: "allow",
-                                          })
-                                        }
-                                      >
-                                        Allow Access
-                                      </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                  </DropdownMenu>
-                                </div>
-
-                                {/* Day */}
-                                <div>
-                                  <Label className="text-sm font-medium">
-                                    Day
-                                  </Label>
-                                  <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                      <Button
-                                        variant="outline"
-                                        className="w-full justify-between text-sm"
-                                      >
-                                        {getDayLabel(displayData.dayOfWeek)}
-                                        <ChevronDown className="w-4 h-4" />
-                                      </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent
-                                      align="start"
-                                      className="w-[160px]"
-                                    >
-                                      {DAYS_OF_WEEK.map((day) => (
-                                        <DropdownMenuItem
-                                          key={day.value}
-                                          onClick={() =>
-                                            updateTempData(rule.id, {
-                                              dayOfWeek: day.value,
-                                            })
-                                          }
-                                        >
-                                          {day.label}
-                                        </DropdownMenuItem>
-                                      ))}
-                                    </DropdownMenuContent>
-                                  </DropdownMenu>
-                                </div>
+                                    ))}
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
                               </div>
 
                               {/* Time Range */}
@@ -912,20 +830,14 @@ export function TimeRuleModal({
                                   </span>
                                   <div className="flex gap-1 flex-shrink-0">
                                     <Badge
-                                      variant={
-                                        rule.action === "block"
-                                          ? "default"
-                                          : "default"
-                                      }
+                                      variant="default"
                                       className={`text-xs text-white ${
                                         !rule.enabled
                                           ? "bg-gray-400 hover:bg-gray-500 dark:bg-gray-600 dark:hover:bg-gray-700 border-gray-400"
-                                          : rule.action === "allow"
-                                            ? "bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 border-green-600"
-                                            : "bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800 border-red-600"
+                                          : "bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800 border-red-600"
                                       }`}
                                     >
-                                      {rule.action}
+                                      Block
                                     </Badge>
                                   </div>
                                 </div>
@@ -1017,8 +929,8 @@ export function TimeRuleModal({
         isOpen={showDeleteAllConfirm}
         onClose={() => setShowDeleteAllConfirm(false)}
         onConfirm={confirmDeleteAllRules}
-        title="Delete All Time Rules?"
-        description="This action will permanently delete all existing time rules for this user. This cannot be undone."
+        title="Delete All Blocking Rules?"
+        description="This action will permanently delete all existing blocking rules for this user. This cannot be undone."
         confirmText="Delete All"
         variant="destructive"
         loading={deletingAllRules}
@@ -1030,7 +942,7 @@ export function TimeRuleModal({
         onClose={() => setShowPresetConfirm(null)}
         onConfirm={() => confirmCreatePreset(showPresetConfirm!)}
         title={`Apply ${showPresetConfirm} Preset?`}
-        description={`This will delete all existing time rules and create new ones for ${showPresetConfirm?.toLowerCase()}. This action cannot be undone.`}
+        description={`This will delete all existing blocking rules and create new blocking rules for ${showPresetConfirm?.toLowerCase()}. This action cannot be undone.`}
         confirmText="Apply Preset"
         variant="default"
         loading={creatingPreset === showPresetConfirm}

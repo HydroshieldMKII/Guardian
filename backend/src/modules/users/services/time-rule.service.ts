@@ -7,7 +7,6 @@ export interface CreateTimeRuleDto {
   userId: string;
   deviceIdentifier?: string;
   ruleName: string;
-  action: 'allow' | 'block';
   dayOfWeek: number;
   startTime: string;
   endTime: string;
@@ -16,7 +15,6 @@ export interface CreateTimeRuleDto {
 export interface UpdateTimeRuleDto {
   ruleName?: string;
   enabled?: boolean;
-  action?: 'allow' | 'block';
   dayOfWeek?: number;
   startTime?: string;
   endTime?: string;
@@ -125,7 +123,6 @@ export class TimeRuleService {
           userId: createDto.userId,
           deviceIdentifier: createDto.deviceIdentifier || undefined,
           ruleName: ruleData.ruleName,
-          action: ruleData.action,
           dayOfWeek: ruleData.dayOfWeek,
           startTime: ruleData.startTime,
           endTime: ruleData.endTime,
@@ -183,110 +180,53 @@ export class TimeRuleService {
     }
   }
 
-  private getPresetRules(
-    presetType: 'weekdays-only' | 'weekends-only',
-    deviceIdentifier?: string,
-  ) {
+  private getPresetRules(presetType: 'weekdays-only' | 'weekends-only') {
     if (presetType === 'weekdays-only') {
+      // Block weekends (Saturday and Sunday)
       return [
-        {
-          dayOfWeek: 1,
-          ruleName: 'Monday - Allow All Day',
-          action: 'allow' as const,
-          startTime: '00:00',
-          endTime: '23:59',
-        },
-        {
-          dayOfWeek: 2,
-          ruleName: 'Tuesday - Allow All Day',
-          action: 'allow' as const,
-          startTime: '00:00',
-          endTime: '23:59',
-        },
-        {
-          dayOfWeek: 3,
-          ruleName: 'Wednesday - Allow All Day',
-          action: 'allow' as const,
-          startTime: '00:00',
-          endTime: '23:59',
-        },
-        {
-          dayOfWeek: 4,
-          ruleName: 'Thursday - Allow All Day',
-          action: 'allow' as const,
-          startTime: '00:00',
-          endTime: '23:59',
-        },
-        {
-          dayOfWeek: 5,
-          ruleName: 'Friday - Allow All Day',
-          action: 'allow' as const,
-          startTime: '00:00',
-          endTime: '23:59',
-        },
         {
           dayOfWeek: 0,
           ruleName: 'Sunday - Block All Day',
-          action: 'block' as const,
           startTime: '00:00',
           endTime: '23:59',
         },
         {
           dayOfWeek: 6,
           ruleName: 'Saturday - Block All Day',
-          action: 'block' as const,
           startTime: '00:00',
           endTime: '23:59',
         },
       ];
     } else if (presetType === 'weekends-only') {
+      // Block weekdays (Monday through Friday)
       return [
-        {
-          dayOfWeek: 0,
-          ruleName: 'Sunday - Allow All Day',
-          action: 'allow' as const,
-          startTime: '00:00',
-          endTime: '23:59',
-        },
-        {
-          dayOfWeek: 6,
-          ruleName: 'Saturday - Allow All Day',
-          action: 'allow' as const,
-          startTime: '00:00',
-          endTime: '23:59',
-        },
         {
           dayOfWeek: 1,
           ruleName: 'Monday - Block All Day',
-          action: 'block' as const,
           startTime: '00:00',
           endTime: '23:59',
         },
         {
           dayOfWeek: 2,
           ruleName: 'Tuesday - Block All Day',
-          action: 'block' as const,
           startTime: '00:00',
           endTime: '23:59',
         },
         {
           dayOfWeek: 3,
           ruleName: 'Wednesday - Block All Day',
-          action: 'block' as const,
           startTime: '00:00',
           endTime: '23:59',
         },
         {
           dayOfWeek: 4,
           ruleName: 'Thursday - Block All Day',
-          action: 'block' as const,
           startTime: '00:00',
           endTime: '23:59',
         },
         {
           dayOfWeek: 5,
           ruleName: 'Friday - Block All Day',
-          action: 'block' as const,
           startTime: '00:00',
           endTime: '23:59',
         },
@@ -432,19 +372,13 @@ export class TimeRuleService {
       (rule) => rule.enabled && rule.dayOfWeek === dayOfWeek,
     );
 
-    // Check if current time falls within any rule's time range
+    // Check if current time falls within any blocking rule's time range
     for (const rule of allRules) {
       if (this.isTimeInRange(timeStr, rule.startTime, rule.endTime)) {
-        if (rule.action === 'block') {
-          return {
-            allowed: false,
-            reason: `Blocked by rule "${rule.ruleName}" (${rule.startTime}-${rule.endTime})`,
-          };
-        }
-        // If we find an 'allow' rule, streaming is explicitly allowed
+        // All rules are blocking rules
         return {
-          allowed: true,
-          reason: `Allowed by rule "${rule.ruleName}"`,
+          allowed: false,
+          reason: `Blocked by rule "${rule.ruleName}" (${rule.startTime}-${rule.endTime})`,
         };
       }
     }
