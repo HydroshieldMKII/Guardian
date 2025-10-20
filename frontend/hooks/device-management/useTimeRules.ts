@@ -288,6 +288,52 @@ export const useTimeRules = () => {
     }
   };
 
+  const createPreset = async (
+    userId: string,
+    presetType: 'weekdays-only' | 'weekends-only',
+    deviceIdentifier?: string
+  ): Promise<UserTimeRule[]> => {
+    try {
+      setLoading(true);
+
+      const response = await fetch(
+        `${config.api.baseUrl}/users/${encodeURIComponent(userId)}/time-rules/preset`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            presetType,
+            deviceIdentifier: deviceIdentifier || undefined,
+          }),
+        }
+      );
+
+      if (response.ok) {
+        const newRules = await response.json();
+
+        // Update cache with new rules (replace existing)
+        globalTimeRuleCache.set(userId, newRules);
+
+        // Clear hasRules cache to ensure "Scheduled" badge updates
+        hasRulesCache.delete(userId);
+
+        return newRules;
+      }
+
+      const errorData = await response
+        .json()
+        .catch(() => ({ message: "Unknown error" }));
+      throw new Error(errorData.message || "Failed to create preset");
+    } catch (error) {
+      console.error("Error creating preset:", error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const toggleTimeRule = async (
     userId: string,
     ruleId: number
@@ -444,6 +490,7 @@ export const useTimeRules = () => {
     createTimeRule,
     updateTimeRule,
     deleteTimeRule,
+    createPreset,
     toggleTimeRule,
     checkStreamingAllowed,
     hasTimeRules,

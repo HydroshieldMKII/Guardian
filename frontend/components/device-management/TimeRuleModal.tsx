@@ -107,6 +107,7 @@ export function TimeRuleModal({
     createTimeRule,
     updateTimeRule,
     deleteTimeRule,
+    createPreset,
     loading,
   } = useTimeRules();
 
@@ -283,6 +284,7 @@ export function TimeRuleModal({
       toast({
         title: "Rule Updated",
         description: "Time rule has been updated successfully",
+        variant: "success",
       });
     } catch (error: any) {
       toast({
@@ -378,46 +380,27 @@ export function TimeRuleModal({
   };
 
   const createWeekdaysOnlyPreset = async () => {
+    if (creatingPreset) {
+      console.log("Already creating preset, ignoring duplicate request");
+      return;
+    }
+
     setCreatingPreset(true);
     try {
-      // First, delete all existing rules to avoid conflicts
-      if (rules.length > 0) {
-        await Promise.all(rules.map((rule) => deleteTimeRule(userId, rule.id)));
-      }
+      console.log("Creating weekdays preset for user:", userId);
+      const createdRules = await createPreset(
+        userId,
+        "weekdays-only",
+        deviceIdentifier
+      );
 
-      const allDayRules = [
-        { dayOfWeek: 1, ruleName: "Monday - Allow All Day" },
-        { dayOfWeek: 2, ruleName: "Tuesday - Allow All Day" },
-        { dayOfWeek: 3, ruleName: "Wednesday - Allow All Day" },
-        { dayOfWeek: 4, ruleName: "Thursday - Allow All Day" },
-        { dayOfWeek: 5, ruleName: "Friday - Allow All Day" },
-        { dayOfWeek: 0, ruleName: "Sunday - Block All Day" },
-        { dayOfWeek: 6, ruleName: "Saturday - Block All Day" },
-      ];
-
-      const createdRules: EditingRule[] = [];
-      for (const rule of allDayRules) {
-        const isWeekend = rule.dayOfWeek === 0 || rule.dayOfWeek === 6;
-        const newRuleData = {
-          deviceIdentifier: deviceIdentifier || undefined,
-          ruleName: rule.ruleName,
-          action: isWeekend ? ("block" as const) : ("allow" as const),
-          dayOfWeek: rule.dayOfWeek,
-          startTime: "00:00",
-          endTime: "23:59",
-        };
-
-        const createdRule = await createTimeRule(userId, newRuleData);
-        createdRules.push({ ...createdRule, isEditing: false });
-      }
-
-      setRules(createdRules);
+      setRules(createdRules.map((rule) => ({ ...rule, isEditing: false })));
       toast({
         title: "Preset Created",
-        description:
-          "Weekdays preset created successfully (5 allow rules + 2 weekend block rules)",
+        description: "Weekdays preset created successfully applied",
       });
     } catch (error: any) {
+      console.error("Error creating weekdays preset:", error);
       toast({
         title: "Error",
         description: error.message || "Failed to create weekdays preset",
@@ -429,46 +412,28 @@ export function TimeRuleModal({
   };
 
   const createWeekendsOnlyPreset = async () => {
+    if (creatingPreset) {
+      console.log("Already creating preset, ignoring duplicate request");
+      return;
+    }
+
     setCreatingPreset(true);
     try {
-      // First, delete all existing rules to avoid conflicts
-      if (rules.length > 0) {
-        await Promise.all(rules.map((rule) => deleteTimeRule(userId, rule.id)));
-      }
+      console.log("Creating weekends preset for user:", userId);
+      const createdRules = await createPreset(
+        userId,
+        "weekends-only",
+        deviceIdentifier
+      );
 
-      const weekendRules = [
-        { dayOfWeek: 0, ruleName: "Sunday - Allow All Day" },
-        { dayOfWeek: 6, ruleName: "Saturday - Allow All Day" },
-        { dayOfWeek: 1, ruleName: "Monday - Block All Day" },
-        { dayOfWeek: 2, ruleName: "Tuesday - Block All Day" },
-        { dayOfWeek: 3, ruleName: "Wednesday - Block All Day" },
-        { dayOfWeek: 4, ruleName: "Thursday - Block All Day" },
-        { dayOfWeek: 5, ruleName: "Friday - Block All Day" },
-      ];
-
-      const createdRules: EditingRule[] = [];
-      for (const rule of weekendRules) {
-        const isWeekend = rule.dayOfWeek === 0 || rule.dayOfWeek === 6;
-        const newRuleData = {
-          deviceIdentifier: deviceIdentifier || undefined,
-          ruleName: rule.ruleName,
-          action: isWeekend ? ("allow" as const) : ("block" as const),
-          dayOfWeek: rule.dayOfWeek,
-          startTime: "00:00",
-          endTime: "23:59",
-        };
-
-        const createdRule = await createTimeRule(userId, newRuleData);
-        createdRules.push({ ...createdRule, isEditing: false });
-      }
-
-      setRules(createdRules);
+      setRules(createdRules.map((rule) => ({ ...rule, isEditing: false })));
       toast({
         title: "Preset Created",
-        description:
-          "Weekends-only preset created successfully (2 weekend allow rules + 5 weekday block rules)",
+        description: "Weekends-only preset successfully applied",
+        variant: "success",
       });
     } catch (error: any) {
+      console.error("Error creating weekends preset:", error);
       toast({
         title: "Error",
         description: error.message || "Failed to create weekends preset",
@@ -491,6 +456,7 @@ export function TimeRuleModal({
       toast({
         title: "All Rules Deleted",
         description: `Successfully deleted ${rules.length} time rules`,
+        variant: "success",
       });
     } catch (error: any) {
       toast({
@@ -556,7 +522,7 @@ export function TimeRuleModal({
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground">
-                Presets create 7 rules automatically (one for each day)
+                Delete your current rules and apply a preset
               </p>
             </div>
 

@@ -8,6 +8,8 @@ import {
   Param,
   ParseIntPipe,
   Query,
+  HttpException,
+  HttpStatus,
 } from '@nestjs/common';
 import { TimeRuleService } from '../services/time-rule.service';
 import type {
@@ -85,5 +87,24 @@ export class TimeRuleController {
     @Query('deviceIdentifier') deviceIdentifier?: string,
   ): Promise<{ allowed: boolean; reason: string }> {
     return this.timeRuleService.checkStreamingAllowed(userId, deviceIdentifier);
+  }
+
+  @Post('preset')
+  async createPreset(
+    @Param('userId') userId: string,
+    @Body() createDto: Omit<import('../services/time-rule.service').CreatePresetDto, 'userId'>,
+  ): Promise<UserTimeRule[]> {
+    try {
+      return await this.timeRuleService.createPreset({
+        ...createDto,
+        userId,
+      });
+    } catch (error) {
+      console.error(`Controller error creating preset: ${error.message}`);
+      throw new HttpException(
+        error.message || 'Failed to create preset',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
   }
 }
