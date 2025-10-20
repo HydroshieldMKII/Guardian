@@ -98,10 +98,7 @@ export class TimeRuleService {
       await deleteQuery.execute();
 
       // Define preset rules based on type
-      const presetRules = this.getPresetRules(
-        createDto.presetType,
-        createDto.deviceIdentifier,
-      );
+      const presetRules = this.getPresetRules(createDto.presetType);
       this.logger.log(`Creating ${presetRules.length} preset rules`);
 
       if (presetRules.length === 0) {
