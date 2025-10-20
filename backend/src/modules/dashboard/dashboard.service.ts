@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ActiveSessionService } from '../sessions/services/active-session.service';
 import { DeviceTrackingService } from '../devices/services/device-tracking.service';
 import { ConfigService } from '../config/services/config.service';
@@ -31,6 +31,8 @@ export interface DashboardData {
 
 @Injectable()
 export class DashboardService {
+  private readonly logger = new Logger(DashboardService.name);
+
   constructor(
     private readonly activeSessionService: ActiveSessionService,
     private readonly deviceTrackingService: DeviceTrackingService,
@@ -99,7 +101,7 @@ export class DashboardService {
         stats,
       };
     } catch (error) {
-      console.error('Failed to fetch dashboard data:', error);
+      this.logger.error('Failed to fetch dashboard data', error?.stack || error);
       throw error;
     }
   }

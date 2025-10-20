@@ -186,7 +186,6 @@ export class SessionTerminationService {
 
     try {
       const sessions = sessionsData?.MediaContainer?.Metadata || [];
-      // console.log('Checking sessions for unapproved devices:', sessions);
 
       if (!sessions || sessions.length === 0) {
         return { stoppedSessions, errors };
@@ -199,7 +198,6 @@ export class SessionTerminationService {
           if (shouldStopResult.shouldStop) {
             const sessionId = session.Session?.id; // Device identifier for termination
             const sessionKey = session.sessionKey; // Session key for history lookup
-            // console.log('Terminating unapproved session:', session);
 
             if (sessionId) {
               const username = session.User?.title || 'Unknown';

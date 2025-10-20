@@ -168,7 +168,13 @@ export class DeviceTrackingService {
       deviceInfo.userId,
     ); // User wont have a preference yet, so this will return app default
 
-    console.log('New device detected:', deviceInfo);
+    this.logger.log('New device detected', {
+      userId: deviceInfo.userId,
+      username: deviceInfo.username,
+      deviceName: deviceInfo.deviceName,
+      deviceIdentifier: deviceInfo.deviceIdentifier,
+      platform: deviceInfo.devicePlatform
+    });
 
     const newDevice = this.userDeviceRepository.create({
       userId: deviceInfo.userId,

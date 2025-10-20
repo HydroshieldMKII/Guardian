@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { UserTimeRule } from '../../../entities/user-time-rule.entity';
@@ -30,6 +30,8 @@ export interface CreatePresetDto {
 
 @Injectable()
 export class TimeRuleService {
+  private readonly logger = new Logger(TimeRuleService.name);
+
   constructor(
     @InjectRepository(UserTimeRule)
     private readonly timeRuleRepository: Repository<UserTimeRule>,
@@ -70,9 +72,7 @@ export class TimeRuleService {
   }
 
   async createPreset(createDto: CreatePresetDto): Promise<UserTimeRule[]> {
-    console.log(
-      `Creating preset: ${createDto.presetType} for user ${createDto.userId}`,
-    );
+    this.logger.log(`Creating preset: ${createDto.presetType} for user ${createDto.userId}`);
 
     const queryRunner = this.dataSource.createQueryRunner();
 
@@ -102,7 +102,7 @@ export class TimeRuleService {
         createDto.presetType,
         createDto.deviceIdentifier,
       );
-      console.log(`Creating ${presetRules.length} preset rules`);
+      this.logger.log(`Creating ${presetRules.length} preset rules`);
 
       if (presetRules.length === 0) {
         throw new Error(`Invalid preset type: ${createDto.presetType}`);
@@ -130,21 +130,19 @@ export class TimeRuleService {
           enabled: true,
         };
 
-        console.log(`Creating rule: ${JSON.stringify(ruleToCreate)}`);
+        this.logger.debug(`Creating rule: ${JSON.stringify(ruleToCreate)}`);
 
         // Use the transaction-aware repository
         const newRule = queryRunner.manager.create(UserTimeRule, ruleToCreate);
         const savedRule = await queryRunner.manager.save(newRule);
 
-        console.log(
-          `Saved rule with ID: ${savedRule.id}, ruleName: ${savedRule.ruleName}`,
-        );
+        this.logger.debug(`Saved rule with ID: ${savedRule.id}, ruleName: ${savedRule.ruleName}`);
         createdRules.push(savedRule);
       }
 
       // Commit the transaction
       await queryRunner.commitTransaction();
-      console.log(`Successfully created ${createdRules.length} preset rules`);
+      this.logger.log(`Successfully created ${createdRules.length} preset rules`);
 
       // Verify the rules were actually saved by querying them back
       const verifyQuery = this.timeRuleRepository
@@ -160,14 +158,12 @@ export class TimeRuleService {
       }
 
       const actualSavedRules = await verifyQuery.getMany();
-      console.log(
-        `Verification: Found ${actualSavedRules.length} rules in database after commit`,
-      );
+      this.logger.log(`Verification: Found ${actualSavedRules.length} rules in database after commit`);
 
       return createdRules;
     } catch (error) {
       // Rollback the transaction on error
-      console.error(`Error creating preset: ${error.message}`);
+      this.logger.error(`Error creating preset: ${error.message}`, error?.stack);
       await queryRunner.rollbackTransaction();
       throw new Error(`Failed to create preset: ${error.message}`);
     } finally {
