@@ -270,11 +270,11 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
                 {/* Temporary Access Button */}
                 {hasTemporaryAccess(device) ? (
                   <Button
-                    variant="default"
+                    variant="outline"
                     size="sm"
                     onClick={() => onRevokeTempAccess(device.id)}
                     disabled={actionLoading === device.id}
-                    className="w-full text-sm px-4 py-2.5 bg-slate-600 text-white hover:bg-slate-700 font-medium shadow-sm hover:shadow-md transition-all"
+                    className="w-full text-sm px-4 py-2.5 border-slate-600 text-slate-600 hover:bg-slate-50 dark:border-slate-400 dark:text-slate-400 dark:hover:bg-slate-900/20 font-medium shadow-sm hover:shadow-md transition-all"
                   >
                     {actionLoading === device.id ? (
                       <RefreshCw className="w-4 h-4 animate-spin" />
@@ -326,11 +326,11 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
                 {/* Temporary Access Button for Rejected Devices */}
                 {hasTemporaryAccess(device) ? (
                   <Button
-                    variant="default"
+                    variant="outline"
                     size="sm"
                     onClick={() => onRevokeTempAccess(device.id)}
                     disabled={actionLoading === device.id}
-                    className="w-full text-sm px-4 py-2.5 bg-slate-600 text-white hover:bg-slate-700 font-medium shadow-sm hover:shadow-md transition-all"
+                    className="w-full text-sm px-4 py-2.5 border-slate-600 text-slate-600 hover:bg-slate-50 dark:border-slate-400 dark:text-slate-400 dark:hover:bg-slate-900/20 font-medium shadow-sm hover:shadow-md transition-all"
                   >
                     {actionLoading === device.id ? (
                       <RefreshCw className="w-4 h-4 animate-spin" />
@@ -525,11 +525,11 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
                 {/* Temporary Access Button */}
                 {hasTemporaryAccess(device) ? (
                   <Button
-                    variant="default"
+                    variant="outline"
                     size="sm"
                     onClick={() => onRevokeTempAccess(device.id)}
                     disabled={actionLoading === device.id}
-                    className="w-full text-xs px-2 py-1 bg-slate-600 text-white hover:bg-slate-700"
+                    className="w-full text-xs px-2 py-1 border-slate-600 text-slate-600 hover:bg-slate-50 dark:border-slate-400 dark:text-slate-400 dark:hover:bg-slate-900/20"
                   >
                     {actionLoading === device.id ? (
                       <RefreshCw className="w-3 h-3 animate-spin" />
@@ -581,11 +581,11 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
                 {/* Temporary Access Button for Rejected Devices */}
                 {hasTemporaryAccess(device) ? (
                   <Button
-                    variant="default"
+                    variant="outline"
                     size="sm"
                     onClick={() => onRevokeTempAccess(device.id)}
                     disabled={actionLoading === device.id}
-                    className="w-full text-xs px-2 py-1 bg-slate-600 text-white hover:bg-slate-700"
+                    className="w-full text-xs px-2 py-1 border-slate-600 text-slate-600 hover:bg-slate-50 dark:border-slate-400 dark:text-slate-400 dark:hover:bg-slate-900/20"
                   >
                     {actionLoading === device.id ? (
                       <RefreshCw className="w-3 h-3 animate-spin" />
