@@ -133,6 +133,22 @@ export function TimeRuleModal({
     enabled: true,
   });
 
+  // Helper function to sort rules by day of week and start time
+  const sortRules = (rules: EditingRule[]): EditingRule[] => {
+    return [...rules].sort((a, b) => {
+      // First sort by day of week
+      if (a.dayOfWeek !== b.dayOfWeek) {
+        return a.dayOfWeek - b.dayOfWeek;
+      }
+      // Then sort by start time
+      const timeToMinutes = (timeStr: string): number => {
+        const [hours, minutes] = timeStr.split(":").map(Number);
+        return hours * 60 + minutes;
+      };
+      return timeToMinutes(a.startTime) - timeToMinutes(b.startTime);
+    });
+  };
+
   // Load rules when modal opens
   useEffect(() => {
     if (isOpen) {
@@ -144,9 +160,8 @@ export function TimeRuleModal({
     setLoadingRules(true);
     try {
       const userRules = await getTimeRules(userId, deviceIdentifier);
-      setRules(
-        userRules.map((rule: UserTimeRule) => ({ ...rule, isEditing: false }))
-      );
+      const editingRules = userRules.map((rule: UserTimeRule) => ({ ...rule, isEditing: false }));
+      setRules(sortRules(editingRules));
     } catch (error) {
       console.error("Failed to load rules:", error);
       toast({
@@ -271,9 +286,9 @@ export function TimeRuleModal({
         enabled: rule.tempData.enabled ?? rule.enabled,
       });
 
-      // Update local state
-      setRules((prev) =>
-        prev.map((r) => {
+      // Update local state and maintain sort order
+      setRules((prev) => {
+        const updatedRules = prev.map((r) => {
           if (r.id === ruleId) {
             return {
               ...r,
@@ -283,8 +298,9 @@ export function TimeRuleModal({
             };
           }
           return r;
-        })
-      );
+        });
+        return sortRules(updatedRules);
+      });
 
       toast({
         title: "Rule Updated",
@@ -355,7 +371,7 @@ export function TimeRuleModal({
       const { enabled, ...createDto } = newRule;
       const createdRule = await createTimeRule(userId, createDto);
 
-      setRules((prev) => [...prev, { ...createdRule, isEditing: false }]);
+      setRules((prev) => sortRules([...prev, { ...createdRule, isEditing: false }]));
 
       // Reset new rule form
       setNewRule({
@@ -436,7 +452,8 @@ export function TimeRuleModal({
         deviceIdentifier
       );
 
-      setRules(createdRules.map((rule) => ({ ...rule, isEditing: false })));
+      const editingRules = createdRules.map((rule) => ({ ...rule, isEditing: false }));
+      setRules(sortRules(editingRules));
       toast({
         title: "Preset Applied",
         description: `${presetType === "weekdays-only" ? "Weekdays" : "Weekends"} preset successfully applied`,
@@ -671,7 +688,7 @@ export function TimeRuleModal({
 
             {/* Left Column - Existing Rules (Show second on mobile) */}
             <div className="lg:w-1/2 flex flex-col min-h-0 h-[35vh] lg:h-auto order-2 lg:order-1">
-              <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center justify-between mb-3 pr-2">
                 <Label className="text-sm font-medium">
                   Existing Time Rules
                 </Label>
@@ -692,7 +709,7 @@ export function TimeRuleModal({
                   </Button>
                 )}
               </div>
-              <div className="flex-1 overflow-y-auto space-y-2 pr-2">
+              <div className="flex-1 overflow-y-auto space-y-2 pr-2 scrollbar-hide">
                 {loadingRules ? (
                   <div className="text-center py-4">Loading rules...</div>
                 ) : rules.length === 0 ? (

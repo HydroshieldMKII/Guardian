@@ -67,24 +67,21 @@ export function ConfirmationModal({
               {description}
             </DialogDescription>
           </DialogHeader>
-        
-          {children && (
-            <div className="py-4">
-              {children}
-            </div>
-          )}
-        
+
+          {children && <div className="py-4">{children}</div>}
+
           <DialogFooter className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={handleCancel}
-            >
+            <Button variant="outline" onClick={handleCancel}>
               {cancelText}
             </Button>
             <Button
               variant={variant === "destructive" ? "destructive" : "default"}
               onClick={handleConfirm}
-              className={variant === "destructive" ? "bg-red-600 dark:bg-red-700 text-white hover:bg-red-700 dark:hover:bg-red-800" : ""}
+              className={
+                variant === "destructive"
+                  ? "bg-red-600 dark:bg-red-700 text-white hover:bg-red-700 dark:hover:bg-red-800"
+                  : ""
+              }
             >
               {confirmText}
             </Button>
