@@ -84,6 +84,7 @@ export function ConfirmationModal({
             <Button
               variant={variant === "destructive" ? "destructive" : "default"}
               onClick={handleConfirm}
+              className={variant === "destructive" ? "bg-red-600 dark:bg-red-700 text-white hover:bg-red-700 dark:hover:bg-red-800" : ""}
             >
               {confirmText}
             </Button>
