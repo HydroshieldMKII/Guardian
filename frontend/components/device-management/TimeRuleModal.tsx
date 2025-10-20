@@ -160,7 +160,10 @@ export function TimeRuleModal({
     setLoadingRules(true);
     try {
       const userRules = await getTimeRules(userId, deviceIdentifier);
-      const editingRules = userRules.map((rule: UserTimeRule) => ({ ...rule, isEditing: false }));
+      const editingRules = userRules.map((rule: UserTimeRule) => ({
+        ...rule,
+        isEditing: false,
+      }));
       setRules(sortRules(editingRules));
     } catch (error) {
       console.error("Failed to load rules:", error);
@@ -371,7 +374,9 @@ export function TimeRuleModal({
       const { enabled, ...createDto } = newRule;
       const createdRule = await createTimeRule(userId, createDto);
 
-      setRules((prev) => sortRules([...prev, { ...createdRule, isEditing: false }]));
+      setRules((prev) =>
+        sortRules([...prev, { ...createdRule, isEditing: false }])
+      );
 
       // Reset new rule form
       setNewRule({
@@ -452,7 +457,10 @@ export function TimeRuleModal({
         deviceIdentifier
       );
 
-      const editingRules = createdRules.map((rule) => ({ ...rule, isEditing: false }));
+      const editingRules = createdRules.map((rule) => ({
+        ...rule,
+        isEditing: false,
+      }));
       setRules(sortRules(editingRules));
       toast({
         title: "Preset Applied",
