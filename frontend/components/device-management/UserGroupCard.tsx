@@ -23,6 +23,7 @@ import { UserDevice, UserPreference, AppSetting } from "@/types";
 import { UserAvatar, getUserPreferenceBadge } from "./SharedComponents";
 import { DeviceCard } from "./DeviceCard";
 import { IPAccessModal } from "./IPAccessModal";
+import { useSettings } from "@/contexts/settings-context";
 
 // User-Device group interface
 interface UserDeviceGroup {
@@ -93,6 +94,7 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
   onNewDeviceNameChange,
 }) => {
   const [showIPModal, setShowIPModal] = useState(false);
+  const { getGlobalDefaultBlock, loading: configLoading } = useSettings();
 
   return (
     <Collapsible
@@ -265,7 +267,7 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
                     }`}
                   >
                     <Settings className="w-3 h-3 mr-2" />
-                    Global
+                    Global {!configLoading && `(${getGlobalDefaultBlock() ? 'Block' : 'Allow'})`}
                   </button>
                   <button
                     onClick={() =>
