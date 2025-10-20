@@ -32,6 +32,60 @@ export class DevicesController {
     return this.deviceTrackingService.getApprovedDevices();
   }
 
+  @Post('batch/temporary-access')
+  async grantBatchTemporaryAccess(
+    @Body() body: { deviceIds: number[], durationMinutes: number },
+  ): Promise<{ message: string; results: { deviceId: number; success: boolean; error?: string }[] }> {
+    try {
+      // Validate request body
+      if (!body || !Array.isArray(body.deviceIds) || body.deviceIds.length === 0) {
+        throw new HttpException('deviceIds must be a non-empty array', HttpStatus.BAD_REQUEST);
+      }
+
+      if (!body.durationMinutes || typeof body.durationMinutes !== 'number' || body.durationMinutes <= 0) {
+        throw new HttpException('durationMinutes must be a positive number', HttpStatus.BAD_REQUEST);
+      }
+
+      // Validate that all deviceIds are numbers
+      for (const deviceId of body.deviceIds) {
+        if (typeof deviceId !== 'number' || !Number.isInteger(deviceId) || deviceId <= 0) {
+          throw new HttpException(`Invalid device ID: ${deviceId}. All device IDs must be positive integers.`, HttpStatus.BAD_REQUEST);
+        }
+      }
+
+      this.logger.log(`Granting temporary access to ${body.deviceIds.length} devices for ${body.durationMinutes} minutes`);
+      
+      const results: { deviceId: number; success: boolean; error?: string }[] = [];
+      
+      for (const deviceId of body.deviceIds) {
+        try {
+          await this.deviceTrackingService.grantTemporaryAccess(deviceId, body.durationMinutes);
+          results.push({ deviceId, success: true });
+          this.logger.log(`Successfully granted temporary access to device ${deviceId}`);
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          results.push({ 
+            deviceId, 
+            success: false, 
+            error: errorMessage
+          });
+          this.logger.error(`Failed to grant temporary access to device ${deviceId}: ${errorMessage}`);
+        }
+      }
+      
+      const successCount = results.filter(r => r.success).length;
+      const failCount = results.filter(r => !r.success).length;
+      
+      return {
+        message: `Temporary access: ${successCount} devices granted, ${failCount} failed`,
+        results
+      };
+    } catch (error) {
+      this.logger.error(`Batch temporary access error: ${error.message}`);
+      throw error;
+    }
+  }
+
   @Post(':id/approve')
   async approveDevice(
     @Param('id', ParseIntPipe) id: number,

@@ -12,7 +12,8 @@ import {
   Eye,
   History,
   SquareUser,
-  Shield
+  Shield,
+  Timer
 } from "lucide-react";
 import { UserDevice, UserPreference, AppSetting } from '@/types';
 import { UserAvatar, getUserPreferenceBadge } from './SharedComponents';
@@ -44,6 +45,7 @@ interface UserGroupCardProps {
   onUpdateUserIPPolicy?: (userId: string, updates: Partial<UserPreference>) => void;
   onToggleUserVisibility?: (userId: string) => void;
   onShowHistory?: (userId: string) => void;
+  onGrantUserTempAccess?: (userId: string) => void;
   onEdit: (device: UserDevice) => void;
   onCancelEdit: () => void;
   onRename: (deviceId: number, newName: string) => void;
@@ -51,11 +53,9 @@ interface UserGroupCardProps {
   onReject: (device: UserDevice) => void;
   onDelete: (device: UserDevice) => void;
   onToggleApproval: (device: UserDevice) => void;
-  onGrantTempAccess: (deviceId: number) => void;
   onRevokeTempAccess: (deviceId: number) => void;
   onShowDetails: (device: UserDevice) => void;
   onNewDeviceNameChange: (name: string) => void;
-  shouldShowGrantTempAccess: (device: UserDevice) => boolean;
 }
 
 export const UserGroupCard: React.FC<UserGroupCardProps> = ({
@@ -70,6 +70,7 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
   onUpdateUserIPPolicy,
   onToggleUserVisibility,
   onShowHistory,
+  onGrantUserTempAccess,
   onEdit,
   onCancelEdit,
   onRename,
@@ -77,11 +78,9 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
   onReject,
   onDelete,
   onToggleApproval,
-  onGrantTempAccess,
   onRevokeTempAccess,
   onShowDetails,
   onNewDeviceNameChange,
-  shouldShowGrantTempAccess,
 }) => {
   const [showIPModal, setShowIPModal] = useState(false);
 
@@ -137,7 +136,7 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
         <CollapsibleContent>
           <div className="p-3 sm:p-4 space-y-4">
             {/* User Actions Card */}
-            {(onToggleUserVisibility || onShowHistory || onUpdateUserIPPolicy) && (
+            {(onToggleUserVisibility || onShowHistory || onUpdateUserIPPolicy || onGrantUserTempAccess) && (
               <div className="bg-gradient-to-r from-card to-card/50 border rounded-lg p-4 shadow-sm">
                 <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                   {/* Actions Label */}
@@ -153,6 +152,16 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
                   
                   {/* Action Buttons */}
                   <div className="flex items-center bg-muted/50 rounded-lg p-1 gap-1">
+                    {onGrantUserTempAccess && (
+                      <button
+                        onClick={() => onGrantUserTempAccess(group.user.userId)}
+                        className="text-xs px-3 py-2 rounded-md transition-all duration-200 flex items-center cursor-pointer text-muted-foreground hover:text-foreground hover:bg-background/50"
+                        title="Grant temporary access to user devices"
+                      >
+                        <Timer className="w-3 h-3 mr-2" />
+                        Grant Temp Access
+                      </button>
+                    )}
                     {onUpdateUserIPPolicy && (
                       <button
                         onClick={() => setShowIPModal(true)}
@@ -273,11 +282,9 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
                     onReject={onReject}
                     onDelete={onDelete}
                     onToggleApproval={onToggleApproval}
-                    onGrantTempAccess={onGrantTempAccess}
                     onRevokeTempAccess={onRevokeTempAccess}
                     onShowDetails={onShowDetails}
                     onNewDeviceNameChange={onNewDeviceNameChange}
-                    shouldShowGrantTempAccess={shouldShowGrantTempAccess}
                   />
                 ))}
               </div>
