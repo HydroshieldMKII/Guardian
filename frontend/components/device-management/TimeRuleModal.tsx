@@ -942,7 +942,7 @@ export function TimeRuleModal({
         onClose={() => setShowPresetConfirm(null)}
         onConfirm={() => confirmCreatePreset(showPresetConfirm!)}
         title={`Apply ${showPresetConfirm} Preset?`}
-        description={`This will delete all existing blocking rules and create new blocking rules for ${showPresetConfirm?.toLowerCase()}. This action cannot be undone.`}
+        description={`This will delete all existing rules and create new blocking rules for ${showPresetConfirm?.toLowerCase()}. This action cannot be undone.`}
         confirmText="Apply Preset"
         variant="default"
         loading={creatingPreset === showPresetConfirm}

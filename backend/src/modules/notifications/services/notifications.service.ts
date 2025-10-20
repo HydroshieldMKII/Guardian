@@ -75,7 +75,7 @@ export class NotificationsService {
           text = `${username} stream was blocked - "${deviceName}" IP is not in the allowed list (restricted IP policy)`;
           break;
         case 'TIME_RESTRICTED':
-          text = `${username} stream was blocked on "${deviceName}" - time scheduling doesn't allow streaming now`;
+          text = `${username} stream was blocked on "${deviceName}" - time scheduling doesn't allow streaming at this time`;
           break;
         default:
           text = `${username} stream was blocked on "${deviceName}" - ${stopCode}`;
