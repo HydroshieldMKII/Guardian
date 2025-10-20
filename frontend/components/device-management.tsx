@@ -195,7 +195,9 @@ const DeviceManagement = memo(
       Record<string, boolean>
     >({});
     const [loadingTimeRules, setLoadingTimeRules] = useState(false);
-    const [updatingUserPreference, setUpdatingUserPreference] = useState<string | null>(null);
+    const [updatingUserPreference, setUpdatingUserPreference] = useState<
+      string | null
+    >(null);
 
     // Confirmation dialog states
     const [confirmAction, setConfirmAction] =

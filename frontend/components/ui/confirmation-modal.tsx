@@ -73,11 +73,7 @@ export function ConfirmationModal({
           {children && <div className="py-4">{children}</div>}
 
           <DialogFooter className="flex gap-2">
-            <Button 
-              variant="outline" 
-              onClick={handleCancel}
-              disabled={loading}
-            >
+            <Button variant="outline" onClick={handleCancel} disabled={loading}>
               {cancelText}
             </Button>
             <Button
