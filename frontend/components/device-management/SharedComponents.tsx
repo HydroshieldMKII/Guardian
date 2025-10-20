@@ -1,23 +1,27 @@
-import React from 'react';
+import React from "react";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { 
-  CheckCircle, 
-  XCircle, 
-  AlertTriangle, 
-  Settings, 
+import {
+  CheckCircle,
+  XCircle,
+  AlertTriangle,
+  Settings,
   Timer,
   Smartphone,
   Tv,
   Laptop,
   Monitor,
-  ExternalLink
+  ExternalLink,
 } from "lucide-react";
-import { UserDevice, UserPreference } from '@/types';
-import { useDeviceUtils } from '@/hooks/device-management/useDeviceUtils';
+import { UserDevice, UserPreference } from "@/types";
+import { useDeviceUtils } from "@/hooks/device-management/useDeviceUtils";
 
 // Clickable IP component
-export const ClickableIP = ({ ipAddress }: { ipAddress: string | null | undefined }) => {
+export const ClickableIP = ({
+  ipAddress,
+}: {
+  ipAddress: string | null | undefined;
+}) => {
   if (!ipAddress || ipAddress === "Unknown IP" || ipAddress === "Unknown") {
     return <span className="truncate">{ipAddress || "Unknown IP"}</span>;
   }
@@ -27,7 +31,7 @@ export const ClickableIP = ({ ipAddress }: { ipAddress: string | null | undefine
     window.open(
       `https://ipinfo.io/${ipAddress}`,
       "_blank",
-      "noopener,noreferrer"
+      "noopener,noreferrer",
     );
   };
 
@@ -44,9 +48,13 @@ export const ClickableIP = ({ ipAddress }: { ipAddress: string | null | undefine
 };
 
 // User avatar component that displays Plex profile picture
-export const UserAvatar = ({ userId, username, avatarUrl }: { 
-  userId: string; 
-  username?: string; 
+export const UserAvatar = ({
+  userId,
+  username,
+  avatarUrl,
+}: {
+  userId: string;
+  username?: string;
   avatarUrl?: string;
 }) => {
   const displayName = username || userId;
@@ -55,8 +63,8 @@ export const UserAvatar = ({ userId, username, avatarUrl }: {
   return (
     <Avatar className="w-10 h-10 flex-shrink-0">
       {avatarUrl && (
-        <AvatarImage 
-          src={avatarUrl} 
+        <AvatarImage
+          src={avatarUrl}
           alt={`${displayName}'s avatar`}
           className="object-cover"
         />
@@ -69,7 +77,10 @@ export const UserAvatar = ({ userId, username, avatarUrl }: {
 };
 
 // Device icon component
-export const getDeviceIcon = (platform: string | null | undefined, product: string | null | undefined) => {
+export const getDeviceIcon = (
+  platform: string | null | undefined,
+  product: string | null | undefined,
+) => {
   const p = platform?.toLowerCase() || product?.toLowerCase() || "";
 
   if (
@@ -103,7 +114,10 @@ export const DeviceStatus = ({ device }: { device: UserDevice }) => {
     const timeLeft = getTemporaryAccessTimeLeft(device);
     return (
       <div className="flex items-center gap-2">
-        <Badge variant="default" className="bg-blue-600 dark:bg-blue-700 text-white">
+        <Badge
+          variant="default"
+          className="bg-blue-600 dark:bg-blue-700 text-white"
+        >
           <Timer className="w-3 h-3 mr-1" />
           Temporary Access ({timeLeft} left)
         </Badge>
@@ -114,14 +128,20 @@ export const DeviceStatus = ({ device }: { device: UserDevice }) => {
   switch (device.status) {
     case "approved":
       return (
-        <Badge variant="default" className="bg-green-600 dark:bg-green-700 text-white">
+        <Badge
+          variant="default"
+          className="bg-green-600 dark:bg-green-700 text-white"
+        >
           <CheckCircle className="w-3 h-3 mr-1" />
           Approved
         </Badge>
       );
     case "rejected":
       return (
-        <Badge variant="destructive" className="bg-red-600 dark:bg-red-700 text-white">
+        <Badge
+          variant="destructive"
+          className="bg-red-600 dark:bg-red-700 text-white"
+        >
           <XCircle className="w-3 h-3 mr-1" />
           Rejected
         </Badge>
@@ -129,7 +149,10 @@ export const DeviceStatus = ({ device }: { device: UserDevice }) => {
     case "pending":
     default:
       return (
-        <Badge variant="secondary" className="bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 border-yellow-300 dark:border-yellow-700">
+        <Badge
+          variant="secondary"
+          className="bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 border-yellow-300 dark:border-yellow-700"
+        >
           <AlertTriangle className="w-3 h-3 mr-1" />
           Pending
         </Badge>
@@ -149,14 +172,20 @@ export const getUserPreferenceBadge = (defaultBlock: boolean | null) => {
   }
   if (defaultBlock) {
     return (
-      <Badge variant="destructive" className="bg-red-600 dark:bg-red-700 text-white">
+      <Badge
+        variant="destructive"
+        className="bg-red-600 dark:bg-red-700 text-white"
+      >
         <XCircle className="w-3 h-3 mr-1" />
         Block by Default
       </Badge>
     );
   }
   return (
-    <Badge variant="default" className="bg-green-600 dark:bg-green-700 text-white">
+    <Badge
+      variant="default"
+      className="bg-green-600 dark:bg-green-700 text-white"
+    >
       <CheckCircle className="w-3 h-3 mr-1" />
       Allow by Default
     </Badge>

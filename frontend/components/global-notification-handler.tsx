@@ -55,7 +55,7 @@ export function GlobalNotificationHandler() {
       } catch (error) {
         console.error(
           "Failed to fetch settings for notification handler:",
-          error
+          error,
         );
       }
     };
@@ -98,14 +98,16 @@ export function GlobalNotificationHandler() {
 
       // Check if auto-mark as read is enabled and mark as read in background
       const autoMarkReadSetting = settings.find(
-        (s) => s.key === "AUTO_MARK_NOTIFICATION_READ"
+        (s) => s.key === "AUTO_MARK_NOTIFICATION_READ",
       );
       const shouldAutoMarkRead = autoMarkReadSetting?.value === "true";
 
       if (shouldAutoMarkRead && !notification.read) {
         // Update UI immediately for better UX
         updateNotifications((prev) =>
-          prev.map((n) => (n.id === notification.id ? { ...n, read: true } : n))
+          prev.map((n) =>
+            n.id === notification.id ? { ...n, read: true } : n,
+          ),
         );
 
         // Make API call in background
@@ -114,8 +116,8 @@ export function GlobalNotificationHandler() {
           // Revert the UI change if API call fails
           updateNotifications((prev) =>
             prev.map((n) =>
-              n.id === notification.id ? { ...n, read: false } : n
-            )
+              n.id === notification.id ? { ...n, read: false } : n,
+            ),
           );
         });
       }

@@ -11,7 +11,7 @@ import {
   DialogPortal,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Loader2 } from "lucide-react";
 
 interface ConfirmationModalProps {
   isOpen: boolean;
@@ -23,6 +23,7 @@ interface ConfirmationModalProps {
   cancelText?: string;
   variant?: "default" | "destructive";
   children?: React.ReactNode;
+  loading?: boolean;
 }
 
 export function ConfirmationModal({
@@ -35,6 +36,7 @@ export function ConfirmationModal({
   cancelText = "Cancel",
   variant = "default",
   children,
+  loading = false,
 }: ConfirmationModalProps) {
   const handleConfirm = () => {
     onConfirm();
@@ -67,24 +69,24 @@ export function ConfirmationModal({
               {description}
             </DialogDescription>
           </DialogHeader>
-        
-          {children && (
-            <div className="py-4">
-              {children}
-            </div>
-          )}
-        
+
+          {children && <div className="py-4">{children}</div>}
+
           <DialogFooter className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={handleCancel}
-            >
+            <Button variant="outline" onClick={handleCancel} disabled={loading}>
               {cancelText}
             </Button>
             <Button
               variant={variant === "destructive" ? "destructive" : "default"}
               onClick={handleConfirm}
+              disabled={loading}
+              className={
+                variant === "destructive"
+                  ? "bg-red-600 dark:bg-red-700 text-white hover:bg-red-700 dark:hover:bg-red-800"
+                  : ""
+              }
             >
+              {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               {confirmText}
             </Button>
           </DialogFooter>

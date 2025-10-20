@@ -5,6 +5,7 @@ export { TemporaryAccessModal } from "./TemporaryAccessModal";
 export { ConfirmationModal } from "./ConfirmationModal";
 export { UserHistoryModal } from "./UserHistoryModal";
 export { IPAccessModal } from "./IPAccessModal";
+export { TimeRuleModal } from "./TimeRuleModal";
 export {
   ClickableIP,
   UserAvatar,

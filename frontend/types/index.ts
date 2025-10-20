@@ -111,11 +111,43 @@ export interface UserPreference {
   defaultBlock: boolean | null;
   hidden: boolean;
   // IP/Network access policies
-  networkPolicy: 'both' | 'lan' | 'wan';
-  ipAccessPolicy: 'all' | 'restricted';
+  networkPolicy: "both" | "lan" | "wan";
+  ipAccessPolicy: "all" | "restricted";
   allowedIPs?: string[];
   createdAt: string;
   updatedAt: string;
+}
+
+export interface UserTimeRule {
+  id: number;
+  userId: string;
+  deviceIdentifier?: string;
+  ruleName: string;
+  enabled: boolean;
+  action: "allow" | "block";
+  dayOfWeek: number; // Single day (0-6, Sunday=0)
+  startTime: string; // HH:MM format
+  endTime: string; // HH:MM format (must be > startTime)
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateTimeRuleDto {
+  deviceIdentifier?: string;
+  ruleName: string;
+  action: "allow" | "block";
+  dayOfWeek: number; // Single day (0-6)
+  startTime: string; // HH:MM
+  endTime: string; // HH:MM (validated to be > startTime)
+}
+
+export interface UpdateTimeRuleDto {
+  ruleName?: string;
+  enabled?: boolean;
+  action?: "allow" | "block";
+  dayOfWeek?: number;
+  startTime?: string;
+  endTime?: string;
 }
 
 export interface UnifiedDashboardData {
@@ -138,7 +170,7 @@ export interface Notification {
   username: string;
   deviceName: string;
   text: string;
-  type: 'block' | 'info' | 'warning' | 'error';
+  type: "block" | "info" | "warning" | "error";
   read: boolean;
   createdAt: Date;
   sessionHistoryId?: number;

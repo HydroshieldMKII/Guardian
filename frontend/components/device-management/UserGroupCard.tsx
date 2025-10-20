@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   Collapsible,
   CollapsibleContent,
@@ -45,18 +46,21 @@ interface UserGroupCardProps {
   actionLoading: number | null;
   editingDevice: number | null;
   newDeviceName: string;
+  hasTimeSchedules?: boolean;
+  updatingUserPreference?: string | null; // Track which user's preference is being updated
   onToggleExpansion: (userId: string) => void;
   onUpdateUserPreference: (
     userId: string,
-    defaultBlock: boolean | null
+    defaultBlock: boolean | null,
   ) => void;
   onUpdateUserIPPolicy?: (
     userId: string,
-    updates: Partial<UserPreference>
+    updates: Partial<UserPreference>,
   ) => void;
   onToggleUserVisibility?: (userId: string) => void;
   onShowHistory?: (userId: string) => void;
   onGrantUserTempAccess?: (userId: string) => void;
+  onShowTimePolicy?: (userId: string, deviceIdentifier?: string) => void;
   onEdit: (device: UserDevice) => void;
   onCancelEdit: () => void;
   onRename: (deviceId: number, newName: string) => void;
@@ -76,12 +80,15 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
   actionLoading,
   editingDevice,
   newDeviceName,
+  hasTimeSchedules = false,
+  updatingUserPreference,
   onToggleExpansion,
   onUpdateUserPreference,
   onUpdateUserIPPolicy,
   onToggleUserVisibility,
   onShowHistory,
   onGrantUserTempAccess,
+  onShowTimePolicy,
   onEdit,
   onCancelEdit,
   onRename,
@@ -134,16 +141,28 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
                     )}
                   </p>
                 </div>
-                <div className="hidden sm:flex">
+                <div className="hidden sm:flex items-center gap-2">
                   {group.user.preference &&
                     getUserPreferenceBadge(group.user.preference.defaultBlock)}
+                  {hasTimeSchedules && (
+                    <Badge variant="outline" className="text-xs">
+                      <Timer className="w-3 h-3 mr-1" />
+                      Scheduled
+                    </Badge>
+                  )}
                 </div>
               </div>
 
               {/* Mobile: Show preference badge */}
-              <div className="sm:hidden">
+              <div className="sm:hidden flex items-center gap-2">
                 {group.user.preference &&
                   getUserPreferenceBadge(group.user.preference.defaultBlock)}
+                {hasTimeSchedules && (
+                  <Badge variant="outline" className="text-xs">
+                    <Timer className="w-3 h-3 mr-1" />
+                    Scheduled
+                  </Badge>
+                )}
               </div>
             </div>
           </div>
@@ -155,7 +174,8 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
             {(onToggleUserVisibility ||
               onShowHistory ||
               onUpdateUserIPPolicy ||
-              onGrantUserTempAccess) && (
+              onGrantUserTempAccess ||
+              onShowTimePolicy) && (
               <div className="bg-gradient-to-r from-card to-card/50 border rounded-lg p-4 shadow-sm">
                 <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                   {/* Actions Label */}
@@ -174,25 +194,51 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
                   </div>
 
                   {/* Action Buttons */}
-                  <div className="flex items-center bg-muted/50 rounded-lg p-1 gap-1">
+                  <div className="flex flex-wrap items-center bg-muted/50 rounded-lg p-1 gap-1 sm:gap-1">
+                    {onShowTimePolicy && (
+                      <button
+                        onClick={() => onShowTimePolicy(group.user.userId)}
+                        className="text-xs px-2 sm:px-3 py-2 rounded-md transition-all duration-200 flex items-center cursor-pointer text-foreground hover:bg-background/50 whitespace-nowrap"
+                        title="Manage time-based access policies"
+                      >
+                        <Timer className="w-3 h-3 mr-1 sm:mr-2" />
+                        <span className="hidden sm:inline">Schedule</span>
+                        <span className="sm:hidden">Sched</span>
+                      </button>
+                    )}
+                    {onShowHistory && (
+                      <button
+                        onClick={() => onShowHistory(group.user.userId)}
+                        className="text-xs px-2 sm:px-3 py-2 rounded-md transition-all duration-200 flex items-center cursor-pointer text-foreground hover:bg-background/50 whitespace-nowrap"
+                        title="Show user history"
+                      >
+                        <History className="w-3 h-3 mr-1 sm:mr-2" />
+                        <span className="hidden sm:inline">History</span>
+                        <span className="sm:hidden">Hist</span>
+                      </button>
+                    )}
                     {onGrantUserTempAccess && (
                       <button
                         onClick={() => onGrantUserTempAccess(group.user.userId)}
-                        className="text-xs px-3 py-2 rounded-md transition-all duration-200 flex items-center cursor-pointer text-muted-foreground hover:text-foreground hover:bg-background/50"
+                        className="text-xs px-2 sm:px-3 py-2 rounded-md transition-all duration-200 flex items-center cursor-pointer text-foreground hover:text-foreground hover:bg-background/50 whitespace-nowrap"
                         title="Grant temporary access to user devices"
                       >
-                        <Timer className="w-3 h-3 mr-2" />
-                        Grant Temp Access
+                        <Timer className="w-3 h-3 mr-1 sm:mr-2" />
+                        <span className="hidden sm:inline">
+                          Grant Temp Access
+                        </span>
+                        <span className="sm:hidden">Temp</span>
                       </button>
                     )}
                     {onUpdateUserIPPolicy && (
                       <button
                         onClick={() => setShowIPModal(true)}
-                        className="text-xs px-3 py-2 rounded-md transition-all duration-200 flex items-center cursor-pointer text-muted-foreground hover:text-foreground hover:bg-background/50"
+                        className="text-xs px-2 sm:px-3 py-2 rounded-md transition-all duration-200 flex items-center cursor-pointer text-foreground hover:text-foreground hover:bg-background/50 whitespace-nowrap"
                         title="Configure IP and network access policies"
                       >
-                        <Shield className="w-3 h-3 mr-2" />
-                        IP Policy
+                        <Shield className="w-3 h-3 mr-1 sm:mr-2" />
+                        <span className="hidden sm:inline">IP Policy</span>
+                        <span className="sm:hidden">IP</span>
                       </button>
                     )}
                     {onToggleUserVisibility && (
@@ -200,7 +246,7 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
                         onClick={() =>
                           onToggleUserVisibility(group.user.userId)
                         }
-                        className="text-xs px-3 py-2 rounded-md transition-all duration-200 flex items-center cursor-pointer text-muted-foreground hover:text-foreground hover:bg-background/50"
+                        className="text-xs px-2 sm:px-3 py-2 rounded-md transition-all duration-200 flex items-center cursor-pointer text-foreground hover:text-foreground hover:bg-background/50 whitespace-nowrap"
                         title={
                           group.user.preference?.hidden
                             ? "Show user"
@@ -209,25 +255,17 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
                       >
                         {group.user.preference?.hidden ? (
                           <>
-                            <Eye className="w-3 h-3 mr-2" />
-                            Show
+                            <Eye className="w-3 h-3 mr-1 sm:mr-2" />
+                            <span className="hidden sm:inline">Show</span>
+                            <span className="sm:hidden">Show</span>
                           </>
                         ) : (
                           <>
-                            <EyeOff className="w-3 h-3 mr-2" />
-                            Hide
+                            <EyeOff className="w-3 h-3 mr-1 sm:mr-2" />
+                            <span className="hidden sm:inline">Hide</span>
+                            <span className="sm:hidden">Hide</span>
                           </>
                         )}
-                      </button>
-                    )}
-                    {onShowHistory && (
-                      <button
-                        onClick={() => onShowHistory(group.user.userId)}
-                        className="text-xs px-3 py-2 rounded-md transition-all duration-200 flex items-center cursor-pointer text-muted-foreground hover:bg-background/50"
-                        title="Show user history"
-                      >
-                        <History className="w-3 h-3 mr-2" />
-                        History
                       </button>
                     )}
                   </div>
@@ -259,14 +297,19 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
                     onClick={() =>
                       onUpdateUserPreference(group.user.userId, null)
                     }
+                    disabled={updatingUserPreference === group.user.userId}
                     className={`text-xs px-3 py-2 rounded-md transition-all duration-200 flex items-center cursor-pointer ${
                       !group.user.preference ||
                       group.user.preference.defaultBlock === null
                         ? "bg-gray-200 text-black shadow-sm font-medium hover:bg-gray-100"
-                        : "text-muted-foreground hover:text-foreground hover:bg-background/50"
-                    }`}
+                        : "text-foreground hover:text-foreground hover:bg-background/50"
+                    } ${updatingUserPreference === group.user.userId ? "opacity-50 cursor-not-allowed" : ""}`}
                   >
-                    <Settings className="w-3 h-3 mr-2" />
+                    {updatingUserPreference === group.user.userId ? (
+                      <div className="w-3 h-3 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin mr-2" />
+                    ) : (
+                      <Settings className="w-3 h-3 mr-2" />
+                    )}
                     Global{" "}
                     {!configLoading &&
                       `(${getGlobalDefaultBlock() ? "Block" : "Allow"})`}
@@ -275,26 +318,36 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
                     onClick={() =>
                       onUpdateUserPreference(group.user.userId, false)
                     }
+                    disabled={updatingUserPreference === group.user.userId}
                     className={`text-xs px-3 py-2 rounded-md transition-all duration-200 flex items-center cursor-pointer ${
                       group.user.preference?.defaultBlock === false
                         ? "bg-green-600 text-white shadow-sm font-medium hover:bg-green-600"
-                        : "text-muted-foreground hover:text-foreground hover:bg-background/50"
-                    }`}
+                        : "text-foreground hover:text-foreground hover:bg-background/50"
+                    } ${updatingUserPreference === group.user.userId ? "opacity-50 cursor-not-allowed" : ""}`}
                   >
-                    <CheckCircle className="w-3 h-3 mr-2" />
+                    {updatingUserPreference === group.user.userId ? (
+                      <div className="w-3 h-3 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin mr-2" />
+                    ) : (
+                      <CheckCircle className="w-3 h-3 mr-2" />
+                    )}
                     Allow
                   </button>
                   <button
                     onClick={() =>
                       onUpdateUserPreference(group.user.userId, true)
                     }
+                    disabled={updatingUserPreference === group.user.userId}
                     className={`text-xs px-3 py-2 rounded-md transition-all duration-200 flex items-center cursor-pointer ${
                       group.user.preference?.defaultBlock === true
-                        ? "bg-red-700 text-white shadow-sm font-medium hover:bg-red-600"
-                        : "text-muted-foreground hover:text-foreground hover:bg-background/50"
-                    }`}
+                        ? "bg-red-600 dark:bg-red-700 text-white shadow-sm font-medium hover:bg-red-700 dark:hover:bg-red-800"
+                        : "text-foreground hover:text-foreground hover:bg-background/50"
+                    } ${updatingUserPreference === group.user.userId ? "opacity-50 cursor-not-allowed" : ""}`}
                   >
-                    <XCircle className="w-3 h-3 mr-2" />
+                    {updatingUserPreference === group.user.userId ? (
+                      <div className="w-3 h-3 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin mr-2" />
+                    ) : (
+                      <XCircle className="w-3 h-3 mr-2" />
+                    )}
                     Block
                   </button>
                 </div>

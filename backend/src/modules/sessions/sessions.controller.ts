@@ -16,16 +16,20 @@ export class SessionsController {
   async getUserSessionHistory(
     @Param('userId') userId: string,
     @Query('limit') limit?: string,
-    @Query('includeActive') includeActive?: string
+    @Query('includeActive') includeActive?: string,
   ): Promise<SessionHistory[]> {
     const limitNum = limit ? parseInt(limit, 10) : 50;
     const includeActiveFlag = includeActive === 'true';
-    return this.activeSessionService.getUserSessionHistory(userId, limitNum, includeActiveFlag);
+    return this.activeSessionService.getUserSessionHistory(
+      userId,
+      limitNum,
+      includeActiveFlag,
+    );
   }
 
   @Delete('history/:sessionId')
   async deleteSessionHistory(
-    @Param('sessionId') sessionId: string
+    @Param('sessionId') sessionId: string,
   ): Promise<{ success: boolean }> {
     const sessionIdNum = parseInt(sessionId, 10);
     await this.activeSessionService.deleteSessionHistory(sessionIdNum);

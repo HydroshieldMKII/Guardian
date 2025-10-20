@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ActiveSessionService } from '../sessions/services/active-session.service';
 import { DeviceTrackingService } from '../devices/services/device-tracking.service';
 import { ConfigService } from '../config/services/config.service';
@@ -31,6 +31,8 @@ export interface DashboardData {
 
 @Injectable()
 export class DashboardService {
+  private readonly logger = new Logger(DashboardService.name);
+
   constructor(
     private readonly activeSessionService: ActiveSessionService,
     private readonly deviceTrackingService: DeviceTrackingService,
@@ -65,15 +67,21 @@ export class DashboardService {
       }
 
       // Fetch all data in parallel
-      const [sessions, allDevices, pendingDevices, approvedDevices, processedDevices, users] = 
-        await Promise.all([
-          this.plexService.getActiveSessions(),
-          this.deviceTrackingService.getAllDevices(),
-          this.deviceTrackingService.getPendingDevices(),
-          this.deviceTrackingService.getApprovedDevices(),
-          this.deviceTrackingService.getProcessedDevices(),
-          this.usersService.getAllUsers(true),
-        ]);
+      const [
+        sessions,
+        allDevices,
+        pendingDevices,
+        approvedDevices,
+        processedDevices,
+        users,
+      ] = await Promise.all([
+        this.plexService.getActiveSessions(),
+        this.deviceTrackingService.getAllDevices(),
+        this.deviceTrackingService.getPendingDevices(),
+        this.deviceTrackingService.getApprovedDevices(),
+        this.deviceTrackingService.getProcessedDevices(),
+        this.usersService.getAllUsers(true),
+      ]);
 
       // Calculate stats
       const stats = {
@@ -82,8 +90,6 @@ export class DashboardService {
         pendingDevices: pendingDevices.length,
         approvedDevices: approvedDevices.length,
       };
-
-
 
       return {
         plexStatus,
@@ -99,7 +105,10 @@ export class DashboardService {
         stats,
       };
     } catch (error) {
-      console.error('Failed to fetch dashboard data:', error);
+      this.logger.error(
+        'Failed to fetch dashboard data',
+        error?.stack || error,
+      );
       throw error;
     }
   }

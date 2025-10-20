@@ -1,10 +1,10 @@
-import React from 'react';
-import { 
-  Smartphone, 
-  Tablet, 
-  Laptop, 
+import React from "react";
+import {
+  Smartphone,
+  Tablet,
+  Laptop,
   Monitor,
-  ExternalLink 
+  ExternalLink,
 } from "lucide-react";
 
 // Clickable IP component for external IP lookup
@@ -18,7 +18,7 @@ export const ClickableIP = ({ ipAddress }: { ipAddress: string | null }) => {
     window.open(
       `https://ipinfo.io/${ipAddress}`,
       "_blank",
-      "noopener,noreferrer"
+      "noopener,noreferrer",
     );
   };
 
@@ -72,7 +72,7 @@ export const formatDuration = (ms: number) => {
 // Utility function to get progress percentage
 export const getProgressPercentage = (
   viewOffset: number = 0,
-  duration: number = 0
+  duration: number = 0,
 ) => {
   if (!duration) return 0;
   return Math.min(100, (viewOffset / duration) * 100);
@@ -89,7 +89,7 @@ export const getContentTitle = (session: any) => {
   if (session.type === "track") {
     // For music tracks: Artist - Album - Song Title (Year)
     let title = "";
-    
+
     if (session.grandparentTitle) {
       // Artist - Song Title
       title = `${session.grandparentTitle} - ${session.title}`;
@@ -97,11 +97,11 @@ export const getContentTitle = (session: any) => {
       // Fallback to just the song title
       title = session.title;
     }
-    
+
     if (session.parentYear) {
       title += ` (${session.parentYear})`;
     }
-    
+
     return title;
   }
   return session.title || "Unknown Title";
@@ -114,10 +114,14 @@ export const getDetailedQuality = (session: any) => {
 
   return {
     resolution: media.videoResolution?.toUpperCase() || "Unknown",
-    bitrate: media.bitrate ? `${Math.round(media.bitrate / 1000)} Mbps` : "Unknown",
+    bitrate: media.bitrate
+      ? `${Math.round(media.bitrate / 1000)} Mbps`
+      : "Unknown",
     videoCodec: media.videoCodec?.toUpperCase() || "Unknown",
-    audioCodec: media.audioCodec?.toUpperCase() || "Unknown", 
+    audioCodec: media.audioCodec?.toUpperCase() || "Unknown",
     container: media.container?.toUpperCase() || "Unknown",
-    bandwidth: session.Session?.bandwidth ? `${Math.round(session.Session.bandwidth / 1000)} Mbps` : "Unknown"
+    bandwidth: session.Session?.bandwidth
+      ? `${Math.round(session.Session.bandwidth / 1000)} Mbps`
+      : "Unknown",
   };
 };

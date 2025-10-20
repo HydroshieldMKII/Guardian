@@ -34,7 +34,9 @@ export class NotificationsService {
     private configService: ConfigService,
   ) {}
 
-  async createNotification(createDto: CreateNotificationDto): Promise<Notification> {
+  async createNotification(
+    createDto: CreateNotificationDto,
+  ): Promise<Notification> {
     const notification = this.notificationRepository.create({
       userId: createDto.userId,
       text: createDto.text,
@@ -51,10 +53,10 @@ export class NotificationsService {
     username: string,
     deviceName: string,
     stopCode?: string,
-    sessionHistoryId?: number
+    sessionHistoryId?: number,
   ): Promise<Notification> {
     let text: string;
-    
+
     if (stopCode) {
       switch (stopCode) {
         case 'DEVICE_PENDING':
@@ -84,7 +86,7 @@ export class NotificationsService {
     //Mark in session history the stream was terminated
     if (sessionHistoryId) {
       const session = await this.sessionHistoryRepository.findOne({
-        where: { id: sessionHistoryId }
+        where: { id: sessionHistoryId },
       });
 
       if (session) {
@@ -92,7 +94,7 @@ export class NotificationsService {
         await this.sessionHistoryRepository.save(session);
       }
     }
-    
+
     return await this.createNotification({
       userId,
       text,
@@ -101,7 +103,9 @@ export class NotificationsService {
     });
   }
 
-  async getNotificationsForUser(userId: string): Promise<NotificationResponseDto[]> {
+  async getNotificationsForUser(
+    userId: string,
+  ): Promise<NotificationResponseDto[]> {
     const notifications = await this.notificationRepository
       .createQueryBuilder('notification')
       .leftJoinAndSelect('notification.sessionHistory', 'sessionHistory')
@@ -111,11 +115,13 @@ export class NotificationsService {
       .orderBy('notification.createdAt', 'DESC')
       .getMany();
 
-    return notifications.map(notification => ({
+    return notifications.map((notification) => ({
       id: notification.id,
       userId: notification.userId,
-      username: notification.sessionHistory?.userPreference?.username || 'Unknown User',
-      deviceName: notification.sessionHistory?.userDevice?.deviceName || 'Unknown Device',
+      username:
+        notification.sessionHistory?.userPreference?.username || 'Unknown User',
+      deviceName:
+        notification.sessionHistory?.userDevice?.deviceName || 'Unknown Device',
       text: notification.text,
       type: notification.type,
       read: notification.read,
@@ -133,11 +139,13 @@ export class NotificationsService {
       .orderBy('notification.createdAt', 'DESC')
       .getMany();
 
-    return notifications.map(notification => ({
+    return notifications.map((notification) => ({
       id: notification.id,
       userId: notification.userId,
-      username: notification.sessionHistory?.userPreference?.username || 'Unknown User',
-      deviceName: notification.sessionHistory?.userDevice?.deviceName || 'Unknown Device',
+      username:
+        notification.sessionHistory?.userPreference?.username || 'Unknown User',
+      deviceName:
+        notification.sessionHistory?.userDevice?.deviceName || 'Unknown Device',
       text: notification.text,
       type: notification.type,
       read: notification.read,
@@ -146,18 +154,25 @@ export class NotificationsService {
     }));
   }
 
-  async markAsRead(notificationId: number, forced: boolean = false): Promise<Notification> {
+  async markAsRead(
+    notificationId: number,
+    forced: boolean = false,
+  ): Promise<Notification> {
     const notification = await this.notificationRepository.findOne({
-      where: { id: notificationId }
+      where: { id: notificationId },
     });
 
     if (!notification) {
-      throw new NotFoundException(`Notification with ID ${notificationId} not found`);
+      throw new NotFoundException(
+        `Notification with ID ${notificationId} not found`,
+      );
     }
-    
+
     // Check if auto-mark as read is enabled
     if (!forced) {
-      const autoMarkRead = await this.configService.getSetting('AUTO_MARK_NOTIFICATION_READ');
+      const autoMarkRead = await this.configService.getSetting(
+        'AUTO_MARK_NOTIFICATION_READ',
+      );
       if (!autoMarkRead) {
         return notification;
       }
@@ -169,23 +184,22 @@ export class NotificationsService {
 
   async deleteNotification(notificationId: number): Promise<void> {
     const result = await this.notificationRepository.delete(notificationId);
-    
+
     if (result.affected === 0) {
-      throw new NotFoundException(`Notification with ID ${notificationId} not found`);
+      throw new NotFoundException(
+        `Notification with ID ${notificationId} not found`,
+      );
     }
   }
 
   async getUnreadCountForUser(userId: string): Promise<number> {
     return await this.notificationRepository.count({
-      where: { userId, read: false }
+      where: { userId, read: false },
     });
   }
 
   async markAllAsRead(): Promise<void> {
-    await this.notificationRepository.update(
-      { read: false },
-      { read: true }
-    );
+    await this.notificationRepository.update({ read: false }, { read: true });
   }
 
   async clearAll(): Promise<void> {

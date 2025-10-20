@@ -9,7 +9,7 @@ export class PlexController {
 
   constructor(
     private readonly plexClient: PlexClient,
-    private readonly plexService: PlexService
+    private readonly plexService: PlexService,
   ) {}
 
   @Get('media/:type/:ratingKey')
@@ -21,7 +21,9 @@ export class PlexController {
   ) {
     try {
       if (!['thumb', 'art'].includes(type)) {
-        return res.status(400).json({ error: 'Invalid media type. Must be thumb or art.' });
+        return res
+          .status(400)
+          .json({ error: 'Invalid media type. Must be thumb or art.' });
       }
 
       // Build the media endpoint
@@ -31,7 +33,7 @@ export class PlexController {
       }
 
       const mediaBuffer = await this.plexClient.requestMedia(endpoint);
-      
+
       if (!mediaBuffer) {
         return res.status(404).json({ error: 'Media not found' });
       }
@@ -39,10 +41,13 @@ export class PlexController {
       res.setHeader('Content-Type', 'image/jpeg');
       res.setHeader('Cache-Control', 'public, max-age=3600'); // Cache for 1 hour
       res.setHeader('Content-Length', mediaBuffer.length);
-      
+
       return res.send(mediaBuffer);
     } catch (error) {
-      this.logger.error(`Failed to fetch ${type} for ratingKey ${ratingKey}:`, error);
+      this.logger.error(
+        `Failed to fetch ${type} for ratingKey ${ratingKey}:`,
+        error,
+      );
       return res.status(500).json({ error: 'Failed to fetch media' });
     }
   }

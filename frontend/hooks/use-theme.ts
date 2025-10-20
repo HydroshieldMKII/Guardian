@@ -34,8 +34,8 @@ export function ThemeProvider({
   useEffect(() => {
     // Read current theme from DOM (Inline script at the top of _document)
     const root = document.documentElement;
-    const currentTheme = root.classList.contains('light') ? 'light' : 'dark';
-    
+    const currentTheme = root.classList.contains("light") ? "light" : "dark";
+
     // Update state to match DOM
     setTheme(currentTheme);
   }, []);
@@ -70,7 +70,7 @@ export function ThemeProvider({
   return React.createElement(
     ThemeProviderContext.Provider,
     { value },
-    children
+    children,
   );
 }
 

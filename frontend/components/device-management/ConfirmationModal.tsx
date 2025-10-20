@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 import {
   Dialog,
   DialogContent,
@@ -8,14 +8,9 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { 
-  CheckCircle,
-  XCircle,
-  Trash2,
-  RefreshCw,
-} from "lucide-react";
-import { UserDevice } from '@/types';
-import { getDeviceIcon } from './SharedComponents';
+import { CheckCircle, XCircle, Trash2, RefreshCw } from "lucide-react";
+import { UserDevice } from "@/types";
+import { getDeviceIcon } from "./SharedComponents";
 
 interface ConfirmActionData {
   device: UserDevice;
@@ -65,27 +60,31 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
         if (confirmAction.device.status === "approved") {
           return {
             variant: "outline" as const,
-            className: "w-full sm:w-auto border-red-600 text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-700 dark:hover:bg-red-900/20"
+            className:
+              "w-full sm:w-auto border-red-600 text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-700 dark:hover:bg-red-900/20",
           };
         }
         return {
           variant: "default" as const,
-          className: "w-full sm:w-auto bg-green-500 hover:bg-green-600 text-white"
+          className:
+            "w-full sm:w-auto bg-green-500 hover:bg-green-600 text-white",
         };
       case "reject":
         return {
           variant: "outline" as const,
-          className: "w-full sm:w-auto border-red-600 text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-700 dark:hover:bg-red-900/20"
+          className:
+            "w-full sm:w-auto border-red-600 text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-700 dark:hover:bg-red-900/20",
         };
       case "delete":
         return {
           variant: "destructive" as const,
-          className: "w-full sm:w-auto bg-red-600 dark:bg-red-700 text-white hover:bg-red-700 dark:hover:bg-red-800"
+          className:
+            "w-full sm:w-auto bg-red-600 dark:bg-red-700 text-white hover:bg-red-700 dark:hover:bg-red-800",
         };
       default:
         return {
           variant: "default" as const,
-          className: "w-full sm:w-auto"
+          className: "w-full sm:w-auto",
         };
     }
   };
@@ -99,7 +98,9 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
       case "delete":
         return "Delete Device";
       case "toggle":
-        return confirmAction.device.status === "approved" ? "Reject Device" : "Approve Device";
+        return confirmAction.device.status === "approved"
+          ? "Reject Device"
+          : "Approve Device";
       default:
         return "Confirm";
     }
@@ -147,7 +148,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
           <div className="flex items-center gap-3 mb-2">
             {getDeviceIcon(
               confirmAction.device.devicePlatform,
-              confirmAction.device.deviceProduct
+              confirmAction.device.deviceProduct,
             )}
             <div className="min-w-0 flex-1">
               <div className="text-sm font-medium text-foreground truncate">
@@ -155,8 +156,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
                   confirmAction.device.deviceIdentifier}
               </div>
               <div className="text-xs text-muted-foreground truncate">
-                {confirmAction.device.username ||
-                  confirmAction.device.userId}
+                {confirmAction.device.username || confirmAction.device.userId}
               </div>
             </div>
           </div>

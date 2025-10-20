@@ -9,25 +9,18 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import {
-  Tv,
-  RefreshCw,
-  AlertCircle,
-  Wifi,
-  Search,
-  Pause,
-} from "lucide-react";
+import { Tv, RefreshCw, AlertCircle, Wifi, Search, Pause } from "lucide-react";
 
 import { PlexSession, StreamsResponse } from "@/types";
 import { useSwipeToRefresh } from "../hooks/useSwipeToRefresh";
 import { useStreamsData, useStreamActions } from "../hooks/useStreams";
 
 // Import extracted components
-import { 
-  RemoveAccessModal, 
+import {
+  RemoveAccessModal,
   StreamCard,
   getContentTitle,
-  getDeviceIcon
+  getDeviceIcon,
 } from "./streams";
 
 interface StreamsListProps {
@@ -46,19 +39,11 @@ export default function StreamsList({
   onNavigateToDevice,
 }: StreamsListProps) {
   // Custom hooks
-  const { 
-    streams, 
-    loading, 
-    error, 
-    fetchStreamsData, 
-    updateStreamsFromProps 
-  } = useStreamsData();
-  
-  const { 
-    revokingAuth, 
-    revokeDeviceAuthorization,
-    setRevokingAuth 
-  } = useStreamActions();
+  const { streams, loading, error, fetchStreamsData, updateStreamsFromProps } =
+    useStreamsData();
+
+  const { revokingAuth, revokeDeviceAuthorization, setRevokingAuth } =
+    useStreamActions();
 
   // Local state
   const [refreshing, setRefreshing] = useState(false);
@@ -85,7 +70,7 @@ export default function StreamsList({
     }
   }, [sessionsData, fetchStreamsData, updateStreamsFromProps]);
 
-  // Handle auto-refresh toggle  
+  // Handle auto-refresh toggle
   const handleAutoRefreshToggle = () => {
     onAutoRefreshChange(!autoRefresh);
   };
@@ -224,7 +209,9 @@ export default function StreamsList({
                 isRevoking={revokingAuth === stream.sessionKey}
                 onToggleExpand={() =>
                   setExpandedStream(
-                    expandedStream === stream.sessionKey ? null : stream.sessionKey
+                    expandedStream === stream.sessionKey
+                      ? null
+                      : stream.sessionKey,
                   )
                 }
                 onRemoveAccess={() => setConfirmRemoveStream(stream)}

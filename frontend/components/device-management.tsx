@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, memo } from "react";
+import React, { useState, useEffect, memo, useMemo } from "react";
 import {
   Card,
   CardContent,
@@ -47,6 +47,7 @@ import {
 import { useDeviceActions } from "@/hooks/device-management/useDeviceActions";
 import { useUserPreferences } from "@/hooks/device-management/useUserPreferences";
 import { useDeviceUtils } from "@/hooks/device-management/useDeviceUtils";
+import { useTimeRules } from "@/hooks/device-management/useTimeRules";
 import { useToast } from "@/hooks/use-toast";
 
 // Types
@@ -62,6 +63,7 @@ import { DeviceDetailsModal } from "@/components/device-management/DeviceDetails
 import { TemporaryAccessModal } from "@/components/device-management/TemporaryAccessModal";
 import { ConfirmationModal } from "@/components/device-management/ConfirmationModal";
 import { UserHistoryModal } from "@/components/device-management/UserHistoryModal";
+import { TimeRuleModal } from "@/components/device-management/TimeRuleModal";
 import { UserAvatar } from "@/components/device-management/SharedComponents";
 
 // User-Device group interface
@@ -163,7 +165,7 @@ const DeviceManagement = memo(
     const [autoRefresh, setAutoRefresh] = useState(parentAutoRefresh ?? true);
     const [actionLoading, setActionLoading] = useState<number | null>(null);
     const [selectedDevice, setSelectedDevice] = useState<UserDevice | null>(
-      null
+      null,
     );
     const [expandedUsers, setExpandedUsers] = useState<Set<string>>(new Set());
     const [searchTerm, setSearchTerm] = useState("");
@@ -181,8 +183,21 @@ const DeviceManagement = memo(
       username?: string;
     } | null>(null);
     const [scrollToSessionId, setScrollToSessionId] = useState<number | null>(
-      null
+      null,
     );
+    const [timeRuleModalOpen, setTimeRuleModalOpen] = useState(false);
+    const [selectedTimeRuleUser, setSelectedTimeRuleUser] = useState<{
+      userId: string;
+      username?: string;
+      deviceIdentifier?: string;
+    } | null>(null);
+    const [userTimeRuleStatus, setUserTimeRuleStatus] = useState<
+      Record<string, boolean>
+    >({});
+    const [loadingTimeRules, setLoadingTimeRules] = useState(false);
+    const [updatingUserPreference, setUpdatingUserPreference] = useState<
+      string | null
+    >(null);
 
     // Confirmation dialog states
     const [confirmAction, setConfirmAction] =
@@ -192,6 +207,7 @@ const DeviceManagement = memo(
     const deviceActions = useDeviceActions();
     const userPreferences = useUserPreferences();
     const deviceUtils = useDeviceUtils();
+    const { hasTimeRules, fetchAllTimeRules } = useTimeRules();
     const { toast } = useToast();
 
     // Local storage keys for sorting preferences
@@ -260,10 +276,10 @@ const DeviceManagement = memo(
           | "deviceCount"
           | "pendingCount"
           | "lastSeen"
-          | "streamCount"
+          | "streamCount",
     );
     const [sortOrder, setSortOrder] = useState<"asc" | "desc">(
-      () => getStoredValue(USER_SORT_ORDER_KEY, "desc") as "asc" | "desc"
+      () => getStoredValue(USER_SORT_ORDER_KEY, "desc") as "asc" | "desc",
     );
 
     // Save sorting preferences to localStorage when they change
@@ -392,6 +408,34 @@ const DeviceManagement = memo(
       }
     }, [devicesData, usersData]);
 
+    // Load time policy status for all users when user groups change
+    useEffect(() => {
+      const loadTimePolicyStatus = async () => {
+        if (userGroups.length > 0 && !loadingTimeRules) {
+          setLoadingTimeRules(true);
+          const userIds = userGroups.map((group) => group.user.userId);
+
+          try {
+            // Fetch all time rules at once (cached globally)
+            await fetchAllTimeRules(userIds);
+
+            // Check time rule status for each user using cached data
+            const statusMap: Record<string, boolean> = {};
+            for (const userId of userIds) {
+              statusMap[userId] = await hasTimeRules(userId);
+            }
+            setUserTimeRuleStatus(statusMap);
+          } catch (error) {
+            console.error("Error loading time rule status:", error);
+          } finally {
+            setLoadingTimeRules(false);
+          }
+        }
+      };
+
+      loadTimePolicyStatus();
+    }, [userGroups]);
+
     // Sync local autoRefresh with parent
     useEffect(() => {
       if (parentAutoRefresh !== undefined) {
@@ -417,7 +461,7 @@ const DeviceManagement = memo(
 
         setTimeout(() => {
           const deviceElement = document.querySelector(
-            `[data-device-identifier="${deviceIdentifier}"]`
+            `[data-device-identifier="${deviceIdentifier}"]`,
           );
           if (deviceElement) {
             // Scroll directly to the device with some padding above
@@ -432,13 +476,13 @@ const DeviceManagement = memo(
               deviceElement.classList.add(
                 "ring-2",
                 "ring-blue-500",
-                "ring-opacity-75"
+                "ring-opacity-75",
               );
               setTimeout(() => {
                 deviceElement.classList.remove(
                   "ring-2",
                   "ring-blue-500",
-                  "ring-opacity-75"
+                  "ring-opacity-75",
                 );
                 // Call completion callback
                 if (onNavigationComplete) {
@@ -449,16 +493,12 @@ const DeviceManagement = memo(
           }
         }, delay);
       }
-    }, [
-      navigationTarget,
-      userGroups.length,
-      expandedUsers,
-      onNavigationComplete,
-    ]);
+    }, [navigationTarget, userGroups.length, onNavigationComplete]); // Removed expandedUsers to prevent infinite loop
 
     const handleRefresh = () => {
       if (onRefresh) {
         setRefreshing(true);
+        setUserTimeRuleStatus({}); // Clear time rule status to force re-fetch
         onRefresh();
         // Reset refreshing state after a short delay
         setTimeout(() => setRefreshing(false), 1000);
@@ -475,88 +515,92 @@ const DeviceManagement = memo(
     };
 
     // Filter and sort user groups
-    const filteredAndSortedGroups = userGroups
-      .filter((group) => {
-        // Apply search filter
-        if (searchTerm.trim()) {
-          const searchLower = searchTerm.toLowerCase();
-          const username = (
-            group.user.username || group.user.userId
-          ).toLowerCase();
-          const hasMatchingDevice = group.devices.some((device) => {
-            const deviceName = (
-              device.deviceName ||
-              device.deviceIdentifier ||
-              ""
+    const filteredAndSortedGroups = useMemo(() => {
+      return userGroups
+        .filter((group) => {
+          // Apply search filter
+          if (searchTerm.trim()) {
+            const searchLower = searchTerm.toLowerCase();
+            const username = (
+              group.user.username || group.user.userId
             ).toLowerCase();
-            const devicePlatform = (device.devicePlatform || "").toLowerCase();
-            const deviceProduct = (device.deviceProduct || "").toLowerCase();
-            return (
-              deviceName.includes(searchLower) ||
-              devicePlatform.includes(searchLower) ||
-              deviceProduct.includes(searchLower)
-            );
-          });
+            const hasMatchingDevice = group.devices.some((device) => {
+              const deviceName = (
+                device.deviceName ||
+                device.deviceIdentifier ||
+                ""
+              ).toLowerCase();
+              const devicePlatform = (
+                device.devicePlatform || ""
+              ).toLowerCase();
+              const deviceProduct = (device.deviceProduct || "").toLowerCase();
+              return (
+                deviceName.includes(searchLower) ||
+                devicePlatform.includes(searchLower) ||
+                deviceProduct.includes(searchLower)
+              );
+            });
 
-          return username.includes(searchLower) || hasMatchingDevice;
-        }
+            return username.includes(searchLower) || hasMatchingDevice;
+          }
 
-        return true;
-      })
-      .sort((a, b) => {
-        let valueA: any;
-        let valueB: any;
+          return true;
+        })
+        .sort((a, b) => {
+          let valueA: any;
+          let valueB: any;
 
-        switch (sortBy) {
-          case "username":
-            valueA = (a.user.username || a.user.userId).toLowerCase();
-            valueB = (b.user.username || b.user.userId).toLowerCase();
-            break;
-          case "deviceCount":
-            valueA = a.devices.length;
-            valueB = b.devices.length;
-            break;
-          case "pendingCount":
-            valueA = a.pendingCount;
-            valueB = b.pendingCount;
-            break;
-          case "lastSeen":
-            // Use lastSeen date, fallback to 0 (epoch) if no devices
-            valueA = a.lastSeen ? a.lastSeen.getTime() : 0;
-            valueB = b.lastSeen ? b.lastSeen.getTime() : 0;
-            break;
-          case "streamCount":
-            // Sum up session counts across all devices for each user
-            valueA = a.devices.reduce(
-              (total, device) => total + (device.sessionCount || 0),
-              0
-            );
-            valueB = b.devices.reduce(
-              (total, device) => total + (device.sessionCount || 0),
-              0
-            );
-            break;
-          default:
-            valueA = (a.user.username || a.user.userId).toLowerCase();
-            valueB = (b.user.username || b.user.userId).toLowerCase();
-            break;
-        }
+          switch (sortBy) {
+            case "username":
+              valueA = (a.user.username || a.user.userId).toLowerCase();
+              valueB = (b.user.username || b.user.userId).toLowerCase();
+              break;
+            case "deviceCount":
+              valueA = a.devices.length;
+              valueB = b.devices.length;
+              break;
+            case "pendingCount":
+              valueA = a.pendingCount;
+              valueB = b.pendingCount;
+              break;
+            case "lastSeen":
+              // Use lastSeen date, fallback to 0 (epoch) if no devices
+              valueA = a.lastSeen ? a.lastSeen.getTime() : 0;
+              valueB = b.lastSeen ? b.lastSeen.getTime() : 0;
+              break;
+            case "streamCount":
+              // Sum up session counts across all devices for each user
+              valueA = a.devices.reduce(
+                (total, device) => total + (device.sessionCount || 0),
+                0,
+              );
+              valueB = b.devices.reduce(
+                (total, device) => total + (device.sessionCount || 0),
+                0,
+              );
+              break;
+            default:
+              valueA = (a.user.username || a.user.userId).toLowerCase();
+              valueB = (b.user.username || b.user.userId).toLowerCase();
+              break;
+          }
 
-        // For numeric values, use numeric comparison
-        if (
-          sortBy === "deviceCount" ||
-          sortBy === "pendingCount" ||
-          sortBy === "lastSeen" ||
-          sortBy === "streamCount"
-        ) {
-          const comparison = valueA - valueB;
+          // For numeric values, use numeric comparison
+          if (
+            sortBy === "deviceCount" ||
+            sortBy === "pendingCount" ||
+            sortBy === "lastSeen" ||
+            sortBy === "streamCount"
+          ) {
+            const comparison = valueA - valueB;
+            return sortOrder === "asc" ? comparison : -comparison;
+          }
+
+          // For string values, use localeCompare
+          const comparison = valueA.localeCompare(valueB);
           return sortOrder === "asc" ? comparison : -comparison;
-        }
-
-        // For string values, use localeCompare
-        const comparison = valueA.localeCompare(valueB);
-        return sortOrder === "asc" ? comparison : -comparison;
-      });
+        });
+    }, [userGroups, searchTerm, sortBy, sortOrder]);
 
     // Toggle user expansion
     const toggleUserExpansion = (userId: string) => {
@@ -572,21 +616,47 @@ const DeviceManagement = memo(
     // User preference update handler
     const handleUpdateUserPreference = async (
       userId: string,
-      defaultBlock: boolean | null
+      defaultBlock: boolean | null,
     ) => {
-      const success = await userPreferences.updateUserPreference(
-        userId,
-        defaultBlock
-      );
-      if (success) {
-        handleRefresh();
+      setUpdatingUserPreference(userId);
+      try {
+        const success = await userPreferences.updateUserPreference(
+          userId,
+          defaultBlock,
+        );
+        if (success) {
+          // Refresh data without clearing time rule status to prevent "Scheduled" tag flickering
+          if (onRefresh) {
+            onRefresh();
+          }
+          toast({
+            title: "Device Policy Updated",
+            description: `Default device policy has been updated successfully`,
+            variant: "success",
+          });
+        } else {
+          toast({
+            title: "Update Failed",
+            description: "Failed to update device policy",
+            variant: "destructive",
+          });
+        }
+      } catch (error) {
+        console.error("Error updating user preference:", error);
+        toast({
+          title: "Update Failed",
+          description: "Failed to update device policy",
+          variant: "destructive",
+        });
+      } finally {
+        setUpdatingUserPreference(null);
       }
     };
 
     // User IP policy update handler
     const handleUpdateUserIPPolicy = async (
       userId: string,
-      updates: Partial<UserPreference>
+      updates: Partial<UserPreference>,
     ) => {
       const success = await userPreferences.updateUserIPPolicy(userId, updates);
       if (success) {
@@ -650,7 +720,7 @@ const DeviceManagement = memo(
     const handleShowHistory = (userId: string) => {
       // Find the username for this userId
       const userGroup = userGroups.find(
-        (group) => group.user.userId === userId
+        (group) => group.user.userId === userId,
       );
       const username =
         userGroup?.user.username || userGroup?.user.preference?.username;
@@ -661,7 +731,7 @@ const DeviceManagement = memo(
 
     const handleNavigateToDeviceFromHistory = (
       userId: string,
-      deviceIdentifier: string
+      deviceIdentifier: string,
     ) => {
       // Expand the user group
       setExpandedUsers((prev) => new Set(prev).add(userId));
@@ -677,7 +747,7 @@ const DeviceManagement = memo(
 
         setTimeout(() => {
           const deviceElement = document.querySelector(
-            `[data-device-identifier="${deviceIdentifier}"]`
+            `[data-device-identifier="${deviceIdentifier}"]`,
           );
           if (deviceElement) {
             deviceElement.scrollIntoView({
@@ -691,13 +761,13 @@ const DeviceManagement = memo(
               deviceElement.classList.add(
                 "ring-2",
                 "ring-blue-500",
-                "ring-opacity-75"
+                "ring-opacity-75",
               );
               setTimeout(() => {
                 deviceElement.classList.remove(
                   "ring-2",
                   "ring-blue-500",
-                  "ring-opacity-75"
+                  "ring-opacity-75",
                 );
               }, 1500);
             }, 200);
@@ -827,7 +897,7 @@ const DeviceManagement = memo(
 
     const handleGrantTemporaryAccess = async (
       deviceIds: number[],
-      durationMinutes: number
+      durationMinutes: number,
     ) => {
       try {
         if (deviceIds.length === 1) {
@@ -835,7 +905,7 @@ const DeviceManagement = memo(
           setActionLoading(deviceIds[0]);
           const success = await deviceActions.grantTemporaryAccess(
             deviceIds[0],
-            durationMinutes
+            durationMinutes,
           );
           if (!success) {
             toast({
@@ -850,7 +920,7 @@ const DeviceManagement = memo(
           setActionLoading(deviceIds[0]); // Set loading indicator
           const result = await deviceActions.grantBatchTemporaryAccess(
             deviceIds,
-            durationMinutes
+            durationMinutes,
           );
           if (!result.success) {
             toast({
@@ -887,7 +957,7 @@ const DeviceManagement = memo(
 
     const handleGrantUserTempAccess = (userId: string) => {
       const userGroup = userGroups.find(
-        (group) => group.user.userId === userId
+        (group) => group.user.userId === userId,
       );
       if (userGroup) {
         setTempAccessUser({
@@ -911,6 +981,49 @@ const DeviceManagement = memo(
         }
       } finally {
         setActionLoading(null);
+      }
+    };
+
+    const handleShowTimePolicy = (
+      userId: string,
+      deviceIdentifier?: string,
+    ) => {
+      const userGroup = userGroups.find(
+        (group) => group.user.userId === userId,
+      );
+      if (userGroup) {
+        setSelectedTimeRuleUser({
+          userId: userGroup.user.userId,
+          username: userGroup.user.username,
+          deviceIdentifier,
+        });
+        setTimeRuleModalOpen(true);
+      }
+    };
+
+    const handleTimeRuleModalClose = async () => {
+      setTimeRuleModalOpen(false);
+      setSelectedTimeRuleUser(null);
+      // Refresh time policy status for all users after policy changes
+      if (userGroups.length > 0 && !loadingTimeRules) {
+        setLoadingTimeRules(true);
+        const userIds = userGroups.map((group) => group.user.userId);
+
+        try {
+          // Refresh all time rules (cached globally)
+          await fetchAllTimeRules(userIds);
+
+          // Check updated time rule status for each user using cached data
+          const statusMap: Record<string, boolean> = {};
+          for (const userId of userIds) {
+            statusMap[userId] = await hasTimeRules(userId);
+          }
+          setUserTimeRuleStatus(statusMap);
+        } catch (error) {
+          console.error("Error refreshing time rule status:", error);
+        } finally {
+          setLoadingTimeRules(false);
+        }
       }
     };
 
@@ -950,7 +1063,7 @@ const DeviceManagement = memo(
       if (!userPreference || userPreference.defaultBlock === null) {
         // Find global default block setting
         const globalDefaultBlock = settingsData?.find(
-          (s) => s.key === "PLEX_GUARD_DEFAULT_BLOCK"
+          (s) => s.key === "PLEX_GUARD_DEFAULT_BLOCK",
         );
 
         // If global setting is to allow (value "false"), don't show Grant Temp Access for pending devices
@@ -1199,12 +1312,17 @@ const DeviceManagement = memo(
                     actionLoading={actionLoading}
                     editingDevice={editingDevice}
                     newDeviceName={newDeviceName}
+                    hasTimeSchedules={
+                      userTimeRuleStatus[group.user.userId] || false
+                    }
+                    updatingUserPreference={updatingUserPreference}
                     onToggleExpansion={toggleUserExpansion}
                     onUpdateUserPreference={handleUpdateUserPreference}
                     onUpdateUserIPPolicy={handleUpdateUserIPPolicy}
                     onToggleUserVisibility={handleToggleUserVisibility}
                     onShowHistory={handleShowHistory}
                     onGrantUserTempAccess={handleGrantUserTempAccess}
+                    onShowTimePolicy={handleShowTimePolicy}
                     onEdit={startEditing}
                     onCancelEdit={cancelEditing}
                     onRename={handleRename}
@@ -1254,7 +1372,7 @@ const DeviceManagement = memo(
           userDevices={
             tempAccessUser
               ? userGroups.find(
-                  (group) => group.user.userId === tempAccessUser.userId
+                  (group) => group.user.userId === tempAccessUser.userId,
                 )?.devices || []
               : []
           }
@@ -1342,9 +1460,17 @@ const DeviceManagement = memo(
           onNavigateToDevice={handleNavigateToDeviceFromHistory}
           scrollToSessionId={scrollToSessionId}
         />
+
+        <TimeRuleModal
+          isOpen={timeRuleModalOpen}
+          onClose={handleTimeRuleModalClose}
+          userId={selectedTimeRuleUser?.userId || ""}
+          username={selectedTimeRuleUser?.username || "Unknown User"}
+          deviceIdentifier={selectedTimeRuleUser?.deviceIdentifier}
+        />
       </>
     );
-  }
+  },
 );
 
 DeviceManagement.displayName = "DeviceManagement";

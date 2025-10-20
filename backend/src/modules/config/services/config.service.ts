@@ -89,6 +89,11 @@ export class ConfigService {
         type: 'string' as const,
       },
       {
+        key: 'MSG_TIME_RESTRICTED',
+        value: 'Streaming is not allowed at this time due to time restrictions',
+        type: 'string' as const,
+      },
+      {
         key: 'MSG_IP_LAN_ONLY',
         value: 'Only LAN access is allowed',
         type: 'string' as const,

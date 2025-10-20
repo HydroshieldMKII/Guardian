@@ -72,7 +72,7 @@ export class DeviceTrackingService {
       await this.usersService.updateUserFromSessionData(
         deviceInfo.userId,
         deviceInfo.username,
-        deviceInfo.avatarUrl
+        deviceInfo.avatarUrl,
       );
 
       await this.trackDevice(deviceInfo);
@@ -100,7 +100,7 @@ export class DeviceTrackingService {
   private async trackDevice(deviceInfo: DeviceInfo): Promise<void> {
     try {
       // this.logger.debug(`Tracking device: ${deviceInfo.deviceIdentifier} for user: ${deviceInfo.userId} with session: ${deviceInfo.sessionKey}`);
-      
+
       // Check if device already exists
       const existingDevice = await this.userDeviceRepository.findOne({
         where: {
@@ -129,12 +129,17 @@ export class DeviceTrackingService {
     deviceInfo: DeviceInfo,
   ): Promise<void> {
     existingDevice.lastSeen = new Date();
-    
+
     // Only increment session count if this is a new session
-    if (deviceInfo.sessionKey && existingDevice.currentSessionKey !== deviceInfo.sessionKey) {
+    if (
+      deviceInfo.sessionKey &&
+      existingDevice.currentSessionKey !== deviceInfo.sessionKey
+    ) {
       existingDevice.sessionCount += 1;
       existingDevice.currentSessionKey = deviceInfo.sessionKey;
-      this.logger.debug(`New session started for device ${deviceInfo.deviceIdentifier}. Session count: ${existingDevice.sessionCount}`);
+      this.logger.debug(
+        `New session started for device ${deviceInfo.deviceIdentifier}. Session count: ${existingDevice.sessionCount}`,
+      );
     }
 
     // Update device info if it has changed or was null
@@ -168,7 +173,13 @@ export class DeviceTrackingService {
       deviceInfo.userId,
     ); // User wont have a preference yet, so this will return app default
 
-    console.log('New device detected:', deviceInfo);
+    this.logger.log('New device detected', {
+      userId: deviceInfo.userId,
+      username: deviceInfo.username,
+      deviceName: deviceInfo.deviceName,
+      deviceIdentifier: deviceInfo.deviceIdentifier,
+      platform: deviceInfo.devicePlatform,
+    });
 
     const newDevice = this.userDeviceRepository.create({
       userId: deviceInfo.userId,
@@ -227,7 +238,9 @@ export class DeviceTrackingService {
     });
   }
 
-  async findDeviceByIdentifier(deviceIdentifier: string): Promise<UserDevice | null> {
+  async findDeviceByIdentifier(
+    deviceIdentifier: string,
+  ): Promise<UserDevice | null> {
     return this.userDeviceRepository.findOne({
       where: { deviceIdentifier },
     });
@@ -254,19 +267,23 @@ export class DeviceTrackingService {
 
   async deleteDevice(deviceId: number): Promise<void> {
     try {
-      await this.userDeviceRepository.manager.transaction(async transactionalEntityManager => {
-        await transactionalEntityManager
-          .getRepository(SessionHistory)
-          .delete({ userDeviceId: deviceId });
-        
-        this.logger.debug(`Session history deleted for device ${deviceId}`);
-        
-        await transactionalEntityManager
-          .getRepository(UserDevice)
-          .delete(deviceId);
-      });
-      
-      this.logger.log(`Device ${deviceId} and its related data have been deleted`);
+      await this.userDeviceRepository.manager.transaction(
+        async (transactionalEntityManager) => {
+          await transactionalEntityManager
+            .getRepository(SessionHistory)
+            .delete({ userDeviceId: deviceId });
+
+          this.logger.debug(`Session history deleted for device ${deviceId}`);
+
+          await transactionalEntityManager
+            .getRepository(UserDevice)
+            .delete(deviceId);
+        },
+      );
+
+      this.logger.log(
+        `Device ${deviceId} and its related data have been deleted`,
+      );
     } catch (error) {
       this.logger.error(`Failed to delete device ${deviceId}:`, error);
       throw new Error(`Device deletion failed: ${error.message}`);
@@ -280,7 +297,10 @@ export class DeviceTrackingService {
     this.logger.log(`Device ${deviceId} has been renamed to "${newName}"`);
   }
 
-  async grantTemporaryAccess(deviceId: number, durationMinutes: number): Promise<void> {
+  async grantTemporaryAccess(
+    deviceId: number,
+    durationMinutes: number,
+  ): Promise<void> {
     const now = new Date();
     const expiresAt = new Date(now.getTime() + durationMinutes * 60 * 1000);
 
@@ -290,17 +310,19 @@ export class DeviceTrackingService {
       temporaryAccessDurationMinutes: durationMinutes,
     });
 
-    this.logger.log(`Granted temporary access to device ${deviceId} for ${durationMinutes} minutes (expires at ${expiresAt.toISOString()})`);
+    this.logger.log(
+      `Granted temporary access to device ${deviceId} for ${durationMinutes} minutes (expires at ${expiresAt.toISOString()})`,
+    );
   }
 
   async revokeTemporaryAccess(deviceId: number): Promise<void> {
     await this.userDeviceRepository
       .createQueryBuilder()
       .update(UserDevice)
-      .set({ 
+      .set({
         temporaryAccessUntil: () => 'NULL',
         temporaryAccessGrantedAt: () => 'NULL',
-        temporaryAccessDurationMinutes: () => 'NULL'
+        temporaryAccessDurationMinutes: () => 'NULL',
       })
       .where('id = :deviceId', { deviceId })
       .execute();
@@ -319,7 +341,9 @@ export class DeviceTrackingService {
     if (!isValid) {
       // Temporary access has expired, clean it up
       await this.revokeTemporaryAccess(device.id);
-      this.logger.log(`Temporary access expired for device ${device.id}, cleaned up`);
+      this.logger.log(
+        `Temporary access expired for device ${device.id}, cleaned up`,
+      );
     }
 
     return isValid;
@@ -332,21 +356,23 @@ export class DeviceTrackingService {
 
     const now = new Date();
     const timeLeft = device.temporaryAccessUntil.getTime() - now.getTime();
-    
+
     return timeLeft > 0 ? Math.ceil(timeLeft / (60 * 1000)) : 0; // Return minutes left
   }
 
   async clearSessionKey(sessionKey: string): Promise<void> {
     this.logger.debug(`Attempting to clear session key: ${sessionKey}`);
-    
+
     // Find devices with this session key first
     const devicesWithSession = await this.userDeviceRepository.find({
       where: { currentSessionKey: sessionKey },
-      select: ['id', 'deviceIdentifier', 'currentSessionKey']
+      select: ['id', 'deviceIdentifier', 'currentSessionKey'],
     });
-    
-    this.logger.debug(`Found ${devicesWithSession.length} device(s) with session key ${sessionKey}`);
-    
+
+    this.logger.debug(
+      `Found ${devicesWithSession.length} device(s) with session key ${sessionKey}`,
+    );
+
     // Clear specific session key for device that stopped streaming
     const result = await this.userDeviceRepository
       .createQueryBuilder()
@@ -357,17 +383,20 @@ export class DeviceTrackingService {
 
     // Find in session history and mark terminated at true
     await this.sessionHistoryRepository
-          .createQueryBuilder()
-          .update(SessionHistory)
-          .set({ endedAt: () => 'CURRENT_TIMESTAMP'})
-          .where('session_key = :sessionKey', { sessionKey })
-          .execute();
-      
-    this.logger.debug(`Cleared session key for ${result.affected || 0} device(s) that stopped streaming (session: ${sessionKey})`);
-  
+      .createQueryBuilder()
+      .update(SessionHistory)
+      .set({ endedAt: () => 'CURRENT_TIMESTAMP' })
+      .where('session_key = :sessionKey', { sessionKey })
+      .execute();
+
+    this.logger.debug(
+      `Cleared session key for ${result.affected || 0} device(s) that stopped streaming (session: ${sessionKey})`,
+    );
   }
 
-  async cleanupInactiveDevices(inactiveDays: number): Promise<{ deletedCount: number; deletedDevices: UserDevice[] }> {
+  async cleanupInactiveDevices(
+    inactiveDays: number,
+  ): Promise<{ deletedCount: number; deletedDevices: UserDevice[] }> {
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - inactiveDays);
 
@@ -379,43 +408,52 @@ export class DeviceTrackingService {
     }
 
     const inactiveDevices: UserDevice[] = [];
-    
+
     for (const device of allDevices) {
       if (!device.lastSeen) {
-        this.logger.warn(`Device ${device.id} has no lastSeen date, skipping...`);
+        this.logger.warn(
+          `Device ${device.id} has no lastSeen date, skipping...`,
+        );
         continue;
       }
-      
+
       if (new Date(device.lastSeen) < cutoffDate) {
         inactiveDevices.push(device);
       }
     }
 
-    this.logger.log(`Found ${inactiveDevices.length} inactive device(s) older than ${inactiveDays} days`);
-    
+    this.logger.log(
+      `Found ${inactiveDevices.length} inactive device(s) older than ${inactiveDays} days`,
+    );
+
     // Log which devices will be deleted
     for (const device of inactiveDevices) {
       this.logger.log(
         `Removing inactive device: ${device.deviceName || device.deviceIdentifier} ` +
-        `(User: ${device.username || device.userId}, Last seen: ${device.lastSeen.toISOString()})`
+          `(User: ${device.username || device.userId}, Last seen: ${device.lastSeen.toISOString()})`,
       );
     }
 
     // Delete session history for inactive devices
-    const inactiveDeviceIds = inactiveDevices.map(device => device.id);
-    await this.sessionHistoryRepository.delete({ userDeviceId: In(inactiveDeviceIds) });
-    this.logger.log(`Deleted session history for ${inactiveDevices.length} inactive device(s)`);
+    const inactiveDeviceIds = inactiveDevices.map((device) => device.id);
+    await this.sessionHistoryRepository.delete({
+      userDeviceId: In(inactiveDeviceIds),
+    });
+    this.logger.log(
+      `Deleted session history for ${inactiveDevices.length} inactive device(s)`,
+    );
 
     // Delete the inactive devices
-    const deviceIds = inactiveDevices.map(device => device.id);
+    const deviceIds = inactiveDevices.map((device) => device.id);
     await this.userDeviceRepository.delete({ id: In(deviceIds) });
 
-    this.logger.log(`Successfully removed ${inactiveDevices.length} inactive device(s)`);
-    
-    return { 
-      deletedCount: inactiveDevices.length, 
-      deletedDevices: inactiveDevices 
+    this.logger.log(
+      `Successfully removed ${inactiveDevices.length} inactive device(s)`,
+    );
+
+    return {
+      deletedCount: inactiveDevices.length,
+      deletedDevices: inactiveDevices,
     };
   }
-  
 }

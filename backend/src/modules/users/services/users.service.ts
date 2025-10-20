@@ -27,21 +27,21 @@ export class UsersService {
       return await this.userPreferenceRepository.find();
     }
     return await this.userPreferenceRepository.find({
-      where: { hidden: false }
+      where: { hidden: false },
     });
   }
 
   // Get only hidden users
   async getHiddenUsers(): Promise<UserPreference[]> {
     return await this.userPreferenceRepository.find({
-      where: { hidden: true }
+      where: { hidden: true },
     });
   }
 
   // Toggle user visibility (hide/show)
   async toggleUserVisibility(userId: string): Promise<UserPreference> {
     const user = await this.userPreferenceRepository.findOne({
-      where: { userId }
+      where: { userId },
     });
 
     if (!user) {
@@ -55,7 +55,7 @@ export class UsersService {
   // Hide a user
   async hideUser(userId: string): Promise<UserPreference> {
     const user = await this.userPreferenceRepository.findOne({
-      where: { userId }
+      where: { userId },
     });
 
     if (!user) {
@@ -69,7 +69,7 @@ export class UsersService {
   // Show a user (unhide)
   async showUser(userId: string): Promise<UserPreference> {
     const user = await this.userPreferenceRepository.findOne({
-      where: { userId }
+      where: { userId },
     });
 
     if (!user) {
@@ -81,7 +81,11 @@ export class UsersService {
   }
 
   // Create user if not exists
-  async updateUserFromSessionData(userId: string, username?: string, avatarUrl?: string): Promise<void> {
+  async updateUserFromSessionData(
+    userId: string,
+    username?: string,
+    avatarUrl?: string,
+  ): Promise<void> {
     if (!userId) return;
 
     try {
@@ -97,16 +101,19 @@ export class UsersService {
           username,
           defaultBlock: null, // null means use global default
         });
-        
+
         await this.userPreferenceRepository.save(newPreference);
-        this.logger.debug(`Created new user preference: ${userId} (${username})`);
+        this.logger.debug(
+          `Created new user preference: ${userId} (${username})`,
+        );
       }
     } catch (error) {
-      this.logger.error(`Error updating user from session data: ${userId}`, error);
+      this.logger.error(
+        `Error updating user from session data: ${userId}`,
+        error,
+      );
     }
   }
-
-
 
   async getUserPreference(userId: string): Promise<UserPreference | null> {
     return this.userPreferenceRepository.findOne({
@@ -148,7 +155,8 @@ export class UsersService {
     }
 
     // Save the preference
-    const savedPreference = await this.userPreferenceRepository.save(preference);
+    const savedPreference =
+      await this.userPreferenceRepository.save(preference);
     return savedPreference;
   }
 
@@ -184,7 +192,8 @@ export class UsersService {
     }
 
     // Save the preference
-    const savedPreference = await this.userPreferenceRepository.save(preference);
+    const savedPreference =
+      await this.userPreferenceRepository.save(preference);
     return savedPreference;
   }
 
@@ -203,11 +212,11 @@ export class UsersService {
     return defaultBlock;
   }
 
-    private parseUsersFromXML(xmlString: string): any[] {
+  private parseUsersFromXML(xmlString: string): any[] {
     try {
       const users: any[] = [];
       const userMatches = xmlString.match(/<User[^>]*>/g);
-      
+
       if (!userMatches) {
         this.logger.debug('No User elements found in XML response');
         return [];
@@ -215,10 +224,12 @@ export class UsersService {
 
       for (const userMatch of userMatches) {
         const user: any = {};
-        
+
         // Extract attributes from the User element
         const idMatch = userMatch.match(/id="([^"]*)"/);
-        const usernameMatch = userMatch.match(/username="([^"]*)"/) || userMatch.match(/title="([^"]*)"/);
+        const usernameMatch =
+          userMatch.match(/username="([^"]*)"/) ||
+          userMatch.match(/title="([^"]*)"/);
         const thumbMatch = userMatch.match(/thumb="([^"]*)"/);
         const friendlyNameMatch = userMatch.match(/friendlyName="([^"]*)"/);
 
@@ -249,10 +260,10 @@ export class UsersService {
 
     try {
       this.logger.log('Starting Plex users sync from Plex.tv API...');
-      
+
       // Fetch users from Plex.tv
       const response = await this.plexClient.getPlexUsers();
-      
+
       if (!response) {
         this.logger.warn('No users data received from Plex.tv API');
         return { updated: 0, created: 0, errors: 1 };
@@ -264,7 +275,9 @@ export class UsersService {
         this.logger.debug('Parsing XML response from Plex.tv');
         users = this.parseUsersFromXML(response);
       } else if (response.users) {
-        users = Array.isArray(response.users) ? response.users : [response.users];
+        users = Array.isArray(response.users)
+          ? response.users
+          : [response.users];
       }
 
       if (!users || users.length === 0) {
@@ -306,23 +319,20 @@ export class UsersService {
           }
 
           // Upsert user preference
-          await this.userPreferenceRepository.upsert(
-            userData,
-            {
-              conflictPaths: ['userId'],
-              skipUpdateIfNoValuesChanged: true,
-            },
-          );
+          await this.userPreferenceRepository.upsert(userData, {
+            conflictPaths: ['userId'],
+            skipUpdateIfNoValuesChanged: true,
+          });
 
           if (!existingUser) {
             created++;
             this.logger.log(`Created new user: ${userId} (${username})`);
           } else {
             // Check if anything actually changed
-            const hasChanges = 
+            const hasChanges =
               (username && existingUser.username !== username) ||
               (avatarUrl && existingUser.avatarUrl !== avatarUrl);
-            
+
             if (hasChanges) {
               updated++;
               this.logger.debug(`Updated user: ${userId} (${username})`);

@@ -4,7 +4,7 @@ export class ApiError extends Error {
   constructor(
     public status: number,
     message: string,
-    public response?: Response
+    public response?: Response,
   ) {
     super(message);
     this.name = "ApiError";
@@ -20,7 +20,7 @@ class ApiClient {
 
   private async request<T>(
     endpoint: string,
-    options: RequestInit = {}
+    options: RequestInit = {},
   ): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
 

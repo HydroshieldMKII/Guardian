@@ -12,7 +12,9 @@ interface UseNotificationsProps {
 }
 
 export function useNotifications(props?: UseNotificationsProps) {
-  const [notifications, setNotifications] = useState<Notification[]>(props?.initialData?.data || []);
+  const [notifications, setNotifications] = useState<Notification[]>(
+    props?.initialData?.data || [],
+  );
   const [isLoading, setIsLoading] = useState(!props?.initialData);
   const [error, setError] = useState<string | null>(null);
 
@@ -21,19 +23,19 @@ export function useNotifications(props?: UseNotificationsProps) {
     try {
       setIsLoading(true);
       setError(null);
-      
+
       const data = await apiClient.getAllNotifications<Notification[]>();
-      
+
       // Convert createdAt strings to Date objects
-      const processedNotifications = data.map(notification => ({
+      const processedNotifications = data.map((notification) => ({
         ...notification,
         createdAt: new Date(notification.createdAt),
       }));
-      
+
       setNotifications(processedNotifications);
     } catch (err) {
-      console.error('Failed to fetch notifications:', err);
-      setError('Failed to load notifications');
+      console.error("Failed to fetch notifications:", err);
+      setError("Failed to load notifications");
       // Fallback to empty array on error
       setNotifications([]);
     } finally {
@@ -51,21 +53,21 @@ export function useNotifications(props?: UseNotificationsProps) {
   }, [fetchNotifications, props?.initialData]);
 
   // Calculate unread count
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const unreadCount = notifications.filter((n) => !n.read).length;
 
   // Mark notification as read
   const markAsRead = useCallback(async (id: number) => {
     try {
       await apiClient.markNotificationAsRead(id);
-      setNotifications(prev =>
-        prev.map(notification =>
+      setNotifications((prev) =>
+        prev.map((notification) =>
           notification.id === id
             ? { ...notification, read: true }
-            : notification
-        )
+            : notification,
+        ),
       );
     } catch (err) {
-      console.error('Failed to mark notification as read:', err);
+      console.error("Failed to mark notification as read:", err);
     }
   }, []);
 
@@ -73,11 +75,11 @@ export function useNotifications(props?: UseNotificationsProps) {
   const removeNotification = useCallback(async (id: number) => {
     try {
       await apiClient.deleteNotification(id);
-      setNotifications(prev =>
-        prev.filter(notification => notification.id !== id)
+      setNotifications((prev) =>
+        prev.filter((notification) => notification.id !== id),
       );
     } catch (err) {
-      console.error('Failed to delete notification:', err);
+      console.error("Failed to delete notification:", err);
     }
   }, []);
 
@@ -85,11 +87,11 @@ export function useNotifications(props?: UseNotificationsProps) {
   const markAllAsRead = useCallback(async () => {
     try {
       await apiClient.markAllNotificationsAsRead();
-      setNotifications(prev =>
-        prev.map(notification => ({ ...notification, read: true }))
+      setNotifications((prev) =>
+        prev.map((notification) => ({ ...notification, read: true })),
       );
     } catch (err) {
-      console.error('Failed to mark all notifications as read:', err);
+      console.error("Failed to mark all notifications as read:", err);
     }
   }, []);
 
@@ -99,11 +101,11 @@ export function useNotifications(props?: UseNotificationsProps) {
       await apiClient.clearAllNotifications();
       setNotifications([]);
     } catch (err) {
-      console.error('Failed to clear all notifications:', err);
+      console.error("Failed to clear all notifications:", err);
     }
   }, []);
 
-  // Refresh notifications 
+  // Refresh notifications
   const refreshNotifications = useCallback(() => {
     fetchNotifications();
   }, [fetchNotifications]);

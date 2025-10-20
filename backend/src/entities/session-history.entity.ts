@@ -19,7 +19,7 @@ export class SessionHistory {
   @Column({ name: 'session_key' })
   sessionKey: string;
 
-    @Column({ name: 'user_id' })
+  @Column({ name: 'user_id' })
   userId: string;
 
   // Foreign key to UserPreference to get user info (username, etc.)
@@ -89,10 +89,10 @@ export class SessionHistory {
   @CreateDateColumn({ name: 'started_at' })
   startedAt: Date;
 
-  @Column({ 
+  @Column({
     name: 'ended_at',
     type: 'datetime',
-    nullable: true
+    nullable: true,
   })
   endedAt?: Date;
 

@@ -28,12 +28,17 @@ export class SchedulerService implements OnModuleInit {
   async onModuleInit() {
     this.logger.log('Scheduler service initialized with cron jobs');
     await this.setupDynamicSessionUpdatesCron();
-    
+
     // Set up config change listener to update cron expression when interval changes
-    this.configService.addConfigChangeListener('PLEXGUARD_REFRESH_INTERVAL', async () => {
-      this.logger.log('Refresh interval changed, updating cron expression...');
-      await this.setupDynamicSessionUpdatesCron();
-    });
+    this.configService.addConfigChangeListener(
+      'PLEXGUARD_REFRESH_INTERVAL',
+      async () => {
+        this.logger.log(
+          'Refresh interval changed, updating cron expression...',
+        );
+        await this.setupDynamicSessionUpdatesCron();
+      },
+    );
 
     // Perform tasks on startup
     await this.handleSessionUpdates();
@@ -44,31 +49,38 @@ export class SchedulerService implements OnModuleInit {
   private async setupDynamicSessionUpdatesCron() {
     try {
       // Get the current refresh interval from config
-      const refreshInterval = await this.configService.getSetting('PLEXGUARD_REFRESH_INTERVAL');
+      const refreshInterval = await this.configService.getSetting(
+        'PLEXGUARD_REFRESH_INTERVAL',
+      );
       const intervalSeconds = parseInt(refreshInterval as string, 10) || 10;
-      
+
       // Convert seconds to cron expression
       const cronExpression = this.secondsToCronExpression(intervalSeconds);
-      
+
       // Remove existing job if it exists (e.g when interval changes)
       try {
         this.schedulerRegistry.deleteCronJob('sessionUpdates');
       } catch (error) {
         // Job doesn't exist yet, which is fine
       }
-      
+
       // Create new cron job with dynamic expression
       const job = new CronJob(cronExpression, async () => {
         await this.handleSessionUpdates();
       });
-      
+
       // Add job to scheduler registry
       this.schedulerRegistry.addCronJob('sessionUpdates', job);
       job.start();
-      
-      this.logger.log(`Session updates scheduled with ${intervalSeconds}s interval (${cronExpression})`);
+
+      this.logger.log(
+        `Session updates scheduled with ${intervalSeconds}s interval (${cronExpression})`,
+      );
     } catch (error) {
-      this.logger.error('Error setting up dynamic session updates cron:', error);
+      this.logger.error(
+        'Error setting up dynamic session updates cron:',
+        error,
+      );
     }
   }
 
@@ -87,9 +99,11 @@ export class SchedulerService implements OnModuleInit {
         return `0 0 */${hours} * * *`;
       }
     }
-    
+
     // Default to every 10 seconds if invalid input
-    this.logger.warn(`Invalid refresh interval (${seconds}s), defaulting to 10s`);
+    this.logger.warn(
+      `Invalid refresh interval (${seconds}s), defaulting to 10s`,
+    );
     return '*/10 * * * * *';
   }
 
@@ -132,7 +146,9 @@ export class SchedulerService implements OnModuleInit {
         return;
       }
 
-      this.logger.log(`Running device cleanup for devices inactive for ${intervalDays} days...`);
+      this.logger.log(
+        `Running device cleanup for devices inactive for ${intervalDays} days...`,
+      );
       await this.deviceTrackingService.cleanupInactiveDevices(intervalDays);
     } catch (error) {
       this.logger.error('Error during device cleanup:', error);
@@ -145,11 +161,15 @@ export class SchedulerService implements OnModuleInit {
   })
   async handleDeviceCleanup() {
     try {
-      const cleanupEnabled = await this.configService.getSetting('DEVICE_CLEANUP_ENABLED');
+      const cleanupEnabled = await this.configService.getSetting(
+        'DEVICE_CLEANUP_ENABLED',
+      );
       const isEnabled = cleanupEnabled === true;
 
       if (!isEnabled) {
-        this.logger.debug('Device cleanup is disabled - skipping scheduled cleanup');
+        this.logger.debug(
+          'Device cleanup is disabled - skipping scheduled cleanup',
+        );
         return;
       }
 
@@ -174,7 +194,9 @@ export class SchedulerService implements OnModuleInit {
       const token = await this.configService.getSetting('PLEX_TOKEN');
 
       if (!token) {
-        this.logger.debug('Skipping Plex users sync - Plex token not configured');
+        this.logger.debug(
+          'Skipping Plex users sync - Plex token not configured',
+        );
         return;
       }
 

@@ -1,5 +1,5 @@
-import React from 'react';
-import { formatDuration, getProgressPercentage } from './SharedComponents';
+import React from "react";
+import { formatDuration, getProgressPercentage } from "./SharedComponents";
 
 interface StreamProgressProps {
   session: any;
@@ -26,7 +26,7 @@ export const StreamProgress: React.FC<StreamProgressProps> = ({ session }) => {
           style={{
             width: `${getProgressPercentage(
               session.viewOffset,
-              session.duration
+              session.duration,
             )}%`,
           }}
         >
