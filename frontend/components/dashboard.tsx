@@ -23,18 +23,23 @@ import StreamsList from "./streams-list";
 import { DeviceManagement } from "./device-management";
 import { PlexErrorHandler } from "./plex-error-handler";
 
-import { DashboardStats, UnifiedDashboardData, PlexStatus, Notification } from "@/types";
+import {
+  DashboardStats,
+  UnifiedDashboardData,
+  PlexStatus,
+  Notification,
+} from "@/types";
 import { apiClient } from "@/lib/api";
 import { config } from "@/lib/config";
 import { useVersion } from "@/contexts/version-context";
-
 
 export function Dashboard() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { versionInfo, checkForUpdatesIfEnabled } = useVersion();
 
-  const [dashboardData, setDashboardData] = useState<UnifiedDashboardData | null>(null);
+  const [dashboardData, setDashboardData] =
+    useState<UnifiedDashboardData | null>(null);
   const [stats, setStats] = useState<DashboardStats>({
     activeStreams: 0,
     totalDevices: 0,
@@ -46,10 +51,13 @@ export function Dashboard() {
   const [plexStatus, setPlexStatus] = useState<PlexStatus | null>(null);
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [initialTabSet, setInitialTabSet] = useState(false);
-  const [navigationTarget, setNavigationTarget] = useState<{userId: string, deviceIdentifier: string} | null>(null);
+  const [navigationTarget, setNavigationTarget] = useState<{
+    userId: string;
+    deviceIdentifier: string;
+  } | null>(null);
 
   const handleShowSettings = () => {
-    router.push('/settings');
+    router.push("/settings");
   };
 
   const refreshDashboard = useCallback(async (silent = false) => {
@@ -57,22 +65,22 @@ export function Dashboard() {
       if (!silent) {
         setLoading(true);
       }
-      
+
       // Fetch all dashboard data
-      const newDashboardData = await apiClient.getDashboardData<UnifiedDashboardData>();
-      
+      const newDashboardData =
+        await apiClient.getDashboardData<UnifiedDashboardData>();
+
       // Always update the data
       setDashboardData(newDashboardData);
       setPlexStatus(newDashboardData.plexStatus);
       setStats(newDashboardData.stats);
-      
-      
     } catch (error) {
       console.error("Failed to fetch dashboard stats:", error);
       setPlexStatus({
         configured: false,
         hasValidCredentials: false,
-        connectionStatus: "Backend connection error: Cannot connect to Guardian backend service",
+        connectionStatus:
+          "Backend connection error: Cannot connect to Guardian backend service",
       });
     } finally {
       setLoading(false);
@@ -82,7 +90,9 @@ export function Dashboard() {
   // Set initial tab only once when dashboard data is first available
   useEffect(() => {
     if (dashboardData && !initialTabSet) {
-      const defaultPageSetting = dashboardData.settings.find(s => s.key === "DEFAULT_PAGE");
+      const defaultPageSetting = dashboardData.settings.find(
+        (s) => s.key === "DEFAULT_PAGE",
+      );
       const defaultPage = defaultPageSetting?.value || "devices";
       setActiveTab(defaultPage === "streams" ? "streams" : "devices");
       setInitialTabSet(true);
@@ -93,7 +103,7 @@ export function Dashboard() {
   const handleNavigateToDevice = (userId: string, deviceIdentifier: string) => {
     // Switch to devices tab
     setActiveTab("devices");
-    
+
     // Set navigation target for DeviceManagement component
     setNavigationTarget({ userId, deviceIdentifier });
   };
@@ -109,16 +119,16 @@ export function Dashboard() {
 
   // Handle URL parameters for device navigation
   useEffect(() => {
-    const userId = searchParams.get('userId');
-    const deviceId = searchParams.get('deviceId');
-    
+    const userId = searchParams.get("userId");
+    const deviceId = searchParams.get("deviceId");
+
     if (userId && deviceId) {
       // Switch to devices tab and set navigation target
       setActiveTab("devices");
       setNavigationTarget({ userId, deviceIdentifier: deviceId });
-      
+
       // Clean up URL parameters
-      router.replace('/', { scroll: false });
+      router.replace("/", { scroll: false });
     }
   }, [searchParams, router]);
 
@@ -135,12 +145,13 @@ export function Dashboard() {
 
   useEffect(() => {
     if (!autoRefresh) return; // Don't set up interval in manual mode
-    
-    const interval = setInterval(() => refreshDashboard(true), config.app.refreshInterval);
+
+    const interval = setInterval(
+      () => refreshDashboard(true),
+      config.app.refreshInterval,
+    );
     return () => clearInterval(interval);
   }, [autoRefresh, refreshDashboard]);
-
-
 
   if (loading) {
     // Loading dots animation
@@ -164,7 +175,7 @@ export function Dashboard() {
   // Show configuration prompt if Plex is not properly connected
   if (!plexStatus?.configured || !plexStatus?.hasValidCredentials) {
     return (
-      <PlexErrorHandler 
+      <PlexErrorHandler
         plexStatus={plexStatus}
         onShowSettings={handleShowSettings}
       />
@@ -174,7 +185,6 @@ export function Dashboard() {
   return (
     <div className="min-h-[calc(100vh-3.5rem)]">
       <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-8">
-
         {/* Server Statistics */}
         <div className="mb-3 sm:mb-8">
           <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center">
@@ -277,7 +287,7 @@ export function Dashboard() {
 
         {/* Tab Content */}
         {activeTab === "streams" ? (
-          <StreamsList 
+          <StreamsList
             sessionsData={dashboardData?.sessions}
             onRefresh={() => refreshDashboard(true)}
             autoRefresh={autoRefresh}
@@ -285,7 +295,7 @@ export function Dashboard() {
             onNavigateToDevice={handleNavigateToDevice}
           />
         ) : (
-          <DeviceManagement 
+          <DeviceManagement
             devicesData={dashboardData?.devices}
             usersData={dashboardData?.users}
             settingsData={dashboardData?.settings}

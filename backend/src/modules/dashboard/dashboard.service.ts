@@ -67,15 +67,21 @@ export class DashboardService {
       }
 
       // Fetch all data in parallel
-      const [sessions, allDevices, pendingDevices, approvedDevices, processedDevices, users] = 
-        await Promise.all([
-          this.plexService.getActiveSessions(),
-          this.deviceTrackingService.getAllDevices(),
-          this.deviceTrackingService.getPendingDevices(),
-          this.deviceTrackingService.getApprovedDevices(),
-          this.deviceTrackingService.getProcessedDevices(),
-          this.usersService.getAllUsers(true),
-        ]);
+      const [
+        sessions,
+        allDevices,
+        pendingDevices,
+        approvedDevices,
+        processedDevices,
+        users,
+      ] = await Promise.all([
+        this.plexService.getActiveSessions(),
+        this.deviceTrackingService.getAllDevices(),
+        this.deviceTrackingService.getPendingDevices(),
+        this.deviceTrackingService.getApprovedDevices(),
+        this.deviceTrackingService.getProcessedDevices(),
+        this.usersService.getAllUsers(true),
+      ]);
 
       // Calculate stats
       const stats = {
@@ -84,8 +90,6 @@ export class DashboardService {
         pendingDevices: pendingDevices.length,
         approvedDevices: approvedDevices.length,
       };
-
-
 
       return {
         plexStatus,
@@ -101,7 +105,10 @@ export class DashboardService {
         stats,
       };
     } catch (error) {
-      this.logger.error('Failed to fetch dashboard data', error?.stack || error);
+      this.logger.error(
+        'Failed to fetch dashboard data',
+        error?.stack || error,
+      );
       throw error;
     }
   }

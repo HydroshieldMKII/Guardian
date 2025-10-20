@@ -12,12 +12,12 @@ export function GlobalUpdateBanner() {
 
   const handleCheckAgain = useCallback(async () => {
     if (checking) return; // Prevent multiple simultaneous checks
-    
+
     setChecking(true);
     try {
       await checkForUpdatesManually();
     } catch (error) {
-      console.error('Error checking for updates:', error);
+      console.error("Error checking for updates:", error);
     } finally {
       setChecking(false);
     }
@@ -44,12 +44,13 @@ export function GlobalUpdateBanner() {
                 Update Available: Guardian v{updateInfo.latestVersion}
               </p>
               <p className="text-xs text-blue-100 break-words sm:truncate">
-                A new version is available (current: v{updateInfo.currentVersion}). 
-                Update to get the latest features and bug fixes.
+                A new version is available (current: v
+                {updateInfo.currentVersion}). Update to get the latest features
+                and bug fixes.
               </p>
             </div>
           </div>
-          
+
           <div className="flex items-center gap-2 sm:ml-4 self-start sm:self-center">
             {/* <Button
               variant="ghost"
@@ -67,7 +68,7 @@ export function GlobalUpdateBanner() {
             </Button> */}
             <Button
               size="sm"
-              onClick={() => window.open(updateInfo.updateUrl, '_blank')}
+              onClick={() => window.open(updateInfo.updateUrl, "_blank")}
               className="bg-blue-700 hover:bg-blue-800 text-white text-xs px-3 py-1 h-auto"
             >
               <NotepadText className="h-3 w-3 mr-1" />
@@ -75,7 +76,12 @@ export function GlobalUpdateBanner() {
             </Button>
             <Button
               size="sm"
-              onClick={() => window.open('https://github.com/HydroshieldMKII/Guardian?tab=readme-ov-file#updating', '_blank')}
+              onClick={() =>
+                window.open(
+                  "https://github.com/HydroshieldMKII/Guardian?tab=readme-ov-file#updating",
+                  "_blank",
+                )
+              }
               className="bg-blue-700 hover:bg-blue-800 text-white text-xs px-3 py-1 h-auto"
             >
               <Download className="h-3 w-3 mr-1" />

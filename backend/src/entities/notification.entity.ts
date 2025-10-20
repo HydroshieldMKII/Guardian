@@ -23,10 +23,10 @@ export class Notification {
   @Column({ name: 'session_history_id', nullable: true })
   sessionHistoryId?: number;
 
-  @ManyToOne(() => SessionHistory, { 
-    eager: false, 
+  @ManyToOne(() => SessionHistory, {
+    eager: false,
     nullable: true,
-    onDelete: 'SET NULL'
+    onDelete: 'SET NULL',
   })
   @JoinColumn({ name: 'session_history_id' })
   sessionHistory?: SessionHistory;

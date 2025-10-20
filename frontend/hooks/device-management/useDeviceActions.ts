@@ -12,7 +12,7 @@ export const useDeviceActions = () => {
         `${config.api.baseUrl}/devices/${deviceId}/approve`,
         {
           method: "POST",
-        }
+        },
       );
       return response.ok;
     } catch (error) {
@@ -30,7 +30,7 @@ export const useDeviceActions = () => {
         `${config.api.baseUrl}/devices/${deviceId}/reject`,
         {
           method: "POST",
-        }
+        },
       );
       return response.ok;
     } catch (error) {
@@ -48,7 +48,7 @@ export const useDeviceActions = () => {
         `${config.api.baseUrl}/devices/${deviceId}/delete`,
         {
           method: "POST",
-        }
+        },
       );
       return response.ok;
     } catch (error) {
@@ -61,7 +61,7 @@ export const useDeviceActions = () => {
 
   const renameDevice = async (
     deviceId: number,
-    newName: string
+    newName: string,
   ): Promise<boolean> => {
     try {
       setActionLoading(deviceId);
@@ -73,7 +73,7 @@ export const useDeviceActions = () => {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({ newName }),
-        }
+        },
       );
       return response.ok;
     } catch (error) {
@@ -86,7 +86,7 @@ export const useDeviceActions = () => {
 
   const grantTemporaryAccess = async (
     deviceId: number,
-    durationMinutes: number
+    durationMinutes: number,
   ): Promise<boolean> => {
     try {
       setActionLoading(deviceId);
@@ -98,7 +98,7 @@ export const useDeviceActions = () => {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({ durationMinutes }),
-        }
+        },
       );
       return response.ok;
     } catch (error) {
@@ -111,7 +111,7 @@ export const useDeviceActions = () => {
 
   const grantBatchTemporaryAccess = async (
     deviceIds: number[],
-    durationMinutes: number
+    durationMinutes: number,
   ): Promise<{ success: boolean; results?: any }> => {
     try {
       setActionLoading(deviceIds[0]); // Set loading for the first device as indicator
@@ -124,7 +124,7 @@ export const useDeviceActions = () => {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({ deviceIds, durationMinutes }),
-        }
+        },
       );
 
       if (response.ok) {
@@ -134,7 +134,7 @@ export const useDeviceActions = () => {
         console.error(
           "Batch temporary access failed:",
           response.status,
-          await response.text()
+          await response.text(),
         );
         return { success: false };
       }
@@ -153,7 +153,7 @@ export const useDeviceActions = () => {
         `${config.api.baseUrl}/devices/${deviceId}/revoke-temporary-access`,
         {
           method: "POST",
-        }
+        },
       );
       return response.ok;
     } catch (error) {

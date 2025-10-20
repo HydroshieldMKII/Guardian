@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -9,7 +9,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { UserX, RefreshCw, User } from "lucide-react";
-import { getContentTitle, getDeviceIcon } from './SharedComponents';
+import { getContentTitle, getDeviceIcon } from "./SharedComponents";
 import { PlexSession } from "@/types";
 
 interface RemoveAccessModalProps {
@@ -26,10 +26,7 @@ export const RemoveAccessModal: React.FC<RemoveAccessModalProps> = ({
   onCancel,
 }) => {
   return (
-    <Dialog
-      open={!!stream}
-      onOpenChange={(open) => !open && onCancel()}
-    >
+    <Dialog open={!!stream} onOpenChange={(open) => !open && onCancel()}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -38,8 +35,8 @@ export const RemoveAccessModal: React.FC<RemoveAccessModalProps> = ({
           </DialogTitle>
           <DialogDescription>
             Are you sure you want to remove access for this device? This will
-            immediately stop the current stream and prevent future access
-            until the device is manually re-approved.
+            immediately stop the current stream and prevent future access until
+            the device is manually re-approved.
           </DialogDescription>
         </DialogHeader>
 
@@ -66,11 +63,7 @@ export const RemoveAccessModal: React.FC<RemoveAccessModalProps> = ({
         )}
 
         <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={onCancel}
-            disabled={isRemoving}
-          >
+          <Button variant="outline" onClick={onCancel} disabled={isRemoving}>
             Cancel
           </Button>
           <Button

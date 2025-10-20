@@ -6,7 +6,8 @@
  * Validates if a string is a valid IPv4 address
  */
 export const isValidIPv4 = (ip: string): boolean => {
-  const ipRegex = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+  const ipRegex =
+    /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
   return ipRegex.test(ip.trim());
 };
 
@@ -14,7 +15,8 @@ export const isValidIPv4 = (ip: string): boolean => {
  * Validates if a string is a valid CIDR notation (IP/subnet)
  */
 export const isValidCIDR = (cidr: string): boolean => {
-  const cidrRegex = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\/(?:[0-9]|[1-2][0-9]|3[0-2])$/;
+  const cidrRegex =
+    /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\/(?:[0-9]|[1-2][0-9]|3[0-2])$/;
   return cidrRegex.test(cidr.trim());
 };
 
@@ -32,7 +34,7 @@ export const isValidIPOrCIDR = (input: string): boolean => {
 export const isPrivateIP = (ip: string): boolean => {
   if (!isValidIPv4(ip)) return false;
 
-  const parts = ip.split('.').map(Number);
+  const parts = ip.split(".").map(Number);
   const [a, b, c] = parts;
 
   // Private IP ranges:
@@ -51,21 +53,24 @@ export const isPrivateIP = (ip: string): boolean => {
 /**
  * Determines the network type of an IP address
  */
-export const getNetworkType = (ip: string): 'lan' | 'wan' | 'unknown' => {
-  if (!isValidIPv4(ip)) return 'unknown';
-  return isPrivateIP(ip) ? 'lan' : 'wan';
+export const getNetworkType = (ip: string): "lan" | "wan" | "unknown" => {
+  if (!isValidIPv4(ip)) return "unknown";
+  return isPrivateIP(ip) ? "lan" : "wan";
 };
 
 /**
  * Checks if an IP address matches any of the allowed IPs/ranges
  */
-export const isIPAllowed = (clientIP: string, allowedIPs: string[]): boolean => {
+export const isIPAllowed = (
+  clientIP: string,
+  allowedIPs: string[],
+): boolean => {
   if (!isValidIPv4(clientIP)) return false;
   if (!allowedIPs.length) return true; // If no restrictions, allow all
 
   for (const allowed of allowedIPs) {
     const trimmed = allowed.trim();
-    
+
     if (isValidIPv4(trimmed)) {
       // Exact IP match
       if (clientIP === trimmed) return true;
@@ -74,7 +79,7 @@ export const isIPAllowed = (clientIP: string, allowedIPs: string[]): boolean => 
       if (isIPInCIDR(clientIP, trimmed)) return true;
     }
   }
-  
+
   return false;
 };
 
@@ -84,11 +89,11 @@ export const isIPAllowed = (clientIP: string, allowedIPs: string[]): boolean => 
 export const isIPInCIDR = (ip: string, cidr: string): boolean => {
   if (!isValidIPv4(ip) || !isValidCIDR(cidr)) return false;
 
-  const [network, prefixLength] = cidr.split('/');
+  const [network, prefixLength] = cidr.split("/");
   const ipNum = ipToNumber(ip);
   const networkNum = ipToNumber(network);
-  const mask = ((0xffffffff << (32 - parseInt(prefixLength))) >>> 0);
-  
+  const mask = (0xffffffff << (32 - parseInt(prefixLength))) >>> 0;
+
   return (ipNum & mask) === (networkNum & mask);
 };
 
@@ -96,7 +101,9 @@ export const isIPInCIDR = (ip: string, cidr: string): boolean => {
  * Converts an IP address string to a 32-bit number
  */
 const ipToNumber = (ip: string): number => {
-  return ip.split('.').reduce((acc, octet) => (acc << 8) + parseInt(octet), 0) >>> 0;
+  return (
+    ip.split(".").reduce((acc, octet) => (acc << 8) + parseInt(octet), 0) >>> 0
+  );
 };
 
 /**
@@ -107,20 +114,28 @@ export const numberToIP = (num: number): string => {
     (num >>> 24) & 255,
     (num >>> 16) & 255,
     (num >>> 8) & 255,
-    num & 255
-  ].join('.');
+    num & 255,
+  ].join(".");
 };
 
 /**
  * Gets the network address and broadcast address for a CIDR range
  */
-export const getCIDRInfo = (cidr: string): { network: string; broadcast: string; firstHost: string; lastHost: string; totalHosts: number } | null => {
+export const getCIDRInfo = (
+  cidr: string,
+): {
+  network: string;
+  broadcast: string;
+  firstHost: string;
+  lastHost: string;
+  totalHosts: number;
+} | null => {
   if (!isValidCIDR(cidr)) return null;
 
-  const [network, prefixLength] = cidr.split('/');
+  const [network, prefixLength] = cidr.split("/");
   const prefix = parseInt(prefixLength);
   const networkNum = ipToNumber(network);
-  const mask = ((0xffffffff << (32 - prefix)) >>> 0);
+  const mask = (0xffffffff << (32 - prefix)) >>> 0;
   const networkAddress = networkNum & mask;
   const broadcastAddress = networkAddress | (~mask >>> 0);
   const totalHosts = Math.pow(2, 32 - prefix);
@@ -130,7 +145,7 @@ export const getCIDRInfo = (cidr: string): { network: string; broadcast: string;
     broadcast: numberToIP(broadcastAddress),
     firstHost: numberToIP(networkAddress + 1),
     lastHost: numberToIP(broadcastAddress - 1),
-    totalHosts: Math.max(0, totalHosts - 2) // Subtract network and broadcast addresses
+    totalHosts: Math.max(0, totalHosts - 2), // Subtract network and broadcast addresses
   };
 };
 
@@ -139,33 +154,33 @@ export const getCIDRInfo = (cidr: string): { network: string; broadcast: string;
  */
 export const validateIPAccess = (
   clientIP: string,
-  networkPolicy: 'both' | 'lan' | 'wan' = 'both',
-  ipAccessPolicy: 'all' | 'restricted' = 'all',
-  allowedIPs: string[] = []
+  networkPolicy: "both" | "lan" | "wan" = "both",
+  ipAccessPolicy: "all" | "restricted" = "all",
+  allowedIPs: string[] = [],
 ): { allowed: boolean; reason?: string } => {
   // First check if IP is valid
   if (!isValidIPv4(clientIP)) {
-    return { allowed: false, reason: 'Invalid IP address format' };
+    return { allowed: false, reason: "Invalid IP address format" };
   }
 
   const networkType = getNetworkType(clientIP);
 
   // Check network policy
-  if (networkPolicy === 'lan' && networkType !== 'lan') {
-    return { allowed: false, reason: 'Only LAN access is allowed' };
+  if (networkPolicy === "lan" && networkType !== "lan") {
+    return { allowed: false, reason: "Only LAN access is allowed" };
   }
-  if (networkPolicy === 'wan' && networkType !== 'wan') {
-    return { allowed: false, reason: 'Only WAN access is allowed' };
+  if (networkPolicy === "wan" && networkType !== "wan") {
+    return { allowed: false, reason: "Only WAN access is allowed" };
   }
 
   // Check IP access policy
-  if (ipAccessPolicy === 'all') {
+  if (ipAccessPolicy === "all") {
     return { allowed: true };
   }
 
-  if (ipAccessPolicy === 'restricted') {
+  if (ipAccessPolicy === "restricted") {
     if (!isIPAllowed(clientIP, allowedIPs)) {
-      return { allowed: false, reason: 'IP address not in allowed list' };
+      return { allowed: false, reason: "IP address not in allowed list" };
     }
   }
 
@@ -176,19 +191,19 @@ export const validateIPAccess = (
  * Formats an IP address for display (adds CIDR info if applicable)
  */
 export const formatIPForDisplay = (ip: string): string => {
-  if (!ip) return 'Unknown';
-  
+  if (!ip) return "Unknown";
+
   if (isValidCIDR(ip)) {
     const cidrInfo = getCIDRInfo(ip);
     if (cidrInfo) {
       return `${ip} (${cidrInfo.totalHosts} hosts)`;
     }
   }
-  
+
   if (isValidIPv4(ip)) {
     const networkType = getNetworkType(ip);
     return `${ip} (${networkType.toUpperCase()})`;
   }
-  
+
   return ip;
 };

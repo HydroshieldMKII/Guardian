@@ -25,12 +25,13 @@ export function GlobalVersionMismatchBanner() {
                 Critical Version Mismatch Detected
               </p>
               <p className="text-xs text-red-100 break-words sm:truncate">
-                Database version ({versionInfo.databaseVersion}) is newer than code version ({versionInfo.codeVersion}). 
-                Update Guardian immediately to prevent data corruption.
+                Database version ({versionInfo.databaseVersion}) is newer than
+                code version ({versionInfo.codeVersion}). Update Guardian
+                immediately to prevent data corruption.
               </p>
             </div>
           </div>
-          
+
           <div className="flex items-center gap-2 sm:ml-4 self-start sm:self-center">
             <Button
               variant="ghost"

@@ -2,11 +2,11 @@ import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import * as http from 'http';
 import * as https from 'https';
 import { ConfigService } from '../../config/services/config.service';
-import { 
-  PlexErrorCode, 
-  PlexResponse, 
-  createPlexError, 
-  createPlexSuccess 
+import {
+  PlexErrorCode,
+  PlexResponse,
+  createPlexError,
+  createPlexSuccess,
 } from '../../../types/plex-errors';
 
 import { InjectRepository } from '@nestjs/typeorm';
@@ -155,11 +155,14 @@ export class PlexClient {
 
   async requestMedia(endpoint: string): Promise<Buffer | null> {
     await this.validateConfiguration();
-    const { ip, port, token, useSSL, ignoreCertErrors } = await this.getConfig();
+    const { ip, port, token, useSSL, ignoreCertErrors } =
+      await this.getConfig();
     const baseUrl = `${useSSL ? 'https' : 'http'}://${ip}:${port}`;
 
     return new Promise((resolve, reject) => {
-      const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
+      const cleanEndpoint = endpoint.startsWith('/')
+        ? endpoint.slice(1)
+        : endpoint;
       const hasQuery = cleanEndpoint.includes('?');
       const tokenParam = `X-Plex-Token=${encodeURIComponent(token)}`;
       const fullEndpoint = hasQuery
@@ -184,12 +187,14 @@ export class PlexClient {
 
       const req = httpModule.request(requestOptions, (res) => {
         if (res.statusCode !== 200) {
-          this.logger.warn(`Media request failed with status ${res.statusCode} for ${endpoint}`);
+          this.logger.warn(
+            `Media request failed with status ${res.statusCode} for ${endpoint}`,
+          );
           return resolve(null);
         }
 
         const chunks: Buffer[] = [];
-        
+
         res.on('data', (chunk: Buffer) => {
           chunks.push(chunk);
         });
@@ -318,9 +323,8 @@ export class PlexClient {
       const url = `https://plex.tv/api/users?X-Plex-Token=${encodeURIComponent(token)}`;
 
       this.logger.debug('Fetching Plex users from Plex.tv API');
-      
-      const response = await this.externalRequest(url);
 
+      const response = await this.externalRequest(url);
 
       const responseText = response.text();
       this.logger.debug('Successfully fetched Plex users');
@@ -335,7 +339,6 @@ export class PlexClient {
     deviceIdentifier: string,
     reason: string = 'Session terminated',
   ): Promise<void> {
-
     if (!deviceIdentifier) {
       this.logger.warn('No device identifier provided for termination');
       return;
@@ -350,21 +353,23 @@ export class PlexClient {
       method: 'GET',
     });
 
-    this.logger.log(`Terminate session requested to Plex for ${deviceIdentifier}`);
+    this.logger.log(
+      `Terminate session requested to Plex for ${deviceIdentifier}`,
+    );
   }
 
   async testConnection(): Promise<PlexResponse> {
     try {
       await this.validateConfiguration();
       const response = await this.request('/');
-      
+
       if (response.ok) {
         return createPlexSuccess('Connection successful');
       } else {
         return createPlexError(
           PlexErrorCode.SERVER_ERROR,
           `Plex server returned error: ${response.status}`,
-          `HTTP ${response.status}`
+          `HTTP ${response.status}`,
         );
       }
     } catch (error) {
@@ -375,7 +380,7 @@ export class PlexClient {
         return createPlexError(
           PlexErrorCode.CERT_ERROR,
           'SSL certificate error: Hostname/IP does not match certificate',
-          'Enable "Ignore SSL certificate errors" or use HTTP instead'
+          'Enable "Ignore SSL certificate errors" or use HTTP instead',
         );
       }
 
@@ -383,7 +388,7 @@ export class PlexClient {
         return createPlexError(
           PlexErrorCode.SSL_ERROR,
           'SSL/TLS connection error',
-          'Consider enabling "Ignore SSL certificate errors" or using HTTP'
+          'Consider enabling "Ignore SSL certificate errors" or using HTTP',
         );
       }
 
@@ -392,13 +397,13 @@ export class PlexClient {
         return createPlexError(
           PlexErrorCode.CONNECTION_REFUSED,
           'Plex server is unreachable',
-          'Check if Plex server is running and accessible'
+          'Check if Plex server is running and accessible',
         );
       }
 
       // Handle timeout errors - normalize all timeout types
       if (
-        error.code === 'ECONNRESET' || 
+        error.code === 'ECONNRESET' ||
         error.code === 'ETIMEDOUT' ||
         error.message.includes('timeout') ||
         error.message === 'Request timeout'
@@ -406,23 +411,26 @@ export class PlexClient {
         return createPlexError(
           PlexErrorCode.CONNECTION_TIMEOUT,
           'Connection timeout',
-          'Check server address, port and network settings'
+          'Check server address, port and network settings',
         );
       }
 
       // Handle authentication errors
-      if (error.message.includes('401') || error.message.includes('Unauthorized')) {
+      if (
+        error.message.includes('401') ||
+        error.message.includes('Unauthorized')
+      ) {
         return createPlexError(
           PlexErrorCode.AUTH_FAILED,
           'Authentication failed',
-          'Check your Plex token'
+          'Check your Plex token',
         );
       }
 
       return createPlexError(
         PlexErrorCode.NETWORK_ERROR,
         'Connection failed',
-        error.message
+        error.message,
       );
     }
   }

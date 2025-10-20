@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import {
   Dialog,
   DialogContent,
@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { 
+import {
   Clock,
   Monitor,
   MapPin,
@@ -23,12 +23,12 @@ import {
   UserRoundSearch,
   RefreshCw,
   Radio,
-  Trash2
+  Trash2,
 } from "lucide-react";
-import { config } from '@/lib/config';
-import { ClickableIP } from './SharedComponents';
-import { ConfirmationModal } from '@/components/ui/confirmation-modal';
-import { useToast } from '@/hooks/use-toast';
+import { config } from "@/lib/config";
+import { ClickableIP } from "./SharedComponents";
+import { ConfirmationModal } from "@/components/ui/confirmation-modal";
+import { useToast } from "@/hooks/use-toast";
 
 interface UserDevice {
   id: number;
@@ -82,9 +82,10 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
   const router = useRouter();
   const [sessions, setSessions] = useState<SessionHistoryEntry[]>([]);
   const [loading, setLoading] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
   const [showTerminatedOnly, setShowTerminatedOnly] = useState(false);
-  const [sessionToDelete, setSessionToDelete] = useState<SessionHistoryEntry | null>(null);
+  const [sessionToDelete, setSessionToDelete] =
+    useState<SessionHistoryEntry | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const sessionsListRef = React.useRef<HTMLDivElement>(null);
   const { toast } = useToast();
@@ -94,20 +95,23 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
 
     setLoading(true);
     try {
-      const response = await fetch(`${config.api.baseUrl}/sessions/history/${userId}?limit=100&includeActive=true`);
+      const response = await fetch(
+        `${config.api.baseUrl}/sessions/history/${userId}?limit=100&includeActive=true`,
+      );
       if (response.ok) {
         const data = await response.json();
         // Sort by most recent first (startedAt descending)
-        const sortedData = (data || []).sort((a: SessionHistoryEntry, b: SessionHistoryEntry) => 
-          new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime()
+        const sortedData = (data || []).sort(
+          (a: SessionHistoryEntry, b: SessionHistoryEntry) =>
+            new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime(),
         );
         setSessions(sortedData);
       } else {
-        console.error('Failed to fetch user history');
+        console.error("Failed to fetch user history");
         setSessions([]);
       }
     } catch (error) {
-      console.error('Error fetching user history:', error);
+      console.error("Error fetching user history:", error);
       setSessions([]);
     } finally {
       setLoading(false);
@@ -122,19 +126,26 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
 
   // Debug scrollToSessionId changes
   useEffect(() => {
-    console.log('UserHistoryModal: scrollToSessionId changed to:', scrollToSessionId);
+    console.log(
+      "UserHistoryModal: scrollToSessionId changed to:",
+      scrollToSessionId,
+    );
   }, [scrollToSessionId]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { 
-      hour: '2-digit', 
-      minute: '2-digit' 
-    });
+    return (
+      date.toLocaleDateString() +
+      " " +
+      date.toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    );
   };
 
   const formatTitle = (session: SessionHistoryEntry) => {
-    if (session.contentType === 'episode' && session.grandparentTitle) {
+    if (session.contentType === "episode" && session.grandparentTitle) {
       // For TV episodes: "Series - Season X: Episode Title"
       let result = session.grandparentTitle;
       if (session.parentTitle && session.contentTitle) {
@@ -148,71 +159,98 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
     }
 
     // For movies or other content
-    return session.contentTitle || 'Unknown Title';
+    return session.contentTitle || "Unknown Title";
   };
 
   const getDeviceDisplayName = (session: SessionHistoryEntry) => {
-    return session.userDevice?.deviceName || session.userDevice?.deviceProduct || 'Unknown Device';
+    return (
+      session.userDevice?.deviceName ||
+      session.userDevice?.deviceProduct ||
+      "Unknown Device"
+    );
   };
 
   const formatProduct = (session: SessionHistoryEntry) => {
     const product = session.product || session.userDevice?.deviceProduct;
-    if (!product) return 'Unknown';
-    
+    if (!product) return "Unknown";
+
     // Check if it's Plex Amp based on product name
-    if (product.toLowerCase() === 'plexamp') {
-      return 'Plex Amp';
+    if (product.toLowerCase() === "plexamp") {
+      return "Plex Amp";
     }
-    
+
     // Default to Plex for most cases
-    return 'Plex';
+    return "Plex";
   };
 
   // Filter sessions based on search term and terminated filter
   const filteredSessions = React.useMemo(() => {
-    return sessions.filter(session => {
+    return sessions.filter((session) => {
       // Apply search filter
-      const matchesSearch = 
+      const matchesSearch =
         formatTitle(session).toLowerCase().includes(searchTerm.toLowerCase()) ||
-        getDeviceDisplayName(session).toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (session.deviceAddress || '').toLowerCase().includes(searchTerm.toLowerCase());
-      
+        getDeviceDisplayName(session)
+          .toLowerCase()
+          .includes(searchTerm.toLowerCase()) ||
+        (session.deviceAddress || "")
+          .toLowerCase()
+          .includes(searchTerm.toLowerCase());
+
       // Apply terminated filter
-      const matchesTerminated = showTerminatedOnly ? session.terminated === true : true;
-      
+      const matchesTerminated = showTerminatedOnly
+        ? session.terminated === true
+        : true;
+
       return matchesSearch && matchesTerminated;
     });
   }, [sessions, searchTerm, showTerminatedOnly]);
 
-    // Scroll to specific session after sessions are loaded
+  // Scroll to specific session after sessions are loaded
   useEffect(() => {
-    if (scrollToSessionId && sessions.length > 0 && !loading && sessionsListRef.current) {
-      console.log('Scrolling to session ID:', scrollToSessionId);
-      
+    if (
+      scrollToSessionId &&
+      sessions.length > 0 &&
+      !loading &&
+      sessionsListRef.current
+    ) {
+      console.log("Scrolling to session ID:", scrollToSessionId);
+
       // Check if session exists in data first
-      const sessionExistsInData = sessions.some(s => s.id === scrollToSessionId);
+      const sessionExistsInData = sessions.some(
+        (s) => s.id === scrollToSessionId,
+      );
       if (!sessionExistsInData) {
         return; // Session doesn't exist, nothing to scroll to
       }
 
       // Function to scroll to and highlight the session
       const scrollToSession = () => {
-        const sessionElement = sessionsListRef.current?.querySelector(`[data-session-id="${scrollToSessionId}"]`);
+        const sessionElement = sessionsListRef.current?.querySelector(
+          `[data-session-id="${scrollToSessionId}"]`,
+        );
         if (sessionElement) {
-          console.log('Found session element, scrolling and highlighting');
-          
+          console.log("Found session element, scrolling and highlighting");
+
           // Scroll to element
-          sessionElement.scrollIntoView({ 
-            behavior: 'smooth', 
-            block: 'center',
-            inline: 'nearest'
+          sessionElement.scrollIntoView({
+            behavior: "smooth",
+            block: "center",
+            inline: "nearest",
           });
-          
+
           // Add highlight
           requestAnimationFrame(() => {
-            sessionElement.classList.add('border-2', 'border-blue-400', 'shadow-lg');
+            sessionElement.classList.add(
+              "border-2",
+              "border-blue-400",
+              "shadow-lg",
+            );
             setTimeout(() => {
-              sessionElement.classList.remove('border-2', 'border-blue-400', 'shadow-lg');
+              sessionElement.classList.remove(
+                "border-2",
+                "border-blue-400",
+                "shadow-lg",
+              );
             }, 2000);
           });
           return true;
@@ -234,7 +272,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
 
       observer.observe(sessionsListRef.current, {
         childList: true,
-        subtree: true
+        subtree: true,
       });
 
       // Cleanup after 3 seconds
@@ -251,14 +289,14 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
 
   const formatDuration = (session: SessionHistoryEntry) => {
     if (!session.endedAt) {
-      return 'N/A';
+      return "N/A";
     }
 
     const startTime = new Date(session.startedAt).getTime();
     const endTime = new Date(session.endedAt).getTime();
     const durationMs = endTime - startTime;
 
-    if (durationMs < 0) return 'Unknown';
+    if (durationMs < 0) return "Unknown";
 
     const seconds = Math.floor(durationMs / 1000);
     const minutes = Math.floor(seconds / 60);
@@ -276,18 +314,18 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
     }
   };
 
-
-
   const handleDeviceClick = (session: SessionHistoryEntry) => {
     onClose();
-    
+
     if (onNavigateToDevice && userId && session.userDevice?.deviceIdentifier) {
       // Use prop-based navigation when available (dashboard context)
       onNavigateToDevice(userId, session.userDevice.deviceIdentifier);
     } else if (userId && session.userDevice?.deviceIdentifier) {
       // Use router navigation when no prop available (global context)
       // Navigate to dashboard with both userId and deviceIdentifier as query parameters
-      router.push(`/?userId=${encodeURIComponent(userId)}&deviceId=${encodeURIComponent(session.userDevice.deviceIdentifier)}`);
+      router.push(
+        `/?userId=${encodeURIComponent(userId)}&deviceId=${encodeURIComponent(session.userDevice.deviceIdentifier)}`,
+      );
     }
   };
 
@@ -300,13 +338,16 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
 
     setDeleteLoading(true);
     try {
-      const response = await fetch(`${config.api.baseUrl}/sessions/history/${sessionToDelete.id}`, {
-        method: 'DELETE',
-      });
+      const response = await fetch(
+        `${config.api.baseUrl}/sessions/history/${sessionToDelete.id}`,
+        {
+          method: "DELETE",
+        },
+      );
 
       if (response.ok) {
         // Remove the session from the local state
-        setSessions(prev => prev.filter(s => s.id !== sessionToDelete.id));
+        setSessions((prev) => prev.filter((s) => s.id !== sessionToDelete.id));
         setSessionToDelete(null);
         toast({
           title: "Session Deleted",
@@ -315,7 +356,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
         });
       } else {
         toast({
-          title: "Delete Failed", 
+          title: "Delete Failed",
           description: "Failed to delete session history. Please try again.",
           variant: "destructive",
         });
@@ -324,7 +365,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
       toast({
         title: "Delete Failed",
         description: "An error occurred while deleting the session history.",
-        variant: "destructive", 
+        variant: "destructive",
       });
     } finally {
       setDeleteLoading(false);
@@ -337,17 +378,25 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="!max-w-[95vw] !w-[95vw] max-h-[90vh] h-[90vh] overflow-hidden flex flex-col" style={{ width: '95vw !important', maxWidth: '95vw !important', minWidth: '95vw' }}>
+      <DialogContent
+        className="!max-w-[95vw] !w-[95vw] max-h-[90vh] h-[90vh] overflow-hidden flex flex-col"
+        style={{
+          width: "95vw !important",
+          maxWidth: "95vw !important",
+          minWidth: "95vw",
+        }}
+      >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Clock className="w-5 h-5" />
             Streaming History - {username || userId}
           </DialogTitle>
           <DialogDescription>
-            View and manage streaming session history for this user. Active sessions are highlighted in green.
+            View and manage streaming session history for this user. Active
+            sessions are highlighted in green.
           </DialogDescription>
         </DialogHeader>
-        
+
         <div className="flex flex-col gap-4 flex-1 overflow-hidden">
           {/* Search, Filter and Refresh */}
           <div className="flex flex-col sm:flex-row gap-3 px-1 pt-1">
@@ -364,7 +413,10 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
                   checked={showTerminatedOnly}
                   onCheckedChange={setShowTerminatedOnly}
                 />
-                <Label htmlFor="terminated-filter" className="text-sm whitespace-nowrap">
+                <Label
+                  htmlFor="terminated-filter"
+                  className="text-sm whitespace-nowrap"
+                >
                   Terminated only
                 </Label>
               </div>
@@ -375,13 +427,18 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
                 disabled={loading}
                 className="flex-shrink-0"
               >
-                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                <RefreshCw
+                  className={`w-4 h-4 ${loading ? "animate-spin" : ""}`}
+                />
               </Button>
             </div>
           </div>
 
           {/* Sessions List */}
-          <div ref={sessionsListRef} className="flex-1 overflow-auto border rounded-md">
+          <div
+            ref={sessionsListRef}
+            className="flex-1 overflow-auto border rounded-md"
+          >
             {loading ? (
               <div className="flex items-center justify-center h-32">
                 <RefreshCw className="w-6 h-6 animate-spin" />
@@ -391,18 +448,23 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
               <div className="flex flex-col items-center justify-center h-32 text-muted-foreground text-center">
                 <Clock className="w-8 h-8 mb-2" />
                 <p className="text-center">
-                  {searchTerm || showTerminatedOnly 
-                    ? 'No sessions found matching your filters' 
-                    : 'No streaming history found'
-                  }
+                  {searchTerm || showTerminatedOnly
+                    ? "No sessions found matching your filters"
+                    : "No streaming history found"}
                 </p>
               </div>
             ) : (
               <>
-                  {/* Desktop Table View */}
+                {/* Desktop Table View */}
                 <div className="hidden md:block divide-y">
                   {/* Header */}
-                  <div className="grid gap-2 p-3 bg-muted text-sm font-medium sticky top-0 z-10" style={{ gridTemplateColumns: '2fr 1.2fr 0.8fr 0.8fr 1.2fr 1.4fr 1.4fr 0.8fr 0.8fr' }}>
+                  <div
+                    className="grid gap-2 p-3 bg-muted text-sm font-medium sticky top-0 z-10"
+                    style={{
+                      gridTemplateColumns:
+                        "2fr 1.2fr 0.8fr 0.8fr 1.2fr 1.4fr 1.4fr 0.8fr 0.8fr",
+                    }}
+                  >
                     <div>Content</div>
                     <div>Device</div>
                     <div>Platform</div>
@@ -412,19 +474,23 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
                     <div>Ended</div>
                     <div>Duration</div>
                     <div>Actions</div>
-                  </div>                  {/* Desktop Session Rows */}
+                  </div>{" "}
+                  {/* Desktop Session Rows */}
                   {filteredSessions.map((session) => (
-                    <div 
+                    <div
                       key={session.id}
                       data-session-id={session.id}
                       className={`grid gap-2 p-3 transition-colors ${
-                        !session.endedAt 
-                          ? 'bg-green-50/20 hover:bg-green-50/30 border-l-4 border-l-green-500' 
+                        !session.endedAt
+                          ? "bg-green-50/20 hover:bg-green-50/30 border-l-4 border-l-green-500"
                           : session.terminated
-                          ? 'bg-red-50/20 hover:bg-red-50/30 border-l-4 border-l-red-500'
-                          : 'hover:bg-muted/30'
+                            ? "bg-red-50/20 hover:bg-red-50/30 border-l-4 border-l-red-500"
+                            : "hover:bg-muted/30"
                       }`}
-                      style={{ gridTemplateColumns: '2fr 1.2fr 0.8fr 0.8fr 1.2fr 1.4fr 1.4fr 0.8fr 0.8fr' }}
+                      style={{
+                        gridTemplateColumns:
+                          "2fr 1.2fr 0.8fr 0.8fr 1.2fr 1.4fr 1.4fr 0.8fr 0.8fr",
+                      }}
                     >
                       {/* Content Title */}
                       <div className="overflow-hidden">
@@ -485,7 +551,9 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
                           ) : (
                             <>
                               <Radio className="w-3 h-3 text-green-500 animate-pulse flex-shrink-0" />
-                              <span className="text-green-700 font-medium">Active</span>
+                              <span className="text-green-700 font-medium">
+                                Active
+                              </span>
                             </>
                           )}
                         </div>
@@ -529,15 +597,15 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
                 {/* Mobile Card View */}
                 <div className="md:hidden space-y-3">
                   {filteredSessions.map((session) => (
-                    <Card 
+                    <Card
                       key={session.id}
                       data-session-id={session.id}
                       className={`p-4 transition-colors ${
-                        !session.endedAt 
-                          ? 'bg-green-50/20 hover:bg-green-50/30 border-l-4 border-l-green-500' 
+                        !session.endedAt
+                          ? "bg-green-50/20 hover:bg-green-50/30 border-l-4 border-l-green-500"
                           : session.terminated
-                          ? 'bg-red-50/20 hover:bg-red-50/30 border-l-4 border-l-red-500'
-                          : 'hover:bg-muted/30'
+                            ? "bg-red-50/20 hover:bg-red-50/30 border-l-4 border-l-red-500"
+                            : "hover:bg-muted/30"
                       }`}
                     >
                       {/* Title and Active Status */}
@@ -555,34 +623,46 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
                         {!session.endedAt ? (
                           <div className="flex items-center gap-1 ml-2 flex-shrink-0">
                             <Radio className="w-3 h-3 text-green-500 animate-pulse" />
-                            <span className="text-xs text-green-700 font-medium">Active</span>
+                            <span className="text-xs text-green-700 font-medium">
+                              Active
+                            </span>
                           </div>
-                        ) : session.terminated && (
-                          <div className="flex items-center gap-1 ml-2 flex-shrink-0">
-                            <X className="w-3 h-3 text-red-500" />
-                            <span className="text-xs text-red-700 font-medium">Terminated</span>
-                          </div>
+                        ) : (
+                          session.terminated && (
+                            <div className="flex items-center gap-1 ml-2 flex-shrink-0">
+                              <X className="w-3 h-3 text-red-500" />
+                              <span className="text-xs text-red-700 font-medium">
+                                Terminated
+                              </span>
+                            </div>
+                          )
                         )}
                       </div>
 
                       {/* Device and Platform */}
                       <div className="space-y-2 mb-3">
                         <div className="flex items-center justify-between">
-                          <span className="text-xs text-muted-foreground">Device:</span>
+                          <span className="text-xs text-muted-foreground">
+                            Device:
+                          </span>
                           <span className="text-sm break-words text-right max-w-[60%]">
                             {getDeviceDisplayName(session)}
                           </span>
                         </div>
                         {session.userDevice?.devicePlatform && (
                           <div className="flex items-center justify-between">
-                            <span className="text-xs text-muted-foreground">Platform:</span>
+                            <span className="text-xs text-muted-foreground">
+                              Platform:
+                            </span>
                             <span className="text-sm capitalize">
                               {session.userDevice.devicePlatform}
                             </span>
                           </div>
                         )}
                         <div className="flex items-center justify-between">
-                          <span className="text-xs text-muted-foreground">Product:</span>
+                          <span className="text-xs text-muted-foreground">
+                            Product:
+                          </span>
                           <span className="text-sm">
                             {formatProduct(session)}
                           </span>
@@ -592,25 +672,31 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
                       {/* Timing Information */}
                       <div className="space-y-2 mb-3">
                         <div className="flex items-center justify-between">
-                          <span className="text-xs text-muted-foreground">Started:</span>
+                          <span className="text-xs text-muted-foreground">
+                            Started:
+                          </span>
                           <span className="text-sm break-words text-right max-w-[60%]">
                             {formatDate(session.startedAt)}
                           </span>
                         </div>
                         <div className="flex items-center justify-between">
-                          <span className="text-xs text-muted-foreground">Ended:</span>
+                          <span className="text-xs text-muted-foreground">
+                            Ended:
+                          </span>
                           <div className="text-sm break-words text-right max-w-[60%]">
                             {session.endedAt ? (
                               <div className="flex items-center gap-1 justify-end">
                                 <span>{formatDate(session.endedAt)}</span>
                               </div>
                             ) : (
-                              'Active Now'
+                              "Active Now"
                             )}
                           </div>
                         </div>
                         <div className="flex items-center justify-between">
-                          <span className="text-xs text-muted-foreground">Duration:</span>
+                          <span className="text-xs text-muted-foreground">
+                            Duration:
+                          </span>
                           <span className="text-sm font-mono">
                             {formatDuration(session)}
                           </span>
@@ -619,7 +705,9 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
 
                       {/* IP Address */}
                       <div className="flex items-center justify-between mb-3">
-                        <span className="text-xs text-muted-foreground">IP Address:</span>
+                        <span className="text-xs text-muted-foreground">
+                          IP Address:
+                        </span>
                         <div className="text-sm font-mono">
                           <ClickableIP ipAddress={session.deviceAddress} />
                         </div>
@@ -661,12 +749,14 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
           {/* Footer Info */}
           {!loading && filteredSessions.length > 0 && (
             <div className="text-sm text-muted-foreground text-center">
-              Showing {filteredSessions.length} session{filteredSessions.length !== 1 ? 's' : ''}
+              Showing {filteredSessions.length} session
+              {filteredSessions.length !== 1 ? "s" : ""}
               {(searchTerm || showTerminatedOnly) && (
                 <span>
-                  {' '}matching filters
+                  {" "}
+                  matching filters
                   {searchTerm && ` "${searchTerm}"`}
-                  {showTerminatedOnly && ' (terminated only)'}
+                  {showTerminatedOnly && " (terminated only)"}
                 </span>
               )}
             </div>
@@ -681,9 +771,9 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
         onConfirm={confirmDelete}
         title="Delete Session History"
         description={
-          sessionToDelete 
+          sessionToDelete
             ? `Are you sure you want to delete this session history for "${formatTitle(sessionToDelete)}"? This action cannot be undone.`
-            : ''
+            : ""
         }
         confirmText="Delete"
         cancelText="Cancel"

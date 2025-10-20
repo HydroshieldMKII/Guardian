@@ -3,7 +3,7 @@ import { getBackendUrl } from "@/lib/config";
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: Promise<{ path: string[] }> }
+  { params }: { params: Promise<{ path: string[] }> },
 ) {
   const resolvedParams = await params;
   return proxy(req, resolvedParams);
@@ -11,7 +11,7 @@ export async function GET(
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: Promise<{ path: string[] }> }
+  { params }: { params: Promise<{ path: string[] }> },
 ) {
   const resolvedParams = await params;
   return proxy(req, resolvedParams);
@@ -19,7 +19,7 @@ export async function POST(
 
 export async function PUT(
   req: NextRequest,
-  { params }: { params: Promise<{ path: string[] }> }
+  { params }: { params: Promise<{ path: string[] }> },
 ) {
   const resolvedParams = await params;
   return proxy(req, resolvedParams);
@@ -27,7 +27,7 @@ export async function PUT(
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: Promise<{ path: string[] }> }
+  { params }: { params: Promise<{ path: string[] }> },
 ) {
   const resolvedParams = await params;
   return proxy(req, resolvedParams);
@@ -35,7 +35,7 @@ export async function PATCH(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: Promise<{ path: string[] }> }
+  { params }: { params: Promise<{ path: string[] }> },
 ) {
   const resolvedParams = await params;
   return proxy(req, resolvedParams);
@@ -45,7 +45,7 @@ async function proxy(req: NextRequest, params: { path: string[] }) {
   const backend = getBackendUrl();
   const target = new URL(backend.replace(/\/$/, ""));
   const upstream = new URL(
-    `${target.origin}/${params.path.join("/")}${req.nextUrl.search}`
+    `${target.origin}/${params.path.join("/")}${req.nextUrl.search}`,
   );
 
   const init: RequestInit = {

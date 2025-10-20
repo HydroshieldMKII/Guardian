@@ -33,23 +33,29 @@ const ICON_MAP = {
   AlertTriangle,
 };
 
-export function PlexErrorHandler({ plexStatus, onShowSettings }: PlexErrorHandlerProps) {
+export function PlexErrorHandler({
+  plexStatus,
+  onShowSettings,
+}: PlexErrorHandlerProps) {
   // Determine the appropriate display configuration based on the error
   const getErrorInfo = () => {
     // Check for backend connection errors FIRST (before checking configured status)
     const status = plexStatus?.connectionStatus || "";
-    
-    if (status.includes("Backend connection error") || 
-        status.includes("Failed to fetch dashboard data") ||
-        status.includes("Cannot connect to Guardian backend") ||
-        status.includes("Backend server is not reachable")) {
+
+    if (
+      status.includes("Backend connection error") ||
+      status.includes("Failed to fetch dashboard data") ||
+      status.includes("Cannot connect to Guardian backend") ||
+      status.includes("Backend server is not reachable")
+    ) {
       return {
         title: "Backend Connection Error",
-        description: "Cannot communicate with the Guardian backend. Please check if the backend service is running.",
+        description:
+          "Cannot communicate with the Guardian backend. Please check if the backend service is running.",
         icon: AlertTriangle,
         iconColor: "text-red-600 dark:text-red-400",
         iconBg: "bg-red-100 dark:bg-red-900/20",
-        showChecklist: false
+        showChecklist: false,
       };
     }
 
@@ -58,22 +64,29 @@ export function PlexErrorHandler({ plexStatus, onShowSettings }: PlexErrorHandle
       const config = ERROR_DISPLAY_CONFIG[PlexErrorCode.NOT_CONFIGURED];
       return {
         ...config,
-        icon: ICON_MAP[config.iconName as keyof typeof ICON_MAP]
+        icon: ICON_MAP[config.iconName as keyof typeof ICON_MAP],
       };
     }
 
-    
     let errorCode: PlexErrorCode | null = null;
-    
+
     // Check for the specific error codes that our backend now returns
     if (status.startsWith("PLEX_CONNECTION_REFUSED:")) {
       errorCode = PlexErrorCode.CONNECTION_REFUSED;
     } else if (status.startsWith("PLEX_CONNECTION_TIMEOUT:")) {
       errorCode = PlexErrorCode.CONNECTION_TIMEOUT;
-    } else if (status.startsWith("PLEX_AUTH_FAILED:") || status.startsWith("PLEX_UNAUTHORIZED:")) {
+    } else if (
+      status.startsWith("PLEX_AUTH_FAILED:") ||
+      status.startsWith("PLEX_UNAUTHORIZED:")
+    ) {
       errorCode = PlexErrorCode.AUTH_FAILED;
-    } else if (status.startsWith("PLEX_SSL_ERROR:") || status.startsWith("PLEX_CERT_ERROR:")) {
-      errorCode = status.startsWith("PLEX_CERT_ERROR:") ? PlexErrorCode.CERT_ERROR : PlexErrorCode.SSL_ERROR;
+    } else if (
+      status.startsWith("PLEX_SSL_ERROR:") ||
+      status.startsWith("PLEX_CERT_ERROR:")
+    ) {
+      errorCode = status.startsWith("PLEX_CERT_ERROR:")
+        ? PlexErrorCode.CERT_ERROR
+        : PlexErrorCode.SSL_ERROR;
     } else if (status.startsWith("PLEX_SERVER_ERROR:")) {
       errorCode = PlexErrorCode.SERVER_ERROR;
     } else if (status.startsWith("PLEX_NETWORK_ERROR:")) {
@@ -87,18 +100,19 @@ export function PlexErrorHandler({ plexStatus, onShowSettings }: PlexErrorHandle
       const config = ERROR_DISPLAY_CONFIG[errorCode];
       return {
         ...config,
-        icon: ICON_MAP[config.iconName as keyof typeof ICON_MAP]
+        icon: ICON_MAP[config.iconName as keyof typeof ICON_MAP],
       };
     }
 
     // Fallback for unknown errors
     return {
       title: "Oops! Something Went Wrong",
-      description: "Something went wrong with Guardian. Please check your setup and try again.",
+      description:
+        "Something went wrong with Guardian. Please check your setup and try again.",
       icon: Server,
       iconColor: "text-amber-600 dark:text-amber-400",
       iconBg: "bg-amber-100 dark:bg-amber-900/20",
-      showChecklist: false
+      showChecklist: false,
     };
   };
 
@@ -173,11 +187,7 @@ export function PlexErrorHandler({ plexStatus, onShowSettings }: PlexErrorHandle
               )}
 
               <div className="pt-4">
-                <Button
-                  onClick={onShowSettings}
-                  className="w-full"
-                  size="lg"
-                >
+                <Button onClick={onShowSettings} className="w-full" size="lg">
                   <Settings className="h-4 w-4 mr-2" />
                   Configure Plex Settings
                 </Button>

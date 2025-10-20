@@ -72,7 +72,9 @@ export class TimeRuleService {
   }
 
   async createPreset(createDto: CreatePresetDto): Promise<UserTimeRule[]> {
-    this.logger.log(`Creating preset: ${createDto.presetType} for user ${createDto.userId}`);
+    this.logger.log(
+      `Creating preset: ${createDto.presetType} for user ${createDto.userId}`,
+    );
 
     const queryRunner = this.dataSource.createQueryRunner();
 
@@ -136,13 +138,17 @@ export class TimeRuleService {
         const newRule = queryRunner.manager.create(UserTimeRule, ruleToCreate);
         const savedRule = await queryRunner.manager.save(newRule);
 
-        this.logger.debug(`Saved rule with ID: ${savedRule.id}, ruleName: ${savedRule.ruleName}`);
+        this.logger.debug(
+          `Saved rule with ID: ${savedRule.id}, ruleName: ${savedRule.ruleName}`,
+        );
         createdRules.push(savedRule);
       }
 
       // Commit the transaction
       await queryRunner.commitTransaction();
-      this.logger.log(`Successfully created ${createdRules.length} preset rules`);
+      this.logger.log(
+        `Successfully created ${createdRules.length} preset rules`,
+      );
 
       // Verify the rules were actually saved by querying them back
       const verifyQuery = this.timeRuleRepository
@@ -158,12 +164,17 @@ export class TimeRuleService {
       }
 
       const actualSavedRules = await verifyQuery.getMany();
-      this.logger.log(`Verification: Found ${actualSavedRules.length} rules in database after commit`);
+      this.logger.log(
+        `Verification: Found ${actualSavedRules.length} rules in database after commit`,
+      );
 
       return createdRules;
     } catch (error) {
       // Rollback the transaction on error
-      this.logger.error(`Error creating preset: ${error.message}`, error?.stack);
+      this.logger.error(
+        `Error creating preset: ${error.message}`,
+        error?.stack,
+      );
       await queryRunner.rollbackTransaction();
       throw new Error(`Failed to create preset: ${error.message}`);
     } finally {

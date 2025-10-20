@@ -121,8 +121,8 @@ export function NotificationMenu() {
         prev.map((notification) =>
           notification.id === id
             ? { ...notification, read: true }
-            : notification
-        )
+            : notification,
+        ),
       );
     } catch (err) {
       console.error("Failed to mark notification as read:", err);
@@ -134,7 +134,7 @@ export function NotificationMenu() {
     try {
       await apiClient.deleteNotification(id);
       updateNotifications((prev) =>
-        prev.filter((notification) => notification.id !== id)
+        prev.filter((notification) => notification.id !== id),
       );
     } catch (err) {
       console.error("Failed to delete notification:", err);
@@ -146,7 +146,7 @@ export function NotificationMenu() {
     try {
       await apiClient.markAllNotificationsAsRead();
       updateNotifications((prev) =>
-        prev.map((notification) => ({ ...notification, read: true }))
+        prev.map((notification) => ({ ...notification, read: true })),
       );
     } catch (err) {
       console.error("Failed to mark all notifications as read:", err);

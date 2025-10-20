@@ -59,7 +59,7 @@ export const TemporaryAccessModal: React.FC<TemporaryAccessModalProps> = ({
 
   // Get eligible devices for temporary access
   const eligibleDevices = userDevices.filter((device) =>
-    shouldShowGrantTempAccess(device)
+    shouldShowGrantTempAccess(device),
   );
 
   // Reset when modal opens/closes
@@ -180,7 +180,7 @@ export const TemporaryAccessModal: React.FC<TemporaryAccessModalProps> = ({
                         </div>
                         {getDeviceIcon(
                           device.devicePlatform,
-                          device.deviceProduct
+                          device.deviceProduct,
                         )}
                         <div className="min-w-0 flex-1">
                           <div className="text-sm font-medium text-foreground truncate">

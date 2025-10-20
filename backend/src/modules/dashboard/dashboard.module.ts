@@ -9,7 +9,14 @@ import { NotificationsModule } from '../notifications/notifications.module';
 import { PlexModule } from '../plex/plex.module';
 
 @Module({
-  imports: [SessionsModule, DevicesModule, ConfigModule, UsersModule, NotificationsModule, PlexModule],
+  imports: [
+    SessionsModule,
+    DevicesModule,
+    ConfigModule,
+    UsersModule,
+    NotificationsModule,
+    PlexModule,
+  ],
   controllers: [DashboardController],
   providers: [DashboardService],
   exports: [DashboardService],

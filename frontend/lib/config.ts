@@ -1,6 +1,6 @@
 function getBackendUrl(): string {
-  return process.env.DEPLOYMENT_MODE === "standalone" 
-    ? "http://localhost:3001" 
+  return process.env.DEPLOYMENT_MODE === "standalone"
+    ? "http://localhost:3001"
     : "http://backend:3001";
 }
 

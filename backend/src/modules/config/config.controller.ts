@@ -121,9 +121,12 @@ export class ConfigController {
       const exportData = await this.configService.exportDatabase();
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
       const filename = `guardian-backup-${timestamp}.json`;
-      
+
       res.setHeader('Content-Type', 'application/json');
-      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="${filename}"`,
+      );
       res.send(exportData);
     } catch (error) {
       throw new HttpException(
@@ -143,7 +146,7 @@ export class ConfigController {
 
       const fileContent = file.buffer.toString('utf8');
       let importData;
-      
+
       try {
         importData = JSON.parse(fileContent);
       } catch (parseError) {

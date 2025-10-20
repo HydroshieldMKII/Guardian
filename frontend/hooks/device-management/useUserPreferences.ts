@@ -1,8 +1,11 @@
-import { config } from '@/lib/config';
-import { UserPreference } from '@/types';
+import { config } from "@/lib/config";
+import { UserPreference } from "@/types";
 
 export const useUserPreferences = () => {
-  const updateUserPreference = async (userId: string, defaultBlock: boolean | null): Promise<boolean> => {
+  const updateUserPreference = async (
+    userId: string,
+    defaultBlock: boolean | null,
+  ): Promise<boolean> => {
     try {
       const response = await fetch(
         `${config.api.baseUrl}/users/${encodeURIComponent(userId)}/preference`,
@@ -12,7 +15,7 @@ export const useUserPreferences = () => {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({ defaultBlock }),
-        }
+        },
       );
       return response.ok;
     } catch (error) {
@@ -22,8 +25,10 @@ export const useUserPreferences = () => {
   };
 
   const updateUserIPPolicy = async (
-    userId: string, 
-    updates: Partial<Pick<UserPreference, 'networkPolicy' | 'ipAccessPolicy' | 'allowedIPs'>>
+    userId: string,
+    updates: Partial<
+      Pick<UserPreference, "networkPolicy" | "ipAccessPolicy" | "allowedIPs">
+    >,
   ): Promise<boolean> => {
     try {
       const response = await fetch(
@@ -34,7 +39,7 @@ export const useUserPreferences = () => {
             "Content-Type": "application/json",
           },
           body: JSON.stringify(updates),
-        }
+        },
       );
       return response.ok;
     } catch (error) {

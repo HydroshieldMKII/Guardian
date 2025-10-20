@@ -86,7 +86,7 @@ const settingsSections = [
 
 // Function to get setting label and description
 const getSettingInfo = (
-  setting: AppSetting
+  setting: AppSetting,
 ): { label: string; description: string } => {
   const settingInfoMap: Record<
     string,
@@ -324,7 +324,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
   };
 
   const validateSettings = (
-    settingsToUpdate: { key: string; value: any }[]
+    settingsToUpdate: { key: string; value: any }[],
   ) => {
     const errors: string[] = [];
 
@@ -358,7 +358,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
             errors.push("Device cleanup interval must be a number");
           } else if (!Number.isInteger(cleanupDays)) {
             errors.push(
-              "Device cleanup interval must be a whole number (no decimals)"
+              "Device cleanup interval must be a whole number (no decimals)",
             );
           } else if (cleanupDays < 1) {
             errors.push("Device cleanup interval must be at least 1 day");
@@ -390,7 +390,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
               !urlValue.startsWith("https://")
             ) {
               errors.push(
-                "Custom Plex URL must start with http:// or https://"
+                "Custom Plex URL must start with http:// or https://",
               );
               break;
             }
@@ -408,12 +408,12 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
 
               if (!hasValidDomain) {
                 errors.push(
-                  "Custom Plex URL must contain a valid domain with extension (e.g., plex.example.com)"
+                  "Custom Plex URL must contain a valid domain with extension (e.g., plex.example.com)",
                 );
               }
             } catch (error) {
               errors.push(
-                "Custom Plex URL must be a valid URL format (e.g., https://app.plex.tv)"
+                "Custom Plex URL must be a valid URL format (e.g., https://app.plex.tv)",
               );
             }
           }
@@ -478,7 +478,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
 
         // Dispatch event to notify notification handler of settings change
         window.dispatchEvent(
-          new CustomEvent("settingsUpdated", { detail: settingsToUpdate })
+          new CustomEvent("settingsUpdated", { detail: settingsToUpdate }),
         );
 
         // Show success toast
@@ -531,7 +531,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
         `${config.api.baseUrl}/config/test-plex-connection`,
         {
           method: "POST",
-        }
+        },
       );
 
       if (response.ok) {
@@ -569,7 +569,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
     setExportingDatabase(true);
     try {
       const response = await fetch(
-        `${config.api.baseUrl}/config/database/export`
+        `${config.api.baseUrl}/config/database/export`,
       );
 
       if (response.ok) {
@@ -665,7 +665,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
         {
           method: "POST",
           body: formData,
-        }
+        },
       );
 
       if (response.ok) {
@@ -757,7 +757,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
         `${config.api.baseUrl}/config/scripts/reset-database`,
         {
           method: "POST",
-        }
+        },
       );
 
       if (response.ok) {
@@ -792,7 +792,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
         `${config.api.baseUrl}/config/scripts/reset-stream-counts`,
         {
           method: "POST",
-        }
+        },
       );
 
       if (response.ok) {
@@ -824,7 +824,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
         `${config.api.baseUrl}/config/scripts/delete-all-devices`,
         {
           method: "POST",
-        }
+        },
       );
 
       if (response.ok) {
@@ -856,7 +856,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
         `${config.api.baseUrl}/config/scripts/clear-session-history`,
         {
           method: "POST",
-        }
+        },
       );
 
       if (response.ok) {
@@ -906,7 +906,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
     };
 
     const filteredSettings = settings.filter(
-      (setting) => categoryMap[category]?.includes(setting.key) || false
+      (setting) => categoryMap[category]?.includes(setting.key) || false,
     );
 
     // Sort settings according to the order defined in categoryMap
@@ -1002,10 +1002,10 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
 
   const renderDeviceCleanupSettings = () => {
     const cleanupEnabledSetting = settings.find(
-      (s) => s.key === "DEVICE_CLEANUP_ENABLED"
+      (s) => s.key === "DEVICE_CLEANUP_ENABLED",
     );
     const cleanupIntervalSetting = settings.find(
-      (s) => s.key === "DEVICE_CLEANUP_INTERVAL_DAYS"
+      (s) => s.key === "DEVICE_CLEANUP_INTERVAL_DAYS",
     );
 
     if (!cleanupEnabledSetting || !cleanupIntervalSetting) return null;
@@ -1084,7 +1084,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
   const renderSSLSettings = () => {
     const useSSLSetting = settings.find((s) => s.key === "USE_SSL");
     const ignoreCertSetting = settings.find(
-      (s) => s.key === "IGNORE_CERT_ERRORS"
+      (s) => s.key === "IGNORE_CERT_ERRORS",
     );
 
     if (!useSSLSetting || !ignoreCertSetting) return null;
@@ -1778,7 +1778,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
                         onClick={() =>
                           window.open(
                             "https://github.com/HydroshieldMKII/Guardian",
-                            "_blank"
+                            "_blank",
                           )
                         }
                         className="h-6 text-xs text-muted-foreground hover:text-foreground"
