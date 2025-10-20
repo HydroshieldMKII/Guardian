@@ -222,7 +222,9 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
                         title="Grant temporary access to user devices"
                       >
                         <Timer className="w-3 h-3 mr-1 sm:mr-2" />
-                        <span className="hidden sm:inline">Grant Temp Access</span>
+                        <span className="hidden sm:inline">
+                          Grant Temp Access
+                        </span>
                         <span className="sm:hidden">Temp</span>
                       </button>
                     )}

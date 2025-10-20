@@ -37,7 +37,9 @@ export class TimeRuleService {
 
     // Validate day of week
     if (createDto.dayOfWeek < 0 || createDto.dayOfWeek > 6) {
-      throw new Error('Day of week must be between 0 (Sunday) and 6 (Saturday)');
+      throw new Error(
+        'Day of week must be between 0 (Sunday) and 6 (Saturday)',
+      );
     }
 
     // Check for overlapping rules - need to check ALL rules for this user
@@ -47,7 +49,9 @@ export class TimeRuleService {
 
     for (const existingRule of allUserRules) {
       if (newRule.overlaps(existingRule)) {
-        throw new Error(`Rule overlaps with existing rule "${existingRule.ruleName}" on the same day and time`);
+        throw new Error(
+          `Rule overlaps with existing rule "${existingRule.ruleName}" on the same day and time`,
+        );
       }
     }
 
@@ -58,13 +62,18 @@ export class TimeRuleService {
     return await this.timeRuleRepository.save(timeRule);
   }
 
-  async getTimeRules(userId: string, deviceIdentifier?: string): Promise<UserTimeRule[]> {
+  async getTimeRules(
+    userId: string,
+    deviceIdentifier?: string,
+  ): Promise<UserTimeRule[]> {
     const queryBuilder = this.timeRuleRepository
       .createQueryBuilder('rule')
       .where('rule.userId = :userId', { userId });
 
     if (deviceIdentifier) {
-      queryBuilder.andWhere('rule.deviceIdentifier = :deviceIdentifier', { deviceIdentifier });
+      queryBuilder.andWhere('rule.deviceIdentifier = :deviceIdentifier', {
+        deviceIdentifier,
+      });
     } else {
       queryBuilder.andWhere('rule.deviceIdentifier IS NULL');
     }
@@ -105,26 +114,37 @@ export class TimeRuleService {
     if (updateDto.startTime || updateDto.endTime) {
       const startTime = updateDto.startTime || rule.startTime;
       const endTime = updateDto.endTime || rule.endTime;
-      
+
       if (!this.validateTimeRange(startTime, endTime)) {
         throw new Error('End time must be greater than start time');
       }
     }
 
     // Validate day of week if being updated
-    if (updateDto.dayOfWeek !== undefined && (updateDto.dayOfWeek < 0 || updateDto.dayOfWeek > 6)) {
-      throw new Error('Day of week must be between 0 (Sunday) and 6 (Saturday)');
+    if (
+      updateDto.dayOfWeek !== undefined &&
+      (updateDto.dayOfWeek < 0 || updateDto.dayOfWeek > 6)
+    ) {
+      throw new Error(
+        'Day of week must be between 0 (Sunday) and 6 (Saturday)',
+      );
     }
 
     // Check for overlapping rules if relevant fields are being updated
-    if (updateDto.dayOfWeek !== undefined || updateDto.startTime || updateDto.endTime) {
+    if (
+      updateDto.dayOfWeek !== undefined ||
+      updateDto.startTime ||
+      updateDto.endTime
+    ) {
       const existingRules = await this.getAllTimeRules(userId);
       const tempRule = new UserTimeRule();
       Object.assign(tempRule, updatedRule);
 
       for (const existingRule of existingRules) {
         if (tempRule.overlaps(existingRule)) {
-          throw new Error(`Updated rule would overlap with existing rule "${existingRule.ruleName}"`);
+          throw new Error(
+            `Updated rule would overlap with existing rule "${existingRule.ruleName}"`,
+          );
         }
       }
     }
@@ -169,13 +189,13 @@ export class TimeRuleService {
     const timeStr = now.toTimeString().slice(0, 5); // HH:MM format
 
     // Get all applicable rules (device-specific and user-wide)
-    const deviceRules = deviceIdentifier 
+    const deviceRules = deviceIdentifier
       ? await this.getTimeRules(userId, deviceIdentifier)
       : [];
     const userRules = await this.getTimeRules(userId);
-    
-    const allRules = [...deviceRules, ...userRules].filter(rule => 
-      rule.enabled && rule.dayOfWeek === dayOfWeek
+
+    const allRules = [...deviceRules, ...userRules].filter(
+      (rule) => rule.enabled && rule.dayOfWeek === dayOfWeek,
     );
 
     // Check if current time falls within any rule's time range
@@ -205,22 +225,26 @@ export class TimeRuleService {
   private validateTimeRange(startTime: string, endTime: string): boolean {
     const [startHour, startMinute] = startTime.split(':').map(Number);
     const [endHour, endMinute] = endTime.split(':').map(Number);
-    
+
     const startMinutes = startHour * 60 + startMinute;
     const endMinutes = endHour * 60 + endMinute;
-    
+
     return endMinutes > startMinutes;
   }
 
-  private isTimeInRange(currentTime: string, startTime: string, endTime: string): boolean {
+  private isTimeInRange(
+    currentTime: string,
+    startTime: string,
+    endTime: string,
+  ): boolean {
     const [currentHour, currentMinute] = currentTime.split(':').map(Number);
     const [startHour, startMinute] = startTime.split(':').map(Number);
     const [endHour, endMinute] = endTime.split(':').map(Number);
-    
+
     const current = currentHour * 60 + currentMinute;
     const start = startHour * 60 + startMinute;
     const end = endHour * 60 + endMinute;
-    
+
     return current >= start && current < end;
   }
 }
