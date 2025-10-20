@@ -377,7 +377,7 @@ export function TimeRuleModal({
     }
   };
 
-    const createWeekdaysOnlyPreset = async () => {
+  const createWeekdaysOnlyPreset = async () => {
     setCreatingPreset(true);
     try {
       // First, delete all existing rules to avoid conflicts

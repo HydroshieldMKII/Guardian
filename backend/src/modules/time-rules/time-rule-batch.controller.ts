@@ -1,8 +1,4 @@
-import {
-  Controller,
-  Post,
-  Body,
-} from '@nestjs/common';
+import { Controller, Post, Body } from '@nestjs/common';
 import { TimeRuleService } from '../users/services/time-rule.service';
 import { UserTimeRule } from '../../entities/user-time-rule.entity';
 
@@ -19,7 +15,7 @@ export class TimeRuleBatchController {
     @Body() dto: BatchTimeRulesDto,
   ): Promise<Record<string, UserTimeRule[]>> {
     const result: Record<string, UserTimeRule[]> = {};
-    
+
     // Fetch time rules for each user
     for (const userId of dto.userIds) {
       try {
@@ -30,7 +26,7 @@ export class TimeRuleBatchController {
         result[userId] = []; // Return empty array on error
       }
     }
-    
+
     return result;
   }
 }
