@@ -390,7 +390,7 @@ export function TimeRuleModal({
         { dayOfWeek: 6, ruleName: "Saturday - Block All Day" },
       ];
 
-      const createdRules = [];
+      const createdRules: EditingRule[] = [];
       for (const rule of weekdayRules) {
         const isWeekend = rule.dayOfWeek === 0 || rule.dayOfWeek === 6;
         const newRuleData = {
@@ -436,7 +436,7 @@ export function TimeRuleModal({
         { dayOfWeek: 5, ruleName: "Friday - Block All Day" },
       ];
 
-      const createdRules = [];
+      const createdRules: EditingRule[] = [];
       for (const rule of weekendRules) {
         const isWeekend = rule.dayOfWeek === 0 || rule.dayOfWeek === 6;
         const newRuleData = {

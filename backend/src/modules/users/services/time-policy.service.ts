@@ -1,7 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { UserTimePolicy } from '../../../entities/user-time-policy.entity';
+import { UserTimeRule } from '../../../entities/user-time-rule.entity';
 
 export interface CreateTimePolicyDto {
   userId: string;
@@ -27,67 +27,71 @@ export interface UpdateTimePolicyDto {
 @Injectable()
 export class TimePolicyService {
   constructor(
-    @InjectRepository(UserTimePolicy)
-    private readonly timePolicyRepository: Repository<UserTimePolicy>,
+    @InjectRepository(UserTimeRule)
+    private readonly timeRuleRepository: Repository<UserTimeRule>,
   ) {}
 
   async createTimePolicy(
     createDto: CreateTimePolicyDto,
-  ): Promise<UserTimePolicy> {
-    const policy = this.timePolicyRepository.create({
+  ): Promise<UserTimeRule> {
+    const policy = this.timeRuleRepository.create({
       userId: createDto.userId,
       deviceIdentifier: createDto.deviceIdentifier || undefined,
-      policyName: createDto.policyName,
+      ruleName: createDto.policyName,
       action: createDto.action,
-      daysOfWeek: createDto.daysOfWeek,
+      dayOfWeek: createDto.daysOfWeek[0] || 0, // Take first day or default to Sunday
       startTime: createDto.startTime,
       endTime: createDto.endTime,
-      priority: createDto.priority || 0,
+      enabled: true,
     });
 
-    return this.timePolicyRepository.save(policy);
+    return this.timeRuleRepository.save(policy);
   }
 
-  async getTimePolicies(userId: string): Promise<UserTimePolicy[]> {
-    return this.timePolicyRepository.find({
+  async getTimePolicies(userId: string): Promise<UserTimeRule[]> {
+    return this.timeRuleRepository.find({
       where: { userId },
-      order: { priority: 'DESC', createdAt: 'ASC' },
+      order: { createdAt: 'ASC' },
     });
   }
 
   async getTimePoliciesForDevice(
     userId: string,
     deviceIdentifier: string,
-  ): Promise<UserTimePolicy[]> {
-    return this.timePolicyRepository.find({
+  ): Promise<UserTimeRule[]> {
+    return this.timeRuleRepository.find({
       where: [
         { userId, deviceIdentifier },
         { userId, deviceIdentifier: undefined }, // User-wide policies
       ],
-      order: { priority: 'DESC', createdAt: 'ASC' },
+      order: { createdAt: 'ASC' },
     });
   }
 
   async updateTimePolicy(
     id: number,
-    updateDto: UpdateTimePolicyDto,
-  ): Promise<UserTimePolicy | null> {
-    await this.timePolicyRepository.update(id, updateDto);
-    return this.timePolicyRepository.findOne({ where: { id } });
+    updates: Partial<UserTimeRule>,
+  ): Promise<UserTimeRule> {
+    await this.timeRuleRepository.update(id, updates);
+    const updated = await this.timeRuleRepository.findOne({ where: { id } });
+    if (!updated) {
+      throw new NotFoundException('Time rule not found');
+    }
+    return updated;
   }
 
   async deleteTimePolicy(id: number): Promise<void> {
-    await this.timePolicyRepository.delete(id);
+    await this.timeRuleRepository.delete(id);
   }
 
-  async toggleTimePolicy(id: number): Promise<UserTimePolicy> {
-    const policy = await this.timePolicyRepository.findOne({ where: { id } });
+  async toggleTimePolicy(id: number): Promise<UserTimeRule> {
+    const policy = await this.timeRuleRepository.findOne({ where: { id } });
     if (!policy) {
-      throw new Error('Time policy not found');
+      throw new NotFoundException('Time rule not found');
     }
 
     policy.enabled = !policy.enabled;
-    return this.timePolicyRepository.save(policy);
+    return this.timeRuleRepository.save(policy);
   }
 
   /**
@@ -111,12 +115,8 @@ export class TimePolicyService {
     const currentDay = now.getDay(); // 0=Sunday, 1=Monday, etc.
     const currentTime = now.toTimeString().slice(0, 5); // HH:mm format
 
-    // Sort by priority (highest first) and check each policy
-    const sortedPolicies = enabledPolicies.sort(
-      (a, b) => b.priority - a.priority,
-    );
-
-    for (const policy of sortedPolicies) {
+    // Check each policy (no priority sorting needed)
+    for (const policy of enabledPolicies) {
       if (this.isPolicyActive(policy, currentDay, currentTime)) {
         return policy.action === 'allow';
       }
@@ -126,12 +126,12 @@ export class TimePolicyService {
   }
 
   private isPolicyActive(
-    policy: UserTimePolicy,
+    policy: UserTimeRule,
     currentDay: number,
     currentTime: string,
   ): boolean {
-    // Check if current day is in the policy's days
-    if (!policy.daysOfWeek.includes(currentDay)) {
+    // Check if current day matches the policy's day
+    if (policy.dayOfWeek !== currentDay) {
       return false;
     }
 
@@ -165,36 +165,15 @@ export class TimePolicyService {
     }
 
     const summaries = enabledPolicies.map((policy) => {
-      const days = this.formatDaysOfWeek(policy.daysOfWeek);
-      return `${policy.action.toUpperCase()}: ${days} ${policy.startTime}-${policy.endTime}`;
+      const day = this.formatDayOfWeek(policy.dayOfWeek);
+      return `${policy.action.toUpperCase()}: ${day} ${policy.startTime}-${policy.endTime}`;
     });
 
     return summaries.join('; ');
   }
 
-  private formatDaysOfWeek(days: number[]): string {
+  private formatDayOfWeek(day: number): string {
     const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const sortedDays = days.sort((a, b) => a - b);
-
-    if (sortedDays.length === 7) {
-      return 'Daily';
-    }
-
-    if (
-      sortedDays.length === 5 &&
-      sortedDays.every((day) => day >= 1 && day <= 5)
-    ) {
-      return 'Weekdays';
-    }
-
-    if (
-      sortedDays.length === 2 &&
-      sortedDays.includes(0) &&
-      sortedDays.includes(6)
-    ) {
-      return 'Weekends';
-    }
-
-    return sortedDays.map((day) => dayNames[day]).join(', ');
+    return dayNames[day] || 'Invalid Day';
   }
 }
