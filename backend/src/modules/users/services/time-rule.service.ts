@@ -70,10 +70,12 @@ export class TimeRuleService {
   }
 
   async createPreset(createDto: CreatePresetDto): Promise<UserTimeRule[]> {
-    console.log(`Creating preset: ${createDto.presetType} for user ${createDto.userId}`);
-    
+    console.log(
+      `Creating preset: ${createDto.presetType} for user ${createDto.userId}`,
+    );
+
     const queryRunner = this.dataSource.createQueryRunner();
-    
+
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
@@ -96,20 +98,25 @@ export class TimeRuleService {
       await deleteQuery.execute();
 
       // Define preset rules based on type
-      const presetRules = this.getPresetRules(createDto.presetType, createDto.deviceIdentifier);
+      const presetRules = this.getPresetRules(
+        createDto.presetType,
+        createDto.deviceIdentifier,
+      );
       console.log(`Creating ${presetRules.length} preset rules`);
-      
+
       if (presetRules.length === 0) {
         throw new Error(`Invalid preset type: ${createDto.presetType}`);
       }
-      
+
       const createdRules: UserTimeRule[] = [];
 
       // Create all preset rules within the transaction
       for (const ruleData of presetRules) {
         // Validate time range first
         if (!this.validateTimeRange(ruleData.startTime, ruleData.endTime)) {
-          throw new Error(`Invalid time range for rule "${ruleData.ruleName}": ${ruleData.startTime}-${ruleData.endTime}`);
+          throw new Error(
+            `Invalid time range for rule "${ruleData.ruleName}": ${ruleData.startTime}-${ruleData.endTime}`,
+          );
         }
 
         const ruleToCreate = {
@@ -124,24 +131,26 @@ export class TimeRuleService {
         };
 
         console.log(`Creating rule: ${JSON.stringify(ruleToCreate)}`);
-        
+
         // Use the transaction-aware repository
         const newRule = queryRunner.manager.create(UserTimeRule, ruleToCreate);
         const savedRule = await queryRunner.manager.save(newRule);
-        
-        console.log(`Saved rule with ID: ${savedRule.id}, ruleName: ${savedRule.ruleName}`);
+
+        console.log(
+          `Saved rule with ID: ${savedRule.id}, ruleName: ${savedRule.ruleName}`,
+        );
         createdRules.push(savedRule);
       }
 
       // Commit the transaction
       await queryRunner.commitTransaction();
       console.log(`Successfully created ${createdRules.length} preset rules`);
-      
+
       // Verify the rules were actually saved by querying them back
       const verifyQuery = this.timeRuleRepository
         .createQueryBuilder('rule')
         .where('rule.userId = :userId', { userId: createDto.userId });
-        
+
       if (createDto.deviceIdentifier) {
         verifyQuery.andWhere('rule.deviceIdentifier = :deviceIdentifier', {
           deviceIdentifier: createDto.deviceIdentifier,
@@ -149,10 +158,12 @@ export class TimeRuleService {
       } else {
         verifyQuery.andWhere('rule.deviceIdentifier IS NULL');
       }
-      
+
       const actualSavedRules = await verifyQuery.getMany();
-      console.log(`Verification: Found ${actualSavedRules.length} rules in database after commit`);
-      
+      console.log(
+        `Verification: Found ${actualSavedRules.length} rules in database after commit`,
+      );
+
       return createdRules;
     } catch (error) {
       // Rollback the transaction on error
@@ -165,29 +176,116 @@ export class TimeRuleService {
     }
   }
 
-  private getPresetRules(presetType: 'weekdays-only' | 'weekends-only', deviceIdentifier?: string) {
+  private getPresetRules(
+    presetType: 'weekdays-only' | 'weekends-only',
+    deviceIdentifier?: string,
+  ) {
     if (presetType === 'weekdays-only') {
       return [
-        { dayOfWeek: 1, ruleName: "Monday - Allow All Day", action: 'allow' as const, startTime: "00:00", endTime: "23:59" },
-        { dayOfWeek: 2, ruleName: "Tuesday - Allow All Day", action: 'allow' as const, startTime: "00:00", endTime: "23:59" },
-        { dayOfWeek: 3, ruleName: "Wednesday - Allow All Day", action: 'allow' as const, startTime: "00:00", endTime: "23:59" },
-        { dayOfWeek: 4, ruleName: "Thursday - Allow All Day", action: 'allow' as const, startTime: "00:00", endTime: "23:59" },
-        { dayOfWeek: 5, ruleName: "Friday - Allow All Day", action: 'allow' as const, startTime: "00:00", endTime: "23:59" },
-        { dayOfWeek: 0, ruleName: "Sunday - Block All Day", action: 'block' as const, startTime: "00:00", endTime: "23:59" },
-        { dayOfWeek: 6, ruleName: "Saturday - Block All Day", action: 'block' as const, startTime: "00:00", endTime: "23:59" },
+        {
+          dayOfWeek: 1,
+          ruleName: 'Monday - Allow All Day',
+          action: 'allow' as const,
+          startTime: '00:00',
+          endTime: '23:59',
+        },
+        {
+          dayOfWeek: 2,
+          ruleName: 'Tuesday - Allow All Day',
+          action: 'allow' as const,
+          startTime: '00:00',
+          endTime: '23:59',
+        },
+        {
+          dayOfWeek: 3,
+          ruleName: 'Wednesday - Allow All Day',
+          action: 'allow' as const,
+          startTime: '00:00',
+          endTime: '23:59',
+        },
+        {
+          dayOfWeek: 4,
+          ruleName: 'Thursday - Allow All Day',
+          action: 'allow' as const,
+          startTime: '00:00',
+          endTime: '23:59',
+        },
+        {
+          dayOfWeek: 5,
+          ruleName: 'Friday - Allow All Day',
+          action: 'allow' as const,
+          startTime: '00:00',
+          endTime: '23:59',
+        },
+        {
+          dayOfWeek: 0,
+          ruleName: 'Sunday - Block All Day',
+          action: 'block' as const,
+          startTime: '00:00',
+          endTime: '23:59',
+        },
+        {
+          dayOfWeek: 6,
+          ruleName: 'Saturday - Block All Day',
+          action: 'block' as const,
+          startTime: '00:00',
+          endTime: '23:59',
+        },
       ];
     } else if (presetType === 'weekends-only') {
       return [
-        { dayOfWeek: 0, ruleName: "Sunday - Allow All Day", action: 'allow' as const, startTime: "00:00", endTime: "23:59" },
-        { dayOfWeek: 6, ruleName: "Saturday - Allow All Day", action: 'allow' as const, startTime: "00:00", endTime: "23:59" },
-        { dayOfWeek: 1, ruleName: "Monday - Block All Day", action: 'block' as const, startTime: "00:00", endTime: "23:59" },
-        { dayOfWeek: 2, ruleName: "Tuesday - Block All Day", action: 'block' as const, startTime: "00:00", endTime: "23:59" },
-        { dayOfWeek: 3, ruleName: "Wednesday - Block All Day", action: 'block' as const, startTime: "00:00", endTime: "23:59" },
-        { dayOfWeek: 4, ruleName: "Thursday - Block All Day", action: 'block' as const, startTime: "00:00", endTime: "23:59" },
-        { dayOfWeek: 5, ruleName: "Friday - Block All Day", action: 'block' as const, startTime: "00:00", endTime: "23:59" },
+        {
+          dayOfWeek: 0,
+          ruleName: 'Sunday - Allow All Day',
+          action: 'allow' as const,
+          startTime: '00:00',
+          endTime: '23:59',
+        },
+        {
+          dayOfWeek: 6,
+          ruleName: 'Saturday - Allow All Day',
+          action: 'allow' as const,
+          startTime: '00:00',
+          endTime: '23:59',
+        },
+        {
+          dayOfWeek: 1,
+          ruleName: 'Monday - Block All Day',
+          action: 'block' as const,
+          startTime: '00:00',
+          endTime: '23:59',
+        },
+        {
+          dayOfWeek: 2,
+          ruleName: 'Tuesday - Block All Day',
+          action: 'block' as const,
+          startTime: '00:00',
+          endTime: '23:59',
+        },
+        {
+          dayOfWeek: 3,
+          ruleName: 'Wednesday - Block All Day',
+          action: 'block' as const,
+          startTime: '00:00',
+          endTime: '23:59',
+        },
+        {
+          dayOfWeek: 4,
+          ruleName: 'Thursday - Block All Day',
+          action: 'block' as const,
+          startTime: '00:00',
+          endTime: '23:59',
+        },
+        {
+          dayOfWeek: 5,
+          ruleName: 'Friday - Block All Day',
+          action: 'block' as const,
+          startTime: '00:00',
+          endTime: '23:59',
+        },
       ];
     }
-    
+
     return [];
   }
 

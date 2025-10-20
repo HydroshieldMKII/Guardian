@@ -15,6 +15,7 @@ import { TimeRuleService } from '../services/time-rule.service';
 import type {
   CreateTimeRuleDto,
   UpdateTimeRuleDto,
+  CreatePresetDto,
 } from '../services/time-rule.service';
 import { UserTimeRule } from '../../../entities/user-time-rule.entity';
 
@@ -92,7 +93,7 @@ export class TimeRuleController {
   @Post('preset')
   async createPreset(
     @Param('userId') userId: string,
-    @Body() createDto: Omit<import('../services/time-rule.service').CreatePresetDto, 'userId'>,
+    @Body() createDto: Omit<CreatePresetDto, 'userId'>,
   ): Promise<UserTimeRule[]> {
     try {
       return await this.timeRuleService.createPreset({

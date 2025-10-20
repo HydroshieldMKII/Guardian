@@ -656,7 +656,7 @@ export function TimeRuleModal({
                   {/* Create Button */}
                   <Button
                     onClick={createRule}
-                    disabled={creatingRule || !newRule.ruleName.trim()}
+                    disabled={creatingRule || creatingPreset || !newRule.ruleName.trim()}
                     className="w-full flex items-center gap-2"
                   >
                     {creatingRule ? (

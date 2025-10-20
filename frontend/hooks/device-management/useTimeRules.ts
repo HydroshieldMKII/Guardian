@@ -290,7 +290,7 @@ export const useTimeRules = () => {
 
   const createPreset = async (
     userId: string,
-    presetType: 'weekdays-only' | 'weekends-only',
+    presetType: "weekdays-only" | "weekends-only",
     deviceIdentifier?: string
   ): Promise<UserTimeRule[]> => {
     try {

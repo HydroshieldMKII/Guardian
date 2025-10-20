@@ -378,14 +378,17 @@ export class SessionTerminationService {
         this.logger.warn(
           `Device ${deviceIdentifier} for user ${userId} is blocked by time policy: ${timePolicySummary}`,
         );
-        const message =
-          ((await this.configService.getSetting(
-            'MSG_TIME_RESTRICTED',
-          )) as string) ||
-          `Streaming is not allowed at this time. Active restrictions: ${timePolicySummary}`;
+
+        // Get the configured message or use a detailed default
+        const configMessage = (await this.configService.getSetting(
+          'MSG_TIME_RESTRICTED',
+        )) as string;
+
         return {
           shouldStop: true,
-          reason: message,
+          reason:
+            configMessage ||
+            `Streaming is not allowed at this time due to time restrictions (Policy: ${timePolicySummary})`,
           stopCode: 'TIME_RESTRICTED',
         };
       }
