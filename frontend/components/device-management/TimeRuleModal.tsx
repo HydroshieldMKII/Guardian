@@ -539,9 +539,6 @@ export function TimeRuleModal({
                     )}
                   </Button>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Delete your current rules and apply a preset
-                </p>
               </div>
 
               <div className="flex-1 overflow-y-auto pr-2">
