@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import { config } from '@/lib/config';
-import { UserDevice } from '@/types';
+import { useState } from "react";
+import { config } from "@/lib/config";
+import { UserDevice } from "@/types";
 
 export const useDeviceActions = () => {
   const [actionLoading, setActionLoading] = useState<number | null>(null);
@@ -59,7 +59,10 @@ export const useDeviceActions = () => {
     }
   };
 
-  const renameDevice = async (deviceId: number, newName: string): Promise<boolean> => {
+  const renameDevice = async (
+    deviceId: number,
+    newName: string
+  ): Promise<boolean> => {
     try {
       setActionLoading(deviceId);
       const response = await fetch(
@@ -81,7 +84,10 @@ export const useDeviceActions = () => {
     }
   };
 
-  const grantTemporaryAccess = async (deviceId: number, durationMinutes: number): Promise<boolean> => {
+  const grantTemporaryAccess = async (
+    deviceId: number,
+    durationMinutes: number
+  ): Promise<boolean> => {
     try {
       setActionLoading(deviceId);
       const response = await fetch(
@@ -103,10 +109,13 @@ export const useDeviceActions = () => {
     }
   };
 
-  const grantBatchTemporaryAccess = async (deviceIds: number[], durationMinutes: number): Promise<{ success: boolean; results?: any }> => {
+  const grantBatchTemporaryAccess = async (
+    deviceIds: number[],
+    durationMinutes: number
+  ): Promise<{ success: boolean; results?: any }> => {
     try {
       setActionLoading(deviceIds[0]); // Set loading for the first device as indicator
-      
+
       const response = await fetch(
         `${config.api.baseUrl}/devices/batch/temporary-access`,
         {
@@ -117,12 +126,16 @@ export const useDeviceActions = () => {
           body: JSON.stringify({ deviceIds, durationMinutes }),
         }
       );
-      
+
       if (response.ok) {
         const data = await response.json();
         return { success: true, results: data.results };
       } else {
-        console.error('Batch temporary access failed:', response.status, await response.text());
+        console.error(
+          "Batch temporary access failed:",
+          response.status,
+          await response.text()
+        );
         return { success: false };
       }
     } catch (error) {

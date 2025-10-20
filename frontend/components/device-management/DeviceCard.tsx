@@ -1,9 +1,9 @@
-import React from 'react';
+import React from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { 
-  CheckCircle, 
-  XCircle, 
+import {
+  CheckCircle,
+  XCircle,
   Trash2,
   RefreshCw,
   Timer,
@@ -11,11 +11,11 @@ import {
   Monitor,
   MapPin,
   Activity,
-  Clock
+  Clock,
 } from "lucide-react";
-import { UserDevice, AppSetting } from '@/types';
-import { getDeviceIcon, ClickableIP } from './SharedComponents';
-import { useDeviceUtils } from '@/hooks/device-management/useDeviceUtils';
+import { UserDevice, AppSetting } from "@/types";
+import { getDeviceIcon, ClickableIP } from "./SharedComponents";
+import { useDeviceUtils } from "@/hooks/device-management/useDeviceUtils";
 
 interface DeviceCardProps {
   device: UserDevice;
@@ -56,21 +56,29 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
 
   // Helper function to identify Plex Amp devices
   const isPlexAmpDevice = (device: UserDevice) => {
-    return device.deviceProduct?.toLowerCase().includes('plexamp') || 
-           device.deviceName?.toLowerCase().includes('plexamp');
+    return (
+      device.deviceProduct?.toLowerCase().includes("plexamp") ||
+      device.deviceName?.toLowerCase().includes("plexamp")
+    );
   };
 
   // Get device type badge
   const getDeviceTypeBadge = () => {
     if (isPlexAmpDevice(device)) {
       return (
-        <Badge variant="outline" className="text-xs bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-700">
+        <Badge
+          variant="outline"
+          className="text-xs bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-700"
+        >
           Plex Amp
         </Badge>
       );
     }
     return (
-      <Badge variant="outline" className="text-xs bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-700">
+      <Badge
+        variant="outline"
+        className="text-xs bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-700"
+      >
         Plex
       </Badge>
     );
@@ -83,13 +91,17 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
       data-device-identifier={device.deviceIdentifier}
     >
       {/* Status indicator stripe */}
-      <div className={`absolute top-0 left-0 w-full h-1 ${
-        isPlexAmpDevice(device) ? 'bg-gradient-to-r from-purple-500 to-violet-500' :
-        device.status === 'approved' ? 'bg-gradient-to-r from-green-500 to-emerald-500' :
-        device.status === 'rejected' ? 'bg-gradient-to-r from-red-500 to-rose-500' :
-        'bg-gradient-to-r from-yellow-500 to-amber-500'
-      }`} />
-      
+      <div
+        className={`absolute top-0 left-0 w-full h-1 ${
+          isPlexAmpDevice(device)
+            ? "bg-gradient-to-r from-purple-500 to-violet-500"
+            : device.status === "approved"
+              ? "bg-gradient-to-r from-green-500 to-emerald-500"
+              : device.status === "rejected"
+                ? "bg-gradient-to-r from-red-500 to-rose-500"
+                : "bg-gradient-to-r from-yellow-500 to-amber-500"
+        }`}
+      />
 
       {/* Mobile-first layout */}
       <div className="space-y-4 sm:space-y-0">
@@ -111,18 +123,22 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
                 </div>
               </div>
             </div>
-            
+
             {/* Badges - Mobile */}
             <div className="flex justify-start gap-2">
               {getDeviceTypeBadge()}
               {hasTemporaryAccess(device) && (
-                <Badge variant="outline" className="text-xs bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 border-orange-200 dark:border-orange-700">
+                <Badge
+                  variant="outline"
+                  className="text-xs bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 border-orange-200 dark:border-orange-700"
+                >
                   <Timer className="w-3 h-3 mr-1" />
                   {getTemporaryAccessTimeLeft(device)}
                 </Badge>
               )}
             </div>
-          </div>          {/* Device Info Grid - Mobile */}
+          </div>{" "}
+          {/* Device Info Grid - Mobile */}
           <div className="grid grid-cols-1 gap-3 text-sm">
             <div className="flex items-center justify-between p-2.5 bg-muted/30 rounded-lg">
               <div className="flex items-center gap-2">
@@ -146,14 +162,20 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
               <div className="flex flex-col p-2.5 bg-muted/30 rounded-lg">
                 <div className="flex items-center gap-1.5 mb-1">
                   <Activity className="w-3.5 h-3.5 text-muted-foreground" />
-                  <span className="text-xs font-medium text-muted-foreground">Streams</span>
+                  <span className="text-xs font-medium text-muted-foreground">
+                    Streams
+                  </span>
                 </div>
-                <span className="font-semibold text-foreground">{device.sessionCount}</span>
+                <span className="font-semibold text-foreground">
+                  {device.sessionCount}
+                </span>
               </div>
               <div className="flex flex-col p-2.5 bg-muted/30 rounded-lg">
                 <div className="flex items-center gap-1.5 mb-1">
                   <Clock className="w-3.5 h-3.5 text-muted-foreground" />
-                  <span className="text-xs font-medium text-muted-foreground">Last Seen</span>
+                  <span className="text-xs font-medium text-muted-foreground">
+                    Last Seen
+                  </span>
                 </div>
                 <span className="font-semibold text-foreground text-xs">
                   {new Date(device.lastSeen).toLocaleDateString()}
@@ -161,7 +183,6 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
               </div>
             </div>
           </div>
-
           {/* Action Buttons - Mobile */}
           <div className="flex flex-col gap-3 pt-3 border-t border-border/50">
             {/* Details Button - Full width on mobile */}
@@ -380,7 +401,10 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
               <div className="flex-shrink-0 flex gap-2">
                 {getDeviceTypeBadge()}
                 {hasTemporaryAccess(device) && (
-                  <Badge variant="outline" className="text-xs bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 border-orange-200 dark:border-orange-700">
+                  <Badge
+                    variant="outline"
+                    className="text-xs bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 border-orange-200 dark:border-orange-700"
+                  >
                     <Timer className="w-3 h-3 mr-1" />
                     {getTemporaryAccessTimeLeft(device)}
                   </Badge>

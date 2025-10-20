@@ -1,9 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { 
-  ChevronDown, 
-  ChevronRight, 
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
+  ChevronDown,
+  ChevronRight,
   Settings,
   CheckCircle,
   XCircle,
@@ -13,12 +17,12 @@ import {
   History,
   SquareUser,
   Shield,
-  Timer
+  Timer,
 } from "lucide-react";
-import { UserDevice, UserPreference, AppSetting } from '@/types';
-import { UserAvatar, getUserPreferenceBadge } from './SharedComponents';
-import { DeviceCard } from './DeviceCard';
-import { IPAccessModal } from './IPAccessModal';
+import { UserDevice, UserPreference, AppSetting } from "@/types";
+import { UserAvatar, getUserPreferenceBadge } from "./SharedComponents";
+import { DeviceCard } from "./DeviceCard";
+import { IPAccessModal } from "./IPAccessModal";
 
 // User-Device group interface
 interface UserDeviceGroup {
@@ -41,8 +45,14 @@ interface UserGroupCardProps {
   editingDevice: number | null;
   newDeviceName: string;
   onToggleExpansion: (userId: string) => void;
-  onUpdateUserPreference: (userId: string, defaultBlock: boolean | null) => void;
-  onUpdateUserIPPolicy?: (userId: string, updates: Partial<UserPreference>) => void;
+  onUpdateUserPreference: (
+    userId: string,
+    defaultBlock: boolean | null
+  ) => void;
+  onUpdateUserIPPolicy?: (
+    userId: string,
+    updates: Partial<UserPreference>
+  ) => void;
   onToggleUserVisibility?: (userId: string) => void;
   onShowHistory?: (userId: string) => void;
   onGrantUserTempAccess?: (userId: string) => void;
@@ -89,7 +99,7 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
       open={isExpanded}
       onOpenChange={() => onToggleExpansion(group.user.userId)}
     >
-      <div 
+      <div
         className="rounded-lg border bg-card shadow-sm hover:shadow-md transition-shadow"
         data-user-id={group.user.userId}
       >
@@ -102,7 +112,7 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
                 ) : (
                   <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                 )}
-                <UserAvatar 
+                <UserAvatar
                   userId={group.user.userId}
                   username={group.user.username}
                   avatarUrl={group.user.preference?.avatarUrl}
@@ -112,31 +122,38 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
                     {group.user.username || group.user.userId}
                   </h3>
                   <p className="text-xs sm:text-sm text-muted-foreground">
-                    {group.devices.length} device{group.devices.length !== 1 ? 's' : ''}
+                    {group.devices.length} device
+                    {group.devices.length !== 1 ? "s" : ""}
                     {group.pendingCount > 0 && (
                       <span className="text-yellow-600 dark:text-yellow-400">
-                        {" • "}{group.pendingCount} pending
+                        {" • "}
+                        {group.pendingCount} pending
                       </span>
                     )}
                   </p>
                 </div>
                 <div className="hidden sm:flex">
-                  {group.user.preference && getUserPreferenceBadge(group.user.preference.defaultBlock)}
+                  {group.user.preference &&
+                    getUserPreferenceBadge(group.user.preference.defaultBlock)}
                 </div>
               </div>
-              
+
               {/* Mobile: Show preference badge */}
               <div className="sm:hidden">
-                {group.user.preference && getUserPreferenceBadge(group.user.preference.defaultBlock)}
+                {group.user.preference &&
+                  getUserPreferenceBadge(group.user.preference.defaultBlock)}
               </div>
             </div>
           </div>
         </CollapsibleTrigger>
-        
+
         <CollapsibleContent>
           <div className="p-3 sm:p-4 space-y-4">
             {/* User Actions Card */}
-            {(onToggleUserVisibility || onShowHistory || onUpdateUserIPPolicy || onGrantUserTempAccess) && (
+            {(onToggleUserVisibility ||
+              onShowHistory ||
+              onUpdateUserIPPolicy ||
+              onGrantUserTempAccess) && (
               <div className="bg-gradient-to-r from-card to-card/50 border rounded-lg p-4 shadow-sm">
                 <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                   {/* Actions Label */}
@@ -145,11 +162,15 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
                       <SquareUser className="w-4 h-4 text-primary" />
                     </div>
                     <div>
-                      <h4 className="font-semibold text-sm text-foreground">User Actions</h4>
-                      <p className="text-xs text-muted-foreground">Manage user visibility, history, and access policies</p>
+                      <h4 className="font-semibold text-sm text-foreground">
+                        User Actions
+                      </h4>
+                      <p className="text-xs text-muted-foreground">
+                        Manage user visibility, history, and access policies
+                      </p>
                     </div>
                   </div>
-                  
+
                   {/* Action Buttons */}
                   <div className="flex items-center bg-muted/50 rounded-lg p-1 gap-1">
                     {onGrantUserTempAccess && (
@@ -174,9 +195,15 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
                     )}
                     {onToggleUserVisibility && (
                       <button
-                        onClick={() => onToggleUserVisibility(group.user.userId)}
+                        onClick={() =>
+                          onToggleUserVisibility(group.user.userId)
+                        }
                         className="text-xs px-3 py-2 rounded-md transition-all duration-200 flex items-center cursor-pointer text-muted-foreground hover:text-foreground hover:bg-background/50"
-                        title={group.user.preference?.hidden ? "Show user" : "Hide user"}
+                        title={
+                          group.user.preference?.hidden
+                            ? "Show user"
+                            : "Hide user"
+                        }
                       >
                         {group.user.preference?.hidden ? (
                           <>
@@ -215,17 +242,24 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
                     <Settings className="w-4 h-4 text-primary" />
                   </div>
                   <div>
-                    <h4 className="font-semibold text-sm text-foreground">Default Device Policy</h4>
-                    <p className="text-xs text-muted-foreground">How new devices should be handled</p>
+                    <h4 className="font-semibold text-sm text-foreground">
+                      Default Device Policy
+                    </h4>
+                    <p className="text-xs text-muted-foreground">
+                      How new devices should be handled
+                    </p>
                   </div>
                 </div>
-                
+
                 {/* Policy Toggle Buttons */}
                 <div className="flex items-center bg-muted/50 rounded-lg p-1 gap-1">
                   <button
-                    onClick={() => onUpdateUserPreference(group.user.userId, null)}
+                    onClick={() =>
+                      onUpdateUserPreference(group.user.userId, null)
+                    }
                     className={`text-xs px-3 py-2 rounded-md transition-all duration-200 flex items-center cursor-pointer ${
-                      !group.user.preference || group.user.preference.defaultBlock === null
+                      !group.user.preference ||
+                      group.user.preference.defaultBlock === null
                         ? "bg-gray-200 text-black shadow-sm font-medium hover:bg-gray-100"
                         : "text-muted-foreground hover:text-foreground hover:bg-background/50"
                     }`}
@@ -234,7 +268,9 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
                     Global
                   </button>
                   <button
-                    onClick={() => onUpdateUserPreference(group.user.userId, false)}
+                    onClick={() =>
+                      onUpdateUserPreference(group.user.userId, false)
+                    }
                     className={`text-xs px-3 py-2 rounded-md transition-all duration-200 flex items-center cursor-pointer ${
                       group.user.preference?.defaultBlock === false
                         ? "bg-green-600 text-white shadow-sm font-medium hover:bg-green-600"
@@ -245,7 +281,9 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
                     Allow
                   </button>
                   <button
-                    onClick={() => onUpdateUserPreference(group.user.userId, true)}
+                    onClick={() =>
+                      onUpdateUserPreference(group.user.userId, true)
+                    }
                     className={`text-xs px-3 py-2 rounded-md transition-all duration-200 flex items-center cursor-pointer ${
                       group.user.preference?.defaultBlock === true
                         ? "bg-red-700 text-white shadow-sm font-medium hover:bg-red-600"

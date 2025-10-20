@@ -356,19 +356,24 @@ const DeviceManagement = memo(
             devices: group.devices.sort((a, b) => {
               // Helper function to identify Plex Amp devices
               const isPlexAmpDevice = (device: UserDevice) => {
-                return device.deviceProduct?.toLowerCase().includes('plexamp') || 
-                       device.deviceName?.toLowerCase().includes('plexamp');
+                return (
+                  device.deviceProduct?.toLowerCase().includes("plexamp") ||
+                  device.deviceName?.toLowerCase().includes("plexamp")
+                );
               };
 
               // PlexAmp devices always go last
               const aIsPlexAmp = isPlexAmpDevice(a);
               const bIsPlexAmp = isPlexAmpDevice(b);
-              
+
               if (aIsPlexAmp && !bIsPlexAmp) return 1; // a goes after b
               if (!aIsPlexAmp && bIsPlexAmp) return -1; // a goes before b
               if (aIsPlexAmp && bIsPlexAmp) {
                 // Both are PlexAmp, sort by lastSeen
-                return new Date(b.lastSeen).getTime() - new Date(a.lastSeen).getTime();
+                return (
+                  new Date(b.lastSeen).getTime() -
+                  new Date(a.lastSeen).getTime()
+                );
               }
 
               // For non-PlexAmp devices, sort by status (pending first, then rejected, then approved)
@@ -855,9 +860,10 @@ const DeviceManagement = memo(
             });
             return;
           }
-          
+
           // Check if any devices failed
-          const failedDevices = result.results?.filter((r: any) => !r.success) || [];
+          const failedDevices =
+            result.results?.filter((r: any) => !r.success) || [];
           if (failedDevices.length > 0) {
             toast({
               title: "Partial Success",
@@ -866,12 +872,12 @@ const DeviceManagement = memo(
             });
           }
         }
-        
+
         setTimeout(handleRefresh, 100);
         setTempAccessUser(null);
         toast({
           title: "Temporary Access Granted",
-          description: `Temporary access granted to ${deviceIds.length} device${deviceIds.length > 1 ? 's' : ''} for ${formatDuration(durationMinutes)}`,
+          description: `Temporary access granted to ${deviceIds.length} device${deviceIds.length > 1 ? "s" : ""} for ${formatDuration(durationMinutes)}`,
           variant: "success",
         });
       } finally {
@@ -880,11 +886,13 @@ const DeviceManagement = memo(
     };
 
     const handleGrantUserTempAccess = (userId: string) => {
-      const userGroup = userGroups.find(group => group.user.userId === userId);
+      const userGroup = userGroups.find(
+        (group) => group.user.userId === userId
+      );
       if (userGroup) {
         setTempAccessUser({
           userId: userGroup.user.userId,
-          username: userGroup.user.username
+          username: userGroup.user.username,
         });
       }
     };
@@ -913,8 +921,10 @@ const DeviceManagement = memo(
     // Utility function to check if grant temp access should be shown
     const shouldShowGrantTempAccess = (device: UserDevice): boolean => {
       // Exclude PlexAmp devices - they are not eligible for temporary access
-      if (device.deviceProduct?.toLowerCase().includes('plexamp') || 
-          device.deviceName?.toLowerCase().includes('plexamp')) {
+      if (
+        device.deviceProduct?.toLowerCase().includes("plexamp") ||
+        device.deviceName?.toLowerCase().includes("plexamp")
+      ) {
         return false;
       }
 
@@ -1243,7 +1253,9 @@ const DeviceManagement = memo(
           user={tempAccessUser}
           userDevices={
             tempAccessUser
-              ? userGroups.find(group => group.user.userId === tempAccessUser.userId)?.devices || []
+              ? userGroups.find(
+                  (group) => group.user.userId === tempAccessUser.userId
+                )?.devices || []
               : []
           }
           isOpen={!!tempAccessUser}

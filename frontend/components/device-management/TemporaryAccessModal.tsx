@@ -40,9 +40,7 @@ interface TemporaryAccessModalProps {
   shouldShowGrantTempAccess: (device: UserDevice) => boolean;
 }
 
-export const TemporaryAccessModal: React.FC<
-  TemporaryAccessModalProps
-> = ({
+export const TemporaryAccessModal: React.FC<TemporaryAccessModalProps> = ({
   user,
   userDevices,
   isOpen,
@@ -74,9 +72,9 @@ export const TemporaryAccessModal: React.FC<
   }, [isOpen]);
 
   const handleDeviceToggle = (deviceId: number) => {
-    setSelectedDeviceIds(prev => {
+    setSelectedDeviceIds((prev) => {
       if (prev.includes(deviceId)) {
-        return prev.filter(id => id !== deviceId);
+        return prev.filter((id) => id !== deviceId);
       } else {
         return [...prev, deviceId];
       }
@@ -87,12 +85,15 @@ export const TemporaryAccessModal: React.FC<
     if (selectedDeviceIds.length === eligibleDevices.length) {
       setSelectedDeviceIds([]);
     } else {
-      setSelectedDeviceIds(eligibleDevices.map(device => device.id));
+      setSelectedDeviceIds(eligibleDevices.map((device) => device.id));
     }
   };
 
   const handleGrantAccess = () => {
-    if (selectedDeviceIds.length > 0 && isValidDuration(durationValue, durationUnit)) {
+    if (
+      selectedDeviceIds.length > 0 &&
+      isValidDuration(durationValue, durationUnit)
+    ) {
       const totalMinutes = convertToMinutes(durationValue, durationUnit);
       onGrantAccess(selectedDeviceIds, totalMinutes);
     }
@@ -110,7 +111,8 @@ export const TemporaryAccessModal: React.FC<
           </DialogTitle>
           <DialogDescription className="text-sm text-muted-foreground">
             Grant temporary streaming access to{" "}
-            <span className="font-medium">{user.username || user.userId}</span>'s devices.
+            <span className="font-medium">{user.username || user.userId}</span>
+            's devices.
           </DialogDescription>
         </DialogHeader>
 
@@ -129,7 +131,9 @@ export const TemporaryAccessModal: React.FC<
                   onClick={handleSelectAll}
                   className="text-xs"
                 >
-                  {selectedDeviceIds.length === eligibleDevices.length ? "Deselect All" : "Select All"}
+                  {selectedDeviceIds.length === eligibleDevices.length
+                    ? "Deselect All"
+                    : "Select All"}
                 </Button>
               )}
             </div>
@@ -162,11 +166,13 @@ export const TemporaryAccessModal: React.FC<
                     <CardContent className="p-3">
                       <div className="flex items-center gap-3">
                         <div className="flex-shrink-0">
-                          <div className={`w-5 h-5 border-2 rounded flex items-center justify-center ${
-                            selectedDeviceIds.includes(device.id)
-                              ? "border-blue-500 bg-blue-500"
-                              : "border-muted-foreground/40"
-                          }`}>
+                          <div
+                            className={`w-5 h-5 border-2 rounded flex items-center justify-center ${
+                              selectedDeviceIds.includes(device.id)
+                                ? "border-blue-500 bg-blue-500"
+                                : "border-muted-foreground/40"
+                            }`}
+                          >
                             {selectedDeviceIds.includes(device.id) && (
                               <CheckCircle className="w-3 h-3 text-white" />
                             )}
@@ -355,8 +361,8 @@ export const TemporaryAccessModal: React.FC<
           <Button
             onClick={handleGrantAccess}
             disabled={
-              actionLoading !== null || 
-              selectedDeviceIds.length === 0 || 
+              actionLoading !== null ||
+              selectedDeviceIds.length === 0 ||
               !isValidDuration(durationValue, durationUnit)
             }
             className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white"
