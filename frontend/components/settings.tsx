@@ -1348,6 +1348,28 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
         );
 
       case "customization":
+        const interfaceSettings = [
+          "ENABLE_MEDIA_THUMBNAILS",
+          "ENABLE_MEDIA_ARTWORK",
+          "CUSTOM_PLEX_URL",
+          "DEFAULT_PAGE",
+        ];
+        const messageSettings = [
+          "MSG_DEVICE_PENDING",
+          "MSG_DEVICE_REJECTED",
+          "MSG_IP_LAN_ONLY",
+          "MSG_IP_WAN_ONLY",
+          "MSG_IP_NOT_ALLOWED",
+          "MSG_TIME_RESTRICTED",
+        ];
+
+        const interfaceSettingsData = settings.filter((setting) =>
+          interfaceSettings.includes(setting.key)
+        );
+        const messageSettingsData = settings.filter((setting) =>
+          messageSettings.includes(setting.key)
+        );
+
         return (
           <div className="space-y-6">
             <div>
@@ -1358,12 +1380,52 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
               </p>
             </div>
 
+            {/* Interface Settings Section */}
             <div className="space-y-4">
-              {getSettingsByCategory("customization").map((setting) => (
-                <Card key={setting.key} className="p-4">
-                  {renderSettingField(setting)}
-                </Card>
-              ))}
+              <div>
+                <h4 className="text-base font-medium text-slate-900 dark:text-slate-100 mb-2">
+                  Interface Settings
+                </h4>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Configure the visual appearance and behavior of the Guardian
+                  interface.
+                </p>
+              </div>
+              {interfaceSettingsData
+                .sort(
+                  (a, b) =>
+                    interfaceSettings.indexOf(a.key) -
+                    interfaceSettings.indexOf(b.key)
+                )
+                .map((setting) => (
+                  <Card key={setting.key} className="p-4">
+                    {renderSettingField(setting)}
+                  </Card>
+                ))}
+            </div>
+
+            {/* Custom Messages Section */}
+            <div className="space-y-4">
+              <div>
+                <h4 className="text-base font-medium text-slate-900 dark:text-slate-100 mb-2">
+                  Custom Messages
+                </h4>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Customize the messages displayed to users when access is
+                  restricted or devices require approval.
+                </p>
+              </div>
+              {messageSettingsData
+                .sort(
+                  (a, b) =>
+                    messageSettings.indexOf(a.key) -
+                    messageSettings.indexOf(b.key)
+                )
+                .map((setting) => (
+                  <Card key={setting.key} className="p-4">
+                    {renderSettingField(setting)}
+                  </Card>
+                ))}
             </div>
           </div>
         );
@@ -1810,7 +1872,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
           {/* Settings Navigation */}
           <Card className="lg:col-span-1">
             <CardHeader>
-              <CardTitle className="text-base">Settings</CardTitle>
+              <CardTitle className="text-base mt-4">Settings</CardTitle>
               <CardDescription>Choose a category to configure</CardDescription>
             </CardHeader>
             <CardContent className="space-y-1 p-0">

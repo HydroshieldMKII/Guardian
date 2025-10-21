@@ -16,7 +16,7 @@ import { SessionHistory } from 'src/entities/session-history.entity';
 import { Notification } from 'src/entities/notification.entity';
 
 // App version
-const CURRENT_APP_VERSION = '1.2.2';
+const CURRENT_APP_VERSION = '1.2.3';
 
 export interface ConfigSettingDto {
   key: string;
