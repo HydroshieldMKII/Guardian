@@ -109,7 +109,7 @@ You can run Guardian in a lightweight LXC container using the community script.
 
 **Steps**
 
-1. Run the automated installation script:
+1. Run the automated installation script on your host:
    ```bash
    bash -c "$(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/guardian.sh)"
    ```
@@ -262,13 +262,13 @@ docker compose up -d
 
 ### Proxmox
 
-If you used the community script to install Guardian, you can update it by running:
+If you used the community script to install Guardian, you can update by running on of these commands in the LXC console:
 
 ```bash
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/guardian.sh)" -u
 ```
 
-or type in the LXC console:
+or
 
 ```bash
 update
