@@ -210,7 +210,8 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
   const [testingConnection, setTestingConnection] = useState(false);
   const [exportingDatabase, setExportingDatabase] = useState(false);
   const [importingDatabase, setImportingDatabase] = useState(false);
-  const { settings, loading, error, refreshSettings } = useSettings();
+  const { settings, loading, error, refreshSettings, updateSettings } =
+    useSettings();
   const {
     versionInfo,
     updateInfo,
@@ -479,7 +480,14 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
       });
 
       if (response.ok) {
-        await refreshSettings(); // Refresh settings
+        const updatedFormData = { ...formData };
+        settingsToUpdate.forEach(({ key, value }) => {
+          updatedFormData[key] = value;
+        });
+        setFormData(updatedFormData);
+
+        // Update the settings context with the new values
+        updateSettings(settingsToUpdate);
 
         // Dispatch event to notify notification handler of settings change
         window.dispatchEvent(

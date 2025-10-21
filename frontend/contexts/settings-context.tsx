@@ -15,6 +15,7 @@ interface SettingsContextType {
   loading: boolean;
   error: string | null;
   refreshSettings: () => Promise<void>;
+  updateSettings: (updates: { key: string; value: any }[]) => void;
   getSetting: (key: string) => string | null;
   getBooleanSetting: (key: string) => boolean | null;
   getNumberSetting: (key: string) => number | null;
@@ -63,6 +64,22 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({
     await fetchSettings();
   };
 
+  const updateSettings = (updates: { key: string; value: any }[]) => {
+    setSettings(prevSettings => {
+      const updatedSettings = [...prevSettings];
+      updates.forEach(({ key, value }) => {
+        const index = updatedSettings.findIndex(s => s.key === key);
+        if (index !== -1) {
+          updatedSettings[index] = {
+            ...updatedSettings[index],
+            value: String(value)
+          };
+        }
+      });
+      return updatedSettings;
+    });
+  };
+
   const getSetting = (key: string): string | null => {
     const setting = settings.find((s) => s.key === key);
     return setting ? setting.value : null;
@@ -91,6 +108,7 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({
     loading,
     error,
     refreshSettings,
+    updateSettings,
     getSetting,
     getBooleanSetting,
     getNumberSetting,
