@@ -223,11 +223,15 @@ Customize the user interface, blocking messages, and overall user experience.
 - **Show background artwork**: Display background artwork for active streams
 - **Custom Plex web URL**: Custom URL for opening Plex content (e.g., https://app.plex.tv). Leave empty to use configured server settings
 - **Default page on startup**: Choose which page to display when the app loads
+
+#### Custom message
+
 - **Device pending approval message**: Message displayed when a device is waiting for approval
 - **Device rejected message**: Message displayed when a device has been rejected
 - **LAN-only access message**: Message displayed when only LAN access is allowed
 - **WAN-only access message**: Message displayed when only WAN access is allowed
-- **IP not allowed message**: Message displayed when the IP address is not in the allowed list 
+- **IP not allowed message**: Message displayed when the IP address is not in the allowed list
+- **Time restriction message**: Message displayed when time schedule conditions are not met
 
 ### Notification Settings
 
