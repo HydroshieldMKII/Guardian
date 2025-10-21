@@ -32,7 +32,9 @@ import {
   AlertTriangle,
   ChevronDown,
   Activity,
-  ExternalLink,
+  MailQuestionMark,
+  SendHorizonal,
+  MailCheck,
   BookOpen,
 } from "lucide-react";
 import { config } from "../lib/config";
@@ -215,6 +217,11 @@ const getSettingInfo = (
     SMTP_FROM_EMAIL: {
       label: "From email address",
       description: "Email address that notifications will be sent from",
+    },
+    SMTP_TO_EMAILS: {
+      label: "To email addresses",
+      description:
+        "Email addresses to send notifications to (separate multiple addresses with commas, semicolons, or new lines)",
     },
     SMTP_FROM_NAME: {
       label: "From display name",
@@ -1107,6 +1114,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
         "SMTP_USER",
         "SMTP_PASSWORD",
         "SMTP_FROM_EMAIL",
+        "SMTP_TO_EMAILS",
         "SMTP_FROM_NAME",
         "SMTP_USE_TLS",
       ],
@@ -1369,6 +1377,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
       "SMTP_USER",
       "SMTP_PASSWORD",
       "SMTP_FROM_EMAIL",
+      "SMTP_TO_EMAILS",
       "SMTP_FROM_NAME",
       "SMTP_USE_TLS",
     ];
@@ -1447,36 +1456,49 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
                     >
                       {label}
                     </Label>
-                    <Input
-                      type={
-                        setting.private
-                          ? "password"
-                          : setting.type === "number"
-                            ? "number"
-                            : setting.key === "SMTP_FROM_EMAIL"
-                              ? "email"
-                              : "text"
-                      }
-                      value={String(formData[setting.key] || "")}
-                      disabled={!isSMTPEnabled}
-                      onChange={(e) => {
-                        const newValue =
+                    {setting.key === "SMTP_TO_EMAILS" ? (
+                      <textarea
+                        value={String(formData[setting.key] || "")}
+                        disabled={!isSMTPEnabled}
+                        onChange={(e) => {
+                          handleInputChange(setting.key, e.target.value);
+                        }}
+                        placeholder="user1@example.com, user2@example.com"
+                        rows={3}
+                        className={`flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${!isSMTPEnabled ? "bg-muted" : ""}`}
+                      />
+                    ) : (
+                      <Input
+                        type={
+                          setting.private
+                            ? "password"
+                            : setting.type === "number"
+                              ? "number"
+                              : setting.key === "SMTP_FROM_EMAIL"
+                                ? "email"
+                                : "text"
+                        }
+                        value={String(formData[setting.key] || "")}
+                        disabled={!isSMTPEnabled}
+                        onChange={(e) => {
+                          const newValue =
+                            setting.type === "number"
+                              ? parseFloat(e.target.value) || 0
+                              : e.target.value;
+                          handleInputChange(setting.key, newValue);
+                        }}
+                        placeholder={
+                          setting.private && !formData[setting.key]
+                            ? "••••••••••••••••••••"
+                            : ""
+                        }
+                        className={`${
                           setting.type === "number"
-                            ? parseFloat(e.target.value) || 0
-                            : e.target.value;
-                        handleInputChange(setting.key, newValue);
-                      }}
-                      placeholder={
-                        setting.private && !formData[setting.key]
-                          ? "••••••••••••••••••••"
-                          : ""
-                      }
-                      className={`${
-                        setting.type === "number"
-                          ? "[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                          : ""
-                      } ${!isSMTPEnabled ? "bg-muted" : ""}`}
-                    />
+                            ? "[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            : ""
+                        } ${!isSMTPEnabled ? "bg-muted" : ""}`}
+                      />
+                    )}
                     <p
                       className={`text-xs ${!isSMTPEnabled ? "text-muted-foreground/60" : "text-muted-foreground"}`}
                     >
@@ -1508,11 +1530,16 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
                     variant="outline"
                   >
                     {testingSMTPConnection ? (
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        <SendHorizonal className="w-4 h-4 mr-2" />
+                      </>
+                    ) : smtpConnectionStatus?.success ? (
+                      <MailCheck className="w-4 h-4 mr-2" />
                     ) : (
-                      <RefreshCw className="w-4 h-4 mr-2" />
+                      <MailQuestionMark className="w-4 h-4 mr-2" />
                     )}
-                    Test SMTP Connection
+                    Send Test Email
                   </Button>
 
                   {smtpConnectionStatus && (
@@ -2172,6 +2199,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
       "SMTP_USER",
       "SMTP_PASSWORD",
       "SMTP_FROM_EMAIL",
+      "SMTP_TO_EMAILS",
       "SMTP_FROM_NAME",
       "SMTP_USE_TLS",
     ];

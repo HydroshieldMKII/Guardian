@@ -6,6 +6,7 @@ import { UserDevice } from '../../../entities/user-device.entity';
 import { UserPreference } from '../../../entities/user-preference.entity';
 import * as http from 'http';
 import * as https from 'https';
+import * as nodemailer from 'nodemailer';
 import {
   PlexErrorCode,
   PlexResponse,
@@ -158,6 +159,53 @@ export class ConfigService {
       {
         key: 'TIMEZONE',
         value: '+00:00',
+        type: 'string' as const,
+      },
+      // SMTP Email Configuration Settings
+      {
+        key: 'SMTP_ENABLED',
+        value: 'false',
+        type: 'boolean' as const,
+      },
+      {
+        key: 'SMTP_HOST',
+        value: '',
+        type: 'string' as const,
+      },
+      {
+        key: 'SMTP_PORT',
+        value: '587',
+        type: 'number' as const,
+      },
+      {
+        key: 'SMTP_USER',
+        value: '',
+        type: 'string' as const,
+      },
+      {
+        key: 'SMTP_PASSWORD',
+        value: '',
+        type: 'string' as const,
+        private: true,
+      },
+      {
+        key: 'SMTP_FROM_EMAIL',
+        value: '',
+        type: 'string' as const,
+      },
+      {
+        key: 'SMTP_FROM_NAME',
+        value: 'Guardian Notifications',
+        type: 'string' as const,
+      },
+      {
+        key: 'SMTP_USE_TLS',
+        value: 'true',
+        type: 'boolean' as const,
+      },
+      {
+        key: 'SMTP_TO_EMAILS',
+        value: '',
         type: 'string' as const,
       },
     ];
@@ -407,13 +455,12 @@ export class ConfigService {
       const minutes = parseInt(offsetMatch[3], 10);
 
       // Calculate total offset in milliseconds
-      // UTC offset means: local time = UTC time + offset
-      // So UTC-4 means local time = UTC time + (-4 hours)
       const offsetMs = sign * (hours * 60 + minutes) * 60 * 1000;
 
       // Get current UTC time and apply the timezone offset
       const now = new Date();
-      const localTime = new Date(now.getTime() + offsetMs);
+      const utcTime = now.getTime() + now.getTimezoneOffset() * 60000;
+      const localTime = new Date(utcTime + offsetMs);
 
       return localTime;
     } catch (error) {
@@ -583,6 +630,278 @@ export class ConfigService {
         'Unexpected error testing Plex connection',
         error.message,
       );
+    }
+  }
+
+  async testSMTPConnection(): Promise<{ success: boolean; message: string }> {
+    try {
+      const smtpEnabled = await this.getSetting('SMTP_ENABLED');
+      const smtpHost = await this.getSetting('SMTP_HOST');
+      const smtpPort = await this.getSetting('SMTP_PORT');
+      const smtpUser = await this.getSetting('SMTP_USER');
+      const smtpPassword = await this.getSetting('SMTP_PASSWORD');
+      const smtpFromEmail = await this.getSetting('SMTP_FROM_EMAIL');
+      const smtpFromName = await this.getSetting('SMTP_FROM_NAME');
+      const smtpUseTLS = await this.getSetting('SMTP_USE_TLS');
+      const smtpToEmails = await this.getSetting('SMTP_TO_EMAILS');
+
+      // Check if SMTP is enabled
+      if (smtpEnabled !== true) {
+        return {
+          success: false,
+          message: 'SMTP email notifications are disabled',
+        };
+      }
+
+      // Check if all required settings are present
+      if (
+        !smtpHost ||
+        !smtpPort ||
+        !smtpUser ||
+        !smtpPassword ||
+        !smtpFromEmail
+      ) {
+        return {
+          success: false,
+          message:
+            'Missing required SMTP configuration (host, port, user, password, or from email)',
+        };
+      }
+
+      // Check if TLS is valid with port
+      if (
+        smtpUseTLS === true &&
+        parseInt(smtpPort) !== 465 &&
+        parseInt(smtpPort) !== 587
+      ) {
+        return {
+          success: false,
+          message:
+            'TLS is not supported on this port. Please use port 465 or 587.',
+        };
+      }
+
+      // Parse and validate recipient emails
+      let recipientEmails: string[] = [];
+      if (smtpToEmails && smtpToEmails.trim()) {
+        // Split by comma, semicolon, or newline and clean up
+        recipientEmails = smtpToEmails
+          .split(/[,;\n]/)
+          .map((email: string) => email.trim())
+          .filter((email: string) => email.length > 0);
+      }
+
+      // If no specific recipients configured
+      if (recipientEmails.length === 0) {
+        return {
+          success: false,
+          message:
+            'No recipient email addresses configured. Please  provide at least one recipient.',
+        };
+      }
+
+      // Validate email format for recipients
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      const invalidEmails = recipientEmails.filter(
+        (email) => !emailRegex.test(email),
+      );
+      if (invalidEmails.length > 0) {
+        return {
+          success: false,
+          message: `Invalid email format(s): ${invalidEmails.join(', ')}`,
+        };
+      }
+
+      // Create transporter
+      const transporter = nodemailer.createTransport({
+        host: smtpHost,
+        port: parseInt(smtpPort),
+        secure: smtpUseTLS === 'true' && parseInt(smtpPort) === 465, // Use secure for port 465
+        auth: {
+          user: smtpUser,
+          pass: smtpPassword,
+        },
+        tls: {
+          rejectUnauthorized: false, // Allow self-signed certificates for testing
+        },
+      });
+
+      // Verify the connection
+      await transporter.verify();
+
+      // Get the current time in the configured timezone for the email timestamp
+      const currentTimeInTimezone = await this.getCurrentTimeInTimezone();
+
+      // Format timestamp in French style (dd/mm/yyyy à 17h33)
+      const day = currentTimeInTimezone.getDate().toString().padStart(2, '0');
+      const month = (currentTimeInTimezone.getMonth() + 1)
+        .toString()
+        .padStart(2, '0');
+      const year = currentTimeInTimezone.getFullYear();
+      const hours = currentTimeInTimezone.getHours();
+      const minutes = currentTimeInTimezone
+        .getMinutes()
+        .toString()
+        .padStart(2, '0');
+
+      const formattedTimestamp = `${day}/${month}/${year} ${hours}h${minutes}`;
+
+      const testMailOptions = {
+        from: smtpFromName
+          ? `${smtpFromName} <${smtpFromEmail}>`
+          : smtpFromEmail,
+        to: recipientEmails,
+        subject: 'Guardian SMTP Test - Connection Successful',
+        text: 'This is a test email from Guardian to verify SMTP configuration. If you received this email, your SMTP settings are working correctly.',
+        html: `<!DOCTYPE html>
+        <html lang="en">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <style>
+            body {
+              margin: 0;
+              padding: 0;
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+              background-color: #ffffff;
+              color: #000000;
+              line-height: 1.6;
+            }
+            .container {
+              max-width: 600px;
+              margin: 0 auto;
+              background-color: #ffffff;
+              border: 1px solid #e5e5e5;
+            }
+            .header {
+              padding: 60px 40px 40px;
+              text-align: center;
+              background-color: #ffffff;
+            }
+            .header h1 {
+              margin: 0;
+              font-size: 32px;
+              font-weight: 700;
+              letter-spacing: -1px;
+              color: #000000;
+              text-transform: uppercase;
+            }
+            .content {
+              padding: 0 40px 40px;
+              background-color: #ffffff;
+            }
+            .content p {
+              margin: 0 0 24px 0;
+              font-size: 16px;
+              line-height: 1.7;
+              color: #000000;
+              font-weight: 400;
+            }
+            .content p:last-child {
+              margin-bottom: 0;
+            }
+            .status {
+              display: inline-block;
+              padding: 12px 24px;
+              background-color: #f8f8f8;
+              color: #000000 !important;
+              border: 2px solid #000000;
+              font-size: 12px;
+              font-weight: 700;
+              letter-spacing: 1px;
+              text-transform: uppercase;
+              margin: 32px 0;
+              border-radius: 0;
+            }
+            .recipients {
+              margin: 40px 0;
+              padding: 24px;
+              background-color: #f8f8f8;
+              border-left: 4px solid #000000;
+            }
+            .recipients h3 {
+              margin: 0 0 16px 0;
+              font-size: 14px;
+              font-weight: 700;
+              color: #000000;
+              text-transform: uppercase;
+              letter-spacing: 0.5px;
+            }
+            .recipients p {
+              margin: 0;
+              font-size: 14px;
+              color: #000000;
+              font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+              font-weight: 500;
+            }
+            .footer {
+              padding: 40px 40px 60px;
+              text-align: center;
+              border-top: 1px solid #e5e5e5;
+              margin-top: 40px;
+              background-color: #ffffff;
+            }
+            .footer p {
+              margin: 0;
+              font-size: 12px;
+              color: #000000;
+              font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+              text-transform: uppercase;
+              letter-spacing: 0.5px;
+              font-weight: 500;
+            }
+            .divider {
+              height: 1px;
+              background-color: #e5e5e5;
+              margin: 40px 0;
+              width: 60px;
+              margin-left: auto;
+              margin-right: auto;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>Guardian</h1>
+              <div class="divider"></div>
+            </div>
+            <div class="content">
+              <p>This is a test email from Guardian to verify your SMTP configuration.</p>
+              <div class="status">SMTP VERIFIED</div>
+              <p>Your email settings are working correctly. Guardian is ready to send notifications.</p>
+              <div class="recipients">
+                <h3>Test Recipients</h3>
+                <p>${recipientEmails.join(', ')}</p>
+              </div>
+            </div>
+            <div class="footer">
+              <p>Test sent at: ${formattedTimestamp}</p>
+            </div>
+          </div>
+        </body>
+        </html>`,
+      };
+
+      await transporter.sendMail(testMailOptions);
+
+      const recipientCount = recipientEmails.length;
+      const recipientText =
+        recipientCount === 1
+          ? recipientEmails[0]
+          : `${recipientCount} recipients (${recipientEmails.join(', ')})`;
+
+      return {
+        success: true,
+        message: `SMTP connection successful! Test email sent to ${recipientText}`,
+      };
+    } catch (error) {
+      this.logger.error('Error testing SMTP connection:', error);
+
+      return {
+        success: false,
+        message: `SMTP error: ${error.message}`,
+      };
     }
   }
 
