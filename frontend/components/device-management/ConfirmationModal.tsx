@@ -72,8 +72,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
       case "reject":
         return {
           variant: "default" as const,
-          className:
-            "w-full sm:w-auto bg-red-500 hover:bg-red-600 text-white",
+          className: "w-full sm:w-auto bg-red-500 hover:bg-red-600 text-white",
         };
       case "delete":
         return {
