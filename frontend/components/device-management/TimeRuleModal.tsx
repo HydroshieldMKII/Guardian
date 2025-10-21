@@ -676,7 +676,7 @@ export function TimeRuleModal({
                     {deletingAllRules ? (
                       <div className="w-3 h-3 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
                     ) : (
-                      <Trash2 className="w-3 h-3" />
+                      <Trash2 className="w-3 h-3 text-red-600 dark:text-red-400" />
                     )}
                     {deletingAllRules ? "Deleting..." : "Delete All"}
                   </Button>
@@ -901,7 +901,7 @@ export function TimeRuleModal({
                                   {deletingRuleId === rule.id ? (
                                     <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
                                   ) : (
-                                    <Trash2 className="w-4 h-4" />
+                                    <Trash2 className="w-4 h-4 text-red-600 dark:text-red-400" />
                                   )}
                                 </Button>
                               </div>
