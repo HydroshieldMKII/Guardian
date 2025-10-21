@@ -33,7 +33,6 @@ import {
   ChevronDown,
   Activity,
   MailQuestionMark,
-  SendHorizonal,
   MailCheck,
   BookOpen,
 } from "lucide-react";
@@ -1529,15 +1528,8 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
                     size="sm"
                     variant="outline"
                   >
-                    {testingSMTPConnection ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        <SendHorizonal className="w-4 h-4 mr-2" />
-                      </>
-                    ) : smtpConnectionStatus?.success ? (
-                      <MailCheck className="w-4 h-4 mr-2" />
-                    ) : (
-                      <MailQuestionMark className="w-4 h-4 mr-2" />
+                    {testingSMTPConnection && (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                     )}
                     Send Test Email
                   </Button>
@@ -1551,9 +1543,9 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
                       }`}
                     >
                       {smtpConnectionStatus.success ? (
-                        <CheckCircle className="w-4 h-4" />
+                        <MailCheck className="w-4 h-4" />
                       ) : (
-                        <XCircle className="w-4 h-4" />
+                        <MailQuestionMark className="w-4 h-4" />
                       )}
                       <span>{smtpConnectionStatus.message}</span>
                     </div>

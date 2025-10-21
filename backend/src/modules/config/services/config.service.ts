@@ -891,16 +891,47 @@ export class ConfigService {
           ? recipientEmails[0]
           : `${recipientCount} recipients (${recipientEmails.join(', ')})`;
 
+      this.logger.log(
+        `SMTP test email sent successfully to ${recipientCount} recipient(s): ${recipientEmails.join(', ')}`,
+      );
+
       return {
         success: true,
         message: `SMTP connection successful! Test email sent to ${recipientText}`,
       };
     } catch (error) {
-      this.logger.error('Error testing SMTP connection:', error);
+      this.logger.error('SMTP Connection Test Failed', {
+        error: error.message,
+        code: error.code,
+        command: error.command,
+        response: error.response,
+        responseCode: error.responseCode,
+        stack: error.stack,
+      });
+
+      let userMessage = `SMTP error: ${error.message}`;
+
+      if (error.code === 'EAUTH') {
+        userMessage =
+          'Authentication failed. Please check your username and password.';
+      } else if (error.code === 'ECONNECTION') {
+        userMessage =
+          'Failed to connect to SMTP server. Please check the host and port.';
+      } else if (error.code === 'ETIMEDOUT') {
+        userMessage =
+          'Connection timed out. Please check your network connection and server settings.';
+      } else if (error.code === 'ENOTFOUND') {
+        userMessage = 'SMTP server not found. Please check the hostname.';
+      } else if (error.responseCode === 535) {
+        userMessage = 'Authentication failed. Please verify your credentials.';
+      } else if (error.responseCode === 550) {
+        userMessage =
+          'Email rejected by server. Please check recipient addresses.';
+      }
 
       return {
         success: false,
-        message: `SMTP error: ${error.message}`,
+        message: userMessage,
       };
     }
   }
