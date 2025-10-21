@@ -23,7 +23,7 @@ interface SettingsContextType {
 }
 
 const SettingsContext = createContext<SettingsContextType | undefined>(
-  undefined,
+  undefined
 );
 
 interface SettingsProviderProps {
@@ -65,14 +65,14 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({
   };
 
   const updateSettings = (updates: { key: string; value: any }[]) => {
-    setSettings(prevSettings => {
+    setSettings((prevSettings) => {
       const updatedSettings = [...prevSettings];
       updates.forEach(({ key, value }) => {
-        const index = updatedSettings.findIndex(s => s.key === key);
+        const index = updatedSettings.findIndex((s) => s.key === key);
         if (index !== -1) {
           updatedSettings[index] = {
             ...updatedSettings[index],
-            value: String(value)
+            value: String(value),
           };
         }
       });
