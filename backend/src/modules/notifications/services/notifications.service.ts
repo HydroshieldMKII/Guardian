@@ -60,15 +60,15 @@ export class NotificationsService {
   ): Promise<Notification> {
     // Look up the custom device name from the database
     let deviceDisplayName = 'Unknown Device'; // Default if not found
-    
+
     try {
       const userDevice = await this.userDeviceRepository.findOne({
-        where: { 
+        where: {
           userId: userId,
-          deviceIdentifier: deviceIdentifier
-        }
+          deviceIdentifier: deviceIdentifier,
+        },
       });
-      
+
       if (userDevice && userDevice.deviceName) {
         deviceDisplayName = userDevice.deviceName; // Use custom name from database
       }

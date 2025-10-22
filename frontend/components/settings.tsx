@@ -1769,7 +1769,10 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
         );
 
       case "notifications":
-        const generalNotificationSettings = ["AUTO_MARK_NOTIFICATION_READ", "SMTP_NOTIFY_ON_NOTIFICATIONS"];
+        const generalNotificationSettings = [
+          "AUTO_MARK_NOTIFICATION_READ",
+          "SMTP_NOTIFY_ON_NOTIFICATIONS",
+        ];
 
         const generalNotificationSettingsData = settings.filter((setting) =>
           generalNotificationSettings.includes(setting.key)

@@ -10,7 +10,12 @@ import { ConfigModule } from '../config/config.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Notification, SessionHistory, UserPreference, UserDevice]),
+    TypeOrmModule.forFeature([
+      Notification,
+      SessionHistory,
+      UserPreference,
+      UserDevice,
+    ]),
     ConfigModule,
   ],
   controllers: [NotificationsController],
