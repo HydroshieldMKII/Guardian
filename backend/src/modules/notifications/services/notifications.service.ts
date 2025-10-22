@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Notification } from '../../../entities/notification.entity';
 import { SessionHistory } from '../../../entities/session-history.entity';
+import { UserDevice } from '../../../entities/user-device.entity';
 import { ConfigService } from '../../config/services/config.service';
 
 export interface CreateNotificationDto {
@@ -31,6 +32,8 @@ export class NotificationsService {
     private notificationRepository: Repository<Notification>,
     @InjectRepository(SessionHistory)
     private sessionHistoryRepository: Repository<SessionHistory>,
+    @InjectRepository(UserDevice)
+    private userDeviceRepository: Repository<UserDevice>,
     private configService: ConfigService,
   ) {}
 
@@ -51,39 +54,58 @@ export class NotificationsService {
   async createStreamBlockedNotification(
     userId: string,
     username: string,
-    deviceName: string,
+    deviceIdentifier: string,
     stopCode?: string,
     sessionHistoryId?: number,
   ): Promise<Notification> {
+    // Look up the custom device name from the database
+    let deviceDisplayName = 'Unknown Device'; // Default if not found
+    
+    try {
+      const userDevice = await this.userDeviceRepository.findOne({
+        where: { 
+          userId: userId,
+          deviceIdentifier: deviceIdentifier
+        }
+      });
+      
+      if (userDevice && userDevice.deviceName) {
+        deviceDisplayName = userDevice.deviceName; // Use custom name from database
+      }
+    } catch (error) {
+      // If lookup fails, use default
+      console.warn('Failed to lookup custom device name:', error);
+    }
+
     let text: string;
 
     if (stopCode) {
       switch (stopCode) {
         case 'DEVICE_PENDING':
-          text = `${username} stream was blocked - device "${deviceName}" needs approval`;
+          text = `Stream blocked for ${username} on ${deviceDisplayName} - device needs approval`;
           break;
         case 'DEVICE_REJECTED':
-          text = `${username} stream was blocked - device "${deviceName}" is explicitly rejected`;
+          text = `Stream blocked for ${username} on ${deviceDisplayName} - device has been rejected`;
           break;
         case 'IP_POLICY_LAN_ONLY':
-          text = `${username} stream was blocked - "${deviceName}" tried to stream on WAN access (LAN-only policy)`;
+          text = `Stream blocked for ${username} on ${deviceDisplayName} - device attempted WAN access but is restricted to LAN only`;
           break;
         case 'IP_POLICY_WAN_ONLY':
-          text = `${username} stream was blocked - "${deviceName}" tried to stream on LAN access (WAN-only policy)`;
+          text = `Stream blocked for ${username} on ${deviceDisplayName} - device attempted LAN access but is restricted to WAN only`;
           break;
         case 'IP_POLICY_NOT_ALLOWED':
-          text = `${username} stream was blocked - "${deviceName}" IP is not in the allowed list (restricted IP policy)`;
+          text = `Stream blocked for ${username} on ${deviceDisplayName} - IP address is not in the allowed list`;
           break;
         case 'TIME_RESTRICTED':
-          text = `${username} stream was blocked on "${deviceName}" - time scheduling doesn't allow streaming at this time`;
+          text = `Stream blocked for ${username} on ${deviceDisplayName} - time scheduling restrictions are in effect`;
           break;
         default:
-          text = `${username} stream was blocked on "${deviceName}" - ${stopCode}`;
+          text = `Stream blocked for ${username} on ${deviceDisplayName} - ${stopCode}`;
           break;
       }
     } else {
       // Fallback to generic message if no stop code provided
-      text = `${username} stream was blocked on "${deviceName}"`;
+      text = `Stream blocked for ${username} on ${deviceDisplayName}`;
     }
 
     //Mark in session history the stream was terminated
@@ -98,12 +120,28 @@ export class NotificationsService {
       }
     }
 
-    return await this.createNotification({
+    const notification = await this.createNotification({
       userId,
       text,
       type: 'block',
       sessionHistoryId,
     });
+
+    // Send email notification for stream blocking if enabled
+    try {
+      await this.configService.sendNotificationEmail(
+        'block',
+        text,
+        username,
+        deviceDisplayName,
+        stopCode,
+      );
+    } catch (error) {
+      // Log error but don't fail the notification creation
+      console.error('Failed to send stream blocked notification email:', error);
+    }
+
+    return notification;
   }
 
   async getNotificationsForUser(

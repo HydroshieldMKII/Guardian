@@ -232,6 +232,11 @@ const getSettingInfo = (
       description:
         "Enable TLS/STARTTLS encryption for secure email transmission",
     },
+    SMTP_NOTIFY_ON_NOTIFICATIONS: {
+      label: "Email notifications for events",
+      description:
+        "Send email notifications when new events occur (device approvals, rejections, etc.)",
+    },
   };
 
   const info = settingInfoMap[setting.key];
@@ -557,6 +562,11 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
         case "SMTP_USE_TLS":
           if (typeof setting.value !== "boolean") {
             errors.push("SMTP TLS setting must be a boolean value");
+          }
+          break;
+        case "SMTP_NOTIFY_ON_NOTIFICATIONS":
+          if (typeof setting.value !== "boolean") {
+            errors.push("SMTP notify on notifications must be a boolean value");
           }
           break;
         default:
@@ -1107,6 +1117,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
       ],
       notifications: [
         "AUTO_MARK_NOTIFICATION_READ",
+        "SMTP_NOTIFY_ON_NOTIFICATIONS",
         "SMTP_ENABLED",
         "SMTP_HOST",
         "SMTP_PORT",
@@ -1758,7 +1769,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
         );
 
       case "notifications":
-        const generalNotificationSettings = ["AUTO_MARK_NOTIFICATION_READ"];
+        const generalNotificationSettings = ["AUTO_MARK_NOTIFICATION_READ", "SMTP_NOTIFY_ON_NOTIFICATIONS"];
 
         const generalNotificationSettingsData = settings.filter((setting) =>
           generalNotificationSettings.includes(setting.key)
@@ -2194,6 +2205,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
       "SMTP_TO_EMAILS",
       "SMTP_FROM_NAME",
       "SMTP_USE_TLS",
+      "SMTP_NOTIFY_ON_NOTIFICATIONS",
     ];
 
     return Object.entries(formData).some(([key, value]) => {

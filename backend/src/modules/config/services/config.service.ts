@@ -208,6 +208,11 @@ export class ConfigService {
         value: '',
         type: 'string' as const,
       },
+      {
+        key: 'SMTP_NOTIFY_ON_NOTIFICATIONS',
+        value: 'false',
+        type: 'boolean' as const,
+      },
     ];
 
     // Update version number on startup if current version is higher
@@ -933,6 +938,322 @@ export class ConfigService {
         success: false,
         message: userMessage,
       };
+    }
+  }
+
+  async sendNotificationEmail(
+    notificationType: 'block' | 'info' | 'warning' | 'error',
+    notificationText: string,
+    username: string,
+    deviceName?: string,
+    stopCode?: string,
+  ): Promise<void> {
+    try {
+      // Check if email notifications are enabled
+      const smtpEnabled = await this.getSetting('SMTP_ENABLED');
+      const notifyOnNotifications = await this.getSetting(
+        'SMTP_NOTIFY_ON_NOTIFICATIONS',
+      );
+
+      if (!smtpEnabled || !notifyOnNotifications) {
+        return; // Email notifications are disabled
+      }
+
+      // Get SMTP settings
+      const [
+        smtpHost,
+        smtpPort,
+        smtpUser,
+        smtpPassword,
+        smtpFromEmail,
+        smtpFromName,
+        smtpUseTLS,
+        smtpToEmails,
+      ] = await Promise.all([
+        this.getSetting('SMTP_HOST'),
+        this.getSetting('SMTP_PORT'),
+        this.getSetting('SMTP_USER'),
+        this.getSetting('SMTP_PASSWORD'),
+        this.getSetting('SMTP_FROM_EMAIL'),
+        this.getSetting('SMTP_FROM_NAME'),
+        this.getSetting('SMTP_USE_TLS'),
+        this.getSetting('SMTP_TO_EMAILS'),
+      ]);
+
+      // Validate required settings
+      if (
+        !smtpHost ||
+        !smtpPort ||
+        !smtpUser ||
+        !smtpPassword ||
+        !smtpFromEmail ||
+        !smtpToEmails
+      ) {
+        this.logger.warn(
+          'SMTP notification email skipped: missing required configuration',
+        );
+        return;
+      }
+
+      // Parse recipient emails
+      const recipientEmails = smtpToEmails
+        .split(/[,;\n]/)
+        .map((email: string) => email.trim())
+        .filter((email: string) => email.length > 0);
+
+      if (recipientEmails.length === 0) {
+        this.logger.warn(
+          'SMTP notification email skipped: no recipient addresses configured',
+        );
+        return;
+      }
+
+      // Create transporter
+      const transporter = nodemailer.createTransport({
+        host: smtpHost,
+        port: parseInt(smtpPort),
+        secure: smtpUseTLS === 'true' && parseInt(smtpPort) === 465,
+        auth: {
+          user: smtpUser,
+          pass: smtpPassword,
+        },
+        tls: {
+          rejectUnauthorized: false,
+        },
+      });
+
+      // Get current time for timestamp
+      const currentTimeInTimezone = await this.getCurrentTimeInTimezone();
+      const day = currentTimeInTimezone.getDate().toString().padStart(2, '0');
+      const month = (currentTimeInTimezone.getMonth() + 1)
+        .toString()
+        .padStart(2, '0');
+      const year = currentTimeInTimezone.getFullYear();
+      const hours = currentTimeInTimezone.getHours();
+      const minutes = currentTimeInTimezone
+        .getMinutes()
+        .toString()
+        .padStart(2, '0');
+      const formattedTimestamp = `${day}/${month}/${year} ${hours}h${minutes}`;
+
+      // Generate subject and email content based on notification type
+      const { subject, statusLabel, statusColor, mainMessage } =
+        this.getNotificationEmailContent(
+          notificationType,
+          stopCode,
+          username,
+          deviceName,
+        );
+
+      const emailHtml = `<!DOCTYPE html>
+        <html lang="en">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <style>
+            body {
+              margin: 0;
+              padding: 0;
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+              background-color: #ffffff;
+              color: #000000;
+              line-height: 1.6;
+            }
+            .container {
+              max-width: 600px;
+              margin: 0 auto;
+              background-color: #ffffff;
+              border: 1px solid #e5e5e5;
+            }
+            .header {
+              padding: 60px 40px 40px;
+              text-align: center;
+              background-color: #ffffff;
+            }
+            .header h1 {
+              margin: 0;
+              font-size: 32px;
+              font-weight: 700;
+              letter-spacing: -1px;
+              color: #000000;
+              text-transform: uppercase;
+            }
+            .content {
+              padding: 0 40px 40px;
+              background-color: #ffffff;
+            }
+            .content p {
+              margin: 0 0 24px 0;
+              font-size: 16px;
+              line-height: 1.7;
+              color: #000000;
+              font-weight: 400;
+            }
+            .content p:last-child {
+              margin-bottom: 0;
+            }
+            .notification-details {
+              margin: 40px 0;
+              padding: 24px;
+              background-color: #f8f8f8;
+              border-left: 4px solid #000000;
+            }
+            .notification-details h3 {
+              margin: 0 0 16px 0;
+              font-size: 14px;
+              font-weight: 700;
+              color: #000000;
+              text-transform: uppercase;
+              letter-spacing: 0.5px;
+            }
+            .notification-details p {
+              margin: 8px 0;
+              font-size: 14px;
+              color: #000000;
+            }
+            .notification-details .detail-label {
+              font-weight: 600;
+              display: inline-block;
+              min-width: 80px;
+            }
+            .footer {
+              padding: 40px 40px 60px;
+              text-align: center;
+              border-top: 1px solid #e5e5e5;
+              margin-top: 40px;
+              background-color: #ffffff;
+            }
+            .footer p {
+              margin: 0;
+              font-size: 12px;
+              color: #000000;
+              font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+              text-transform: uppercase;
+              letter-spacing: 0.5px;
+              font-weight: 500;
+            }
+            .divider {
+              height: 1px;
+              background-color: #e5e5e5;
+              margin: 40px 0;
+              width: 60px;
+              margin-left: auto;
+              margin-right: auto;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>Guardian</h1>
+              <div class="divider"></div>
+            </div>
+            <div class="content">
+              <p>${mainMessage}</p>
+              
+              <div class="notification-details">
+                <h3>Event Details</h3>
+                <p><span class="detail-label">User:</span> ${username}</p>
+                ${deviceName ? `<p><span class="detail-label">Device:</span> ${deviceName}</p>` : ''}
+                <p><span class="detail-label">Type:</span> ${notificationType.toUpperCase()}</p>
+                ${stopCode ? `<p><span class="detail-label">Internal Stop Code:</span> ${stopCode}</p>` : ''}
+              </div>
+            </div>
+            <div class="footer">
+              <p>Notification sent at: ${formattedTimestamp}</p>
+            </div>
+          </div>
+        </body>
+        </html>`;
+
+      const mailOptions = {
+        from: smtpFromName
+          ? `${smtpFromName} <${smtpFromEmail}>`
+          : smtpFromEmail,
+        to: recipientEmails,
+        subject,
+        text: `${subject}\n\n${mainMessage}\n\nUser: ${username}${deviceName ? `\nDevice: ${deviceName}` : ''}\nType: ${notificationType.toUpperCase()}${stopCode ? `\nReason: ${stopCode}` : ''}\n\nNotification sent at: ${formattedTimestamp}`,
+        html: emailHtml,
+      };
+
+      await transporter.sendMail(mailOptions);
+
+      this.logger.log(
+        `Notification email sent successfully for ${notificationType} event: ${username}${deviceName ? ` on ${deviceName}` : ''}`,
+      );
+    } catch (error) {
+      this.logger.error('Failed to send notification email', {
+        error: error.message,
+        notificationType,
+        username,
+        deviceName,
+        stopCode,
+        stack: error.stack,
+      });
+    }
+  }
+
+  private getNotificationEmailContent(
+    notificationType: 'block' | 'info' | 'warning' | 'error',
+    stopCode?: string,
+    username?: string,
+    deviceName?: string,
+  ): {
+    subject: string;
+    statusLabel: string;
+    statusColor: string;
+    mainMessage: string;
+  } {
+    switch (notificationType) {
+      case 'block':
+        return {
+          subject: `Guardian Alert: Stream Blocked${deviceName ? ` - ${deviceName}` : ''}`,
+          statusLabel: 'STREAM BLOCKED',
+          statusColor: '#ff4444',
+          mainMessage: `A streaming session has been blocked on your Plex server.${stopCode ? `\n\n${this.getStopCodeDescription(stopCode)}.` : ''}`,
+        };
+      case 'warning':
+        return {
+          subject: `Guardian Warning${deviceName ? ` - ${deviceName}` : ''}`,
+          statusLabel: 'WARNING',
+          statusColor: '#ffaa00',
+          mainMessage:
+            'Guardian has detected an issue that requires your attention.',
+        };
+      case 'error':
+        return {
+          subject: `Guardian Error${deviceName ? ` - ${deviceName}` : ''}`,
+          statusLabel: 'ERROR',
+          statusColor: '#ff4444',
+          mainMessage: 'Guardian has encountered an error during operation.',
+        };
+      case 'info':
+      default:
+        return {
+          subject: `Guardian Notification${deviceName ? ` - ${deviceName}` : ''}`,
+          statusLabel: 'NOTIFICATION',
+          statusColor: '#4488ff',
+          mainMessage: 'Guardian has a new notification for your Plex server.',
+        };
+    }
+  }
+
+  private getStopCodeDescription(stopCode: string): string {
+    switch (stopCode) {
+      case 'DEVICE_PENDING':
+        return 'Device requires administrator approval before streaming is allowed';
+      case 'DEVICE_REJECTED':
+        return 'Device has been explicitly rejected by an administrator';
+      case 'IP_POLICY_LAN_ONLY':
+        return 'Device attempted external access but is restricted to local network only';
+      case 'IP_POLICY_WAN_ONLY':
+        return 'Device attempted local access but is restricted to external connections only';
+      case 'IP_POLICY_NOT_ALLOWED':
+        return 'Device IP address is not in the approved access list';
+      case 'TIME_RESTRICTED':
+        return 'Streaming blocked due to time-based scheduling restrictions';
+      default:
+        return `Streaming blocked: ${stopCode}`;
     }
   }
 
