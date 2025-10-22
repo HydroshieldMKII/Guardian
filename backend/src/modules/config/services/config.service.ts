@@ -1156,7 +1156,7 @@ export class ConfigService {
                 <p><span class="detail-label">User:</span> ${username}</p>
                 ${deviceName ? `<p><span class="detail-label">Device:</span> ${deviceName}</p>` : ''}
                 <p><span class="detail-label">Type:</span> ${notificationType.toUpperCase()}</p>
-                ${stopCode ? `<p><span class="detail-label">Internal Stop Code:</span> ${stopCode}</p>` : ''}
+                ${stopCode ? `<p><span class="detail-label">Stop Code:</span> ${stopCode}</p>` : ''}
               </div>
             </div>
             <div class="footer">
