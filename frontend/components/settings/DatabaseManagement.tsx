@@ -151,9 +151,15 @@ export function DatabaseManagement({
       if (response.ok) {
         // Handle nested result structure from backend
         const importResult = result.imported || result;
-        const imported = typeof importResult.imported === 'number' ? importResult.imported : 'unknown';
-        const skipped = typeof importResult.skipped === 'number' ? importResult.skipped : 'unknown';
-        
+        const imported =
+          typeof importResult.imported === "number"
+            ? importResult.imported
+            : "unknown";
+        const skipped =
+          typeof importResult.skipped === "number"
+            ? importResult.skipped
+            : "unknown";
+
         toast({
           title: "Import successful",
           description: `Imported ${imported} items, skipped ${skipped} items`,
