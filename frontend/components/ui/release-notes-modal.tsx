@@ -50,7 +50,7 @@ export function ReleaseNotesModal({
         .replace(/^- (.*$)/gm, '<li class="ml-4 mb-1 list-disc">$1</li>')
         // Wrap consecutive list items in ul tags
         .replace(
-          /(<li[^>]*>.*?<\/li>(?:\s*<li[^>]*>.*?<\/li>)*)/gs,
+          /(<li[^>]*>[\s\S]*?<\/li>(?:\s*<li[^>]*>[\s\S]*?<\/li>)*)/g,
           '<ul class="ml-4 mb-2">$1</ul>'
         )
         // Convert markdown bold

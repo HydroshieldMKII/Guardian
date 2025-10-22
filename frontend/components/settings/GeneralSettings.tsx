@@ -85,7 +85,7 @@ export function GeneralSettings({
       return index !== undefined && index >= 0 ? index : 999;
     };
 
-    let filteredSettings;
+    let filteredSettings: AppSetting[];
     switch (section) {
       case "guardian":
         filteredSettings = settings.filter((setting) =>
