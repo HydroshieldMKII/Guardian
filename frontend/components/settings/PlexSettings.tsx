@@ -56,14 +56,13 @@ export function PlexSettings({
         setting.key === "CUSTOM_PLEX_URL"
     )
     .sort((a, b) => {
-      // Define the desired order for Plex settings
       const order = [
-        "CUSTOM_PLEX_URL", // Custom URL at the top
+        "CUSTOM_PLEX_URL",
         "PLEX_SERVER_IP",
         "PLEX_SERVER_PORT",
         "PLEX_TOKEN",
-        "USE_SSL", // SSL settings grouped together
-        "IGNORE_CERT_ERRORS", // SSL settings grouped together
+        "USE_SSL",
+        "IGNORE_CERT_ERRORS",
       ];
 
       const indexA = order.indexOf(a.key);

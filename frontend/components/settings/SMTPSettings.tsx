@@ -54,10 +54,10 @@ export function SMTPSettings({
     .sort((a, b) => {
       const order = [
         "SMTP_ENABLED",
-        "SMTP_NOTIFY_ON_NOTIFICATIONS", // Email notifications toggle first after enable
+        "SMTP_NOTIFY_ON_NOTIFICATIONS",
         "SMTP_HOST",
         "SMTP_PORT",
-        "SMTP_USE_TLS", // Move TLS setting right after port for better UX
+        "SMTP_USE_TLS",
         "SMTP_USER",
         "SMTP_PASSWORD",
         "SMTP_FROM_EMAIL",

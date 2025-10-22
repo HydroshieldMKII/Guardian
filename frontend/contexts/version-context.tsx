@@ -297,7 +297,7 @@ export function VersionProvider({ children }: { children: React.ReactNode }) {
     }
   }, [versionInfo?.version, checkForUpdatesIfEnabled]);
 
-  // Periodic update checking (every 30 minutes if auto-check is enabled)
+  // Periodic update checking
   useEffect(() => {
     if (!versionInfo?.version) return;
 
