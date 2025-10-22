@@ -26,8 +26,8 @@ export function GlobalVersionMismatchBanner() {
               </p>
               <p className="text-xs text-red-100 break-words sm:truncate">
                 Database version ({versionInfo.databaseVersion}) is newer than
-                code version ({versionInfo.codeVersion}). Update Guardian
-                immediately to prevent data corruption.
+                code version ({versionInfo.codeVersion}). Unexpected issues may
+                occur, please update the application right away.
               </p>
             </div>
           </div>

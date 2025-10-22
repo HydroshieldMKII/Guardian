@@ -4,20 +4,20 @@ import { Repository } from 'typeorm';
 import { AppSettings } from '../../../entities/app-settings.entity';
 import { UserDevice } from '../../../entities/user-device.entity';
 import { UserPreference } from '../../../entities/user-preference.entity';
-import * as http from 'http';
-import * as https from 'https';
-import * as nodemailer from 'nodemailer';
+import { SessionHistory } from '../../../entities/session-history.entity';
+import { Notification } from '../../../entities/notification.entity';
+import { PlexResponse, PlexErrorCode } from '../../../types/plex-errors';
+import { StopCodeUtils } from '../../../common/utils/stop-code.utils';
 import {
-  PlexErrorCode,
-  PlexResponse,
-  createPlexError,
-  createPlexSuccess,
-} from '../../../types/plex-errors';
-import { SessionHistory } from 'src/entities/session-history.entity';
-import { Notification } from 'src/entities/notification.entity';
-
-// App version
-const CURRENT_APP_VERSION = '1.2.3';
+  EmailService,
+  SMTPConfig,
+  NotificationEmailData,
+} from './email.service';
+import { EmailTemplateService } from './email-template.service';
+import { PlexConnectionService } from './plex-connection.service';
+import { TimezoneService } from './timezone.service';
+import { DatabaseService } from './database.service';
+import { VersionService } from './version.service';
 
 export interface ConfigSettingDto {
   key: string;
@@ -35,6 +35,12 @@ export class ConfigService {
   constructor(
     @InjectRepository(AppSettings)
     private settingsRepository: Repository<AppSettings>,
+    private readonly emailService: EmailService,
+    private readonly emailTemplateService: EmailTemplateService,
+    private readonly plexConnectionService: PlexConnectionService,
+    private readonly timezoneService: TimezoneService,
+    private readonly databaseService: DatabaseService,
+    private readonly versionService: VersionService,
   ) {
     this.initializeDefaultSettings();
   }
@@ -132,7 +138,7 @@ export class ConfigService {
       },
       {
         key: 'APP_VERSION',
-        value: CURRENT_APP_VERSION,
+        value: this.versionService.getCurrentAppVersion(),
         type: 'string' as const,
         private: false,
       },
@@ -445,579 +451,96 @@ export class ConfigService {
 
   async getCurrentTimeInTimezone(): Promise<Date> {
     const timezoneOffset = await this.getTimezone();
-    try {
-      // Parse UTC offset format (e.g., "+02:00", "-05:30")
-      const offsetMatch = timezoneOffset.match(/^([+-])(\d{2}):(\d{2})$/);
-      if (!offsetMatch) {
-        this.logger.warn(
-          `Invalid timezone offset format ${timezoneOffset}, falling back to UTC`,
-        );
-        return new Date();
-      }
-
-      const sign = offsetMatch[1] === '+' ? 1 : -1;
-      const hours = parseInt(offsetMatch[2], 10);
-      const minutes = parseInt(offsetMatch[3], 10);
-
-      // Calculate total offset in milliseconds
-      const offsetMs = sign * (hours * 60 + minutes) * 60 * 1000;
-
-      // Get current UTC time and apply the timezone offset
-      const now = new Date();
-      const utcTime = now.getTime() + now.getTimezoneOffset() * 60000;
-      const localTime = new Date(utcTime + offsetMs);
-
-      return localTime;
-    } catch (error) {
-      this.logger.warn(
-        `Invalid timezone offset ${timezoneOffset}, falling back to UTC: ${error.message}`,
-      );
-      return new Date();
-    }
+    return this.timezoneService.getCurrentTimeInTimezone(timezoneOffset);
   }
 
   private getTimeInSpecificTimezone(timezoneOffset: string): Date {
-    try {
-      // Parse UTC offset format (e.g., "+02:00", "-05:30")
-      const offsetMatch = timezoneOffset.match(/^([+-])(\d{2}):(\d{2})$/);
-      if (!offsetMatch) {
-        this.logger.warn(
-          `Invalid timezone offset format ${timezoneOffset}, falling back to UTC`,
-        );
-        return new Date();
-      }
-
-      const sign = offsetMatch[1] === '+' ? 1 : -1;
-      const hours = parseInt(offsetMatch[2], 10);
-      const minutes = parseInt(offsetMatch[3], 10);
-
-      // Calculate total offset in milliseconds
-      const offsetMs = sign * (hours * 60 + minutes) * 60 * 1000;
-
-      // Get current UTC time and apply the timezone offset
-      const now = new Date();
-      const utcTime = now.getTime() + now.getTimezoneOffset() * 60000;
-      const localTime = new Date(utcTime + offsetMs);
-
-      return localTime;
-    } catch (error) {
-      this.logger.warn(
-        `Invalid timezone offset ${timezoneOffset}, falling back to UTC: ${error.message}`,
-      );
-      return new Date();
-    }
+    return this.timezoneService.getCurrentTimeInTimezone(timezoneOffset);
   }
 
   async testPlexConnection(): Promise<PlexResponse> {
     try {
-      const ip = await this.getSetting('PLEX_SERVER_IP');
-      const port = await this.getSetting('PLEX_SERVER_PORT');
-      const token = await this.getSetting('PLEX_TOKEN');
-      const useSSL = await this.getSetting('USE_SSL');
-      const ignoreCertErrors = await this.getSetting('IGNORE_CERT_ERRORS');
+      const [ip, port, token, useSSL, ignoreCertErrors] = await Promise.all([
+        this.getSetting('PLEX_SERVER_IP'),
+        this.getSetting('PLEX_SERVER_PORT'),
+        this.getSetting('PLEX_TOKEN'),
+        this.getSetting('USE_SSL'),
+        this.getSetting('IGNORE_CERT_ERRORS'),
+      ]);
 
-      if (!ip || !port || !token) {
-        return createPlexError(
-          PlexErrorCode.NOT_CONFIGURED,
-          'Missing required Plex configuration (IP, Port, or Token)',
-        );
-      }
-
-      // Create a HTTP/HTTPS request to test the connection
-      const protocol = useSSL ? 'https' : 'http';
-      const testUrl = `${protocol}://${ip}:${port}/?X-Plex-Token=${token}`;
-
-      const httpModule = protocol === 'https' ? https : http;
-
-      return new Promise((resolve) => {
-        const urlObj = new URL(testUrl);
-        const options = {
-          hostname: urlObj.hostname,
-          port: urlObj.port,
-          path: urlObj.pathname + urlObj.search,
-          method: 'GET',
-          timeout: 10000,
-          rejectUnauthorized: !ignoreCertErrors,
-        };
-
-        const req = httpModule.request(options, (res: any) => {
-          if (res.statusCode === 200) {
-            resolve(createPlexSuccess('Successfully connected to Plex server'));
-          } else if (res.statusCode === 401) {
-            resolve(
-              createPlexError(
-                PlexErrorCode.AUTH_FAILED,
-                'Authentication failed - check your Plex token',
-                `HTTP ${res.statusCode}: ${res.statusMessage}`,
-              ),
-            );
-          } else {
-            resolve(
-              createPlexError(
-                PlexErrorCode.SERVER_ERROR,
-                `Plex server returned an error: ${res.statusCode} ${res.statusMessage}`,
-                `HTTP ${res.statusCode}: ${res.statusMessage}`,
-              ),
-            );
-          }
-        });
-
-        req.on('error', (error: any) => {
-          // Handle specific error types with appropriate error codes
-          if (error.code === 'ERR_TLS_CERT_ALTNAME_INVALID') {
-            resolve(
-              createPlexError(
-                PlexErrorCode.CERT_ERROR,
-                'SSL certificate error: Hostname/IP does not match certificate',
-                'Enable "Ignore SSL certificate errors" or use HTTP instead',
-              ),
-            );
-          } else if (error.code && error.code.startsWith('ERR_TLS_')) {
-            resolve(
-              createPlexError(
-                PlexErrorCode.SSL_ERROR,
-                'SSL/TLS connection error',
-                'Consider enabling "Ignore SSL certificate errors" or using HTTP',
-              ),
-            );
-          } else if (
-            error.code === 'ECONNREFUSED' ||
-            error.code === 'EHOSTUNREACH'
-          ) {
-            resolve(
-              createPlexError(
-                PlexErrorCode.CONNECTION_REFUSED,
-                'Plex server is unreachable',
-                'Check if Plex server is running and accessible',
-              ),
-            );
-          } else if (
-            error.code === 'ECONNRESET' ||
-            error.code === 'ETIMEDOUT' ||
-            error.message.includes('timeout')
-          ) {
-            resolve(
-              createPlexError(
-                PlexErrorCode.CONNECTION_TIMEOUT,
-                'Connection timeout',
-                'Check server address, port and network settings',
-              ),
-            );
-          } else {
-            resolve(
-              createPlexError(
-                PlexErrorCode.NETWORK_ERROR,
-                'Network error connecting to Plex server',
-                error.message,
-              ),
-            );
-          }
-        });
-
-        req.on('timeout', () => {
-          req.destroy();
-          resolve(
-            createPlexError(
-              PlexErrorCode.CONNECTION_REFUSED,
-              'Plex server is unreachable',
-              'Check if Plex server is running and accessible',
-            ),
-          );
-        });
-
-        req.setTimeout(10000);
-        req.end();
-      });
+      return this.plexConnectionService.testConnection(
+        ip,
+        port,
+        token,
+        useSSL,
+        ignoreCertErrors,
+      );
     } catch (error) {
       this.logger.error('Error testing Plex connection:', error);
-      return createPlexError(
-        PlexErrorCode.UNKNOWN_ERROR,
-        'Unexpected error testing Plex connection',
-        error.message,
-      );
+      return {
+        success: false,
+        errorCode: PlexErrorCode.UNKNOWN_ERROR,
+        message: 'Unexpected error testing Plex connection',
+        details: error.message,
+      };
     }
   }
 
   async testSMTPConnection(): Promise<{ success: boolean; message: string }> {
     try {
-      const smtpEnabled = await this.getSetting('SMTP_ENABLED');
-      const smtpHost = await this.getSetting('SMTP_HOST');
-      const smtpPort = await this.getSetting('SMTP_PORT');
-      const smtpUser = await this.getSetting('SMTP_USER');
-      const smtpPassword = await this.getSetting('SMTP_PASSWORD');
-      const smtpFromEmail = await this.getSetting('SMTP_FROM_EMAIL');
-      const smtpFromName = await this.getSetting('SMTP_FROM_NAME');
-      const smtpUseTLS = await this.getSetting('SMTP_USE_TLS');
-      const smtpToEmails = await this.getSetting('SMTP_TO_EMAILS');
+      const [
+        smtpEnabled,
+        smtpHost,
+        smtpPort,
+        smtpUser,
+        smtpPassword,
+        smtpFromEmail,
+        smtpFromName,
+        smtpUseTLS,
+        smtpToEmails,
+      ] = await Promise.all([
+        this.getSetting('SMTP_ENABLED'),
+        this.getSetting('SMTP_HOST'),
+        this.getSetting('SMTP_PORT'),
+        this.getSetting('SMTP_USER'),
+        this.getSetting('SMTP_PASSWORD'),
+        this.getSetting('SMTP_FROM_EMAIL'),
+        this.getSetting('SMTP_FROM_NAME'),
+        this.getSetting('SMTP_USE_TLS'),
+        this.getSetting('SMTP_TO_EMAILS'),
+      ]);
 
-      // Check if SMTP is enabled
-      if (smtpEnabled !== true) {
-        return {
-          success: false,
-          message: 'SMTP email notifications are disabled',
-        };
-      }
-
-      // Check if all required settings are present
-      if (
-        !smtpHost ||
-        !smtpPort ||
-        !smtpUser ||
-        !smtpPassword ||
-        !smtpFromEmail
-      ) {
-        return {
-          success: false,
-          message:
-            'Missing required SMTP configuration (host, port, user, password, or from email)',
-        };
-      }
-
-      // Check if TLS is valid with port
-      if (
-        smtpUseTLS === true &&
-        parseInt(smtpPort) !== 465 &&
-        parseInt(smtpPort) !== 587
-      ) {
-        return {
-          success: false,
-          message:
-            'TLS is not supported on this port. Please use port 465 or 587.',
-        };
-      }
-
-      // Parse and validate recipient emails
-      let recipientEmails: string[] = [];
-      if (smtpToEmails && smtpToEmails.trim()) {
-        // Split by comma, semicolon, or newline and clean up
-        recipientEmails = smtpToEmails
-          .split(/[,;\n]/)
-          .map((email: string) => email.trim())
-          .filter((email: string) => email.length > 0);
-      }
-
-      // If no specific recipients configured
-      if (recipientEmails.length === 0) {
-        return {
-          success: false,
-          message:
-            'No recipient email addresses configured. Please  provide at least one recipient.',
-        };
-      }
-
-      // Validate email format for recipients
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      const invalidEmails = recipientEmails.filter(
-        (email) => !emailRegex.test(email),
-      );
-      if (invalidEmails.length > 0) {
-        return {
-          success: false,
-          message: `Invalid email format(s): ${invalidEmails.join(', ')}`,
-        };
-      }
-
-      // Create transporter
-      const transporter = nodemailer.createTransport({
+      const smtpConfig: SMTPConfig = {
         host: smtpHost,
         port: parseInt(smtpPort),
-        secure: smtpUseTLS === 'true' && parseInt(smtpPort) === 465, // Use secure for port 465
-        auth: {
-          user: smtpUser,
-          pass: smtpPassword,
-        },
-        tls: {
-          rejectUnauthorized: false, // Allow self-signed certificates for testing
-        },
-      });
-
-      // Verify the connection
-      await transporter.verify();
-
-      // Get the current time in the configured timezone for the email timestamp
-      const currentTimeInTimezone = await this.getCurrentTimeInTimezone();
-
-      // Format timestamp in French style (dd/mm/yyyy à 17h33)
-      const day = currentTimeInTimezone.getDate().toString().padStart(2, '0');
-      const month = (currentTimeInTimezone.getMonth() + 1)
-        .toString()
-        .padStart(2, '0');
-      const year = currentTimeInTimezone.getFullYear();
-      const hours = currentTimeInTimezone.getHours();
-      const minutes = currentTimeInTimezone
-        .getMinutes()
-        .toString()
-        .padStart(2, '0');
-
-      const formattedTimestamp = `${day}/${month}/${year} ${hours}h${minutes}`;
-
-      const testMailOptions = {
-        from: smtpFromName
-          ? `${smtpFromName} <${smtpFromEmail}>`
-          : smtpFromEmail,
-        to: recipientEmails,
-        subject: 'Guardian SMTP Test - Connection Successful',
-        text: 'This is a test email from Guardian to verify SMTP configuration. If you received this email, your SMTP settings are working correctly.',
-        html: `<!DOCTYPE html>
-        <html lang="en">
-        <head>
-          <meta charset="UTF-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <style>
-            @media only screen and (max-width: 600px) {
-              .container { width: 100% !important; margin: 0 !important; }
-              .header, .content, .footer { padding-left: 20px !important; padding-right: 20px !important; }
-              .test-details { margin: 20px 0 !important; padding: 16px !important; }
-            }
-            @media (prefers-color-scheme: dark) {
-              .header {
-                background-color: #ffffff !important;
-                background: #ffffff !important;
-                color: #000000 !important;
-              }
-              .header h1 {
-                color: #000000 !important;
-              }
-              .container {
-                background-color: #ffffff !important;
-                background: #ffffff !important;
-              }
-              body {
-                background-color: #f5f5f5 !important;
-              }
-              .email-wrapper {
-                background-color: #f5f5f5 !important;
-              }
-            }
-            [data-ogsc] .header {
-              background-color: #ffffff !important;
-              background: #ffffff !important;
-            }
-            [data-ogsc] .header h1 {
-              color: #000000 !important;
-            }
-            body {
-              margin: 0;
-              padding: 0;
-              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
-              background-color: #f5f5f5;
-              color: #000000;
-              line-height: 1.6;
-            }
-            .email-wrapper {
-              background-color: #f5f5f5;
-              padding: 40px 20px;
-              min-height: 100vh;
-            }
-            .container {
-              max-width: 600px;
-              margin: 0 auto;
-              background-color: #ffffff;
-              border-radius: 12px;
-              box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-              overflow: hidden;
-            }
-            .header {
-              padding: 50px 40px 30px;
-              text-align: center;
-              background-color: #ffffff;
-              color: #000000;
-              position: relative;
-            }
-            .header::after {
-              content: '';
-              position: absolute;
-              bottom: 0;
-              left: 0;
-              right: 0;
-              height: 4px;
-              background: linear-gradient(90deg, #ff0000, #ff6600, #ffcc00, #00cc66, #0066cc, #6600cc);
-            }
-            .header h1 {
-              margin: 0;
-              font-size: 36px;
-              font-weight: 800;
-              letter-spacing: -1.5px;
-              color: #000000;
-              text-transform: uppercase;
-              text-shadow: none;
-            }
-            .content {
-              padding: 40px 40px 30px;
-              background-color: #ffffff;
-            }
-            .success-badge {
-              display: inline-block;
-              padding: 8px 16px;
-              background-color: #00aa00;
-              color: #ffffff !important;
-              font-size: 11px;
-              font-weight: 700;
-              text-transform: uppercase;
-              letter-spacing: 1px;
-              border-radius: 20px;
-              margin-bottom: 24px;
-              box-shadow: 0 2px 8px rgba(0, 170, 0, 0.3);
-            }
-            .main-message {
-              margin: 0 0 32px 0;
-              font-size: 18px;
-              line-height: 1.7;
-              color: #000000;
-              font-weight: 500;
-            }
-            .test-details {
-              margin: 32px 0;
-              padding: 24px;
-              background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
-              border: 1px solid #e9ecef;
-              border-radius: 8px;
-              border-left: 4px solid #00aa00;
-              box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-            }
-            .test-details h3 {
-              margin: 0 0 20px 0;
-              font-size: 14px;
-              font-weight: 700;
-              color: #000000;
-              text-transform: uppercase;
-              letter-spacing: 1px;
-              display: flex;
-              align-items: center;
-            }
-            .detail-row {
-              display: flex;
-              margin: 12px 0;
-              padding: 8px 0;
-              border-bottom: 1px solid #f0f0f0;
-            }
-            .detail-row:last-child {
-              border-bottom: none;
-            }
-            .detail-label {
-              font-weight: 700;
-              color: #666666;
-              min-width: 120px;
-              font-size: 13px;
-              text-transform: uppercase;
-              letter-spacing: 0.5px;
-            }
-            .detail-value {
-              color: #000000;
-              font-weight: 500;
-              font-size: 14px;
-              flex: 1;
-              font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
-            }
-            .footer {
-              padding: 30px 40px 40px;
-              text-align: center;
-              background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
-              border-top: 1px solid #e9ecef;
-            }
-            .footer p {
-              margin: 0;
-              font-size: 12px;
-              color: #666666;
-              font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
-              text-transform: uppercase;
-              letter-spacing: 0.5px;
-              font-weight: 500;
-            }
-            .timestamp {
-              display: inline-block;
-              background-color: #f1f3f4;
-              padding: 6px 12px;
-              border-radius: 6px;
-              margin-top: 8px;
-            }
-          </style>
-        </head>
-        <body>
-          <div class="email-wrapper">
-            <div class="container">
-              <div class="header">
-                <h1>Guardian</h1>
-              </div>
-              <div class="content">
-                <div class="success-badge">Test Successful</div>
-                <p class="main-message">SMTP configuration test completed successfully. Your email settings are working correctly and Guardian is ready to send notifications.</p>
-                
-                <div class="test-details">
-                  <h3>Test Details</h3>
-                  <div class="detail-row">
-                    <span class="detail-label">Status</span>
-                    <span class="detail-value">SMTP Verified</span>
-                  </div>
-                  <div class="detail-row">
-                    <span class="detail-label">Recipients</span>
-                    <span class="detail-value">${recipientEmails.join(', ')}</span>
-                  </div>
-                  <div class="detail-row">
-                    <span class="detail-label">Test Type</span>
-                    <span class="detail-value">Connection & Delivery</span>
-                  </div>
-                </div>
-              </div>
-              <div class="footer">
-                <p>SMTP Test</p>
-                <div class="timestamp">${formattedTimestamp}</div>
-              </div>
-            </div>
-          </div>
-        </body>
-        </html>`,
+        user: smtpUser,
+        password: smtpPassword,
+        fromEmail: smtpFromEmail,
+        fromName: smtpFromName,
+        useTLS: smtpUseTLS === 'true',
+        toEmails: smtpToEmails
+          ? smtpToEmails
+              .split(/[,;\n]/)
+              .map((email: string) => email.trim())
+              .filter((email: string) => email.length > 0)
+          : [],
       };
 
-      await transporter.sendMail(testMailOptions);
-
-      const recipientCount = recipientEmails.length;
-      const recipientText =
-        recipientCount === 1
-          ? recipientEmails[0]
-          : `${recipientCount} recipients (${recipientEmails.join(', ')})`;
-
-      this.logger.log(
-        `SMTP test email sent successfully to ${recipientCount} recipient(s): ${recipientEmails.join(', ')}`,
+      const currentTimeInTimezone = await this.getCurrentTimeInTimezone();
+      const timestamp = this.timezoneService.formatTimestamp(
+        currentTimeInTimezone,
       );
 
-      return {
-        success: true,
-        message: `SMTP connection successful! Test email sent to ${recipientText}`,
-      };
+      return this.emailService.testSMTPConnection(
+        smtpConfig,
+        smtpEnabled,
+        timestamp,
+      );
     } catch (error) {
-      this.logger.error('SMTP Connection Test Failed', {
-        error: error.message,
-        code: error.code,
-        command: error.command,
-        response: error.response,
-        responseCode: error.responseCode,
-        stack: error.stack,
-      });
-
-      let userMessage = `SMTP error: ${error.message}`;
-
-      if (error.code === 'EAUTH') {
-        userMessage =
-          'Authentication failed. Please check your username and password.';
-      } else if (error.code === 'ECONNECTION') {
-        userMessage =
-          'Failed to connect to SMTP server. Please check the host and port.';
-      } else if (error.code === 'ETIMEDOUT') {
-        userMessage =
-          'Connection timed out. Please check your network connection and server settings.';
-      } else if (error.code === 'ENOTFOUND') {
-        userMessage = 'SMTP server not found. Please check the hostname.';
-      } else if (error.responseCode === 535) {
-        userMessage = 'Authentication failed. Please verify your credentials.';
-      } else if (error.responseCode === 550) {
-        userMessage =
-          'Email rejected by server. Please check recipient addresses.';
-      }
-
+      this.logger.error('Error in testSMTPConnection:', error);
       return {
         success: false,
-        message: userMessage,
+        message: `Unexpected error: ${error.message}`,
       };
     }
   }
@@ -1030,18 +553,9 @@ export class ConfigService {
     stopCode?: string,
   ): Promise<void> {
     try {
-      // Check if email notifications are enabled
-      const smtpEnabled = await this.getSetting('SMTP_ENABLED');
-      const notifyOnNotifications = await this.getSetting(
-        'SMTP_NOTIFY_ON_NOTIFICATIONS',
-      );
-
-      if (!smtpEnabled || !notifyOnNotifications) {
-        return; // Email notifications are disabled
-      }
-
-      // Get SMTP settings
       const [
+        smtpEnabled,
+        notifyOnNotifications,
         smtpHost,
         smtpPort,
         smtpUser,
@@ -1051,6 +565,8 @@ export class ConfigService {
         smtpUseTLS,
         smtpToEmails,
       ] = await Promise.all([
+        this.getSetting('SMTP_ENABLED'),
+        this.getSetting('SMTP_NOTIFY_ON_NOTIFICATIONS'),
         this.getSetting('SMTP_HOST'),
         this.getSetting('SMTP_PORT'),
         this.getSetting('SMTP_USER'),
@@ -1061,320 +577,44 @@ export class ConfigService {
         this.getSetting('SMTP_TO_EMAILS'),
       ]);
 
-      // Validate required settings
-      if (
-        !smtpHost ||
-        !smtpPort ||
-        !smtpUser ||
-        !smtpPassword ||
-        !smtpFromEmail ||
-        !smtpToEmails
-      ) {
-        this.logger.warn(
-          'SMTP notification email skipped: missing required configuration',
-        );
-        return;
-      }
-
-      // Parse recipient emails
-      const recipientEmails = smtpToEmails
-        .split(/[,;\n]/)
-        .map((email: string) => email.trim())
-        .filter((email: string) => email.length > 0);
-
-      if (recipientEmails.length === 0) {
-        this.logger.warn(
-          'SMTP notification email skipped: no recipient addresses configured',
-        );
-        return;
-      }
-
-      // Create transporter
-      const transporter = nodemailer.createTransport({
+      const smtpConfig: SMTPConfig = {
         host: smtpHost,
         port: parseInt(smtpPort),
-        secure: smtpUseTLS === 'true' && parseInt(smtpPort) === 465,
-        auth: {
-          user: smtpUser,
-          pass: smtpPassword,
-        },
-        tls: {
-          rejectUnauthorized: false,
-        },
-      });
-
-      // Get current time for timestamp
-      const currentTimeInTimezone = await this.getCurrentTimeInTimezone();
-      const day = currentTimeInTimezone.getDate().toString().padStart(2, '0');
-      const month = (currentTimeInTimezone.getMonth() + 1)
-        .toString()
-        .padStart(2, '0');
-      const year = currentTimeInTimezone.getFullYear();
-      const hours = currentTimeInTimezone.getHours();
-      const minutes = currentTimeInTimezone
-        .getMinutes()
-        .toString()
-        .padStart(2, '0');
-      const formattedTimestamp = `${day}/${month}/${year} ${hours}h${minutes}`;
-
-      // Generate subject and email content based on notification type
-      const { subject, statusLabel, statusColor, mainMessage } =
-        this.getNotificationEmailContent(
-          notificationType,
-          stopCode,
-          username,
-          deviceName,
-        );
-
-      const emailHtml = `<!DOCTYPE html>
-        <html lang="en">
-        <head>
-          <meta charset="UTF-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <style>
-            @media only screen and (max-width: 600px) {
-              .container { width: 100% !important; margin: 0 !important; }
-              .header, .content, .footer { padding-left: 20px !important; padding-right: 20px !important; }
-              .notification-details { margin: 20px 0 !important; padding: 16px !important; }
-            }
-            @media (prefers-color-scheme: dark) {
-              .header {
-                background-color: #ffffff !important;
-                background: #ffffff !important;
-                color: #000000 !important;
-              }
-              .header h1 {
-                color: #000000 !important;
-              }
-              .container {
-                background-color: #ffffff !important;
-                background: #ffffff !important;
-              }
-              body {
-                background-color: #f5f5f5 !important;
-              }
-              .email-wrapper {
-                background-color: #f5f5f5 !important;
-              }
-            }
-            [data-ogsc] .header {
-              background-color: #ffffff !important;
-              background: #ffffff !important;
-            }
-            [data-ogsc] .header h1 {
-              color: #000000 !important;
-            }
-            body {
-              margin: 0;
-              padding: 0;
-              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
-              background-color: #f5f5f5;
-              color: #000000;
-              line-height: 1.6;
-            }
-            .email-wrapper {
-              background-color: #f5f5f5;
-              padding: 40px 20px;
-              min-height: 100vh;
-            }
-            .container {
-              max-width: 600px;
-              margin: 0 auto;
-              background-color: #ffffff;
-              border-radius: 12px;
-              box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-              overflow: hidden;
-            }
-            .header {
-              padding: 50px 40px 30px;
-              text-align: center;
-              background-color: #ffffff;
-              color: #000000;
-              position: relative;
-            }
-            .header::after {
-              content: '';
-              position: absolute;
-              bottom: 0;
-              left: 0;
-              right: 0;
-              height: 4px;
-              background: linear-gradient(90deg, #ff0000, #ff6600, #ffcc00, #00cc66, #0066cc, #6600cc);
-            }
-            .header h1 {
-              margin: 0;
-              font-size: 36px;
-              font-weight: 800;
-              letter-spacing: -1.5px;
-              color: #000000;
-              text-transform: uppercase;
-              text-shadow: none;
-            }
-            .content {
-              padding: 40px 40px 30px;
-              background-color: #ffffff;
-            }
-            .alert-badge {
-              display: inline-block;
-              padding: 8px 16px;
-              background-color: ${statusColor};
-              color: #ffffff !important;
-              font-size: 11px;
-              font-weight: 700;
-              text-transform: uppercase;
-              letter-spacing: 1px;
-              border-radius: 20px;
-              margin-bottom: 24px;
-              box-shadow: 0 2px 8px rgba(255, 68, 68, 0.3);
-            }
-            .main-message {
-              margin: 0 0 32px 0;
-              font-size: 18px;
-              line-height: 1.7;
-              color: #000000;
-              font-weight: 500;
-            }
-            .notification-details {
-              margin: 32px 0;
-              padding: 24px;
-              background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
-              border: 1px solid #e9ecef;
-              border-radius: 8px;
-              border-left: 4px solid ${statusColor};
-              box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-            }
-            .notification-details h3 {
-              margin: 0 0 20px 0;
-              font-size: 14px;
-              font-weight: 700;
-              color: #000000;
-              text-transform: uppercase;
-              letter-spacing: 1px;
-              display: flex;
-              align-items: center;
-            }
-            .detail-row {
-              display: flex;
-              margin: 12px 0;
-              padding: 8px 0;
-              border-bottom: 1px solid #f0f0f0;
-            }
-            .detail-row:last-child {
-              border-bottom: none;
-            }
-            .detail-label {
-              font-weight: 700;
-              color: #666666;
-              min-width: 100px;
-              font-size: 13px;
-              text-transform: uppercase;
-              letter-spacing: 0.5px;
-            }
-            .detail-value {
-              color: #000000;
-              font-weight: 500;
-              font-size: 14px;
-              flex: 1;
-            }
-            .stop-code {
-              font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
-              background-color: #f1f3f4;
-              padding: 4px 8px;
-              border-radius: 4px;
-              font-size: 12px;
-              color: #000000;
-            }
-            .notification-type {
-              display: inline-block;
-              background-color: ${statusColor};
-              color: #ffffff;
-              padding: 4px 8px;
-              border-radius: 4px;
-              font-size: 12px;
-              font-weight: 700;
-              letter-spacing: 0.5px;
-            }
-            .footer {
-              padding: 30px 40px 40px;
-              text-align: center;
-              background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
-              border-top: 1px solid #e9ecef;
-            }
-            .footer p {
-              margin: 0;
-              font-size: 12px;
-              color: #666666;
-              font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
-              text-transform: uppercase;
-              letter-spacing: 0.5px;
-              font-weight: 500;
-            }
-            .timestamp {
-              display: inline-block;
-              background-color: #f1f3f4;
-              padding: 6px 12px;
-              border-radius: 6px;
-              margin-top: 8px;
-            }
-          </style>
-        </head>
-        <body>
-          <div class="email-wrapper">
-            <div class="container">
-              <div class="header">
-                <h1>Guardian</h1>
-              </div>
-              <div class="content">
-                <div class="alert-badge">${statusLabel}</div>
-                <p class="main-message">${mainMessage}</p>
-                
-                <div class="notification-details">
-                  <h3>Event Details</h3>
-                  <div class="detail-row">
-                    <span class="detail-label">User</span>
-                    <span class="detail-value">${username}</span>
-                  </div>
-                  ${deviceName ? `<div class="detail-row"><span class="detail-label">Device</span><span class="detail-value">${deviceName}</span></div>` : ''}
-                  <div class="detail-row">
-                    <span class="detail-label">Type</span>
-                    <span class="detail-value"><span class="notification-type">${notificationType.toUpperCase()}</span></span>
-                  </div>
-                  ${stopCode ? `<div class="detail-row"><span class="detail-label">Stop Code</span><span class="detail-value"><span class="stop-code">${stopCode}</span></span></div>` : ''}
-                </div>
-              </div>
-              <div class="footer">
-                <p>Notification System</p>
-                <div class="timestamp">${formattedTimestamp}</div>
-              </div>
-            </div>
-          </div>
-        </body>
-        </html>`;
-
-      const mailOptions = {
-        from: smtpFromName
-          ? `${smtpFromName} <${smtpFromEmail}>`
-          : smtpFromEmail,
-        to: recipientEmails,
-        subject,
-        text: `${subject}\n\n${mainMessage}\n\nUser: ${username}${deviceName ? `\nDevice: ${deviceName}` : ''}\nType: ${notificationType.toUpperCase()}${stopCode ? `\nReason: ${stopCode}` : ''}\n\nNotification sent at: ${formattedTimestamp}`,
-        html: emailHtml,
+        user: smtpUser,
+        password: smtpPassword,
+        fromEmail: smtpFromEmail,
+        fromName: smtpFromName,
+        useTLS: smtpUseTLS === 'true',
+        toEmails: smtpToEmails
+          ? smtpToEmails
+              .split(/[,;\n]/)
+              .map((email: string) => email.trim())
+              .filter((email: string) => email.length > 0)
+          : [],
       };
 
-      await transporter.sendMail(mailOptions);
-
-      this.logger.log(
-        `Notification email sent successfully for ${notificationType} event: ${username}${deviceName ? ` on ${deviceName}` : ''}`,
-      );
-    } catch (error) {
-      this.logger.error('Failed to send notification email', {
-        error: error.message,
-        notificationType,
+      const notificationData: NotificationEmailData = {
+        type: notificationType,
+        text: notificationText,
         username,
         deviceName,
         stopCode,
-        stack: error.stack,
-      });
+      };
+
+      const currentTimeInTimezone = await this.getCurrentTimeInTimezone();
+      const timestamp = this.timezoneService.formatTimestamp(
+        currentTimeInTimezone,
+      );
+
+      await this.emailService.sendNotificationEmail(
+        smtpConfig,
+        notificationData,
+        smtpEnabled,
+        notifyOnNotifications,
+        timestamp,
+      );
+    } catch (error) {
+      this.logger.error('Error in sendNotificationEmail:', error);
     }
   }
 
@@ -1396,7 +636,7 @@ export class ConfigService {
           statusLabel: 'STREAM BLOCKED',
           statusColor: '#ff4444',
           mainMessage: stopCode
-            ? this.getStopCodeDescription(stopCode)
+            ? StopCodeUtils.getStopCodeDescription(stopCode)
             : 'A streaming session has been blocked on your Plex server',
         };
       case 'warning':
@@ -1422,25 +662,6 @@ export class ConfigService {
           statusColor: '#4488ff',
           mainMessage: 'Guardian has a new notification for your Plex server.',
         };
-    }
-  }
-
-  private getStopCodeDescription(stopCode: string): string {
-    switch (stopCode) {
-      case 'DEVICE_PENDING':
-        return 'A streaming session was blocked because the device requires administrator approval';
-      case 'DEVICE_REJECTED':
-        return 'A streaming session was blocked because the device has been rejected by an administrator';
-      case 'IP_POLICY_LAN_ONLY':
-        return 'A streaming session was blocked because the device attempted external access but is restricted to local network only';
-      case 'IP_POLICY_WAN_ONLY':
-        return 'A streaming session was blocked because the device attempted local access but is restricted to external connections only';
-      case 'IP_POLICY_NOT_ALLOWED':
-        return 'A streaming session was blocked because the device IP address is not in the approved access list';
-      case 'TIME_RESTRICTED':
-        return 'A streaming session was blocked due to time-based scheduling restrictions';
-      default:
-        return `A streaming session was blocked: ${stopCode}`;
     }
   }
 
@@ -1494,253 +715,38 @@ export class ConfigService {
   }
 
   async exportDatabase(): Promise<string> {
-    try {
-      this.logger.log('Starting database export...');
-      // Get all data from all tables
-
-      const [settings, userDevices, userPreferences] = await Promise.all([
-        this.settingsRepository.find(),
-        this.settingsRepository.manager.getRepository(UserDevice).find(),
-        this.settingsRepository.manager.getRepository(UserPreference).find(),
-      ]);
-
-      // Get current app version from settings database
-      const appVersion = await this.getSetting('APP_VERSION');
-
-      const exportData = {
-        exportedAt: new Date().toISOString(),
-        version: appVersion,
-        data: {
-          settings,
-          userDevices,
-          userPreferences,
-        },
-      };
-
-      this.logger.log(
-        `Database export completed: ${settings.length} settings, ${userDevices.length} devices, ${userPreferences.length} preferences`,
-      );
-
-      return JSON.stringify(exportData, null, 2);
-    } catch (error) {
-      this.logger.error('Error exporting database:', error);
-      throw new Error('Failed to export database');
-    }
+    const appVersion = await this.getSetting('APP_VERSION');
+    return this.databaseService.exportDatabase(appVersion);
   }
 
   async importDatabase(
     importData: any,
   ): Promise<{ imported: number; skipped: number }> {
-    try {
-      this.logger.log('Starting database import...');
+    const result = await this.databaseService.importDatabase(
+      importData,
+      this.versionService.getCurrentAppVersion(),
+      this.versionService.compareVersions.bind(this.versionService),
+    );
 
-      if (!importData || !importData.data) {
-        throw new Error('Invalid import data format');
-      }
-
-      const { data } = importData;
-      let imported = 0;
-      let skipped = 0;
-
-      this.logger.debug('Import data contains:', {
-        settings: data.settings?.length || 0,
-        userDevices: data.userDevices?.length || 0,
-        userPreferences: data.userPreferences?.length || 0,
-      });
-
-      // Import settings
-      if (data.settings && Array.isArray(data.settings)) {
-        for (const setting of data.settings) {
-          try {
-            const existing = await this.settingsRepository.findOne({
-              where: { key: setting.key },
-            });
-
-            // Skip importing APP_VERSION if the import file has an older version than the current code
-            if (
-              setting.key === 'APP_VERSION' &&
-              this.compareVersions(setting.value, CURRENT_APP_VERSION) < 0
-            ) {
-              this.logger.log(
-                `Skipping import of APP_VERSION (${setting.value}) to avoid downgrading from current version (${CURRENT_APP_VERSION})`,
-              );
-              skipped++;
-              continue;
-            }
-
-            this.logger.debug(
-              'Importing setting:',
-              setting.key,
-              'Existing:',
-              !!existing,
-            );
-
-            if (existing) {
-              existing.value = setting.value;
-              await this.settingsRepository.save(existing);
-              imported++;
-            } else {
-              this.logger.warn(`Skipping unknown setting ${setting.key}`);
-            }
-          } catch (error) {
-            this.logger.warn(`Failed to import setting ${setting.key}:`, error);
-            skipped++;
-          }
-        }
-      }
-
-      // Import user devices
-      if (data.userDevices && Array.isArray(data.userDevices)) {
-        const deviceRepo =
-          this.settingsRepository.manager.getRepository(UserDevice);
-        for (const device of data.userDevices) {
-          try {
-            const existing = await deviceRepo.findOne({
-              where: {
-                userId: device.userId,
-                deviceIdentifier: device.deviceIdentifier,
-              },
-            });
-
-            this.logger.debug(
-              `Importing device ${device.deviceIdentifier} for user ${device.userId}, existing:`,
-              !!existing,
-            );
-
-            if (!existing) {
-              const newDevice = deviceRepo.create(device);
-              await deviceRepo.save(newDevice);
-              imported++;
-              this.logger.debug(
-                `Created new device: ${device.deviceIdentifier}`,
-              );
-            } else {
-              // Update existing device with new data
-              Object.assign(existing, device);
-              await deviceRepo.save(existing);
-              imported++;
-              this.logger.debug(
-                `Updated existing device: ${device.deviceIdentifier}`,
-              );
-            }
-          } catch (error) {
-            this.logger.warn(
-              `Failed to import device ${device.deviceIdentifier}:`,
-              error,
-            );
-            skipped++;
-          }
-        }
-      }
-
-      // Import user preferences
-      if (data.userPreferences && Array.isArray(data.userPreferences)) {
-        const prefRepo =
-          this.settingsRepository.manager.getRepository(UserPreference);
-        for (const pref of data.userPreferences) {
-          try {
-            const existing = await prefRepo.findOne({
-              where: { userId: pref.userId },
-            });
-
-            this.logger.debug(
-              `Importing preference for user ${pref.userId}, existing:`,
-              !!existing,
-            );
-
-            if (!existing) {
-              const newPref = prefRepo.create(pref);
-              await prefRepo.save(newPref);
-              imported++;
-              this.logger.debug(
-                `Created new preference for user: ${pref.userId}`,
-              );
-            } else {
-              // Update existing preference
-              existing.defaultBlock = pref.defaultBlock;
-              existing.username = pref.username || existing.username;
-              await prefRepo.save(existing);
-              imported++;
-              this.logger.debug(
-                `Updated existing preference for user: ${pref.userId}`,
-              );
-            }
-          } catch (error) {
-            this.logger.warn(
-              `Failed to import preference for user ${pref.userId}:`,
-              error,
-            );
-            skipped++;
-          }
-        }
-      }
-
-      // Refresh cache after import
-      await this.loadCache();
-
-      this.logger.log(
-        `Database import completed: ${imported} items imported, ${skipped} items skipped`,
-      );
-
-      return {
-        imported,
-        skipped,
-      };
-    } catch (error) {
-      this.logger.error('Error importing database:', error);
-      throw new Error(`Failed to import database: ${error.message}`);
-    }
+    // Refresh cache after import
+    await this.loadCache();
+    return result;
   }
 
   private async updateAppVersionIfNewer(): Promise<void> {
-    try {
-      const versionSetting = await this.settingsRepository.findOne({
-        where: { key: 'APP_VERSION' },
-      });
+    const versionSetting = await this.settingsRepository.findOne({
+      where: { key: 'APP_VERSION' },
+    });
 
-      if (
-        versionSetting &&
-        this.compareVersions(CURRENT_APP_VERSION, versionSetting.value) > 0
-      ) {
-        this.logger.log(
-          `Updating app version from ${versionSetting.value} to: ${CURRENT_APP_VERSION}`,
-        );
-        versionSetting.value = CURRENT_APP_VERSION;
-        await this.settingsRepository.save(versionSetting);
-        this.logger.log('App version updated successfully');
-      } else if (
-        versionSetting &&
-        this.compareVersions(CURRENT_APP_VERSION, versionSetting.value) < 0
-      ) {
-        this.logger.error(
-          `WARNING: Current app version ${CURRENT_APP_VERSION} is older than your data version ${versionSetting.value}. Please check your installation.`,
-        );
-      } else {
-        this.logger.log(`App version is up to date: ${CURRENT_APP_VERSION}`);
-      }
-    } catch (error) {
-      this.logger.warn('Failed to update app version:', error);
+    if (versionSetting) {
+      await this.versionService.updateAppVersionIfNewer(
+        versionSetting.value,
+        async (newVersion: string) => {
+          versionSetting.value = newVersion;
+          await this.settingsRepository.save(versionSetting);
+        },
+      );
     }
-  }
-
-  private compareVersions(version1: string, version2: string): number {
-    const parseVersion = (version: string): number[] => {
-      return version.split('.').map((v) => parseInt(v) || 0);
-    };
-
-    const v1Parts = parseVersion(version1);
-    const v2Parts = parseVersion(version2);
-    const maxLength = Math.max(v1Parts.length, v2Parts.length);
-
-    for (let i = 0; i < maxLength; i++) {
-      const v1Part = v1Parts[i] || 0;
-      const v2Part = v2Parts[i] || 0;
-
-      if (v1Part > v2Part) return 1;
-      if (v1Part < v2Part) return -1;
-    }
-
-    return 0; // versions are equal
   }
 
   async getVersionInfo(): Promise<{
@@ -1750,144 +756,29 @@ export class ConfigService {
     isVersionMismatch: boolean;
   }> {
     const dbVersion =
-      (await this.getSetting('APP_VERSION')) || CURRENT_APP_VERSION;
-    // Version mismatch occurs when database version > current code version (downgrade scenario)
-    const isVersionMismatch =
-      this.compareVersions(dbVersion, CURRENT_APP_VERSION) > 0;
-
-    return {
-      version: CURRENT_APP_VERSION,
-      databaseVersion: dbVersion,
-      codeVersion: CURRENT_APP_VERSION,
-      isVersionMismatch,
-    };
+      (await this.getSetting('APP_VERSION')) ||
+      this.versionService.getCurrentAppVersion();
+    return this.versionService.getVersionInfo(dbVersion);
   }
 
   // Database management scripts
   async resetDatabase(): Promise<void> {
-    try {
-      this.logger.warn('RESETTING ALL DATABASE TABLES');
-
-      await this.settingsRepository.manager.transaction(
-        async (transactionalEntityManager) => {
-          await transactionalEntityManager
-            .getRepository(SessionHistory)
-            .clear();
-          this.logger.debug('Session history table cleared');
-
-          await transactionalEntityManager.getRepository(Notification).clear();
-          this.logger.debug('Notifications table cleared');
-
-          await transactionalEntityManager
-            .getRepository(UserPreference)
-            .clear();
-          this.logger.debug('User preferences table cleared');
-
-          await transactionalEntityManager.getRepository(UserDevice).clear();
-          this.logger.debug('User devices table cleared');
-
-          await transactionalEntityManager.getRepository(AppSettings).clear();
-          this.logger.debug('App settings table cleared');
-        },
-      );
-
-      // Reinitialize default settings
-      await this.initializeDefaultSettings();
-
-      // Clear cache
-      this.cache.clear();
-
-      this.logger.warn(
-        'Database reset completed - all data has been deleted and default settings restored',
-      );
-    } catch (error) {
-      this.logger.error('Failed to reset database:', error);
-      throw new Error(`Database reset failed: ${error.message}`);
-    }
+    await this.databaseService.resetDatabase();
+    // Reinitialize default settings
+    await this.initializeDefaultSettings();
+    // Clear cache
+    this.cache.clear();
   }
 
   async resetStreamCounts(): Promise<void> {
-    try {
-      this.logger.warn('Resetting all device stream counts');
-
-      // Reset session count and clear current session keys for all devices
-      const result = await this.settingsRepository.manager
-        .getRepository(UserDevice)
-        .createQueryBuilder()
-        .update(UserDevice)
-        .set({
-          sessionCount: 0,
-          currentSessionKey: () => 'NULL',
-        })
-        .execute();
-
-      this.logger.log(
-        `Stream counts reset for ${result.affected || 0} devices`,
-      );
-    } catch (error) {
-      this.logger.error('Failed to reset stream counts:', error);
-      throw new Error(`Stream count reset failed: ${error.message}`);
-    }
+    return this.databaseService.resetStreamCounts();
   }
 
   async deleteAllDevices(): Promise<void> {
-    try {
-      this.logger.warn('DELETING ALL DEVICES per user request');
-
-      // Get count before deletion for logging
-      const deviceCount = await this.settingsRepository.manager
-        .getRepository(UserDevice)
-        .count();
-
-      await this.settingsRepository.manager.transaction(
-        async (transactionalEntityManager) => {
-          await transactionalEntityManager
-            .getRepository(SessionHistory)
-            .clear();
-          this.logger.debug('Session history cleared');
-
-          await transactionalEntityManager.getRepository(Notification).clear();
-          this.logger.debug('Notifications cleared');
-
-          await transactionalEntityManager.getRepository(UserDevice).clear();
-          this.logger.debug('User devices cleared');
-        },
-      );
-
-      this.logger.warn(
-        `All ${deviceCount} devices and related data have been deleted`,
-      );
-    } catch (error) {
-      this.logger.error('Failed to delete all devices:', error);
-      throw new Error(`Device deletion failed: ${error.message}`);
-    }
+    return this.databaseService.deleteAllDevices();
   }
 
   async clearAllSessionHistory(): Promise<void> {
-    try {
-      this.logger.warn('CLEARING ALL SESSION HISTORY per user request');
-
-      // Get count before deletion for logging
-      const sessionCount = await this.settingsRepository.manager
-        .getRepository(SessionHistory)
-        .count();
-
-      await this.settingsRepository.manager.transaction(
-        async (transactionalEntityManager) => {
-          // Clear all session history
-          await transactionalEntityManager
-            .getRepository(SessionHistory)
-            .clear();
-          this.logger.debug('Session history cleared');
-        },
-      );
-
-      this.logger.warn(
-        `All ${sessionCount} session history records have been cleared`,
-      );
-    } catch (error) {
-      this.logger.error('Failed to clear session history:', error);
-      throw new Error(`Session history clearing failed: ${error.message}`);
-    }
+    return this.databaseService.clearAllSessionHistory();
   }
 }

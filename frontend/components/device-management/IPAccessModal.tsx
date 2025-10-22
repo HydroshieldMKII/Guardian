@@ -48,10 +48,10 @@ export const IPAccessModal: React.FC<IPAccessModalProps> = ({
   onSave,
 }) => {
   const [networkPolicy, setNetworkPolicy] = useState<"both" | "lan" | "wan">(
-    "both",
+    "both"
   );
   const [ipAccessPolicy, setIpAccessPolicy] = useState<"all" | "restricted">(
-    "all",
+    "all"
   );
   const [allowedIPs, setAllowedIPs] = useState<string[]>([]);
   const [newIP, setNewIP] = useState("");
@@ -82,7 +82,7 @@ export const IPAccessModal: React.FC<IPAccessModalProps> = ({
 
     if (!validateIP(trimmedIP)) {
       setIpError(
-        "Please enter a valid IP address or CIDR range (e.g., 192.168.1.1 or 192.168.1.0/24)",
+        "Please enter a valid IP address or CIDR range (e.g. 192.168.1.1 or 192.168.1.0/24)"
       );
       return;
     }
@@ -117,7 +117,7 @@ export const IPAccessModal: React.FC<IPAccessModalProps> = ({
     // Validate that IP restrictions have at least one IP address
     if (ipAccessPolicy === "restricted" && allowedIPs.length === 0) {
       setIpError(
-        "Please add at least one IP address when restricting access by IP",
+        "Please add at least one IP address when restricting access by IP"
       );
       return;
     }
@@ -277,7 +277,7 @@ export const IPAccessModal: React.FC<IPAccessModalProps> = ({
 
                 <div className="flex gap-2">
                   <Input
-                    placeholder="e.g., 192.168.1.100 or 192.168.1.0/24"
+                    placeholder="e.g. 192.168.1.100 or 192.168.1.0/24"
                     value={newIP}
                     onChange={(e) => {
                       setNewIP(e.target.value);
