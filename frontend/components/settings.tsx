@@ -203,16 +203,6 @@ export default function Settings({ onBack }: SettingsProps) {
         "Configure your Plex Media Server connection and related settings",
     },
     {
-      id: "smtp",
-      label: "Email/SMTP",
-      description: "Email notification configuration",
-    },
-    {
-      id: "database",
-      label: "Database",
-      description: "Database management and backup",
-    },
-    {
       id: "guardian",
       label: "Guardian",
       description: "Core Guardian behavior settings",
@@ -223,9 +213,19 @@ export default function Settings({ onBack }: SettingsProps) {
       description: "UI and user experience settings",
     },
     {
+      id: "smtp",
+      label: "Email/SMTP",
+      description: "Email notification configuration",
+    },
+    {
       id: "notifications",
       label: "Notifications",
       description: "Notification preferences",
+    },
+    {
+      id: "database",
+      label: "Database",
+      description: "Database management and backup",
     },
     {
       id: "admin",
@@ -293,17 +293,17 @@ export default function Settings({ onBack }: SettingsProps) {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4 lg:grid-cols-7 mb-4">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-1 h-auto p-1 mb-4 justify-items-stretch">
           {tabs.map((tab) => {
             const IconComponent = getTabIcon(tab.id);
             return (
               <TabsTrigger
                 key={tab.id}
                 value={tab.id}
-                className="flex items-center gap-2 px-3"
+                className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 text-xs sm:text-sm h-auto min-h-[2.5rem] justify-self-start w-full"
               >
-                <IconComponent className="h-4 w-4" />
-                <span className="hidden sm:inline">{tab.label}</span>
+                <IconComponent className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                <span className="text-[10px] sm:text-sm leading-tight text-center">{tab.label}</span>
               </TabsTrigger>
             );
           })}

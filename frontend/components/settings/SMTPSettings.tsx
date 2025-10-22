@@ -221,7 +221,7 @@ export function SMTPSettings({
   };
 
   const isSmtpEnabled = (() => {
-    const smtpSetting = settings.find(s => s.key === "SMTP_ENABLED");
+    const smtpSetting = settings.find((s) => s.key === "SMTP_ENABLED");
     return smtpSetting?.value === true || smtpSetting?.value === "true";
   })();
 
