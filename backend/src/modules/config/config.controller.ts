@@ -102,6 +102,19 @@ export class ConfigController {
     }
   }
 
+  @Post('test-smtp-connection')
+  async testSMTPConnection() {
+    try {
+      const result = await this.configService.testSMTPConnection();
+      return result;
+    } catch (error) {
+      throw new HttpException(
+        'Failed to test SMTP connection',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
   @Get('plex/status')
   async getPlexStatus() {
     try {

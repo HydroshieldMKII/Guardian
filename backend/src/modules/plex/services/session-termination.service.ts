@@ -231,7 +231,7 @@ export class SessionTerminationService {
                 await this.notificationsService.createStreamBlockedNotification(
                   userId,
                   username,
-                  deviceName,
+                  sessionId, // Device identifier
                   stopCode,
                   sessionHistory?.id,
                 );

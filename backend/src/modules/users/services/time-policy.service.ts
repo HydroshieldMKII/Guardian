@@ -115,15 +115,6 @@ export class TimePolicyService {
     const timezonedDate = await this.configService.getCurrentTimeInTimezone();
     const currentDay = timezonedDate.getDay(); // 0=Sunday, 1=Monday, etc.
     const currentTime = timezonedDate.toISOString().substring(11, 16); // Extract HH:MM from ISO string
-    const dayNames = [
-      'Sunday',
-      'Monday',
-      'Tuesday',
-      'Wednesday',
-      'Thursday',
-      'Friday',
-      'Saturday',
-    ];
 
     // Check each policy
     for (const policy of enabledPolicies) {

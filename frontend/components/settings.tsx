@@ -32,7 +32,8 @@ import {
   AlertTriangle,
   ChevronDown,
   Activity,
-  ExternalLink,
+  MailQuestionMark,
+  MailCheck,
   BookOpen,
 } from "lucide-react";
 import { config } from "../lib/config";
@@ -187,7 +188,54 @@ const getSettingInfo = (
     AUTO_MARK_NOTIFICATION_READ: {
       label: "Auto-mark notifications as read",
       description:
-        "Automatically mark notifications as read when you click on them",
+        "Automatically mark notifications as read when you click on them (app only)",
+    },
+    SMTP_ENABLED: {
+      label: "Enable email notifications",
+      description: "Enable sending notifications via email using SMTP",
+    },
+    SMTP_HOST: {
+      label: "SMTP server host",
+      description:
+        "Hostname or IP address of your SMTP server (e.g., smtp.gmail.com)",
+    },
+    SMTP_PORT: {
+      label: "SMTP server port",
+      description:
+        "Port number for SMTP connection (common ports: 587 for TLS, 465 for SSL, 25 for unencrypted)",
+    },
+    SMTP_USER: {
+      label: "SMTP username",
+      description:
+        "Username for SMTP authentication (usually your email address)",
+    },
+    SMTP_PASSWORD: {
+      label: "SMTP password",
+      description: "Password or app-specific password for SMTP authentication",
+    },
+    SMTP_FROM_EMAIL: {
+      label: "From email address",
+      description: "Email address that notifications will be sent from",
+    },
+    SMTP_TO_EMAILS: {
+      label: "To email addresses",
+      description:
+        "Email addresses to send notifications to (separate multiple addresses with commas, semicolons, or new lines)",
+    },
+    SMTP_FROM_NAME: {
+      label: "From display name",
+      description:
+        "Display name that will appear as the sender (e.g., Guardian Notifications)",
+    },
+    SMTP_USE_TLS: {
+      label: "Use TLS encryption",
+      description:
+        "Enable TLS/STARTTLS encryption for secure email transmission",
+    },
+    SMTP_NOTIFY_ON_NOTIFICATIONS: {
+      label: "Email notifications for events",
+      description:
+        "Send email notifications when new events occur (device approvals, rejections, etc.)",
     },
   };
 
@@ -210,7 +258,8 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
   const [testingConnection, setTestingConnection] = useState(false);
   const [exportingDatabase, setExportingDatabase] = useState(false);
   const [importingDatabase, setImportingDatabase] = useState(false);
-  const { settings, loading, error, refreshSettings } = useSettings();
+  const { settings, loading, error, refreshSettings, updateSettings } =
+    useSettings();
   const {
     versionInfo,
     updateInfo,
@@ -227,6 +276,11 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
     importVersion: string;
   } | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<{
+    success: boolean;
+    message: string;
+  } | null>(null);
+  const [testingSMTPConnection, setTestingSMTPConnection] = useState(false);
+  const [smtpConnectionStatus, setSMTPConnectionStatus] = useState<{
     success: boolean;
     message: string;
   } | null>(null);
@@ -333,6 +387,14 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
   ) => {
     const errors: string[] = [];
 
+    // Check if SMTP is being enabled in this update
+    const smtpEnabledUpdate = settingsToUpdate.find(
+      (s) => s.key === "SMTP_ENABLED"
+    );
+    const isSMTPEnabled = smtpEnabledUpdate
+      ? smtpEnabledUpdate.value
+      : Boolean(formData["SMTP_ENABLED"]);
+
     for (const setting of settingsToUpdate) {
       switch (setting.key) {
         case "PLEX_SERVER_PORT":
@@ -423,6 +485,90 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
             }
           }
           break;
+        case "SMTP_ENABLED":
+          if (typeof setting.value !== "boolean") {
+            errors.push("SMTP enabled must be a boolean value");
+          }
+          break;
+        case "SMTP_HOST":
+          // Only validate if SMTP is enabled
+          if (
+            isSMTPEnabled &&
+            (!setting.value || setting.value.trim().length === 0)
+          ) {
+            errors.push(
+              "SMTP host is required when email notifications are enabled"
+            );
+          }
+          break;
+        case "SMTP_PORT":
+          // Only validate if SMTP is enabled or if a value is provided
+          if (setting.value && setting.value !== "") {
+            const smtpPort = Number(setting.value);
+            if (isNaN(smtpPort) || smtpPort < 1 || smtpPort > 65535) {
+              errors.push("SMTP port must be a number between 1 and 65535");
+            }
+          } else if (isSMTPEnabled) {
+            errors.push(
+              "SMTP port is required when email notifications are enabled"
+            );
+          }
+          break;
+        case "SMTP_USER":
+          if (
+            isSMTPEnabled &&
+            (!setting.value || setting.value.trim().length === 0)
+          ) {
+            errors.push(
+              "SMTP username is required when email notifications are enabled"
+            );
+          }
+          break;
+        case "SMTP_PASSWORD":
+          if (
+            isSMTPEnabled &&
+            (!setting.value || setting.value.trim().length === 0)
+          ) {
+            errors.push(
+              "SMTP password is required when email notifications are enabled"
+            );
+          }
+          break;
+        case "SMTP_FROM_EMAIL":
+          if (isSMTPEnabled) {
+            if (!setting.value || setting.value.trim().length === 0) {
+              errors.push(
+                "From email address is required when email notifications are enabled"
+              );
+            } else {
+              // Basic email validation
+              const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+              if (!emailRegex.test(setting.value.trim())) {
+                errors.push("From email address must be a valid email format");
+              }
+            }
+          }
+          break;
+        case "SMTP_FROM_NAME":
+          if (
+            isSMTPEnabled &&
+            (!setting.value || setting.value.trim().length === 0)
+          ) {
+            errors.push(
+              "From display name is required when email notifications are enabled"
+            );
+          }
+          break;
+        case "SMTP_USE_TLS":
+          if (typeof setting.value !== "boolean") {
+            errors.push("SMTP TLS setting must be a boolean value");
+          }
+          break;
+        case "SMTP_NOTIFY_ON_NOTIFICATIONS":
+          if (typeof setting.value !== "boolean") {
+            errors.push("SMTP notify on notifications must be a boolean value");
+          }
+          break;
         default:
           //console.warn(`No validation rules for setting: ${setting.key}`);
           break;
@@ -479,7 +625,14 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
       });
 
       if (response.ok) {
-        await refreshSettings(); // Refresh settings
+        const updatedFormData = { ...formData };
+        settingsToUpdate.forEach(({ key, value }) => {
+          updatedFormData[key] = value;
+        });
+        setFormData(updatedFormData);
+
+        // Update the settings context with the new values
+        updateSettings(settingsToUpdate);
 
         // Dispatch event to notify notification handler of settings change
         window.dispatchEvent(
@@ -495,6 +648,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
 
         // Clear connection status after saving settings
         setConnectionStatus(null);
+        setSMTPConnectionStatus(null);
       } else {
         // Handle save error
         const errorData = await response.json().catch(() => ({}));
@@ -567,6 +721,59 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
       });
     } finally {
       setTestingConnection(false);
+    }
+  };
+
+  const handleTestSMTPConnection = async () => {
+    // Check if there are pending SMTP settings changes
+    if (hasSMTPChanges()) {
+      toast({
+        title: "Pending Changes Detected",
+        description:
+          "Please save your SMTP settings before testing the connection to ensure accurate results.",
+        variant: "warning",
+      });
+      return;
+    }
+
+    setTestingSMTPConnection(true);
+    try {
+      const response = await fetch(
+        `${config.api.baseUrl}/config/test-smtp-connection`,
+        {
+          method: "POST",
+        }
+      );
+
+      if (response.ok) {
+        const result = await response.json();
+        setSMTPConnectionStatus(result);
+      } else {
+        // Try to get the error message from the response
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage =
+          errorData.message || `Server error (${response.status})`;
+        setSMTPConnectionStatus({
+          success: false,
+          message: errorMessage,
+        });
+      }
+    } catch (error) {
+      const errorMessage =
+        "Failed to test SMTP connection - unable to reach server";
+      setSMTPConnectionStatus({
+        success: false,
+        message: errorMessage,
+      });
+
+      // Only show toast if it's a network/backend error (unable to reach server)
+      toast({
+        title: "Network Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setTestingSMTPConnection(false);
     }
   };
 
@@ -908,7 +1115,19 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
         "MSG_IP_NOT_ALLOWED",
         "MSG_TIME_RESTRICTED",
       ],
-      notifications: ["AUTO_MARK_NOTIFICATION_READ"],
+      notifications: [
+        "AUTO_MARK_NOTIFICATION_READ",
+        "SMTP_NOTIFY_ON_NOTIFICATIONS",
+        "SMTP_ENABLED",
+        "SMTP_HOST",
+        "SMTP_PORT",
+        "SMTP_USER",
+        "SMTP_PASSWORD",
+        "SMTP_FROM_EMAIL",
+        "SMTP_TO_EMAILS",
+        "SMTP_FROM_NAME",
+        "SMTP_USE_TLS",
+      ],
     };
 
     const filteredSettings = settings.filter(
@@ -1160,6 +1379,197 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
     );
   };
 
+  const renderSMTPSettings = () => {
+    const isSMTPEnabled = Boolean(formData["SMTP_ENABLED"]);
+    const smtpFields = [
+      "SMTP_HOST",
+      "SMTP_PORT",
+      "SMTP_USER",
+      "SMTP_PASSWORD",
+      "SMTP_FROM_EMAIL",
+      "SMTP_TO_EMAILS",
+      "SMTP_FROM_NAME",
+      "SMTP_USE_TLS",
+    ];
+
+    const smtpFieldSettings = settings.filter((setting) =>
+      smtpFields.includes(setting.key)
+    );
+
+    return (
+      <Card className="p-4">
+        <div className="space-y-4">
+          {/* SMTP Enabled Setting */}
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label>Enable email notifications</Label>
+              <p className="text-xs text-muted-foreground">
+                Enable sending notifications via email using SMTP
+              </p>
+            </div>
+            <Switch
+              checked={isSMTPEnabled}
+              onCheckedChange={(checked) =>
+                handleInputChange("SMTP_ENABLED", checked)
+              }
+              className="cursor-pointer"
+            />
+          </div>
+
+          {/* SMTP Configuration Fields - Conditional and indented */}
+          <div
+            className={`ml-4 pl-4 border-l-2 space-y-4 ${isSMTPEnabled ? "border-border" : "border-muted"}`}
+          >
+            {smtpFieldSettings
+              .sort(
+                (a, b) => smtpFields.indexOf(a.key) - smtpFields.indexOf(b.key)
+              )
+              .map((setting) => {
+                const { label, description } = getSettingInfo(setting);
+
+                if (setting.type === "boolean") {
+                  return (
+                    <div
+                      key={setting.key}
+                      className="flex items-center justify-between"
+                    >
+                      <div className="space-y-0.5">
+                        <Label
+                          className={
+                            !isSMTPEnabled ? "text-muted-foreground" : ""
+                          }
+                        >
+                          {label}
+                        </Label>
+                        <p
+                          className={`text-xs ${!isSMTPEnabled ? "text-muted-foreground/60" : "text-muted-foreground"}`}
+                        >
+                          {description}
+                        </p>
+                      </div>
+                      <Switch
+                        checked={Boolean(formData[setting.key])}
+                        disabled={!isSMTPEnabled}
+                        onCheckedChange={(checked) =>
+                          handleInputChange(setting.key, checked)
+                        }
+                        className={!isSMTPEnabled ? "" : "cursor-pointer"}
+                      />
+                    </div>
+                  );
+                }
+
+                return (
+                  <div key={setting.key} className="space-y-2">
+                    <Label
+                      className={!isSMTPEnabled ? "text-muted-foreground" : ""}
+                    >
+                      {label}
+                    </Label>
+                    {setting.key === "SMTP_TO_EMAILS" ? (
+                      <textarea
+                        value={String(formData[setting.key] || "")}
+                        disabled={!isSMTPEnabled}
+                        onChange={(e) => {
+                          handleInputChange(setting.key, e.target.value);
+                        }}
+                        placeholder="user1@example.com, user2@example.com"
+                        rows={3}
+                        className={`flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${!isSMTPEnabled ? "bg-muted" : ""}`}
+                      />
+                    ) : (
+                      <Input
+                        type={
+                          setting.private
+                            ? "password"
+                            : setting.type === "number"
+                              ? "number"
+                              : setting.key === "SMTP_FROM_EMAIL"
+                                ? "email"
+                                : "text"
+                        }
+                        value={String(formData[setting.key] || "")}
+                        disabled={!isSMTPEnabled}
+                        onChange={(e) => {
+                          const newValue =
+                            setting.type === "number"
+                              ? parseFloat(e.target.value) || 0
+                              : e.target.value;
+                          handleInputChange(setting.key, newValue);
+                        }}
+                        placeholder={
+                          setting.private && !formData[setting.key]
+                            ? "••••••••••••••••••••"
+                            : ""
+                        }
+                        className={`${
+                          setting.type === "number"
+                            ? "[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            : ""
+                        } ${!isSMTPEnabled ? "bg-muted" : ""}`}
+                      />
+                    )}
+                    <p
+                      className={`text-xs ${!isSMTPEnabled ? "text-muted-foreground/60" : "text-muted-foreground"}`}
+                    >
+                      {description}
+                    </p>
+                  </div>
+                );
+              })}
+          </div>
+
+          {/* SMTP Connection Test - Only show when SMTP is enabled */}
+          {isSMTPEnabled && (
+            <div className="ml-4 pl-4 border-l-2 border-border">
+              <div className="space-y-4">
+                <h5 className="text-sm font-medium">Connection Test</h5>
+                {hasSMTPChanges() && (
+                  <div className="flex items-center space-x-2 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-md">
+                    <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                    <span className="text-sm text-amber-800 dark:text-amber-200">
+                      Save your SMTP settings before testing the connection
+                    </span>
+                  </div>
+                )}
+                <div className="flex items-center space-x-2">
+                  <Button
+                    onClick={handleTestSMTPConnection}
+                    disabled={testingSMTPConnection}
+                    size="sm"
+                    variant="outline"
+                  >
+                    {testingSMTPConnection && (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    )}
+                    Send Test Email
+                  </Button>
+
+                  {smtpConnectionStatus && (
+                    <div
+                      className={`flex items-center space-x-1 text-sm ${
+                        smtpConnectionStatus.success
+                          ? "text-green-500"
+                          : "text-yellow-600"
+                      }`}
+                    >
+                      {smtpConnectionStatus.success ? (
+                        <MailCheck className="w-4 h-4" />
+                      ) : (
+                        <MailQuestionMark className="w-4 h-4" />
+                      )}
+                      <span>{smtpConnectionStatus.message}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </Card>
+    );
+  };
+
   const renderSSLSettings = () => {
     const useSSLSetting = settings.find((s) => s.key === "USE_SSL");
     const ignoreCertSetting = settings.find(
@@ -1232,6 +1642,16 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
 
     switch (sectionId) {
       case "plex":
+        const plexServerSettings = [
+          "PLEX_SERVER_IP",
+          "PLEX_SERVER_PORT",
+          "PLEX_TOKEN",
+        ];
+
+        const plexServerSettingsData = settings.filter((setting) =>
+          plexServerSettings.includes(setting.key)
+        );
+
         return (
           <div className="space-y-6">
             <div>
@@ -1241,65 +1661,87 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
               </p>
             </div>
 
+            {/* Server Configuration */}
             <div className="space-y-4">
-              {getSettingsByCategory("plex")
-                .filter((setting) => setting.key !== "USE_SSL") // Handle SSL settings separately
+              <div>
+                <h4 className="text-base font-medium text-slate-900 dark:text-slate-100 mb-2">
+                  Server Configuration
+                </h4>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Configure your Plex Media Server connection details.
+                </p>
+              </div>
+              {plexServerSettingsData
+                .sort(
+                  (a, b) =>
+                    plexServerSettings.indexOf(a.key) -
+                    plexServerSettings.indexOf(b.key)
+                )
                 .map((setting) => (
                   <Card key={setting.key} className="p-4">
                     {renderSettingField(setting)}
                   </Card>
                 ))}
 
-              {/* Special SSL Settings Group */}
+              {/* SSL Settings Group */}
               {renderSSLSettings()}
             </div>
 
             {/* Connection Test */}
-            <Card className="p-4">
-              <div className="space-y-4">
-                <h4 className="text-sm font-medium">Connection Test</h4>
-                {hasPlexChanges() && (
-                  <div className="flex items-center space-x-2 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-md">
-                    <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-                    <span className="text-sm text-amber-800 dark:text-amber-200">
-                      Save your Plex settings before testing the connection
-                    </span>
-                  </div>
-                )}
-                <div className="flex items-center space-x-2">
-                  <Button
-                    onClick={handleTestConnection}
-                    disabled={testingConnection}
-                    size="sm"
-                    variant="outline"
-                  >
-                    {testingConnection ? (
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    ) : (
-                      <RefreshCw className="w-4 h-4 mr-2" />
-                    )}
-                    Test Connection
-                  </Button>
-
-                  {connectionStatus && (
-                    <div
-                      className={`flex items-center space-x-1 text-sm ${
-                        connectionStatus.success
-                          ? "text-green-500"
-                          : "text-yellow-600"
-                      }`}
-                    >
-                      {connectionStatus.success ? (
-                        <CheckCircle className="w-4 h-4" />
-                      ) : (
-                        <XCircle className="w-4 h-4" />
-                      )}
-                      <span>{connectionStatus.message}</span>
+            <div className="space-y-4">
+              <div>
+                <h4 className="text-base font-medium text-slate-900 dark:text-slate-100 mb-2">
+                  Connection Test
+                </h4>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Test your Plex server connection to verify the configuration.
+                </p>
+              </div>
+              <Card className="p-4">
+                <div className="space-y-4">
+                  {hasPlexChanges() && (
+                    <div className="flex items-center space-x-2 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-md">
+                      <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                      <span className="text-sm text-amber-800 dark:text-amber-200">
+                        Save your Plex settings before testing the connection
+                      </span>
                     </div>
                   )}
+                  <div className="flex items-center space-x-2">
+                    <Button
+                      onClick={handleTestConnection}
+                      disabled={testingConnection}
+                      size="sm"
+                      variant="outline"
+                    >
+                      {testingConnection ? (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      ) : (
+                        <RefreshCw className="w-4 h-4 mr-2" />
+                      )}
+                      Test Connection
+                    </Button>
+
+                    {connectionStatus && (
+                      <div
+                        className={`flex items-center space-x-1 text-sm ${
+                          connectionStatus.success
+                            ? "text-green-500"
+                            : "text-yellow-600"
+                        }`}
+                      >
+                        {connectionStatus.success ? (
+                          <CheckCircle className="w-4 h-4" />
+                        ) : (
+                          <XCircle className="w-4 h-4" />
+                        )}
+                        <span>{connectionStatus.message}</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            </Card>
+              </Card>
+            </div>
           </div>
         );
 
@@ -1327,27 +1769,86 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
         );
 
       case "notifications":
+        const generalNotificationSettings = [
+          "AUTO_MARK_NOTIFICATION_READ",
+          "SMTP_NOTIFY_ON_NOTIFICATIONS",
+        ];
+
+        const generalNotificationSettingsData = settings.filter((setting) =>
+          generalNotificationSettings.includes(setting.key)
+        );
+
         return (
           <div className="space-y-6">
             <div>
               <h3 className="text-lg font-medium">Notification Settings</h3>
               <p className="text-sm text-muted-foreground">
-                Configure how notifications behave and interact with your
-                workflow.
+                Configure notification behavior and email delivery settings.
               </p>
             </div>
 
+            {/* General Notification Settings */}
             <div className="space-y-4">
-              {getSettingsByCategory("notifications").map((setting) => (
-                <Card key={setting.key} className="p-4">
-                  {renderSettingField(setting)}
-                </Card>
-              ))}
+              <div>
+                <h4 className="text-base font-medium text-slate-900 dark:text-slate-100 mb-2">
+                  General Settings
+                </h4>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Configure general notification behavior and preferences.
+                </p>
+              </div>
+              {generalNotificationSettingsData
+                .sort(
+                  (a, b) =>
+                    generalNotificationSettings.indexOf(a.key) -
+                    generalNotificationSettings.indexOf(b.key)
+                )
+                .map((setting) => (
+                  <Card key={setting.key} className="p-4">
+                    {renderSettingField(setting)}
+                  </Card>
+                ))}
+            </div>
+
+            {/* SMTP Configuration */}
+            <div className="space-y-4">
+              <div>
+                <h4 className="text-base font-medium text-slate-900 dark:text-slate-100 mb-2">
+                  Email Configuration (SMTP)
+                </h4>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Configure SMTP settings for sending email notifications. All
+                  fields are required when email notifications are enabled.
+                </p>
+              </div>
+              {renderSMTPSettings()}
             </div>
           </div>
         );
 
       case "customization":
+        const interfaceSettings = [
+          "ENABLE_MEDIA_THUMBNAILS",
+          "ENABLE_MEDIA_ARTWORK",
+          "CUSTOM_PLEX_URL",
+          "DEFAULT_PAGE",
+        ];
+        const messageSettings = [
+          "MSG_DEVICE_PENDING",
+          "MSG_DEVICE_REJECTED",
+          "MSG_IP_LAN_ONLY",
+          "MSG_IP_WAN_ONLY",
+          "MSG_IP_NOT_ALLOWED",
+          "MSG_TIME_RESTRICTED",
+        ];
+
+        const interfaceSettingsData = settings.filter((setting) =>
+          interfaceSettings.includes(setting.key)
+        );
+        const messageSettingsData = settings.filter((setting) =>
+          messageSettings.includes(setting.key)
+        );
+
         return (
           <div className="space-y-6">
             <div>
@@ -1358,12 +1859,52 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
               </p>
             </div>
 
+            {/* Interface Settings Section */}
             <div className="space-y-4">
-              {getSettingsByCategory("customization").map((setting) => (
-                <Card key={setting.key} className="p-4">
-                  {renderSettingField(setting)}
-                </Card>
-              ))}
+              <div>
+                <h4 className="text-base font-medium text-slate-900 dark:text-slate-100 mb-2">
+                  Interface Settings
+                </h4>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Configure the visual appearance and behavior of the Guardian
+                  interface.
+                </p>
+              </div>
+              {interfaceSettingsData
+                .sort(
+                  (a, b) =>
+                    interfaceSettings.indexOf(a.key) -
+                    interfaceSettings.indexOf(b.key)
+                )
+                .map((setting) => (
+                  <Card key={setting.key} className="p-4">
+                    {renderSettingField(setting)}
+                  </Card>
+                ))}
+            </div>
+
+            {/* Custom Messages Section */}
+            <div className="space-y-4">
+              <div>
+                <h4 className="text-base font-medium text-slate-900 dark:text-slate-100 mb-2">
+                  Custom Messages
+                </h4>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Customize the messages displayed to users when access is
+                  restricted or devices require approval.
+                </p>
+              </div>
+              {messageSettingsData
+                .sort(
+                  (a, b) =>
+                    messageSettings.indexOf(a.key) -
+                    messageSettings.indexOf(b.key)
+                )
+                .map((setting) => (
+                  <Card key={setting.key} className="p-4">
+                    {renderSettingField(setting)}
+                  </Card>
+                ))}
             </div>
           </div>
         );
@@ -1506,8 +2047,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
                       Clear All Session History
                     </h4>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Permanently remove all session history records from the
-                      database. This will clear viewing history for all users.
+                      Permanently remove all session history from the database.
                     </p>
                   </div>
                   <Button
@@ -1534,10 +2074,12 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
                   <div>
                     <h4 className="text-sm font-medium flex items-center">
                       <AlertTriangle className="w-4 h-4 mr-2 text-red-500" />
-                      Delete All Devices
+                      Delete All Devices Data
                     </h4>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Permanently remove all device records from the database.
+                      Permanently remove all device, sessions history and
+                      notifications from the database. This action cannot be
+                      undone.
                     </p>
                   </div>
                   <Button
@@ -1567,8 +2109,9 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
                     </h4>
                     <p className="text-xs text-muted-foreground mt-1">
                       <strong>DANGER:</strong> This will permanently delete ALL
-                      data including settings, devices, user preferences, and
-                      sessions. Default settings will be restored.
+                      data including settings, devices, user preferences,
+                      sessions history and notifications. Default settings will
+                      be restored.
                     </p>
                   </div>
                   <div className="text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 p-3 rounded border border-red-200 dark:border-red-800">
@@ -1594,40 +2137,6 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
             </div>
           </div>
         );
-
-      // case "notifications":
-      //   return (
-      //     <div className="space-y-6">
-      //       <div>
-      //         <h3 className="text-lg font-medium">Notification Settings</h3>
-      //         <p className="text-sm text-muted-foreground">
-      //           Control how you receive notifications and alerts.
-      //         </p>
-      //       </div>
-      //       <Card className="p-4">
-      //         <p className="text-sm text-muted-foreground">
-      //           Notification settings will be implemented in a future version.
-      //         </p>
-      //       </Card>
-      //     </div>
-      //   );
-
-      // case "profile":
-      //   return (
-      //     <div className="space-y-6">
-      //       <div>
-      //         <h3 className="text-lg font-medium">Profile Settings</h3>
-      //         <p className="text-sm text-muted-foreground">
-      //           Manage your account profile and preferences.
-      //         </p>
-      //       </div>
-      //       <Card className="p-4">
-      //         <p className="text-sm text-muted-foreground">
-      //           Profile settings will be implemented in a future version.
-      //         </p>
-      //       </Card>
-      //     </div>
-      //   );
 
       default:
         return (
@@ -1670,6 +2179,40 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
 
     return Object.entries(formData).some(([key, value]) => {
       if (!plexKeys.includes(key)) return false;
+
+      const originalSetting = settings.find((s) => s.key === key);
+      if (!originalSetting) return false;
+
+      let originalValue: any = originalSetting.value;
+      if (originalSetting.type === "boolean") {
+        originalValue = originalValue === "true";
+      } else if (originalSetting.type === "number") {
+        originalValue = parseFloat(originalValue);
+      }
+
+      return (
+        value !== originalValue && !(originalSetting.private && value === "")
+      );
+    });
+  };
+
+  // Check if there are unsaved changes in SMTP-related settings
+  const hasSMTPChanges = () => {
+    const smtpKeys = [
+      "SMTP_ENABLED",
+      "SMTP_HOST",
+      "SMTP_PORT",
+      "SMTP_USER",
+      "SMTP_PASSWORD",
+      "SMTP_FROM_EMAIL",
+      "SMTP_TO_EMAILS",
+      "SMTP_FROM_NAME",
+      "SMTP_USE_TLS",
+      "SMTP_NOTIFY_ON_NOTIFICATIONS",
+    ];
+
+    return Object.entries(formData).some(([key, value]) => {
+      if (!smtpKeys.includes(key)) return false;
 
       const originalSetting = settings.find((s) => s.key === key);
       if (!originalSetting) return false;
@@ -1810,7 +2353,7 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
           {/* Settings Navigation */}
           <Card className="lg:col-span-1">
             <CardHeader>
-              <CardTitle className="text-base">Settings</CardTitle>
+              <CardTitle className="text-base mt-4">Settings</CardTitle>
               <CardDescription>Choose a category to configure</CardDescription>
             </CardHeader>
             <CardContent className="space-y-1 p-0">

@@ -6,6 +6,7 @@ import { UserDevice } from '../../../entities/user-device.entity';
 import { UserPreference } from '../../../entities/user-preference.entity';
 import * as http from 'http';
 import * as https from 'https';
+import * as nodemailer from 'nodemailer';
 import {
   PlexErrorCode,
   PlexResponse,
@@ -16,7 +17,7 @@ import { SessionHistory } from 'src/entities/session-history.entity';
 import { Notification } from 'src/entities/notification.entity';
 
 // App version
-const CURRENT_APP_VERSION = '1.2.2';
+const CURRENT_APP_VERSION = '1.2.3';
 
 export interface ConfigSettingDto {
   key: string;
@@ -159,6 +160,58 @@ export class ConfigService {
         key: 'TIMEZONE',
         value: '+00:00',
         type: 'string' as const,
+      },
+      // SMTP Email Configuration Settings
+      {
+        key: 'SMTP_ENABLED',
+        value: 'false',
+        type: 'boolean' as const,
+      },
+      {
+        key: 'SMTP_HOST',
+        value: '',
+        type: 'string' as const,
+      },
+      {
+        key: 'SMTP_PORT',
+        value: '587',
+        type: 'number' as const,
+      },
+      {
+        key: 'SMTP_USER',
+        value: '',
+        type: 'string' as const,
+      },
+      {
+        key: 'SMTP_PASSWORD',
+        value: '',
+        type: 'string' as const,
+        private: true,
+      },
+      {
+        key: 'SMTP_FROM_EMAIL',
+        value: '',
+        type: 'string' as const,
+      },
+      {
+        key: 'SMTP_FROM_NAME',
+        value: 'Guardian Notifications',
+        type: 'string' as const,
+      },
+      {
+        key: 'SMTP_USE_TLS',
+        value: 'true',
+        type: 'boolean' as const,
+      },
+      {
+        key: 'SMTP_TO_EMAILS',
+        value: '',
+        type: 'string' as const,
+      },
+      {
+        key: 'SMTP_NOTIFY_ON_NOTIFICATIONS',
+        value: 'false',
+        type: 'boolean' as const,
       },
     ];
 
@@ -407,13 +460,12 @@ export class ConfigService {
       const minutes = parseInt(offsetMatch[3], 10);
 
       // Calculate total offset in milliseconds
-      // UTC offset means: local time = UTC time + offset
-      // So UTC-4 means local time = UTC time + (-4 hours)
       const offsetMs = sign * (hours * 60 + minutes) * 60 * 1000;
 
       // Get current UTC time and apply the timezone offset
       const now = new Date();
-      const localTime = new Date(now.getTime() + offsetMs);
+      const utcTime = now.getTime() + now.getTimezoneOffset() * 60000;
+      const localTime = new Date(utcTime + offsetMs);
 
       return localTime;
     } catch (error) {
@@ -583,6 +635,812 @@ export class ConfigService {
         'Unexpected error testing Plex connection',
         error.message,
       );
+    }
+  }
+
+  async testSMTPConnection(): Promise<{ success: boolean; message: string }> {
+    try {
+      const smtpEnabled = await this.getSetting('SMTP_ENABLED');
+      const smtpHost = await this.getSetting('SMTP_HOST');
+      const smtpPort = await this.getSetting('SMTP_PORT');
+      const smtpUser = await this.getSetting('SMTP_USER');
+      const smtpPassword = await this.getSetting('SMTP_PASSWORD');
+      const smtpFromEmail = await this.getSetting('SMTP_FROM_EMAIL');
+      const smtpFromName = await this.getSetting('SMTP_FROM_NAME');
+      const smtpUseTLS = await this.getSetting('SMTP_USE_TLS');
+      const smtpToEmails = await this.getSetting('SMTP_TO_EMAILS');
+
+      // Check if SMTP is enabled
+      if (smtpEnabled !== true) {
+        return {
+          success: false,
+          message: 'SMTP email notifications are disabled',
+        };
+      }
+
+      // Check if all required settings are present
+      if (
+        !smtpHost ||
+        !smtpPort ||
+        !smtpUser ||
+        !smtpPassword ||
+        !smtpFromEmail
+      ) {
+        return {
+          success: false,
+          message:
+            'Missing required SMTP configuration (host, port, user, password, or from email)',
+        };
+      }
+
+      // Check if TLS is valid with port
+      if (
+        smtpUseTLS === true &&
+        parseInt(smtpPort) !== 465 &&
+        parseInt(smtpPort) !== 587
+      ) {
+        return {
+          success: false,
+          message:
+            'TLS is not supported on this port. Please use port 465 or 587.',
+        };
+      }
+
+      // Parse and validate recipient emails
+      let recipientEmails: string[] = [];
+      if (smtpToEmails && smtpToEmails.trim()) {
+        // Split by comma, semicolon, or newline and clean up
+        recipientEmails = smtpToEmails
+          .split(/[,;\n]/)
+          .map((email: string) => email.trim())
+          .filter((email: string) => email.length > 0);
+      }
+
+      // If no specific recipients configured
+      if (recipientEmails.length === 0) {
+        return {
+          success: false,
+          message:
+            'No recipient email addresses configured. Please  provide at least one recipient.',
+        };
+      }
+
+      // Validate email format for recipients
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      const invalidEmails = recipientEmails.filter(
+        (email) => !emailRegex.test(email),
+      );
+      if (invalidEmails.length > 0) {
+        return {
+          success: false,
+          message: `Invalid email format(s): ${invalidEmails.join(', ')}`,
+        };
+      }
+
+      // Create transporter
+      const transporter = nodemailer.createTransport({
+        host: smtpHost,
+        port: parseInt(smtpPort),
+        secure: smtpUseTLS === 'true' && parseInt(smtpPort) === 465, // Use secure for port 465
+        auth: {
+          user: smtpUser,
+          pass: smtpPassword,
+        },
+        tls: {
+          rejectUnauthorized: false, // Allow self-signed certificates for testing
+        },
+      });
+
+      // Verify the connection
+      await transporter.verify();
+
+      // Get the current time in the configured timezone for the email timestamp
+      const currentTimeInTimezone = await this.getCurrentTimeInTimezone();
+
+      // Format timestamp in French style (dd/mm/yyyy à 17h33)
+      const day = currentTimeInTimezone.getDate().toString().padStart(2, '0');
+      const month = (currentTimeInTimezone.getMonth() + 1)
+        .toString()
+        .padStart(2, '0');
+      const year = currentTimeInTimezone.getFullYear();
+      const hours = currentTimeInTimezone.getHours();
+      const minutes = currentTimeInTimezone
+        .getMinutes()
+        .toString()
+        .padStart(2, '0');
+
+      const formattedTimestamp = `${day}/${month}/${year} ${hours}h${minutes}`;
+
+      const testMailOptions = {
+        from: smtpFromName
+          ? `${smtpFromName} <${smtpFromEmail}>`
+          : smtpFromEmail,
+        to: recipientEmails,
+        subject: 'Guardian SMTP Test - Connection Successful',
+        text: 'This is a test email from Guardian to verify SMTP configuration. If you received this email, your SMTP settings are working correctly.',
+        html: `<!DOCTYPE html>
+        <html lang="en">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <style>
+            @media only screen and (max-width: 600px) {
+              .container { width: 100% !important; margin: 0 !important; }
+              .header, .content, .footer { padding-left: 20px !important; padding-right: 20px !important; }
+              .test-details { margin: 20px 0 !important; padding: 16px !important; }
+            }
+            @media (prefers-color-scheme: dark) {
+              .header {
+                background-color: #ffffff !important;
+                background: #ffffff !important;
+                color: #000000 !important;
+              }
+              .header h1 {
+                color: #000000 !important;
+              }
+              .container {
+                background-color: #ffffff !important;
+                background: #ffffff !important;
+              }
+              body {
+                background-color: #f5f5f5 !important;
+              }
+              .email-wrapper {
+                background-color: #f5f5f5 !important;
+              }
+            }
+            [data-ogsc] .header {
+              background-color: #ffffff !important;
+              background: #ffffff !important;
+            }
+            [data-ogsc] .header h1 {
+              color: #000000 !important;
+            }
+            body {
+              margin: 0;
+              padding: 0;
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+              background-color: #f5f5f5;
+              color: #000000;
+              line-height: 1.6;
+            }
+            .email-wrapper {
+              background-color: #f5f5f5;
+              padding: 40px 20px;
+              min-height: 100vh;
+            }
+            .container {
+              max-width: 600px;
+              margin: 0 auto;
+              background-color: #ffffff;
+              border-radius: 12px;
+              box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+              overflow: hidden;
+            }
+            .header {
+              padding: 50px 40px 30px;
+              text-align: center;
+              background-color: #ffffff;
+              color: #000000;
+              position: relative;
+            }
+            .header::after {
+              content: '';
+              position: absolute;
+              bottom: 0;
+              left: 0;
+              right: 0;
+              height: 4px;
+              background: linear-gradient(90deg, #ff0000, #ff6600, #ffcc00, #00cc66, #0066cc, #6600cc);
+            }
+            .header h1 {
+              margin: 0;
+              font-size: 36px;
+              font-weight: 800;
+              letter-spacing: -1.5px;
+              color: #000000;
+              text-transform: uppercase;
+              text-shadow: none;
+            }
+            .content {
+              padding: 40px 40px 30px;
+              background-color: #ffffff;
+            }
+            .success-badge {
+              display: inline-block;
+              padding: 8px 16px;
+              background-color: #00aa00;
+              color: #ffffff !important;
+              font-size: 11px;
+              font-weight: 700;
+              text-transform: uppercase;
+              letter-spacing: 1px;
+              border-radius: 20px;
+              margin-bottom: 24px;
+              box-shadow: 0 2px 8px rgba(0, 170, 0, 0.3);
+            }
+            .main-message {
+              margin: 0 0 32px 0;
+              font-size: 18px;
+              line-height: 1.7;
+              color: #000000;
+              font-weight: 500;
+            }
+            .test-details {
+              margin: 32px 0;
+              padding: 24px;
+              background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+              border: 1px solid #e9ecef;
+              border-radius: 8px;
+              border-left: 4px solid #00aa00;
+              box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+            }
+            .test-details h3 {
+              margin: 0 0 20px 0;
+              font-size: 14px;
+              font-weight: 700;
+              color: #000000;
+              text-transform: uppercase;
+              letter-spacing: 1px;
+              display: flex;
+              align-items: center;
+            }
+            .detail-row {
+              display: flex;
+              margin: 12px 0;
+              padding: 8px 0;
+              border-bottom: 1px solid #f0f0f0;
+            }
+            .detail-row:last-child {
+              border-bottom: none;
+            }
+            .detail-label {
+              font-weight: 700;
+              color: #666666;
+              min-width: 120px;
+              font-size: 13px;
+              text-transform: uppercase;
+              letter-spacing: 0.5px;
+            }
+            .detail-value {
+              color: #000000;
+              font-weight: 500;
+              font-size: 14px;
+              flex: 1;
+              font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+            }
+            .footer {
+              padding: 30px 40px 40px;
+              text-align: center;
+              background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+              border-top: 1px solid #e9ecef;
+            }
+            .footer p {
+              margin: 0;
+              font-size: 12px;
+              color: #666666;
+              font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+              text-transform: uppercase;
+              letter-spacing: 0.5px;
+              font-weight: 500;
+            }
+            .timestamp {
+              display: inline-block;
+              background-color: #f1f3f4;
+              padding: 6px 12px;
+              border-radius: 6px;
+              margin-top: 8px;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="email-wrapper">
+            <div class="container">
+              <div class="header">
+                <h1>Guardian</h1>
+              </div>
+              <div class="content">
+                <div class="success-badge">Test Successful</div>
+                <p class="main-message">SMTP configuration test completed successfully. Your email settings are working correctly and Guardian is ready to send notifications.</p>
+                
+                <div class="test-details">
+                  <h3>Test Details</h3>
+                  <div class="detail-row">
+                    <span class="detail-label">Status</span>
+                    <span class="detail-value">SMTP Verified</span>
+                  </div>
+                  <div class="detail-row">
+                    <span class="detail-label">Recipients</span>
+                    <span class="detail-value">${recipientEmails.join(', ')}</span>
+                  </div>
+                  <div class="detail-row">
+                    <span class="detail-label">Test Type</span>
+                    <span class="detail-value">Connection & Delivery</span>
+                  </div>
+                </div>
+              </div>
+              <div class="footer">
+                <p>SMTP Test</p>
+                <div class="timestamp">${formattedTimestamp}</div>
+              </div>
+            </div>
+          </div>
+        </body>
+        </html>`,
+      };
+
+      await transporter.sendMail(testMailOptions);
+
+      const recipientCount = recipientEmails.length;
+      const recipientText =
+        recipientCount === 1
+          ? recipientEmails[0]
+          : `${recipientCount} recipients (${recipientEmails.join(', ')})`;
+
+      this.logger.log(
+        `SMTP test email sent successfully to ${recipientCount} recipient(s): ${recipientEmails.join(', ')}`,
+      );
+
+      return {
+        success: true,
+        message: `SMTP connection successful! Test email sent to ${recipientText}`,
+      };
+    } catch (error) {
+      this.logger.error('SMTP Connection Test Failed', {
+        error: error.message,
+        code: error.code,
+        command: error.command,
+        response: error.response,
+        responseCode: error.responseCode,
+        stack: error.stack,
+      });
+
+      let userMessage = `SMTP error: ${error.message}`;
+
+      if (error.code === 'EAUTH') {
+        userMessage =
+          'Authentication failed. Please check your username and password.';
+      } else if (error.code === 'ECONNECTION') {
+        userMessage =
+          'Failed to connect to SMTP server. Please check the host and port.';
+      } else if (error.code === 'ETIMEDOUT') {
+        userMessage =
+          'Connection timed out. Please check your network connection and server settings.';
+      } else if (error.code === 'ENOTFOUND') {
+        userMessage = 'SMTP server not found. Please check the hostname.';
+      } else if (error.responseCode === 535) {
+        userMessage = 'Authentication failed. Please verify your credentials.';
+      } else if (error.responseCode === 550) {
+        userMessage =
+          'Email rejected by server. Please check recipient addresses.';
+      }
+
+      return {
+        success: false,
+        message: userMessage,
+      };
+    }
+  }
+
+  async sendNotificationEmail(
+    notificationType: 'block' | 'info' | 'warning' | 'error',
+    notificationText: string,
+    username: string,
+    deviceName?: string,
+    stopCode?: string,
+  ): Promise<void> {
+    try {
+      // Check if email notifications are enabled
+      const smtpEnabled = await this.getSetting('SMTP_ENABLED');
+      const notifyOnNotifications = await this.getSetting(
+        'SMTP_NOTIFY_ON_NOTIFICATIONS',
+      );
+
+      if (!smtpEnabled || !notifyOnNotifications) {
+        return; // Email notifications are disabled
+      }
+
+      // Get SMTP settings
+      const [
+        smtpHost,
+        smtpPort,
+        smtpUser,
+        smtpPassword,
+        smtpFromEmail,
+        smtpFromName,
+        smtpUseTLS,
+        smtpToEmails,
+      ] = await Promise.all([
+        this.getSetting('SMTP_HOST'),
+        this.getSetting('SMTP_PORT'),
+        this.getSetting('SMTP_USER'),
+        this.getSetting('SMTP_PASSWORD'),
+        this.getSetting('SMTP_FROM_EMAIL'),
+        this.getSetting('SMTP_FROM_NAME'),
+        this.getSetting('SMTP_USE_TLS'),
+        this.getSetting('SMTP_TO_EMAILS'),
+      ]);
+
+      // Validate required settings
+      if (
+        !smtpHost ||
+        !smtpPort ||
+        !smtpUser ||
+        !smtpPassword ||
+        !smtpFromEmail ||
+        !smtpToEmails
+      ) {
+        this.logger.warn(
+          'SMTP notification email skipped: missing required configuration',
+        );
+        return;
+      }
+
+      // Parse recipient emails
+      const recipientEmails = smtpToEmails
+        .split(/[,;\n]/)
+        .map((email: string) => email.trim())
+        .filter((email: string) => email.length > 0);
+
+      if (recipientEmails.length === 0) {
+        this.logger.warn(
+          'SMTP notification email skipped: no recipient addresses configured',
+        );
+        return;
+      }
+
+      // Create transporter
+      const transporter = nodemailer.createTransport({
+        host: smtpHost,
+        port: parseInt(smtpPort),
+        secure: smtpUseTLS === 'true' && parseInt(smtpPort) === 465,
+        auth: {
+          user: smtpUser,
+          pass: smtpPassword,
+        },
+        tls: {
+          rejectUnauthorized: false,
+        },
+      });
+
+      // Get current time for timestamp
+      const currentTimeInTimezone = await this.getCurrentTimeInTimezone();
+      const day = currentTimeInTimezone.getDate().toString().padStart(2, '0');
+      const month = (currentTimeInTimezone.getMonth() + 1)
+        .toString()
+        .padStart(2, '0');
+      const year = currentTimeInTimezone.getFullYear();
+      const hours = currentTimeInTimezone.getHours();
+      const minutes = currentTimeInTimezone
+        .getMinutes()
+        .toString()
+        .padStart(2, '0');
+      const formattedTimestamp = `${day}/${month}/${year} ${hours}h${minutes}`;
+
+      // Generate subject and email content based on notification type
+      const { subject, statusLabel, statusColor, mainMessage } =
+        this.getNotificationEmailContent(
+          notificationType,
+          stopCode,
+          username,
+          deviceName,
+        );
+
+      const emailHtml = `<!DOCTYPE html>
+        <html lang="en">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <style>
+            @media only screen and (max-width: 600px) {
+              .container { width: 100% !important; margin: 0 !important; }
+              .header, .content, .footer { padding-left: 20px !important; padding-right: 20px !important; }
+              .notification-details { margin: 20px 0 !important; padding: 16px !important; }
+            }
+            @media (prefers-color-scheme: dark) {
+              .header {
+                background-color: #ffffff !important;
+                background: #ffffff !important;
+                color: #000000 !important;
+              }
+              .header h1 {
+                color: #000000 !important;
+              }
+              .container {
+                background-color: #ffffff !important;
+                background: #ffffff !important;
+              }
+              body {
+                background-color: #f5f5f5 !important;
+              }
+              .email-wrapper {
+                background-color: #f5f5f5 !important;
+              }
+            }
+            [data-ogsc] .header {
+              background-color: #ffffff !important;
+              background: #ffffff !important;
+            }
+            [data-ogsc] .header h1 {
+              color: #000000 !important;
+            }
+            body {
+              margin: 0;
+              padding: 0;
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+              background-color: #f5f5f5;
+              color: #000000;
+              line-height: 1.6;
+            }
+            .email-wrapper {
+              background-color: #f5f5f5;
+              padding: 40px 20px;
+              min-height: 100vh;
+            }
+            .container {
+              max-width: 600px;
+              margin: 0 auto;
+              background-color: #ffffff;
+              border-radius: 12px;
+              box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+              overflow: hidden;
+            }
+            .header {
+              padding: 50px 40px 30px;
+              text-align: center;
+              background-color: #ffffff;
+              color: #000000;
+              position: relative;
+            }
+            .header::after {
+              content: '';
+              position: absolute;
+              bottom: 0;
+              left: 0;
+              right: 0;
+              height: 4px;
+              background: linear-gradient(90deg, #ff0000, #ff6600, #ffcc00, #00cc66, #0066cc, #6600cc);
+            }
+            .header h1 {
+              margin: 0;
+              font-size: 36px;
+              font-weight: 800;
+              letter-spacing: -1.5px;
+              color: #000000;
+              text-transform: uppercase;
+              text-shadow: none;
+            }
+            .content {
+              padding: 40px 40px 30px;
+              background-color: #ffffff;
+            }
+            .alert-badge {
+              display: inline-block;
+              padding: 8px 16px;
+              background-color: ${statusColor};
+              color: #ffffff !important;
+              font-size: 11px;
+              font-weight: 700;
+              text-transform: uppercase;
+              letter-spacing: 1px;
+              border-radius: 20px;
+              margin-bottom: 24px;
+              box-shadow: 0 2px 8px rgba(255, 68, 68, 0.3);
+            }
+            .main-message {
+              margin: 0 0 32px 0;
+              font-size: 18px;
+              line-height: 1.7;
+              color: #000000;
+              font-weight: 500;
+            }
+            .notification-details {
+              margin: 32px 0;
+              padding: 24px;
+              background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+              border: 1px solid #e9ecef;
+              border-radius: 8px;
+              border-left: 4px solid ${statusColor};
+              box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+            }
+            .notification-details h3 {
+              margin: 0 0 20px 0;
+              font-size: 14px;
+              font-weight: 700;
+              color: #000000;
+              text-transform: uppercase;
+              letter-spacing: 1px;
+              display: flex;
+              align-items: center;
+            }
+            .detail-row {
+              display: flex;
+              margin: 12px 0;
+              padding: 8px 0;
+              border-bottom: 1px solid #f0f0f0;
+            }
+            .detail-row:last-child {
+              border-bottom: none;
+            }
+            .detail-label {
+              font-weight: 700;
+              color: #666666;
+              min-width: 100px;
+              font-size: 13px;
+              text-transform: uppercase;
+              letter-spacing: 0.5px;
+            }
+            .detail-value {
+              color: #000000;
+              font-weight: 500;
+              font-size: 14px;
+              flex: 1;
+            }
+            .stop-code {
+              font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+              background-color: #f1f3f4;
+              padding: 4px 8px;
+              border-radius: 4px;
+              font-size: 12px;
+              color: #000000;
+            }
+            .notification-type {
+              display: inline-block;
+              background-color: ${statusColor};
+              color: #ffffff;
+              padding: 4px 8px;
+              border-radius: 4px;
+              font-size: 12px;
+              font-weight: 700;
+              letter-spacing: 0.5px;
+            }
+            .footer {
+              padding: 30px 40px 40px;
+              text-align: center;
+              background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+              border-top: 1px solid #e9ecef;
+            }
+            .footer p {
+              margin: 0;
+              font-size: 12px;
+              color: #666666;
+              font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+              text-transform: uppercase;
+              letter-spacing: 0.5px;
+              font-weight: 500;
+            }
+            .timestamp {
+              display: inline-block;
+              background-color: #f1f3f4;
+              padding: 6px 12px;
+              border-radius: 6px;
+              margin-top: 8px;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="email-wrapper">
+            <div class="container">
+              <div class="header">
+                <h1>Guardian</h1>
+              </div>
+              <div class="content">
+                <div class="alert-badge">${statusLabel}</div>
+                <p class="main-message">${mainMessage}</p>
+                
+                <div class="notification-details">
+                  <h3>Event Details</h3>
+                  <div class="detail-row">
+                    <span class="detail-label">User</span>
+                    <span class="detail-value">${username}</span>
+                  </div>
+                  ${deviceName ? `<div class="detail-row"><span class="detail-label">Device</span><span class="detail-value">${deviceName}</span></div>` : ''}
+                  <div class="detail-row">
+                    <span class="detail-label">Type</span>
+                    <span class="detail-value"><span class="notification-type">${notificationType.toUpperCase()}</span></span>
+                  </div>
+                  ${stopCode ? `<div class="detail-row"><span class="detail-label">Stop Code</span><span class="detail-value"><span class="stop-code">${stopCode}</span></span></div>` : ''}
+                </div>
+              </div>
+              <div class="footer">
+                <p>Notification System</p>
+                <div class="timestamp">${formattedTimestamp}</div>
+              </div>
+            </div>
+          </div>
+        </body>
+        </html>`;
+
+      const mailOptions = {
+        from: smtpFromName
+          ? `${smtpFromName} <${smtpFromEmail}>`
+          : smtpFromEmail,
+        to: recipientEmails,
+        subject,
+        text: `${subject}\n\n${mainMessage}\n\nUser: ${username}${deviceName ? `\nDevice: ${deviceName}` : ''}\nType: ${notificationType.toUpperCase()}${stopCode ? `\nReason: ${stopCode}` : ''}\n\nNotification sent at: ${formattedTimestamp}`,
+        html: emailHtml,
+      };
+
+      await transporter.sendMail(mailOptions);
+
+      this.logger.log(
+        `Notification email sent successfully for ${notificationType} event: ${username}${deviceName ? ` on ${deviceName}` : ''}`,
+      );
+    } catch (error) {
+      this.logger.error('Failed to send notification email', {
+        error: error.message,
+        notificationType,
+        username,
+        deviceName,
+        stopCode,
+        stack: error.stack,
+      });
+    }
+  }
+
+  private getNotificationEmailContent(
+    notificationType: 'block' | 'info' | 'warning' | 'error',
+    stopCode?: string,
+    username?: string,
+    deviceName?: string,
+  ): {
+    subject: string;
+    statusLabel: string;
+    statusColor: string;
+    mainMessage: string;
+  } {
+    switch (notificationType) {
+      case 'block':
+        return {
+          subject: `Guardian Alert: Stream Blocked${deviceName ? ` - ${deviceName}` : ''}`,
+          statusLabel: 'STREAM BLOCKED',
+          statusColor: '#ff4444',
+          mainMessage: stopCode
+            ? this.getStopCodeDescription(stopCode)
+            : 'A streaming session has been blocked on your Plex server',
+        };
+      case 'warning':
+        return {
+          subject: `Guardian Warning${deviceName ? ` - ${deviceName}` : ''}`,
+          statusLabel: 'WARNING',
+          statusColor: '#ffaa00',
+          mainMessage:
+            'Guardian has detected an issue that requires your attention.',
+        };
+      case 'error':
+        return {
+          subject: `Guardian Error${deviceName ? ` - ${deviceName}` : ''}`,
+          statusLabel: 'ERROR',
+          statusColor: '#ff4444',
+          mainMessage: 'Guardian has encountered an error during operation.',
+        };
+      case 'info':
+      default:
+        return {
+          subject: `Guardian Notification${deviceName ? ` - ${deviceName}` : ''}`,
+          statusLabel: 'NOTIFICATION',
+          statusColor: '#4488ff',
+          mainMessage: 'Guardian has a new notification for your Plex server.',
+        };
+    }
+  }
+
+  private getStopCodeDescription(stopCode: string): string {
+    switch (stopCode) {
+      case 'DEVICE_PENDING':
+        return 'A streaming session was blocked because the device requires administrator approval';
+      case 'DEVICE_REJECTED':
+        return 'A streaming session was blocked because the device has been rejected by an administrator';
+      case 'IP_POLICY_LAN_ONLY':
+        return 'A streaming session was blocked because the device attempted external access but is restricted to local network only';
+      case 'IP_POLICY_WAN_ONLY':
+        return 'A streaming session was blocked because the device attempted local access but is restricted to external connections only';
+      case 'IP_POLICY_NOT_ALLOWED':
+        return 'A streaming session was blocked because the device IP address is not in the approved access list';
+      case 'TIME_RESTRICTED':
+        return 'A streaming session was blocked due to time-based scheduling restrictions';
+      default:
+        return `A streaming session was blocked: ${stopCode}`;
     }
   }
 

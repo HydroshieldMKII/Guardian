@@ -5,11 +5,17 @@ import { NotificationsService } from './services/notifications.service';
 import { Notification } from '../../entities/notification.entity';
 import { SessionHistory } from '../../entities/session-history.entity';
 import { UserPreference } from '../../entities/user-preference.entity';
+import { UserDevice } from '../../entities/user-device.entity';
 import { ConfigModule } from '../config/config.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Notification, SessionHistory, UserPreference]),
+    TypeOrmModule.forFeature([
+      Notification,
+      SessionHistory,
+      UserPreference,
+      UserDevice,
+    ]),
     ConfigModule,
   ],
   controllers: [NotificationsController],
