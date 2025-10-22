@@ -20,6 +20,8 @@ import {
   MailQuestionMark,
   MailCheck,
   AlertTriangle,
+  Mail,
+  SendHorizontal,
 } from "lucide-react";
 import { config } from "@/lib/config";
 import { AppSetting } from "@/types";
@@ -258,8 +260,8 @@ export function SMTPSettings({
                 </>
               ) : (
                 <>
-                  <MailCheck className="mr-2 h-4 w-4" />
-                  Test SMTP Connection
+                  <SendHorizontal className="mr-2 h-4 w-4" />
+                  Send test email
                 </>
               )}
             </Button>
@@ -299,7 +301,7 @@ export function SMTPSettings({
               disabled={true}
               className="w-full"
             >
-              <MailCheck className="mr-2 h-4 w-4" />
+              <Mail className="mr-2 h-4 w-4" />
               Test SMTP Connection
             </Button>
             <p className="text-xs text-muted-foreground mt-2 text-center">

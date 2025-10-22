@@ -126,7 +126,7 @@ export const getSettingInfo = (setting: AppSetting): SettingInfo => {
     SMTP_HOST: {
       label: "SMTP server hostname",
       description:
-        "Hostname or IP address of your SMTP server (e.g., smtp.gmail.com)",
+        "Hostname or IP address of your SMTP server (e.g. smtp.gmail.com)",
     },
     SMTP_PORT: {
       label: "SMTP server port",
@@ -153,7 +153,7 @@ export const getSettingInfo = (setting: AppSetting): SettingInfo => {
     SMTP_FROM_NAME: {
       label: "From display name",
       description:
-        "Display name that will appear as the sender (e.g., Guardian Notifications)",
+        "Display name that will appear as the sender (e.g. Guardian Notifications)",
     },
     SMTP_USE_TLS: {
       label: "Use TLS encryption",
@@ -163,7 +163,7 @@ export const getSettingInfo = (setting: AppSetting): SettingInfo => {
     SMTP_NOTIFY_ON_NOTIFICATIONS: {
       label: "Email notifications for events",
       description:
-        "Send email notifications when new events occur (device approvals, rejections, etc.)",
+        "Send email notifications when new events occur (e.g. stream blocked)",
     },
   };
 

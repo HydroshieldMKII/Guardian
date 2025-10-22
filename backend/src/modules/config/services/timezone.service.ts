@@ -6,7 +6,7 @@ export class TimezoneService {
 
   getCurrentTimeInTimezone(timezoneOffset: string): Date {
     try {
-      // Parse UTC offset format (e.g., "+02:00", "-05:30")
+      // Parse UTC offset format (e.g. "+02:00", "-05:30")
       const offsetMatch = timezoneOffset.match(/^([+-])(\d{2}):(\d{2})$/);
       if (!offsetMatch) {
         this.logger.warn(

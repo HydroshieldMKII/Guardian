@@ -560,7 +560,7 @@ export function TimeRuleModal({
                             ruleName: e.target.value,
                           }))
                         }
-                        placeholder="e.g., School hours, Sleep time, Work hours"
+                        placeholder="e.g. School hours, Sleep time, Work hours"
                       />
                     </div>
 
