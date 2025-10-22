@@ -48,8 +48,8 @@ export function GlobalUpdateBanner() {
                 </p>
                 <p className="text-xs text-blue-100 break-words sm:truncate">
                   A new version is available (current: v
-                  {updateInfo.currentVersion}). Update to get the latest features
-                  and bug fixes.
+                  {updateInfo.currentVersion}). Update to get the latest
+                  features and bug fixes.
                 </p>
               </div>
             </div>
@@ -82,7 +82,7 @@ export function GlobalUpdateBanner() {
                 onClick={() =>
                   window.open(
                     "https://github.com/HydroshieldMKII/Guardian?tab=readme-ov-file#updating",
-                    "_blank",
+                    "_blank"
                   )
                 }
                 className="bg-blue-700 hover:bg-blue-800 text-white text-xs px-3 py-1 h-auto"
@@ -109,7 +109,7 @@ export function GlobalUpdateBanner() {
           isOpen={showReleaseNotes}
           onClose={() => setShowReleaseNotes(false)}
           latestVersion={updateInfo.latestVersion}
-          releaseNotes={updateInfo.releaseNotes || ''}
+          releaseNotes={updateInfo.releaseNotes || ""}
           updateUrl={updateInfo.updateUrl}
         />
       )}

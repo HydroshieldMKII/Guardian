@@ -229,13 +229,13 @@ export function DatabaseManagement({
               <div className="flex items-center gap-2">
                 <span className="font-medium">Database Version:</span>
                 <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 rounded-md font-mono">
-                  {versionInfo.databaseVersion || 'Unknown'}
+                  {versionInfo.databaseVersion || "Unknown"}
                 </span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="font-medium">Code Version:</span>
                 <span className="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 rounded-md font-mono">
-                  {versionInfo.codeVersion || 'Unknown'}
+                  {versionInfo.codeVersion || "Unknown"}
                 </span>
               </div>
             </div>

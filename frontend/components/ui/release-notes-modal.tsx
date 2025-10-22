@@ -49,7 +49,10 @@ export function ReleaseNotesModal({
         .replace(/^\* (.*$)/gm, '<li class="ml-4 mb-1 list-disc">$1</li>')
         .replace(/^- (.*$)/gm, '<li class="ml-4 mb-1 list-disc">$1</li>')
         // Wrap consecutive list items in ul tags
-        .replace(/(<li[^>]*>.*?<\/li>(?:\s*<li[^>]*>.*?<\/li>)*)/gs, '<ul class="ml-4 mb-2">$1</ul>')
+        .replace(
+          /(<li[^>]*>.*?<\/li>(?:\s*<li[^>]*>.*?<\/li>)*)/gs,
+          '<ul class="ml-4 mb-2">$1</ul>'
+        )
         // Convert markdown bold
         .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold">$1</strong>')
         // Convert markdown links
