@@ -45,10 +45,7 @@ export function SMTPSettings({
   const { toast } = useToast();
 
   const smtpSettings = settings
-    .filter(
-      (setting) =>
-        setting.key.startsWith("SMTP_")
-    )
+    .filter((setting) => setting.key.startsWith("SMTP_"))
     .sort((a, b) => {
       const order = [
         "SMTP_ENABLED",

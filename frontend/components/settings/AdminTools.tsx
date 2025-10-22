@@ -1,10 +1,22 @@
 "use client";
 
 import { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, RefreshCw, XCircle, AlertTriangle, Settings2 } from "lucide-react";
+import {
+  Loader2,
+  RefreshCw,
+  XCircle,
+  AlertTriangle,
+  Settings2,
+} from "lucide-react";
 import { config } from "@/lib/config";
 import { ConfirmationModal } from "@/components/ui/confirmation-modal";
 
@@ -14,25 +26,31 @@ interface AdminToolsProps {
 
 export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
   const { toast } = useToast();
-  
+
   // State for various operations
   const [resettingStreamCounts, setResettingStreamCounts] = useState(false);
   const [clearingSessionHistory, setClearingSessionHistory] = useState(false);
   const [deletingAllDevices, setDeletingAllDevices] = useState(false);
   const [resettingDatabase, setResettingDatabase] = useState(false);
-  
+
   // Modal states
-  const [showResetStreamCountsModal, setShowResetStreamCountsModal] = useState(false);
-  const [showClearSessionHistoryModal, setShowClearSessionHistoryModal] = useState(false);
-  const [showDeleteAllDevicesModal, setShowDeleteAllDevicesModal] = useState(false);
+  const [showResetStreamCountsModal, setShowResetStreamCountsModal] =
+    useState(false);
+  const [showClearSessionHistoryModal, setShowClearSessionHistoryModal] =
+    useState(false);
+  const [showDeleteAllDevicesModal, setShowDeleteAllDevicesModal] =
+    useState(false);
   const [showResetDatabaseModal, setShowResetDatabaseModal] = useState(false);
 
   const handleResetStreamCounts = async () => {
     try {
       setResettingStreamCounts(true);
-      const response = await fetch(`${config.api.baseUrl}/config/scripts/reset-stream-counts`, {
-        method: 'POST',
-      });
+      const response = await fetch(
+        `${config.api.baseUrl}/config/scripts/reset-stream-counts`,
+        {
+          method: "POST",
+        }
+      );
 
       if (response.ok) {
         toast({
@@ -46,7 +64,10 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
     } catch (error) {
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to reset stream counts",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to reset stream counts",
         variant: "destructive",
       });
     } finally {
@@ -58,9 +79,12 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
   const handleClearSessionHistory = async () => {
     try {
       setClearingSessionHistory(true);
-      const response = await fetch(`${config.api.baseUrl}/config/scripts/clear-session-history`, {
-        method: 'POST',
-      });
+      const response = await fetch(
+        `${config.api.baseUrl}/config/scripts/clear-session-history`,
+        {
+          method: "POST",
+        }
+      );
 
       if (response.ok) {
         toast({
@@ -74,7 +98,10 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
     } catch (error) {
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to clear session history",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to clear session history",
         variant: "destructive",
       });
     } finally {
@@ -86,9 +113,12 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
   const handleDeleteAllDevices = async () => {
     try {
       setDeletingAllDevices(true);
-      const response = await fetch(`${config.api.baseUrl}/config/scripts/delete-all-devices`, {
-        method: 'POST',
-      });
+      const response = await fetch(
+        `${config.api.baseUrl}/config/scripts/delete-all-devices`,
+        {
+          method: "POST",
+        }
+      );
 
       if (response.ok) {
         toast({
@@ -103,7 +133,10 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
     } catch (error) {
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to delete all devices",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to delete all devices",
         variant: "destructive",
       });
     } finally {
@@ -115,14 +148,18 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
   const handleResetDatabase = async () => {
     try {
       setResettingDatabase(true);
-      const response = await fetch(`${config.api.baseUrl}/config/scripts/reset-database`, {
-        method: 'POST',
-      });
+      const response = await fetch(
+        `${config.api.baseUrl}/config/scripts/reset-database`,
+        {
+          method: "POST",
+        }
+      );
 
       if (response.ok) {
         toast({
           title: "Success",
-          description: "Database has been reset successfully. Page will reload.",
+          description:
+            "Database has been reset successfully. Page will reload.",
         });
         onSettingsRefresh?.();
         setTimeout(() => {
@@ -135,7 +172,8 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
     } catch (error) {
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to reset database",
+        description:
+          error instanceof Error ? error.message : "Failed to reset database",
         variant: "destructive",
       });
     } finally {
@@ -162,7 +200,8 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
               <div>
                 <h4 className="text-sm font-medium">Reset Stream Counts</h4>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Reset session counts for all devices. This will not delete devices.
+                  Reset session counts for all devices. This will not delete
+                  devices.
                 </p>
               </div>
               <Button
@@ -184,7 +223,9 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
           <Card className="p-4 my-4">
             <div className="space-y-4">
               <div>
-                <h4 className="text-sm font-medium">Clear All Session History</h4>
+                <h4 className="text-sm font-medium">
+                  Clear All Session History
+                </h4>
                 <p className="text-xs text-muted-foreground mt-1">
                   Permanently remove all session history from the database.
                 </p>
@@ -200,7 +241,9 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
                 ) : (
                   <XCircle className="w-4 h-4 mr-2" />
                 )}
-                {clearingSessionHistory ? "Clearing..." : "Clear Session History"}
+                {clearingSessionHistory
+                  ? "Clearing..."
+                  : "Clear Session History"}
               </Button>
             </div>
           </Card>
@@ -213,7 +256,8 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
                   Delete All Devices Data
                 </h4>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Permanently remove all device, sessions history and notifications from the database. This action cannot be undone.
+                  Permanently remove all device, sessions history and
+                  notifications from the database. This action cannot be undone.
                 </p>
               </div>
               <Button
@@ -241,11 +285,15 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
                   Reset Entire Database
                 </h4>
                 <p className="text-xs text-muted-foreground mt-1">
-                  <strong>DANGER:</strong> This will permanently delete ALL data including settings, devices, user preferences, sessions history and notifications. Default settings will be restored.
+                  <strong>DANGER:</strong> This will permanently delete ALL data
+                  including settings, devices, user preferences, sessions
+                  history and notifications. Default settings will be restored.
                 </p>
               </div>
               <div className="text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 p-3 rounded border border-red-200 dark:border-red-800">
-                <strong>IRREVERSIBLE ACTION:</strong> This will completely wipe your Guardian database. Export your database first if you want to keep any data. This action cannot be undone.
+                <strong>IRREVERSIBLE ACTION:</strong> This will completely wipe
+                your Guardian database. Export your database first if you want
+                to keep any data. This action cannot be undone.
               </div>
               <Button
                 onClick={() => setShowResetDatabaseModal(true)}

@@ -10,7 +10,7 @@ export async function POST() {
         headers: {
           "Content-Type": "application/json",
         },
-      },
+      }
     );
 
     const data = await response.json();
@@ -30,7 +30,7 @@ export async function POST() {
         message: "Cannot connect to Guardian backend",
         details: error.message,
       },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

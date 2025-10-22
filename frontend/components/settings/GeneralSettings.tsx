@@ -1,10 +1,22 @@
 "use client";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Shield, User, BellRing } from "lucide-react";
 import { AppSetting } from "@/types";
 import { getSettingInfo, SettingsFormData } from "./settings-utils";
@@ -16,7 +28,12 @@ interface GeneralSettingsProps {
   sectionId: string;
 }
 
-export function GeneralSettings({ settings, formData, onFormDataChange, sectionId }: GeneralSettingsProps) {
+export function GeneralSettings({
+  settings,
+  formData,
+  onFormDataChange,
+  sectionId,
+}: GeneralSettingsProps) {
   const handleInputChange = (key: string, value: string | boolean) => {
     onFormDataChange({ [key]: value });
   };
@@ -25,28 +42,26 @@ export function GeneralSettings({ settings, formData, onFormDataChange, sectionI
     const getSettingOrder = (section: string, settingKey: string): number => {
       const orderMaps = {
         guardian: [
-          "AUTO_CHECK_UPDATES",           // Application updates - now at top
-          "PLEX_GUARD_DEFAULT_BLOCK",     // Core security
-          "PLEXGUARD_REFRESH_INTERVAL",   // Session monitoring interval
-          "DEVICE_CLEANUP_ENABLED",       // Device cleanup feature
+          "AUTO_CHECK_UPDATES", // Application updates - now at top
+          "PLEX_GUARD_DEFAULT_BLOCK", // Core security
+          "PLEXGUARD_REFRESH_INTERVAL", // Session monitoring interval
+          "DEVICE_CLEANUP_ENABLED", // Device cleanup feature
           "DEVICE_CLEANUP_INTERVAL_DAYS", // Device cleanup interval (follows the feature toggle)
-          "TIMEZONE"                      // Display/locale setting
+          "TIMEZONE", // Display/locale setting
         ],
         customization: [
-          "ENABLE_MEDIA_THUMBNAILS",    // UI settings first
-          "ENABLE_MEDIA_ARTWORK",       // UI settings
-          "MSG_DEVICE_PENDING",         // Message settings grouped
+          "ENABLE_MEDIA_THUMBNAILS", // UI settings first
+          "ENABLE_MEDIA_ARTWORK", // UI settings
+          "MSG_DEVICE_PENDING", // Message settings grouped
           "MSG_DEVICE_REJECTED",
-          "MSG_TIME_RESTRICTED", 
+          "MSG_TIME_RESTRICTED",
           "MSG_IP_LAN_ONLY",
           "MSG_IP_WAN_ONLY",
-          "MSG_IP_NOT_ALLOWED"
+          "MSG_IP_NOT_ALLOWED",
         ],
-        notifications: [
-          "AUTO_MARK_NOTIFICATION_READ"
-        ]
+        notifications: ["AUTO_MARK_NOTIFICATION_READ"],
       };
-      
+
       const order = orderMaps[section as keyof typeof orderMaps];
       const index = order?.indexOf(settingKey);
       return index !== undefined && index >= 0 ? index : 999;
@@ -55,29 +70,38 @@ export function GeneralSettings({ settings, formData, onFormDataChange, sectionI
     let filteredSettings;
     switch (section) {
       case "guardian":
-        filteredSettings = settings.filter(setting => 
-          ["PLEX_GUARD_DEFAULT_BLOCK", "PLEXGUARD_REFRESH_INTERVAL", "AUTO_CHECK_UPDATES", 
-           "DEVICE_CLEANUP_ENABLED", "DEVICE_CLEANUP_INTERVAL_DAYS", "TIMEZONE"].includes(setting.key)
+        filteredSettings = settings.filter((setting) =>
+          [
+            "PLEX_GUARD_DEFAULT_BLOCK",
+            "PLEXGUARD_REFRESH_INTERVAL",
+            "AUTO_CHECK_UPDATES",
+            "DEVICE_CLEANUP_ENABLED",
+            "DEVICE_CLEANUP_INTERVAL_DAYS",
+            "TIMEZONE",
+          ].includes(setting.key)
         );
         break;
       case "customization":
-        filteredSettings = settings.filter(setting => 
-          ["ENABLE_MEDIA_THUMBNAILS", "ENABLE_MEDIA_ARTWORK"].includes(setting.key) ||
-          setting.key.startsWith("MSG_")
+        filteredSettings = settings.filter(
+          (setting) =>
+            ["ENABLE_MEDIA_THUMBNAILS", "ENABLE_MEDIA_ARTWORK"].includes(
+              setting.key
+            ) || setting.key.startsWith("MSG_")
         );
         break;
       case "notifications":
-        filteredSettings = settings.filter(setting => 
+        filteredSettings = settings.filter((setting) =>
           ["AUTO_MARK_NOTIFICATION_READ"].includes(setting.key)
         );
         break;
       default:
         filteredSettings = [];
     }
-    
+
     // Sort the filtered settings according to the defined order
-    return filteredSettings.sort((a, b) => 
-      getSettingOrder(section, a.key) - getSettingOrder(section, b.key)
+    return filteredSettings.sort(
+      (a, b) =>
+        getSettingOrder(section, a.key) - getSettingOrder(section, b.key)
     );
   };
 
@@ -87,73 +111,100 @@ export function GeneralSettings({ settings, formData, onFormDataChange, sectionI
         return {
           title: "Guardian Configuration",
           description: "Core Guardian behavior and security settings",
-          icon: Shield
+          icon: Shield,
         };
       case "customization":
         return {
           title: "Customization",
-          description: "Customize user interface, messages, and user experience",
-          icon: User
+          description:
+            "Customize user interface, messages, and user experience",
+          icon: User,
         };
       case "notifications":
         return {
           title: "Notification Settings",
           description: "Configure notification behavior and preferences",
-          icon: BellRing
+          icon: BellRing,
         };
       default:
         return {
           title: "Settings",
           description: "Application settings",
-          icon: Shield
+          icon: Shield,
         };
     }
   };
 
   const renderDeviceCleanupGroup = (settings: AppSetting[]) => {
-    const cleanupEnabledSetting = settings.find(s => s.key === "DEVICE_CLEANUP_ENABLED");
-    const cleanupIntervalSetting = settings.find(s => s.key === "DEVICE_CLEANUP_INTERVAL_DAYS");
-    
+    const cleanupEnabledSetting = settings.find(
+      (s) => s.key === "DEVICE_CLEANUP_ENABLED"
+    );
+    const cleanupIntervalSetting = settings.find(
+      (s) => s.key === "DEVICE_CLEANUP_INTERVAL_DAYS"
+    );
+
     if (!cleanupEnabledSetting || !cleanupIntervalSetting) return null;
 
     const cleanupEnabledInfo = getSettingInfo(cleanupEnabledSetting);
     const cleanupIntervalInfo = getSettingInfo(cleanupIntervalSetting);
-    
-    const cleanupEnabledValue = formData[cleanupEnabledSetting.key] ?? cleanupEnabledSetting.value;
-    const cleanupIntervalValue = formData[cleanupIntervalSetting.key] ?? cleanupIntervalSetting.value;
-    
-    const isCleanupEnabled = cleanupEnabledValue === "true" || cleanupEnabledValue === true;
+
+    const cleanupEnabledValue =
+      formData[cleanupEnabledSetting.key] ?? cleanupEnabledSetting.value;
+    const cleanupIntervalValue =
+      formData[cleanupIntervalSetting.key] ?? cleanupIntervalSetting.value;
+
+    const isCleanupEnabled =
+      cleanupEnabledValue === "true" || cleanupEnabledValue === true;
 
     return (
       <div className="space-y-4">
         {/* Parent setting */}
         <div className="flex items-center justify-between">
           <div className="space-y-0.5">
-            <Label htmlFor={cleanupEnabledSetting.key}>{cleanupEnabledInfo.label}</Label>
+            <Label htmlFor={cleanupEnabledSetting.key}>
+              {cleanupEnabledInfo.label}
+            </Label>
             {cleanupEnabledInfo.description && (
-              <p className="text-sm text-muted-foreground">{cleanupEnabledInfo.description}</p>
+              <p className="text-sm text-muted-foreground">
+                {cleanupEnabledInfo.description}
+              </p>
             )}
           </div>
           <Switch
             id={cleanupEnabledSetting.key}
             checked={isCleanupEnabled}
-            onCheckedChange={(checked) => handleInputChange(cleanupEnabledSetting.key, checked)}
+            onCheckedChange={(checked) =>
+              handleInputChange(cleanupEnabledSetting.key, checked)
+            }
           />
         </div>
-        
+
         {/* Child setting - indented */}
-        <div className={`ml-6 space-y-2 transition-opacity duration-200 ${!isCleanupEnabled ? 'opacity-50' : ''}`}>
-          <Label htmlFor={cleanupIntervalSetting.key} className={!isCleanupEnabled ? 'text-muted-foreground' : ''}>
+        <div
+          className={`ml-6 space-y-2 transition-opacity duration-200 ${!isCleanupEnabled ? "opacity-50" : ""}`}
+        >
+          <Label
+            htmlFor={cleanupIntervalSetting.key}
+            className={!isCleanupEnabled ? "text-muted-foreground" : ""}
+          >
             {cleanupIntervalInfo.label}
           </Label>
           {cleanupIntervalInfo.description && (
-            <p className="text-sm text-muted-foreground">{cleanupIntervalInfo.description}</p>
+            <p className="text-sm text-muted-foreground">
+              {cleanupIntervalInfo.description}
+            </p>
           )}
           <Input
             id={cleanupIntervalSetting.key}
             type="number"
-            value={typeof cleanupIntervalValue === "string" ? cleanupIntervalValue : String(cleanupIntervalValue)}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange(cleanupIntervalSetting.key, e.target.value)}
+            value={
+              typeof cleanupIntervalValue === "string"
+                ? cleanupIntervalValue
+                : String(cleanupIntervalValue)
+            }
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+              handleInputChange(cleanupIntervalSetting.key, e.target.value)
+            }
             placeholder="Enter device cleanup interval"
             disabled={!isCleanupEnabled}
           />
@@ -179,7 +230,9 @@ export function GeneralSettings({ settings, formData, onFormDataChange, sectionI
             <Switch
               id={setting.key}
               checked={value === "true" || value === true}
-              onCheckedChange={(checked) => handleInputChange(setting.key, checked)}
+              onCheckedChange={(checked) =>
+                handleInputChange(setting.key, checked)
+              }
             />
           </div>
         </div>
@@ -196,7 +249,9 @@ export function GeneralSettings({ settings, formData, onFormDataChange, sectionI
           )}
           <Select
             value={typeof value === "string" ? value : String(value)}
-            onValueChange={(newValue) => handleInputChange(setting.key, newValue)}
+            onValueChange={(newValue) =>
+              handleInputChange(setting.key, newValue)
+            }
           >
             <SelectTrigger>
               <SelectValue placeholder="Select timezone" />
@@ -245,7 +300,9 @@ export function GeneralSettings({ settings, formData, onFormDataChange, sectionI
             id={setting.key}
             className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             value={typeof value === "string" ? value : String(value)}
-            onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleInputChange(setting.key, e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+              handleInputChange(setting.key, e.target.value)
+            }
           >
             <option value="">Select default page</option>
             <option value="devices">Devices</option>
@@ -265,16 +322,20 @@ export function GeneralSettings({ settings, formData, onFormDataChange, sectionI
           id={setting.key}
           type={setting.key.includes("INTERVAL") ? "number" : "text"}
           value={typeof value === "string" ? value : String(value)}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange(setting.key, e.target.value)}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+            handleInputChange(setting.key, e.target.value)
+          }
           placeholder={`Enter ${label.toLowerCase()}`}
           disabled={
-            setting.key === "DEVICE_CLEANUP_INTERVAL_DAYS" && 
-            (formData["DEVICE_CLEANUP_ENABLED"] === false || formData["DEVICE_CLEANUP_ENABLED"] === "false")
+            setting.key === "DEVICE_CLEANUP_INTERVAL_DAYS" &&
+            (formData["DEVICE_CLEANUP_ENABLED"] === false ||
+              formData["DEVICE_CLEANUP_ENABLED"] === "false")
           }
           className={
-            setting.key === "DEVICE_CLEANUP_INTERVAL_DAYS" && 
-            (formData["DEVICE_CLEANUP_ENABLED"] === false || formData["DEVICE_CLEANUP_ENABLED"] === "false")
-              ? "opacity-50" 
+            setting.key === "DEVICE_CLEANUP_INTERVAL_DAYS" &&
+            (formData["DEVICE_CLEANUP_ENABLED"] === false ||
+              formData["DEVICE_CLEANUP_ENABLED"] === "false")
+              ? "opacity-50"
               : ""
           }
         />
@@ -297,9 +358,7 @@ export function GeneralSettings({ settings, formData, onFormDataChange, sectionI
           <IconComponent className="h-5 w-5" />
           {sectionInfo.title}
         </CardTitle>
-        <CardDescription>
-          {sectionInfo.description}
-        </CardDescription>
+        <CardDescription>{sectionInfo.description}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {sectionSettings.map((setting, index) => {
@@ -311,12 +370,12 @@ export function GeneralSettings({ settings, formData, onFormDataChange, sectionI
               </Card>
             );
           }
-          
+
           // Skip the interval setting since it's handled in the group
           if (setting.key === "DEVICE_CLEANUP_INTERVAL_DAYS") {
             return null;
           }
-          
+
           // Render other settings normally
           return (
             <Card key={setting.key} className="p-4 my-4">
