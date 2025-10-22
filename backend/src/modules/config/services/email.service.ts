@@ -55,7 +55,13 @@ export class EmailService {
   }
 
   private validateSMTPConfig(config: SMTPConfig): string | null {
-    if (!config.host || !config.port || !config.user || !config.password || !config.fromEmail) {
+    if (
+      !config.host ||
+      !config.port ||
+      !config.user ||
+      !config.password ||
+      !config.fromEmail
+    ) {
       return 'Missing required SMTP configuration (host, port, user, password, or from email)';
     }
 
@@ -143,17 +149,21 @@ export class EmailService {
       let userMessage = `SMTP error: ${error.message}`;
 
       if (error.code === 'EAUTH') {
-        userMessage = 'Authentication failed. Please check your username and password.';
+        userMessage =
+          'Authentication failed. Please check your username and password.';
       } else if (error.code === 'ECONNECTION') {
-        userMessage = 'Failed to connect to SMTP server. Please check the host and port.';
+        userMessage =
+          'Failed to connect to SMTP server. Please check the host and port.';
       } else if (error.code === 'ETIMEDOUT') {
-        userMessage = 'Connection timed out. Please check your network connection and server settings.';
+        userMessage =
+          'Connection timed out. Please check your network connection and server settings.';
       } else if (error.code === 'ENOTFOUND') {
         userMessage = 'SMTP server not found. Please check the hostname.';
       } else if (error.responseCode === 535) {
         userMessage = 'Authentication failed. Please verify your credentials.';
       } else if (error.responseCode === 550) {
-        userMessage = 'Email rejected by server. Please check recipient addresses.';
+        userMessage =
+          'Email rejected by server. Please check recipient addresses.';
       }
 
       return {
@@ -184,7 +194,12 @@ export class EmailService {
       const transporter = this.createTransporter(config);
 
       const { subject, statusLabel, statusColor, mainMessage } =
-        this.getNotificationEmailContent(data.type, data.stopCode, data.username, data.deviceName);
+        this.getNotificationEmailContent(
+          data.type,
+          data.stopCode,
+          data.username,
+          data.deviceName,
+        );
 
       const emailHtml = this.emailTemplateService.generateNotificationEmail(
         data.type,
@@ -250,7 +265,8 @@ export class EmailService {
           subject: `Guardian Warning${deviceName ? ` - ${deviceName}` : ''}`,
           statusLabel: 'WARNING',
           statusColor: '#ffaa00',
-          mainMessage: 'Guardian has detected an issue that requires your attention.',
+          mainMessage:
+            'Guardian has detected an issue that requires your attention.',
         };
       case 'error':
         return {

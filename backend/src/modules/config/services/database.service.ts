@@ -34,7 +34,7 @@ export class DatabaseService {
   async exportDatabase(appVersion: string): Promise<string> {
     try {
       this.logger.log('Starting database export...');
-      
+
       const [settings, userDevices, userPreferences] = await Promise.all([
         this.settingsRepository.find(),
         this.settingsRepository.manager.getRepository(UserDevice).find(),
@@ -86,7 +86,11 @@ export class DatabaseService {
 
       // Import settings
       if (data.settings && Array.isArray(data.settings)) {
-        const settingsResult = await this.importSettings(data.settings, currentAppVersion, compareVersions);
+        const settingsResult = await this.importSettings(
+          data.settings,
+          currentAppVersion,
+          compareVersions,
+        );
         imported += settingsResult.imported;
         skipped += settingsResult.skipped;
       }
@@ -100,7 +104,9 @@ export class DatabaseService {
 
       // Import user preferences
       if (data.userPreferences && Array.isArray(data.userPreferences)) {
-        const preferencesResult = await this.importUserPreferences(data.userPreferences);
+        const preferencesResult = await this.importUserPreferences(
+          data.userPreferences,
+        );
         imported += preferencesResult.imported;
         skipped += preferencesResult.skipped;
       }
@@ -169,8 +175,9 @@ export class DatabaseService {
     let imported = 0;
     let skipped = 0;
 
-    const deviceRepo = this.settingsRepository.manager.getRepository(UserDevice);
-    
+    const deviceRepo =
+      this.settingsRepository.manager.getRepository(UserDevice);
+
     for (const device of devices) {
       try {
         const existing = await deviceRepo.findOne({
@@ -189,9 +196,7 @@ export class DatabaseService {
           const newDevice = deviceRepo.create(device);
           await deviceRepo.save(newDevice);
           imported++;
-          this.logger.debug(
-            `Created new device: ${device.deviceIdentifier}`,
-          );
+          this.logger.debug(`Created new device: ${device.deviceIdentifier}`);
         } else {
           // Update existing device with new data
           Object.assign(existing, device);
@@ -213,12 +218,15 @@ export class DatabaseService {
     return { imported, skipped };
   }
 
-  private async importUserPreferences(preferences: any[]): Promise<ImportResult> {
+  private async importUserPreferences(
+    preferences: any[],
+  ): Promise<ImportResult> {
     let imported = 0;
     let skipped = 0;
 
-    const prefRepo = this.settingsRepository.manager.getRepository(UserPreference);
-    
+    const prefRepo =
+      this.settingsRepository.manager.getRepository(UserPreference);
+
     for (const pref of preferences) {
       try {
         const existing = await prefRepo.findOne({
@@ -234,9 +242,7 @@ export class DatabaseService {
           const newPref = prefRepo.create(pref);
           await prefRepo.save(newPref);
           imported++;
-          this.logger.debug(
-            `Created new preference for user: ${pref.userId}`,
-          );
+          this.logger.debug(`Created new preference for user: ${pref.userId}`);
         } else {
           // Update existing preference
           existing.defaultBlock = pref.defaultBlock;
@@ -265,13 +271,17 @@ export class DatabaseService {
 
       await this.settingsRepository.manager.transaction(
         async (transactionalEntityManager) => {
-          await transactionalEntityManager.getRepository(SessionHistory).clear();
+          await transactionalEntityManager
+            .getRepository(SessionHistory)
+            .clear();
           this.logger.debug('Session history table cleared');
 
           await transactionalEntityManager.getRepository(Notification).clear();
           this.logger.debug('Notifications table cleared');
 
-          await transactionalEntityManager.getRepository(UserPreference).clear();
+          await transactionalEntityManager
+            .getRepository(UserPreference)
+            .clear();
           this.logger.debug('User preferences table cleared');
 
           await transactionalEntityManager.getRepository(UserDevice).clear();
@@ -324,7 +334,9 @@ export class DatabaseService {
 
       await this.settingsRepository.manager.transaction(
         async (transactionalEntityManager) => {
-          await transactionalEntityManager.getRepository(SessionHistory).clear();
+          await transactionalEntityManager
+            .getRepository(SessionHistory)
+            .clear();
           this.logger.debug('Session history cleared');
 
           await transactionalEntityManager.getRepository(Notification).clear();
@@ -354,7 +366,9 @@ export class DatabaseService {
 
       await this.settingsRepository.manager.transaction(
         async (transactionalEntityManager) => {
-          await transactionalEntityManager.getRepository(SessionHistory).clear();
+          await transactionalEntityManager
+            .getRepository(SessionHistory)
+            .clear();
           this.logger.debug('Session history cleared');
         },
       );

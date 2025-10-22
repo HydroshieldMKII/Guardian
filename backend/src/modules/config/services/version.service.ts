@@ -42,7 +42,9 @@ export class VersionService {
         );
         await updateVersionCallback(CURRENT_APP_VERSION);
         this.logger.log('App version updated successfully');
-      } else if (this.compareVersions(CURRENT_APP_VERSION, currentDbVersion) < 0) {
+      } else if (
+        this.compareVersions(CURRENT_APP_VERSION, currentDbVersion) < 0
+      ) {
         this.logger.error(
           `WARNING: Current app version ${CURRENT_APP_VERSION} is older than your data version ${currentDbVersion}. Please check your installation.`,
         );
@@ -61,7 +63,8 @@ export class VersionService {
     isVersionMismatch: boolean;
   } {
     // Version mismatch occurs when database version > current code version (downgrade scenario)
-    const isVersionMismatch = this.compareVersions(databaseVersion, CURRENT_APP_VERSION) > 0;
+    const isVersionMismatch =
+      this.compareVersions(databaseVersion, CURRENT_APP_VERSION) > 0;
 
     return {
       version: CURRENT_APP_VERSION,

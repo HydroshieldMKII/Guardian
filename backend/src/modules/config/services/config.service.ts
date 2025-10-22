@@ -7,7 +7,11 @@ import { UserPreference } from '../../../entities/user-preference.entity';
 import { SessionHistory } from '../../../entities/session-history.entity';
 import { Notification } from '../../../entities/notification.entity';
 import { PlexResponse, PlexErrorCode } from '../../../types/plex-errors';
-import { EmailService, SMTPConfig, NotificationEmailData } from './email.service';
+import {
+  EmailService,
+  SMTPConfig,
+  NotificationEmailData,
+} from './email.service';
 import { EmailTemplateService } from './email-template.service';
 import { PlexConnectionService } from './plex-connection.service';
 import { TimezoneService } from './timezone.service';
@@ -513,13 +517,24 @@ export class ConfigService {
         fromEmail: smtpFromEmail,
         fromName: smtpFromName,
         useTLS: smtpUseTLS === 'true',
-        toEmails: smtpToEmails ? smtpToEmails.split(/[,;\n]/).map((email: string) => email.trim()).filter((email: string) => email.length > 0) : [],
+        toEmails: smtpToEmails
+          ? smtpToEmails
+              .split(/[,;\n]/)
+              .map((email: string) => email.trim())
+              .filter((email: string) => email.length > 0)
+          : [],
       };
 
       const currentTimeInTimezone = await this.getCurrentTimeInTimezone();
-      const timestamp = this.timezoneService.formatTimestamp(currentTimeInTimezone);
+      const timestamp = this.timezoneService.formatTimestamp(
+        currentTimeInTimezone,
+      );
 
-      return this.emailService.testSMTPConnection(smtpConfig, smtpEnabled, timestamp);
+      return this.emailService.testSMTPConnection(
+        smtpConfig,
+        smtpEnabled,
+        timestamp,
+      );
     } catch (error) {
       this.logger.error('Error in testSMTPConnection:', error);
       return {
@@ -569,7 +584,12 @@ export class ConfigService {
         fromEmail: smtpFromEmail,
         fromName: smtpFromName,
         useTLS: smtpUseTLS === 'true',
-        toEmails: smtpToEmails ? smtpToEmails.split(/[,;\n]/).map((email: string) => email.trim()).filter((email: string) => email.length > 0) : [],
+        toEmails: smtpToEmails
+          ? smtpToEmails
+              .split(/[,;\n]/)
+              .map((email: string) => email.trim())
+              .filter((email: string) => email.length > 0)
+          : [],
       };
 
       const notificationData: NotificationEmailData = {
@@ -581,7 +601,9 @@ export class ConfigService {
       };
 
       const currentTimeInTimezone = await this.getCurrentTimeInTimezone();
-      const timestamp = this.timezoneService.formatTimestamp(currentTimeInTimezone);
+      const timestamp = this.timezoneService.formatTimestamp(
+        currentTimeInTimezone,
+      );
 
       await this.emailService.sendNotificationEmail(
         smtpConfig,
@@ -751,7 +773,9 @@ export class ConfigService {
     codeVersion: string;
     isVersionMismatch: boolean;
   }> {
-    const dbVersion = (await this.getSetting('APP_VERSION')) || this.versionService.getCurrentAppVersion();
+    const dbVersion =
+      (await this.getSetting('APP_VERSION')) ||
+      this.versionService.getCurrentAppVersion();
     return this.versionService.getVersionInfo(dbVersion);
   }
 
