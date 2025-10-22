@@ -19,6 +19,7 @@ import {
   Loader2,
   MailQuestionMark,
   MailCheck,
+  AlertTriangle,
 } from "lucide-react";
 import { config } from "@/lib/config";
 import { AppSetting } from "@/types";
@@ -32,12 +33,14 @@ interface SMTPSettingsProps {
   settings: AppSetting[];
   formData: SettingsFormData;
   onFormDataChange: (updates: Partial<SettingsFormData>) => void;
+  hasUnsavedChanges?: boolean;
 }
 
 export function SMTPSettings({
   settings,
   formData,
   onFormDataChange,
+  hasUnsavedChanges = false,
 }: SMTPSettingsProps) {
   const [testingConnection, setTestingConnection] = useState(false);
   const [connectionStatus, setConnectionStatus] =
@@ -257,7 +260,7 @@ export function SMTPSettings({
           <div className="pb-4">
             <Button
               onClick={testSMTPConnection}
-              disabled={testingConnection}
+              disabled={testingConnection || hasUnsavedChanges}
               className="w-full"
             >
               {testingConnection ? (
@@ -272,6 +275,15 @@ export function SMTPSettings({
                 </>
               )}
             </Button>
+            
+            {hasUnsavedChanges && (
+              <div className="mt-3 p-3 rounded-md flex items-center gap-2 bg-orange-50 text-orange-700 border border-orange-200 dark:bg-orange-950/20 dark:text-orange-300 dark:border-orange-800">
+                <AlertTriangle className="h-4 w-4" />
+                <span className="text-sm">
+                  Save your changes before testing SMTP connection
+                </span>
+              </div>
+            )}
           </div>
         )}
 

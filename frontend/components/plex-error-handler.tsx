@@ -124,7 +124,7 @@ export function PlexErrorHandler({
       <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-8">
         <div className="flex items-center justify-center min-h-[60vh]">
           <Card className="w-full max-w-2xl">
-            <CardHeader className="text-center pb-2">
+            <CardHeader className="text-center pb-2 mt-8">
               <div className="flex justify-center mb-4">
                 <div className={`p-3 rounded-full ${errorInfo.iconBg}`}>
                   <IconComponent className={`h-8 w-8 ${errorInfo.iconColor}`} />
@@ -186,10 +186,10 @@ export function PlexErrorHandler({
                 </div>
               )}
 
-              <div className="pt-4">
+              <div className="pt-4 mb-8">
                 <Button onClick={onShowSettings} className="w-full" size="lg">
                   <Settings className="h-4 w-4 mr-2" />
-                  Configure Plex Settings
+                  Go to settings
                 </Button>
               </div>
             </CardContent>

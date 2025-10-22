@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { CheckCircle, XCircle, Loader2, Server } from "lucide-react";
+import { CheckCircle, XCircle, Loader2, Server, AlertTriangle } from "lucide-react";
 import { config } from "@/lib/config";
 import { AppSetting } from "@/types";
 import {
@@ -26,12 +26,14 @@ interface PlexSettingsProps {
   settings: AppSetting[];
   formData: SettingsFormData;
   onFormDataChange: (updates: Partial<SettingsFormData>) => void;
+  hasUnsavedChanges?: boolean;
 }
 
 export function PlexSettings({
   settings,
   formData,
   onFormDataChange,
+  hasUnsavedChanges = false,
 }: PlexSettingsProps) {
   const [testingConnection, setTestingConnection] = useState(false);
   const [connectionStatus, setConnectionStatus] =
@@ -167,7 +169,7 @@ export function PlexSettings({
         <div className="pb-4">
           <Button
             onClick={testPlexConnection}
-            disabled={testingConnection}
+            disabled={testingConnection || hasUnsavedChanges}
             className="w-full"
           >
             {testingConnection ? (
@@ -183,7 +185,16 @@ export function PlexSettings({
             )}
           </Button>
 
-          {connectionStatus && (
+          {hasUnsavedChanges && (
+            <div className="mt-3 p-3 rounded-md flex items-center gap-2 bg-orange-50 text-orange-700 border border-orange-200 dark:bg-orange-950/20 dark:text-orange-300 dark:border-orange-800">
+              <AlertTriangle className="h-4 w-4" />
+              <span className="text-sm">
+                Save your changes before testing the connection
+              </span>
+            </div>
+          )}
+
+          {connectionStatus && !hasUnsavedChanges && (
             <div
               className={`mt-3 p-3 rounded-md flex items-center gap-2 ${
                 connectionStatus.success

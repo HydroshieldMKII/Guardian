@@ -12,6 +12,14 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Loader2,
   Save,
   Settings as SettingsIcon,
@@ -23,6 +31,7 @@ import {
   Wrench,
   CheckCircle,
   ArrowLeft,
+  AlertTriangle,
 } from "lucide-react";
 import { AppSetting } from "@/types";
 import { useToast } from "@/hooks/use-toast";
@@ -49,6 +58,7 @@ export default function Settings({ onBack }: SettingsProps) {
   const [formData, setFormData] = useState<SettingsFormData>({});
   const [isSaving, setIsSaving] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [showUnsavedWarning, setShowUnsavedWarning] = useState(false);
   const [activeTab, setActiveTab] = useState("plex");
 
   // Initialize form data when settings load
@@ -83,6 +93,29 @@ export default function Settings({ onBack }: SettingsProps) {
       });
       return updated;
     });
+  };
+
+  const handleBackClick = () => {
+    if (hasUnsavedChanges) {
+      setShowUnsavedWarning(true);
+    } else {
+      onBack?.();
+    }
+  };
+
+  const handleConfirmLeave = () => {
+    setShowUnsavedWarning(false);
+    onBack?.();
+  };
+
+  const handleCancelLeave = () => {
+    setShowUnsavedWarning(false);
+  };
+
+  const handleSaveAndLeave = async () => {
+    setShowUnsavedWarning(false);
+    await handleSave();
+    onBack?.();
   };
 
   const handleSave = async () => {
@@ -248,7 +281,7 @@ export default function Settings({ onBack }: SettingsProps) {
           <Button
             variant="ghost"
             size="sm"
-            onClick={onBack}
+            onClick={handleBackClick}
             className="text-muted-foreground hover:text-foreground transition-colors"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
@@ -332,6 +365,7 @@ export default function Settings({ onBack }: SettingsProps) {
                   settings={settings}
                   formData={formData}
                   onFormDataChange={handleFormDataChange}
+                  hasUnsavedChanges={hasUnsavedChanges}
                 />
               )}
 
@@ -340,6 +374,7 @@ export default function Settings({ onBack }: SettingsProps) {
                   settings={settings}
                   formData={formData}
                   onFormDataChange={handleFormDataChange}
+                  hasUnsavedChanges={hasUnsavedChanges}
                 />
               )}
 
@@ -365,6 +400,50 @@ export default function Settings({ onBack }: SettingsProps) {
           ))}
         </div>
       </Tabs>
+
+      {/* Unsaved Changes Warning Modal */}
+      <Dialog open={showUnsavedWarning} onOpenChange={(open) => !open && setShowUnsavedWarning(false)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-orange-500" />
+              Unsaved Changes
+            </DialogTitle>
+            <DialogDescription>
+              You have unsaved changes that will be lost if you leave this page. 
+              What would you like to do?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex flex-col sm:flex-row gap-2">
+            <Button
+              variant="outline"
+              onClick={handleCancelLeave}
+              className="sm:order-1"
+            >
+              Stay on Page
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmLeave}
+              className="sm:order-3"
+            >
+              Leave Without Saving
+            </Button>
+            <Button
+              onClick={handleSaveAndLeave}
+              disabled={isSaving}
+              className="sm:order-2"
+            >
+              {isSaving ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <Save className="h-4 w-4 mr-2" />
+              )}
+              Save & Leave
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
