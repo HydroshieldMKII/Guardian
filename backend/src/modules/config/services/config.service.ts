@@ -1210,7 +1210,7 @@ export class ConfigService {
           subject: `Guardian Alert: Stream Blocked${deviceName ? ` - ${deviceName}` : ''}`,
           statusLabel: 'STREAM BLOCKED',
           statusColor: '#ff4444',
-          mainMessage: `A streaming session has been blocked on your Plex server.${stopCode ? `\n\n${this.getStopCodeDescription(stopCode)}.` : ''}`,
+          mainMessage: stopCode ? this.getStopCodeDescription(stopCode) : 'A streaming session has been blocked on your Plex server',
         };
       case 'warning':
         return {
@@ -1241,19 +1241,19 @@ export class ConfigService {
   private getStopCodeDescription(stopCode: string): string {
     switch (stopCode) {
       case 'DEVICE_PENDING':
-        return 'Device requires administrator approval before streaming is allowed';
+        return 'A streaming session was blocked because the device requires administrator approval';
       case 'DEVICE_REJECTED':
-        return 'Device has been explicitly rejected by an administrator';
+        return 'A streaming session was blocked because the device has been rejected by an administrator';
       case 'IP_POLICY_LAN_ONLY':
-        return 'Device attempted external access but is restricted to local network only';
+        return 'A streaming session was blocked because the device attempted external access but is restricted to local network only';
       case 'IP_POLICY_WAN_ONLY':
-        return 'Device attempted local access but is restricted to external connections only';
+        return 'A streaming session was blocked because the device attempted local access but is restricted to external connections only';
       case 'IP_POLICY_NOT_ALLOWED':
-        return 'Device IP address is not in the approved access list';
+        return 'A streaming session was blocked because the device IP address is not in the approved access list';
       case 'TIME_RESTRICTED':
-        return 'Streaming blocked due to time-based scheduling restrictions';
+        return 'A streaming session was blocked due to time-based scheduling restrictions';
       default:
-        return `Streaming blocked: ${stopCode}`;
+        return `A streaming session was blocked: ${stopCode}`;
     }
   }
 
