@@ -44,7 +44,7 @@ export function DatabaseManagement({
     try {
       setExportingDatabase(true);
       const response = await fetch(
-        `${config.api.baseUrl}/config/export-database`
+        `${config.api.baseUrl}/config/database/export`
       );
 
       if (!response.ok) {
@@ -104,7 +104,7 @@ export function DatabaseManagement({
         }
 
         // No version mismatch, proceed with import
-        performImport(importData);
+        performImport(importData, file);
       } catch (error) {
         console.error("Import error:", error);
         toast({
@@ -120,25 +120,43 @@ export function DatabaseManagement({
     event.target.value = "";
   };
 
-  const performImport = async (importData: any) => {
+  const performImport = async (importData: any, originalFile?: File) => {
     try {
       setImportingDatabase(true);
 
+      // Create FormData and append the file
+      const formData = new FormData();
+
+      if (originalFile) {
+        // Use the original file if provided
+        formData.append("file", originalFile);
+      } else {
+        // Create a blob from the importData if no original file
+        const blob = new Blob([JSON.stringify(importData)], {
+          type: "application/json",
+        });
+        formData.append("file", blob, "database-import.json");
+      }
+
       const response = await fetch(
-        `${config.api.baseUrl}/config/import-database`,
+        `${config.api.baseUrl}/config/database/import`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(importData),
+          body: formData,
         }
       );
 
       const result = await response.json();
 
       if (response.ok) {
+        // Handle nested result structure from backend
+        const importResult = result.imported || result;
+        const imported = typeof importResult.imported === 'number' ? importResult.imported : 'unknown';
+        const skipped = typeof importResult.skipped === 'number' ? importResult.skipped : 'unknown';
+        
         toast({
           title: "Import successful",
-          description: `Imported ${result.imported} items, skipped ${result.skipped} items`,
+          description: `Imported ${imported} items, skipped ${skipped} items`,
         });
         onSettingsRefresh();
       } else {
@@ -166,7 +184,7 @@ export function DatabaseManagement({
         try {
           const content = e.target?.result as string;
           const importData = JSON.parse(content);
-          performImport(importData);
+          performImport(importData, pendingImportFile);
         } catch (error) {
           console.error("Import error:", error);
           toast({

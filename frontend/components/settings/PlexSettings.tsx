@@ -85,29 +85,15 @@ export function PlexSettings({
 
       if (response.ok && result.success) {
         setConnectionStatus({ success: true, message: result.message });
-        toast({
-          title: "Connection successful",
-          description: result.message,
-        });
       } else {
         setConnectionStatus({
           success: false,
           message: result.message || "Connection failed",
         });
-        toast({
-          title: "Connection failed",
-          description: result.message || "Unable to connect to Plex server",
-          variant: "destructive",
-        });
       }
     } catch (error) {
       const errorMessage = "Failed to test connection";
       setConnectionStatus({ success: false, message: errorMessage });
-      toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive",
-      });
     } finally {
       setTestingConnection(false);
     }

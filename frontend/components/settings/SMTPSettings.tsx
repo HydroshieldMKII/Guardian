@@ -115,6 +115,61 @@ export function SMTPSettings({
     }
   };
 
+  const renderEmailNotificationGroup = () => {
+    const smtpEnabledSetting = smtpSettings.find(
+      (s) => s.key === "SMTP_ENABLED"
+    );
+    const notifyOnNotificationsSetting = smtpSettings.find(
+      (s) => s.key === "SMTP_NOTIFY_ON_NOTIFICATIONS"
+    );
+
+    if (!smtpEnabledSetting || !notifyOnNotificationsSetting) return null;
+
+    const isSmtpEnabled =
+      formData["SMTP_ENABLED"] === true || formData["SMTP_ENABLED"] === "true";
+
+    return (
+      <Card className="p-4 my-4">
+        <div className="space-y-4">
+          {/* Parent setting: SMTP_ENABLED */}
+          {renderSetting(smtpEnabledSetting)}
+
+          {/* Child setting: SMTP_NOTIFY_ON_NOTIFICATIONS - indented and disabled when parent is off */}
+          <div className={`ml-6 ${!isSmtpEnabled ? "opacity-50" : ""}`}>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label
+                    htmlFor={notifyOnNotificationsSetting.key}
+                    className={!isSmtpEnabled ? "text-muted-foreground" : ""}
+                  >
+                    {getSettingInfo(notifyOnNotificationsSetting).label}
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    {getSettingInfo(notifyOnNotificationsSetting).description}
+                  </p>
+                </div>
+                <Switch
+                  id={notifyOnNotificationsSetting.key}
+                  checked={
+                    (formData[notifyOnNotificationsSetting.key] ??
+                      notifyOnNotificationsSetting.value) === "true" ||
+                    (formData[notifyOnNotificationsSetting.key] ??
+                      notifyOnNotificationsSetting.value) === true
+                  }
+                  onCheckedChange={(checked) =>
+                    handleInputChange(notifyOnNotificationsSetting.key, checked)
+                  }
+                  disabled={!isSmtpEnabled}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </Card>
+    );
+  };
+
   const renderSetting = (setting: AppSetting) => {
     const { label, description } = getSettingInfo(setting);
     const value = formData[setting.key] ?? setting.value;
@@ -179,11 +234,21 @@ export function SMTPSettings({
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {smtpSettings.map((setting) => (
-          <Card key={setting.key} className="p-4 my-4">
-            {renderSetting(setting)}
-          </Card>
-        ))}
+        {/* Email notification group - parent and child relationship */}
+        {renderEmailNotificationGroup()}
+
+        {/* Other SMTP settings */}
+        {smtpSettings
+          .filter(
+            (setting) =>
+              setting.key !== "SMTP_ENABLED" &&
+              setting.key !== "SMTP_NOTIFY_ON_NOTIFICATIONS"
+          )
+          .map((setting) => (
+            <Card key={setting.key} className="p-4 my-4">
+              {renderSetting(setting)}
+            </Card>
+          ))}
 
         {isSmtpEnabled && (
           <div className="pb-4">
@@ -204,31 +269,21 @@ export function SMTPSettings({
                 </>
               )}
             </Button>
-
-            {connectionStatus && (
-              <div
-                className={`mt-3 p-3 rounded-md flex items-center gap-2 ${
-                  connectionStatus.success
-                    ? "bg-green-50 text-green-700 border border-green-200"
-                    : "bg-red-50 text-red-700 border border-red-200"
-                }`}
-              >
-                {connectionStatus.success ? (
-                  <CheckCircle className="h-4 w-4" />
-                ) : (
-                  <XCircle className="h-4 w-4" />
-                )}
-                <span className="text-sm">{connectionStatus.message}</span>
-              </div>
-            )}
           </div>
         )}
 
         {!isSmtpEnabled && (
-          <div className="p-3 bg-gray-50 rounded-md">
-            <p className="text-sm text-gray-600">
-              Enable email notifications above to configure SMTP settings and
-              test the connection.
+          <div className="pb-4">
+            <Button
+              onClick={testSMTPConnection}
+              disabled={true}
+              className="w-full"
+            >
+              <MailCheck className="mr-2 h-4 w-4" />
+              Test SMTP Connection
+            </Button>
+            <p className="text-xs text-muted-foreground mt-2 text-center">
+              Enable emails to test the connection.
             </p>
           </div>
         )}

@@ -119,8 +119,8 @@ export const getSettingInfo = (setting: AppSetting): SettingInfo => {
       description: "Timezone offset for time based restrictions and scheduling",
     },
     SMTP_ENABLED: {
-      label: "Enable email notifications",
-      description: "Send email notifications for Guardian events",
+      label: "Enable email",
+      description: "Enable the email notification system",
     },
     SMTP_HOST: {
       label: "SMTP server hostname",
