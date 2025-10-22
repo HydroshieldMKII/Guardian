@@ -764,124 +764,205 @@ export class ConfigService {
           <meta charset="UTF-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <style>
+            @media only screen and (max-width: 600px) {
+              .container { width: 100% !important; margin: 0 !important; }
+              .header, .content, .footer { padding-left: 20px !important; padding-right: 20px !important; }
+              .test-details { margin: 20px 0 !important; padding: 16px !important; }
+            }
+            @media (prefers-color-scheme: dark) {
+              .header {
+                background-color: #ffffff !important;
+                background: #ffffff !important;
+                color: #000000 !important;
+              }
+              .header h1 {
+                color: #000000 !important;
+              }
+              .container {
+                background-color: #ffffff !important;
+                background: #ffffff !important;
+              }
+              body {
+                background-color: #f5f5f5 !important;
+              }
+              .email-wrapper {
+                background-color: #f5f5f5 !important;
+              }
+            }
+            [data-ogsc] .header {
+              background-color: #ffffff !important;
+              background: #ffffff !important;
+            }
+            [data-ogsc] .header h1 {
+              color: #000000 !important;
+            }
             body {
               margin: 0;
               padding: 0;
               font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
-              background-color: #ffffff;
+              background-color: #f5f5f5;
               color: #000000;
               line-height: 1.6;
+            }
+            .email-wrapper {
+              background-color: #f5f5f5;
+              padding: 40px 20px;
+              min-height: 100vh;
             }
             .container {
               max-width: 600px;
               margin: 0 auto;
               background-color: #ffffff;
-              border: 1px solid #e5e5e5;
+              border-radius: 12px;
+              box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+              overflow: hidden;
             }
             .header {
-              padding: 60px 40px 40px;
+              padding: 50px 40px 30px;
               text-align: center;
               background-color: #ffffff;
+              color: #000000;
+              position: relative;
+            }
+            .header::after {
+              content: '';
+              position: absolute;
+              bottom: 0;
+              left: 0;
+              right: 0;
+              height: 4px;
+              background: linear-gradient(90deg, #ff0000, #ff6600, #ffcc00, #00cc66, #0066cc, #6600cc);
             }
             .header h1 {
               margin: 0;
-              font-size: 32px;
-              font-weight: 700;
-              letter-spacing: -1px;
+              font-size: 36px;
+              font-weight: 800;
+              letter-spacing: -1.5px;
               color: #000000;
               text-transform: uppercase;
+              text-shadow: none;
             }
             .content {
-              padding: 0 40px 40px;
+              padding: 40px 40px 30px;
               background-color: #ffffff;
             }
-            .content p {
-              margin: 0 0 24px 0;
-              font-size: 16px;
+            .success-badge {
+              display: inline-block;
+              padding: 8px 16px;
+              background-color: #00aa00;
+              color: #ffffff !important;
+              font-size: 11px;
+              font-weight: 700;
+              text-transform: uppercase;
+              letter-spacing: 1px;
+              border-radius: 20px;
+              margin-bottom: 24px;
+              box-shadow: 0 2px 8px rgba(0, 170, 0, 0.3);
+            }
+            .main-message {
+              margin: 0 0 32px 0;
+              font-size: 18px;
               line-height: 1.7;
               color: #000000;
-              font-weight: 400;
+              font-weight: 500;
             }
-            .content p:last-child {
-              margin-bottom: 0;
-            }
-            .status {
-              display: inline-block;
-              padding: 12px 24px;
-              background-color: #f8f8f8;
-              color: #000000 !important;
-              border: 2px solid #000000;
-              font-size: 12px;
-              font-weight: 700;
-              letter-spacing: 1px;
-              text-transform: uppercase;
+            .test-details {
               margin: 32px 0;
-              border-radius: 0;
-            }
-            .recipients {
-              margin: 40px 0;
               padding: 24px;
-              background-color: #f8f8f8;
-              border-left: 4px solid #000000;
+              background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+              border: 1px solid #e9ecef;
+              border-radius: 8px;
+              border-left: 4px solid #00aa00;
+              box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
             }
-            .recipients h3 {
-              margin: 0 0 16px 0;
+            .test-details h3 {
+              margin: 0 0 20px 0;
               font-size: 14px;
               font-weight: 700;
               color: #000000;
+              text-transform: uppercase;
+              letter-spacing: 1px;
+              display: flex;
+              align-items: center;
+            }
+            .detail-row {
+              display: flex;
+              margin: 12px 0;
+              padding: 8px 0;
+              border-bottom: 1px solid #f0f0f0;
+            }
+            .detail-row:last-child {
+              border-bottom: none;
+            }
+            .detail-label {
+              font-weight: 700;
+              color: #666666;
+              min-width: 120px;
+              font-size: 13px;
               text-transform: uppercase;
               letter-spacing: 0.5px;
             }
-            .recipients p {
-              margin: 0;
-              font-size: 14px;
+            .detail-value {
               color: #000000;
-              font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
               font-weight: 500;
+              font-size: 14px;
+              flex: 1;
+              font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
             }
             .footer {
-              padding: 40px 40px 60px;
+              padding: 30px 40px 40px;
               text-align: center;
-              border-top: 1px solid #e5e5e5;
-              margin-top: 40px;
-              background-color: #ffffff;
+              background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+              border-top: 1px solid #e9ecef;
             }
             .footer p {
               margin: 0;
               font-size: 12px;
-              color: #000000;
+              color: #666666;
               font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
               text-transform: uppercase;
               letter-spacing: 0.5px;
               font-weight: 500;
             }
-            .divider {
-              height: 1px;
-              background-color: #e5e5e5;
-              margin: 40px 0;
-              width: 60px;
-              margin-left: auto;
-              margin-right: auto;
+            .timestamp {
+              display: inline-block;
+              background-color: #f1f3f4;
+              padding: 6px 12px;
+              border-radius: 6px;
+              margin-top: 8px;
             }
           </style>
         </head>
         <body>
-          <div class="container">
-            <div class="header">
-              <h1>Guardian</h1>
-              <div class="divider"></div>
-            </div>
-            <div class="content">
-              <p>This is a test email from Guardian to verify your SMTP configuration.</p>
-              <div class="status">SMTP VERIFIED</div>
-              <p>Your email settings are working correctly. Guardian is ready to send notifications.</p>
-              <div class="recipients">
-                <h3>Test Recipients</h3>
-                <p>${recipientEmails.join(', ')}</p>
+          <div class="email-wrapper">
+            <div class="container">
+              <div class="header">
+                <h1>Guardian</h1>
               </div>
-            </div>
-            <div class="footer">
-              <p>Test sent at: ${formattedTimestamp}</p>
+              <div class="content">
+                <div class="success-badge">Test Successful</div>
+                <p class="main-message">SMTP configuration test completed successfully. Your email settings are working correctly and Guardian is ready to send notifications.</p>
+                
+                <div class="test-details">
+                  <h3>Test Details</h3>
+                  <div class="detail-row">
+                    <span class="detail-label">Status</span>
+                    <span class="detail-value">SMTP Verified</span>
+                  </div>
+                  <div class="detail-row">
+                    <span class="detail-label">Recipients</span>
+                    <span class="detail-value">${recipientEmails.join(', ')}</span>
+                  </div>
+                  <div class="detail-row">
+                    <span class="detail-label">Test Type</span>
+                    <span class="detail-value">Connection & Delivery</span>
+                  </div>
+                </div>
+              </div>
+              <div class="footer">
+                <p>SMTP Test</p>
+                <div class="timestamp">${formattedTimestamp}</div>
+              </div>
             </div>
           </div>
         </body>
@@ -1051,116 +1132,220 @@ export class ConfigService {
           <meta charset="UTF-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <style>
+            @media only screen and (max-width: 600px) {
+              .container { width: 100% !important; margin: 0 !important; }
+              .header, .content, .footer { padding-left: 20px !important; padding-right: 20px !important; }
+              .notification-details { margin: 20px 0 !important; padding: 16px !important; }
+            }
+            @media (prefers-color-scheme: dark) {
+              .header {
+                background-color: #ffffff !important;
+                background: #ffffff !important;
+                color: #000000 !important;
+              }
+              .header h1 {
+                color: #000000 !important;
+              }
+              .container {
+                background-color: #ffffff !important;
+                background: #ffffff !important;
+              }
+              body {
+                background-color: #f5f5f5 !important;
+              }
+              .email-wrapper {
+                background-color: #f5f5f5 !important;
+              }
+            }
+            [data-ogsc] .header {
+              background-color: #ffffff !important;
+              background: #ffffff !important;
+            }
+            [data-ogsc] .header h1 {
+              color: #000000 !important;
+            }
             body {
               margin: 0;
               padding: 0;
               font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
-              background-color: #ffffff;
+              background-color: #f5f5f5;
               color: #000000;
               line-height: 1.6;
+            }
+            .email-wrapper {
+              background-color: #f5f5f5;
+              padding: 40px 20px;
+              min-height: 100vh;
             }
             .container {
               max-width: 600px;
               margin: 0 auto;
               background-color: #ffffff;
-              border: 1px solid #e5e5e5;
+              border-radius: 12px;
+              box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+              overflow: hidden;
             }
             .header {
-              padding: 60px 40px 40px;
+              padding: 50px 40px 30px;
               text-align: center;
               background-color: #ffffff;
+              color: #000000;
+              position: relative;
+            }
+            .header::after {
+              content: '';
+              position: absolute;
+              bottom: 0;
+              left: 0;
+              right: 0;
+              height: 4px;
+              background: linear-gradient(90deg, #ff0000, #ff6600, #ffcc00, #00cc66, #0066cc, #6600cc);
             }
             .header h1 {
               margin: 0;
-              font-size: 32px;
-              font-weight: 700;
-              letter-spacing: -1px;
+              font-size: 36px;
+              font-weight: 800;
+              letter-spacing: -1.5px;
               color: #000000;
               text-transform: uppercase;
+              text-shadow: none;
             }
             .content {
-              padding: 0 40px 40px;
+              padding: 40px 40px 30px;
               background-color: #ffffff;
             }
-            .content p {
-              margin: 0 0 24px 0;
-              font-size: 16px;
+            .alert-badge {
+              display: inline-block;
+              padding: 8px 16px;
+              background-color: ${statusColor};
+              color: #ffffff !important;
+              font-size: 11px;
+              font-weight: 700;
+              text-transform: uppercase;
+              letter-spacing: 1px;
+              border-radius: 20px;
+              margin-bottom: 24px;
+              box-shadow: 0 2px 8px rgba(255, 68, 68, 0.3);
+            }
+            .main-message {
+              margin: 0 0 32px 0;
+              font-size: 18px;
               line-height: 1.7;
               color: #000000;
-              font-weight: 400;
-            }
-            .content p:last-child {
-              margin-bottom: 0;
+              font-weight: 500;
             }
             .notification-details {
-              margin: 40px 0;
+              margin: 32px 0;
               padding: 24px;
-              background-color: #f8f8f8;
-              border-left: 4px solid #000000;
+              background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+              border: 1px solid #e9ecef;
+              border-radius: 8px;
+              border-left: 4px solid ${statusColor};
+              box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
             }
             .notification-details h3 {
-              margin: 0 0 16px 0;
+              margin: 0 0 20px 0;
               font-size: 14px;
               font-weight: 700;
               color: #000000;
+              text-transform: uppercase;
+              letter-spacing: 1px;
+              display: flex;
+              align-items: center;
+            }
+            .detail-row {
+              display: flex;
+              margin: 12px 0;
+              padding: 8px 0;
+              border-bottom: 1px solid #f0f0f0;
+            }
+            .detail-row:last-child {
+              border-bottom: none;
+            }
+            .detail-label {
+              font-weight: 700;
+              color: #666666;
+              min-width: 100px;
+              font-size: 13px;
               text-transform: uppercase;
               letter-spacing: 0.5px;
             }
-            .notification-details p {
-              margin: 8px 0;
+            .detail-value {
+              color: #000000;
+              font-weight: 500;
               font-size: 14px;
+              flex: 1;
+            }
+            .stop-code {
+              font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+              background-color: #f1f3f4;
+              padding: 4px 8px;
+              border-radius: 4px;
+              font-size: 12px;
               color: #000000;
             }
-            .notification-details .detail-label {
-              font-weight: 600;
+            .notification-type {
               display: inline-block;
-              min-width: 80px;
+              background-color: ${statusColor};
+              color: #ffffff;
+              padding: 4px 8px;
+              border-radius: 4px;
+              font-size: 12px;
+              font-weight: 700;
+              letter-spacing: 0.5px;
             }
             .footer {
-              padding: 40px 40px 60px;
+              padding: 30px 40px 40px;
               text-align: center;
-              border-top: 1px solid #e5e5e5;
-              margin-top: 40px;
-              background-color: #ffffff;
+              background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+              border-top: 1px solid #e9ecef;
             }
             .footer p {
               margin: 0;
               font-size: 12px;
-              color: #000000;
+              color: #666666;
               font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
               text-transform: uppercase;
               letter-spacing: 0.5px;
               font-weight: 500;
             }
-            .divider {
-              height: 1px;
-              background-color: #e5e5e5;
-              margin: 40px 0;
-              width: 60px;
-              margin-left: auto;
-              margin-right: auto;
+            .timestamp {
+              display: inline-block;
+              background-color: #f1f3f4;
+              padding: 6px 12px;
+              border-radius: 6px;
+              margin-top: 8px;
             }
           </style>
         </head>
         <body>
-          <div class="container">
-            <div class="header">
-              <h1>Guardian</h1>
-              <div class="divider"></div>
-            </div>
-            <div class="content">
-              <p>${mainMessage}</p>
-              
-              <div class="notification-details">
-                <h3>Event Details</h3>
-                <p><span class="detail-label">User:</span> ${username}</p>
-                ${deviceName ? `<p><span class="detail-label">Device:</span> ${deviceName}</p>` : ''}
-                <p><span class="detail-label">Type:</span> ${notificationType.toUpperCase()}</p>
-                ${stopCode ? `<p><span class="detail-label">Stop Code:</span> ${stopCode}</p>` : ''}
+          <div class="email-wrapper">
+            <div class="container">
+              <div class="header">
+                <h1>Guardian</h1>
               </div>
-            </div>
-            <div class="footer">
-              <p>Notification sent at: ${formattedTimestamp}</p>
+              <div class="content">
+                <div class="alert-badge">${statusLabel}</div>
+                <p class="main-message">${mainMessage}</p>
+                
+                <div class="notification-details">
+                  <h3>Event Details</h3>
+                  <div class="detail-row">
+                    <span class="detail-label">User</span>
+                    <span class="detail-value">${username}</span>
+                  </div>
+                  ${deviceName ? `<div class="detail-row"><span class="detail-label">Device</span><span class="detail-value">${deviceName}</span></div>` : ''}
+                  <div class="detail-row">
+                    <span class="detail-label">Type</span>
+                    <span class="detail-value"><span class="notification-type">${notificationType.toUpperCase()}</span></span>
+                  </div>
+                  ${stopCode ? `<div class="detail-row"><span class="detail-label">Stop Code</span><span class="detail-value"><span class="stop-code">${stopCode}</span></span></div>` : ''}
+                </div>
+              </div>
+              <div class="footer">
+                <p>Notification System</p>
+                <div class="timestamp">${formattedTimestamp}</div>
+              </div>
             </div>
           </div>
         </body>
