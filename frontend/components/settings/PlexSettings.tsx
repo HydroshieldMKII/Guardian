@@ -106,6 +106,60 @@ export function PlexSettings({
     }
   };
 
+  const renderSSLSettingsGroup = () => {
+    const useSslSetting = plexSettings.find((s) => s.key === "USE_SSL");
+    const ignoreCertErrorsSetting = plexSettings.find(
+      (s) => s.key === "IGNORE_CERT_ERRORS"
+    );
+
+    if (!useSslSetting || !ignoreCertErrorsSetting) return null;
+
+    const isSslEnabled =
+      formData["USE_SSL"] === true || formData["USE_SSL"] === "true";
+
+    return (
+      <Card className="p-4 my-4">
+        <div className="space-y-4">
+          {/* Parent setting: USE_SSL */}
+          {renderSetting(useSslSetting)}
+
+          {/* Child setting: IGNORE_CERT_ERRORS */}
+          <div className={`ml-6 ${!isSslEnabled ? "opacity-50" : ""}`}>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label
+                    htmlFor={ignoreCertErrorsSetting.key}
+                    className={!isSslEnabled ? "text-muted-foreground" : ""}
+                  >
+                    {getSettingInfo(ignoreCertErrorsSetting).label}
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    {getSettingInfo(ignoreCertErrorsSetting).description}
+                  </p>
+                </div>
+                <Switch
+                  id={ignoreCertErrorsSetting.key}
+                  checked={
+                    (formData[ignoreCertErrorsSetting.key] ??
+                      ignoreCertErrorsSetting.value) === "true" ||
+                    (formData[ignoreCertErrorsSetting.key] ??
+                      ignoreCertErrorsSetting.value) === true
+                  }
+                  onCheckedChange={(checked) =>
+                    handleInputChange(ignoreCertErrorsSetting.key, checked)
+                  }
+                  disabled={!isSslEnabled}
+                  className="cursor-pointer"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </Card>
+    );
+  };
+
   const renderSetting = (setting: AppSetting) => {
     const { label, description } = getSettingInfo(setting);
     const value = formData[setting.key] ?? setting.value;
@@ -167,11 +221,20 @@ export function PlexSettings({
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {plexSettings.map((setting) => (
-          <Card key={setting.key} className="p-4 my-4">
-            {renderSetting(setting)}
-          </Card>
-        ))}
+        {/* SSL settings group - parent and child relationship */}
+        {renderSSLSettingsGroup()}
+
+        {/* Other Plex settings */}
+        {plexSettings
+          .filter(
+            (setting) =>
+              setting.key !== "USE_SSL" && setting.key !== "IGNORE_CERT_ERRORS"
+          )
+          .map((setting) => (
+            <Card key={setting.key} className="p-4 my-4">
+              {renderSetting(setting)}
+            </Card>
+          ))}
 
         <div className="pb-4">
           <Button
