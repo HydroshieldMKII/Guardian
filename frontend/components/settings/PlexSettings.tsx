@@ -204,8 +204,8 @@ export function PlexSettings({
             <div
               className={`mt-3 p-3 rounded-md flex items-center gap-2 ${
                 connectionStatus.success
-                  ? "bg-green-50 text-green-700 border border-green-200"
-                  : "bg-red-50 text-red-700 border border-red-200"
+                  ? "bg-green-50 text-green-700 border border-green-200 dark:bg-green-950/20 dark:text-green-300 dark:border-green-800"
+                  : "bg-red-50 text-red-700 border border-red-200 dark:bg-red-950/20 dark:text-red-300 dark:border-red-800"
               }`}
             >
               {connectionStatus.success ? (

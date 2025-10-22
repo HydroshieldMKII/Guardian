@@ -90,30 +90,15 @@ export function SMTPSettings({
 
       if (response.ok && result.success) {
         setConnectionStatus({ success: true, message: result.message });
-        toast({
-          title: "SMTP test successful",
-          description: result.message,
-          variant: "success",
-        });
       } else {
         setConnectionStatus({
           success: false,
           message: result.message || "SMTP test failed",
         });
-        toast({
-          title: "SMTP test failed",
-          description: result.message || "Unable to connect to SMTP server",
-          variant: "destructive",
-        });
       }
     } catch (error) {
       const errorMessage = "Failed to test SMTP connection";
       setConnectionStatus({ success: false, message: errorMessage });
-      toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive",
-      });
     } finally {
       setTestingConnection(false);
     }
@@ -282,6 +267,23 @@ export function SMTPSettings({
                 <span className="text-sm">
                   Save your changes before testing SMTP connection
                 </span>
+              </div>
+            )}
+
+            {connectionStatus && !hasUnsavedChanges && (
+              <div
+                className={`mt-3 p-3 rounded-md flex items-center gap-2 ${
+                  connectionStatus.success
+                    ? "bg-green-50 text-green-700 border border-green-200 dark:bg-green-950/20 dark:text-green-300 dark:border-green-800"
+                    : "bg-red-50 text-red-700 border border-red-200 dark:bg-red-950/20 dark:text-red-300 dark:border-red-800"
+                }`}
+              >
+                {connectionStatus.success ? (
+                  <CheckCircle className="h-4 w-4" />
+                ) : (
+                  <XCircle className="h-4 w-4" />
+                )}
+                <span className="text-sm">{connectionStatus.message}</span>
               </div>
             )}
           </div>
