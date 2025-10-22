@@ -2,9 +2,6 @@
  * Utility functions for handling stop codes and their descriptions
  */
 export class StopCodeUtils {
-  /**
-   * Get a human-readable description for a stop code
-   */
   static getStopCodeDescription(stopCode: string): string {
     switch (stopCode) {
       case 'DEVICE_PENDING':
