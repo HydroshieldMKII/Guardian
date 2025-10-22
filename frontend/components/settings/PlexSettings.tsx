@@ -58,9 +58,9 @@ export function PlexSettings({
     .sort((a, b) => {
       const order = [
         "CUSTOM_PLEX_URL",
+        "PLEX_TOKEN",
         "PLEX_SERVER_IP",
         "PLEX_SERVER_PORT",
-        "PLEX_TOKEN",
         "USE_SSL",
         "IGNORE_CERT_ERRORS",
       ];
@@ -221,9 +221,6 @@ export function PlexSettings({
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* SSL settings group - parent and child relationship */}
-        {renderSSLSettingsGroup()}
-
         {/* Other Plex settings */}
         {plexSettings
           .filter(
@@ -235,6 +232,9 @@ export function PlexSettings({
               {renderSetting(setting)}
             </Card>
           ))}
+
+        {/* SSL settings group */}
+        {renderSSLSettingsGroup()}
 
         <div className="pb-4">
           <Button
