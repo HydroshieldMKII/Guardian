@@ -188,7 +188,7 @@ const getSettingInfo = (
     AUTO_MARK_NOTIFICATION_READ: {
       label: "Auto-mark notifications as read",
       description:
-        "Automatically mark notifications as read when you click on them",
+        "Automatically mark notifications as read when you click on them (app only)",
     },
     SMTP_ENABLED: {
       label: "Enable email notifications",

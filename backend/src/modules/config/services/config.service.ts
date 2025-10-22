@@ -1210,7 +1210,9 @@ export class ConfigService {
           subject: `Guardian Alert: Stream Blocked${deviceName ? ` - ${deviceName}` : ''}`,
           statusLabel: 'STREAM BLOCKED',
           statusColor: '#ff4444',
-          mainMessage: stopCode ? this.getStopCodeDescription(stopCode) : 'A streaming session has been blocked on your Plex server',
+          mainMessage: stopCode
+            ? this.getStopCodeDescription(stopCode)
+            : 'A streaming session has been blocked on your Plex server',
         };
       case 'warning':
         return {
