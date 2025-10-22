@@ -43,7 +43,7 @@ interface SettingsProps {
 
 export default function Settings({ onBack }: SettingsProps) {
   const { toast } = useToast();
-  const { settings, loading, refreshSettings } = useSettings();
+  const { settings, loading, refreshSettings, updateSettings } = useSettings();
   const { versionInfo } = useVersion();
 
   const [formData, setFormData] = useState<SettingsFormData>({});
@@ -130,7 +130,12 @@ export default function Settings({ onBack }: SettingsProps) {
         throw new Error(errorText || "Failed to save settings");
       }
 
-      await refreshSettings();
+      updateSettings(
+        changedSettings.map((setting) => ({
+          key: setting.key,
+          value: setting.value,
+        }))
+      );
 
       toast({
         title: "Settings Saved",
@@ -141,6 +146,7 @@ export default function Settings({ onBack }: SettingsProps) {
       setHasUnsavedChanges(false);
     } catch (error) {
       console.error("Error saving settings:", error);
+      await refreshSettings();
       toast({
         title: "Error",
         description:
