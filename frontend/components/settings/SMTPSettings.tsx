@@ -275,7 +275,7 @@ export function SMTPSettings({
                 </>
               )}
             </Button>
-            
+
             {hasUnsavedChanges && (
               <div className="mt-3 p-3 rounded-md flex items-center gap-2 bg-orange-50 text-orange-700 border border-orange-200 dark:bg-orange-950/20 dark:text-orange-300 dark:border-orange-800">
                 <AlertTriangle className="h-4 w-4" />

@@ -402,7 +402,10 @@ export default function Settings({ onBack }: SettingsProps) {
       </Tabs>
 
       {/* Unsaved Changes Warning Modal */}
-      <Dialog open={showUnsavedWarning} onOpenChange={(open) => !open && setShowUnsavedWarning(false)}>
+      <Dialog
+        open={showUnsavedWarning}
+        onOpenChange={(open) => !open && setShowUnsavedWarning(false)}
+      >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -410,7 +413,7 @@ export default function Settings({ onBack }: SettingsProps) {
               Unsaved Changes
             </DialogTitle>
             <DialogDescription>
-              You have unsaved changes that will be lost if you leave this page. 
+              You have unsaved changes that will be lost if you leave this page.
               What would you like to do?
             </DialogDescription>
           </DialogHeader>
