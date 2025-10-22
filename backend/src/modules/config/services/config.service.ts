@@ -7,6 +7,7 @@ import { UserPreference } from '../../../entities/user-preference.entity';
 import { SessionHistory } from '../../../entities/session-history.entity';
 import { Notification } from '../../../entities/notification.entity';
 import { PlexResponse, PlexErrorCode } from '../../../types/plex-errors';
+import { StopCodeUtils } from '../../../common/utils/stop-code.utils';
 import {
   EmailService,
   SMTPConfig,
@@ -635,7 +636,7 @@ export class ConfigService {
           statusLabel: 'STREAM BLOCKED',
           statusColor: '#ff4444',
           mainMessage: stopCode
-            ? this.getStopCodeDescription(stopCode)
+            ? StopCodeUtils.getStopCodeDescription(stopCode)
             : 'A streaming session has been blocked on your Plex server',
         };
       case 'warning':
@@ -661,25 +662,6 @@ export class ConfigService {
           statusColor: '#4488ff',
           mainMessage: 'Guardian has a new notification for your Plex server.',
         };
-    }
-  }
-
-  private getStopCodeDescription(stopCode: string): string {
-    switch (stopCode) {
-      case 'DEVICE_PENDING':
-        return 'A streaming session was blocked because the device requires administrator approval';
-      case 'DEVICE_REJECTED':
-        return 'A streaming session was blocked because the device has been rejected by an administrator';
-      case 'IP_POLICY_LAN_ONLY':
-        return 'A streaming session was blocked because the device attempted external access but is restricted to local network only';
-      case 'IP_POLICY_WAN_ONLY':
-        return 'A streaming session was blocked because the device attempted local access but is restricted to external connections only';
-      case 'IP_POLICY_NOT_ALLOWED':
-        return 'A streaming session was blocked because the device IP address is not in the approved access list';
-      case 'TIME_RESTRICTED':
-        return 'A streaming session was blocked due to time-based scheduling restrictions';
-      default:
-        return `A streaming session was blocked: ${stopCode}`;
     }
   }
 
