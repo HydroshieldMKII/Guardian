@@ -278,9 +278,6 @@ export function GeneralSettings({
               <SelectValue placeholder="Select timezone" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="+00:00">
-                UTC+00:00 (GMT) - {getCurrentTimeInOffset("+00:00")}
-              </SelectItem>
               <SelectItem value="-12:00">
                 UTC-12:00 - {getCurrentTimeInOffset("-12:00")}
               </SelectItem>
@@ -316,6 +313,9 @@ export function GeneralSettings({
               </SelectItem>
               <SelectItem value="-01:00">
                 UTC-01:00 - {getCurrentTimeInOffset("-01:00")}
+              </SelectItem>
+              <SelectItem value="+00:00">
+                UTC+00:00 - {getCurrentTimeInOffset("+00:00")}
               </SelectItem>
               <SelectItem value="+01:00">
                 UTC+01:00 - {getCurrentTimeInOffset("+01:00")}

@@ -406,7 +406,7 @@ export default function Settings({ onBack }: SettingsProps) {
         open={showUnsavedWarning}
         onOpenChange={(open) => !open && setShowUnsavedWarning(false)}
       >
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-orange-500" />
@@ -417,25 +417,18 @@ export default function Settings({ onBack }: SettingsProps) {
               What would you like to do?
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="flex flex-col sm:flex-row gap-2">
+          <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-end">
             <Button
               variant="outline"
               onClick={handleCancelLeave}
-              className="sm:order-1"
+              className="order-1 sm:order-1"
             >
               Stay on Page
             </Button>
             <Button
-              variant="destructive"
-              onClick={handleConfirmLeave}
-              className="sm:order-3"
-            >
-              Leave Without Saving
-            </Button>
-            <Button
               onClick={handleSaveAndLeave}
               disabled={isSaving}
-              className="sm:order-2"
+              className="order-2 sm:order-2"
             >
               {isSaving ? (
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -443,6 +436,13 @@ export default function Settings({ onBack }: SettingsProps) {
                 <Save className="h-4 w-4 mr-2" />
               )}
               Save & Leave
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmLeave}
+              className="order-3 sm:order-3"
+            >
+              Discard Changes
             </Button>
           </DialogFooter>
         </DialogContent>
