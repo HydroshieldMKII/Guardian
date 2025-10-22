@@ -238,12 +238,12 @@ export default function Settings({ onBack }: SettingsProps) {
     <div className="container mx-auto py-6 px-4 max-w-6xl">
       {/* Back Button */}
       {onBack && (
-        <div className="mb-4">
+        <div className="mb-6">
           <Button
             variant="ghost"
             size="sm"
             onClick={onBack}
-            className="text-muted-foreground hover:text-foreground"
+            className="text-muted-foreground hover:text-foreground transition-colors"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Dashboard
@@ -251,45 +251,51 @@ export default function Settings({ onBack }: SettingsProps) {
         </div>
       )}
 
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-3xl font-bold">Settings</h1>
-          <p className="text-muted-foreground mt-1">
-            Configure Guardian application settings and preferences
-          </p>
-          {versionInfo && (
-            <Badge variant="outline" className="mt-2">
-              Version {versionInfo.version}
-            </Badge>
-          )}
+      {/* Header Section */}
+      <div className="mb-8">
+        <div className="flex flex-col gap-4 mb-4">
+          <div className="space-y-2">
+            <div className="flex items-center gap-3">
+              <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
+              {versionInfo && (
+                <Badge variant="outline" className="text-xs font-medium">
+                  v{versionInfo.version}
+                </Badge>
+              )}
+            </div>
+            <p className="text-muted-foreground text-base">
+              Configure Guardian application settings and preferences
+            </p>
+          </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          {hasUnsavedChanges && (
-            <Badge variant="secondary" className="flex items-center gap-1">
-              <div className="h-2 w-2 bg-orange-500 rounded-full" />
-              Unsaved Changes
-            </Badge>
-          )}
-          <Button
-            onClick={handleSave}
-            disabled={isSaving || !hasUnsavedChanges}
-            className="flex items-center gap-2"
-          >
-            {isSaving ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : hasUnsavedChanges ? (
-              <Save className="h-4 w-4" />
-            ) : (
-              <CheckCircle className="h-4 w-4" />
-            )}
-            {isSaving
-              ? "Saving..."
-              : hasUnsavedChanges
-                ? "Save Changes"
-                : "Saved"}
-          </Button>
-        </div>
+        {/* Unsaved Changes Warning */}
+        {hasUnsavedChanges && (
+          <div className="bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800 rounded-lg p-4 flex items-center gap-3">
+            <div className="h-2 w-2 bg-orange-500 rounded-full animate-pulse" />
+            <div className="flex-1">
+              <p className="text-sm font-medium text-orange-800 dark:text-orange-200">
+                You have unsaved changes
+              </p>
+              <p className="text-xs text-orange-600 dark:text-orange-300 mt-1">
+                Don't forget to save your changes before leaving this page
+              </p>
+            </div>
+            <Button
+              onClick={handleSave}
+              disabled={isSaving}
+              size="sm"
+              className="bg-orange-600 hover:bg-orange-700 text-white"
+            >
+              {isSaving ? (
+                <Loader2 className="h-3 w-3 animate-spin mr-1" />
+              ) : (
+                <Save className="h-3 w-3 mr-1" />
+              )}
+              Save Now
+            </Button>
+          </div>
+        )}
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -303,7 +309,9 @@ export default function Settings({ onBack }: SettingsProps) {
                 className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 text-xs sm:text-sm h-auto min-h-[2.5rem] justify-self-start w-full"
               >
                 <IconComponent className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
-                <span className="text-[10px] sm:text-sm leading-tight text-center">{tab.label}</span>
+                <span className="text-[10px] sm:text-sm leading-tight text-center">
+                  {tab.label}
+                </span>
               </TabsTrigger>
             );
           })}
