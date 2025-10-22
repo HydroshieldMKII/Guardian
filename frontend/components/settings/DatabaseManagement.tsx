@@ -224,6 +224,22 @@ export function DatabaseManagement({
           <CardDescription>
             Export and import Guardian database settings and configuration
           </CardDescription>
+          {versionInfo && (
+            <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+              <div className="flex items-center gap-2">
+                <span className="font-medium">Database Version:</span>
+                <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 rounded-md font-mono">
+                  {versionInfo.databaseVersion || 'Unknown'}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="font-medium">Code Version:</span>
+                <span className="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 rounded-md font-mono">
+                  {versionInfo.codeVersion || 'Unknown'}
+                </span>
+              </div>
+            </div>
+          )}
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

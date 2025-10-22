@@ -23,6 +23,7 @@ interface UpdateInfo {
   latestVersion: string;
   currentVersion: string;
   updateUrl: string;
+  releaseNotes?: string;
 }
 
 interface VersionContextType {
@@ -49,7 +50,7 @@ interface VersionContextType {
 // Helper function for version comparison
 const isVersionNewer = (
   newVersion: string,
-  currentVersion: string,
+  currentVersion: string
 ): boolean => {
   const parseVersion = (version: string) => {
     return version.split(".").map((v) => parseInt(v) || 0);
@@ -83,10 +84,12 @@ export function VersionProvider({ children }: { children: React.ReactNode }) {
     latestVersion: string;
     currentVersion: string;
     updateUrl: string;
+    releaseNotes?: string;
   } | null>(null);
 
   // Constants
   const UPDATE_CHECK_COOLDOWN = 1 * 60 * 1000; // 1 minute
+  const PERIODIC_UPDATE_CHECK_INTERVAL = 30 * 60 * 1000; // 30 minutes
 
   const fetchVersionInfo = useCallback(async () => {
     try {
@@ -113,20 +116,28 @@ export function VersionProvider({ children }: { children: React.ReactNode }) {
 
   const checkForUpdatesIfEnabled = useCallback(async () => {
     if (!versionInfo?.version) {
-      console.log("No version info available, skipping update check");
+      console.log(
+        "Version check: No version info available, skipping update check"
+      );
       return null;
     }
 
     // Rate limiting: Check if we've checked recently
     const now = Date.now();
     if (now - lastUpdateCheckRef.current < UPDATE_CHECK_COOLDOWN) {
-      console.log("Rate limited, returning cached result");
+      console.log("Version check: Rate limited, returning cached result");
       // Return cached result if available
       if (updateCheckCacheRef.current) {
         const cached = updateCheckCacheRef.current;
         // Update global state from cache if there's an update
         if (cached.hasUpdate) {
-          setUpdateInfo(cached);
+          setUpdateInfo({
+            hasUpdate: cached.hasUpdate,
+            latestVersion: cached.latestVersion,
+            currentVersion: cached.currentVersion,
+            updateUrl: cached.updateUrl,
+            releaseNotes: cached.releaseNotes || "",
+          });
         }
         return cached;
       }
@@ -134,38 +145,52 @@ export function VersionProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
+      console.log("Version check: Checking if auto-updates are enabled...");
       // First check if AUTO_CHECK_UPDATES is enabled
       const settingsResponse = await fetch(`${config.api.baseUrl}/config`);
       if (!settingsResponse.ok) {
-        console.warn("Failed to fetch settings for update check");
+        console.warn(
+          "Version check: Failed to fetch settings for update check"
+        );
         return null;
       }
 
       const settings = await settingsResponse.json();
       const autoCheckSetting = settings.find(
-        (setting: any) => setting.key === "AUTO_CHECK_UPDATES",
+        (setting: any) => setting.key === "AUTO_CHECK_UPDATES"
       );
       const shouldAutoCheck = autoCheckSetting?.value === "true";
 
       if (!shouldAutoCheck) {
+        console.log("Version check: Auto-check disabled in settings");
         return null; // Auto check is disabled
       }
 
+      console.log(
+        "Version check: Auto-check enabled, fetching latest release informations..."
+      );
       // Update last check time
       lastUpdateCheckRef.current = now;
 
       // Fetch latest release from GitHub API
       const response = await fetch(
-        "https://api.github.com/repos/HydroshieldMKII/Guardian/releases/latest",
+        "https://api.github.com/repos/HydroshieldMKII/Guardian/releases/latest"
       );
       if (!response.ok) {
-        console.warn("Failed to check for updates:", response.status);
+        console.warn(
+          "Version check: Failed to check for updates:",
+          response.status
+        );
         return null;
       }
 
       const release = await response.json();
       const latestVersion = release.tag_name.replace(/^v/, ""); // Remove 'v' prefix if present
       const currentVersion = versionInfo.version;
+
+      console.log(
+        `Version check: Current: ${currentVersion}, Latest: ${latestVersion}`
+      );
 
       // Compare versions
       const hasUpdate = isVersionNewer(latestVersion, currentVersion);
@@ -175,6 +200,7 @@ export function VersionProvider({ children }: { children: React.ReactNode }) {
         latestVersion,
         currentVersion,
         updateUrl: release.html_url,
+        releaseNotes: release.body || "",
       };
 
       // Cache the result
@@ -182,17 +208,24 @@ export function VersionProvider({ children }: { children: React.ReactNode }) {
 
       // Update global state when auto-checking
       if (hasUpdate) {
+        console.log("Version check: Update available! Setting global state...");
         setUpdateInfo({
           hasUpdate: true,
           latestVersion,
           currentVersion,
           updateUrl: release.html_url,
+          releaseNotes: release.body || "",
         });
+      } else {
+        console.log("Version check: No update available");
       }
 
       return result;
     } catch (error) {
-      console.error("Failed to check for updates automatically:", error);
+      console.error(
+        "Version check: Failed to check for updates automatically:",
+        error
+      );
       return null;
     }
   }, [versionInfo?.version, UPDATE_CHECK_COOLDOWN]);
@@ -203,7 +236,7 @@ export function VersionProvider({ children }: { children: React.ReactNode }) {
     try {
       // Manual check bypasses the AUTO_CHECK_UPDATES setting
       const response = await fetch(
-        "https://api.github.com/repos/HydroshieldMKII/Guardian/releases/latest",
+        "https://api.github.com/repos/HydroshieldMKII/Guardian/releases/latest"
       );
       if (!response.ok) {
         console.warn("Failed to check for updates:", response.status);
@@ -222,6 +255,7 @@ export function VersionProvider({ children }: { children: React.ReactNode }) {
         latestVersion,
         currentVersion,
         updateUrl: release.html_url,
+        releaseNotes: release.body || "",
       };
 
       // Update global state
@@ -231,6 +265,7 @@ export function VersionProvider({ children }: { children: React.ReactNode }) {
           latestVersion,
           currentVersion,
           updateUrl: release.html_url,
+          releaseNotes: release.body || "",
         });
       } else {
         setUpdateInfo(null);
@@ -250,6 +285,32 @@ export function VersionProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     fetchVersionInfo();
   }, [fetchVersionInfo]);
+
+  // Automatically check for updates once version info is available
+  useEffect(() => {
+    if (versionInfo?.version) {
+      const timeoutId = setTimeout(() => {
+        checkForUpdatesIfEnabled();
+      }, 1000); // 1 second delay
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [versionInfo?.version, checkForUpdatesIfEnabled]);
+
+  // Periodic update checking (every 30 minutes if auto-check is enabled)
+  useEffect(() => {
+    if (!versionInfo?.version) return;
+
+    const intervalId = setInterval(() => {
+      checkForUpdatesIfEnabled();
+    }, PERIODIC_UPDATE_CHECK_INTERVAL);
+
+    return () => clearInterval(intervalId);
+  }, [
+    versionInfo?.version,
+    checkForUpdatesIfEnabled,
+    PERIODIC_UPDATE_CHECK_INTERVAL,
+  ]);
 
   const contextValue = {
     versionInfo,
