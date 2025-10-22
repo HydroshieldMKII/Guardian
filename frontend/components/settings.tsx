@@ -345,7 +345,7 @@ export default function Settings({ onBack }: SettingsProps) {
               <TabsTrigger
                 key={tab.id}
                 value={tab.id}
-                className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 text-xs sm:text-sm h-auto min-h-[2.5rem] justify-self-start w-full"
+                className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 text-xs sm:text-sm h-auto min-h-[2.5rem] justify-self-start w-full cursor-pointer"
               >
                 <IconComponent className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
                 <span className="text-[10px] sm:text-sm leading-tight text-center">

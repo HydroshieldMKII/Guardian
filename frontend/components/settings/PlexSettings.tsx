@@ -127,6 +127,7 @@ export function PlexSettings({
               onCheckedChange={(checked) =>
                 handleInputChange(setting.key, checked)
               }
+              className="cursor-pointer"
             />
           </div>
         </div>
@@ -149,6 +150,7 @@ export function PlexSettings({
           value={typeof value === "string" ? value : String(value)}
           onChange={(e) => handleInputChange(setting.key, e.target.value)}
           placeholder={`Enter ${label.toLowerCase()}`}
+          className="cursor-pointer"
         />
       </div>
     );

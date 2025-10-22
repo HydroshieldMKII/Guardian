@@ -21,6 +21,24 @@ import { Shield, User, BellRing } from "lucide-react";
 import { AppSetting } from "@/types";
 import { getSettingInfo, SettingsFormData } from "./settings-utils";
 
+// Helper function to get current time in a specific timezone offset
+const getCurrentTimeInOffset = (offsetString: string): string => {
+  const now = new Date();
+  const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+  
+  // Parse offset string (e.g., "+05:30" or "-08:00")
+  const sign = offsetString.charAt(0) === '+' ? 1 : -1;
+  const [hours, minutes = 0] = offsetString.slice(1).split(':').map(Number);
+  const offsetMinutes = sign * (hours * 60 + minutes);
+  
+  const targetTime = new Date(utc + (offsetMinutes * 60000));
+  return targetTime.toLocaleTimeString('en-US', { 
+    hour12: false, 
+    hour: '2-digit', 
+    minute: '2-digit' 
+  });
+};
+
 interface GeneralSettingsProps {
   settings: AppSetting[];
   formData: SettingsFormData;
@@ -176,6 +194,7 @@ export function GeneralSettings({
             onCheckedChange={(checked) =>
               handleInputChange(cleanupEnabledSetting.key, checked)
             }
+            className="cursor-pointer"
           />
         </div>
 
@@ -207,6 +226,7 @@ export function GeneralSettings({
             }
             placeholder="Enter device cleanup interval"
             disabled={!isCleanupEnabled}
+            className="cursor-pointer"
           />
         </div>
       </div>
@@ -233,6 +253,7 @@ export function GeneralSettings({
               onCheckedChange={(checked) =>
                 handleInputChange(setting.key, checked)
               }
+              className="cursor-pointer"
             />
           </div>
         </div>
@@ -253,35 +274,35 @@ export function GeneralSettings({
               handleInputChange(setting.key, newValue)
             }
           >
-            <SelectTrigger>
+            <SelectTrigger className="cursor-pointer">
               <SelectValue placeholder="Select timezone" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="+00:00">UTC+00:00 (GMT)</SelectItem>
-              <SelectItem value="-12:00">UTC-12:00</SelectItem>
-              <SelectItem value="-11:00">UTC-11:00</SelectItem>
-              <SelectItem value="-10:00">UTC-10:00</SelectItem>
-              <SelectItem value="-09:00">UTC-09:00</SelectItem>
-              <SelectItem value="-08:00">UTC-08:00</SelectItem>
-              <SelectItem value="-07:00">UTC-07:00</SelectItem>
-              <SelectItem value="-06:00">UTC-06:00</SelectItem>
-              <SelectItem value="-05:00">UTC-05:00</SelectItem>
-              <SelectItem value="-04:00">UTC-04:00</SelectItem>
-              <SelectItem value="-03:00">UTC-03:00</SelectItem>
-              <SelectItem value="-02:00">UTC-02:00</SelectItem>
-              <SelectItem value="-01:00">UTC-01:00</SelectItem>
-              <SelectItem value="+01:00">UTC+01:00</SelectItem>
-              <SelectItem value="+02:00">UTC+02:00</SelectItem>
-              <SelectItem value="+03:00">UTC+03:00</SelectItem>
-              <SelectItem value="+04:00">UTC+04:00</SelectItem>
-              <SelectItem value="+05:00">UTC+05:00</SelectItem>
-              <SelectItem value="+06:00">UTC+06:00</SelectItem>
-              <SelectItem value="+07:00">UTC+07:00</SelectItem>
-              <SelectItem value="+08:00">UTC+08:00</SelectItem>
-              <SelectItem value="+09:00">UTC+09:00</SelectItem>
-              <SelectItem value="+10:00">UTC+10:00</SelectItem>
-              <SelectItem value="+11:00">UTC+11:00</SelectItem>
-              <SelectItem value="+12:00">UTC+12:00</SelectItem>
+              <SelectItem value="+00:00">UTC+00:00 (GMT) - {getCurrentTimeInOffset("+00:00")}</SelectItem>
+              <SelectItem value="-12:00">UTC-12:00 - {getCurrentTimeInOffset("-12:00")}</SelectItem>
+              <SelectItem value="-11:00">UTC-11:00 - {getCurrentTimeInOffset("-11:00")}</SelectItem>
+              <SelectItem value="-10:00">UTC-10:00 - {getCurrentTimeInOffset("-10:00")}</SelectItem>
+              <SelectItem value="-09:00">UTC-09:00 - {getCurrentTimeInOffset("-09:00")}</SelectItem>
+              <SelectItem value="-08:00">UTC-08:00 - {getCurrentTimeInOffset("-08:00")}</SelectItem>
+              <SelectItem value="-07:00">UTC-07:00 - {getCurrentTimeInOffset("-07:00")}</SelectItem>
+              <SelectItem value="-06:00">UTC-06:00 - {getCurrentTimeInOffset("-06:00")}</SelectItem>
+              <SelectItem value="-05:00">UTC-05:00 - {getCurrentTimeInOffset("-05:00")}</SelectItem>
+              <SelectItem value="-04:00">UTC-04:00 - {getCurrentTimeInOffset("-04:00")}</SelectItem>
+              <SelectItem value="-03:00">UTC-03:00 - {getCurrentTimeInOffset("-03:00")}</SelectItem>
+              <SelectItem value="-02:00">UTC-02:00 - {getCurrentTimeInOffset("-02:00")}</SelectItem>
+              <SelectItem value="-01:00">UTC-01:00 - {getCurrentTimeInOffset("-01:00")}</SelectItem>
+              <SelectItem value="+01:00">UTC+01:00 - {getCurrentTimeInOffset("+01:00")}</SelectItem>
+              <SelectItem value="+02:00">UTC+02:00 - {getCurrentTimeInOffset("+02:00")}</SelectItem>
+              <SelectItem value="+03:00">UTC+03:00 - {getCurrentTimeInOffset("+03:00")}</SelectItem>
+              <SelectItem value="+04:00">UTC+04:00 - {getCurrentTimeInOffset("+04:00")}</SelectItem>
+              <SelectItem value="+05:00">UTC+05:00 - {getCurrentTimeInOffset("+05:00")}</SelectItem>
+              <SelectItem value="+06:00">UTC+06:00 - {getCurrentTimeInOffset("+06:00")}</SelectItem>
+              <SelectItem value="+07:00">UTC+07:00 - {getCurrentTimeInOffset("+07:00")}</SelectItem>
+              <SelectItem value="+08:00">UTC+08:00 - {getCurrentTimeInOffset("+08:00")}</SelectItem>
+              <SelectItem value="+09:00">UTC+09:00 - {getCurrentTimeInOffset("+09:00")}</SelectItem>
+              <SelectItem value="+10:00">UTC+10:00 - {getCurrentTimeInOffset("+10:00")}</SelectItem>
+              <SelectItem value="+11:00">UTC+11:00 - {getCurrentTimeInOffset("+11:00")}</SelectItem>
+              <SelectItem value="+12:00">UTC+12:00 - {getCurrentTimeInOffset("+12:00")}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -298,7 +319,7 @@ export function GeneralSettings({
           )}
           <select
             id={setting.key}
-            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
             value={typeof value === "string" ? value : String(value)}
             onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
               handleInputChange(setting.key, e.target.value)
@@ -331,13 +352,13 @@ export function GeneralSettings({
             (formData["DEVICE_CLEANUP_ENABLED"] === false ||
               formData["DEVICE_CLEANUP_ENABLED"] === "false")
           }
-          className={
+          className={`cursor-pointer ${
             setting.key === "DEVICE_CLEANUP_INTERVAL_DAYS" &&
             (formData["DEVICE_CLEANUP_ENABLED"] === false ||
               formData["DEVICE_CLEANUP_ENABLED"] === "false")
               ? "opacity-50"
               : ""
-          }
+          }`}
         />
       </div>
     );

@@ -150,6 +150,7 @@ export function SMTPSettings({
                     handleInputChange(notifyOnNotificationsSetting.key, checked)
                   }
                   disabled={!isSmtpEnabled}
+                  className="cursor-pointer"
                 />
               </div>
             </div>
@@ -179,6 +180,7 @@ export function SMTPSettings({
               onCheckedChange={(checked) =>
                 handleInputChange(setting.key, checked)
               }
+              className="cursor-pointer"
             />
           </div>
         </div>
@@ -203,6 +205,7 @@ export function SMTPSettings({
           value={typeof value === "string" ? value : String(value)}
           onChange={(e) => handleInputChange(setting.key, e.target.value)}
           placeholder={`Enter ${label.toLowerCase()}`}
+          className="cursor-pointer"
         />
       </div>
     );

@@ -48,11 +48,12 @@ export const getSettingInfo = (setting: AppSetting): SettingInfo => {
     },
     PLEXGUARD_REFRESH_INTERVAL: {
       label: "Session refresh interval (seconds)",
-      description: "How often to check for active Plex sessions",
+      description:
+        "How often to check for active Plex sessions and enforce rules",
     },
     PLEX_GUARD_DEFAULT_BLOCK: {
       label: "Block new devices by default",
-      description: "Require manual approval for all new devices",
+      description: "Block access for all pending devices",
     },
     MSG_DEVICE_PENDING: {
       label: "Device pending message",
