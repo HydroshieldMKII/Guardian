@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Card,
   CardContent,
@@ -8,610 +10,109 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { Separator } from "@/components/ui/separator";
-import { useToast } from "@/hooks/use-toast";
+import { Badge } from "@/components/ui/badge";
 import {
-  User,
-  Bell,
-  BellRing,
-  Shield,
-  Server,
-  Save,
-  RefreshCw,
-  CheckCircle,
-  XCircle,
   Loader2,
-  ArrowLeft,
-  Download,
-  Upload,
+  Save,
+  Settings as SettingsIcon,
   Database,
-  AlertTriangle,
-  ChevronDown,
-  Activity,
-  MailQuestionMark,
-  MailCheck,
-  BookOpen,
+  Mail,
+  Server,
+  Palette,
+  Bell,
+  Wrench,
+  CheckCircle,
+  ArrowLeft,
 } from "lucide-react";
-import { config } from "../lib/config";
-import { useVersion } from "@/contexts/version-context";
-import { useSettings } from "@/contexts/settings-context";
-import { ConfirmationModal } from "@/components/ui/confirmation-modal";
 import { AppSetting } from "@/types";
+import { useToast } from "@/hooks/use-toast";
+import { useSettings } from "@/contexts/settings-context";
+import { useVersion } from "@/contexts/version-context";
+import { config } from "@/lib/config";
 
-interface SettingsFormData {
-  [key: string]: string | boolean | number;
+import { PlexSettings } from "./settings/PlexSettings";
+import { SMTPSettings } from "./settings/SMTPSettings";
+import { DatabaseManagement } from "./settings/DatabaseManagement";
+import { GeneralSettings } from "./settings/GeneralSettings";
+import { AdminTools } from "./settings/AdminTools";
+import { SettingsFormData } from "./settings/settings-utils";
+
+interface SettingsProps {
+  onBack?: () => void;
 }
 
-const settingsSections = [
-  {
-    id: "guardian",
-    title: "Guardian Configuration",
-    description: "Configure Guardian behavior and settings",
-    icon: Shield,
-  },
-  {
-    id: "customization",
-    title: "Customization",
-    description: "Customize user interface, messages, and experience",
-    icon: User,
-  },
-  {
-    id: "notifications",
-    title: "Notification Settings",
-    description: "Configure notification behavior and preferences",
-    icon: BellRing,
-  },
-  {
-    id: "plex",
-    title: "Plex Integration",
-    description: "Configure Plex server connection and settings",
-    icon: Server,
-  },
-  {
-    id: "database",
-    title: "Database Management",
-    description: "Export and import database settings and data",
-    icon: Database,
-  },
-  {
-    id: "admin",
-    title: "Administrative Tools",
-    description: "Dangerous operations for database management",
-    icon: AlertTriangle,
-  },
-];
-
-// Function to get setting label and description
-const getSettingInfo = (
-  setting: AppSetting
-): { label: string; description: string } => {
-  const settingInfoMap: Record<
-    string,
-    { label: string; description?: string }
-  > = {
-    PLEX_SERVER_IP: {
-      label: "Plex server IP address",
-      description: "IP address or hostname of your Plex Media Server",
-    },
-    PLEX_SERVER_PORT: {
-      label: "Plex server port",
-      description: "Port number for connecting to Plex (default: 32400)",
-    },
-    PLEX_TOKEN: {
-      label: "Authentication token",
-      description: "Plex authentication token for secure API access",
-    },
-    USE_SSL: {
-      label: "Enable SSL",
-      description: "Use HTTPS instead of HTTP for Plex server connections",
-    },
-    IGNORE_CERT_ERRORS: {
-      label: "Ignore SSL certificate errors",
-      description:
-        "Skip SSL certificate validation (not recommended for production)",
-    },
-    PLEXGUARD_REFRESH_INTERVAL: {
-      label: "Refresh interval",
-      description:
-        "How often to check for active sessions and enforce policies (seconds)",
-    },
-    MSG_DEVICE_PENDING: {
-      label: "Device pending approval message",
-      description: "Message displayed when a device is waiting for approval",
-    },
-    MSG_DEVICE_REJECTED: {
-      label: "Device rejected message",
-      description: "Message displayed when a device has been rejected",
-    },
-    MSG_IP_LAN_ONLY: {
-      label: "LAN-only access message",
-      description: "Message displayed when only LAN access is allowed",
-    },
-    MSG_IP_WAN_ONLY: {
-      label: "WAN-only access message",
-      description: "Message displayed when only WAN access is allowed",
-    },
-    MSG_IP_NOT_ALLOWED: {
-      label: "IP not allowed message",
-      description:
-        "Message displayed when the IP address is not in the allowed list",
-    },
-    MSG_TIME_RESTRICTED: {
-      label: "Time restriction message",
-      description: "Message displayed when access is blocked due to time rules",
-    },
-    PLEX_GUARD_DEFAULT_BLOCK: {
-      label: "Default behavior for new devices",
-      description:
-        "Whether new devices should be blocked by default until manually approved",
-    },
-    DEVICE_CLEANUP_ENABLED: {
-      label: "Automatic device cleanup",
-      description:
-        "When enabled, devices that haven't streamed for the specified number of days will be automatically deleted and require approval again.",
-    },
-    DEVICE_CLEANUP_INTERVAL_DAYS: {
-      label: "Device inactivity threshold (days)",
-      description:
-        "Number of days a device can be inactive before it's automatically deleted.",
-    },
-    ENABLE_MEDIA_THUMBNAILS: {
-      label: "Show media thumbnails",
-      description: "Display thumbnails for active streams",
-    },
-    ENABLE_MEDIA_ARTWORK: {
-      label: "Show background artwork",
-      description: "Display background artwork for active streams",
-    },
-    CUSTOM_PLEX_URL: {
-      label: "Custom Plex web URL",
-      description:
-        "Custom URL for opening Plex content (e.g., https://app.plex.tv). Leave empty to use configured server settings.",
-    },
-    TIMEZONE: {
-      label: "Timezone",
-      description:
-        "Set the timezone for scheduling and time-based restrictions.",
-    },
-    DEFAULT_PAGE: {
-      label: "Default page on startup",
-      description: "Choose which page to display when the app loads",
-    },
-    AUTO_CHECK_UPDATES: {
-      label: "Automatic update checking",
-      description: "Automatically check for new releases when you open the app",
-    },
-    AUTO_MARK_NOTIFICATION_READ: {
-      label: "Auto-mark notifications as read",
-      description:
-        "Automatically mark notifications as read when you click on them (app only)",
-    },
-    SMTP_ENABLED: {
-      label: "Enable email notifications",
-      description: "Enable sending notifications via email using SMTP",
-    },
-    SMTP_HOST: {
-      label: "SMTP server host",
-      description:
-        "Hostname or IP address of your SMTP server (e.g., smtp.gmail.com)",
-    },
-    SMTP_PORT: {
-      label: "SMTP server port",
-      description:
-        "Port number for SMTP connection (common ports: 587 for TLS, 465 for SSL, 25 for unencrypted)",
-    },
-    SMTP_USER: {
-      label: "SMTP username",
-      description:
-        "Username for SMTP authentication (usually your email address)",
-    },
-    SMTP_PASSWORD: {
-      label: "SMTP password",
-      description: "Password or app-specific password for SMTP authentication",
-    },
-    SMTP_FROM_EMAIL: {
-      label: "From email address",
-      description: "Email address that notifications will be sent from",
-    },
-    SMTP_TO_EMAILS: {
-      label: "To email addresses",
-      description:
-        "Email addresses to send notifications to (separate multiple addresses with commas, semicolons, or new lines)",
-    },
-    SMTP_FROM_NAME: {
-      label: "From display name",
-      description:
-        "Display name that will appear as the sender (e.g., Guardian Notifications)",
-    },
-    SMTP_USE_TLS: {
-      label: "Use TLS encryption",
-      description:
-        "Enable TLS/STARTTLS encryption for secure email transmission",
-    },
-    SMTP_NOTIFY_ON_NOTIFICATIONS: {
-      label: "Email notifications for events",
-      description:
-        "Send email notifications when new events occur (device approvals, rejections, etc.)",
-    },
-  };
-
-  const info = settingInfoMap[setting.key];
-  const label =
-    info?.label ||
-    setting.key
-      .replace(/_/g, " ")
-      .toLowerCase()
-      .replace(/\b\w/g, (l) => l.toUpperCase());
-  const description = info?.description || "";
-
-  return { label, description };
-};
-
-export function Settings({ onBack }: { onBack?: () => void } = {}) {
-  const [activeSection, setActiveSection] = useState("guardian");
-  const [formData, setFormData] = useState<SettingsFormData>({});
-  const [saving, setSaving] = useState(false);
-  const [testingConnection, setTestingConnection] = useState(false);
-  const [exportingDatabase, setExportingDatabase] = useState(false);
-  const [importingDatabase, setImportingDatabase] = useState(false);
-  const { settings, loading, error, refreshSettings, updateSettings } =
-    useSettings();
-  const {
-    versionInfo,
-    updateInfo,
-    refreshVersionInfo,
-    checkForUpdatesIfEnabled,
-    checkForUpdatesManually,
-  } = useVersion();
-  const [checkingUpdates, setCheckingUpdates] = useState(false);
-  const [showVersionMismatchModal, setShowVersionMismatchModal] =
-    useState(false);
-  const [pendingImportFile, setPendingImportFile] = useState<File | null>(null);
-  const [versionMismatchInfo, setVersionMismatchInfo] = useState<{
-    currentVersion: string;
-    importVersion: string;
-  } | null>(null);
-  const [connectionStatus, setConnectionStatus] = useState<{
-    success: boolean;
-    message: string;
-  } | null>(null);
-  const [testingSMTPConnection, setTestingSMTPConnection] = useState(false);
-  const [smtpConnectionStatus, setSMTPConnectionStatus] = useState<{
-    success: boolean;
-    message: string;
-  } | null>(null);
-
-  // Admin tools state
-  const [resettingDatabase, setResettingDatabase] = useState(false);
-  const [resettingStreamCounts, setResettingStreamCounts] = useState(false);
-  const [deletingAllDevices, setDeletingAllDevices] = useState(false);
-  const [showResetDatabaseModal, setShowResetDatabaseModal] = useState(false);
-  const [showResetStreamCountsModal, setShowResetStreamCountsModal] =
-    useState(false);
-  const [showDeleteAllDevicesModal, setShowDeleteAllDevicesModal] =
-    useState(false);
-  const [clearingSessionHistory, setClearingSessionHistory] = useState(false);
-  const [showClearSessionHistoryModal, setShowClearSessionHistoryModal] =
-    useState(false);
-  const [showUnsavedChangesModal, setShowUnsavedChangesModal] = useState(false);
-
+export default function Settings({ onBack }: SettingsProps) {
   const { toast } = useToast();
+  const { settings, loading, refreshSettings } = useSettings();
+  const { versionInfo } = useVersion();
 
-  // Initialize form data when settings are loaded
+  const [formData, setFormData] = useState<SettingsFormData>({});
+  const [isSaving, setIsSaving] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [activeTab, setActiveTab] = useState("plex");
+
+  // Initialize form data when settings load
   useEffect(() => {
-    initializeFormData();
+    if (settings && settings.length > 0) {
+      const initialData: SettingsFormData = {};
+      settings.forEach((setting) => {
+        initialData[setting.key] = setting.value;
+      });
+      setFormData(initialData);
+    }
   }, [settings]);
 
-  // Check for updates automatically when settings page loads
+  // Track unsaved changes
   useEffect(() => {
-    checkForUpdatesIfEnabled();
-  }, []);
-
-  // Also check when versionInfo becomes available
-  useEffect(() => {
-    if (versionInfo?.version) {
-      checkForUpdatesIfEnabled();
-    }
-  }, [versionInfo?.version, checkForUpdatesIfEnabled]);
-
-  const checkForUpdates = async () => {
-    if (!versionInfo?.version) return;
-
-    setCheckingUpdates(true);
-    try {
-      const result = await checkForUpdatesManually();
-
-      if (result) {
-        if (result.hasUpdate) {
-          // Show update available message
-          toast({
-            title: "Update available!",
-            description: `A new version (v${result.latestVersion}) is available. Check the banner above.`,
-            variant: "success",
-          });
-        } else {
-          // Show up-to-date message
-          toast({
-            title: "You're up to date!",
-            description: `Guardian v${result.currentVersion} is the latest version.`,
-            variant: "success",
-          });
-        }
-      } else {
-        toast({
-          title: "Update check failed",
-          description:
-            "Unable to check for updates. You may be rate limited by GitHub. Please slow down your requests and try again later.",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      console.error("Failed to check for updates:", error);
-      toast({
-        title: "Update check failed",
-        description:
-          "Unable to check for updates. Please check your internet connection.",
-        variant: "destructive",
+    if (settings && settings.length > 0) {
+      const hasChanges = settings.some((setting) => {
+        const currentValue = formData[setting.key];
+        return currentValue !== undefined && currentValue !== setting.value;
       });
-    } finally {
-      setCheckingUpdates(false);
+      setHasUnsavedChanges(hasChanges);
     }
-  };
+  }, [formData, settings]);
 
-  const initializeFormData = () => {
-    if (settings.length > 0) {
-      const initialFormData: SettingsFormData = {};
-      settings.forEach((setting: AppSetting) => {
-        if (setting.type === "boolean") {
-          initialFormData[setting.key] = setting.value === "true";
-        } else if (setting.type === "number") {
-          initialFormData[setting.key] = parseFloat(setting.value);
-        } else {
-          initialFormData[setting.key] = setting.private ? "" : setting.value;
+  const handleFormDataChange = (updates: Partial<SettingsFormData>) => {
+    setFormData((prev) => {
+      const updated = { ...prev };
+      Object.entries(updates).forEach(([key, value]) => {
+        if (value !== undefined) {
+          updated[key] = value;
         }
       });
-      setFormData(initialFormData);
-    }
-  };
-
-  const handleInputChange = (key: string, value: string | boolean | number) => {
-    setFormData((prev) => ({ ...prev, [key]: value }));
-  };
-
-  const validateSettings = (
-    settingsToUpdate: { key: string; value: any }[]
-  ) => {
-    const errors: string[] = [];
-
-    // Check if SMTP is being enabled in this update
-    const smtpEnabledUpdate = settingsToUpdate.find(
-      (s) => s.key === "SMTP_ENABLED"
-    );
-    const isSMTPEnabled = smtpEnabledUpdate
-      ? smtpEnabledUpdate.value
-      : Boolean(formData["SMTP_ENABLED"]);
-
-    for (const setting of settingsToUpdate) {
-      switch (setting.key) {
-        case "PLEX_SERVER_PORT":
-          const port = Number(setting.value);
-          if (isNaN(port) || port < 1 || port > 65535) {
-            errors.push("Port must be a number between 1 and 65535");
-          }
-          break;
-        case "PLEXGUARD_REFRESH_INTERVAL":
-          const interval = Number(setting.value);
-          if (isNaN(interval) || interval < 1) {
-            errors.push("Refresh interval must be a positive number");
-          }
-          break;
-        case "PLEX_SERVER_IP":
-          if (!setting.value || setting.value.trim().length === 0) {
-            errors.push("Plex server IP is required");
-          }
-          break;
-        case "PLEX_TOKEN":
-          if (!setting.value || setting.value.trim().length === 0) {
-            errors.push("Plex token is required");
-          }
-          break;
-        case "DEVICE_CLEANUP_INTERVAL_DAYS":
-          const cleanupDays = Number(setting.value);
-          if (isNaN(cleanupDays)) {
-            errors.push("Device cleanup interval must be a number");
-          } else if (!Number.isInteger(cleanupDays)) {
-            errors.push(
-              "Device cleanup interval must be a whole number (no decimals)"
-            );
-          } else if (cleanupDays < 1) {
-            errors.push("Device cleanup interval must be at least 1 day");
-          }
-          break;
-        case "DEFAULT_PAGE":
-          const validPages = ["devices", "streams"];
-          if (!validPages.includes(String(setting.value))) {
-            errors.push('Default page must be either "devices" or "streams"');
-          }
-          break;
-        case "AUTO_CHECK_UPDATES":
-          if (typeof setting.value !== "boolean") {
-            errors.push("Auto check updates must be a boolean value");
-          }
-          break;
-        case "AUTO_MARK_NOTIFICATION_READ":
-          if (typeof setting.value !== "boolean") {
-            errors.push("Auto mark notification read must be a boolean value");
-          }
-          break;
-        case "CUSTOM_PLEX_URL":
-          if (setting.value && setting.value.trim().length > 0) {
-            const urlValue = setting.value.trim();
-
-            // Check if it starts with http:// or https://
-            if (
-              !urlValue.startsWith("http://") &&
-              !urlValue.startsWith("https://")
-            ) {
-              errors.push(
-                "Custom Plex URL must start with http:// or https://"
-              );
-              break;
-            }
-
-            // Try to parse as URL to validate format
-            try {
-              const url = new URL(urlValue);
-
-              // Check domain validity
-              const hostParts = url.hostname.split(".");
-              const hasValidDomain =
-                hostParts.length >= 2 &&
-                hostParts.every((part) => part.length > 0) &&
-                url.hostname.includes(".");
-
-              if (!hasValidDomain) {
-                errors.push(
-                  "Custom Plex URL must contain a valid domain with extension (e.g., plex.example.com)"
-                );
-              }
-            } catch (error) {
-              errors.push(
-                "Custom Plex URL must be a valid URL format (e.g., https://app.plex.tv)"
-              );
-            }
-          }
-          break;
-        case "SMTP_ENABLED":
-          if (typeof setting.value !== "boolean") {
-            errors.push("SMTP enabled must be a boolean value");
-          }
-          break;
-        case "SMTP_HOST":
-          // Only validate if SMTP is enabled
-          if (
-            isSMTPEnabled &&
-            (!setting.value || setting.value.trim().length === 0)
-          ) {
-            errors.push(
-              "SMTP host is required when email notifications are enabled"
-            );
-          }
-          break;
-        case "SMTP_PORT":
-          // Only validate if SMTP is enabled or if a value is provided
-          if (setting.value && setting.value !== "") {
-            const smtpPort = Number(setting.value);
-            if (isNaN(smtpPort) || smtpPort < 1 || smtpPort > 65535) {
-              errors.push("SMTP port must be a number between 1 and 65535");
-            }
-          } else if (isSMTPEnabled) {
-            errors.push(
-              "SMTP port is required when email notifications are enabled"
-            );
-          }
-          break;
-        case "SMTP_USER":
-          if (
-            isSMTPEnabled &&
-            (!setting.value || setting.value.trim().length === 0)
-          ) {
-            errors.push(
-              "SMTP username is required when email notifications are enabled"
-            );
-          }
-          break;
-        case "SMTP_PASSWORD":
-          if (
-            isSMTPEnabled &&
-            (!setting.value || setting.value.trim().length === 0)
-          ) {
-            errors.push(
-              "SMTP password is required when email notifications are enabled"
-            );
-          }
-          break;
-        case "SMTP_FROM_EMAIL":
-          if (isSMTPEnabled) {
-            if (!setting.value || setting.value.trim().length === 0) {
-              errors.push(
-                "From email address is required when email notifications are enabled"
-              );
-            } else {
-              // Basic email validation
-              const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-              if (!emailRegex.test(setting.value.trim())) {
-                errors.push("From email address must be a valid email format");
-              }
-            }
-          }
-          break;
-        case "SMTP_FROM_NAME":
-          if (
-            isSMTPEnabled &&
-            (!setting.value || setting.value.trim().length === 0)
-          ) {
-            errors.push(
-              "From display name is required when email notifications are enabled"
-            );
-          }
-          break;
-        case "SMTP_USE_TLS":
-          if (typeof setting.value !== "boolean") {
-            errors.push("SMTP TLS setting must be a boolean value");
-          }
-          break;
-        case "SMTP_NOTIFY_ON_NOTIFICATIONS":
-          if (typeof setting.value !== "boolean") {
-            errors.push("SMTP notify on notifications must be a boolean value");
-          }
-          break;
-        default:
-          //console.warn(`No validation rules for setting: ${setting.key}`);
-          break;
-      }
-    }
-
-    return errors;
+      return updated;
+    });
   };
 
   const handleSave = async () => {
-    setSaving(true);
+    if (!hasUnsavedChanges) {
+      toast({
+        title: "No Changes",
+        description: "There are no changes to save.",
+      });
+      return;
+    }
+
+    setIsSaving(true);
+
     try {
-      const settingsToUpdate = Object.entries(formData)
-        .filter(([key, value]) => {
-          // Only include changed values
-          const originalSetting = settings.find((s) => s.key === key);
-          if (!originalSetting) return false;
-
-          let originalValue: any = originalSetting.value;
-          if (originalSetting.type === "boolean") {
-            originalValue = originalValue === "true";
-          } else if (originalSetting.type === "number") {
-            originalValue = parseFloat(originalValue);
-          }
-
-          return (
-            value !== originalValue &&
-            !(originalSetting.private && value === "")
-          );
+      // Prepare the data to send
+      const changedSettings = settings
+        ?.filter((setting) => {
+          const newValue = formData[setting.key];
+          return newValue !== undefined && newValue !== setting.value;
         })
-        .map(([key, value]) => ({ key, value }));
+        .map((setting) => ({
+          key: setting.key,
+          value: String(formData[setting.key]),
+          type: setting.type,
+        }));
 
-      if (settingsToUpdate.length === 0) {
-        return;
-      }
-
-      // Validate settings
-      const validationErrors = validateSettings(settingsToUpdate);
-      if (validationErrors.length > 0) {
+      if (!changedSettings || changedSettings.length === 0) {
         toast({
-          title: "Error saving settings",
-          description: validationErrors.join("; \n"),
-          variant: "destructive",
+          title: "No Changes",
+          description: "There are no changes to save.",
         });
         return;
       }
@@ -621,1956 +122,234 @@ export function Settings({ onBack }: { onBack?: () => void } = {}) {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(settingsToUpdate),
+        body: JSON.stringify(changedSettings),
       });
 
-      if (response.ok) {
-        const updatedFormData = { ...formData };
-        settingsToUpdate.forEach(({ key, value }) => {
-          updatedFormData[key] = value;
-        });
-        setFormData(updatedFormData);
-
-        // Update the settings context with the new values
-        updateSettings(settingsToUpdate);
-
-        // Dispatch event to notify notification handler of settings change
-        window.dispatchEvent(
-          new CustomEvent("settingsUpdated", { detail: settingsToUpdate })
-        );
-
-        // Show success toast
-        toast({
-          title: "Settings saved",
-          description: `Successfully updated ${settingsToUpdate.length} setting${settingsToUpdate.length !== 1 ? "s" : ""}`,
-          variant: "success",
-        });
-
-        // Clear connection status after saving settings
-        setConnectionStatus(null);
-        setSMTPConnectionStatus(null);
-      } else {
-        // Handle save error
-        const errorData = await response.json().catch(() => ({}));
-        const errorMessage =
-          errorData.error || `Server error (${response.status})`;
-        toast({
-          title: "Failed to save settings",
-          description: errorMessage,
-          variant: "destructive",
-        });
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || "Failed to save settings");
       }
-    } catch (error) {
-      console.error("Failed to save settings:", error);
-      toast({
-        title: "Network Error",
-        description: "Failed to save settings. Please check your connection.",
-        variant: "destructive",
-      });
-    } finally {
-      setSaving(false);
-    }
-  };
 
-  const handleTestConnection = async () => {
-    // Check if there are pending Plex settings changes
-    if (hasPlexChanges()) {
+      await refreshSettings();
+
       toast({
-        title: "Pending Changes Detected",
+        title: "Settings Saved",
+        description: `Successfully updated ${changedSettings.length} setting(s).`,
+      });
+
+      setHasUnsavedChanges(false);
+    } catch (error) {
+      console.error("Error saving settings:", error);
+      toast({
+        title: "Error",
         description:
-          "Please save your Plex settings before testing the connection to ensure accurate results.",
-        variant: "warning",
-      });
-      return;
-    }
-
-    setTestingConnection(true);
-    try {
-      const response = await fetch(
-        `${config.api.baseUrl}/config/test-plex-connection`,
-        {
-          method: "POST",
-        }
-      );
-
-      if (response.ok) {
-        const result = await response.json();
-        setConnectionStatus(result);
-      } else {
-        // Try to get the error message from the response
-        const errorData = await response.json().catch(() => ({}));
-        const errorMessage =
-          errorData.message || `Server error (${response.status})`;
-        setConnectionStatus({
-          success: false,
-          message: errorMessage,
-        });
-      }
-    } catch (error) {
-      const errorMessage = "Failed to test connection - unable to reach server";
-      setConnectionStatus({
-        success: false,
-        message: errorMessage,
-      });
-
-      // Only show toast if it's a network/backend error (unable to reach server)
-      toast({
-        title: "Network Error",
-        description: errorMessage,
+          error instanceof Error ? error.message : "Failed to save settings",
         variant: "destructive",
       });
     } finally {
-      setTestingConnection(false);
+      setIsSaving(false);
     }
   };
 
-  const handleTestSMTPConnection = async () => {
-    // Check if there are pending SMTP settings changes
-    if (hasSMTPChanges()) {
-      toast({
-        title: "Pending Changes Detected",
-        description:
-          "Please save your SMTP settings before testing the connection to ensure accurate results.",
-        variant: "warning",
-      });
-      return;
-    }
-
-    setTestingSMTPConnection(true);
-    try {
-      const response = await fetch(
-        `${config.api.baseUrl}/config/test-smtp-connection`,
-        {
-          method: "POST",
-        }
-      );
-
-      if (response.ok) {
-        const result = await response.json();
-        setSMTPConnectionStatus(result);
-      } else {
-        // Try to get the error message from the response
-        const errorData = await response.json().catch(() => ({}));
-        const errorMessage =
-          errorData.message || `Server error (${response.status})`;
-        setSMTPConnectionStatus({
-          success: false,
-          message: errorMessage,
-        });
-      }
-    } catch (error) {
-      const errorMessage =
-        "Failed to test SMTP connection - unable to reach server";
-      setSMTPConnectionStatus({
-        success: false,
-        message: errorMessage,
-      });
-
-      // Only show toast if it's a network/backend error (unable to reach server)
-      toast({
-        title: "Network Error",
-        description: errorMessage,
-        variant: "destructive",
-      });
-    } finally {
-      setTestingSMTPConnection(false);
+  const getTabIcon = (tabId: string) => {
+    switch (tabId) {
+      case "plex":
+        return Server;
+      case "smtp":
+        return Mail;
+      case "database":
+        return Database;
+      case "guardian":
+        return SettingsIcon;
+      case "customization":
+        return Palette;
+      case "notifications":
+        return Bell;
+      case "admin":
+        return Wrench;
+      default:
+        return SettingsIcon;
     }
   };
 
-  const handleExportDatabase = async () => {
-    setExportingDatabase(true);
-    try {
-      const response = await fetch(
-        `${config.api.baseUrl}/config/database/export`
-      );
-
-      if (response.ok) {
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `guardian-backup-${new Date().toISOString().replace(/[:.]/g, "-")}.json`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
-
-        toast({
-          title: "Export successful",
-          description: "Database backup downloaded successfully",
-          variant: "success",
-        });
-      } else {
-        const errorData = await response.json().catch(() => ({}));
-        toast({
-          title: "Export failed",
-          description: errorData.message || `Server error (${response.status})`,
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      toast({
-        title: "Network Error",
-        description: "Failed to export database. Please check your connection.",
-        variant: "destructive",
-      });
-    } finally {
-      setExportingDatabase(false);
-    }
-  };
-
-  const handleImportDatabase = async (file: File) => {
-    try {
-      // Read and validate the file
-      const fileContent = await file.text();
-      let importData;
-
-      try {
-        importData = JSON.parse(fileContent);
-      } catch (parseError) {
-        toast({
-          title: "Invalid file",
-          description: "The selected file is not a valid JSON file",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Check version compatibility
-      const importVersion = importData.version;
-      const currentVersion = versionInfo?.version;
-
-      if (importVersion && currentVersion && importVersion !== currentVersion) {
-        // Show modal instead of native confirm - with a small delay to ensure file dialog closes
-        setTimeout(() => {
-          setPendingImportFile(file);
-          setVersionMismatchInfo({
-            currentVersion,
-            importVersion,
-          });
-          setShowVersionMismatchModal(true);
-        }, 100);
-        return;
-      }
-
-      // Proceed with import if no version mismatch
-      setImportingDatabase(true);
-      await performDatabaseImport(file);
-    } catch (error) {
-      toast({
-        title: "Network Error",
-        description: "Failed to import database. Please check your connection.",
-        variant: "destructive",
-      });
-    } finally {
-      setImportingDatabase(false);
-    }
-  };
-
-  const performDatabaseImport = async (file: File) => {
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-
-      const response = await fetch(
-        `${config.api.baseUrl}/config/database/import`,
-        {
-          method: "POST",
-          body: formData,
-        }
-      );
-
-      if (response.ok) {
-        const result = await response.json();
-        const importData = JSON.parse(await file.text());
-        const importVersion = importData.version;
-        const currentVersion = versionInfo?.version;
-
-        const successMessage = `Successfully imported ${result.imported.imported} items, ${result.imported.skipped} items skipped`;
-        const versionMessage =
-          importVersion && currentVersion !== importVersion
-            ? ` (Version: ${importVersion} → ${currentVersion})`
-            : "";
-
-        toast({
-          title: "Import successful",
-          description: successMessage + versionMessage,
-          variant: "success",
-        });
-
-        // Refresh settings and version info after import
-        await refreshSettings();
-        await refreshVersionInfo();
-      } else {
-        const errorData = await response.json().catch(() => ({}));
-        toast({
-          title: "Import failed",
-          description: errorData.message || `Server error (${response.status})`,
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      toast({
-        title: "Network Error",
-        description: "Failed to import database. Please check your connection.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleVersionMismatchConfirm = async () => {
-    if (pendingImportFile) {
-      // Close modal first
-      setShowVersionMismatchModal(false);
-      setImportingDatabase(true);
-      await performDatabaseImport(pendingImportFile);
-      setImportingDatabase(false);
-      setPendingImportFile(null);
-      setVersionMismatchInfo(null);
-    }
-  };
-
-  const handleVersionMismatchCancel = () => {
-    // Close modal first
-    setShowVersionMismatchModal(false);
-    setPendingImportFile(null);
-    setVersionMismatchInfo(null);
-    setImportingDatabase(false);
-    toast({
-      title: "Import cancelled",
-      description: "Import was cancelled due to version mismatch",
-      variant: "destructive",
-    });
-  };
-
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    // Reset the input value immediately to close the file dialog
-    event.target.value = "";
-
-    if (file) {
-      if (file.type === "application/json" || file.name.endsWith(".json")) {
-        handleImportDatabase(file);
-      } else {
-        toast({
-          title: "Invalid file type",
-          description: "Please select a JSON file for import",
-          variant: "destructive",
-        });
-      }
-    }
-  };
-
-  // Admin tools handlers
-  const handleResetDatabase = async () => {
-    setResettingDatabase(true);
-    try {
-      const response = await fetch(
-        `${config.api.baseUrl}/config/scripts/reset-database`,
-        {
-          method: "POST",
-        }
-      );
-
-      if (response.ok) {
-        toast({
-          title: "Database reset successfully",
-          description:
-            "All data has been cleared and default settings restored",
-          variant: "success",
-        });
-        // Refresh settings after reset
-        await refreshSettings();
-      } else {
-        throw new Error("Failed to reset database");
-      }
-    } catch (error) {
-      toast({
-        title: "Failed to reset database",
-        description:
-          error instanceof Error ? error.message : "Unknown error occurred",
-        variant: "destructive",
-      });
-    } finally {
-      setResettingDatabase(false);
-      setShowResetDatabaseModal(false);
-    }
-  };
-
-  const handleResetStreamCounts = async () => {
-    setResettingStreamCounts(true);
-    try {
-      const response = await fetch(
-        `${config.api.baseUrl}/config/scripts/reset-stream-counts`,
-        {
-          method: "POST",
-        }
-      );
-
-      if (response.ok) {
-        toast({
-          title: "Stream counts reset successfully",
-          description: "All device stream counts have been reset to zero",
-          variant: "success",
-        });
-      } else {
-        throw new Error("Failed to reset stream counts");
-      }
-    } catch (error) {
-      toast({
-        title: "Failed to reset stream counts",
-        description:
-          error instanceof Error ? error.message : "Unknown error occurred",
-        variant: "destructive",
-      });
-    } finally {
-      setResettingStreamCounts(false);
-      setShowResetStreamCountsModal(false);
-    }
-  };
-
-  const handleDeleteAllDevices = async () => {
-    setDeletingAllDevices(true);
-    try {
-      const response = await fetch(
-        `${config.api.baseUrl}/config/scripts/delete-all-devices`,
-        {
-          method: "POST",
-        }
-      );
-
-      if (response.ok) {
-        toast({
-          title: "All devices deleted successfully",
-          description: "All device records have been removed from the database",
-          variant: "success",
-        });
-      } else {
-        throw new Error("Failed to delete all devices");
-      }
-    } catch (error) {
-      toast({
-        title: "Failed to delete all devices",
-        description:
-          error instanceof Error ? error.message : "Unknown error occurred",
-        variant: "destructive",
-      });
-    } finally {
-      setDeletingAllDevices(false);
-      setShowDeleteAllDevicesModal(false);
-    }
-  };
-
-  const handleClearSessionHistory = async () => {
-    setClearingSessionHistory(true);
-    try {
-      const response = await fetch(
-        `${config.api.baseUrl}/config/scripts/clear-session-history`,
-        {
-          method: "POST",
-        }
-      );
-
-      if (response.ok) {
-        toast({
-          title: "Session history cleared successfully",
-          description:
-            "All session history records have been removed from the database",
-          variant: "success",
-        });
-      } else {
-        throw new Error("Failed to clear session history");
-      }
-    } catch (error) {
-      toast({
-        title: "Failed to clear session history",
-        description:
-          error instanceof Error ? error.message : "Unknown error occurred",
-        variant: "destructive",
-      });
-    } finally {
-      setClearingSessionHistory(false);
-      setShowClearSessionHistoryModal(false);
-    }
-  };
-
-  const getSettingsByCategory = (category: string) => {
-    const categoryMap: Record<string, string[]> = {
-      plex: ["PLEX_TOKEN", "PLEX_SERVER_IP", "PLEX_SERVER_PORT", "USE_SSL"],
-      guardian: [
-        "AUTO_CHECK_UPDATES",
-        "PLEX_GUARD_DEFAULT_BLOCK",
-        "PLEXGUARD_REFRESH_INTERVAL",
-        "TIMEZONE",
-      ],
-      customization: [
-        "ENABLE_MEDIA_THUMBNAILS",
-        "ENABLE_MEDIA_ARTWORK",
-        "CUSTOM_PLEX_URL",
-        "DEFAULT_PAGE",
-        "MSG_DEVICE_PENDING",
-        "MSG_DEVICE_REJECTED",
-        "MSG_IP_LAN_ONLY",
-        "MSG_IP_WAN_ONLY",
-        "MSG_IP_NOT_ALLOWED",
-        "MSG_TIME_RESTRICTED",
-      ],
-      notifications: [
-        "AUTO_MARK_NOTIFICATION_READ",
-        "SMTP_NOTIFY_ON_NOTIFICATIONS",
-        "SMTP_ENABLED",
-        "SMTP_HOST",
-        "SMTP_PORT",
-        "SMTP_USER",
-        "SMTP_PASSWORD",
-        "SMTP_FROM_EMAIL",
-        "SMTP_TO_EMAILS",
-        "SMTP_FROM_NAME",
-        "SMTP_USE_TLS",
-      ],
-    };
-
-    const filteredSettings = settings.filter(
-      (setting) => categoryMap[category]?.includes(setting.key) || false
-    );
-
-    // Sort settings according to the order defined in categoryMap
-    const categoryKeys = categoryMap[category] || [];
-    return filteredSettings.sort((a, b) => {
-      const aIndex = categoryKeys.indexOf(a.key);
-      const bIndex = categoryKeys.indexOf(b.key);
-      return aIndex - bIndex;
-    });
-  };
-
-  const renderSettingField = (setting: AppSetting) => {
-    const value = formData[setting.key];
-    const { label, description } = getSettingInfo(setting);
-
-    if (setting.type === "boolean") {
-      return (
-        <div className="flex items-center justify-between">
-          <div className="space-y-0.5">
-            <Label>{label}</Label>
-            <p className="text-xs text-muted-foreground">{description}</p>
-          </div>
-          <Switch
-            checked={Boolean(value)}
-            onCheckedChange={(checked) =>
-              handleInputChange(setting.key, checked)
-            }
-            className="cursor-pointer"
-          />
-        </div>
-      );
-    }
-
-    // Special handling for DEFAULT_PAGE setting
-    if (setting.key === "DEFAULT_PAGE") {
-      const options = [
-        { value: "devices", label: "Device Management", icon: Shield },
-        { value: "streams", label: "Active Streams", icon: Activity },
-      ];
-
-      return (
-        <div className="space-y-2">
-          <Label>{label}</Label>
-          <div className="relative">
-            <select
-              value={String(value || "devices")}
-              onChange={(e) => handleInputChange(setting.key, e.target.value)}
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 pr-8 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 appearance-none cursor-pointer"
-            >
-              {options.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-            <ChevronDown className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-          </div>
-          <p className="text-xs text-muted-foreground">{description}</p>
-        </div>
-      );
-    }
-
-    if (setting.key === "TIMEZONE") {
-      // Generate timezone options with UTC offsets and current time
-      const generateTimezoneOptions = () => {
-        const timezones = [];
-        const now = new Date();
-
-        // Generate UTC offsets from -12 to +14
-        for (let offset = -12; offset <= 14; offset++) {
-          const offsetHours = offset;
-
-          // Calculate current time for this offset
-          const utcTime = new Date(
-            now.getTime() + now.getTimezoneOffset() * 60000
-          );
-          const timezoneTime = new Date(
-            utcTime.getTime() + offsetHours * 3600000
-          );
-          const timeString = timezoneTime.toLocaleTimeString("en-US", {
-            hour12: false,
-            hour: "2-digit",
-            minute: "2-digit",
-          });
-
-          // Format offset string
-          const offsetString =
-            offset >= 0
-              ? `+${offset.toString().padStart(2, "0")}:00`
-              : `-${Math.abs(offset).toString().padStart(2, "0")}:00`;
-          const value = offsetString;
-          const label = `UTC${offsetString} (${timeString})`;
-
-          timezones.push({ value, label });
-        }
-
-        // Sort by offset value
-        timezones.sort((a, b) => {
-          const parseOffset = (offset: string) => {
-            const [hours, minutes] = offset
-              .replace("UTC", "")
-              .split(":")
-              .map(Number);
-            return hours + minutes / 60;
-          };
-          return parseOffset(a.value) - parseOffset(b.value);
-        });
-
-        return timezones;
-      };
-
-      const timezoneOptions = generateTimezoneOptions();
-
-      return (
-        <div className="space-y-2">
-          <Label>{label}</Label>
-          <div className="relative">
-            <select
-              value={String(value || "+00:00")}
-              onChange={(e) => handleInputChange(setting.key, e.target.value)}
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 pr-8 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 appearance-none cursor-pointer"
-            >
-              {timezoneOptions.map((timezone) => (
-                <option key={timezone.value} value={timezone.value}>
-                  {timezone.label}
-                </option>
-              ))}
-            </select>
-            <ChevronDown className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-          </div>
-          <p className="text-xs text-muted-foreground">{description}</p>
-        </div>
-      );
-    }
-
+  if (loading) {
     return (
-      <div className="space-y-2">
-        <Label>{label}</Label>
-        <Input
-          type={
-            setting.private
-              ? "password"
-              : setting.type === "number"
-                ? "number"
-                : "text"
-          }
-          value={String(value || "")}
-          onChange={(e) => {
-            const newValue =
-              setting.type === "number"
-                ? parseFloat(e.target.value) || 0
-                : e.target.value;
-            handleInputChange(setting.key, newValue);
-          }}
-          placeholder={setting.private && !value ? "••••••••••••••••••••" : ""}
-          className={
-            setting.type === "number"
-              ? "[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-              : ""
-          }
-        />
-        <p className="text-xs text-muted-foreground">{description}</p>
+      <div className="flex items-center justify-center p-8">
+        <Loader2 className="h-8 w-8 animate-spin" />
+        <span className="ml-2">Loading settings...</span>
       </div>
     );
-  };
+  }
 
-  const renderDeviceCleanupSettings = () => {
-    const cleanupEnabledSetting = settings.find(
-      (s) => s.key === "DEVICE_CLEANUP_ENABLED"
-    );
-    const cleanupIntervalSetting = settings.find(
-      (s) => s.key === "DEVICE_CLEANUP_INTERVAL_DAYS"
-    );
-
-    if (!cleanupEnabledSetting || !cleanupIntervalSetting) return null;
-
-    const isCleanupEnabled = Boolean(formData["DEVICE_CLEANUP_ENABLED"]);
-    const { label: enabledLabel, description: enabledDescription } =
-      getSettingInfo(cleanupEnabledSetting);
-    const { label: intervalLabel, description: intervalDescription } =
-      getSettingInfo(cleanupIntervalSetting);
-
+  if (!settings || settings.length === 0) {
     return (
-      <Card className="p-4">
-        <div className="space-y-4">
-          {/* Device Cleanup Enabled Setting */}
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label>{enabledLabel}</Label>
-              <p className="text-xs text-muted-foreground">
-                {enabledDescription}
-              </p>
-            </div>
-            <Switch
-              checked={isCleanupEnabled}
-              onCheckedChange={(checked) =>
-                handleInputChange("DEVICE_CLEANUP_ENABLED", checked)
-              }
-              className="cursor-pointer"
-            />
-          </div>
-
-          {/* Cleanup Interval Setting */}
-          <div
-            className={`ml-4 pl-4 border-l-2 ${isCleanupEnabled ? "border-border" : "border-muted"}`}
-          >
-            <div className="space-y-2">
-              <Label
-                className={!isCleanupEnabled ? "text-muted-foreground" : ""}
-              >
-                {intervalLabel}
-              </Label>
-              <Input
-                type="number"
-                min="1"
-                max="365"
-                step="1"
-                value={String(formData["DEVICE_CLEANUP_INTERVAL_DAYS"] || "")}
-                disabled={!isCleanupEnabled}
-                onChange={(e) => {
-                  const newValue = parseInt(e.target.value, 10);
-                  if (!isNaN(newValue) && newValue > 0) {
-                    handleInputChange("DEVICE_CLEANUP_INTERVAL_DAYS", newValue);
-                  } else if (e.target.value === "") {
-                    handleInputChange("DEVICE_CLEANUP_INTERVAL_DAYS", "");
-                  }
-                }}
-                onKeyDown={(e) => {
-                  // Prevent decimal input
-                  if (e.key === "." || e.key === ",") {
-                    e.preventDefault();
-                  }
-                }}
-                className={`[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${!isCleanupEnabled ? "bg-muted" : ""}`}
-              />
-              <p
-                className={`text-xs ${!isCleanupEnabled ? "text-muted-foreground/60" : "text-muted-foreground"}`}
-              >
-                {intervalDescription}
-              </p>
-            </div>
-          </div>
-        </div>
+      <Card className="mx-auto max-w-2xl">
+        <CardHeader>
+          <CardTitle>Settings Unavailable</CardTitle>
+          <CardDescription>
+            Unable to load application settings. Please try refreshing the page.
+          </CardDescription>
+        </CardHeader>
       </Card>
     );
-  };
+  }
 
-  const renderSMTPSettings = () => {
-    const isSMTPEnabled = Boolean(formData["SMTP_ENABLED"]);
-    const smtpFields = [
-      "SMTP_HOST",
-      "SMTP_PORT",
-      "SMTP_USER",
-      "SMTP_PASSWORD",
-      "SMTP_FROM_EMAIL",
-      "SMTP_TO_EMAILS",
-      "SMTP_FROM_NAME",
-      "SMTP_USE_TLS",
-    ];
-
-    const smtpFieldSettings = settings.filter((setting) =>
-      smtpFields.includes(setting.key)
-    );
-
-    return (
-      <Card className="p-4">
-        <div className="space-y-4">
-          {/* SMTP Enabled Setting */}
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label>Enable email notifications</Label>
-              <p className="text-xs text-muted-foreground">
-                Enable sending notifications via email using SMTP
-              </p>
-            </div>
-            <Switch
-              checked={isSMTPEnabled}
-              onCheckedChange={(checked) =>
-                handleInputChange("SMTP_ENABLED", checked)
-              }
-              className="cursor-pointer"
-            />
-          </div>
-
-          {/* SMTP Configuration Fields - Conditional and indented */}
-          <div
-            className={`ml-4 pl-4 border-l-2 space-y-4 ${isSMTPEnabled ? "border-border" : "border-muted"}`}
-          >
-            {smtpFieldSettings
-              .sort(
-                (a, b) => smtpFields.indexOf(a.key) - smtpFields.indexOf(b.key)
-              )
-              .map((setting) => {
-                const { label, description } = getSettingInfo(setting);
-
-                if (setting.type === "boolean") {
-                  return (
-                    <div
-                      key={setting.key}
-                      className="flex items-center justify-between"
-                    >
-                      <div className="space-y-0.5">
-                        <Label
-                          className={
-                            !isSMTPEnabled ? "text-muted-foreground" : ""
-                          }
-                        >
-                          {label}
-                        </Label>
-                        <p
-                          className={`text-xs ${!isSMTPEnabled ? "text-muted-foreground/60" : "text-muted-foreground"}`}
-                        >
-                          {description}
-                        </p>
-                      </div>
-                      <Switch
-                        checked={Boolean(formData[setting.key])}
-                        disabled={!isSMTPEnabled}
-                        onCheckedChange={(checked) =>
-                          handleInputChange(setting.key, checked)
-                        }
-                        className={!isSMTPEnabled ? "" : "cursor-pointer"}
-                      />
-                    </div>
-                  );
-                }
-
-                return (
-                  <div key={setting.key} className="space-y-2">
-                    <Label
-                      className={!isSMTPEnabled ? "text-muted-foreground" : ""}
-                    >
-                      {label}
-                    </Label>
-                    {setting.key === "SMTP_TO_EMAILS" ? (
-                      <textarea
-                        value={String(formData[setting.key] || "")}
-                        disabled={!isSMTPEnabled}
-                        onChange={(e) => {
-                          handleInputChange(setting.key, e.target.value);
-                        }}
-                        placeholder="user1@example.com, user2@example.com"
-                        rows={3}
-                        className={`flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${!isSMTPEnabled ? "bg-muted" : ""}`}
-                      />
-                    ) : (
-                      <Input
-                        type={
-                          setting.private
-                            ? "password"
-                            : setting.type === "number"
-                              ? "number"
-                              : setting.key === "SMTP_FROM_EMAIL"
-                                ? "email"
-                                : "text"
-                        }
-                        value={String(formData[setting.key] || "")}
-                        disabled={!isSMTPEnabled}
-                        onChange={(e) => {
-                          const newValue =
-                            setting.type === "number"
-                              ? parseFloat(e.target.value) || 0
-                              : e.target.value;
-                          handleInputChange(setting.key, newValue);
-                        }}
-                        placeholder={
-                          setting.private && !formData[setting.key]
-                            ? "••••••••••••••••••••"
-                            : ""
-                        }
-                        className={`${
-                          setting.type === "number"
-                            ? "[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                            : ""
-                        } ${!isSMTPEnabled ? "bg-muted" : ""}`}
-                      />
-                    )}
-                    <p
-                      className={`text-xs ${!isSMTPEnabled ? "text-muted-foreground/60" : "text-muted-foreground"}`}
-                    >
-                      {description}
-                    </p>
-                  </div>
-                );
-              })}
-          </div>
-
-          {/* SMTP Connection Test - Only show when SMTP is enabled */}
-          {isSMTPEnabled && (
-            <div className="ml-4 pl-4 border-l-2 border-border">
-              <div className="space-y-4">
-                <h5 className="text-sm font-medium">Connection Test</h5>
-                {hasSMTPChanges() && (
-                  <div className="flex items-center space-x-2 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-md">
-                    <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-                    <span className="text-sm text-amber-800 dark:text-amber-200">
-                      Save your SMTP settings before testing the connection
-                    </span>
-                  </div>
-                )}
-                <div className="flex items-center space-x-2">
-                  <Button
-                    onClick={handleTestSMTPConnection}
-                    disabled={testingSMTPConnection}
-                    size="sm"
-                    variant="outline"
-                  >
-                    {testingSMTPConnection && (
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    )}
-                    Send Test Email
-                  </Button>
-
-                  {smtpConnectionStatus && (
-                    <div
-                      className={`flex items-center space-x-1 text-sm ${
-                        smtpConnectionStatus.success
-                          ? "text-green-500"
-                          : "text-yellow-600"
-                      }`}
-                    >
-                      {smtpConnectionStatus.success ? (
-                        <MailCheck className="w-4 h-4" />
-                      ) : (
-                        <MailQuestionMark className="w-4 h-4" />
-                      )}
-                      <span>{smtpConnectionStatus.message}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      </Card>
-    );
-  };
-
-  const renderSSLSettings = () => {
-    const useSSLSetting = settings.find((s) => s.key === "USE_SSL");
-    const ignoreCertSetting = settings.find(
-      (s) => s.key === "IGNORE_CERT_ERRORS"
-    );
-
-    if (!useSSLSetting || !ignoreCertSetting) return null;
-
-    const isSSLEnabled = Boolean(formData["USE_SSL"]);
-
-    return (
-      <Card className="p-4">
-        <div className="space-y-4">
-          {/* Use SSL Setting */}
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label>Enable SSL</Label>
-              <p className="text-xs text-muted-foreground">
-                Use HTTPS instead of HTTP for Plex server connections
-              </p>
-            </div>
-            <Switch
-              checked={isSSLEnabled}
-              onCheckedChange={(checked) =>
-                handleInputChange("USE_SSL", checked)
-              }
-              className="cursor-pointer"
-            />
-          </div>
-
-          {/* Ignore Cert Errors Setting - Indented and conditional */}
-          <div
-            className={`ml-4 pl-4 border-l-2 ${isSSLEnabled ? "border-border" : "border-muted"}`}
-          >
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label className={!isSSLEnabled ? "text-muted-foreground" : ""}>
-                  Ignore SSL certificate errors
-                </Label>
-                <p
-                  className={`text-xs ${!isSSLEnabled ? "text-muted-foreground/60" : "text-muted-foreground"}`}
-                >
-                  Skip SSL certificate validation (not recommended with public
-                  domaines or on public networks)
-                </p>
-              </div>
-              <Switch
-                checked={Boolean(formData["IGNORE_CERT_ERRORS"])}
-                disabled={!isSSLEnabled}
-                onCheckedChange={(checked) =>
-                  handleInputChange("IGNORE_CERT_ERRORS", checked)
-                }
-                className={!isSSLEnabled ? "" : "cursor-pointer"}
-              />
-            </div>
-          </div>
-        </div>
-      </Card>
-    );
-  };
-
-  const renderSectionContent = (sectionId: string) => {
-    if (loading) {
-      return (
-        <div className="flex items-center justify-center py-8">
-          <Loader2 className="h-6 w-6 animate-spin" />
-        </div>
-      );
-    }
-
-    switch (sectionId) {
-      case "plex":
-        const plexServerSettings = [
-          "PLEX_SERVER_IP",
-          "PLEX_SERVER_PORT",
-          "PLEX_TOKEN",
-        ];
-
-        const plexServerSettingsData = settings.filter((setting) =>
-          plexServerSettings.includes(setting.key)
-        );
-
-        return (
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-lg font-medium">Plex Server Configuration</h3>
-              <p className="text-sm text-muted-foreground">
-                Configure your connection to the Plex Media Server.
-              </p>
-            </div>
-
-            {/* Server Configuration */}
-            <div className="space-y-4">
-              <div>
-                <h4 className="text-base font-medium text-slate-900 dark:text-slate-100 mb-2">
-                  Server Configuration
-                </h4>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Configure your Plex Media Server connection details.
-                </p>
-              </div>
-              {plexServerSettingsData
-                .sort(
-                  (a, b) =>
-                    plexServerSettings.indexOf(a.key) -
-                    plexServerSettings.indexOf(b.key)
-                )
-                .map((setting) => (
-                  <Card key={setting.key} className="p-4">
-                    {renderSettingField(setting)}
-                  </Card>
-                ))}
-
-              {/* SSL Settings Group */}
-              {renderSSLSettings()}
-            </div>
-
-            {/* Connection Test */}
-            <div className="space-y-4">
-              <div>
-                <h4 className="text-base font-medium text-slate-900 dark:text-slate-100 mb-2">
-                  Connection Test
-                </h4>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Test your Plex server connection to verify the configuration.
-                </p>
-              </div>
-              <Card className="p-4">
-                <div className="space-y-4">
-                  {hasPlexChanges() && (
-                    <div className="flex items-center space-x-2 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-md">
-                      <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-                      <span className="text-sm text-amber-800 dark:text-amber-200">
-                        Save your Plex settings before testing the connection
-                      </span>
-                    </div>
-                  )}
-                  <div className="flex items-center space-x-2">
-                    <Button
-                      onClick={handleTestConnection}
-                      disabled={testingConnection}
-                      size="sm"
-                      variant="outline"
-                    >
-                      {testingConnection ? (
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      ) : (
-                        <RefreshCw className="w-4 h-4 mr-2" />
-                      )}
-                      Test Connection
-                    </Button>
-
-                    {connectionStatus && (
-                      <div
-                        className={`flex items-center space-x-1 text-sm ${
-                          connectionStatus.success
-                            ? "text-green-500"
-                            : "text-yellow-600"
-                        }`}
-                      >
-                        {connectionStatus.success ? (
-                          <CheckCircle className="w-4 h-4" />
-                        ) : (
-                          <XCircle className="w-4 h-4" />
-                        )}
-                        <span>{connectionStatus.message}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </Card>
-            </div>
-          </div>
-        );
-
-      case "guardian":
-        return (
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-lg font-medium">Guardian Configuration</h3>
-              <p className="text-sm text-muted-foreground">
-                Configure Guardian behavior and monitoring settings.
-              </p>
-            </div>
-
-            <div className="space-y-4">
-              {getSettingsByCategory("guardian").map((setting) => (
-                <Card key={setting.key} className="p-4">
-                  {renderSettingField(setting)}
-                </Card>
-              ))}
-
-              {/* Device Cleanup Settings Group */}
-              {renderDeviceCleanupSettings()}
-            </div>
-          </div>
-        );
-
-      case "notifications":
-        const generalNotificationSettings = [
-          "AUTO_MARK_NOTIFICATION_READ",
-          "SMTP_NOTIFY_ON_NOTIFICATIONS",
-        ];
-
-        const generalNotificationSettingsData = settings.filter((setting) =>
-          generalNotificationSettings.includes(setting.key)
-        );
-
-        return (
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-lg font-medium">Notification Settings</h3>
-              <p className="text-sm text-muted-foreground">
-                Configure notification behavior and email delivery settings.
-              </p>
-            </div>
-
-            {/* General Notification Settings */}
-            <div className="space-y-4">
-              <div>
-                <h4 className="text-base font-medium text-slate-900 dark:text-slate-100 mb-2">
-                  General Settings
-                </h4>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Configure general notification behavior and preferences.
-                </p>
-              </div>
-              {generalNotificationSettingsData
-                .sort(
-                  (a, b) =>
-                    generalNotificationSettings.indexOf(a.key) -
-                    generalNotificationSettings.indexOf(b.key)
-                )
-                .map((setting) => (
-                  <Card key={setting.key} className="p-4">
-                    {renderSettingField(setting)}
-                  </Card>
-                ))}
-            </div>
-
-            {/* SMTP Configuration */}
-            <div className="space-y-4">
-              <div>
-                <h4 className="text-base font-medium text-slate-900 dark:text-slate-100 mb-2">
-                  Email Configuration (SMTP)
-                </h4>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Configure SMTP settings for sending email notifications. All
-                  fields are required when email notifications are enabled.
-                </p>
-              </div>
-              {renderSMTPSettings()}
-            </div>
-          </div>
-        );
-
-      case "customization":
-        const interfaceSettings = [
-          "ENABLE_MEDIA_THUMBNAILS",
-          "ENABLE_MEDIA_ARTWORK",
-          "CUSTOM_PLEX_URL",
-          "DEFAULT_PAGE",
-        ];
-        const messageSettings = [
-          "MSG_DEVICE_PENDING",
-          "MSG_DEVICE_REJECTED",
-          "MSG_IP_LAN_ONLY",
-          "MSG_IP_WAN_ONLY",
-          "MSG_IP_NOT_ALLOWED",
-          "MSG_TIME_RESTRICTED",
-        ];
-
-        const interfaceSettingsData = settings.filter((setting) =>
-          interfaceSettings.includes(setting.key)
-        );
-        const messageSettingsData = settings.filter((setting) =>
-          messageSettings.includes(setting.key)
-        );
-
-        return (
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-lg font-medium">Customization Settings</h3>
-              <p className="text-sm text-muted-foreground">
-                Customize the user interface, blocking messages, and overall
-                user experience.
-              </p>
-            </div>
-
-            {/* Interface Settings Section */}
-            <div className="space-y-4">
-              <div>
-                <h4 className="text-base font-medium text-slate-900 dark:text-slate-100 mb-2">
-                  Interface Settings
-                </h4>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Configure the visual appearance and behavior of the Guardian
-                  interface.
-                </p>
-              </div>
-              {interfaceSettingsData
-                .sort(
-                  (a, b) =>
-                    interfaceSettings.indexOf(a.key) -
-                    interfaceSettings.indexOf(b.key)
-                )
-                .map((setting) => (
-                  <Card key={setting.key} className="p-4">
-                    {renderSettingField(setting)}
-                  </Card>
-                ))}
-            </div>
-
-            {/* Custom Messages Section */}
-            <div className="space-y-4">
-              <div>
-                <h4 className="text-base font-medium text-slate-900 dark:text-slate-100 mb-2">
-                  Custom Messages
-                </h4>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Customize the messages displayed to users when access is
-                  restricted or devices require approval.
-                </p>
-              </div>
-              {messageSettingsData
-                .sort(
-                  (a, b) =>
-                    messageSettings.indexOf(a.key) -
-                    messageSettings.indexOf(b.key)
-                )
-                .map((setting) => (
-                  <Card key={setting.key} className="p-4">
-                    {renderSettingField(setting)}
-                  </Card>
-                ))}
-            </div>
-          </div>
-        );
-
-      case "database":
-        return (
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-lg font-medium">Database Management</h3>
-              <p className="text-sm text-muted-foreground">
-                Export and import your Guardian database for backup and
-                migration purposes.
-              </p>
-            </div>
-
-            <div className="space-y-4">
-              {/* Export Database */}
-              <Card className="p-4">
-                <div className="space-y-4">
-                  <div>
-                    <h4 className="text-sm font-medium">Export Database</h4>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Download a backup of your Guardian database. This includes
-                      all settings, user devices, preferences, and active
-                      sessions.
-                    </p>
-                  </div>
-                  <Button
-                    onClick={handleExportDatabase}
-                    disabled={exportingDatabase}
-                    size="sm"
-                    variant="outline"
-                    className="cursor-pointer"
-                  >
-                    {exportingDatabase ? (
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    ) : (
-                      <Download className="w-4 h-4 mr-2" />
-                    )}
-                    {exportingDatabase ? "Exporting..." : "Export Database"}
-                  </Button>
-                </div>
-              </Card>
-
-              {/* Import Database */}
-              <Card className="p-4">
-                <div className="space-y-4">
-                  <div>
-                    <h4 className="text-sm font-medium">Import Database</h4>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Import a Guardian database backup. This will merge the
-                      imported data with existing data.
-                    </p>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="file"
-                      accept=".json,application/json"
-                      onChange={handleFileUpload}
-                      disabled={importingDatabase}
-                      className="hidden"
-                      id="database-import"
-                    />
-                    <Button
-                      type="button"
-                      disabled={importingDatabase}
-                      size="sm"
-                      variant="outline"
-                      className="cursor-pointer"
-                      onClick={() =>
-                        document.getElementById("database-import")?.click()
-                      }
-                    >
-                      {importingDatabase ? (
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      ) : (
-                        <Upload className="w-4 h-4 mr-2" />
-                      )}
-                      {importingDatabase ? "Importing..." : "Import Database"}
-                    </Button>
-                  </div>
-                  <div className="text-xs text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/20 p-2 rounded border">
-                    <strong>Warning:</strong> Importing a database will merge
-                    data with your current database. Consider exporting your
-                    current database first as a backup.
-                  </div>
-                </div>
-              </Card>
-            </div>
-          </div>
-        );
-
-      case "admin":
-        return (
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-lg font-medium">Administrative Tools</h3>
-              <p className="text-sm text-muted-foreground">
-                Miscellaneous options and scripts. Use with caution.
-              </p>
-            </div>
-
-            <div className="space-y-4">
-              {/* Reset Stream Counts */}
-              <Card className="p-4">
-                <div className="space-y-4">
-                  <div>
-                    <h4 className="text-sm font-medium flex items-center">
-                      {/* <AlertTriangle className="w-4 h-4 mr-2 text-orange-500" /> */}
-                      Reset Stream Counts
-                    </h4>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Reset session counts for all devices. This will not delete
-                      devices.
-                    </p>
-                  </div>
-                  <Button
-                    onClick={() => setShowResetStreamCountsModal(true)}
-                    disabled={resettingStreamCounts}
-                    size="sm"
-                    variant="outline"
-                  >
-                    {resettingStreamCounts ? (
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    ) : (
-                      <RefreshCw className="w-4 h-4 mr-2" />
-                    )}
-                    {resettingStreamCounts
-                      ? "Resetting..."
-                      : "Reset Stream Counts"}
-                  </Button>
-                </div>
-              </Card>
-
-              {/* Clear Session History */}
-              <Card className="p-4">
-                <div className="space-y-4">
-                  <div>
-                    <h4 className="text-sm font-medium flex items-center">
-                      Clear All Session History
-                    </h4>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Permanently remove all session history from the database.
-                    </p>
-                  </div>
-                  <Button
-                    onClick={() => setShowClearSessionHistoryModal(true)}
-                    disabled={clearingSessionHistory}
-                    size="sm"
-                    variant="outline"
-                  >
-                    {clearingSessionHistory ? (
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    ) : (
-                      <XCircle className="w-4 h-4 mr-2" />
-                    )}
-                    {clearingSessionHistory
-                      ? "Clearing..."
-                      : "Clear Session History"}
-                  </Button>
-                </div>
-              </Card>
-
-              {/* Delete All Devices */}
-              <Card className="p-4 border-red-200 dark:border-red-800">
-                <div className="space-y-4">
-                  <div>
-                    <h4 className="text-sm font-medium flex items-center">
-                      <AlertTriangle className="w-4 h-4 mr-2 text-red-500" />
-                      Delete All Devices Data
-                    </h4>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Permanently remove all device, sessions history and
-                      notifications from the database. This action cannot be
-                      undone.
-                    </p>
-                  </div>
-                  <Button
-                    onClick={() => setShowDeleteAllDevicesModal(true)}
-                    disabled={deletingAllDevices}
-                    size="sm"
-                    variant="outline"
-                    className="border-red-200 text-red-700 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900/20"
-                  >
-                    {deletingAllDevices ? (
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    ) : (
-                      <XCircle className="w-4 h-4 mr-2" />
-                    )}
-                    {deletingAllDevices ? "Deleting..." : "Delete All Devices"}
-                  </Button>
-                </div>
-              </Card>
-
-              {/* Reset Database */}
-              <Card className="p-4 border-red-200 dark:border-red-800">
-                <div className="space-y-4">
-                  <div>
-                    <h4 className="text-sm font-medium flex items-center">
-                      <AlertTriangle className="w-4 h-4 mr-2 text-red-500" />
-                      Reset Entire Database
-                    </h4>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      <strong>DANGER:</strong> This will permanently delete ALL
-                      data including settings, devices, user preferences,
-                      sessions history and notifications. Default settings will
-                      be restored.
-                    </p>
-                  </div>
-                  <div className="text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 p-3 rounded border border-red-200 dark:border-red-800">
-                    <strong> IRREVERSIBLE ACTION:</strong> This will completely
-                    wipe your Guardian database. Export your database first if
-                    you want to keep any data. This action cannot be undone.
-                  </div>
-                  <Button
-                    onClick={() => setShowResetDatabaseModal(true)}
-                    disabled={resettingDatabase}
-                    size="sm"
-                    variant="destructive"
-                  >
-                    {resettingDatabase ? (
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    ) : (
-                      <XCircle className="w-4 h-4 mr-2" />
-                    )}
-                    {resettingDatabase ? "Resetting..." : "Reset Database"}
-                  </Button>
-                </div>
-              </Card>
-            </div>
-          </div>
-        );
-
-      default:
-        return (
-          <div className="text-center py-8">
-            <p className="text-muted-foreground">
-              Select a settings category to configure.
-            </p>
-          </div>
-        );
-    }
-  };
-
-  const hasChanges = () => {
-    return Object.entries(formData).some(([key, value]) => {
-      const originalSetting = settings.find((s) => s.key === key);
-      if (!originalSetting) return false;
-
-      let originalValue: any = originalSetting.value;
-      if (originalSetting.type === "boolean") {
-        originalValue = originalValue === "true";
-      } else if (originalSetting.type === "number") {
-        originalValue = parseFloat(originalValue);
-      }
-
-      return (
-        value !== originalValue && !(originalSetting.private && value === "")
-      );
-    });
-  };
-
-  // Check if there are unsaved changes in Plex-related settings
-  const hasPlexChanges = () => {
-    const plexKeys = [
-      "PLEX_TOKEN",
-      "PLEX_SERVER_IP",
-      "PLEX_SERVER_PORT",
-      "USE_SSL",
-      "IGNORE_CERT_ERRORS",
-    ];
-
-    return Object.entries(formData).some(([key, value]) => {
-      if (!plexKeys.includes(key)) return false;
-
-      const originalSetting = settings.find((s) => s.key === key);
-      if (!originalSetting) return false;
-
-      let originalValue: any = originalSetting.value;
-      if (originalSetting.type === "boolean") {
-        originalValue = originalValue === "true";
-      } else if (originalSetting.type === "number") {
-        originalValue = parseFloat(originalValue);
-      }
-
-      return (
-        value !== originalValue && !(originalSetting.private && value === "")
-      );
-    });
-  };
-
-  // Check if there are unsaved changes in SMTP-related settings
-  const hasSMTPChanges = () => {
-    const smtpKeys = [
-      "SMTP_ENABLED",
-      "SMTP_HOST",
-      "SMTP_PORT",
-      "SMTP_USER",
-      "SMTP_PASSWORD",
-      "SMTP_FROM_EMAIL",
-      "SMTP_TO_EMAILS",
-      "SMTP_FROM_NAME",
-      "SMTP_USE_TLS",
-      "SMTP_NOTIFY_ON_NOTIFICATIONS",
-    ];
-
-    return Object.entries(formData).some(([key, value]) => {
-      if (!smtpKeys.includes(key)) return false;
-
-      const originalSetting = settings.find((s) => s.key === key);
-      if (!originalSetting) return false;
-
-      let originalValue: any = originalSetting.value;
-      if (originalSetting.type === "boolean") {
-        originalValue = originalValue === "true";
-      } else if (originalSetting.type === "number") {
-        originalValue = parseFloat(originalValue);
-      }
-
-      return (
-        value !== originalValue && !(originalSetting.private && value === "")
-      );
-    });
-  };
-
-  const handleBackWithConfirmation = () => {
-    if (hasChanges()) {
-      setShowUnsavedChangesModal(true);
-    } else {
-      onBack?.();
-    }
-  };
-
-  const handleConfirmBack = () => {
-    setShowUnsavedChangesModal(false);
-    onBack?.();
-  };
-
-  const handleCancelBack = () => {
-    setShowUnsavedChangesModal(false);
-  };
+  const tabs = [
+    {
+      id: "plex",
+      label: "Plex Integration",
+      description:
+        "Configure your Plex Media Server connection and related settings",
+    },
+    {
+      id: "smtp",
+      label: "Email/SMTP",
+      description: "Email notification configuration",
+    },
+    {
+      id: "database",
+      label: "Database",
+      description: "Database management and backup",
+    },
+    {
+      id: "guardian",
+      label: "Guardian",
+      description: "Core Guardian behavior settings",
+    },
+    {
+      id: "customization",
+      label: "Customization",
+      description: "UI and user experience settings",
+    },
+    {
+      id: "notifications",
+      label: "Notifications",
+      description: "Notification preferences",
+    },
+    {
+      id: "admin",
+      label: "Admin Tools",
+      description: "Administrative tools and system maintenance",
+    },
+  ];
 
   return (
-    <div className="min-h-[calc(100vh-3.5rem)]">
-      <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-8">
-        {/* Back Button */}
-        {onBack && (
-          <div className="mb-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleBackWithConfirmation}
-              className="text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
-            >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Dashboard
-            </Button>
-          </div>
-        )}
+    <div className="container mx-auto py-6 px-4 max-w-6xl">
+      {/* Back Button */}
+      {onBack && (
+        <div className="mb-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onBack}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Dashboard
+          </Button>
+        </div>
+      )}
 
-        {/* Header */}
-        <div className="mb-6 sm:mb-8">
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-900 dark:text-slate-100 mb-2">
-            Settings
-          </h1>
-          <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400">
-            Configure your Guardian dashboard and preferences
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-3xl font-bold">Settings</h1>
+          <p className="text-muted-foreground mt-1">
+            Configure Guardian application settings and preferences
           </p>
+          {versionInfo && (
+            <Badge variant="outline" className="mt-2">
+              Version {versionInfo.version}
+            </Badge>
+          )}
         </div>
 
-        {/* Unsaved Changes Banner */}
-        {hasChanges() && (
-          <div className="mb-6">
-            <Card className="border-amber-600 bg-amber-50 dark:border-amber-700 dark:bg-amber-950/20">
-              <CardContent className="p-4">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                  <div className="flex flex-col flex-1">
-                    <div className="flex items-start gap-3">
-                      <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-amber-800 dark:text-amber-200 mb-1">
-                          Unsaved Changes
-                        </h3>
-                      </div>
-                    </div>
-                    <div className="ml-8">
-                      <p className="text-sm text-amber-600 dark:text-amber-300">
-                        You have unsaved changes. Make sure to save your
-                        settings before leaving this page.
-                      </p>
-                    </div>
-                  </div>
-                  <div className="w-full sm:w-auto">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleSave}
-                      disabled={saving}
-                      className="w-full sm:w-auto border-amber-600 text-amber-600 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-700 dark:hover:bg-amber-900/20"
-                    >
-                      {saving ? (
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      ) : (
-                        <Save className="h-4 w-4 mr-2" />
-                      )}
-                      Save Changes
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
-        {/* Backend Error Display */}
-        {error && (
-          <div className="mb-6">
-            <Card className="border-red-600 bg-red-50 dark:border-red-700 dark:bg-red-950/20">
-              <CardContent>
-                <div className="flex items-center gap-3">
-                  <XCircle className="h-5 w-5 text-red-600 dark:text-red-700 shrink-0" />
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-red-800 dark:text-red-200 mb-1">
-                      Backend Connection Error
-                    </h3>
-                    <p className="text-sm text-red-600 dark:text-red-300">
-                      {error}
-                    </p>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={refreshSettings}
-                    className="border-red-600 text-red-600 hover:bg-red-100 dark:border-red-700 dark:text-red-700 dark:hover:bg-red-900/20"
-                  >
-                    <RefreshCw className="h-4 w-4 mr-2" />
-                    Retry
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Settings Navigation */}
-          <Card className="lg:col-span-1">
-            <CardHeader>
-              <CardTitle className="text-base mt-4">Settings</CardTitle>
-              <CardDescription>Choose a category to configure</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-1 p-0">
-              {settingsSections.map((section) => (
-                <button
-                  key={section.id}
-                  onClick={() => setActiveSection(section.id)}
-                  className={`w-full flex items-center space-x-3 px-4 py-3 text-left text-sm transition-colors hover:bg-accent hover:text-accent-foreground cursor-pointer ${
-                    activeSection === section.id
-                      ? "bg-accent text-accent-foreground"
-                      : "text-muted-foreground"
-                  }`}
-                >
-                  <section.icon className="h-4 w-4" />
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium truncate">{section.title}</div>
-                    <div className="text-xs text-muted-foreground truncate">
-                      {section.description}
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </CardContent>
-
-            {/* Version Information */}
-            {versionInfo && (
-              <div className="px-4 py-3 border-t border-border">
-                <div className="text-xs text-muted-foreground space-y-2">
-                  <div className="font-medium text-foreground">
-                    {/* Update Check Button */}
-                    <div className="pt-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={checkForUpdates}
-                        disabled={checkingUpdates}
-                        className="h-6 text-xs text-muted-foreground hover:text-foreground"
-                      >
-                        {checkingUpdates ? (
-                          <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                        ) : (
-                          <RefreshCw className="h-3 w-3 mr-1" />
-                        )}
-                        Check for Updates
-                      </Button>
-                    </div>
-                    {/* Documentation Link */}
-                    <div className="pt-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() =>
-                          window.open(
-                            "https://github.com/HydroshieldMKII/Guardian",
-                            "_blank"
-                          )
-                        }
-                        className="h-6 text-xs text-muted-foreground hover:text-foreground"
-                      >
-                        <BookOpen className="h-3 w-3 mr-1" />
-                        Documentation
-                      </Button>
-                    </div>
-                  </div>
-                  {versionInfo.isVersionMismatch ? (
-                    <>
-                      <div
-                        className={
-                          versionInfo.databaseVersion < versionInfo.codeVersion
-                            ? "ml-2 text-red-600 dark:text-red-400"
-                            : "ml-2"
-                        }
-                      >
-                        Database version: v{versionInfo.databaseVersion}
-                      </div>
-                      <div
-                        className={
-                          versionInfo.codeVersion < versionInfo.databaseVersion
-                            ? "ml-2 text-red-600 dark:text-red-400"
-                            : "ml-2"
-                        }
-                      >
-                        App Version: v{versionInfo.codeVersion}
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div className="ml-2">
-                        Database version {versionInfo.databaseVersion}
-                      </div>
-                      <div className="ml-2">
-                        App Version {versionInfo.version}
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
+        <div className="flex items-center gap-2">
+          {hasUnsavedChanges && (
+            <Badge variant="secondary" className="flex items-center gap-1">
+              <div className="h-2 w-2 bg-orange-500 rounded-full" />
+              Unsaved Changes
+            </Badge>
+          )}
+          <Button
+            onClick={handleSave}
+            disabled={isSaving || !hasUnsavedChanges}
+            className="flex items-center gap-2"
+          >
+            {isSaving ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : hasUnsavedChanges ? (
+              <Save className="h-4 w-4" />
+            ) : (
+              <CheckCircle className="h-4 w-4" />
             )}
-          </Card>
-
-          {/* Settings Content */}
-          <Card className="lg:col-span-3">
-            <CardContent className="p-6">
-              {renderSectionContent(activeSection)}
-
-              {/* Save Button - Only show for configurable sections */}
-              {(activeSection === "plex" ||
-                activeSection === "guardian" ||
-                activeSection === "notifications" ||
-                activeSection === "customization") && (
-                <>
-                  <Separator className="my-6" />
-                  <div className="flex justify-end space-x-2">
-                    <Button
-                      variant="outline"
-                      onClick={refreshSettings}
-                      disabled={saving}
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      onClick={handleSave}
-                      disabled={saving || !hasChanges()}
-                    >
-                      {saving ? (
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      ) : (
-                        <Save className="w-4 h-4 mr-2" />
-                      )}
-                      Save Changes
-                    </Button>
-                  </div>
-                </>
-              )}
-            </CardContent>
-          </Card>
+            {isSaving
+              ? "Saving..."
+              : hasUnsavedChanges
+                ? "Save Changes"
+                : "Saved"}
+          </Button>
         </div>
       </div>
 
-      {/* Version Mismatch Confirmation Modal */}
-      <ConfirmationModal
-        isOpen={showVersionMismatchModal}
-        onClose={() => {
-          // Handle closing by ESC or outside click - treat as cancel
-          handleVersionMismatchCancel();
-        }}
-        onConfirm={handleVersionMismatchConfirm}
-        title="Version Mismatch Detected"
-        description={
-          versionMismatchInfo
-            ? `Version mismatch detected! Please make sure you have a backup before proceeding.\n\nCurrent version: ${versionMismatchInfo.currentVersion}\nImport file version: ${versionMismatchInfo.importVersion}\n\nYou may lose data during the import. Do you want to continue with the import?`
-            : ""
-        }
-        confirmText="Continue Import"
-        cancelText="Cancel Import"
-        variant="destructive"
-      />
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-4 lg:grid-cols-7 mb-4">
+          {tabs.map((tab) => {
+            const IconComponent = getTabIcon(tab.id);
+            return (
+              <TabsTrigger
+                key={tab.id}
+                value={tab.id}
+                className="flex items-center gap-2 px-3"
+              >
+                <IconComponent className="h-4 w-4" />
+                <span className="hidden sm:inline">{tab.label}</span>
+              </TabsTrigger>
+            );
+          })}
+        </TabsList>
 
-      {/* Reset Database Confirmation Modal */}
-      <ConfirmationModal
-        isOpen={showResetDatabaseModal}
-        onClose={() => setShowResetDatabaseModal(false)}
-        onConfirm={handleResetDatabase}
-        title="Reset Entire Database"
-        description="DANGER: This will permanently delete ALL data including settings, devices, users, and sessions. Default settings will be restored. This action cannot be undone. Are you absolutely sure you want to proceed?"
-        confirmText="Yes, Reset Database"
-        cancelText="Cancel"
-        variant="destructive"
-      />
+        <div className="space-y-6 mt-6">
+          {tabs.map((tab) => (
+            <TabsContent key={tab.id} value={tab.id} className="space-y-6">
+              {/* Render the appropriate component for each tab */}
+              {tab.id === "plex" && (
+                <PlexSettings
+                  settings={settings}
+                  formData={formData}
+                  onFormDataChange={handleFormDataChange}
+                />
+              )}
 
-      {/* Reset Stream Counts Confirmation Modal */}
-      <ConfirmationModal
-        isOpen={showResetStreamCountsModal}
-        onClose={() => setShowResetStreamCountsModal(false)}
-        onConfirm={handleResetStreamCounts}
-        title="Reset Stream Counts"
-        description="This will reset session counts for all devices. Device records will remain but their stream statistics will be reset to zero. This action cannot be undone."
-        confirmText="Reset Stream Counts"
-        cancelText="Cancel"
-        variant="default"
-      />
+              {tab.id === "smtp" && (
+                <SMTPSettings
+                  settings={settings}
+                  formData={formData}
+                  onFormDataChange={handleFormDataChange}
+                />
+              )}
 
-      {/* Delete All Devices Confirmation Modal */}
-      <ConfirmationModal
-        isOpen={showDeleteAllDevicesModal}
-        onClose={() => setShowDeleteAllDevicesModal(false)}
-        onConfirm={handleDeleteAllDevices}
-        title="Delete All Devices"
-        description="This will permanently remove all device records from the database. Devices will need to be detected again on their next stream attempt. Device preferences will be lost. This action cannot be undone."
-        confirmText="Delete All Devices"
-        cancelText="Cancel"
-        variant="destructive"
-      />
+              {tab.id === "database" && (
+                <DatabaseManagement onSettingsRefresh={refreshSettings} />
+              )}
 
-      {/* Clear Session History Confirmation Modal */}
-      <ConfirmationModal
-        isOpen={showClearSessionHistoryModal}
-        onClose={() => setShowClearSessionHistoryModal(false)}
-        onConfirm={handleClearSessionHistory}
-        title="Clear All Session History"
-        description="This will permanently remove all session history records from the database. This includes viewing history, timestamps, and session metadata for all users. This action cannot be undone."
-        confirmText="Clear Session History"
-        cancelText="Cancel"
-        variant="destructive"
-      />
+              {(tab.id === "guardian" ||
+                tab.id === "customization" ||
+                tab.id === "notifications") && (
+                <GeneralSettings
+                  settings={settings}
+                  formData={formData}
+                  onFormDataChange={handleFormDataChange}
+                  sectionId={tab.id}
+                />
+              )}
 
-      {/* Unsaved Changes Confirmation Modal */}
-      <ConfirmationModal
-        isOpen={showUnsavedChangesModal}
-        onClose={handleCancelBack}
-        onConfirm={handleConfirmBack}
-        title="Unsaved Changes"
-        description="You have unsaved changes that will be lost if you leave this page. Are you sure you want to continue without saving?"
-        confirmText="Leave Without Saving"
-        cancelText="Stay and keep editing"
-        variant="destructive"
-      />
+              {tab.id === "admin" && (
+                <AdminTools onSettingsRefresh={refreshSettings} />
+              )}
+            </TabsContent>
+          ))}
+        </div>
+      </Tabs>
     </div>
   );
 }
