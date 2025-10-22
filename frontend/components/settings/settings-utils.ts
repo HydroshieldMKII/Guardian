@@ -134,12 +134,11 @@ export const getSettingInfo = (setting: AppSetting): SettingInfo => {
     },
     SMTP_USER: {
       label: "SMTP username",
-      description:
-        "Username for SMTP authentication (usually your email address)",
+      description: "Username for SMTP authentication",
     },
     SMTP_PASSWORD: {
       label: "SMTP password",
-      description: "Password or app-specific password for SMTP authentication",
+      description: "Password for SMTP authentication",
     },
     SMTP_FROM_EMAIL: {
       label: "From email address",
@@ -148,7 +147,7 @@ export const getSettingInfo = (setting: AppSetting): SettingInfo => {
     SMTP_TO_EMAILS: {
       label: "To email addresses",
       description:
-        "Email addresses to send notifications to (separate multiple addresses with commas, semicolons, or new lines)",
+        "Email addresses to send notifications to (separate multiple addresses with commas, semicolons)",
     },
     SMTP_FROM_NAME: {
       label: "From display name",

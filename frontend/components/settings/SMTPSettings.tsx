@@ -90,6 +90,7 @@ export function SMTPSettings({
         toast({
           title: "SMTP test successful",
           description: result.message,
+          variant: "success",
         });
       } else {
         setConnectionStatus({
@@ -219,8 +220,10 @@ export function SMTPSettings({
     );
   };
 
-  const isSmtpEnabled =
-    formData["SMTP_ENABLED"] === true || formData["SMTP_ENABLED"] === "true";
+  const isSmtpEnabled = (() => {
+    const smtpSetting = settings.find(s => s.key === "SMTP_ENABLED");
+    return smtpSetting?.value === true || smtpSetting?.value === "true";
+  })();
 
   return (
     <Card>

@@ -64,6 +64,7 @@ export function DatabaseManagement({
       toast({
         title: "Export successful",
         description: "Database has been exported successfully",
+        variant: "success",
       });
     } catch (error) {
       console.error("Export error:", error);
@@ -163,6 +164,7 @@ export function DatabaseManagement({
         toast({
           title: "Import successful",
           description: `Imported ${imported} items, skipped ${skipped} items`,
+          variant: "success",
         });
         onSettingsRefresh();
       } else {

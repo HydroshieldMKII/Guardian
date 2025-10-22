@@ -135,6 +135,7 @@ export default function Settings({ onBack }: SettingsProps) {
       toast({
         title: "Settings Saved",
         description: `Successfully updated ${changedSettings.length} setting(s).`,
+        variant: "success",
       });
 
       setHasUnsavedChanges(false);

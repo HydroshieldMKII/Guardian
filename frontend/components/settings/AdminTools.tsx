@@ -56,6 +56,7 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
         toast({
           title: "Success",
           description: "Stream counts have been reset successfully.",
+          variant: "success",
         });
       } else {
         const error = await response.text();
@@ -90,6 +91,7 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
         toast({
           title: "Success",
           description: "Session history has been cleared successfully.",
+          variant: "success",
         });
       } else {
         const error = await response.text();
@@ -124,6 +126,7 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
         toast({
           title: "Success",
           description: "All devices have been deleted successfully.",
+          variant: "success",
         });
         onSettingsRefresh?.();
       } else {
@@ -160,6 +163,7 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
           title: "Success",
           description:
             "Database has been reset successfully. Page will reload.",
+          variant: "success",
         });
         onSettingsRefresh?.();
         setTimeout(() => {
