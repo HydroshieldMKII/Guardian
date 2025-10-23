@@ -57,6 +57,7 @@ export class NotificationsService {
     deviceIdentifier: string,
     stopCode?: string,
     sessionHistoryId?: number,
+    ipAddress?: string,
   ): Promise<Notification> {
     // Look up the custom device name from the database
     let deviceDisplayName = 'Unknown Device'; // Default if not found
@@ -135,6 +136,7 @@ export class NotificationsService {
         username,
         deviceDisplayName,
         stopCode,
+        ipAddress,
       );
     } catch (error) {
       // Log error but don't fail the notification creation

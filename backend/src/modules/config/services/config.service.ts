@@ -590,6 +590,7 @@ export class ConfigService {
     username: string,
     deviceName?: string,
     stopCode?: string,
+    ipAddress?: string,
   ): Promise<void> {
     try {
       const [
@@ -638,6 +639,7 @@ export class ConfigService {
         username,
         deviceName,
         stopCode,
+        ipAddress,
       };
 
       const currentTimeInTimezone = await this.getCurrentTimeInTimezone();

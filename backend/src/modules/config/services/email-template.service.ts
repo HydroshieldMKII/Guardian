@@ -321,6 +321,7 @@ export class EmailTemplateService {
     deviceName?: string,
     stopCode?: string,
     timestamp?: string,
+    ipAddress?: string,
   ): string {
     let detailsContent = `
       <div class="detail-row">
@@ -334,6 +335,15 @@ export class EmailTemplateService {
         <div class="detail-row">
           <span class="detail-label">Device</span>
           <span class="detail-value">${deviceName}</span>
+        </div>
+      `;
+    }
+
+    if (ipAddress) {
+      detailsContent += `
+        <div class="detail-row">
+          <span class="detail-label">IP Address</span>
+          <span class="detail-value"><a href="https://ipinfo.io/${ipAddress}" target="_blank" rel="noopener noreferrer" style="color: #4488ff; text-decoration: underline;">${ipAddress}</a></span>
         </div>
       `;
     }

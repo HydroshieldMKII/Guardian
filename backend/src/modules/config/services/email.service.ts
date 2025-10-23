@@ -20,6 +20,7 @@ export interface NotificationEmailData {
   username: string;
   deviceName?: string;
   stopCode?: string;
+  ipAddress?: string;
 }
 
 @Injectable()
@@ -213,6 +214,7 @@ export class EmailService {
         data.deviceName,
         data.stopCode,
         timestamp,
+        data.ipAddress,
       );
 
       const mailOptions = {

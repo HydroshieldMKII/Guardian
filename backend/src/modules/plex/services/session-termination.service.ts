@@ -236,6 +236,7 @@ export class SessionTerminationService {
                   deviceIdentifier,
                   stopCode,
                   sessionHistory?.id,
+                  session.Player?.address,
                 );
 
                 this.logger.log(
