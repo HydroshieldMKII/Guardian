@@ -114,7 +114,7 @@ export const StreamCard: React.FC<StreamCardProps> = ({
                     const target = e.target as HTMLImageElement;
                     target.style.display = "none";
                     const fallback = target.parentElement?.querySelector(
-                      ".thumbnail-fallback",
+                      ".thumbnail-fallback"
                     ) as HTMLElement;
                     if (fallback) {
                       fallback.style.display = "flex";
@@ -131,7 +131,7 @@ export const StreamCard: React.FC<StreamCardProps> = ({
           {/* Content info */}
           <div className="flex-1 min-w-0 relative z-10">
             <div
-              className={`inline-block px-2 py-1 rounded-md cursor-pointer transition-all duration-200 ${artUrl ? "bg-black/20 text-white hover:bg-black/30" : "bg-transparent text-black dark:text-white hover:bg-black/10 dark:hover:bg-white/10"}`}
+              className={`inline-block px-2 py-1 rounded-md cursor-pointer transition-all duration-200 bg-black/20 text-white hover:bg-black/30`}
             >
               <h3
                 onClick={openInPlex}
@@ -231,7 +231,7 @@ export const StreamCard: React.FC<StreamCardProps> = ({
                 ) {
                   onNavigateToDevice(
                     stream.User.id,
-                    stream.Player.machineIdentifier,
+                    stream.Player.machineIdentifier
                   );
                 }
               }}
