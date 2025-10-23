@@ -14,46 +14,47 @@ export function Navbar() {
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="flex h-14 items-center justify-between w-full px-4">
-        <Link href="/" className="flex items-center space-x-2 pl-10">
-          <div className="flex items-center">
-            {/* Light theme logo (dark logo) */}
-            <Image
-              src="/logo_dark.svg"
-              alt="Guardian"
-              width={300}
-              height={48}
-              className="block dark:hidden"
-              style={{ height: "80px", width: "auto" }}
-              priority
-            />
-            {/* Dark theme logo (light logo) */}
-            <Image
-              src="/logo_white.svg"
-              alt="Guardian"
-              width={300}
-              height={48}
-              className="hidden dark:block"
-              style={{ height: "80px", width: "auto" }}
-              priority
-            />
-          </div>
-        </Link>
+      <div className="w-full max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex h-16 items-center justify-between">
+          <Link href="/" className="flex items-center space-x-3 hover:opacity-80 transition-opacity">
+            <div className="flex items-center">
+              {/* Light theme logo (dark logo) */}
+              <Image
+                src="/logo_dark.svg"
+                alt="Guardian"
+                width={300}
+                height={48}
+                className="block dark:hidden"
+                style={{ height: "64px", width: "auto" }}
+                priority
+              />
+              {/* Dark theme logo (light logo) */}
+              <Image
+                src="/logo_white.svg"
+                alt="Guardian"
+                width={300}
+                height={48}
+                className="hidden dark:block"
+                style={{ height: "64px", width: "auto" }}
+                priority
+              />
+            </div>
+          </Link>
 
-        {/* Right side with theme toggle, notifications, and settings */}
-        <div className="flex items-center space-x-2 pr-10">
-          {/* Theme Toggle Button */}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={toggleTheme}
-            className="h-8 w-8 rounded-full"
+          {/* Right side with theme toggle, notifications, and settings */}
+          <div className="flex items-center space-x-1">
+            {/* Theme Toggle Button */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggleTheme}
+              className="h-9 w-9 rounded-full hover:bg-muted transition-colors"
             title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
           >
             {theme === "dark" ? (
-              <Sun className="h-4 w-4" />
+              <Sun className="h-[18px] w-[18px]" />
             ) : (
-              <Moon className="h-4 w-4" />
+              <Moon className="h-[18px] w-[18px]" />
             )}
           </Button>
 
@@ -65,18 +66,19 @@ export function Navbar() {
             variant="ghost"
             size="icon"
             asChild
-            className="h-8 w-8 rounded-full"
+            className="h-9 w-9 rounded-full hover:bg-muted transition-colors relative"
             title="Settings"
           >
             <Link href="/settings" className="flex items-center justify-center">
-              <Settings className="h-4 w-4" />
+              <Settings className="h-[18px] w-[18px]" />
               {versionInfo?.isVersionMismatch && (
-                <div className="absolute -top-1 -right-1 h-2 w-2 bg-red-500 rounded-full" />
+                <div className="absolute -top-1 -right-1 h-2.5 w-2.5 bg-red-500 rounded-full border border-background" />
               )}
             </Link>
           </Button>
         </div>
       </div>
+    </div>
     </nav>
   );
 }
