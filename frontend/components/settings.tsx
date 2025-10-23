@@ -43,6 +43,7 @@ import { SMTPSettings } from "./settings/SMTPSettings";
 import { DatabaseManagement } from "./settings/DatabaseManagement";
 import { GeneralSettings } from "./settings/GeneralSettings";
 import { AdminTools } from "./settings/AdminTools";
+import { SystemInfo } from "./settings/SystemInfo";
 import { SettingsFormData } from "./settings/settings-utils";
 
 interface SettingsProps {
@@ -204,7 +205,7 @@ export default function Settings({ onBack }: SettingsProps) {
         return Server;
       case "smtp":
         return Mail;
-      case "database":
+      case "system":
         return Database;
       case "guardian":
         return SettingsIcon;
@@ -269,14 +270,14 @@ export default function Settings({ onBack }: SettingsProps) {
       description: "Notification preferences",
     },
     {
-      id: "database",
-      label: "Database",
-      description: "Database management and backup",
-    },
-    {
       id: "admin",
       label: "Admin Tools",
       description: "Administrative tools and system maintenance",
+    },
+    {
+      id: "system",
+      label: "System Info",
+      description: "System information and update management",
     },
   ];
 
@@ -387,6 +388,13 @@ export default function Settings({ onBack }: SettingsProps) {
 
               {tab.id === "database" && (
                 <DatabaseManagement onSettingsRefresh={refreshSettings} />
+              )}
+
+              {tab.id === "system" && (
+                <SystemInfo 
+                  onSettingsRefresh={refreshSettings} 
+                  settings={settings || []}
+                />
               )}
 
               {(tab.id === "guardian" ||

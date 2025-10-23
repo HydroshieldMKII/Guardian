@@ -16,9 +16,13 @@ import {
   XCircle,
   AlertTriangle,
   Settings2,
+  Download,
+  Upload,
 } from "lucide-react";
 import { config } from "@/lib/config";
 import { ConfirmationModal } from "@/components/ui/confirmation-modal";
+import { useVersion } from "@/contexts/version-context";
+import { VersionMismatchInfo } from "./settings-utils";
 
 interface AdminToolsProps {
   onSettingsRefresh?: () => void;
@@ -26,12 +30,15 @@ interface AdminToolsProps {
 
 export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
   const { toast } = useToast();
+  const { versionInfo } = useVersion();
 
   // State for various operations
   const [resettingStreamCounts, setResettingStreamCounts] = useState(false);
   const [clearingSessionHistory, setClearingSessionHistory] = useState(false);
   const [deletingAllDevices, setDeletingAllDevices] = useState(false);
   const [resettingDatabase, setResettingDatabase] = useState(false);
+  const [exportingDatabase, setExportingDatabase] = useState(false);
+  const [importingDatabase, setImportingDatabase] = useState(false);
 
   // Modal states
   const [showResetStreamCountsModal, setShowResetStreamCountsModal] =
@@ -41,6 +48,11 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
   const [showDeleteAllDevicesModal, setShowDeleteAllDevicesModal] =
     useState(false);
   const [showResetDatabaseModal, setShowResetDatabaseModal] = useState(false);
+  const [showVersionMismatchModal, setShowVersionMismatchModal] =
+    useState(false);
+  const [pendingImportFile, setPendingImportFile] = useState<File | null>(null);
+  const [versionMismatchInfo, setVersionMismatchInfo] =
+    useState<VersionMismatchInfo | null>(null);
 
   const handleResetStreamCounts = async () => {
     try {
@@ -186,6 +198,143 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
     }
   };
 
+  const exportDatabase = async () => {
+    try {
+      setExportingDatabase(true);
+      const response = await fetch(
+        `${config.api.baseUrl}/config/database/export`,
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to export database");
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `guardian-database-export-${new Date().toISOString().split("T")[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast({
+        title: "Export successful",
+        description: "Database has been exported successfully",
+        variant: "success",
+      });
+    } catch (error) {
+      console.error("Export error:", error);
+      toast({
+        title: "Export failed",
+        description: "Failed to export database",
+        variant: "destructive",
+      });
+    } finally {
+      setExportingDatabase(false);
+    }
+  };
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const content = e.target?.result as string;
+        const importData = JSON.parse(content);
+
+        // Check for version mismatch
+        if (importData.version && versionInfo?.version) {
+          const importVersion = importData.version;
+          const currentVersion = versionInfo.version;
+
+          if (importVersion !== currentVersion) {
+            setVersionMismatchInfo({
+              currentVersion,
+              importVersion,
+            });
+            setPendingImportFile(file);
+            setShowVersionMismatchModal(true);
+            return;
+          }
+        }
+
+        // No version mismatch, proceed with import
+        importDatabase(file);
+      } catch (error) {
+        toast({
+          title: "Invalid file",
+          description: "Please select a valid Guardian export file",
+          variant: "destructive",
+        });
+      }
+    };
+
+    reader.readAsText(file);
+    event.target.value = "";
+  };
+
+  const importDatabase = async (file: File) => {
+    try {
+      setImportingDatabase(true);
+
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await fetch(
+        `${config.api.baseUrl}/config/database/import`,
+        {
+          method: "POST",
+          body: formData,
+        },
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || "Failed to import database");
+      }
+
+      toast({
+        title: "Import successful",
+        description:
+          "Database has been imported successfully. Page will reload to reflect changes.",
+        variant: "success",
+      });
+
+      onSettingsRefresh?.();
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
+    } catch (error) {
+      console.error("Import error:", error);
+      toast({
+        title: "Import failed",
+        description:
+          error instanceof Error ? error.message : "Failed to import database",
+        variant: "destructive",
+      });
+    } finally {
+      setImportingDatabase(false);
+      setPendingImportFile(null);
+    }
+  };
+
+  const handleProceedWithImport = () => {
+    if (pendingImportFile) {
+      setShowVersionMismatchModal(false);
+      importDatabase(pendingImportFile);
+    }
+  };
+
+  const handleCancelImport = () => {
+    setShowVersionMismatchModal(false);
+    setPendingImportFile(null);
+    setVersionMismatchInfo(null);
+  };
+
   return (
     <>
       <Card>
@@ -252,6 +401,86 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
             </div>
           </Card>
 
+          {/* Database Management Section */}
+          <div className="border-t pt-4 mt-6">
+            <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
+              <Download className="h-5 w-5" />
+              Database Management
+            </h3>
+            
+            <Card className="p-4 my-4">
+              <div className="space-y-4">
+                <div>
+                  <h4 className="text-sm font-medium">Export Database</h4>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Download a backup copy of your Guardian database including all settings, devices, and history.
+                  </p>
+                </div>
+                <Button
+                  onClick={exportDatabase}
+                  disabled={exportingDatabase}
+                  size="sm"
+                  variant="outline"
+                >
+                  {exportingDatabase ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Download className="w-4 h-4 mr-2" />
+                  )}
+                  {exportingDatabase ? "Exporting..." : "Export Database"}
+                </Button>
+              </div>
+            </Card>
+
+            <Card className="p-4 my-4">
+              <div className="space-y-4">
+                <div>
+                  <h4 className="text-sm font-medium">Import Database</h4>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Restore Guardian database from a previously exported backup file.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="file"
+                    accept=".json"
+                    onChange={handleFileUpload}
+                    disabled={importingDatabase}
+                    className="hidden"
+                    id="database-import"
+                  />
+                  <label
+                    htmlFor="database-import"
+                    className="cursor-pointer"
+                  >
+                    <Button
+                      asChild
+                      disabled={importingDatabase}
+                      size="sm"
+                      variant="outline"
+                    >
+                      <span>
+                        {importingDatabase ? (
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        ) : (
+                          <Upload className="w-4 h-4 mr-2" />
+                        )}
+                        {importingDatabase ? "Importing..." : "Import Database"}
+                      </span>
+                    </Button>
+                  </label>
+                </div>
+              </div>
+            </Card>
+          </div>
+
+          {/* Dangerous Operations Section */}
+          <div className="border-t pt-4 mt-6">
+            <h3 className="text-lg font-medium mb-4 flex items-center gap-2 text-red-600 dark:text-red-400">
+              <AlertTriangle className="h-5 w-5" />
+              Dangerous Operations
+            </h3>
+
           <Card className="p-4 my-4 border-red-200 dark:border-red-800">
             <div className="space-y-4">
               <div>
@@ -314,6 +543,7 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
               </Button>
             </div>
           </Card>
+          </div>
         </CardContent>
       </Card>
 
@@ -360,6 +590,20 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
         cancelText="Cancel"
         variant="destructive"
       />
+
+      {/* Version Mismatch Modal */}
+      {versionMismatchInfo && (
+        <ConfirmationModal
+          isOpen={showVersionMismatchModal}
+          onClose={handleCancelImport}
+          onConfirm={handleProceedWithImport}
+          title="Version Mismatch Warning"
+          description={`The import file was created with Guardian version ${versionMismatchInfo.importVersion}, but you are currently running version ${versionMismatchInfo.currentVersion}. Importing data from a different version may cause compatibility issues. Do you want to proceed anyway?`}
+          confirmText="Proceed with Import"
+          cancelText="Cancel Import"
+          variant="destructive"
+        />
+      )}
     </>
   );
 }

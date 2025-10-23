@@ -85,7 +85,7 @@ export function SMTPSettings({
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-        },
+        }
       );
 
       const result = await response.json();
@@ -108,10 +108,10 @@ export function SMTPSettings({
 
   const renderEmailNotificationGroup = () => {
     const smtpEnabledSetting = smtpSettings.find(
-      (s) => s.key === "SMTP_ENABLED",
+      (s) => s.key === "SMTP_ENABLED"
     );
     const notifyOnNotificationsSetting = smtpSettings.find(
-      (s) => s.key === "SMTP_NOTIFY_ON_NOTIFICATIONS",
+      (s) => s.key === "SMTP_NOTIFY_ON_NOTIFICATIONS"
     );
 
     if (!smtpEnabledSetting || !notifyOnNotificationsSetting) return null;
@@ -243,7 +243,7 @@ export function SMTPSettings({
           .filter(
             (setting) =>
               setting.key !== "SMTP_ENABLED" &&
-              setting.key !== "SMTP_NOTIFY_ON_NOTIFICATIONS",
+              setting.key !== "SMTP_NOTIFY_ON_NOTIFICATIONS"
           )
           .map((setting) => (
             <Card key={setting.key} className="p-4 my-4">
