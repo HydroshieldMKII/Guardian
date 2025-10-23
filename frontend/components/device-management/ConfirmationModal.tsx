@@ -147,7 +147,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
           <div className="flex items-center gap-3 mb-2">
             {getDeviceIcon(
               confirmAction.device.devicePlatform,
-              confirmAction.device.deviceProduct
+              confirmAction.device.deviceProduct,
             )}
             <div className="min-w-0 flex-1">
               <div className="text-sm font-medium text-foreground truncate">

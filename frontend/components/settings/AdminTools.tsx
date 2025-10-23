@@ -49,7 +49,7 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
         `${config.api.baseUrl}/config/scripts/reset-stream-counts`,
         {
           method: "POST",
-        }
+        },
       );
 
       if (response.ok) {
@@ -84,7 +84,7 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
         `${config.api.baseUrl}/config/scripts/clear-session-history`,
         {
           method: "POST",
-        }
+        },
       );
 
       if (response.ok) {
@@ -119,7 +119,7 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
         `${config.api.baseUrl}/config/scripts/delete-all-devices`,
         {
           method: "POST",
-        }
+        },
       );
 
       if (response.ok) {
@@ -155,7 +155,7 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
         `${config.api.baseUrl}/config/scripts/reset-database`,
         {
           method: "POST",
-        }
+        },
       );
 
       if (response.ok) {

@@ -167,7 +167,7 @@ export default function Settings({ onBack }: SettingsProps) {
         changedSettings.map((setting) => ({
           key: setting.key,
           value: setting.value,
-        }))
+        })),
       );
 
       toast({

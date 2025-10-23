@@ -35,15 +35,15 @@ export function ReleaseNotesModal({
         // Convert markdown headers
         .replace(
           /^### (.*$)/gm,
-          '<h3 class="text-lg font-semibold mt-4 mb-2">$1</h3>'
+          '<h3 class="text-lg font-semibold mt-4 mb-2">$1</h3>',
         )
         .replace(
           /^## (.*$)/gm,
-          '<h2 class="text-xl font-bold mt-6 mb-3">$1</h2>'
+          '<h2 class="text-xl font-bold mt-6 mb-3">$1</h2>',
         )
         .replace(
           /^# (.*$)/gm,
-          '<h1 class="text-2xl font-bold mt-8 mb-4">$1</h1>'
+          '<h1 class="text-2xl font-bold mt-8 mb-4">$1</h1>',
         )
         // Convert markdown lists
         .replace(/^\* (.*$)/gm, '<li class="ml-4 mb-1 list-disc">$1</li>')
@@ -51,14 +51,14 @@ export function ReleaseNotesModal({
         // Wrap consecutive list items in ul tags
         .replace(
           /(<li[^>]*>[\s\S]*?<\/li>(?:\s*<li[^>]*>[\s\S]*?<\/li>)*)/g,
-          '<ul class="ml-4 mb-2">$1</ul>'
+          '<ul class="ml-4 mb-2">$1</ul>',
         )
         // Convert markdown bold
         .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold">$1</strong>')
         // Convert markdown links
         .replace(
           /\[([^\]]+)\]\(([^)]+)\)/g,
-          '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-blue-600 dark:text-blue-400 hover:underline">$1 <ExternalLink class="inline h-3 w-3" /></a>'
+          '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-blue-600 dark:text-blue-400 hover:underline">$1 <ExternalLink class="inline h-3 w-3" /></a>',
         )
         // Convert line breaks
         .replace(/\n/g, "<br />")
@@ -98,7 +98,7 @@ export function ReleaseNotesModal({
             onClick={() =>
               window.open(
                 "https://github.com/HydroshieldMKII/Guardian?tab=readme-ov-file#updating",
-                "_blank"
+                "_blank",
               )
             }
             variant="outline"

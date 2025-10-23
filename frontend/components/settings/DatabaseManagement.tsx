@@ -44,7 +44,7 @@ export function DatabaseManagement({
     try {
       setExportingDatabase(true);
       const response = await fetch(
-        `${config.api.baseUrl}/config/database/export`
+        `${config.api.baseUrl}/config/database/export`,
       );
 
       if (!response.ok) {
@@ -144,7 +144,7 @@ export function DatabaseManagement({
         {
           method: "POST",
           body: formData,
-        }
+        },
       );
 
       const result = await response.json();

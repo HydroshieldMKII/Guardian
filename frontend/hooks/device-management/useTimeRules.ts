@@ -22,7 +22,7 @@ export const useTimeRules = () => {
 
       // Filter out already cached users
       const uncachedUserIds = userIds.filter(
-        (userId) => !globalTimeRuleCache.has(userId)
+        (userId) => !globalTimeRuleCache.has(userId),
       );
 
       if (uncachedUserIds.length === 0) {
@@ -77,7 +77,7 @@ export const useTimeRules = () => {
 
   const getTimeRules = async (
     userId: string,
-    deviceIdentifier?: string
+    deviceIdentifier?: string,
   ): Promise<UserTimeRule[]> => {
     // Check cache first
     const cached = globalTimeRuleCache.get(userId);
@@ -85,7 +85,7 @@ export const useTimeRules = () => {
       // Filter by device if specified
       if (deviceIdentifier) {
         return cached.filter(
-          (rule) => rule.deviceIdentifier === deviceIdentifier
+          (rule) => rule.deviceIdentifier === deviceIdentifier,
         );
       }
       return cached.filter((rule) => !rule.deviceIdentifier); // User-wide rules
@@ -127,7 +127,7 @@ export const useTimeRules = () => {
     try {
       setLoading(true);
       const response = await fetch(
-        `${config.api.baseUrl}/users/${encodeURIComponent(userId)}/time-rules/all`
+        `${config.api.baseUrl}/users/${encodeURIComponent(userId)}/time-rules/all`,
       );
       if (response.ok) {
         const data = await response.json();
@@ -146,7 +146,7 @@ export const useTimeRules = () => {
 
   const createTimeRule = async (
     userId: string,
-    rule: CreateTimeRuleDto
+    rule: CreateTimeRuleDto,
   ): Promise<UserTimeRule> => {
     try {
       setLoading(true);
@@ -164,7 +164,7 @@ export const useTimeRules = () => {
             "Content-Type": "application/json",
           },
           body: JSON.stringify(rule),
-        }
+        },
       );
 
       if (response.ok) {
@@ -195,7 +195,7 @@ export const useTimeRules = () => {
   const updateTimeRule = async (
     userId: string,
     ruleId: number,
-    updates: UpdateTimeRuleDto
+    updates: UpdateTimeRuleDto,
   ): Promise<UserTimeRule | null> => {
     try {
       setLoading(true);
@@ -221,7 +221,7 @@ export const useTimeRules = () => {
             "Content-Type": "application/json",
           },
           body: JSON.stringify(updates),
-        }
+        },
       );
 
       if (response.ok) {
@@ -230,7 +230,7 @@ export const useTimeRules = () => {
         // Update cache
         const cached = globalTimeRuleCache.get(userId) || [];
         const updatedCache = cached.map((rule) =>
-          rule.id === ruleId ? updatedRule : rule
+          rule.id === ruleId ? updatedRule : rule,
         );
         globalTimeRuleCache.set(userId, updatedCache);
 
@@ -254,7 +254,7 @@ export const useTimeRules = () => {
 
   const deleteTimeRule = async (
     userId: string,
-    ruleId: number
+    ruleId: number,
   ): Promise<void> => {
     try {
       setLoading(true);
@@ -262,7 +262,7 @@ export const useTimeRules = () => {
         `${config.api.baseUrl}/users/${encodeURIComponent(userId)}/time-rules/${ruleId}`,
         {
           method: "DELETE",
-        }
+        },
       );
 
       if (response.ok) {
@@ -287,7 +287,7 @@ export const useTimeRules = () => {
   const createPreset = async (
     userId: string,
     presetType: "weekdays-only" | "weekends-only",
-    deviceIdentifier?: string
+    deviceIdentifier?: string,
   ): Promise<UserTimeRule[]> => {
     try {
       setLoading(true);
@@ -303,7 +303,7 @@ export const useTimeRules = () => {
             presetType,
             deviceIdentifier: deviceIdentifier || undefined,
           }),
-        }
+        },
       );
 
       if (response.ok) {
@@ -332,7 +332,7 @@ export const useTimeRules = () => {
 
   const toggleTimeRule = async (
     userId: string,
-    ruleId: number
+    ruleId: number,
   ): Promise<UserTimeRule> => {
     try {
       setLoading(true);
@@ -340,7 +340,7 @@ export const useTimeRules = () => {
         `${config.api.baseUrl}/users/${encodeURIComponent(userId)}/time-rules/${ruleId}/toggle`,
         {
           method: "PUT",
-        }
+        },
       );
 
       if (response.ok) {
@@ -349,7 +349,7 @@ export const useTimeRules = () => {
         // Update cache
         const cached = globalTimeRuleCache.get(userId) || [];
         const updatedCache = cached.map((rule) =>
-          rule.id === ruleId ? updatedRule : rule
+          rule.id === ruleId ? updatedRule : rule,
         );
         globalTimeRuleCache.set(userId, updatedCache);
 
@@ -369,7 +369,7 @@ export const useTimeRules = () => {
 
   const checkStreamingAllowed = async (
     userId: string,
-    deviceIdentifier?: string
+    deviceIdentifier?: string,
   ): Promise<{ allowed: boolean; reason: string }> => {
     try {
       setLoading(true);
@@ -377,7 +377,7 @@ export const useTimeRules = () => {
         ? `?deviceIdentifier=${encodeURIComponent(deviceIdentifier)}`
         : "";
       const response = await fetch(
-        `${config.api.baseUrl}/users/${encodeURIComponent(userId)}/time-rules/check${queryParams}`
+        `${config.api.baseUrl}/users/${encodeURIComponent(userId)}/time-rules/check${queryParams}`,
       );
       if (response.ok) {
         return await response.json();
@@ -412,7 +412,7 @@ export const useTimeRules = () => {
 
       // Make a request to check if enabled rules exist
       const response = await fetch(
-        `${config.api.baseUrl}/users/${encodeURIComponent(userId)}/time-rules`
+        `${config.api.baseUrl}/users/${encodeURIComponent(userId)}/time-rules`,
       );
 
       if (response.ok) {
@@ -435,7 +435,7 @@ export const useTimeRules = () => {
   };
 
   const validateRuleArray = (
-    rules: CreateTimeRuleDto[]
+    rules: CreateTimeRuleDto[],
   ): { valid: boolean; errors: string[] } => {
     const errors: string[] = [];
 
@@ -450,7 +450,7 @@ export const useTimeRules = () => {
       // Validate day of week
       if (rule.dayOfWeek < 0 || rule.dayOfWeek > 6) {
         errors.push(
-          `Rule ${i + 1}: Day of week must be between 0 (Sunday) and 6 (Saturday)`
+          `Rule ${i + 1}: Day of week must be between 0 (Sunday) and 6 (Saturday)`,
         );
       }
 
@@ -459,7 +459,7 @@ export const useTimeRules = () => {
         const otherRule = rules[j];
         if (rulesOverlap(rule, otherRule)) {
           errors.push(
-            `Rule ${i + 1} overlaps with rule ${j + 1} on the same day and time`
+            `Rule ${i + 1} overlaps with rule ${j + 1} on the same day and time`,
           );
         }
       }
@@ -509,7 +509,7 @@ function validateTimeRange(startTime: string, endTime: string): boolean {
 
 function rulesOverlap(
   rule1: CreateTimeRuleDto,
-  rule2: CreateTimeRuleDto
+  rule2: CreateTimeRuleDto,
 ): boolean {
   // Different days don't overlap
   if (rule1.dayOfWeek !== rule2.dayOfWeek) {

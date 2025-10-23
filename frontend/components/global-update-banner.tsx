@@ -82,7 +82,7 @@ export function GlobalUpdateBanner() {
                 onClick={() =>
                   window.open(
                     "https://github.com/HydroshieldMKII/Guardian?tab=readme-ov-file#updating",
-                    "_blank"
+                    "_blank",
                   )
                 }
                 className="bg-blue-700 hover:bg-blue-800 text-white text-xs px-3 py-1 h-auto"
