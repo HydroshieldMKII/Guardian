@@ -2,10 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { useNotificationContext } from "@/contexts/notification-context";
+import { useSettings } from "@/contexts/settings-context";
 import { UserHistoryModal } from "@/components/device-management/UserHistoryModal";
 import { apiClient } from "@/lib/api";
-import { config } from "@/lib/config";
-import { Notification, AppSetting } from "@/types";
+import { Notification } from "@/types";
 
 export function GlobalNotificationHandler() {
   const {
@@ -14,6 +14,8 @@ export function GlobalNotificationHandler() {
     notifications,
     setNotifications,
   } = useNotificationContext();
+
+  const { settings } = useSettings();
 
   // User History Modal state for notifications
   const [notificationHistoryModalOpen, setNotificationHistoryModalOpen] =
@@ -24,7 +26,6 @@ export function GlobalNotificationHandler() {
   } | null>(null);
   const [notificationScrollToSessionId, setNotificationScrollToSessionId] =
     useState<number | null>(null);
-  const [settings, setSettings] = useState<AppSetting[]>([]);
 
   // Independent notification fetching
   useEffect(() => {
@@ -45,39 +46,12 @@ export function GlobalNotificationHandler() {
       }
     };
 
-    const fetchSettings = async () => {
-      try {
-        const response = await fetch(`${config.api.baseUrl}/config`);
-        if (response.ok) {
-          const data = await response.json();
-          setSettings(data);
-        }
-      } catch (error) {
-        console.error(
-          "Failed to fetch settings for notification handler:",
-          error,
-        );
-      }
-    };
-
-    const fetchAll = async () => {
-      await Promise.all([fetchNotifications(), fetchSettings()]);
-    };
-
-    // Fetch notification and settings immediately on mount
-    fetchAll();
+    // Fetch notifications immediately on mount
+    fetchNotifications();
     const intervalNotification = setInterval(fetchNotifications, 10000);
-
-    // Listen for settings updates from the setting component
-    const handleSettingsUpdate = () => {
-      fetchSettings();
-    };
-
-    window.addEventListener("settingsUpdated", handleSettingsUpdate);
 
     return () => {
       clearInterval(intervalNotification);
-      window.removeEventListener("settingsUpdated", handleSettingsUpdate);
     };
   }, [setNotifications]);
 

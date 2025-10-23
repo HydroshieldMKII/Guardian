@@ -390,7 +390,7 @@ export class ConfigService {
           .split(/[,;\n]/)
           .map((email) => email.trim())
           .filter((email) => email.length > 0);
-        
+
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         for (const email of emails) {
           if (!emailRegex.test(email)) {
