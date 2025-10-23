@@ -44,9 +44,7 @@ export const StreamDeviceInfo: React.FC<StreamDeviceInfoProps> = ({
               Product
             </div>
             <div className="truncate text-foreground/60 dark:text-foreground/50 font-medium">
-              {session.Player?.product && session.Player?.originalTitle
-                ? `${session.Player.product} - ${session.Player.originalTitle}`
-                : session.Player?.product || "Unknown"}
+              {session.Player?.product || "Unknown"}
             </div>
           </div>
         </div>
