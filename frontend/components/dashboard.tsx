@@ -184,7 +184,7 @@ export function Dashboard() {
 
   return (
     <div className="min-h-[calc(100vh-3.5rem)]">
-      <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-8">
+      <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-6">
         {/* Server Statistics */}
         <div className="mb-3 sm:mb-8">
           <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center">

@@ -256,7 +256,7 @@ export function SMTPSettings({
               {testingConnection ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Testing SMTP...
+                  Sending test email...
                 </>
               ) : (
                 <>
