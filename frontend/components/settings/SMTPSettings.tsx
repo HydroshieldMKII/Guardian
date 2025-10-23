@@ -214,6 +214,11 @@ export function SMTPSettings({
   };
 
   const isSmtpEnabled = (() => {
+    const formValue = formData["SMTP_ENABLED"];
+    if (formValue !== undefined) {
+      return formValue === true || formValue === "true";
+    }
+
     const smtpSetting = settings.find((s) => s.key === "SMTP_ENABLED");
     return smtpSetting?.value === "true";
   })();
@@ -304,9 +309,19 @@ export function SMTPSettings({
               <Mail className="mr-2 h-4 w-4" />
               Test SMTP Connection
             </Button>
-            <p className="text-xs text-muted-foreground mt-2 text-center">
-              Enable emails to test the connection.
-            </p>
+
+            {hasUnsavedChanges ? (
+              <div className="mt-3 p-3 rounded-md flex items-center gap-2 bg-orange-50 text-orange-700 border border-orange-200 dark:bg-orange-950/20 dark:text-orange-300 dark:border-orange-800">
+                <AlertTriangle className="h-4 w-4" />
+                <span className="text-sm">
+                  Save your changes before testing SMTP connection
+                </span>
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground mt-2 text-center">
+                Enable emails to test the connection.
+              </p>
+            )}
           </div>
         )}
       </CardContent>
