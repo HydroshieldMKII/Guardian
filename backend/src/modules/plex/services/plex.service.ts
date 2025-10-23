@@ -204,4 +204,41 @@ export class PlexService {
       throw error;
     }
   }
+
+  async getActiveSessionsWithMediaUrls(): Promise<any> {
+    try {
+      const sessions =
+        await this.activeSessionService.getActiveSessionsFormatted();
+
+      // Check if media thumbnails and artwork are enabled
+      const [enableThumbnails, enableArtwork] = await Promise.all([
+        this.configService.getSetting('ENABLE_MEDIA_THUMBNAILS'),
+        this.configService.getSetting('ENABLE_MEDIA_ARTWORK'),
+      ]);
+
+      // Add media URLs to session data
+      if (sessions?.MediaContainer?.Metadata) {
+        sessions.MediaContainer.Metadata = sessions.MediaContainer.Metadata.map(
+          (session) => {
+            return {
+              ...session,
+              thumbnailUrl:
+                enableThumbnails && session.thumb
+                  ? this.buildMediaUrl('thumb', session.thumb)
+                  : undefined,
+              artUrl:
+                enableArtwork && session.art
+                  ? this.buildMediaUrl('art', session.art)
+                  : undefined,
+            };
+          },
+        );
+      }
+
+      return sessions;
+    } catch (error: any) {
+      this.logger.error('Error getting active sessions with media URLs', error);
+      throw error;
+    }
+  }
 }

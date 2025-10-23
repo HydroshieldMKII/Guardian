@@ -33,7 +33,6 @@ import {
   ArrowLeft,
   AlertTriangle,
 } from "lucide-react";
-import { AppSetting } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import { useSettings } from "@/contexts/settings-context";
 import { useVersion } from "@/contexts/version-context";
@@ -167,7 +166,7 @@ export default function Settings({ onBack }: SettingsProps) {
         changedSettings.map((setting) => ({
           key: setting.key,
           value: setting.value,
-        })),
+        }))
       );
 
       toast({

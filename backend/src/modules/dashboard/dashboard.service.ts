@@ -75,7 +75,7 @@ export class DashboardService {
         processedDevices,
         users,
       ] = await Promise.all([
-        this.plexService.getActiveSessions(),
+        this.plexService.getActiveSessionsWithMediaUrls(),
         this.deviceTrackingService.getAllDevices(),
         this.deviceTrackingService.getPendingDevices(),
         this.deviceTrackingService.getApprovedDevices(),

@@ -93,7 +93,7 @@ export const getSettingInfo = (setting: AppSetting): SettingInfo => {
     },
     DEFAULT_PAGE: {
       label: "Default dashboard page",
-      description: "Page to show when opening Guardian (devices or streams)",
+      description: "Page to show when opening Guardian",
     },
     AUTO_CHECK_UPDATES: {
       label: "Automatically check for updates",

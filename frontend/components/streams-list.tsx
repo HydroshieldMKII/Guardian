@@ -199,7 +199,7 @@ export default function StreamsList({
             )}
           </div>
         ) : (
-          <div className="space-y-3 sm:space-y-4">
+          <div className="space-y-3 sm:space-y-4 mb-4">
             {filteredStreams.map((stream, index) => (
               <StreamCard
                 key={stream.sessionKey || index}
@@ -211,7 +211,7 @@ export default function StreamsList({
                   setExpandedStream(
                     expandedStream === stream.sessionKey
                       ? null
-                      : stream.sessionKey,
+                      : stream.sessionKey
                   )
                 }
                 onRemoveAccess={() => setConfirmRemoveStream(stream)}

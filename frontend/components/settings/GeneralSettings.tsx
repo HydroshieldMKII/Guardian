@@ -68,9 +68,10 @@ export function GeneralSettings({
           "TIMEZONE", // Display/locale setting
         ],
         customization: [
-          "ENABLE_MEDIA_THUMBNAILS", // UI settings first
-          "ENABLE_MEDIA_ARTWORK", // UI settings
-          "MSG_DEVICE_PENDING", // Message settings grouped
+          "DEFAULT_PAGE",
+          "ENABLE_MEDIA_THUMBNAILS",
+          "ENABLE_MEDIA_ARTWORK",
+          "MSG_DEVICE_PENDING",
           "MSG_DEVICE_REJECTED",
           "MSG_TIME_RESTRICTED",
           "MSG_IP_LAN_ONLY",
@@ -96,20 +97,22 @@ export function GeneralSettings({
             "DEVICE_CLEANUP_ENABLED",
             "DEVICE_CLEANUP_INTERVAL_DAYS",
             "TIMEZONE",
-          ].includes(setting.key),
+          ].includes(setting.key)
         );
         break;
       case "customization":
         filteredSettings = settings.filter(
           (setting) =>
-            ["ENABLE_MEDIA_THUMBNAILS", "ENABLE_MEDIA_ARTWORK"].includes(
-              setting.key,
-            ) || setting.key.startsWith("MSG_"),
+            [
+              "DEFAULT_PAGE",
+              "ENABLE_MEDIA_THUMBNAILS",
+              "ENABLE_MEDIA_ARTWORK",
+            ].includes(setting.key) || setting.key.startsWith("MSG_")
         );
         break;
       case "notifications":
         filteredSettings = settings.filter((setting) =>
-          ["AUTO_MARK_NOTIFICATION_READ"].includes(setting.key),
+          ["AUTO_MARK_NOTIFICATION_READ"].includes(setting.key)
         );
         break;
       default:
@@ -119,7 +122,7 @@ export function GeneralSettings({
     // Sort the filtered settings according to the defined order
     return filteredSettings.sort(
       (a, b) =>
-        getSettingOrder(section, a.key) - getSettingOrder(section, b.key),
+        getSettingOrder(section, a.key) - getSettingOrder(section, b.key)
     );
   };
 
@@ -155,10 +158,10 @@ export function GeneralSettings({
 
   const renderDeviceCleanupGroup = (settings: AppSetting[]) => {
     const cleanupEnabledSetting = settings.find(
-      (s) => s.key === "DEVICE_CLEANUP_ENABLED",
+      (s) => s.key === "DEVICE_CLEANUP_ENABLED"
     );
     const cleanupIntervalSetting = settings.find(
-      (s) => s.key === "DEVICE_CLEANUP_INTERVAL_DAYS",
+      (s) => s.key === "DEVICE_CLEANUP_INTERVAL_DAYS"
     );
 
     if (!cleanupEnabledSetting || !cleanupIntervalSetting) return null;
@@ -361,24 +364,42 @@ export function GeneralSettings({
 
     // Special handling for select fields
     if (setting.key === "DEFAULT_PAGE") {
+      const currentValue = typeof value === "string" ? value : String(value);
+      
       return (
         <div key={setting.key} className="space-y-2">
-          <Label htmlFor={setting.key}>{label}</Label>
-          {description && (
-            <p className="text-sm text-muted-foreground">{description}</p>
-          )}
-          <select
-            id={setting.key}
-            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
-            value={typeof value === "string" ? value : String(value)}
-            onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
-              handleInputChange(setting.key, e.target.value)
-            }
-          >
-            <option value="">Select default page</option>
-            <option value="devices">Devices</option>
-            <option value="streams">Streams</option>
-          </select>
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label htmlFor={setting.key}>{label}</Label>
+              {description && (
+                <p className="text-sm text-muted-foreground">{description}</p>
+              )}
+            </div>
+            <div className="flex rounded-lg border border-input bg-muted/30 p-1">
+              <button
+                type="button"
+                className={`px-3 py-1.5 text-sm font-medium cursor-pointer rounded-md transition-all duration-200 ${
+                  currentValue === "devices" 
+                    ? "bg-background text-foreground shadow-sm border border-border" 
+                    : "text-muted-foreground hover:text-foreground hover:bg-background/50"
+                }`}
+                onClick={() => handleInputChange(setting.key, "devices")}
+              >
+                Devices
+              </button>
+              <button
+                type="button"
+                className={`px-3 py-1.5 text-sm font-medium cursor-pointer rounded-md transition-all duration-200 ${
+                  currentValue === "streams" 
+                    ? "bg-background text-foreground shadow-sm border border-border" 
+                    : "text-muted-foreground hover:text-foreground hover:bg-background/50"
+                }`}
+                onClick={() => handleInputChange(setting.key, "streams")}
+              >
+                Streams
+              </button>
+            </div>
+          </div>
         </div>
       );
     }
