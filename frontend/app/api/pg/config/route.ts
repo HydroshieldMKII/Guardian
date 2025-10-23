@@ -44,7 +44,25 @@ export async function PUT(request: NextRequest) {
     });
 
     if (!response.ok) {
-      throw new Error(`Backend responded with ${response.status}`);
+      try {
+        const errorData = await response.json();
+        return NextResponse.json(
+          {
+            error:
+              errorData.message ||
+              errorData.error ||
+              "Failed to update configuration",
+          },
+          { status: response.status }
+        );
+      } catch {
+        return NextResponse.json(
+          {
+            error: `Something went wrong check the server logs for more details`,
+          },
+          { status: response.status }
+        );
+      }
     }
 
     const data = await response.json();

@@ -22,6 +22,7 @@ import {
 import {
   Loader2,
   Save,
+  X,
   Settings as SettingsIcon,
   Database,
   Mail,
@@ -126,6 +127,18 @@ export default function Settings({ onBack }: SettingsProps) {
     onBack?.();
   };
 
+  const handleCancel = () => {
+    // Reset form data to original settings values
+    if (settings && settings.length > 0) {
+      const originalData: SettingsFormData = {};
+      settings.forEach((setting) => {
+        originalData[setting.key] = setting.value;
+      });
+      setFormData(originalData);
+    }
+    setHasUnsavedChanges(false);
+  };
+
   const handleSave = async () => {
     if (!hasUnsavedChanges) {
       toast({
@@ -167,8 +180,15 @@ export default function Settings({ onBack }: SettingsProps) {
       });
 
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || "Failed to save settings");
+        let errorMessage = "Failed to save settings";
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorData.error || errorMessage;
+        } catch {
+          const errorText = await response.text();
+          errorMessage = errorText || errorMessage;
+        }
+        throw new Error(errorMessage);
       }
 
       updateSettings(
@@ -187,7 +207,6 @@ export default function Settings({ onBack }: SettingsProps) {
       setHasUnsavedChanges(false);
     } catch (error) {
       console.error("Error saving settings:", error);
-      await refreshSettings();
       toast({
         title: "Error",
         description:
@@ -328,19 +347,31 @@ export default function Settings({ onBack }: SettingsProps) {
                 Don't forget to save your changes to apply them.
               </p>
             </div>
-            <Button
-              onClick={handleSave}
-              disabled={isSaving}
-              size="sm"
-              className="bg-orange-600 hover:bg-orange-700 text-white"
-            >
-              {isSaving ? (
-                <Loader2 className="h-3 w-3 animate-spin mr-1" />
-              ) : (
-                <Save className="h-3 w-3 mr-1" />
-              )}
-              Save Now
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                onClick={handleCancel}
+                disabled={isSaving}
+                size="sm"
+                variant="outline"
+                className="border-orange-300 text-orange-700 hover:bg-orange-50 dark:border-orange-700 dark:text-orange-300 dark:hover:bg-orange-900/20"
+              >
+                <X className="h-3 w-3 mr-1" />
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSave}
+                disabled={isSaving}
+                size="sm"
+                className="bg-orange-600 hover:bg-orange-700 text-white"
+              >
+                {isSaving ? (
+                  <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                ) : (
+                  <Save className="h-3 w-3 mr-1" />
+                )}
+                Save Now
+              </Button>
+            </div>
           </div>
         )}
       </div>

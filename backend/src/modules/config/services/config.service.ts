@@ -361,6 +361,45 @@ export class ConfigService {
       }
     }
 
+    // Validate SMTP_PORT setting
+    if (key === 'SMTP_PORT') {
+      const numValue = Number(value);
+      if (isNaN(numValue)) {
+        throw new Error('SMTP port must be a valid number');
+      }
+      if (!Number.isInteger(numValue)) {
+        throw new Error('SMTP port must be a whole number (no decimals)');
+      }
+      if (numValue < 1 || numValue > 65535) {
+        throw new Error('SMTP port must be between 1 and 65535');
+      }
+    }
+
+    // Validate SMTP_FROM_EMAIL setting
+    if (key === 'SMTP_FROM_EMAIL') {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (value && !emailRegex.test(String(value))) {
+        throw new Error('SMTP from email must be a valid email address');
+      }
+    }
+
+    // Validate SMTP_TO_EMAILS setting
+    if (key === 'SMTP_TO_EMAILS') {
+      if (value) {
+        const emails = String(value)
+          .split(/[,;\n]/)
+          .map((email) => email.trim())
+          .filter((email) => email.length > 0);
+        
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        for (const email of emails) {
+          if (!emailRegex.test(email)) {
+            throw new Error(`Invalid email address: ${email}`);
+          }
+        }
+      }
+    }
+
     // Validate DEFAULT_PAGE setting
     if (key === 'DEFAULT_PAGE') {
       const validPages = ['devices', 'streams'];
