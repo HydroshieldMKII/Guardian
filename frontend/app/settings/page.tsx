@@ -7,7 +7,7 @@ export default function SettingsPage() {
   const router = useRouter();
 
   const handleBack = () => {
-    router.back();
+    router.push('/');
   };
 
   return <Settings onBack={handleBack} />;
