@@ -5,6 +5,10 @@
 [![Stars](https://img.shields.io/github/stars/HydroshieldMKII/Guardian.svg?style=flat)](https://github.com/HydroshieldMKII/Guardian/stargazers)
 [![Need help or feedback?](https://img.shields.io/discord/1415505445883215955?logo=discord&label=Need%20help%20or%20feedback?)](https://discord.gg/xTKuHyhdS4)
 
+![White logo JPG -  Banner](https://github.com/user-attachments/assets/ff8b9bbc-f5d4-451a-bdc1-cb2354023c8b)
+
+
+
 **Guardian** is a utility that enhances the security and management of your Plex Media Server.  
 It helps you monitor activity, control device access, and ensure only authorized users can stream from your library.
 
@@ -29,8 +33,8 @@ It helps you monitor activity, control device access, and ensure only authorized
 
 ---
 
-<img width="1280" height="600" alt="guardian_1" src="https://github.com/user-attachments/assets/83bfd0fc-6bb7-4aa8-b3d6-ce45243e6de1" />
-<img width="1280" height="599" alt="guardian_2" src="https://github.com/user-attachments/assets/f88d3957-d07c-495d-9d95-0868e30510a3" />
+<img width="3024" height="1716" alt="guardian_1" src="https://github.com/user-attachments/assets/d0283784-c009-467e-8e38-b0d7f3907ba0" />
+<img width="3024" height="1718" alt="guardian_2" src="https://github.com/user-attachments/assets/3c2e9d9b-0836-4e95-913d-fcc71634820f" />
 
 ## Features
 
