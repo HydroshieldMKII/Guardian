@@ -267,97 +267,101 @@ export function GeneralSettings({
     if (setting.key === "TIMEZONE") {
       return (
         <div key={setting.key} className="space-y-2">
-          <Label htmlFor={setting.key}>{label}</Label>
-          {description && (
-            <p className="text-sm text-muted-foreground">{description}</p>
-          )}
-          <Select
-            value={typeof value === "string" ? value : String(value)}
-            onValueChange={(newValue) =>
-              handleInputChange(setting.key, newValue)
-            }
-          >
-            <SelectTrigger className="cursor-pointer">
-              <SelectValue placeholder="Select timezone" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="-12:00">
-                UTC-12:00 - {getCurrentTimeInOffset("-12:00")}
-              </SelectItem>
-              <SelectItem value="-11:00">
-                UTC-11:00 - {getCurrentTimeInOffset("-11:00")}
-              </SelectItem>
-              <SelectItem value="-10:00">
-                UTC-10:00 - {getCurrentTimeInOffset("-10:00")}
-              </SelectItem>
-              <SelectItem value="-09:00">
-                UTC-09:00 - {getCurrentTimeInOffset("-09:00")}
-              </SelectItem>
-              <SelectItem value="-08:00">
-                UTC-08:00 - {getCurrentTimeInOffset("-08:00")}
-              </SelectItem>
-              <SelectItem value="-07:00">
-                UTC-07:00 - {getCurrentTimeInOffset("-07:00")}
-              </SelectItem>
-              <SelectItem value="-06:00">
-                UTC-06:00 - {getCurrentTimeInOffset("-06:00")}
-              </SelectItem>
-              <SelectItem value="-05:00">
-                UTC-05:00 - {getCurrentTimeInOffset("-05:00")}
-              </SelectItem>
-              <SelectItem value="-04:00">
-                UTC-04:00 - {getCurrentTimeInOffset("-04:00")}
-              </SelectItem>
-              <SelectItem value="-03:00">
-                UTC-03:00 - {getCurrentTimeInOffset("-03:00")}
-              </SelectItem>
-              <SelectItem value="-02:00">
-                UTC-02:00 - {getCurrentTimeInOffset("-02:00")}
-              </SelectItem>
-              <SelectItem value="-01:00">
-                UTC-01:00 - {getCurrentTimeInOffset("-01:00")}
-              </SelectItem>
-              <SelectItem value="+00:00">
-                UTC+00:00 - {getCurrentTimeInOffset("+00:00")}
-              </SelectItem>
-              <SelectItem value="+01:00">
-                UTC+01:00 - {getCurrentTimeInOffset("+01:00")}
-              </SelectItem>
-              <SelectItem value="+02:00">
-                UTC+02:00 - {getCurrentTimeInOffset("+02:00")}
-              </SelectItem>
-              <SelectItem value="+03:00">
-                UTC+03:00 - {getCurrentTimeInOffset("+03:00")}
-              </SelectItem>
-              <SelectItem value="+04:00">
-                UTC+04:00 - {getCurrentTimeInOffset("+04:00")}
-              </SelectItem>
-              <SelectItem value="+05:00">
-                UTC+05:00 - {getCurrentTimeInOffset("+05:00")}
-              </SelectItem>
-              <SelectItem value="+06:00">
-                UTC+06:00 - {getCurrentTimeInOffset("+06:00")}
-              </SelectItem>
-              <SelectItem value="+07:00">
-                UTC+07:00 - {getCurrentTimeInOffset("+07:00")}
-              </SelectItem>
-              <SelectItem value="+08:00">
-                UTC+08:00 - {getCurrentTimeInOffset("+08:00")}
-              </SelectItem>
-              <SelectItem value="+09:00">
-                UTC+09:00 - {getCurrentTimeInOffset("+09:00")}
-              </SelectItem>
-              <SelectItem value="+10:00">
-                UTC+10:00 - {getCurrentTimeInOffset("+10:00")}
-              </SelectItem>
-              <SelectItem value="+11:00">
-                UTC+11:00 - {getCurrentTimeInOffset("+11:00")}
-              </SelectItem>
-              <SelectItem value="+12:00">
-                UTC+12:00 - {getCurrentTimeInOffset("+12:00")}
-              </SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label htmlFor={setting.key}>{label}</Label>
+              {description && (
+                <p className="text-sm text-muted-foreground">{description}</p>
+              )}
+            </div>
+            <Select
+              value={typeof value === "string" ? value : String(value)}
+              onValueChange={(newValue) =>
+                handleInputChange(setting.key, newValue)
+              }
+            >
+              <SelectTrigger className="w-[220px] cursor-pointer">
+                <SelectValue placeholder="Select timezone" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="-12:00">
+                  UTC-12:00 - {getCurrentTimeInOffset("-12:00")}
+                </SelectItem>
+                <SelectItem value="-11:00">
+                  UTC-11:00 - {getCurrentTimeInOffset("-11:00")}
+                </SelectItem>
+                <SelectItem value="-10:00">
+                  UTC-10:00 - {getCurrentTimeInOffset("-10:00")}
+                </SelectItem>
+                <SelectItem value="-09:00">
+                  UTC-09:00 - {getCurrentTimeInOffset("-09:00")}
+                </SelectItem>
+                <SelectItem value="-08:00">
+                  UTC-08:00 - {getCurrentTimeInOffset("-08:00")}
+                </SelectItem>
+                <SelectItem value="-07:00">
+                  UTC-07:00 - {getCurrentTimeInOffset("-07:00")}
+                </SelectItem>
+                <SelectItem value="-06:00">
+                  UTC-06:00 - {getCurrentTimeInOffset("-06:00")}
+                </SelectItem>
+                <SelectItem value="-05:00">
+                  UTC-05:00 - {getCurrentTimeInOffset("-05:00")}
+                </SelectItem>
+                <SelectItem value="-04:00">
+                  UTC-04:00 - {getCurrentTimeInOffset("-04:00")}
+                </SelectItem>
+                <SelectItem value="-03:00">
+                  UTC-03:00 - {getCurrentTimeInOffset("-03:00")}
+                </SelectItem>
+                <SelectItem value="-02:00">
+                  UTC-02:00 - {getCurrentTimeInOffset("-02:00")}
+                </SelectItem>
+                <SelectItem value="-01:00">
+                  UTC-01:00 - {getCurrentTimeInOffset("-01:00")}
+                </SelectItem>
+                <SelectItem value="+00:00">
+                  UTC+00:00 - {getCurrentTimeInOffset("+00:00")}
+                </SelectItem>
+                <SelectItem value="+01:00">
+                  UTC+01:00 - {getCurrentTimeInOffset("+01:00")}
+                </SelectItem>
+                <SelectItem value="+02:00">
+                  UTC+02:00 - {getCurrentTimeInOffset("+02:00")}
+                </SelectItem>
+                <SelectItem value="+03:00">
+                  UTC+03:00 - {getCurrentTimeInOffset("+03:00")}
+                </SelectItem>
+                <SelectItem value="+04:00">
+                  UTC+04:00 - {getCurrentTimeInOffset("+04:00")}
+                </SelectItem>
+                <SelectItem value="+05:00">
+                  UTC+05:00 - {getCurrentTimeInOffset("+05:00")}
+                </SelectItem>
+                <SelectItem value="+06:00">
+                  UTC+06:00 - {getCurrentTimeInOffset("+06:00")}
+                </SelectItem>
+                <SelectItem value="+07:00">
+                  UTC+07:00 - {getCurrentTimeInOffset("+07:00")}
+                </SelectItem>
+                <SelectItem value="+08:00">
+                  UTC+08:00 - {getCurrentTimeInOffset("+08:00")}
+                </SelectItem>
+                <SelectItem value="+09:00">
+                  UTC+09:00 - {getCurrentTimeInOffset("+09:00")}
+                </SelectItem>
+                <SelectItem value="+10:00">
+                  UTC+10:00 - {getCurrentTimeInOffset("+10:00")}
+                </SelectItem>
+                <SelectItem value="+11:00">
+                  UTC+11:00 - {getCurrentTimeInOffset("+11:00")}
+                </SelectItem>
+                <SelectItem value="+12:00">
+                  UTC+12:00 - {getCurrentTimeInOffset("+12:00")}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       );
     }
@@ -365,7 +369,7 @@ export function GeneralSettings({
     // Special handling for select fields
     if (setting.key === "DEFAULT_PAGE") {
       const currentValue = typeof value === "string" ? value : String(value);
-      
+
       return (
         <div key={setting.key} className="space-y-2">
           <div className="flex items-center justify-between">
@@ -379,8 +383,8 @@ export function GeneralSettings({
               <button
                 type="button"
                 className={`px-3 py-1.5 text-sm font-medium cursor-pointer rounded-md transition-all duration-200 ${
-                  currentValue === "devices" 
-                    ? "bg-background text-foreground shadow-sm border border-border" 
+                  currentValue === "devices"
+                    ? "bg-background text-foreground shadow-sm border border-border"
                     : "text-muted-foreground hover:text-foreground hover:bg-background/50"
                 }`}
                 onClick={() => handleInputChange(setting.key, "devices")}
@@ -390,8 +394,8 @@ export function GeneralSettings({
               <button
                 type="button"
                 className={`px-3 py-1.5 text-sm font-medium cursor-pointer rounded-md transition-all duration-200 ${
-                  currentValue === "streams" 
-                    ? "bg-background text-foreground shadow-sm border border-border" 
+                  currentValue === "streams"
+                    ? "bg-background text-foreground shadow-sm border border-border"
                     : "text-muted-foreground hover:text-foreground hover:bg-background/50"
                 }`}
                 onClick={() => handleInputChange(setting.key, "streams")}

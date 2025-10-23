@@ -76,7 +76,15 @@ export default function Settings({ onBack }: SettingsProps) {
     if (settings && settings.length > 0) {
       const hasChanges = settings.some((setting) => {
         const currentValue = formData[setting.key];
-        return currentValue !== undefined && currentValue !== setting.value;
+        if (currentValue === undefined) return false;
+
+        const normalizeValue = (value: any) => {
+          if (typeof value === "boolean") return String(value);
+          if (typeof value === "string") return value;
+          return String(value);
+        };
+
+        return normalizeValue(currentValue) !== normalizeValue(setting.value);
       });
       setHasUnsavedChanges(hasChanges);
     }
@@ -316,7 +324,7 @@ export default function Settings({ onBack }: SettingsProps) {
                 You have unsaved changes
               </p>
               <p className="text-xs text-orange-600 dark:text-orange-300 mt-1">
-                Don't forget to save your changes before leaving this page
+                Don't forget to save your changes to apply them.
               </p>
             </div>
             <Button

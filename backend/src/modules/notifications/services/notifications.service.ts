@@ -85,7 +85,7 @@ export class NotificationsService {
           text = `Stream blocked for ${username} on ${deviceDisplayName} - device needs approval`;
           break;
         case 'DEVICE_REJECTED':
-          text = `Stream blocked for ${username} on ${deviceDisplayName} - device has been rejected`;
+          text = `Stream blocked for ${username} on ${deviceDisplayName} - device is not allowed`;
           break;
         case 'IP_POLICY_LAN_ONLY':
           text = `Stream blocked for ${username} on ${deviceDisplayName} - device attempted WAN access but is restricted to LAN only`;
@@ -97,7 +97,7 @@ export class NotificationsService {
           text = `Stream blocked for ${username} on ${deviceDisplayName} - IP address is not in the allowed list`;
           break;
         case 'TIME_RESTRICTED':
-          text = `Stream blocked for ${username} on ${deviceDisplayName} - time scheduling restrictions are in effect`;
+          text = `Stream blocked for ${username} on ${deviceDisplayName} - user schedule doesn't allow streaming at this moment`;
           break;
         default:
           text = `Stream blocked for ${username} on ${deviceDisplayName} - ${stopCode}`;

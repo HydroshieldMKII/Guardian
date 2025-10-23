@@ -1,7 +1,52 @@
 import { Injectable } from '@nestjs/common';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 
 @Injectable()
 export class EmailTemplateService {
+  private getLogoBase64(): string {
+    try {
+      // Try multiple possible paths for the logo file
+      const possiblePaths = [
+        join(process.cwd(), '..', 'frontend', 'public', 'logo_dark.svg'),
+        join(process.cwd(), 'frontend', 'public', 'logo_dark.svg'),
+        join(
+          __dirname,
+          '..',
+          '..',
+          '..',
+          '..',
+          '..',
+          'frontend',
+          'public',
+          'logo_dark.svg',
+        ),
+      ];
+
+      let logoContent: string | null = null;
+
+      for (const logoPath of possiblePaths) {
+        try {
+          logoContent = readFileSync(logoPath, 'utf8');
+          break;
+        } catch (error) {
+          // Try next path
+          continue;
+        }
+      }
+
+      if (!logoContent) {
+        throw new Error('Logo file not found in any expected location');
+      }
+
+      // Convert SVG to base64 data URL
+      const base64Logo = Buffer.from(logoContent).toString('base64');
+      return `data:image/svg+xml;base64,${base64Logo}`;
+    } catch (error) {
+      console.warn('Logo file not found, using text fallback:', error.message);
+      return '';
+    }
+  }
   private getBaseEmailStyles(): string {
     return `
       @media only screen and (max-width: 600px) {
@@ -58,7 +103,7 @@ export class EmailTemplateService {
         overflow: hidden;
       }
       .header {
-        padding: 50px 40px 30px;
+        padding: 0px 40px 0px;
         text-align: center;
         background-color: #ffffff;
         color: #000000;
@@ -82,6 +127,14 @@ export class EmailTemplateService {
         text-transform: uppercase;
         text-shadow: none;
       }
+      .logo {
+        width: 300px;
+        height: auto;
+        margin: 0;
+        display: block;
+        margin-left: auto;
+        margin-right: auto;
+      }
       .content {
         padding: 40px 40px 30px;
         background-color: #ffffff;
@@ -96,7 +149,6 @@ export class EmailTemplateService {
         letter-spacing: 1px;
         border-radius: 20px;
         margin-bottom: 24px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
       }
       .main-message {
         margin: 0 0 32px 0;
@@ -197,6 +249,8 @@ export class EmailTemplateService {
     footerText: string,
     timestamp: string,
   ): string {
+    const logoBase64 = this.getLogoBase64();
+
     return `<!DOCTYPE html>
     <html lang="en">
     <head>
@@ -210,7 +264,7 @@ export class EmailTemplateService {
       <div class="email-wrapper">
         <div class="container">
           <div class="header">
-            <h1>Guardian</h1>
+            ${logoBase64 ? `<img src="${logoBase64}" alt="Guardian Logo" class="logo" />` : '<h1>Guardian</h1>'}
           </div>
           <div class="content">
             <div class="badge" style="background-color: ${badgeColor};">${badgeText}</div>

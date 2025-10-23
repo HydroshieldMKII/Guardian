@@ -196,7 +196,9 @@ export class SessionTerminationService {
           const shouldStopResult = await this.shouldStopSession(session);
 
           if (shouldStopResult.shouldStop) {
-            const sessionId = session.Session?.id; // Device identifier for termination
+            const sessionId = session.Session?.id; // Session ID for termination
+            const deviceIdentifier =
+              session.Player?.machineIdentifier || 'unknown'; // Device identifier for notification lookup
             const sessionKey = session.sessionKey; // Session key for history lookup
 
             if (sessionId) {
@@ -231,7 +233,7 @@ export class SessionTerminationService {
                 await this.notificationsService.createStreamBlockedNotification(
                   userId,
                   username,
-                  sessionId, // Device identifier
+                  deviceIdentifier,
                   stopCode,
                   sessionHistory?.id,
                 );

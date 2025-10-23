@@ -253,6 +253,32 @@ export function SMTPSettings({
 
         {isSmtpEnabled && (
           <div className="pb-4">
+            {hasUnsavedChanges && (
+              <div className="mb-3 p-3 rounded-md flex items-center gap-2 bg-orange-50 text-orange-700 border border-orange-200 dark:bg-orange-950/20 dark:text-orange-300 dark:border-orange-800">
+                <AlertTriangle className="h-4 w-4" />
+                <span className="text-sm">
+                  Save your changes before testing SMTP connection
+                </span>
+              </div>
+            )}
+
+            {connectionStatus && !hasUnsavedChanges && (
+              <div
+                className={`mb-3 p-3 rounded-md flex items-center gap-2 ${
+                  connectionStatus.success
+                    ? "bg-green-50 text-green-700 border border-green-200 dark:bg-green-950/20 dark:text-green-300 dark:border-green-800"
+                    : "bg-red-50 text-red-700 border border-red-200 dark:bg-red-950/20 dark:text-red-300 dark:border-red-800"
+                }`}
+              >
+                {connectionStatus.success ? (
+                  <CheckCircle className="h-4 w-4" />
+                ) : (
+                  <XCircle className="h-4 w-4" />
+                )}
+                <span className="text-sm">{connectionStatus.message}</span>
+              </div>
+            )}
+
             <Button
               onClick={testSMTPConnection}
               disabled={testingConnection || hasUnsavedChanges}
@@ -270,9 +296,13 @@ export function SMTPSettings({
                 </>
               )}
             </Button>
+          </div>
+        )}
 
+        {!isSmtpEnabled && (
+          <div className="pb-4">
             {hasUnsavedChanges && (
-              <div className="mt-3 p-3 rounded-md flex items-center gap-2 bg-orange-50 text-orange-700 border border-orange-200 dark:bg-orange-950/20 dark:text-orange-300 dark:border-orange-800">
+              <div className="mb-3 p-3 rounded-md flex items-center gap-2 bg-orange-50 text-orange-700 border border-orange-200 dark:bg-orange-950/20 dark:text-orange-300 dark:border-orange-800">
                 <AlertTriangle className="h-4 w-4" />
                 <span className="text-sm">
                   Save your changes before testing SMTP connection
@@ -280,27 +310,6 @@ export function SMTPSettings({
               </div>
             )}
 
-            {connectionStatus && !hasUnsavedChanges && (
-              <div
-                className={`mt-3 p-3 rounded-md flex items-center gap-2 ${
-                  connectionStatus.success
-                    ? "bg-green-50 text-green-700 border border-green-200 dark:bg-green-950/20 dark:text-green-300 dark:border-green-800"
-                    : "bg-red-50 text-red-700 border border-red-200 dark:bg-red-950/20 dark:text-red-300 dark:border-red-800"
-                }`}
-              >
-                {connectionStatus.success ? (
-                  <CheckCircle className="h-4 w-4" />
-                ) : (
-                  <XCircle className="h-4 w-4" />
-                )}
-                <span className="text-sm">{connectionStatus.message}</span>
-              </div>
-            )}
-          </div>
-        )}
-
-        {!isSmtpEnabled && (
-          <div className="pb-4">
             <Button
               onClick={testSMTPConnection}
               disabled={true}
@@ -310,14 +319,7 @@ export function SMTPSettings({
               Test SMTP Connection
             </Button>
 
-            {hasUnsavedChanges ? (
-              <div className="mt-3 p-3 rounded-md flex items-center gap-2 bg-orange-50 text-orange-700 border border-orange-200 dark:bg-orange-950/20 dark:text-orange-300 dark:border-orange-800">
-                <AlertTriangle className="h-4 w-4" />
-                <span className="text-sm">
-                  Save your changes before testing SMTP connection
-                </span>
-              </div>
-            ) : (
+            {!hasUnsavedChanges && (
               <p className="text-xs text-muted-foreground mt-2 text-center">
                 Enable emails to test the connection.
               </p>
