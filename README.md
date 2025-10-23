@@ -7,8 +7,6 @@
 
 ![White logo JPG -  Banner](https://github.com/user-attachments/assets/ff8b9bbc-f5d4-451a-bdc1-cb2354023c8b)
 
-
-
 **Guardian** is a utility that enhances the security and management of your Plex Media Server.  
 It helps you monitor activity, control device access, and ensure only authorized users can stream from your library.
 
@@ -24,11 +22,11 @@ It helps you monitor activity, control device access, and ensure only authorized
 - [Configuration](#configuration)
 - [Application Settings](#application-settings)
 - [Updating](#updating)
-   - [Docker](#docker)
-   - [Proxmox](#proxmox-1)
+  - [Docker](#docker)
+  - [Proxmox](#proxmox-1)
 - [Troubleshooting](#troubleshooting)
-   - [Docker Logs](#docker-logs)
-   - [Proxmox Logs](#proxmox-logs)
+  - [Docker Logs](#docker-logs)
+  - [Proxmox Logs](#proxmox-logs)
 - [Contributing](#contributing)
 
 ---
@@ -44,6 +42,7 @@ It helps you monitor activity, control device access, and ensure only authorized
 - Global and per-user default blocking rules
 - IP-based access controls (LAN-only, WAN-only, or specific IP/CIDR ranges)
 - Temporary device access with automatic expiration
+- Time-based access restrictions with custom schedules per user
 
 ### Real-time Monitoring & Tracking
 
@@ -52,12 +51,19 @@ It helps you monitor activity, control device access, and ensure only authorized
 - Active stream monitoring: title, quality, duration, progress
 - Session history with filtering and search
 
+### Email Notifications & Alerts
+
+- SMTP email integration
+- Real-time email notifications for security events
+- Support for TLS/STARTTLS encryption and authentication
+
 ### User Interface & Experience
 
 - Customizable blocking messages for different violation scenarios
 - Media thumbnails and background artwork display
 - Custom Plex web URL integration for seamless content access
 - Responsive design with mobile and desktop optimized views
+- Modern dark/light theme support
 
 ### Configuration & Flexibility
 
@@ -66,6 +72,8 @@ It helps you monitor activity, control device access, and ensure only authorized
 - Database export and import for backup and migration
 - Automatic device cleanup based on inactivity periods
 - Administrative tools for database management from the UI
+- Automatic update checking and manual update verification
+- Version mismatch detection
 
 ---
 
@@ -114,6 +122,7 @@ You can run Guardian in a lightweight LXC container using the community script.
 **Steps**
 
 1. Run the automated installation script on your host:
+
    ```bash
    bash -c "$(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/guardian.sh)"
    ```
@@ -161,12 +170,13 @@ Guardian can be customized using environment variables in a `.env` file for Dock
 
 Create a `.env` file to customize Guardian's behavior:
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `PLEXGUARD_FRONTEND_PORT` | Port for the web interface | `3000` |
-| `VERSION` | Docker image version to use | `latest` |
+| Variable                  | Description                 | Default  |
+| ------------------------- | --------------------------- | -------- |
+| `PLEXGUARD_FRONTEND_PORT` | Port for the web interface  | `3000`   |
+| `VERSION`                 | Docker image version to use | `latest` |
 
 **Example `.env` file:**
+
 ```bash
 PLEXGUARD_FRONTEND_PORT=3456
 VERSION=v1.2.3
@@ -182,11 +192,13 @@ VERSION=v1.2.3
 After modifying environment variables, restart Guardian:
 
 **Docker:**
+
 ```bash
 docker compose up -d --force-recreate
 ```
 
 **Proxmox:**
+
 ```bash
 systemctl restart guardian-backend guardian-frontend
 ```
