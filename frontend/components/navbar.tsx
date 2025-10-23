@@ -16,7 +16,10 @@ export function Navbar() {
     <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="w-full max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
-          <Link href="/" className="flex items-center space-x-3 hover:opacity-80 transition-opacity">
+          <Link
+            href="/"
+            className="flex items-center space-x-3 hover:opacity-80 transition-opacity"
+          >
             <div className="flex items-center">
               {/* Light theme logo (dark logo) */}
               <Image
@@ -49,36 +52,39 @@ export function Navbar() {
               size="icon"
               onClick={toggleTheme}
               className="h-9 w-9 rounded-full hover:bg-muted transition-colors"
-            title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
-          >
-            {theme === "dark" ? (
-              <Sun className="h-[18px] w-[18px]" />
-            ) : (
-              <Moon className="h-[18px] w-[18px]" />
-            )}
-          </Button>
-
-          {/* Notification Menu */}
-          <NotificationMenu />
-
-          {/* Settings Button */}
-          <Button
-            variant="ghost"
-            size="icon"
-            asChild
-            className="h-9 w-9 rounded-full hover:bg-muted transition-colors relative"
-            title="Settings"
-          >
-            <Link href="/settings" className="flex items-center justify-center">
-              <Settings className="h-[18px] w-[18px]" />
-              {versionInfo?.isVersionMismatch && (
-                <div className="absolute -top-1 -right-1 h-2.5 w-2.5 bg-red-500 rounded-full border border-background" />
+              title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+            >
+              {theme === "dark" ? (
+                <Sun className="h-[18px] w-[18px]" />
+              ) : (
+                <Moon className="h-[18px] w-[18px]" />
               )}
-            </Link>
-          </Button>
+            </Button>
+
+            {/* Notification Menu */}
+            <NotificationMenu />
+
+            {/* Settings Button */}
+            <Button
+              variant="ghost"
+              size="icon"
+              asChild
+              className="h-9 w-9 rounded-full hover:bg-muted transition-colors relative"
+              title="Settings"
+            >
+              <Link
+                href="/settings"
+                className="flex items-center justify-center"
+              >
+                <Settings className="h-[18px] w-[18px]" />
+                {versionInfo?.isVersionMismatch && (
+                  <div className="absolute -top-1 -right-1 h-2.5 w-2.5 bg-red-500 rounded-full border border-background" />
+                )}
+              </Link>
+            </Button>
+          </div>
         </div>
       </div>
-    </div>
     </nav>
   );
 }

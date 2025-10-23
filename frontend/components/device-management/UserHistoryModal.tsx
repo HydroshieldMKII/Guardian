@@ -397,6 +397,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="flex-1"
+              autoFocus={false}
             />
             <div className="flex items-center gap-3">
               <div className="flex items-center space-x-2">
