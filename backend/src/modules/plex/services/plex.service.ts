@@ -21,7 +21,7 @@ export class PlexService {
     private readonly configService: ConfigService,
   ) {}
 
-  private async getServerIdentifier(): Promise<string | null> {
+  async getServerIdentifier(): Promise<string | null> {
     // Return cached value if available
     if (this.serverIdentifierCache) {
       return this.serverIdentifierCache;

@@ -104,4 +104,10 @@ export class SessionHistory {
 
   @Column({ name: 'product', nullable: true })
   product: string;
+
+  @Column({ name: 'rating_key', nullable: true })
+  ratingKey: string;
+
+  @Column({ name: 'parent_rating_key', nullable: true })
+  parentRatingKey: string;
 }

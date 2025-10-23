@@ -18,7 +18,7 @@ export function Navbar() {
         <div className="flex h-16 items-center justify-between">
           <Link
             href="/"
-            className="flex items-center space-x-3 hover:opacity-80 transition-opacity"
+            className="flex items-center space-x-3 hover:opacity-80 transition-opacity cursor-pointer"
           >
             <div className="flex items-center">
               {/* Light theme logo (dark logo) */}

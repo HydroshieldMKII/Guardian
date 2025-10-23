@@ -96,14 +96,14 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
     setLoading(true);
     try {
       const response = await fetch(
-        `${config.api.baseUrl}/sessions/history/${userId}?limit=100&includeActive=true`,
+        `${config.api.baseUrl}/sessions/history/${userId}?limit=100&includeActive=true`
       );
       if (response.ok) {
         const data = await response.json();
         // Sort by most recent first (startedAt descending)
         const sortedData = (data || []).sort(
           (a: SessionHistoryEntry, b: SessionHistoryEntry) =>
-            new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime(),
+            new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime()
         );
         setSessions(sortedData);
       } else {
@@ -209,7 +209,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
 
       // Check if session exists in data first
       const sessionExistsInData = sessions.some(
-        (s) => s.id === scrollToSessionId,
+        (s) => s.id === scrollToSessionId
       );
       if (!sessionExistsInData) {
         return; // Session doesn't exist, nothing to scroll to
@@ -218,7 +218,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
       // Function to scroll to and highlight the session
       const scrollToSession = () => {
         const sessionElement = sessionsListRef.current?.querySelector(
-          `[data-session-id="${scrollToSessionId}"]`,
+          `[data-session-id="${scrollToSessionId}"]`
         );
         if (sessionElement) {
           console.log("Found session element, scrolling and highlighting");
@@ -235,13 +235,13 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
             sessionElement.classList.add(
               "border-2",
               "border-blue-400",
-              "shadow-lg",
+              "shadow-lg"
             );
             setTimeout(() => {
               sessionElement.classList.remove(
                 "border-2",
                 "border-blue-400",
-                "shadow-lg",
+                "shadow-lg"
               );
             }, 2000);
           });
@@ -316,7 +316,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
       // Use router navigation when no prop available (global context)
       // Navigate to dashboard with both userId and deviceIdentifier as query parameters
       router.push(
-        `/?userId=${encodeURIComponent(userId)}&deviceId=${encodeURIComponent(session.userDevice.deviceIdentifier)}`,
+        `/?userId=${encodeURIComponent(userId)}&deviceId=${encodeURIComponent(session.userDevice.deviceIdentifier)}`
       );
     }
   };
@@ -334,7 +334,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
         `${config.api.baseUrl}/sessions/history/${sessionToDelete.id}`,
         {
           method: "DELETE",
-        },
+        }
       );
 
       if (response.ok) {

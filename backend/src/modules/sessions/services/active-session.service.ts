@@ -43,6 +43,8 @@ interface PlexSessionData {
   type?: string;
   thumb?: string;
   art?: string;
+  ratingKey?: string;
+  parentRatingKey?: string;
 }
 
 @Injectable()
@@ -206,6 +208,10 @@ export class ActiveSessionService {
         }),
         ...(sessionData.thumb && { thumb: sessionData.thumb }),
         ...(sessionData.art && { art: sessionData.art }),
+        ...(sessionData.ratingKey && { ratingKey: sessionData.ratingKey }),
+        ...(sessionData.parentRatingKey && {
+          parentRatingKey: sessionData.parentRatingKey,
+        }),
         ...(media?.videoResolution && {
           videoResolution: media.videoResolution,
         }),
@@ -245,6 +251,7 @@ export class ActiveSessionService {
   async getActiveSessionsFormatted(): Promise<any> {
     try {
       const sessions = await this.getActiveSessions();
+      const serverIdentifier = await this.plexClient.getServerIdentity();
 
       const transformedSessions = sessions.map((session) => {
         const device = session.userDevice;
@@ -294,6 +301,9 @@ export class ActiveSessionService {
           type: session.contentType,
           thumb: session.thumb,
           art: session.art,
+          ratingKey: session.ratingKey,
+          parentRatingKey: session.parentRatingKey,
+          serverMachineIdentifier: serverIdentifier,
         };
       });
 
