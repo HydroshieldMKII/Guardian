@@ -8,7 +8,7 @@ export class HealthController {
   check() {
     const now = new Date();
     const uptimeMs = now.getTime() - this.startTime.getTime();
-    
+
     return {
       status: 'ok',
       timestamp: now.toISOString(),

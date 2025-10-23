@@ -61,7 +61,7 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
         `${config.api.baseUrl}/config/scripts/reset-stream-counts`,
         {
           method: "POST",
-        },
+        }
       );
 
       if (response.ok) {
@@ -96,7 +96,7 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
         `${config.api.baseUrl}/config/scripts/clear-session-history`,
         {
           method: "POST",
-        },
+        }
       );
 
       if (response.ok) {
@@ -131,7 +131,7 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
         `${config.api.baseUrl}/config/scripts/delete-all-devices`,
         {
           method: "POST",
-        },
+        }
       );
 
       if (response.ok) {
@@ -167,7 +167,7 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
         `${config.api.baseUrl}/config/scripts/reset-database`,
         {
           method: "POST",
-        },
+        }
       );
 
       if (response.ok) {
@@ -202,7 +202,7 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
     try {
       setExportingDatabase(true);
       const response = await fetch(
-        `${config.api.baseUrl}/config/database/export`,
+        `${config.api.baseUrl}/config/database/export`
       );
 
       if (!response.ok) {
@@ -289,7 +289,7 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
         {
           method: "POST",
           body: formData,
-        },
+        }
       );
 
       if (!response.ok) {
@@ -407,13 +407,14 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
               <Download className="h-5 w-5" />
               Database Management
             </h3>
-            
+
             <Card className="p-4 my-4">
               <div className="space-y-4">
                 <div>
                   <h4 className="text-sm font-medium">Export Database</h4>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Download a backup copy of your Guardian database including all settings, devices, and history.
+                    Download a backup copy of your Guardian database including
+                    all settings, devices, and history.
                   </p>
                 </div>
                 <Button
@@ -437,7 +438,8 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
                 <div>
                   <h4 className="text-sm font-medium">Import Database</h4>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Restore Guardian database from a previously exported backup file.
+                    Restore Guardian database from a previously exported backup
+                    file.
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -449,10 +451,7 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
                     className="hidden"
                     id="database-import"
                   />
-                  <label
-                    htmlFor="database-import"
-                    className="cursor-pointer"
-                  >
+                  <label htmlFor="database-import" className="cursor-pointer">
                     <Button
                       asChild
                       disabled={importingDatabase}
@@ -481,68 +480,70 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
               Dangerous Operations
             </h3>
 
-          <Card className="p-4 my-4 border-red-200 dark:border-red-800">
-            <div className="space-y-4">
-              <div>
-                <h4 className="text-sm font-medium flex items-center">
-                  <AlertTriangle className="w-4 h-4 mr-2 text-red-500" />
-                  Delete All Devices Data
-                </h4>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Permanently remove all device, sessions history and
-                  notifications from the database. This action cannot be undone.
-                </p>
+            <Card className="p-4 my-4 border-red-200 dark:border-red-800">
+              <div className="space-y-4">
+                <div>
+                  <h4 className="text-sm font-medium flex items-center">
+                    <AlertTriangle className="w-4 h-4 mr-2 text-red-500" />
+                    Delete All Devices Data
+                  </h4>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Permanently remove all device, sessions history and
+                    notifications from the database. This action cannot be
+                    undone.
+                  </p>
+                </div>
+                <Button
+                  onClick={() => setShowDeleteAllDevicesModal(true)}
+                  disabled={deletingAllDevices}
+                  size="sm"
+                  variant="outline"
+                  className="border-red-200 text-red-700 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900/20"
+                >
+                  {deletingAllDevices ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <XCircle className="w-4 h-4 mr-2" />
+                  )}
+                  {deletingAllDevices ? "Deleting..." : "Delete All Devices"}
+                </Button>
               </div>
-              <Button
-                onClick={() => setShowDeleteAllDevicesModal(true)}
-                disabled={deletingAllDevices}
-                size="sm"
-                variant="outline"
-                className="border-red-200 text-red-700 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900/20"
-              >
-                {deletingAllDevices ? (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                ) : (
-                  <XCircle className="w-4 h-4 mr-2" />
-                )}
-                {deletingAllDevices ? "Deleting..." : "Delete All Devices"}
-              </Button>
-            </div>
-          </Card>
+            </Card>
 
-          <Card className="p-4 my-4 border-red-200 dark:border-red-800">
-            <div className="space-y-4">
-              <div>
-                <h4 className="text-sm font-medium flex items-center">
-                  <AlertTriangle className="w-4 h-4 mr-2 text-red-500" />
-                  Reset Entire Database
-                </h4>
-                <p className="text-xs text-muted-foreground mt-1">
-                  <strong>DANGER:</strong> This will permanently delete ALL data
-                  including settings, devices, user preferences, sessions
-                  history and notifications. Default settings will be restored.
-                </p>
+            <Card className="p-4 my-4 border-red-200 dark:border-red-800">
+              <div className="space-y-4">
+                <div>
+                  <h4 className="text-sm font-medium flex items-center">
+                    <AlertTriangle className="w-4 h-4 mr-2 text-red-500" />
+                    Reset Entire Database
+                  </h4>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    <strong>DANGER:</strong> This will permanently delete ALL
+                    data including settings, devices, user preferences, sessions
+                    history and notifications. Default settings will be
+                    restored.
+                  </p>
+                </div>
+                <div className="text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 p-3 rounded border border-red-200 dark:border-red-800">
+                  <strong>IRREVERSIBLE ACTION:</strong> This will completely
+                  wipe your Guardian database. Export your database first if you
+                  want to keep any data. This action cannot be undone.
+                </div>
+                <Button
+                  onClick={() => setShowResetDatabaseModal(true)}
+                  disabled={resettingDatabase}
+                  size="sm"
+                  variant="destructive"
+                >
+                  {resettingDatabase ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <XCircle className="w-4 h-4 mr-2" />
+                  )}
+                  {resettingDatabase ? "Resetting..." : "Reset Database"}
+                </Button>
               </div>
-              <div className="text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 p-3 rounded border border-red-200 dark:border-red-800">
-                <strong>IRREVERSIBLE ACTION:</strong> This will completely wipe
-                your Guardian database. Export your database first if you want
-                to keep any data. This action cannot be undone.
-              </div>
-              <Button
-                onClick={() => setShowResetDatabaseModal(true)}
-                disabled={resettingDatabase}
-                size="sm"
-                variant="destructive"
-              >
-                {resettingDatabase ? (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                ) : (
-                  <XCircle className="w-4 h-4 mr-2" />
-                )}
-                {resettingDatabase ? "Resetting..." : "Reset Database"}
-              </Button>
-            </div>
-          </Card>
+            </Card>
           </div>
         </CardContent>
       </Card>

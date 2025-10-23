@@ -391,8 +391,8 @@ export default function Settings({ onBack }: SettingsProps) {
               )}
 
               {tab.id === "system" && (
-                <SystemInfo 
-                  onSettingsRefresh={refreshSettings} 
+                <SystemInfo
+                  onSettingsRefresh={refreshSettings}
                   settings={settings || []}
                 />
               )}
