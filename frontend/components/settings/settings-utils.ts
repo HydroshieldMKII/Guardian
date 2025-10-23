@@ -148,7 +148,7 @@ export const getSettingInfo = (setting: AppSetting): SettingInfo => {
     SMTP_TO_EMAILS: {
       label: "To email addresses",
       description:
-        "Email addresses to send notifications to (separate multiple addresses with commas, semicolons)",
+        "Email addresses to send notifications to (separate multiple addresses with commas or semicolons)",
     },
     SMTP_FROM_NAME: {
       label: "From display name",
