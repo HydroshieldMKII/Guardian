@@ -58,7 +58,8 @@ export function SMTPSettings({
     .sort((a, b) => {
       const order = [
         "SMTP_ENABLED",
-        "SMTP_NOTIFY_ON_NOTIFICATIONS",
+        "SMTP_NOTIFY_ON_NEW_DEVICES",
+        "SMTP_NOTIFY_ON_BLOCK",
         "SMTP_HOST",
         "SMTP_PORT",
         "SMTP_USE_TLS",
@@ -114,11 +115,15 @@ export function SMTPSettings({
     const smtpEnabledSetting = smtpSettings.find(
       (s) => s.key === "SMTP_ENABLED"
     );
-    const notifyOnNotificationsSetting = smtpSettings.find(
-      (s) => s.key === "SMTP_NOTIFY_ON_NOTIFICATIONS"
+    const notifyOnBlockSetting = smtpSettings.find(
+      (s) => s.key === "SMTP_NOTIFY_ON_BLOCK"
     );
 
-    if (!smtpEnabledSetting || !notifyOnNotificationsSetting) return null;
+    const notifyOnNewDeviceSetting = smtpSettings.find(
+      (s) => s.key === "SMTP_NOTIFY_ON_NEW_DEVICES"
+    );
+
+    if (!smtpEnabledSetting || !notifyOnBlockSetting || !notifyOnNewDeviceSetting) return null;
 
     const isSmtpEnabled =
       formData["SMTP_ENABLED"] === true || formData["SMTP_ENABLED"] === "true";
@@ -129,35 +134,69 @@ export function SMTPSettings({
           {/* Parent setting: SMTP_ENABLED */}
           {renderSetting(smtpEnabledSetting)}
 
-          {/* Child setting: SMTP_NOTIFY_ON_NOTIFICATIONS - indented and disabled when parent is off */}
-          <div className={`ml-6 pl-4 border-l-2 border-muted ${!isSmtpEnabled ? "opacity-50" : ""}`}>
-            <div className="space-y-2">
+          {/* Child settings: SMTP_NOTIFY_ON_BLOCK & SMTP_NOTIFY_ON_NEW_DEVICES */}
+          <div className={`ml-6 ${!isSmtpEnabled ? "opacity-50" : ""}`}>
+            {/* Notify on new devices */}
+            <div className="pl-4 border-l-2 border-muted space-y-2 mb-4">
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
                   <Label
-                    htmlFor={notifyOnNotificationsSetting.key}
+                    htmlFor={notifyOnNewDeviceSetting.key}
                     className={!isSmtpEnabled ? "text-muted-foreground" : ""}
                   >
-                    {getSettingInfo(notifyOnNotificationsSetting).label}
+                    {getSettingInfo(notifyOnNewDeviceSetting).label}
                   </Label>
                   <p className="text-sm text-muted-foreground">
-                    {getSettingInfo(notifyOnNotificationsSetting).description}
+                    {getSettingInfo(notifyOnNewDeviceSetting).description}
                   </p>
                 </div>
                 <Switch
-                  id={notifyOnNotificationsSetting.key}
+                  id={notifyOnNewDeviceSetting.key}
                   checked={
-                    (formData[notifyOnNotificationsSetting.key] ??
-                      notifyOnNotificationsSetting.value) === "true" ||
-                    (formData[notifyOnNotificationsSetting.key] ??
-                      notifyOnNotificationsSetting.value) === true
+                    (formData[notifyOnNewDeviceSetting.key] ??
+                      notifyOnNewDeviceSetting.value) === "true" ||
+                    (formData[notifyOnNewDeviceSetting.key] ??
+                      notifyOnNewDeviceSetting.value) === true
                   }
                   onCheckedChange={(checked) =>
-                    handleInputChange(notifyOnNotificationsSetting.key, checked)
+                    handleInputChange(notifyOnNewDeviceSetting.key, checked)
                   }
                   disabled={!isSmtpEnabled}
                   className="cursor-pointer"
                 />
+              </div>
+            </div>
+            
+            <div className="pl-4 border-l-2 border-muted space-y-3">
+              {/* Notify on block */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label
+                      htmlFor={notifyOnBlockSetting.key}
+                      className={!isSmtpEnabled ? "text-muted-foreground" : ""}
+                    >
+                      {getSettingInfo(notifyOnBlockSetting).label}
+                    </Label>
+                    <p className="text-sm text-muted-foreground">
+                      {getSettingInfo(notifyOnBlockSetting).description}
+                    </p>
+                  </div>
+                  <Switch
+                    id={notifyOnBlockSetting.key}
+                    checked={
+                      (formData[notifyOnBlockSetting.key] ??
+                        notifyOnBlockSetting.value) === "true" ||
+                      (formData[notifyOnBlockSetting.key] ??
+                        notifyOnBlockSetting.value) === true
+                    }
+                    onCheckedChange={(checked) =>
+                      handleInputChange(notifyOnBlockSetting.key, checked)
+                    }
+                    disabled={!isSmtpEnabled}
+                    className="cursor-pointer"
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -247,7 +286,8 @@ export function SMTPSettings({
           .filter(
             (setting) =>
               setting.key !== "SMTP_ENABLED" &&
-              setting.key !== "SMTP_NOTIFY_ON_NOTIFICATIONS"
+              setting.key !== "SMTP_NOTIFY_ON_NEW_DEVICES" &&
+              setting.key !== "SMTP_NOTIFY_ON_BLOCK"
           )
           .map((setting) => (
             <Card key={setting.key} className="p-4 my-4">

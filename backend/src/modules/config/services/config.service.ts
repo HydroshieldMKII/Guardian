@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AppSettings } from '../../../entities/app-settings.entity';
@@ -36,6 +36,7 @@ export class ConfigService {
   constructor(
     @InjectRepository(AppSettings)
     private settingsRepository: Repository<AppSettings>,
+    @Inject(forwardRef(() => EmailService))
     private readonly emailService: EmailService,
     private readonly emailTemplateService: EmailTemplateService,
     private readonly plexConnectionService: PlexConnectionService,
@@ -217,7 +218,12 @@ export class ConfigService {
         type: 'string' as const,
       },
       {
-        key: 'SMTP_NOTIFY_ON_NOTIFICATIONS',
+        key: 'SMTP_NOTIFY_ON_NEW_DEVICES',
+        value: 'false',
+        type: 'boolean' as const,
+      },
+      {
+        key: 'SMTP_NOTIFY_ON_BLOCK',
         value: 'false',
         type: 'boolean' as const,
       },
@@ -604,128 +610,6 @@ export class ConfigService {
         success: false,
         message: `Unexpected error: ${error.message}`,
       };
-    }
-  }
-
-  async sendNotificationEmail(
-    notificationType: 'block' | 'info' | 'warning' | 'error',
-    notificationText: string,
-    username: string,
-    deviceName?: string,
-    stopCode?: string,
-    ipAddress?: string,
-  ): Promise<void> {
-    try {
-      const [
-        smtpEnabled,
-        notifyOnNotifications,
-        smtpHost,
-        smtpPort,
-        smtpUser,
-        smtpPassword,
-        smtpFromEmail,
-        smtpFromName,
-        smtpUseTLS,
-        smtpToEmails,
-      ] = await Promise.all([
-        this.getSetting('SMTP_ENABLED'),
-        this.getSetting('SMTP_NOTIFY_ON_NOTIFICATIONS'),
-        this.getSetting('SMTP_HOST'),
-        this.getSetting('SMTP_PORT'),
-        this.getSetting('SMTP_USER'),
-        this.getSetting('SMTP_PASSWORD'),
-        this.getSetting('SMTP_FROM_EMAIL'),
-        this.getSetting('SMTP_FROM_NAME'),
-        this.getSetting('SMTP_USE_TLS'),
-        this.getSetting('SMTP_TO_EMAILS'),
-      ]);
-
-      const smtpConfig: SMTPConfig = {
-        host: smtpHost,
-        port: parseInt(smtpPort),
-        user: smtpUser,
-        password: smtpPassword,
-        fromEmail: smtpFromEmail,
-        fromName: smtpFromName,
-        useTLS: smtpUseTLS === 'true',
-        toEmails: smtpToEmails
-          ? smtpToEmails
-              .split(/[,;\n]/)
-              .map((email: string) => email.trim())
-              .filter((email: string) => email.length > 0)
-          : [],
-      };
-
-      const notificationData: NotificationEmailData = {
-        type: notificationType,
-        text: notificationText,
-        username,
-        deviceName,
-        stopCode,
-        ipAddress,
-      };
-
-      const currentTimeInTimezone = await this.getCurrentTimeInTimezone();
-      const timestamp = this.timezoneService.formatTimestamp(
-        currentTimeInTimezone,
-      );
-
-      await this.emailService.sendNotificationEmail(
-        smtpConfig,
-        notificationData,
-        smtpEnabled,
-        notifyOnNotifications,
-        timestamp,
-      );
-    } catch (error) {
-      this.logger.error('Error in sendNotificationEmail:', error);
-    }
-  }
-
-  private getNotificationEmailContent(
-    notificationType: 'block' | 'info' | 'warning' | 'error',
-    stopCode?: string,
-    username?: string,
-    deviceName?: string,
-  ): {
-    subject: string;
-    statusLabel: string;
-    statusColor: string;
-    mainMessage: string;
-  } {
-    switch (notificationType) {
-      case 'block':
-        return {
-          subject: `Guardian Alert: Stream Blocked${deviceName ? ` - ${deviceName}` : ''}`,
-          statusLabel: 'STREAM BLOCKED',
-          statusColor: '#ff4444',
-          mainMessage: stopCode
-            ? StopCodeUtils.getStopCodeDescription(stopCode)
-            : 'A streaming session has been blocked on your Plex server',
-        };
-      case 'warning':
-        return {
-          subject: `Guardian Warning${deviceName ? ` - ${deviceName}` : ''}`,
-          statusLabel: 'WARNING',
-          statusColor: '#ffaa00',
-          mainMessage:
-            'Guardian has detected an issue that requires your attention.',
-        };
-      case 'error':
-        return {
-          subject: `Guardian Error${deviceName ? ` - ${deviceName}` : ''}`,
-          statusLabel: 'ERROR',
-          statusColor: '#ff4444',
-          mainMessage: 'Guardian has encountered an error during operation.',
-        };
-      case 'info':
-      default:
-        return {
-          subject: `Guardian Notification${deviceName ? ` - ${deviceName}` : ''}`,
-          statusLabel: 'NOTIFICATION',
-          statusColor: '#4488ff',
-          mainMessage: 'Guardian has a new notification for your Plex server.',
-        };
     }
   }
 

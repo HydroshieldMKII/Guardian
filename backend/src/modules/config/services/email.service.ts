@@ -1,7 +1,9 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import * as nodemailer from 'nodemailer';
 import { EmailTemplateService } from './email-template.service';
 import { StopCodeUtils } from '../../../common/utils/stop-code.utils';
+import { ConfigService } from './config.service';
+import { TimezoneService } from './timezone.service';
 
 export interface SMTPConfig {
   host: string;
@@ -27,7 +29,12 @@ export interface NotificationEmailData {
 export class EmailService {
   private readonly logger = new Logger(EmailService.name);
 
-  constructor(private readonly emailTemplateService: EmailTemplateService) {}
+  constructor(
+    private readonly emailTemplateService: EmailTemplateService,
+    @Inject(forwardRef(() => ConfigService))
+    private readonly configService: ConfigService,
+    private readonly timezoneService: TimezoneService,
+  ) {}
 
   private createTransporter(config: SMTPConfig) {
     return nodemailer.createTransport({
@@ -45,13 +52,6 @@ export class EmailService {
       greetingTimeout: 15000,
       socketTimeout: 15000,
     });
-  }
-
-  private parseEmailAddresses(emailString: string): string[] {
-    return emailString
-      .split(/[,;\n]/)
-      .map((email: string) => email.trim())
-      .filter((email: string) => email.length > 0);
   }
 
   private validateEmailAddresses(emails: string[]): string[] {
@@ -177,25 +177,113 @@ export class EmailService {
     }
   }
 
-  async sendNotificationEmail(
-    config: SMTPConfig,
-    data: NotificationEmailData,
-    enabled: boolean,
-    notifyOnNotifications: boolean,
-    timestamp: string,
+  async sendBlockedEmail(
+    username: string,
+    deviceName: string,
+    stopCode: string,
+    ipAddress?: string,
+  ): Promise<void> {
+    const notificationText = StopCodeUtils.getStopCodeDescription(stopCode) || `Stream blocked for ${username} on ${deviceName}`;
+    const type = 'block';
+
+    const notificationData: NotificationEmailData = {
+      type,
+      text: notificationText,
+      username,
+      deviceName,
+      stopCode,
+      ipAddress,
+    };
+
+    await this.sendEmail(
+      notificationData
+    );
+  }
+
+  async sendNewDeviceEmail(
+    notificationType: 'block' | 'info' | 'warning' | 'error',
+    notificationText: string,
+    username: string,
+    deviceName?: string,
+    stopCode?: string,
+    ipAddress?: string,
   ): Promise<void> {
     try {
-      if (!enabled || !notifyOnNotifications) {
-        return; // Email notifications are disabled
+
+      const notificationData: NotificationEmailData = {
+        type: notificationType,
+        text: notificationText,
+        username,
+        deviceName,
+        stopCode,
+        ipAddress,
+      };
+
+      await this.sendEmail(
+        notificationData
+      );
+    } catch (error) {
+      this.logger.error('Error in sendNotificationEmail:', error);
+    }
+  }
+
+  async sendEmail(
+    data: NotificationEmailData,
+  ): Promise<void> {
+    try {
+      const [
+        smtpEnabled,
+        smtpHost,
+        smtpPort,
+        smtpUser,
+        smtpPassword,
+        smtpFromEmail,
+        smtpFromName,
+        smtpUseTLS,
+        smtpToEmails,
+      ] = await Promise.all([
+        this.configService.getSetting('SMTP_ENABLED'),
+        this.configService.getSetting('SMTP_HOST'),
+        this.configService.getSetting('SMTP_PORT'),
+        this.configService.getSetting('SMTP_USER'),
+        this.configService.getSetting('SMTP_PASSWORD'),
+        this.configService.getSetting('SMTP_FROM_EMAIL'),
+        this.configService.getSetting('SMTP_FROM_NAME'),
+        this.configService.getSetting('SMTP_USE_TLS'),
+        this.configService.getSetting('SMTP_TO_EMAILS'),
+      ]);
+
+      if (!smtpEnabled) {
+        this.logger.log(
+          'SMTP notification email skipped: SMTP email notifications are disabled',
+        );
+        return;
       }
 
-      const validationError = this.validateSMTPConfig(config);
+      const smtpConfig: SMTPConfig = {
+        host: smtpHost,
+        port: parseInt(smtpPort),
+        user: smtpUser,
+        password: smtpPassword,
+        fromEmail: smtpFromEmail,
+        fromName: smtpFromName,
+        useTLS: smtpUseTLS === 'true',
+        toEmails: smtpToEmails
+          ? smtpToEmails
+              .split(/[,;\n]/)
+              .map((email: string) => email.trim())
+              .filter((email: string) => email.length > 0)
+          : [],
+      };
+
+      const validationError = this.validateSMTPConfig(smtpConfig);
+
       if (validationError) {
         this.logger.warn(`SMTP notification email skipped: ${validationError}`);
         return;
       }
 
-      const transporter = this.createTransporter(config);
+      const transporter = this.createTransporter(smtpConfig);
 
       const { subject, statusLabel, statusColor, mainMessage } =
         this.getNotificationEmailContent(
@@ -204,6 +292,11 @@ export class EmailService {
           data.username,
           data.deviceName,
         );
+
+      const currentTimeInTimezone = await this.configService.getCurrentTimeInTimezone();
+      const timestamp = this.timezoneService.formatTimestamp(
+        currentTimeInTimezone,
+      );
 
       const emailHtml = this.emailTemplateService.generateNotificationEmail(
         data.type,
@@ -218,10 +311,10 @@ export class EmailService {
       );
 
       const mailOptions = {
-        from: config.fromName
-          ? `${config.fromName} <${config.fromEmail}>`
-          : config.fromEmail,
-        to: config.toEmails,
+        from: smtpConfig.fromName
+          ? `${smtpConfig.fromName} <${smtpConfig.fromEmail}>`
+          : smtpConfig.fromEmail,
+        to: smtpConfig.toEmails,
         subject,
         text: `${subject}\n\n${mainMessage}\n\nUser: ${data.username}${data.deviceName ? `\nDevice: ${data.deviceName}` : ''}\nType: ${data.type.toUpperCase()}${data.stopCode ? `\nReason: ${data.stopCode}` : ''}\n\nNotification sent at: ${timestamp}`,
         html: emailHtml,

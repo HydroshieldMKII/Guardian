@@ -83,7 +83,7 @@ export class AppriseService {
     return this.sendNotification(notificationData);
   }
 
-  async sendStreamBlockedNotification(
+  async sendBlockedNotification(
     username: string,
     deviceName: string,
     ipAddress?: string,

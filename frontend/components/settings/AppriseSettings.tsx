@@ -141,7 +141,7 @@ export function AppriseSettings({
                   About Apprise
                 </h4>
                 <p className="text-blue-700 dark:text-blue-300 text-sm mt-1">
-                  Apprise allows you to send notifications to 80+ services including Discord, Slack, Telegram, email, and more.
+                  Apprise allows you to send notifications to 100+ services including Discord, Slack, Telegram, Pushover, and more.
                   Each service URL follows a specific format.{" "}
                   <button
                     type="button"
