@@ -126,7 +126,8 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/community-scripts/Proxmo
 
 Follow the interactive prompts, then access Guardian at `http://[CONTAINER-IP]:3000`.
 
-> **Note:** For detailed Proxmox configuration options, see the [community script documentation](https://community-scripts.github.io/ProxmoxVE/scripts?id=guardian).
+> [!NOTE]
+> For detailed Proxmox configuration options, see the [community script documentation](https://community-scripts.github.io/ProxmoxVE/scripts?id=guardian).
 
 ---
 
@@ -196,7 +197,8 @@ docker compose up -d --force-recreate
 systemctl restart guardian-backend guardian-frontend
 ```
 
-> **Important:** Most configuration is done through Guardian's web interface. Environment variables are primarily for deployment customization.
+> [!IMPORTANT]
+> Most configuration is done through Guardian's web interface. Environment variables are primarily for deployment customization.
 
 ---
 
@@ -288,7 +290,8 @@ Send notifications to 100+ services including Discord, Slack, Telegram, Pushover
 | **Notify on Block** | Apprise alerts for blocked streams |
 | **Service URLs** | Notification service URLs (one per line, comma, or semicolon separated) |
 
-> **Note:** Each service has a specific URL format. View the [Apprise documentation](https://github.com/caronc/apprise/wiki) for service URL formats and configuration examples.
+> [!NOTE]
+> Each service has a specific URL format. View the [Apprise documentation](https://github.com/caronc/apprise/wiki) for service URL formats and configuration examples.
 
 ### Admin Tools
 
@@ -301,11 +304,13 @@ Backup and restore your Guardian configuration.
 | **Export Database** | Download JSON backup of settings, devices, and preferences |
 | **Import Database** | Restore from a previous backup (merges with existing data) |
 
-> **Warning:** Exports contain sensitive information including your Plex authentication token, SMTP credentials or Apprise crendentials. Store backups securely. Import operations create or overwrite current records and do not delete any records.
+> [!WARNING]
+> Exports contain sensitive information including your Plex authentication token, SMTP credentials or Apprise credentials. Store backups securely. Import operations create or overwrite current records and do not delete any records.
 
 #### Administrative Tools & Dangerous Operations
 
-> **Caution:** These operations can permanently modify or delete data. Always export your database before performing administrative operations.
+> [!CAUTION]
+> These operations can permanently modify or delete data. Always export your database before performing administrative operations.
 
 | Tool | Description | Impact |
 |------|-------------|--------|
@@ -318,7 +323,8 @@ Backup and restore your Guardian configuration.
 
 ## Updating
 
-> **Important:** Always backup your database before updating (Settings → Admin Tools → Export Database).
+> [!IMPORTANT]
+> Always backup your database before updating (Settings → Admin Tools → Export Database).
 
 ### Docker
 
@@ -405,4 +411,5 @@ We welcome contributions! Here's how you can help:
 - **Improve Documentation** - Submit PRs for README or docs improvements
 - **Submit Code** - Fork, make changes, and submit a pull request
 
-> **Note:** Please ensure your contributions follow the project's standards.
+> [!NOTE]
+> Please ensure your contributions follow the project's standards.
