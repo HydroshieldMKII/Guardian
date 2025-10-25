@@ -5,6 +5,7 @@ import { UserDevice } from '../../../entities/user-device.entity';
 import { SessionHistory } from '../../../entities/session-history.entity';
 import { UsersService } from '../../users/services/users.service';
 import { ConfigService } from '../../config/services/config.service';
+import { AppriseService } from 'src/modules/config/services/apprise.service';
 import {
   PlexSession,
   DeviceInfo,
@@ -22,6 +23,7 @@ export class DeviceTrackingService {
     private sessionHistoryRepository: Repository<SessionHistory>,
     private usersService: UsersService,
     private configService: ConfigService,
+    private appriseService: AppriseService,
   ) {}
 
   // Function to process sessions and track devices
@@ -205,11 +207,11 @@ export class DeviceTrackingService {
 
     // Send Apprise notification for new device
     try {
-      await this.configService.sendNewDeviceAppriseNotification(
+      await this.appriseService.sendNewDeviceNotification(
         deviceInfo.username || deviceInfo.userId,
         deviceInfo.deviceName || deviceInfo.deviceIdentifier,
-        deviceInfo.devicePlatform,
-        deviceInfo.ipAddress,
+        deviceInfo.devicePlatform || 'Unknown Platform',
+        deviceInfo.ipAddress || 'Unknown IP',
       );
     } catch (error) {
       this.logger.error('Failed to send Apprise notification for new device:', error);

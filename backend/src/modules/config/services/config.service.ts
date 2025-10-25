@@ -820,60 +820,15 @@ export class ConfigService {
     return this.versionService.getVersionInfo(dbVersion);
   }
 
-  async testAppriseConnection(): Promise<{ success: boolean; message: string }> {
-    try {
-      const [appriseEnabled, appriseUrls] = await Promise.all([
-        this.getSetting('APPRISE_ENABLED'),
-        this.getSetting('APPRISE_URLS'),
-      ]);
-
-      const appriseConfig: AppriseConfig = {
-        enabled: appriseEnabled,
-        urls: appriseUrls
-          ? appriseUrls
-              .split('\n')
-              .map((url: string) => url.trim())
-              .filter((url: string) => url.length > 0)
-          : [],
-        notifyOnNewDevices: false, // Not needed for test
-      };
-
-      return this.appriseService.testAppriseConnection(appriseConfig);
-    } catch (error) {
-      this.logger.error('Error in testAppriseConnection:', error);
-      return {
-        success: false,
-        message: `Unexpected error: ${error.message}`,
-      };
-    }
-  }
-
   async sendNewDeviceAppriseNotification(
     username: string,
     deviceName: string,
-    devicePlatform?: string,
-    ipAddress?: string,
+    devicePlatform: string,
+    ipAddress: string,
   ): Promise<void> {
     try {
-      const [appriseEnabled, appriseUrls, notifyOnNewDevices] = await Promise.all([
-        this.getSetting('APPRISE_ENABLED'),
-        this.getSetting('APPRISE_URLS'),
-        this.getSetting('APPRISE_NOTIFY_ON_NEW_DEVICES'),
-      ]);
-
-      const appriseConfig: AppriseConfig = {
-        enabled: appriseEnabled,
-        urls: appriseUrls
-          ? appriseUrls
-              .split('\n')
-              .map((url: string) => url.trim())
-              .filter((url: string) => url.length > 0)
-          : [],
-        notifyOnNewDevices: notifyOnNewDevices,
-      };
 
       await this.appriseService.sendNewDeviceNotification(
-        appriseConfig,
         username,
         deviceName,
         devicePlatform,

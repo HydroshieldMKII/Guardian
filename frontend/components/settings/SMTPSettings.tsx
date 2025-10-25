@@ -126,7 +126,7 @@ export function SMTPSettings({
           {renderSetting(smtpEnabledSetting)}
 
           {/* Child setting: SMTP_NOTIFY_ON_NOTIFICATIONS - indented and disabled when parent is off */}
-          <div className={`ml-6 ${!isSmtpEnabled ? "opacity-50" : ""}`}>
+          <div className={`ml-6 pl-4 border-l-2 border-muted ${!isSmtpEnabled ? "opacity-50" : ""}`}>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">

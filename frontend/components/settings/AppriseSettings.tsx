@@ -50,7 +50,7 @@ export function AppriseSettings({
   const { toast } = useToast();
 
   const appriseSettings = settings
-    .filter((setting) => setting.key.startsWith("APPRISE_"))
+    .filter((setting) => setting && setting.key && setting.key.startsWith("APPRISE_"))
     .sort((a, b) => {
       const order = [
         "APPRISE_ENABLED",
@@ -133,7 +133,7 @@ export function AppriseSettings({
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 mt-4">
             <Bell className="h-5 w-5" />
             <CardTitle>Apprise Notifications</CardTitle>
           </div>
@@ -141,9 +141,9 @@ export function AppriseSettings({
             Configure Apprise for sending notifications to various services like Discord, Slack, Telegram, and more.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-2">
           {/* Apprise Documentation Link */}
-          <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+          <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mt-4">
             <div className="flex items-start gap-3">
               <Info className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
               <div className="flex-1">
@@ -152,17 +152,17 @@ export function AppriseSettings({
                 </h4>
                 <p className="text-blue-700 dark:text-blue-300 text-sm mt-1">
                   Apprise allows you to send notifications to 80+ services including Discord, Slack, Telegram, email, and more.
-                  Each service URL follows a specific format. Visit the documentation to get your service URLs.
+                  Each service URL follows a specific format.{" "}
+                  <button
+                    type="button"
+                    className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 underline underline-offset-2 inline-flex items-center gap-1 cursor-pointer"
+                    onClick={() => window.open("https://github.com/caronc/apprise/wiki", "_blank")}
+                  >
+                    View Apprise Documentation
+                    <ExternalLink className="h-3 w-3" />
+                  </button>{" "}
+                  to get your service URLs.
                 </p>
-                <Button
-                  variant="link"
-                  size="sm"
-                  className="h-auto p-0 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 mt-2"
-                  onClick={() => window.open("https://github.com/caronc/apprise/wiki", "_blank")}
-                >
-                  View Apprise Documentation
-                  <ExternalLink className="h-3 w-3 ml-1" />
-                </Button>
               </div>
             </div>
           </div>
@@ -170,7 +170,7 @@ export function AppriseSettings({
           {/* Settings Form */}
           <div className="space-y-4">
             {appriseSettings.map((setting) => {
-              const settingInfo = getSettingInfo(setting.key);
+              const settingInfo = getSettingInfo(setting);
               const currentValue = formData[setting.key] ?? setting.value;
 
               if (setting.key === "APPRISE_ENABLED") {
@@ -196,7 +196,7 @@ export function AppriseSettings({
 
               if (setting.key === "APPRISE_NOTIFY_ON_NEW_DEVICES") {
                 return (
-                  <div key={setting.key} className="flex items-center justify-between">
+                  <div key={setting.key} className="flex items-center justify-between ml-6 pl-4 border-l-2 border-muted">
                     <div className="space-y-0.5">
                       <Label className="text-base font-medium">
                         {settingInfo.label}
@@ -218,7 +218,7 @@ export function AppriseSettings({
 
               if (setting.key === "APPRISE_URLS") {
                 return (
-                  <div key={setting.key} className="space-y-2">
+                  <div key={setting.key} className="space-y-3">
                     <Label htmlFor={setting.key} className="text-base font-medium">
                       {settingInfo.label}
                     </Label>
@@ -230,7 +230,7 @@ slack://token_a/token_b/token_c"
                       value={currentValue as string}
                       onChange={(e) => handleInputChange(setting.key, e.target.value)}
                       disabled={!isAppriseEnabled}
-                      className="min-h-[120px] font-mono text-sm"
+                      className="min-h-[120px] font-mono text-sm mt-2"
                     />
                     <div className="text-sm text-muted-foreground">
                       {settingInfo.description}

@@ -1,10 +1,10 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { spawn } from 'child_process';
+import { ConfigService } from './config.service';
 
 export interface AppriseConfig {
   enabled: boolean;
   urls: string[];
-  notifyOnNewDevices: boolean;
 }
 
 export interface AppriseNotificationData {
@@ -18,33 +18,29 @@ export interface AppriseNotificationData {
 export class AppriseService {
   private readonly logger = new Logger(AppriseService.name);
 
-  async sendNotification(
-    config: AppriseConfig,
-    data: AppriseNotificationData,
-  ): Promise<{ success: boolean; message: string }> {
-    if (!config.enabled) {
-      this.logger.debug('Apprise notifications are disabled');
-      return { success: true, message: 'Apprise notifications disabled' };
-    }
+  constructor(
+      @Inject(forwardRef(() => ConfigService))
+      private configService: ConfigService,
+    ) {}
 
-    if (!config.urls || config.urls.length === 0) {
-      this.logger.warn('No Apprise URLs configured');
-      return { success: false, message: 'No Apprise URLs configured' };
+  async sendNotification(
+    appriseData: AppriseNotificationData,
+  ): Promise<{ success: boolean; message: string }> {
+    const appriseConfiguration = await this.getAppriseConfig();
+
+    // Check if we got a valid configuration or an error message
+    if ('success' in appriseConfiguration) {
+      return {
+        success: false,
+        message: appriseConfiguration.message,
+      };
     }
 
     try {
-      // Filter out empty URLs
-      const validUrls = config.urls.filter(url => url && url.trim().length > 0);
-      
-      if (validUrls.length === 0) {
-        this.logger.warn('No valid Apprise URLs found');
-        return { success: false, message: 'No valid Apprise URLs found' };
-      }
+      const result = await this.executeApprise(appriseConfiguration.urls, appriseData);
 
-      const result = await this.executeApprise(validUrls, data);
-      
       if (result.success) {
-        this.logger.log(`Apprise notification sent successfully to ${validUrls.length} service(s)`);
+        this.logger.log(`Apprise notification sent successfully to ${appriseConfiguration.urls.length} service(s)`);
       } else {
         this.logger.error(`Apprise notification failed: ${result.message}`);
       }
@@ -60,63 +56,90 @@ export class AppriseService {
   }
 
   async sendNewDeviceNotification(
-    config: AppriseConfig,
     username: string,
     deviceName: string,
-    devicePlatform?: string,
-    ipAddress?: string,
+    devicePlatform: string,
+    ipAddress: string,
   ): Promise<{ success: boolean; message: string }> {
-    if (!config.notifyOnNewDevices) {
-      this.logger.debug('New device notifications are disabled');
-      return { success: true, message: 'New device notifications disabled' };
-    }
-
-    const platformInfo = devicePlatform ? ` (${devicePlatform})` : '';
-    const ipInfo = ipAddress ? ` from ${ipAddress}` : '';
     
     const notificationData: AppriseNotificationData = {
-      title: '🚨 New Device Detected - Guardian',
+      title: 'New Device Detected - Guardian',
       body: `A new device has been detected and requires approval:\n\n` +
             `👤 User: ${username}\n` +
-            `📱 Device: ${deviceName}${platformInfo}\n` +
-            `🌐 IP Address: ${ipAddress || 'Unknown'}${ipInfo}\n` +
+            `Device: ${deviceName}${devicePlatform}\n` +
+            `IP Address: ${ipAddress}\n` +
             `⏰ Status: Pending Approval\n\n` +
             `Please review and approve/reject this device in Guardian.`,
       type: 'warning',
       tag: 'new-device',
     };
 
-    return this.sendNotification(config, notificationData);
+    return this.sendNotification(notificationData);
   }
 
-  async testAppriseConnection(
-    config: AppriseConfig,
-  ): Promise<{ success: boolean; message: string }> {
-    if (!config.enabled) {
+  async getAppriseConfig(): Promise<AppriseConfig | { success: boolean; message: string }> {
+    const [appriseEnabled, appriseUrls, notifyOnNewDevices] = await Promise.all([
+      this.configService.getSetting('APPRISE_ENABLED'),
+      this.configService.getSetting('APPRISE_URLS'),
+      this.configService.getSetting('APPRISE_NOTIFY_ON_NEW_DEVICES'),
+    ]);
+
+    // Handle case where Apprise is disabled
+    if (appriseEnabled !== 'true') {
+      this.logger.warn('Apprise is disabled in configuration');
       return { success: false, message: 'Apprise is disabled' };
     }
 
-    if (!config.urls || config.urls.length === 0) {
-      return { success: false, message: 'No Apprise URLs configured' };
+    // Validate urls
+    const validUrls = appriseUrls
+      .split(/[,:\n]+/)
+      .map(url => url.trim())
+      .filter(url => url.length > 0);
+
+    if (validUrls.length === 0) {
+      this.logger.warn('No valid Apprise URLs found');
+      return { success: false, message: 'No valid Apprise URLs found' };
+    }
+
+    const config: AppriseConfig = {
+      enabled: appriseEnabled === 'true',
+      urls: validUrls
+    };
+
+    return config;
+  }
+
+  async testAppriseConnection(
+  ): Promise<{ success: boolean; message: string }> {   
+
+    // Get current Apprise configuration
+    const appriseConfig = await this.getAppriseConfig();
+
+    // Check if we got a valid configuration or an error message
+    if ('success' in appriseConfig) {
+      return {
+        success: false,
+        message: appriseConfig.message,
+      };
     }
 
     const testData: AppriseNotificationData = {
-      title: '🧪 Guardian Apprise Test',
+      title: 'Guardian Apprise Test',
       body: `This is a test notification from Guardian.\n\n` +
-            `✅ Apprise integration is working correctly!\n` +
-            `⏰ Sent at: ${new Date().toISOString()}\n\n` +
+            `Apprise integration is working correctly!\n` +
+            `Sent at: ${new Date().toISOString()}\n\n` +
             `You should receive this notification on all configured services.`,
       type: 'info',
       tag: 'test',
     };
 
     try {
-      const result = await this.sendNotification(config, testData);
+      const result = await this.sendNotification(testData);
       
       if (result.success) {
         return {
           success: true,
-          message: `Test notification sent successfully to ${config.urls.length} service(s)`,
+          message: `Test notification sent successfully to ${appriseConfig.urls.length} service(s)`,
         };
       } else {
         return {

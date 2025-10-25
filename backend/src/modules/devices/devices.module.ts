@@ -7,6 +7,7 @@ import { SessionHistory } from '../../entities/session-history.entity';
 import { UsersModule } from '../users/users.module';
 import { PlexModule } from '../plex/plex.module';
 import { SessionsModule } from '../sessions/sessions.module';
+import { ConfigModule } from '../config/config.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { SessionsModule } from '../sessions/sessions.module';
     forwardRef(() => UsersModule),
     forwardRef(() => PlexModule),
     forwardRef(() => SessionsModule),
+    ConfigModule,
   ],
   controllers: [DevicesController],
   providers: [DeviceTrackingService],
