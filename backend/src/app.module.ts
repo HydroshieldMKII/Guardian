@@ -37,6 +37,8 @@ import * as path from 'path';
       ],
       synchronize: true,
       logging: config.database.logging,
+      migrations: [path.join(__dirname, 'migrations/*{.ts,.js}')],
+      migrationsRun: true,
     }),
     SessionsModule,
     DevicesModule,
