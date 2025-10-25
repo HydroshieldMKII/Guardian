@@ -273,7 +273,7 @@ export class AppriseService {
             message: 'Apprise process timed out after 30 seconds',
           });
         }
-      }, 30000);
+      }, 20000);
     });
   }
 

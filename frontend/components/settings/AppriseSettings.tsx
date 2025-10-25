@@ -223,7 +223,7 @@ slack://token_a/token_b/token_c"
                       value={currentValue as string}
                       onChange={(e) => handleInputChange(setting.key, e.target.value)}
                       disabled={!isAppriseEnabled}
-                      className="min-h-[120px] font-mono text-sm mb-4"
+                      className="min-h-[120px] font-mono text-sm mb-2"
                     />
                   </div>
                 );

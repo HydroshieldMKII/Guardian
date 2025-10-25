@@ -16,7 +16,6 @@ import {
   CheckCircle,
   XCircle,
   Loader2,
-  MailQuestionMark,
   AlertTriangle,
   Mail,
   SendHorizontal,
