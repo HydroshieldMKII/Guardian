@@ -160,7 +160,7 @@ export const getSettingInfo = (setting: AppSetting): SettingInfo => {
       description:
         "Enable TLS/STARTTLS encryption for secure email transmission",
     },
-    SMTP_NOTIFY_ON_NEW_DEVICES: {
+    SMTP_NOTIFY_ON_NEW_DEVICE: {
       label: "Email notifications for new devices",
       description:
         "Send email notifications when new devices are detected",
@@ -179,10 +179,10 @@ export const getSettingInfo = (setting: AppSetting): SettingInfo => {
       description:
         "Enter your notification service URLs, separated by comma, semicolon, or new lines",
     },
-    APPRISE_NOTIFY_ON_NEW_DEVICES: {
+    APPRISE_NOTIFY_ON_NEW_DEVICE: {
       label: "Notify on new devices",
       description:
-        "Send notifications when new devices are detected and require approval",
+        "Send notifications when new devices are detected",
     },
     APPRISE_NOTIFY_ON_BLOCK: {
       label: "Notify on blocked streams",

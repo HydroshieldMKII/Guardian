@@ -4,9 +4,7 @@ import { Repository, In } from 'typeorm';
 import { UserDevice } from '../../../entities/user-device.entity';
 import { SessionHistory } from '../../../entities/session-history.entity';
 import { UsersService } from '../../users/services/users.service';
-import { ConfigService } from '../../config/services/config.service';
-import { AppriseService } from 'src/modules/config/services/apprise.service';
-import { EmailService } from 'src/modules/config/services/email.service';
+import { NotificationsService } from '../../notifications/services/notifications.service';
 import {
   PlexSession,
   DeviceInfo,
@@ -23,9 +21,7 @@ export class DeviceTrackingService {
     @InjectRepository(SessionHistory)
     private sessionHistoryRepository: Repository<SessionHistory>,
     private usersService: UsersService,
-    private configService: ConfigService,
-    private appriseService: AppriseService,
-    private emailService: EmailService,
+    private notificationsService: NotificationsService,
   ) {}
 
   // Function to process sessions and track devices
@@ -204,51 +200,15 @@ export class DeviceTrackingService {
     await this.userDeviceRepository.save(newDevice);
 
     this.logger.warn(
-      `🚨 NEW DEVICE DETECTED! User: ${deviceInfo.username || deviceInfo.userId}, Device: ${deviceInfo.deviceName || deviceInfo.deviceIdentifier}, Platform: ${deviceInfo.devicePlatform || 'Unknown'}, Status: pending, App default action: ${defaultBlock ? 'Block' : 'Allow'}`,
+      `🚨 NEW DEVICE DETECTED! User: ${deviceInfo.username || deviceInfo.userId}, IP: ${deviceInfo.ipAddress || 'Unknown IP'}, Device: ${deviceInfo.deviceName || deviceInfo.deviceIdentifier}, Platform: ${deviceInfo.devicePlatform || 'Unknown'}, Status: pending, App default action: ${defaultBlock ? 'Block' : 'Allow'}`,
     );
 
-    // Email notification for new device
-    try {
-      const [smtpEnabled, notifyOnNewDevices] = await Promise.all([
-        this.configService.getSetting('SMTP_ENABLED'),
-        this.configService.getSetting('SMTP_NOTIFY_ON_NEW_DEVICES'),
-      ])
-
-      if (smtpEnabled && notifyOnNewDevices) {
-        await this.emailService.sendNewDeviceEmail(
-          'info',
-          deviceInfo.username || "Unknown User",
-          deviceInfo.deviceName || "Unknown Device",
-          deviceInfo.devicePlatform || 'Unknown Platform',
-          deviceInfo.ipAddress || 'Unknown IP',
-        );
-      } else {
-        this.logger.debug('SMTP email notifications are disabled for new devices.');
-      }
-    } catch (error) {
-      this.logger.error('Failed to send email notification for new device:', error);
-    }
-
-    // Send Apprise notification for new device
-    try {
-      const [appriseEnabled, notifyOnNewDevices] = await Promise.all([
-        this.configService.getSetting('APPRISE_ENABLED'),
-        this.configService.getSetting('APPRISE_NOTIFY_ON_NEW_DEVICES'),
-      ])
-
-      if (appriseEnabled && notifyOnNewDevices) {
-        await this.appriseService.sendNewDeviceNotification(
-          deviceInfo.username || deviceInfo.userId,
-          deviceInfo.deviceName || deviceInfo.deviceIdentifier,
-          deviceInfo.devicePlatform || 'Unknown Platform',
-          deviceInfo.ipAddress || 'Unknown IP',
-        );
-      }else{
-        this.logger.debug('Apprise notifications are disabled for new devices.');
-      }
-    } catch (error) {
-      this.logger.error('Failed to send Apprise notification for new device:', error);
-    }
+    this.notificationsService.createNewDeviceNotification(
+      deviceInfo.userId,
+      deviceInfo.username || "Unknown User",
+      deviceInfo.deviceName || "Unknown Device",
+      deviceInfo.ipAddress || 'Unknown IP',
+    );
   }
 
   async getAllDevices(): Promise<UserDevice[]> {

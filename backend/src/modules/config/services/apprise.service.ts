@@ -57,12 +57,11 @@ export class AppriseService {
   async sendNewDeviceNotification(
     username: string,
     deviceName: string,
-    devicePlatform: string,
     ipAddress: string,
   ): Promise<{ success: boolean; message: string }> {
 
     //Check if notifications for new devices is enabled
-    const notifyOnNewDevices = await this.configService.getSetting('APPRISE_NOTIFY_ON_NEW_DEVICES');
+    const notifyOnNewDevices = await this.configService.getSetting('APPRISE_NOTIFY_ON_NEW_DEVICE');
     if (notifyOnNewDevices !== true) {
       this.logger.log('Apprise notification for new devices is disabled');
       return { success: false, message: 'Apprise notification for new devices is disabled' };
@@ -70,10 +69,9 @@ export class AppriseService {
 
     const notificationData: AppriseNotificationData = {
       title: 'New Device Detected - Guardian',
-      body: `A new device has been detected and requires approval:\n\n` +
+      body: `A new device has been detected:\n\n` +
             `User: ${username}\n` +
             `Device: ${deviceName}\n` +
-            `Platform: ${devicePlatform}\n` +
             `IP Address: ${ipAddress}\n` +
             `Status: Pending Approval\n\n` +
             `Review to approve/reject this device in Guardian.`,
@@ -99,7 +97,7 @@ export class AppriseService {
 
     const notificationData: AppriseNotificationData = {
       title: 'Stream Blocked - Guardian',
-      body: `A stream has been blocked on your server. See details below:\n\n` +
+      body: `A stream has been blocked on your server. See details below.\n\n` +
             `User: ${username}\n` +
             `Device: ${deviceName}\n` +
             `IP Address: ${ipAddress || 'Unknown IP Address'}\n` +
@@ -113,7 +111,7 @@ export class AppriseService {
     const [appriseEnabled, appriseUrls, notifyOnNewDevices] = await Promise.all([
       this.configService.getSetting('APPRISE_ENABLED'),
       this.configService.getSetting('APPRISE_URLS'),
-      this.configService.getSetting('APPRISE_NOTIFY_ON_NEW_DEVICES'),
+      this.configService.getSetting('APPRISE_NOTIFY_ON_NEW_DEVICE'),
     ]);
 
     // Handle case where Apprise is disabled

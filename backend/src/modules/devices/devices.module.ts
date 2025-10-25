@@ -8,6 +8,7 @@ import { UsersModule } from '../users/users.module';
 import { PlexModule } from '../plex/plex.module';
 import { SessionsModule } from '../sessions/sessions.module';
 import { ConfigModule } from '../config/config.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
@@ -15,7 +16,8 @@ import { ConfigModule } from '../config/config.module';
     forwardRef(() => UsersModule),
     forwardRef(() => PlexModule),
     forwardRef(() => SessionsModule),
-    ConfigModule,
+  ConfigModule,
+  forwardRef(() => NotificationsModule),
   ],
   controllers: [DevicesController],
   providers: [DeviceTrackingService],

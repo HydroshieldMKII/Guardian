@@ -58,7 +58,7 @@ export function AppriseSettings({
     .sort((a, b) => {
       const order = [
         "APPRISE_ENABLED",
-        "APPRISE_NOTIFY_ON_NEW_DEVICES",
+        "APPRISE_NOTIFY_ON_NEW_DEVICE",
         "APPRISE_NOTIFY_ON_BLOCK",
         "APPRISE_URLS",
       ];
@@ -185,7 +185,7 @@ export function AppriseSettings({
                 );
               }
 
-              if (setting.key === "APPRISE_NOTIFY_ON_NEW_DEVICES") {
+              if (setting.key === "APPRISE_NOTIFY_ON_NEW_DEVICE") {
                 return (
                   <div key={setting.key} className="flex items-center justify-between ml-6 pl-4 border-l-2 border-muted">
                     <div className="space-y-0.5">

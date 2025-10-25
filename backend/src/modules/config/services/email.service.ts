@@ -17,7 +17,7 @@ export interface SMTPConfig {
 }
 
 export interface NotificationEmailData {
-  type: 'block' | 'info' | 'warning' | 'error';
+  type: 'block' | 'info' | 'warning' | 'error' | 'new-device';
   text: string;
   username: string;
   deviceName?: string;
@@ -201,21 +201,18 @@ export class EmailService {
   }
 
   async sendNewDeviceEmail(
-    notificationType: 'block' | 'info' | 'warning' | 'error',
     notificationText: string,
     username: string,
     deviceName?: string,
-    stopCode?: string,
     ipAddress?: string,
   ): Promise<void> {
     try {
 
       const notificationData: NotificationEmailData = {
-        type: notificationType,
+        type: "new-device",
         text: notificationText,
         username,
         deviceName,
-        stopCode,
         ipAddress,
       };
 
@@ -230,6 +227,9 @@ export class EmailService {
   async sendEmail(
     data: NotificationEmailData,
   ): Promise<void> {
+    //Print all data
+    this.logger.debug('Preparing to send notification email with data:', data);
+
     try {
       const [
         smtpEnabled,
@@ -338,7 +338,7 @@ export class EmailService {
   }
 
   private getNotificationEmailContent(
-    notificationType: 'block' | 'info' | 'warning' | 'error',
+    notificationType: 'block' | 'info' | 'warning' | 'error' | 'new-device',
     stopCode?: string,
     username?: string,
     deviceName?: string,
@@ -373,6 +373,13 @@ export class EmailService {
           statusColor: '#ff4444',
           mainMessage: 'Guardian has encountered an error during operation.',
         };
+      case 'new-device':
+        return {
+          subject: `Guardian Alert: New Device Detected${deviceName ? ` - ${deviceName}` : ''}`,
+          statusLabel: 'NEW DEVICE',
+          statusColor: '#4488ff',
+          mainMessage: `A new device "${deviceName}" has been detected for user "${username}".`,
+        };  
       case 'info':
       default:
         return {

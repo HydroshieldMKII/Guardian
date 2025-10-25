@@ -58,6 +58,65 @@ export class NotificationsService {
     return await this.notificationRepository.save(notification);
   }
 
+  async createNewDeviceNotification(
+    userId: string,
+    username: string,
+    deviceName: string,
+    ipAddress: string,
+  ): Promise<Notification> {
+    const text = `New device detected for ${username} on ${deviceName} - ${ipAddress}`;
+
+    // Always create a notification
+    const notification = await this.createNotification({
+      userId,
+      text,
+      type: 'info',
+    });
+
+    // Send email notification for new device if enabled
+    try {
+      const [smtpEnabled, smtpNotifyOnNewDevice] = await Promise.all([
+        this.configService.getSetting('SMTP_ENABLED'),
+        this.configService.getSetting('SMTP_NOTIFY_ON_NEW_DEVICE'),
+      ]);
+
+      if (smtpEnabled && smtpNotifyOnNewDevice) {
+        await this.emailService.sendNewDeviceEmail(
+          text,
+          username,
+          deviceName,
+          ipAddress,
+        );
+      }else{
+        this.logger.log('SMTP email notification for new device is disabled.');
+      }
+    } catch (error) {
+      console.error('Failed to send new device notification email:', error);
+    }
+
+    // Send Apprise notification for new device if enabled
+    try {
+      const [appriseEnabled, appriseNotifyOnNewDevice] = await Promise.all([
+        this.configService.getSetting('APPRISE_ENABLED'),
+        this.configService.getSetting('APPRISE_NOTIFY_ON_NEW_DEVICE'),
+      ]);
+
+      if (appriseEnabled && appriseNotifyOnNewDevice) {
+        await this.appriseService.sendNewDeviceNotification(
+          username,
+          deviceName,
+          ipAddress,
+        );
+      }else{
+        this.logger.log('Apprise notification for new device is disabled.');
+      }
+    } catch (error) {
+      console.error('Failed to send Apprise new device notification:', error);
+    }
+
+    return notification;
+  }
+
   async createStreamBlockedNotification(
     userId: string,
     username: string,
@@ -144,12 +203,10 @@ export class NotificationsService {
       ]);
 
       if (smtpEnabled && smtpNotifyOnBlock) {
-        await this.emailService.sendNewDeviceEmail(
-          'block',
-          text,
+        await this.emailService.sendBlockedEmail(
           username,
           deviceDisplayName,
-          stopCode,
+          stopCode || 'N/A',
           ipAddress,
         );
       }else{

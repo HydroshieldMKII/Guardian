@@ -58,7 +58,7 @@ export function SMTPSettings({
     .sort((a, b) => {
       const order = [
         "SMTP_ENABLED",
-        "SMTP_NOTIFY_ON_NEW_DEVICES",
+        "SMTP_NOTIFY_ON_NEW_DEVICE",
         "SMTP_NOTIFY_ON_BLOCK",
         "SMTP_HOST",
         "SMTP_PORT",
@@ -120,7 +120,7 @@ export function SMTPSettings({
     );
 
     const notifyOnNewDeviceSetting = smtpSettings.find(
-      (s) => s.key === "SMTP_NOTIFY_ON_NEW_DEVICES"
+      (s) => s.key === "SMTP_NOTIFY_ON_NEW_DEVICE"
     );
 
     if (!smtpEnabledSetting || !notifyOnBlockSetting || !notifyOnNewDeviceSetting) return null;
@@ -134,7 +134,7 @@ export function SMTPSettings({
           {/* Parent setting: SMTP_ENABLED */}
           {renderSetting(smtpEnabledSetting)}
 
-          {/* Child settings: SMTP_NOTIFY_ON_BLOCK & SMTP_NOTIFY_ON_NEW_DEVICES */}
+          {/* Child settings: SMTP_NOTIFY_ON_BLOCK & SMTP_NOTIFY_ON_NEW_DEVICE */}
           <div className={`ml-6 ${!isSmtpEnabled ? "opacity-50" : ""}`}>
             {/* Notify on new devices */}
             <div className="pl-4 border-l-2 border-muted space-y-2 mb-4">
@@ -286,7 +286,7 @@ export function SMTPSettings({
           .filter(
             (setting) =>
               setting.key !== "SMTP_ENABLED" &&
-              setting.key !== "SMTP_NOTIFY_ON_NEW_DEVICES" &&
+              setting.key !== "SMTP_NOTIFY_ON_NEW_DEVICE" &&
               setting.key !== "SMTP_NOTIFY_ON_BLOCK"
           )
           .map((setting) => (

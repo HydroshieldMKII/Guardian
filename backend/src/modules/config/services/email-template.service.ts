@@ -313,7 +313,7 @@ export class EmailTemplateService {
   }
 
   generateNotificationEmail(
-    notificationType: 'block' | 'info' | 'warning' | 'error',
+    notificationType: 'block' | 'info' | 'warning' | 'error' | 'new-device',
     statusColor: string,
     statusLabel: string,
     mainMessage: string,
@@ -358,7 +358,7 @@ export class EmailTemplateService {
     if (stopCode) {
       detailsContent += `
         <div class="detail-row">
-          <span class="detail-label">Stop Code</span>
+          <span class="detail-label">Code</span>
           <span class="detail-value"><span class="stop-code">${stopCode}</span></span>
         </div>
       `;

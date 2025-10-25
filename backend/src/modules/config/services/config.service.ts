@@ -218,7 +218,7 @@ export class ConfigService {
         type: 'string' as const,
       },
       {
-        key: 'SMTP_NOTIFY_ON_NEW_DEVICES',
+        key: 'SMTP_NOTIFY_ON_NEW_DEVICE',
         value: 'false',
         type: 'boolean' as const,
       },
@@ -239,7 +239,7 @@ export class ConfigService {
         type: 'string' as const,
       },
       {
-        key: 'APPRISE_NOTIFY_ON_NEW_DEVICES',
+        key: 'APPRISE_NOTIFY_ON_NEW_DEVICE',
         value: 'false',
         type: 'boolean' as const,
       },
@@ -707,26 +707,6 @@ export class ConfigService {
       (await this.getSetting('APP_VERSION')) ||
       this.versionService.getCurrentAppVersion();
     return this.versionService.getVersionInfo(dbVersion);
-  }
-
-  async sendNewDeviceAppriseNotification(
-    username: string,
-    deviceName: string,
-    devicePlatform: string,
-    ipAddress: string,
-  ): Promise<void> {
-    try {
-
-      await this.appriseService.sendNewDeviceNotification(
-        username,
-        deviceName,
-        devicePlatform,
-        ipAddress,
-      );
-    } catch (error) {
-      // Log error but don't fail the device creation
-      this.logger.error('Failed to send Apprise new device notification:', error);
-    }
   }
 
   // Database management scripts
