@@ -47,6 +47,7 @@ interface UserGroupCardProps {
   editingDevice: number | null;
   newDeviceName: string;
   hasTimeSchedules?: boolean;
+  hasIPPolicies?: boolean;
   updatingUserPreference?: string | null; // Track which user's preference is being updated
   onToggleExpansion: (userId: string) => void;
   onUpdateUserPreference: (
@@ -81,6 +82,7 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
   editingDevice,
   newDeviceName,
   hasTimeSchedules = false,
+  hasIPPolicies = false,
   updatingUserPreference,
   onToggleExpansion,
   onUpdateUserPreference,
@@ -148,6 +150,12 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
                     <Badge variant="outline" className="text-xs">
                       <Timer className="w-3 h-3 mr-1" />
                       Scheduled
+                    </Badge>
+                  )}
+                  {hasIPPolicies && (
+                    <Badge variant="outline" className="text-xs">
+                      <Shield className="w-3 h-3 mr-1" />
+                      IP Policy
                     </Badge>
                   )}
                 </div>

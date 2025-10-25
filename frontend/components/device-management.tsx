@@ -1315,6 +1315,26 @@ const DeviceManagement = memo(
                     hasTimeSchedules={
                       userTimeRuleStatus[group.user.userId] || false
                     }
+                    hasIPPolicies={
+                      (() => {
+                        const pref = usersData?.find(
+                          (u) => u.userId === group.user.userId
+                        );
+                        if (!pref) return false;
+                        const networkPolicyIsCustom = pref.networkPolicy !== "both";
+                        const ipAccessPolicyIsCustom = pref.ipAccessPolicy !== "all";
+                        const allowedIPsPresent =
+                          pref.allowedIPs != null &&
+                          (Array.isArray(pref.allowedIPs)
+                            ? pref.allowedIPs.length > 0
+                            : String(pref.allowedIPs).trim() !== "");
+                        return (
+                          networkPolicyIsCustom ||
+                          ipAccessPolicyIsCustom ||
+                          allowedIPsPresent
+                        );
+                      })()
+                    }
                     updatingUserPreference={updatingUserPreference}
                     onToggleExpansion={toggleUserExpansion}
                     onUpdateUserPreference={handleUpdateUserPreference}
