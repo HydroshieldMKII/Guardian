@@ -11,36 +11,46 @@ concurrency:
 permissions:
   contents: read
   actions: write
+  packages: write
 
 env:
   RELEASE_TAG: ${{ github.event.release.tag_name }}
 
 jobs:
-  build-backend:
+  build-backend-amd64:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
       - name: Set up Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build Backend (multi-arch)
+      - name: Build Backend AMD64
         uses: docker/build-push-action@v6
         with:
           context: ./backend
           file: ./backend/Dockerfile
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
           push: false
           tags: |
-            docker.io/hydroshieldmkii/guardian-backend:latest
-            docker.io/hydroshieldmkii/guardian-backend:${{ env.RELEASE_TAG }}
-          cache-from: type=gha,scope=guardian-backend
-          cache-to: type=gha,scope=guardian-backend,mode=max
-          outputs: type=image,name=docker.io/hydroshieldmkii/guardian-backend,push=false
+            docker.io/hydroshieldmkii/guardian-backend:${{ env.RELEASE_TAG }}-amd64
+          cache-from: type=gha,scope=guardian-backend-amd64
+          cache-to: type=gha,scope=guardian-backend-amd64,mode=max
+          outputs: type=docker,dest=/tmp/backend-amd64.tar
 
-  build-frontend:
-    runs-on: ubuntu-latest
+      - name: Upload AMD64 artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-amd64
+          path: /tmp/backend-amd64.tar
+          retention-days: 1
+
+  build-backend-arm64:
+    runs-on: ubuntu-24.04-arm64
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -48,26 +58,105 @@ jobs:
       - name: Set up Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build Frontend (multi-arch)
+      - name: Build Backend ARM64
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          platforms: linux/arm64
+          push: false
+          tags: |
+            docker.io/hydroshieldmkii/guardian-backend:${{ env.RELEASE_TAG }}-arm64
+          cache-from: type=gha,scope=guardian-backend-arm64
+          cache-to: type=gha,scope=guardian-backend-arm64,mode=max
+          outputs: type=docker,dest=/tmp/backend-arm64.tar
+
+      - name: Upload ARM64 artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-arm64
+          path: /tmp/backend-arm64.tar
+          retention-days: 1
+
+  build-frontend-amd64:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Frontend AMD64
         uses: docker/build-push-action@v6
         with:
           context: ./frontend
           file: ./frontend/Dockerfile
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
           push: false
           tags: |
-            docker.io/hydroshieldmkii/guardian-frontend:latest
-            docker.io/hydroshieldmkii/guardian-frontend:${{ env.RELEASE_TAG }}
-          cache-from: type=gha,scope=guardian-frontend
-          cache-to: type=gha,scope=guardian-frontend,mode=max
-          outputs: type=image,name=docker.io/hydroshieldmkii/guardian-frontend,push=false
+            docker.io/hydroshieldmkii/guardian-frontend:${{ env.RELEASE_TAG }}-amd64
+          cache-from: type=gha,scope=guardian-frontend-amd64
+          cache-to: type=gha,scope=guardian-frontend-amd64,mode=max
+          outputs: type=docker,dest=/tmp/frontend-amd64.tar
+
+      - name: Upload AMD64 artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-amd64
+          path: /tmp/frontend-amd64.tar
+          retention-days: 1
+
+  build-frontend-arm64:
+    runs-on: ubuntu-24.04-arm64
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Frontend ARM64
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          platforms: linux/arm64
+          push: false
+          tags: |
+            docker.io/hydroshieldmkii/guardian-frontend:${{ env.RELEASE_TAG }}-arm64
+          cache-from: type=gha,scope=guardian-frontend-arm64
+          cache-to: type=gha,scope=guardian-frontend-arm64,mode=max
+          outputs: type=docker,dest=/tmp/frontend-arm64.tar
+
+      - name: Upload ARM64 artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-arm64
+          path: /tmp/frontend-arm64.tar
+          retention-days: 1
 
   push-backend:
-    needs: [build-backend, build-frontend]
+    needs: [build-backend-amd64, build-backend-arm64]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Download AMD64 artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-amd64
+          path: /tmp
+
+      - name: Download ARM64 artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-arm64
+          path: /tmp
 
       - name: Login to Docker Hub
         uses: docker/login-action@v3
@@ -78,24 +167,47 @@ jobs:
       - name: Set up Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Push Backend (multi-arch)
-        uses: docker/build-push-action@v6
-        with:
-          context: ./backend
-          file: ./backend/Dockerfile
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: |
-            docker.io/hydroshieldmkii/guardian-backend:latest
-            docker.io/hydroshieldmkii/guardian-backend:${{ env.RELEASE_TAG }}
-          cache-from: type=gha,scope=guardian-backend
+      - name: Load AMD64 image
+        run: docker load --input /tmp/backend-amd64.tar
+
+      - name: Load ARM64 image
+        run: docker load --input /tmp/backend-arm64.tar
+
+      - name: Push manifest
+        run: |
+          docker tag docker.io/hydroshieldmkii/guardian-backend:${{ env.RELEASE_TAG }}-amd64 docker.io/hydroshieldmkii/guardian-backend:${{ env.RELEASE_TAG }}
+          docker push docker.io/hydroshieldmkii/guardian-backend:${{ env.RELEASE_TAG }}-amd64
+          docker push docker.io/hydroshieldmkii/guardian-backend:${{ env.RELEASE_TAG }}-arm64
+          
+          docker manifest create docker.io/hydroshieldmkii/guardian-backend:${{ env.RELEASE_TAG }} \
+            --amend docker.io/hydroshieldmkii/guardian-backend:${{ env.RELEASE_TAG }}-amd64 \
+            --amend docker.io/hydroshieldmkii/guardian-backend:${{ env.RELEASE_TAG }}-arm64
+          
+          docker manifest create docker.io/hydroshieldmkii/guardian-backend:latest \
+            --amend docker.io/hydroshieldmkii/guardian-backend:${{ env.RELEASE_TAG }}-amd64 \
+            --amend docker.io/hydroshieldmkii/guardian-backend:${{ env.RELEASE_TAG }}-arm64
+          
+          docker manifest push docker.io/hydroshieldmkii/guardian-backend:${{ env.RELEASE_TAG }}
+          docker manifest push docker.io/hydroshieldmkii/guardian-backend:latest
 
   push-frontend:
-    needs: [build-frontend, build-backend]
+    needs: [build-frontend-amd64, build-frontend-arm64]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Download AMD64 artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-amd64
+          path: /tmp
+
+      - name: Download ARM64 artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-arm64
+          path: /tmp
 
       - name: Login to Docker Hub
         uses: docker/login-action@v3
@@ -106,17 +218,28 @@ jobs:
       - name: Set up Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Push Frontend (multi-arch)
-        uses: docker/build-push-action@v6
-        with:
-          context: ./frontend
-          file: ./frontend/Dockerfile
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: |
-            docker.io/hydroshieldmkii/guardian-frontend:latest
-            docker.io/hydroshieldmkii/guardian-frontend:${{ env.RELEASE_TAG }}
-          cache-from: type=gha,scope=guardian-frontend
+      - name: Load AMD64 image
+        run: docker load --input /tmp/frontend-amd64.tar
+
+      - name: Load ARM64 image
+        run: docker load --input /tmp/frontend-arm64.tar
+
+      - name: Push manifest
+        run: |
+          docker tag docker.io/hydroshieldmkii/guardian-frontend:${{ env.RELEASE_TAG }}-amd64 docker.io/hydroshieldmkii/guardian-frontend:${{ env.RELEASE_TAG }}
+          docker push docker.io/hydroshieldmkii/guardian-frontend:${{ env.RELEASE_TAG }}-amd64
+          docker push docker.io/hydroshieldmkii/guardian-frontend:${{ env.RELEASE_TAG }}-arm64
+          
+          docker manifest create docker.io/hydroshieldmkii/guardian-frontend:${{ env.RELEASE_TAG }} \
+            --amend docker.io/hydroshieldmkii/guardian-frontend:${{ env.RELEASE_TAG }}-amd64 \
+            --amend docker.io/hydroshieldmkii/guardian-frontend:${{ env.RELEASE_TAG }}-arm64
+          
+          docker manifest create docker.io/hydroshieldmkii/guardian-frontend:latest \
+            --amend docker.io/hydroshieldmkii/guardian-frontend:${{ env.RELEASE_TAG }}-amd64 \
+            --amend docker.io/hydroshieldmkii/guardian-frontend:${{ env.RELEASE_TAG }}-arm64
+          
+          docker manifest push docker.io/hydroshieldmkii/guardian-frontend:${{ env.RELEASE_TAG }}
+          docker manifest push docker.io/hydroshieldmkii/guardian-frontend:latest
 
   publish-confirmation:
     runs-on: ubuntu-latest
