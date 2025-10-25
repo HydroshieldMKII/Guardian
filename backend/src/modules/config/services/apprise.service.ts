@@ -85,7 +85,8 @@ export class AppriseService {
     ]);
 
     // Handle case where Apprise is disabled
-    if (appriseEnabled !== 'true') {
+    if (appriseEnabled !== true) {
+      console.log(appriseEnabled)
       this.logger.warn('Apprise is disabled in configuration');
       return { success: false, message: 'Apprise is disabled' };
     }

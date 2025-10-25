@@ -85,30 +85,15 @@ export function AppriseSettings({
 
       if (response.ok && result.success) {
         setConnectionStatus({ success: true, message: result.message });
-        toast({
-          title: "Test Successful",
-          description: result.message,
-          variant: "success",
-        });
       } else {
         setConnectionStatus({
           success: false,
           message: result.message || "Apprise test failed",
         });
-        toast({
-          title: "Test Failed",
-          description: result.message || "Apprise test failed",
-          variant: "destructive",
-        });
       }
     } catch (error) {
       const errorMessage = "Failed to test Apprise connection";
       setConnectionStatus({ success: false, message: errorMessage });
-      toast({
-        title: "Test Error",
-        description: errorMessage,
-        variant: "destructive",
-      });
     } finally {
       setTestingConnection(false);
     }
@@ -168,8 +153,9 @@ export function AppriseSettings({
           </div>
 
           {/* Settings Form */}
-          <div className="space-y-4">
-            {appriseSettings.map((setting) => {
+          <Card className="p-4 my-4">
+            <div className="space-y-4">
+              {appriseSettings.map((setting) => {
               const settingInfo = getSettingInfo(setting);
               const currentValue = formData[setting.key] ?? setting.value;
 
@@ -222,6 +208,9 @@ export function AppriseSettings({
                     <Label htmlFor={setting.key} className="text-base font-medium">
                       {settingInfo.label}
                     </Label>
+                    <div className="text-sm text-muted-foreground">
+                      {settingInfo.description}
+                    </div>
                     <Textarea
                       id={setting.key}
                       placeholder="discord://webhook_id/webhook_token
@@ -230,33 +219,55 @@ slack://token_a/token_b/token_c"
                       value={currentValue as string}
                       onChange={(e) => handleInputChange(setting.key, e.target.value)}
                       disabled={!isAppriseEnabled}
-                      className="min-h-[120px] font-mono text-sm mt-2"
+                      className="min-h-[120px] font-mono text-sm mb-4"
                     />
-                    <div className="text-sm text-muted-foreground">
-                      {settingInfo.description}
-                    </div>
                   </div>
                 );
               }
 
               return null;
             })}
-          </div>
+            </div>
+          </Card>
 
           {/* Test Connection */}
           {isAppriseEnabled && (
             <div className="pt-4 border-t">
-              <div className="flex items-center justify-between">
+              <div className="space-y-3">
                 <div>
                   <h4 className="font-medium">Test Apprise Connection</h4>
                   <p className="text-sm text-muted-foreground">
                     Send a test notification to verify your configuration
                   </p>
                 </div>
+
+                {/* Banners above button */}
+                {hasUnsavedChanges && (
+                  <div className="p-3 rounded-md flex items-center gap-2 bg-orange-50 text-orange-700 border border-orange-200 dark:bg-orange-950/20 dark:text-orange-300 dark:border-orange-800">
+                    <AlertTriangle className="h-4 w-4" />
+                    <span className="text-sm">
+                      Save your changes before testing apprise connection.
+                    </span>
+                  </div>
+                )}
+
+                {connectionStatus && !hasUnsavedChanges && (
+                  <div className={`p-3 rounded-md flex items-center gap-2 ${
+                    connectionStatus.success
+                      ? "bg-green-50 text-green-700 border border-green-200 dark:bg-green-950/20 dark:text-green-300 dark:border-green-800"
+                      : "bg-red-50 text-red-700 border border-red-200 dark:bg-red-950/20 dark:text-red-300 dark:border-red-800"
+                  }`}>
+                    {getStatusIcon()}
+                    <span className="text-sm">
+                      {connectionStatus.message}
+                    </span>
+                  </div>
+                )}
+
                 <Button
                   onClick={testAppriseConnection}
                   disabled={testingConnection || hasUnsavedChanges}
-                  size="sm"
+                  className="w-full mb-4"
                   variant="outline"
                 >
                   {testingConnection ? (
@@ -264,31 +275,52 @@ slack://token_a/token_b/token_c"
                   ) : (
                     <SendHorizontal className="h-4 w-4 mr-2" />
                   )}
-                  {testingConnection ? "Testing..." : "Send Test"}
+                  {testingConnection ? "Testing..." : "Send a test notification"}
                 </Button>
               </div>
+            </div>
+          )}
 
-              {hasUnsavedChanges && (
-                <div className="mt-3 text-sm text-orange-600 dark:text-orange-400 flex items-center gap-2">
-                  <AlertTriangle className="h-4 w-4" />
-                  Save your changes before testing the connection
+          {/* Test Connection - Disabled State */}
+          {!isAppriseEnabled && (
+            <div className="pt-4 border-t">
+              <div className="space-y-3">
+                <div>
+                  <h4 className="font-medium">Test Apprise Connection</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Send a test notification to verify your configuration
+                  </p>
                 </div>
-              )}
 
-              {connectionStatus && (
-                <div className="mt-3 flex items-center gap-2 text-sm">
-                  {getStatusIcon()}
-                  <span
-                    className={
-                      connectionStatus.success
-                        ? "text-green-600 dark:text-green-400"
-                        : "text-red-600 dark:text-red-400"
-                    }
-                  >
-                    {connectionStatus.message}
-                  </span>
-                </div>
-              )}
+                {/* Banners above button */}
+                {hasUnsavedChanges && (
+                  <div className="p-3 rounded-md flex items-center gap-2 bg-orange-50 text-orange-700 border border-orange-200 dark:bg-orange-950/20 dark:text-orange-300 dark:border-orange-800">
+                    <AlertTriangle className="h-4 w-4" />
+                    <span className="text-sm">
+                      Save your changes before testing apprise connection.
+                    </span>
+                  </div>
+                )}
+
+                {!hasUnsavedChanges && (
+                  <div className="p-3 rounded-md flex items-center gap-2 bg-gray-50 text-gray-700 border border-gray-200 dark:bg-gray-950/20 dark:text-gray-300 dark:border-gray-800">
+                    <AlertTriangle className="h-4 w-4" />
+                    <span className="text-sm">
+                      Enable Apprise to test the connection.
+                    </span>
+                  </div>
+                )}
+
+                <Button
+                  onClick={testAppriseConnection}
+                  disabled={true}
+                  className="w-full"
+                  variant="outline"
+                >
+                  <SendHorizontal className="h-4 w-4 mr-2" />
+                  Send Test
+                </Button>
+              </div>
             </div>
           )}
         </CardContent>

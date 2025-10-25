@@ -172,7 +172,7 @@ export const getSettingInfo = (setting: AppSetting): SettingInfo => {
     APPRISE_URLS: {
       label: "Apprise service URLs",
       description:
-        "Enter your notification service URLs, one per line. Examples: discord://webhook_id/webhook_token, telegram://bot_token/chat_id",
+        "Enter your notification service URLs, separated by comma, semicolon, or new lines",
     },
     APPRISE_NOTIFY_ON_NEW_DEVICES: {
       label: "Notify on new devices",
