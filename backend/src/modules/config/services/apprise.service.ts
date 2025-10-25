@@ -91,11 +91,38 @@ export class AppriseService {
       return { success: false, message: 'Apprise is disabled' };
     }
 
-    // Validate urls
-    const validUrls = appriseUrls
-      .split(/[,:\n]+/)
+    // Check if URLs are provided
+    if (!appriseUrls || appriseUrls.trim().length === 0) {
+      this.logger.warn('No Apprise URLs configured');
+      return { success: false, message: 'No Apprise URLs configured' };
+    }
+
+    // Parse URLs
+    const urlList = appriseUrls
+      .split(/[,;\n]+/)
       .map(url => url.trim())
       .filter(url => url.length > 0);
+
+    // Validate each URL format
+    const validUrls: string[] = [];
+    const invalidUrls: string[] = [];
+
+    urlList.forEach(url => {
+      if (this.isValidAppriseUrl(url)) {
+        validUrls.push(url);
+      } else {
+        invalidUrls.push(url);
+      }
+    });
+
+    // Report invalid URLs
+    if (invalidUrls.length > 0) {
+      this.logger.warn(`Invalid Apprise URLs found: ${invalidUrls.join(', ')}`);
+      return { 
+        success: false, 
+        message: `Invalid service URLs found: ${invalidUrls.join(', ')}. Please check the URL format.` 
+      };
+    }
 
     if (validUrls.length === 0) {
       this.logger.warn('No valid Apprise URLs found');
@@ -145,7 +172,7 @@ export class AppriseService {
       } else {
         return {
           success: false,
-          message: `Test notification failed: ${result.message}`,
+          message: result.message,
         };
       }
     } catch (error) {
@@ -167,15 +194,6 @@ export class AppriseService {
         '--body', data.body,
       ];
 
-      // Add notification type if specified
-      if (data.type) {
-        args.push('--type', data.type);
-      }
-
-      // Add tag if specified
-      if (data.tag) {
-        args.push('--tag', data.tag);
-      }
 
       // Add all URLs
       urls.forEach(url => {
@@ -213,9 +231,27 @@ export class AppriseService {
             message: 'Notification sent successfully',
           });
         } else {
+          const errorOutput = stderr || stdout;
+          let userFriendlyMessage = '';
+
+          if (errorOutput.includes('Unsupported URL')) {
+            const urlMatch = errorOutput.match(/Unsupported URL: (\S+)/);
+            const invalidUrl = urlMatch ? urlMatch[1] : 'unknown';
+            userFriendlyMessage = `Invalid service URL: "${invalidUrl}". Please check your Apprise service URLs and ensure they follow the correct format.`;
+          } else if (errorOutput.includes('You must specify at least one server URL')) {
+            userFriendlyMessage = 'No valid service URLs found. Please configure at least one valid Apprise service URL.';
+          } else if (errorOutput.includes('ERROR') && errorOutput.includes('HTTP Error')) {
+            userFriendlyMessage = 'Failed to connect to notification service. Please check your service URLs and network connection.';
+          } else if (errorOutput.includes('Permission denied') || errorOutput.includes('Forbidden')) {
+            userFriendlyMessage = 'Permission denied when sending notification. Please check your service credentials and permissions.';
+          } else {
+            // Fallback to original error
+            userFriendlyMessage = `Notification failed: ${errorOutput.replace(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3} - ERROR - /, '').trim()}`;
+          }
+
           resolve({
             success: false,
-            message: `Apprise exited with code ${code}: ${stderr || stdout}`,
+            message: userFriendlyMessage,
           });
         }
       });
@@ -239,5 +275,14 @@ export class AppriseService {
         }
       }, 30000);
     });
+  }
+
+  private isValidAppriseUrl(url: string): boolean {
+    if (!url || url.length < 5) {
+      return false;
+    }
+
+    const appriseUrlPattern = /^[a-zA-Z][a-zA-Z0-9]*:\/\/.+$/;
+    return appriseUrlPattern.test(url);
   }
 }
