@@ -18,6 +18,7 @@ import { PlexConnectionService } from './plex-connection.service';
 import { TimezoneService } from './timezone.service';
 import { DatabaseService } from './database.service';
 import { VersionService } from './version.service';
+import { AppriseService, AppriseConfig } from './apprise.service';
 
 export interface ConfigSettingDto {
   key: string;
@@ -41,6 +42,7 @@ export class ConfigService {
     private readonly timezoneService: TimezoneService,
     private readonly databaseService: DatabaseService,
     private readonly versionService: VersionService,
+    private readonly appriseService: AppriseService,
   ) {
     this.initializeDefaultSettings();
   }
@@ -219,6 +221,27 @@ export class ConfigService {
         value: 'false',
         type: 'boolean' as const,
       },
+      // Apprise Configuration Settings
+      {
+        key: 'APPRISE_ENABLED',
+        value: 'false',
+        type: 'boolean' as const,
+      },
+      {
+        key: 'APPRISE_URLS',
+        value: '',
+        type: 'string' as const,
+      },
+      {
+        key: 'APPRISE_NOTIFY_ON_NEW_DEVICES',
+        value: 'false',
+        type: 'boolean' as const,
+      },
+      {
+        key: 'APPRISE_NOTIFY_ON_BLOCK',
+        value: 'false',
+        type: 'boolean' as const,
+      }
     ];
 
     // Update version number on startup if current version is higher
@@ -800,6 +823,26 @@ export class ConfigService {
       (await this.getSetting('APP_VERSION')) ||
       this.versionService.getCurrentAppVersion();
     return this.versionService.getVersionInfo(dbVersion);
+  }
+
+  async sendNewDeviceAppriseNotification(
+    username: string,
+    deviceName: string,
+    devicePlatform: string,
+    ipAddress: string,
+  ): Promise<void> {
+    try {
+
+      await this.appriseService.sendNewDeviceNotification(
+        username,
+        deviceName,
+        devicePlatform,
+        ipAddress,
+      );
+    } catch (error) {
+      // Log error but don't fail the device creation
+      this.logger.error('Failed to send Apprise new device notification:', error);
+    }
   }
 
   // Database management scripts

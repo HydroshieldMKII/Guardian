@@ -165,6 +165,25 @@ export const getSettingInfo = (setting: AppSetting): SettingInfo => {
       description:
         "Send email notifications when new events occur (e.g. stream blocked)",
     },
+    APPRISE_ENABLED: {
+      label: "Enable Apprise notifications",
+      description: "Enable the Apprise notification system for multi-service notifications",
+    },
+    APPRISE_URLS: {
+      label: "Apprise service URLs",
+      description:
+        "Enter your notification service URLs, separated by comma, semicolon, or new lines",
+    },
+    APPRISE_NOTIFY_ON_NEW_DEVICES: {
+      label: "Notify on new devices",
+      description:
+        "Send notifications when new devices are detected and require approval",
+    },
+    APPRISE_NOTIFY_ON_BLOCK: {
+      label: "Notify on blocked streams",
+      description:
+        "Send notifications when streams are blocked due to rules",
+    },
   };
 
   const info = settingInfoMap[setting.key];

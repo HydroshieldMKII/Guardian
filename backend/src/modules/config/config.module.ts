@@ -8,6 +8,7 @@ import { PlexConnectionService } from './services/plex-connection.service';
 import { TimezoneService } from './services/timezone.service';
 import { DatabaseService } from './services/database.service';
 import { VersionService } from './services/version.service';
+import { AppriseService } from './services/apprise.service';
 import { AppSettings } from '../../entities/app-settings.entity';
 
 @Module({
@@ -21,6 +22,7 @@ import { AppSettings } from '../../entities/app-settings.entity';
     TimezoneService,
     DatabaseService,
     VersionService,
+    AppriseService,
   ],
   exports: [
     ConfigService,
@@ -30,6 +32,7 @@ import { AppSettings } from '../../entities/app-settings.entity';
     TimezoneService,
     DatabaseService,
     VersionService,
+    AppriseService,
   ],
 })
 export class ConfigModule {}

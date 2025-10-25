@@ -4,6 +4,8 @@ import { Repository, In } from 'typeorm';
 import { UserDevice } from '../../../entities/user-device.entity';
 import { SessionHistory } from '../../../entities/session-history.entity';
 import { UsersService } from '../../users/services/users.service';
+import { ConfigService } from '../../config/services/config.service';
+import { AppriseService } from 'src/modules/config/services/apprise.service';
 import {
   PlexSession,
   DeviceInfo,
@@ -20,6 +22,8 @@ export class DeviceTrackingService {
     @InjectRepository(SessionHistory)
     private sessionHistoryRepository: Repository<SessionHistory>,
     private usersService: UsersService,
+    private configService: ConfigService,
+    private appriseService: AppriseService,
   ) {}
 
   // Function to process sessions and track devices
@@ -200,6 +204,18 @@ export class DeviceTrackingService {
     this.logger.warn(
       `🚨 NEW DEVICE DETECTED! User: ${deviceInfo.username || deviceInfo.userId}, Device: ${deviceInfo.deviceName || deviceInfo.deviceIdentifier}, Platform: ${deviceInfo.devicePlatform || 'Unknown'}, Status: pending, App default action: ${defaultBlock ? 'Block' : 'Allow'}`,
     );
+
+    // Send Apprise notification for new device
+    try {
+      await this.appriseService.sendNewDeviceNotification(
+        deviceInfo.username || deviceInfo.userId,
+        deviceInfo.deviceName || deviceInfo.deviceIdentifier,
+        deviceInfo.devicePlatform || 'Unknown Platform',
+        deviceInfo.ipAddress || 'Unknown IP',
+      );
+    } catch (error) {
+      this.logger.error('Failed to send Apprise notification for new device:', error);
+    }
   }
 
   async getAllDevices(): Promise<UserDevice[]> {

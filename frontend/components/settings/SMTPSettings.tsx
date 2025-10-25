@@ -12,13 +12,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { useToast } from "@/hooks/use-toast";
 import {
   CheckCircle,
   XCircle,
   Loader2,
-  MailQuestionMark,
-  MailCheck,
   AlertTriangle,
   Mail,
   SendHorizontal,
@@ -30,6 +27,8 @@ import {
   SettingsFormData,
   ConnectionStatus,
 } from "./settings-utils";
+
+import { useEffect } from "react";
 
 interface SMTPSettingsProps {
   settings: AppSetting[];
@@ -47,7 +46,12 @@ export function SMTPSettings({
   const [testingConnection, setTestingConnection] = useState(false);
   const [connectionStatus, setConnectionStatus] =
     useState<ConnectionStatus | null>(null);
-  const { toast } = useToast();
+
+  useEffect(() => {
+    if (!hasUnsavedChanges) {
+      setConnectionStatus(null);
+    }
+  }, [hasUnsavedChanges]);
 
   const smtpSettings = settings
     .filter((setting) => setting.key.startsWith("SMTP_"))
@@ -126,7 +130,7 @@ export function SMTPSettings({
           {renderSetting(smtpEnabledSetting)}
 
           {/* Child setting: SMTP_NOTIFY_ON_NOTIFICATIONS - indented and disabled when parent is off */}
-          <div className={`ml-6 ${!isSmtpEnabled ? "opacity-50" : ""}`}>
+          <div className={`ml-6 pl-4 border-l-2 border-muted ${!isSmtpEnabled ? "opacity-50" : ""}`}>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
@@ -227,7 +231,7 @@ export function SMTPSettings({
     <Card>
       <CardHeader className="mt-4">
         <CardTitle className="flex items-center gap-2">
-          <MailQuestionMark className="h-5 w-5" />
+          <Mail className="h-5 w-5" />
           Email Notifications (SMTP)
         </CardTitle>
         <CardDescription>

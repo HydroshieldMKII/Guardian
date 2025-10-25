@@ -14,10 +14,11 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import type { Response } from 'express';
 import { ConfigService, ConfigSettingDto } from './services/config.service';
+import { AppriseService } from './services/apprise.service';
 
 @Controller('config')
 export class ConfigController {
-  constructor(private readonly configService: ConfigService) {}
+  constructor(private readonly configService: ConfigService, private readonly appriseService: AppriseService) {}
 
   @Get('version')
   async getVersion() {
@@ -110,6 +111,19 @@ export class ConfigController {
     } catch (error) {
       throw new HttpException(
         'Failed to test SMTP connection',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  @Post('test-apprise-connection')
+  async testAppriseConnection() {
+    try {
+      const result = await this.appriseService.testAppriseConnection();
+      return result;
+    } catch (error) {
+      throw new HttpException(
+        'Failed to test Apprise connection',
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
