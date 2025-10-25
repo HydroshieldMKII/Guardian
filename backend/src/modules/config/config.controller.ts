@@ -115,6 +115,19 @@ export class ConfigController {
     }
   }
 
+  @Post('test-apprise-connection')
+  async testAppriseConnection() {
+    try {
+      const result = await this.configService.testAppriseConnection();
+      return result;
+    } catch (error) {
+      throw new HttpException(
+        'Failed to test Apprise connection',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
   @Get('plex/status')
   async getPlexStatus() {
     try {
