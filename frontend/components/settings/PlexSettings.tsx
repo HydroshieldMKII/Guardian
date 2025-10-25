@@ -28,6 +28,8 @@ import {
   ConnectionStatus,
 } from "./settings-utils";
 
+import { useEffect } from "react";
+
 interface PlexSettingsProps {
   settings: AppSetting[];
   formData: SettingsFormData;
@@ -44,7 +46,12 @@ export function PlexSettings({
   const [testingConnection, setTestingConnection] = useState(false);
   const [connectionStatus, setConnectionStatus] =
     useState<ConnectionStatus | null>(null);
-  const { toast } = useToast();
+  
+  useEffect(() => {
+    if (!hasUnsavedChanges) {
+      setConnectionStatus(null);
+    }
+  }, [hasUnsavedChanges]);
 
   const plexSettings = settings
     .filter(

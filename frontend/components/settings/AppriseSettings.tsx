@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Card,
   CardContent,
@@ -12,7 +12,6 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/hooks/use-toast";
 import {
   CheckCircle,
   XCircle,
@@ -47,8 +46,13 @@ export function AppriseSettings({
   const [testingConnection, setTestingConnection] = useState(false);
   const [connectionStatus, setConnectionStatus] =
     useState<ConnectionStatus | null>(null);
-  const { toast } = useToast();
 
+    useEffect(() => {
+      if (!hasUnsavedChanges) {
+        setConnectionStatus(null);
+      }
+    }, [hasUnsavedChanges]);
+    
   const appriseSettings = settings
     .filter((setting) => setting && setting.key && setting.key.startsWith("APPRISE_"))
     .sort((a, b) => {
