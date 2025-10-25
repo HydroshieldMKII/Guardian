@@ -329,15 +329,6 @@ slack://token_a/token_b/token_c"
                   </div>
                 )}
 
-                {!hasUnsavedChanges && (
-                  <div className="p-3 rounded-md flex items-center gap-2 bg-gray-50 text-gray-700 border border-gray-200 dark:bg-gray-950/20 dark:text-gray-300 dark:border-gray-800">
-                    <AlertTriangle className="h-4 w-4" />
-                    <span className="text-sm">
-                      Enable Apprise to test the connection.
-                    </span>
-                  </div>
-                )}
-
                 <Button
                   onClick={testAppriseConnection}
                   disabled={true}
@@ -347,6 +338,12 @@ slack://token_a/token_b/token_c"
                   <SendHorizontal className="h-4 w-4 mr-2" />
                   Send Test
                 </Button>
+
+                  {!hasUnsavedChanges && (
+                    <p className="text-xs text-muted-foreground mb-2 text-center">
+                      Enable apprise to test the connection.
+                    </p>
+                  )}
               </div>
             </div>
           )}

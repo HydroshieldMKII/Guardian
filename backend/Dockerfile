@@ -23,7 +23,7 @@ ENV NODE_ENV=production
 RUN apk add --no-cache wget python3 py3-pip
 
 # Install Apprise
-RUN pip3 install --no-cache-dir apprise
+RUN pip3 install --no-cache-dir --break-system-packages apprise
 
 # Prod deps only
 COPY package*.json ./
