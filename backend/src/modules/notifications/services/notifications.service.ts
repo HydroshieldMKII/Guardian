@@ -5,6 +5,7 @@ import { Notification } from '../../../entities/notification.entity';
 import { SessionHistory } from '../../../entities/session-history.entity';
 import { UserDevice } from '../../../entities/user-device.entity';
 import { ConfigService } from '../../config/services/config.service';
+import { AppriseService } from '../../config/services/apprise.service';
 
 export interface CreateNotificationDto {
   userId: string;
@@ -35,6 +36,7 @@ export class NotificationsService {
     @InjectRepository(UserDevice)
     private userDeviceRepository: Repository<UserDevice>,
     private configService: ConfigService,
+    private appriseService: AppriseService,
   ) {}
 
   async createNotification(
@@ -139,8 +141,24 @@ export class NotificationsService {
         ipAddress,
       );
     } catch (error) {
-      // Log error but don't fail the notification creation
       console.error('Failed to send stream blocked notification email:', error);
+    }
+
+    // Send Apprise notification for stream blocking if enabled
+    try {
+      const appriseNotifyOnBlock = await this.configService.getSetting(
+        'APPRISE_NOTIFY_ON_BLOCK',
+      );
+      if (appriseNotifyOnBlock) {
+        await this.appriseService.sendStreamBlockedNotification(
+          username,
+          deviceDisplayName,
+          ipAddress,
+          stopCode,
+        );
+      }
+    } catch (error) {
+      console.error('Failed to send Apprise stream blocked notification:', error);
     }
 
     return notification;

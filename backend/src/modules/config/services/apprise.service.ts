@@ -11,7 +11,6 @@ export interface AppriseNotificationData {
   title: string;
   body: string;
   type?: 'info' | 'success' | 'warning' | 'error';
-  tag?: string;
 }
 
 @Injectable()
@@ -65,13 +64,34 @@ export class AppriseService {
     const notificationData: AppriseNotificationData = {
       title: 'New Device Detected - Guardian',
       body: `A new device has been detected and requires approval:\n\n` +
-            `👤 User: ${username}\n` +
-            `Device: ${deviceName}${devicePlatform}\n` +
+            `User: ${username}\n` +
+            `Device: ${deviceName}\n` +
+            `Platform: ${devicePlatform}\n` +
             `IP Address: ${ipAddress}\n` +
-            `⏰ Status: Pending Approval\n\n` +
-            `Please review and approve/reject this device in Guardian.`,
-      type: 'warning',
-      tag: 'new-device',
+            `Status: Pending Approval\n\n` +
+            `Review to approve/reject this device in Guardian.`,
+      type: 'warning'
+    };
+
+    return this.sendNotification(notificationData);
+  }
+
+  async sendStreamBlockedNotification(
+    username: string,
+    deviceName: string,
+    devicePlatform?: string,
+    ipAddress?: string,
+    stopCode?: string,
+  ): Promise<{ success: boolean; message: string }> {
+    
+    const notificationData: AppriseNotificationData = {
+      title: 'Stream Blocked - Guardian',
+      body: `A stream has been blocked based on your Guardian rules:\n\n` +
+            `User: ${username}\n` +
+            `Device: ${deviceName}\n` +
+            `Platform: ${devicePlatform || 'Unknown Platform'}\n` +
+            `IP Address: ${ipAddress || 'Unknown IP Address'}\n` +
+            `Stop Code: ${stopCode || 'Unknown Stop Code'}\n\n`,
     };
 
     return this.sendNotification(notificationData);
@@ -158,7 +178,6 @@ export class AppriseService {
             `Sent at: ${new Date().toISOString()}\n\n` +
             `You should receive this notification on all configured services.`,
       type: 'info',
-      tag: 'test',
     };
 
     try {

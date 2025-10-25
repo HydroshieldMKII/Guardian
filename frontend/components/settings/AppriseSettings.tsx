@@ -59,6 +59,7 @@ export function AppriseSettings({
       const order = [
         "APPRISE_ENABLED",
         "APPRISE_NOTIFY_ON_NEW_DEVICES",
+        "APPRISE_NOTIFY_ON_BLOCK",
         "APPRISE_URLS",
       ];
 
@@ -185,6 +186,28 @@ export function AppriseSettings({
               }
 
               if (setting.key === "APPRISE_NOTIFY_ON_NEW_DEVICES") {
+                return (
+                  <div key={setting.key} className="flex items-center justify-between ml-6 pl-4 border-l-2 border-muted">
+                    <div className="space-y-0.5">
+                      <Label className="text-base font-medium">
+                        {settingInfo.label}
+                      </Label>
+                      <div className="text-sm text-muted-foreground">
+                        {settingInfo.description}
+                      </div>
+                    </div>
+                    <Switch
+                      checked={currentValue === "true"}
+                      onCheckedChange={(checked) =>
+                        handleInputChange(setting.key, checked.toString())
+                      }
+                      disabled={!isAppriseEnabled}
+                    />
+                  </div>
+                );
+              }
+
+              if (setting.key === "APPRISE_NOTIFY_ON_BLOCK") {
                 return (
                   <div key={setting.key} className="flex items-center justify-between ml-6 pl-4 border-l-2 border-muted">
                     <div className="space-y-0.5">

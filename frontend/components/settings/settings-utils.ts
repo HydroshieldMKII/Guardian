@@ -177,7 +177,12 @@ export const getSettingInfo = (setting: AppSetting): SettingInfo => {
     APPRISE_NOTIFY_ON_NEW_DEVICES: {
       label: "Notify on new devices",
       description:
-        "Send Apprise notifications when new devices are detected and require approval",
+        "Send notifications when new devices are detected and require approval",
+    },
+    APPRISE_NOTIFY_ON_BLOCK: {
+      label: "Notify on blocked streams",
+      description:
+        "Send notifications when streams are blocked due to rules",
     },
   };
 

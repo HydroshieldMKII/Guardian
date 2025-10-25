@@ -237,6 +237,11 @@ export class ConfigService {
         value: 'false',
         type: 'boolean' as const,
       },
+      {
+        key: 'APPRISE_NOTIFY_ON_BLOCK',
+        value: 'false',
+        type: 'boolean' as const,
+      }
     ];
 
     // Update version number on startup if current version is higher
