@@ -6,42 +6,32 @@ import { join } from 'path';
 export class EmailTemplateService {
   private getLogoBase64(): string {
     try {
-      // Try multiple possible paths for the logo file
       const possiblePaths = [
-        join(process.cwd(), '..', 'frontend', 'public', 'logo_dark.svg'),
-        join(process.cwd(), 'frontend', 'public', 'logo_dark.svg'),
-        join(
-          __dirname,
-          '..',
-          '..',
-          '..',
-          '..',
-          '..',
-          'frontend',
-          'public',
-          'logo_dark.svg',
-        ),
-      ];
+            // If repo root is CWD
+            join(process.cwd(), 'backend', 'src', 'assets', 'logo_dark.svg'),
+            join(process.cwd(), 'src', 'assets', 'logo_dark.svg'),
+            // When running from dist
+            join(__dirname, '..', 'assets', 'logo_dark.svg'),
+            join(__dirname, '..', '..', 'assets', 'logo_dark.svg'),
+            join(__dirname, '..', '..', '..', 'assets', 'logo_dark.svg'),
+  
+          ];
 
-      let logoContent: string | null = null;
+          
 
       for (const logoPath of possiblePaths) {
-        try {
-          logoContent = readFileSync(logoPath, 'utf8');
-          break;
+        try {  
+          const logoContent = readFileSync(logoPath, 'utf8');
+          const base64Logo = Buffer.from(logoContent).toString('base64');
+          return `data:image/svg+xml;base64,${base64Logo}`;
         } catch (error) {
           // Try next path
           continue;
         }
       }
 
-      if (!logoContent) {
-        throw new Error('Logo file not found in any expected location');
-      }
-
-      // Convert SVG to base64 data URL
-      const base64Logo = Buffer.from(logoContent).toString('base64');
-      return `data:image/svg+xml;base64,${base64Logo}`;
+      // If not found, fall back to empty string (text fallback will be used)
+      throw new Error('Logo file not found in any expected location');
     } catch (error) {
       console.warn('Logo file not found, using text fallback:', error.message);
       return '';
