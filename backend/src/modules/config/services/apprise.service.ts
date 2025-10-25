@@ -60,7 +60,14 @@ export class AppriseService {
     devicePlatform: string,
     ipAddress: string,
   ): Promise<{ success: boolean; message: string }> {
-    
+
+    //Check if notifications for new devices is enabled
+    const notifyOnNewDevices = await this.configService.getSetting('APPRISE_NOTIFY_ON_NEW_DEVICES');
+    if (notifyOnNewDevices !== true) {
+      this.logger.log('Apprise notification for new devices is disabled');
+      return { success: false, message: 'Apprise notification for new devices is disabled' };
+    }
+
     const notificationData: AppriseNotificationData = {
       title: 'New Device Detected - Guardian',
       body: `A new device has been detected and requires approval:\n\n` +
@@ -83,7 +90,14 @@ export class AppriseService {
     ipAddress?: string,
     stopCode?: string,
   ): Promise<{ success: boolean; message: string }> {
-    
+
+    //Check if notifications for blocked streams is enabled
+    const notifyOnBlockedStreams = await this.configService.getSetting('APPRISE_NOTIFY_ON_BLOCK');
+    if (notifyOnBlockedStreams !== true) {
+      this.logger.log('Apprise notification for blocked streams is disabled');
+      return { success: false, message: 'Apprise notification for blocked streams is disabled' };
+    }
+
     const notificationData: AppriseNotificationData = {
       title: 'Stream Blocked - Guardian',
       body: `A stream has been blocked based on your Guardian rules:\n\n` +
@@ -107,7 +121,7 @@ export class AppriseService {
     // Handle case where Apprise is disabled
     if (appriseEnabled !== true) {
       console.log(appriseEnabled)
-      this.logger.warn('Apprise is disabled in configuration');
+      this.logger.warn('Apprise is disabled');
       return { success: false, message: 'Apprise is disabled' };
     }
 
