@@ -18,6 +18,7 @@ import { PlexConnectionService } from './plex-connection.service';
 import { TimezoneService } from './timezone.service';
 import { DatabaseService } from './database.service';
 import { VersionService } from './version.service';
+import { AppriseService, AppriseConfig } from './apprise.service';
 
 export interface ConfigSettingDto {
   key: string;
@@ -41,6 +42,7 @@ export class ConfigService {
     private readonly timezoneService: TimezoneService,
     private readonly databaseService: DatabaseService,
     private readonly versionService: VersionService,
+    private readonly appriseService: AppriseService,
   ) {
     this.initializeDefaultSettings();
   }
@@ -216,6 +218,22 @@ export class ConfigService {
       },
       {
         key: 'SMTP_NOTIFY_ON_NOTIFICATIONS',
+        value: 'false',
+        type: 'boolean' as const,
+      },
+      // Apprise Configuration Settings
+      {
+        key: 'APPRISE_ENABLED',
+        value: 'false',
+        type: 'boolean' as const,
+      },
+      {
+        key: 'APPRISE_URLS',
+        value: '',
+        type: 'string' as const,
+      },
+      {
+        key: 'APPRISE_NOTIFY_ON_NEW_DEVICES',
         value: 'false',
         type: 'boolean' as const,
       },
@@ -800,6 +818,71 @@ export class ConfigService {
       (await this.getSetting('APP_VERSION')) ||
       this.versionService.getCurrentAppVersion();
     return this.versionService.getVersionInfo(dbVersion);
+  }
+
+  async testAppriseConnection(): Promise<{ success: boolean; message: string }> {
+    try {
+      const [appriseEnabled, appriseUrls] = await Promise.all([
+        this.getSetting('APPRISE_ENABLED'),
+        this.getSetting('APPRISE_URLS'),
+      ]);
+
+      const appriseConfig: AppriseConfig = {
+        enabled: appriseEnabled,
+        urls: appriseUrls
+          ? appriseUrls
+              .split('\n')
+              .map((url: string) => url.trim())
+              .filter((url: string) => url.length > 0)
+          : [],
+        notifyOnNewDevices: false, // Not needed for test
+      };
+
+      return this.appriseService.testAppriseConnection(appriseConfig);
+    } catch (error) {
+      this.logger.error('Error in testAppriseConnection:', error);
+      return {
+        success: false,
+        message: `Unexpected error: ${error.message}`,
+      };
+    }
+  }
+
+  async sendNewDeviceAppriseNotification(
+    username: string,
+    deviceName: string,
+    devicePlatform?: string,
+    ipAddress?: string,
+  ): Promise<void> {
+    try {
+      const [appriseEnabled, appriseUrls, notifyOnNewDevices] = await Promise.all([
+        this.getSetting('APPRISE_ENABLED'),
+        this.getSetting('APPRISE_URLS'),
+        this.getSetting('APPRISE_NOTIFY_ON_NEW_DEVICES'),
+      ]);
+
+      const appriseConfig: AppriseConfig = {
+        enabled: appriseEnabled,
+        urls: appriseUrls
+          ? appriseUrls
+              .split('\n')
+              .map((url: string) => url.trim())
+              .filter((url: string) => url.length > 0)
+          : [],
+        notifyOnNewDevices: notifyOnNewDevices,
+      };
+
+      await this.appriseService.sendNewDeviceNotification(
+        appriseConfig,
+        username,
+        deviceName,
+        devicePlatform,
+        ipAddress,
+      );
+    } catch (error) {
+      // Log error but don't fail the device creation
+      this.logger.error('Failed to send Apprise new device notification:', error);
+    }
   }
 
   // Database management scripts

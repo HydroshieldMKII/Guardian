@@ -41,6 +41,7 @@ import { config } from "@/lib/config";
 
 import { PlexSettings } from "./settings/PlexSettings";
 import { SMTPSettings } from "./settings/SMTPSettings";
+import { AppriseSettings } from "./settings/AppriseSettings";
 import { DatabaseManagement } from "./settings/DatabaseManagement";
 import { GeneralSettings } from "./settings/GeneralSettings";
 import { AdminTools } from "./settings/AdminTools";
@@ -429,14 +430,30 @@ export default function Settings({ onBack }: SettingsProps) {
               )}
 
               {(tab.id === "guardian" ||
-                tab.id === "customization" ||
-                tab.id === "notifications") && (
+                tab.id === "customization") && (
                 <GeneralSettings
                   settings={settings}
                   formData={formData}
                   onFormDataChange={handleFormDataChange}
                   sectionId={tab.id}
                 />
+              )}
+
+              {tab.id === "notifications" && (
+                <div className="space-y-6">
+                  <AppriseSettings
+                    settings={settings}
+                    formData={formData}
+                    onFormDataChange={handleFormDataChange}
+                    hasUnsavedChanges={hasUnsavedChanges}
+                  />
+                  <GeneralSettings
+                    settings={settings}
+                    formData={formData}
+                    onFormDataChange={handleFormDataChange}
+                    sectionId={tab.id}
+                  />
+                </div>
               )}
 
               {tab.id === "admin" && (
