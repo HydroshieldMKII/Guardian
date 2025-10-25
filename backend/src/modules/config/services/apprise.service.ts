@@ -86,7 +86,6 @@ export class AppriseService {
   async sendStreamBlockedNotification(
     username: string,
     deviceName: string,
-    devicePlatform?: string,
     ipAddress?: string,
     stopCode?: string,
   ): Promise<{ success: boolean; message: string }> {
@@ -100,10 +99,9 @@ export class AppriseService {
 
     const notificationData: AppriseNotificationData = {
       title: 'Stream Blocked - Guardian',
-      body: `A stream has been blocked based on your Guardian rules:\n\n` +
+      body: `A stream has been blocked on your server. See details below:\n\n` +
             `User: ${username}\n` +
             `Device: ${deviceName}\n` +
-            `Platform: ${devicePlatform || 'Unknown Platform'}\n` +
             `IP Address: ${ipAddress || 'Unknown IP Address'}\n` +
             `Stop Code: ${stopCode || 'Unknown Stop Code'}\n\n`,
     };
@@ -188,9 +186,7 @@ export class AppriseService {
     const testData: AppriseNotificationData = {
       title: 'Guardian Apprise Test',
       body: `This is a test notification from Guardian.\n\n` +
-            `Apprise integration is working correctly!\n` +
-            `Sent at: ${new Date().toISOString()}\n\n` +
-            `You should receive this notification on all configured services.`,
+            `Apprise integration is working correctly!\n`,
       type: 'info',
     };
 
