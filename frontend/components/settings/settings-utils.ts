@@ -160,24 +160,29 @@ export const getSettingInfo = (setting: AppSetting): SettingInfo => {
       description:
         "Enable TLS/STARTTLS encryption for secure email transmission",
     },
-    SMTP_NOTIFY_ON_NOTIFICATIONS: {
-      label: "Email notifications for events",
+    SMTP_NOTIFY_ON_NEW_DEVICE: {
+      label: "Email notifications for new devices",
       description:
-        "Send email notifications when new events occur (e.g. stream blocked)",
+        "Send email notifications when new devices are detected",
+    },
+    SMTP_NOTIFY_ON_BLOCK: {
+      label: "Email notifications for blocked streams",
+      description:
+        "Send email notifications when streams are blocked due to rules",
     },
     APPRISE_ENABLED: {
       label: "Enable Apprise notifications",
-      description: "Enable the Apprise notification system for multi-service notifications",
+      description: "Enable the Apprise notification system",
     },
     APPRISE_URLS: {
       label: "Apprise service URLs",
       description:
         "Enter your notification service URLs, separated by comma, semicolon, or new lines",
     },
-    APPRISE_NOTIFY_ON_NEW_DEVICES: {
+    APPRISE_NOTIFY_ON_NEW_DEVICE: {
       label: "Notify on new devices",
       description:
-        "Send notifications when new devices are detected and require approval",
+        "Send notifications when new devices are detected",
     },
     APPRISE_NOTIFY_ON_BLOCK: {
       label: "Notify on blocked streams",

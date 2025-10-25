@@ -6,6 +6,8 @@ import { SessionHistory } from '../../../entities/session-history.entity';
 import { UserDevice } from '../../../entities/user-device.entity';
 import { ConfigService } from '../../config/services/config.service';
 import { AppriseService } from '../../config/services/apprise.service';
+import { EmailService } from '../../config/services/email.service';
+import { Logger } from '@nestjs/common';
 
 export interface CreateNotificationDto {
   userId: string;
@@ -28,6 +30,8 @@ export interface NotificationResponseDto {
 
 @Injectable()
 export class NotificationsService {
+  private readonly logger = new Logger(NotificationsService.name);
+
   constructor(
     @InjectRepository(Notification)
     private notificationRepository: Repository<Notification>,
@@ -37,6 +41,7 @@ export class NotificationsService {
     private userDeviceRepository: Repository<UserDevice>,
     private configService: ConfigService,
     private appriseService: AppriseService,
+    private emailService: EmailService,
   ) {}
 
   async createNotification(
@@ -51,6 +56,65 @@ export class NotificationsService {
     });
 
     return await this.notificationRepository.save(notification);
+  }
+
+  async createNewDeviceNotification(
+    userId: string,
+    username: string,
+    deviceName: string,
+    ipAddress: string,
+  ): Promise<Notification> {
+    const text = `New device detected for ${username} on ${deviceName} - ${ipAddress}`;
+
+    // Always create a notification
+    const notification = await this.createNotification({
+      userId,
+      text,
+      type: 'info',
+    });
+
+    // Send email notification for new device if enabled
+    try {
+      const [smtpEnabled, smtpNotifyOnNewDevice] = await Promise.all([
+        this.configService.getSetting('SMTP_ENABLED'),
+        this.configService.getSetting('SMTP_NOTIFY_ON_NEW_DEVICE'),
+      ]);
+
+      if (smtpEnabled && smtpNotifyOnNewDevice) {
+        await this.emailService.sendNewDeviceEmail(
+          text,
+          username,
+          deviceName,
+          ipAddress,
+        );
+      }else{
+        this.logger.log('SMTP email notification for new device is disabled.');
+      }
+    } catch (error) {
+      console.error('Failed to send new device notification email:', error);
+    }
+
+    // Send Apprise notification for new device if enabled
+    try {
+      const [appriseEnabled, appriseNotifyOnNewDevice] = await Promise.all([
+        this.configService.getSetting('APPRISE_ENABLED'),
+        this.configService.getSetting('APPRISE_NOTIFY_ON_NEW_DEVICE'),
+      ]);
+
+      if (appriseEnabled && appriseNotifyOnNewDevice) {
+        await this.appriseService.sendNewDeviceNotification(
+          username,
+          deviceName,
+          ipAddress,
+        );
+      }else{
+        this.logger.log('Apprise notification for new device is disabled.');
+      }
+    } catch (error) {
+      console.error('Failed to send Apprise new device notification:', error);
+    }
+
+    return notification;
   }
 
   async createStreamBlockedNotification(
@@ -123,6 +187,7 @@ export class NotificationsService {
       }
     }
 
+    // Always create a notification
     const notification = await this.createNotification({
       userId,
       text,
@@ -132,30 +197,41 @@ export class NotificationsService {
 
     // Send email notification for stream blocking if enabled
     try {
-      await this.configService.sendNotificationEmail(
-        'block',
-        text,
-        username,
-        deviceDisplayName,
-        stopCode,
-        ipAddress,
-      );
+      const [smtpEnabled, smtpNotifyOnBlock] = await Promise.all([
+        this.configService.getSetting('SMTP_ENABLED'),
+        this.configService.getSetting('SMTP_NOTIFY_ON_BLOCK'),
+      ]);
+
+      if (smtpEnabled && smtpNotifyOnBlock) {
+        await this.emailService.sendBlockedEmail(
+          username,
+          deviceDisplayName,
+          stopCode || 'N/A',
+          ipAddress,
+        );
+      }else{
+        this.logger.log('SMTP email notification for stream blocking is disabled.');
+      }
     } catch (error) {
       console.error('Failed to send stream blocked notification email:', error);
     }
 
     // Send Apprise notification for stream blocking if enabled
     try {
-      const appriseNotifyOnBlock = await this.configService.getSetting(
-        'APPRISE_NOTIFY_ON_BLOCK',
-      );
-      if (appriseNotifyOnBlock) {
-        await this.appriseService.sendStreamBlockedNotification(
+      const [appriseEnabled, appriseNotifyOnBlock] = await Promise.all([
+        this.configService.getSetting('APPRISE_ENABLED'),
+        this.configService.getSetting('APPRISE_NOTIFY_ON_BLOCK'),
+      ]);
+
+      if (appriseEnabled && appriseNotifyOnBlock) {
+        await this.appriseService.sendBlockedNotification(
           username,
           deviceDisplayName,
           ipAddress,
           stopCode,
         );
+      }else{
+        this.logger.log('Apprise notification for stream blocking is disabled.');
       }
     } catch (error) {
       console.error('Failed to send Apprise stream blocked notification:', error);

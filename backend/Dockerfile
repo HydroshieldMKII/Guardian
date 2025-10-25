@@ -32,6 +32,9 @@ RUN npm ci --only=production && npm cache clean --force
 # Built application
 COPY --from=builder /app/dist ./dist
 
+# Copy logo asset for emails
+COPY --from=builder /app/src/assets/logo_dark.svg ./dist/assets/logo_dark.svg
+
 # Expose (documentation only; compose will bind)
 EXPOSE 3001
 

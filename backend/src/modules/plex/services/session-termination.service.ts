@@ -230,6 +230,7 @@ export class SessionTerminationService {
                   );
                 }
 
+                // Create the in-app notification. SMTP and Apprise will be handled here
                 await this.notificationsService.createStreamBlockedNotification(
                   userId,
                   username,
@@ -249,17 +250,12 @@ export class SessionTerminationService {
                 );
               }
               this.logger.warn(
-                `Stopped session: ${session.Session?.id} - Reason: ${reason}`,
-              );
-              this.logger.warn(
                 `Stopped session: ${username} on ${deviceName} (Session: ${sessionId}) - Reason: ${reason}`,
               );
             } else {
               this.logger.warn(
                 'Could not find session identifier in session data',
               );
-
-              //
             }
           }
         } catch (error) {

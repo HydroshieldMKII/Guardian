@@ -58,7 +58,7 @@ export function AppriseSettings({
     .sort((a, b) => {
       const order = [
         "APPRISE_ENABLED",
-        "APPRISE_NOTIFY_ON_NEW_DEVICES",
+        "APPRISE_NOTIFY_ON_NEW_DEVICE",
         "APPRISE_NOTIFY_ON_BLOCK",
         "APPRISE_URLS",
       ];
@@ -141,7 +141,7 @@ export function AppriseSettings({
                   About Apprise
                 </h4>
                 <p className="text-blue-700 dark:text-blue-300 text-sm mt-1">
-                  Apprise allows you to send notifications to 80+ services including Discord, Slack, Telegram, email, and more.
+                  Apprise allows you to send notifications to 100+ services including Discord, Slack, Telegram, Pushover, and more.
                   Each service URL follows a specific format.{" "}
                   <button
                     type="button"
@@ -185,7 +185,7 @@ export function AppriseSettings({
                 );
               }
 
-              if (setting.key === "APPRISE_NOTIFY_ON_NEW_DEVICES") {
+              if (setting.key === "APPRISE_NOTIFY_ON_NEW_DEVICE") {
                 return (
                   <div key={setting.key} className="flex items-center justify-between ml-6 pl-4 border-l-2 border-muted">
                     <div className="space-y-0.5">
