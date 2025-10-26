@@ -151,8 +151,29 @@ jobs:
     needs: [build-backend-amd64, build-backend-arm64, build-frontend-amd64, build-frontend-arm64]
     runs-on: ubuntu-latest
     steps:
-      - name: Download all artifacts
+      - name: Download backend-amd64 artifact
         uses: actions/download-artifact@v4
+        with:
+          name: backend-amd64
+          path: ./artifacts/backend-amd64
+
+      - name: Download backend-arm64 artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-arm64
+          path: ./artifacts/backend-arm64
+
+      - name: Download frontend-amd64 artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-amd64
+          path: ./artifacts/frontend-amd64
+
+      - name: Download frontend-arm64 artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-arm64
+          path: ./artifacts/frontend-arm64
 
       - name: Login to Docker Hub
         uses: docker/login-action@v3
@@ -165,10 +186,10 @@ jobs:
 
       - name: Load images
         run: |
-          docker load --input backend-amd64/backend-amd64.tar
-          docker load --input backend-arm64/backend-arm64.tar
-          docker load --input frontend-amd64/frontend-amd64.tar
-          docker load --input frontend-arm64/frontend-arm64.tar
+          docker load --input ./artifacts/backend-amd64/backend-amd64.tar
+          docker load --input ./artifacts/backend-arm64/backend-arm64.tar
+          docker load --input ./artifacts/frontend-amd64/frontend-amd64.tar
+          docker load --input ./artifacts/frontend-arm64/frontend-arm64.tar
 
       - name: Push backend
         run: |
@@ -206,4 +227,4 @@ jobs:
     runs-on: ubuntu-latest
     needs: push-images
     steps:
-      - run: echo "✅ Release ${{ env.RELEASE_TAG }} images built and published."
+      - run: echo "Release ${{ env.RELEASE_TAG }} images built and published."
