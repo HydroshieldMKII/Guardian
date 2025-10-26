@@ -35,7 +35,9 @@ jobs:
           push: false
           tags: |
             docker.io/hydroshieldmkii/guardian-backend:${{ env.RELEASE_TAG }}-amd64
-          cache-from: type=gha,scope=guardian-backend-amd64
+          cache-from: |
+            type=gha,scope=guardian-backend-amd64
+            type=registry,ref=docker.io/hydroshieldmkii/guardian-backend:latest
           cache-to: type=gha,scope=guardian-backend-amd64,mode=max
           outputs: type=docker,dest=/tmp/backend-amd64.tar
 
@@ -47,10 +49,13 @@ jobs:
           retention-days: 1
 
   build-backend-arm64:
-    runs-on: ubuntu-24.04-arm64
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
 
       - name: Set up Buildx
         uses: docker/setup-buildx-action@v3
@@ -64,7 +69,9 @@ jobs:
           push: false
           tags: |
             docker.io/hydroshieldmkii/guardian-backend:${{ env.RELEASE_TAG }}-arm64
-          cache-from: type=gha,scope=guardian-backend-arm64
+          cache-from: |
+            type=gha,scope=guardian-backend-arm64
+            type=registry,ref=docker.io/hydroshieldmkii/guardian-backend:latest
           cache-to: type=gha,scope=guardian-backend-arm64,mode=max
           outputs: type=docker,dest=/tmp/backend-arm64.tar
 
@@ -93,7 +100,9 @@ jobs:
           push: false
           tags: |
             docker.io/hydroshieldmkii/guardian-frontend:${{ env.RELEASE_TAG }}-amd64
-          cache-from: type=gha,scope=guardian-frontend-amd64
+          cache-from: |
+            type=gha,scope=guardian-frontend-amd64
+            type=registry,ref=docker.io/hydroshieldmkii/guardian-frontend:latest
           cache-to: type=gha,scope=guardian-frontend-amd64,mode=max
           outputs: type=docker,dest=/tmp/frontend-amd64.tar
 
@@ -105,10 +114,13 @@ jobs:
           retention-days: 1
 
   build-frontend-arm64:
-    runs-on: ubuntu-24.04-arm64
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
 
       - name: Set up Buildx
         uses: docker/setup-buildx-action@v3
@@ -122,7 +134,9 @@ jobs:
           push: false
           tags: |
             docker.io/hydroshieldmkii/guardian-frontend:${{ env.RELEASE_TAG }}-arm64
-          cache-from: type=gha,scope=guardian-frontend-arm64
+          cache-from: |
+            type=gha,scope=guardian-frontend-arm64
+            type=registry,ref=docker.io/hydroshieldmkii/guardian-frontend:latest
           cache-to: type=gha,scope=guardian-frontend-arm64,mode=max
           outputs: type=docker,dest=/tmp/frontend-arm64.tar
 
