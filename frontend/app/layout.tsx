@@ -1,15 +1,9 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { ErrorBoundary } from "@/components/error-boundary";
-import { Navbar } from "@/components/navbar";
-import { GlobalVersionMismatchBanner } from "@/components/global-version-mismatch-banner";
-import { GlobalUpdateBanner } from "@/components/global-update-banner";
-import { GlobalNotificationHandler } from "@/components/global-notification-handler";
-import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "@/hooks/use-theme";
-import { VersionProvider } from "@/contexts/version-context";
-import { NotificationProvider } from "@/contexts/notification-context";
-import { SettingsProvider } from "@/contexts/settings-context";
+import { AuthProvider } from "@/contexts/auth-context";
+import { AuthGuard } from "@/components/auth-guard";
+import { AppProviders } from "@/components/app-providers";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -67,20 +61,13 @@ export default function RootLayout({
           }}
         />
         <ThemeProvider defaultTheme="dark" storageKey="guardian-ui-theme">
-          <VersionProvider>
-            <NotificationProvider>
-              <SettingsProvider>
-                <ErrorBoundary>
-                  <GlobalVersionMismatchBanner />
-                  <GlobalUpdateBanner />
-                  <Navbar />
-                  <GlobalNotificationHandler />
-                  {children}
-                </ErrorBoundary>
-                <Toaster />
-              </SettingsProvider>
-            </NotificationProvider>
-          </VersionProvider>
+          <AuthProvider>
+            <AuthGuard>
+              <AppProviders>
+                {children}
+              </AppProviders>
+            </AuthGuard>
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>

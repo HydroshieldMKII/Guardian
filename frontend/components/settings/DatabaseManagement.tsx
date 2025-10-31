@@ -17,7 +17,7 @@ import {
   Database,
   AlertTriangle,
 } from "lucide-react";
-import { config } from "@/lib/config";
+import { apiClient } from "@/lib/api";
 import { useVersion } from "@/contexts/version-context";
 import { ConfirmationModal } from "@/components/ui/confirmation-modal";
 import { VersionMismatchInfo } from "./settings-utils";
@@ -43,15 +43,12 @@ export function DatabaseManagement({
   const exportDatabase = async () => {
     try {
       setExportingDatabase(true);
-      const response = await fetch(
-        `${config.api.baseUrl}/config/database/export`,
-      );
+      const data = await apiClient.exportDatabase();
 
-      if (!response.ok) {
-        throw new Error("Failed to export database");
-      }
-
-      const blob = await response.blob();
+      // Convert the data to a blob for download
+      const blob = new Blob([JSON.stringify(data, null, 2)], {
+        type: "application/json",
+      });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -139,37 +136,25 @@ export function DatabaseManagement({
         formData.append("file", blob, "database-import.json");
       }
 
-      const response = await fetch(
-        `${config.api.baseUrl}/config/database/import`,
-        {
-          method: "POST",
-          body: formData,
-        },
-      );
+      const result = await apiClient.importDatabase(formData);
 
-      const result = await response.json();
+      // Handle nested result structure from backend
+      const importResult = (result as any).imported || result;
+      const imported =
+        typeof importResult.imported === "number"
+          ? importResult.imported
+          : "unknown";
+      const skipped =
+        typeof importResult.skipped === "number"
+          ? importResult.skipped
+          : "unknown";
 
-      if (response.ok) {
-        // Handle nested result structure from backend
-        const importResult = result.imported || result;
-        const imported =
-          typeof importResult.imported === "number"
-            ? importResult.imported
-            : "unknown";
-        const skipped =
-          typeof importResult.skipped === "number"
-            ? importResult.skipped
-            : "unknown";
-
-        toast({
-          title: "Import successful",
-          description: `Imported ${imported} items, skipped ${skipped} items`,
-          variant: "success",
-        });
-        onSettingsRefresh();
-      } else {
-        throw new Error(result.message || "Import failed");
-      }
+      toast({
+        title: "Import successful",
+        description: `Imported ${imported} items, skipped ${skipped} items`,
+        variant: "success",
+      });
+      onSettingsRefresh();
     } catch (error) {
       console.error("Import error:", error);
       toast({

@@ -29,9 +29,20 @@ class ApiClient {
         "Content-Type": "application/json",
         ...options.headers,
       },
+      credentials: "include", // For session auth
     };
 
-    const response = await fetch(url, { ...defaultOptions, ...options });
+    const finalOptions = { ...defaultOptions, ...options };
+    const response = await fetch(url, finalOptions);
+
+    // Handle 401 Unauthorized - redirect to login silently
+    if (response.status === 401) {
+      if (typeof window !== "undefined") {
+        window.location.href = "/login";
+        return {} as T; // Return empty object
+      }
+      throw new ApiError(response.status, "Unauthorized", response);
+    }
 
     if (!response.ok) {
       const errorMessage = `HTTP ${response.status}: ${response.statusText}`;
@@ -119,6 +130,65 @@ class ApiClient {
 
   async clearAllNotifications<T>(): Promise<T> {
     return this.delete<T>(`/notifications/clear-all`);
+  }
+
+  // Settings/Config methods
+  async updateConfig<T>(settings: any): Promise<T> {
+    return this.request<T>(`/config`, {
+      method: "PUT",
+      body: JSON.stringify(settings),
+    });
+  }
+
+  async testPlexConnection<T>(): Promise<T> {
+    return this.post<T>(`/config/test-plex-connection`);
+  }
+
+  async testSmtpConnection<T>(): Promise<T> {
+    return this.post<T>(`/config/test-smtp-connection`);
+  }
+
+  async testAppriseConnection<T>(): Promise<T> {
+    return this.post<T>(`/config/test-apprise-connection`);
+  }
+
+  async getPlexStatus<T>(): Promise<T> {
+    return this.get<T>(`/config/status/plex`);
+  }
+
+  // Admin/Script endpoints
+  async resetStreamCounts<T>(): Promise<T> {
+    return this.post<T>(`/config/scripts/reset-stream-counts`);
+  }
+
+  async clearSessionHistory<T>(): Promise<T> {
+    return this.post<T>(`/config/scripts/clear-session-history`);
+  }
+
+  async deleteAllDevices<T>(): Promise<T> {
+    return this.post<T>(`/config/scripts/delete-all-devices`);
+  }
+
+  async resetDatabase<T>(): Promise<T> {
+    return this.post<T>(`/config/scripts/reset-database`);
+  }
+
+  // Database export/import endpoints
+  async exportDatabase<T>(): Promise<T> {
+    return this.get<T>(`/config/database/export`);
+  }
+
+  async importDatabase<T>(file: FormData): Promise<T> {
+    return this.request<T>(`/config/database/import`, {
+      method: "POST",
+      body: file,
+      headers: {},
+    });
+  }
+
+  // Health endpoint
+  async getHealth<T>(): Promise<T> {
+    return this.get<T>(`/health`);
   }
 }
 

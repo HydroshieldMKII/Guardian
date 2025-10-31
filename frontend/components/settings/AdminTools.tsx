@@ -19,7 +19,7 @@ import {
   Download,
   Upload,
 } from "lucide-react";
-import { config } from "@/lib/config";
+import { apiClient } from "@/lib/api";
 import { ConfirmationModal } from "@/components/ui/confirmation-modal";
 import { useVersion } from "@/contexts/version-context";
 import { VersionMismatchInfo } from "./settings-utils";
@@ -57,23 +57,13 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
   const handleResetStreamCounts = async () => {
     try {
       setResettingStreamCounts(true);
-      const response = await fetch(
-        `${config.api.baseUrl}/config/scripts/reset-stream-counts`,
-        {
-          method: "POST",
-        }
-      );
+      await apiClient.resetStreamCounts();
 
-      if (response.ok) {
-        toast({
-          title: "Success",
-          description: "Stream counts have been reset successfully.",
-          variant: "success",
-        });
-      } else {
-        const error = await response.text();
-        throw new Error(error);
-      }
+      toast({
+        title: "Success",
+        description: "Stream counts have been reset successfully.",
+        variant: "success",
+      });
     } catch (error) {
       toast({
         title: "Error",
@@ -92,23 +82,13 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
   const handleClearSessionHistory = async () => {
     try {
       setClearingSessionHistory(true);
-      const response = await fetch(
-        `${config.api.baseUrl}/config/scripts/clear-session-history`,
-        {
-          method: "POST",
-        }
-      );
+      await apiClient.clearSessionHistory();
 
-      if (response.ok) {
-        toast({
-          title: "Success",
-          description: "Session history has been cleared successfully.",
-          variant: "success",
-        });
-      } else {
-        const error = await response.text();
-        throw new Error(error);
-      }
+      toast({
+        title: "Success",
+        description: "Session history has been cleared successfully.",
+        variant: "success",
+      });
     } catch (error) {
       toast({
         title: "Error",
@@ -127,24 +107,14 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
   const handleDeleteAllDevices = async () => {
     try {
       setDeletingAllDevices(true);
-      const response = await fetch(
-        `${config.api.baseUrl}/config/scripts/delete-all-devices`,
-        {
-          method: "POST",
-        }
-      );
+      await apiClient.deleteAllDevices();
 
-      if (response.ok) {
-        toast({
-          title: "Success",
-          description: "All devices have been deleted successfully.",
-          variant: "success",
-        });
-        onSettingsRefresh?.();
-      } else {
-        const error = await response.text();
-        throw new Error(error);
-      }
+      toast({
+        title: "Success",
+        description: "All devices have been deleted successfully.",
+        variant: "success",
+      });
+      onSettingsRefresh?.();
     } catch (error) {
       toast({
         title: "Error",
@@ -163,28 +133,18 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
   const handleResetDatabase = async () => {
     try {
       setResettingDatabase(true);
-      const response = await fetch(
-        `${config.api.baseUrl}/config/scripts/reset-database`,
-        {
-          method: "POST",
-        }
-      );
+      await apiClient.resetDatabase();
 
-      if (response.ok) {
-        toast({
-          title: "Success",
-          description:
-            "Database has been reset successfully. Page will reload.",
-          variant: "success",
-        });
-        onSettingsRefresh?.();
-        setTimeout(() => {
-          window.location.reload();
-        }, 2000);
-      } else {
-        const error = await response.text();
-        throw new Error(error);
-      }
+      toast({
+        title: "Success",
+        description:
+          "Database has been reset successfully. Page will reload.",
+        variant: "success",
+      });
+      onSettingsRefresh?.();
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
     } catch (error) {
       toast({
         title: "Error",
@@ -201,15 +161,12 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
   const exportDatabase = async () => {
     try {
       setExportingDatabase(true);
-      const response = await fetch(
-        `${config.api.baseUrl}/config/database/export`
-      );
+      const data = await apiClient.exportDatabase();
 
-      if (!response.ok) {
-        throw new Error("Failed to export database");
-      }
-
-      const blob = await response.blob();
+      // Convert the data to a blob for download
+      const blob = new Blob([JSON.stringify(data, null, 2)], {
+        type: "application/json",
+      });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -284,18 +241,7 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
       const formData = new FormData();
       formData.append("file", file);
 
-      const response = await fetch(
-        `${config.api.baseUrl}/config/database/import`,
-        {
-          method: "POST",
-          body: formData,
-        }
-      );
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || "Failed to import database");
-      }
+      await apiClient.importDatabase(formData);
 
       toast({
         title: "Import successful",

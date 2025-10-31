@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import StreamsList from "./streams-list";
 import { DeviceManagement } from "./device-management";
-import { PlexErrorHandler } from "./plex-error-handler";
+import { PlexErrorHandler, ErrorHandler } from "./error-handler";
 
 import {
   DashboardStats,
@@ -32,11 +32,13 @@ import {
 import { apiClient } from "@/lib/api";
 import { config } from "@/lib/config";
 import { useVersion } from "@/contexts/version-context";
+import { useAuth } from "@/contexts/auth-context";
 
 export function Dashboard() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { versionInfo, checkForUpdatesIfEnabled } = useVersion();
+  const { setupRequired, backendError, retryConnection } = useAuth();
 
   const [dashboardData, setDashboardData] =
     useState<UnifiedDashboardData | null>(null);
@@ -114,8 +116,12 @@ export function Dashboard() {
   };
 
   useEffect(() => {
+    // Don't fetch dashboard data during setup
+    if (setupRequired) {
+      return;
+    }
     refreshDashboard();
-  }, []);
+  }, [setupRequired]);
 
   // Handle URL parameters for device navigation
   useEffect(() => {
@@ -152,6 +158,16 @@ export function Dashboard() {
     );
     return () => clearInterval(interval);
   }, [autoRefresh, refreshDashboard]);
+
+  // Show error if backend is unavailable
+  if (backendError) {
+    return <ErrorHandler backendError={backendError} onRetry={retryConnection} />;
+  }
+
+  // Don't render dashboard during setup
+  if (setupRequired) {
+    return null;
+  }
 
   if (loading) {
     // Loading dots animation
