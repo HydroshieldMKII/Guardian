@@ -49,7 +49,7 @@ export class VersionService {
           `WARNING: Current app version ${CURRENT_APP_VERSION} is older than your data version ${currentDbVersion}. Please check your installation.`,
         );
       } else {
-        this.logger.log(`App version is up to date: ${CURRENT_APP_VERSION}`);
+        this.logger.log(`App version is up to date with database: ${CURRENT_APP_VERSION}`);
       }
     } catch (error) {
       this.logger.warn('Failed to update app version:', error);

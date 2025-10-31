@@ -9,6 +9,7 @@ import React, {
 } from "react";
 import { config } from "@/lib/config";
 import { AppSetting } from "@/types";
+import { useAuth } from "./auth-context";
 
 interface SettingsContextType {
   settings: AppSetting[];
@@ -33,11 +34,18 @@ interface SettingsProviderProps {
 export const SettingsProvider: React.FC<SettingsProviderProps> = ({
   children,
 }) => {
+  const { setupRequired, isLoading: authLoading } = useAuth();
   const [settings, setSettings] = useState<AppSetting[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const fetchSettings = async () => {
+    // Skip fetching during setup or auth loading
+    if (setupRequired || authLoading) {
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
@@ -58,7 +66,7 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({
 
   useEffect(() => {
     fetchSettings();
-  }, []);
+  }, [setupRequired, authLoading]);
 
   const refreshSettings = async () => {
     await fetchSettings();

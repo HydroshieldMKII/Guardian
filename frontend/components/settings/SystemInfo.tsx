@@ -23,7 +23,7 @@ import {
   Server,
   Clock,
 } from "lucide-react";
-import { config } from "@/lib/config";
+import { apiClient } from "@/lib/api";
 import { useVersion } from "@/contexts/version-context";
 import { AppSetting } from "@/types";
 
@@ -68,13 +68,10 @@ export function SystemInfo({ onSettingsRefresh, settings }: SystemInfoProps) {
   // Fetch uptime information
   const fetchUptimeInfo = async () => {
     try {
-      const response = await fetch(`${config.api.baseUrl}/health`);
-      if (response.ok) {
-        const data: HealthResponse = await response.json();
-        if (data.uptime) {
-          setUptimeInfo(data.uptime);
-          setCurrentUptime(data.uptime.seconds);
-        }
+      const data = await apiClient.getHealth<HealthResponse>();
+      if (data.uptime) {
+        setUptimeInfo(data.uptime);
+        setCurrentUptime(data.uptime.seconds);
       }
     } catch (error) {
       console.error("Failed to fetch uptime info:", error);
@@ -125,12 +122,7 @@ export function SystemInfo({ onSettingsRefresh, settings }: SystemInfoProps) {
       setCheckingUpdates(true);
       setUpdateStatus(null);
 
-      // Simulate checking for updates (you can replace this with actual GitHub API call)
-      const response = await fetch(`${config.api.baseUrl}/health`);
-
-      if (!response.ok) {
-        throw new Error("Failed to check for updates");
-      }
+      await apiClient.getHealth();
 
       // For now, simulate no updates available
       // In a real implementation, you'd check GitHub releases API
