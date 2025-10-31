@@ -100,7 +100,7 @@ export default function LoginPage() {
         <CardHeader className="space-y-1 text-center pb-6 mt-4">
           <CardTitle className="text-3xl font-bold">Guardian</CardTitle>
           <CardDescription className="text-sm">
-            Sign in to your admin account
+            Sign in to your account
           </CardDescription>
         </CardHeader>
 

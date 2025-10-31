@@ -291,10 +291,10 @@ export class DatabaseService {
           this.logger.debug('App settings table cleared');
 
           //clear sessions and admin users
-          await transactionalEntityManager.getRepository('session').clear();
+          await transactionalEntityManager.getRepository('sessions').clear();
           this.logger.debug('Sessions table cleared');
 
-          await transactionalEntityManager.getRepository('admin_user').clear();
+          await transactionalEntityManager.getRepository('admin_users').clear();
           this.logger.debug('Admin users table cleared');
         },
       );

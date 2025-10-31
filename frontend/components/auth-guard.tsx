@@ -44,8 +44,16 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     }
   }, [isAuthenticated, isLoading, setupRequired, pathname, router, backendError]);
 
-  // Show loading state while checking auth
-  if (isLoading) {
+  const isPublicRoute = PUBLIC_ROUTES.includes(pathname);
+  const shouldRenderContent =
+    !isLoading && // Auth check complete
+    !backendError && // No backend errors
+    (isPublicRoute || // Public routes always render
+      (isAuthenticated && !setupRequired) || // Authenticated users on protected routes
+      setupRequired); // Setup page renders during setup
+
+  // Show loading state while checking auth or redirecting
+  if (!shouldRenderContent) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <ThreeDotLoader />
