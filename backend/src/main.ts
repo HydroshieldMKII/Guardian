@@ -2,7 +2,6 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 import { GlobalExceptionFilter } from './filters/global-exception.filter';
-import { spawn } from 'child_process';
 import { config, isDevelopment } from './config/app.config';
 import * as dotenv from 'dotenv';
 import * as path from 'path';
