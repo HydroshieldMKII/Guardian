@@ -48,6 +48,7 @@ import { GeneralSettings } from "@/components/settings/GeneralSettings";
 import { AdminTools } from "@/components/settings/AdminTools";
 import { SystemInfo } from "@/components/settings/SystemInfo";
 import { SettingsFormData } from "@/components/settings/settings-utils";
+import { ThreeDotLoader } from "@/components/three-dot-loader";
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -226,8 +227,8 @@ export default function SettingsPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center p-8">
-        <Loader2 className="h-8 w-8 animate-spin" />
+      <div className="flex items-center justify-center min-h-screen">
+        <ThreeDotLoader />
       </div>
     );
   }
