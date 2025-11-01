@@ -14,8 +14,8 @@ import { LoginDto } from './dto/login.dto';
 import { Public } from './decorators/public.decorator';
 import { CurrentUser } from './decorators/current-user.decorator';
 
-// 30 days
-const COOKIE_MAX_AGE = 30 * 24 * 60 * 60 * 1000;
+// 7 days
+const COOKIE_MAX_AGE = 7 * 24 * 60 * 60 * 1000;
 
 const getCookieOptions = () => {
   return {
