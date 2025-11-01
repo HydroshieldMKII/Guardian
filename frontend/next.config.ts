@@ -1,12 +1,10 @@
 import type { NextConfig } from "next";
 
-const getBackendUrl = () => {
-  if (process.env.BACKEND_URL) {
-    return process.env.BACKEND_URL;
-  }
-
-  return "http://localhost:3001";
-};
+function getBackendUrl(): string {
+  return process.env.DEPLOYMENT_MODE === "standalone"
+    ? "http://localhost:3001"
+    : "http://backend:3001";
+}
 
 const nextConfig: NextConfig = {
   output: "standalone",
