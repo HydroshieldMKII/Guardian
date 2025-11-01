@@ -34,7 +34,7 @@ interface SettingsProviderProps {
 export const SettingsProvider: React.FC<SettingsProviderProps> = ({
   children,
 }) => {
-  const { setupRequired, isLoading: authLoading } = useAuth();
+  const { setupRequired, isLoading: authLoading, isAuthenticated } = useAuth();
   const [settings, setSettings] = useState<AppSetting[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -65,8 +65,10 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({
   };
 
   useEffect(() => {
-    fetchSettings();
-  }, [setupRequired, authLoading]);
+    if (isAuthenticated) {
+      fetchSettings();
+    }
+  }, [setupRequired, authLoading, isAuthenticated]);
 
   const refreshSettings = async () => {
     await fetchSettings();
