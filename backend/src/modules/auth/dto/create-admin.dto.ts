@@ -10,7 +10,6 @@ export class CreateAdminDto {
 
   @IsString()
   @MinLength(12)
-  @MaxLength(128)
   @Matches(
     /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/,
     {
