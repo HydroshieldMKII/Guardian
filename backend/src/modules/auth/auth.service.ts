@@ -9,6 +9,8 @@ import { AppSettings } from '../../entities/app-settings.entity';
 import { CreateAdminDto } from './dto/create-admin.dto';
 import { LoginDto } from './dto/login.dto';
 import { AuthResponseDto } from './dto/session.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
+import { UpdatePasswordDto } from './dto/update-password.dto';
 
 // Session expiration: 30 days in milliseconds
 const SESSION_EXPIRATION_MS = 30 * 24 * 60 * 60 * 1000;
@@ -252,5 +254,95 @@ export class AuthService {
       email: user.email,
       avatarUrl: user.avatarUrl,
     };
+  }
+
+  /**
+   * Update user profile
+   */
+  async updateProfile(userId: string, dto: UpdateProfileDto): Promise<{ id: string; username: string; email: string; avatarUrl?: string }> {
+    const user = await this.adminUserRepository.findOne({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    // Check if new username is already taken
+    if (dto.username && dto.username !== user.username) {
+      const existingUser = await this.adminUserRepository.findOne({
+        where: { username: dto.username },
+      });
+      if (existingUser) {
+        throw new BadRequestException('Username already exists');
+      }
+    }
+
+    // Check if new email is already taken
+    if (dto.email && dto.email !== user.email) {
+      const existingUser = await this.adminUserRepository.findOne({
+        where: { email: dto.email },
+      });
+      if (existingUser) {
+        throw new BadRequestException('Email already exists');
+      }
+    }
+
+    try {
+      if (dto.username) {
+        user.username = dto.username;
+      }
+      if (dto.email !== undefined) {
+        user.email = dto.email;
+      }
+      if (dto.avatarUrl !== undefined) {
+        user.avatarUrl = dto.avatarUrl;
+      }
+
+      await this.adminUserRepository.save(user);
+
+      return {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        avatarUrl: user.avatarUrl,
+      };
+    } catch (error) {
+      throw new InternalServerErrorException('Failed to update profile');
+    }
+  }
+
+  /**
+   * Update user password
+   */
+  async updatePassword(userId: string, dto: UpdatePasswordDto): Promise<void> {
+    const user = await this.adminUserRepository.findOne({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    // Verify current password
+    const passwordValid = await bcrypt.compare(dto.currentPassword, user.passwordHash);
+    if (!passwordValid) {
+      throw new BadRequestException('Current password is incorrect');
+    }
+
+    // Validate new passwords match
+    if (dto.newPassword !== dto.confirmPassword) {
+      throw new BadRequestException('New passwords do not match');
+    }
+
+    // Hash new password
+    const newPasswordHash = await bcrypt.hash(dto.newPassword, 12);
+
+    try {
+      user.passwordHash = newPasswordHash;
+      await this.adminUserRepository.save(user);
+    } catch (error) {
+      throw new InternalServerErrorException('Failed to update password');
+    }
   }
 }

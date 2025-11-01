@@ -1,13 +1,8 @@
-import { IsEmail, IsString, MinLength, Matches, ValidateIf } from 'class-validator';
+import { IsString, MinLength, Matches } from 'class-validator';
 
-export class CreateAdminDto {
+export class UpdatePasswordDto {
   @IsString()
-  @MinLength(3)
-  username: string;
-
-  @ValidateIf((o) => o.email !== undefined && o.email !== null && o.email !== '')
-  @IsEmail()
-  email?: string;
+  currentPassword: string;
 
   @IsString()
   @MinLength(12)
@@ -18,7 +13,7 @@ export class CreateAdminDto {
         'Password must contain uppercase, lowercase, number, and special character. Minimum length is 12 characters and maximum length is 128 characters.',
     },
   )
-  password: string;
+  newPassword: string;
 
   @IsString()
   confirmPassword: string;
