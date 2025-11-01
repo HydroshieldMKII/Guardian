@@ -7,6 +7,7 @@ import * as dotenv from 'dotenv';
 import * as path from 'path';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
+import * as bodyParser from 'body-parser';
 
 // Load environment variables
 if (isDevelopment()) {
@@ -18,6 +19,8 @@ if (isDevelopment()) {
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  app.use(bodyParser.json({ limit: '5mb' }));
+  app.use(bodyParser.urlencoded({ limit: '5mb', extended: true }));
   app.use(cookieParser());
 
   app.enableCors({
