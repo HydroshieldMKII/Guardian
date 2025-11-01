@@ -32,7 +32,7 @@ export default function SetupPage() {
       uppercase: /[A-Z]/.test(password),
       lowercase: /[a-z]/.test(password),
       number: /\d/.test(password),
-      special: /[@$!%*?&]/.test(password),
+      special: /[!@#$%^&*()_+\-=\[\]{};:'",./<>?\\|~]/.test(password),
     };
   };
 
@@ -43,8 +43,9 @@ export default function SetupPage() {
       newErrors.username = 'Username must be at least 3 characters';
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!formData.email || !emailRegex.test(formData.email)) {
+    // Email is optional, but if provided must be valid
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+    if (formData.email && !emailRegex.test(formData.email)) {
       newErrors.email = 'Please enter a valid email address';
     }
 
@@ -169,32 +170,6 @@ export default function SetupPage() {
               )}
             </div>
 
-            {/* Email */}
-            <div className="space-y-2">
-              <label htmlFor="email" className="text-sm font-semibold text-foreground">
-                Email
-              </label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  placeholder="your@email.com"
-                  value={formData.email}
-                  onChange={handleChange}
-                  disabled={isSubmitting}
-                  className={`pl-10 ${errors.email ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
-                />
-              </div>
-              {errors.email && (
-                <div className="flex items-center gap-1 text-xs text-red-500">
-                  <AlertCircle className="h-3 w-3" />
-                  {errors.email}
-                </div>
-              )}
-            </div>
-
             {/* Password */}
             <div className="space-y-3">
               <label htmlFor="password" className="text-sm font-semibold text-foreground">
@@ -273,7 +248,7 @@ export default function SetupPage() {
                       <div className="h-3 w-3 rounded-full border border-muted-foreground" />
                     )}
                     <span className={requirements.special ? 'text-green-700' : 'text-muted-foreground'}>
-                      Special character (@$!%*?&)
+                      Special character (!, @, #, $, %, etc.)
                     </span>
                   </div>
                 </div>
@@ -317,6 +292,32 @@ export default function SetupPage() {
                 <div className="flex items-center gap-1 text-xs text-red-500">
                   <AlertCircle className="h-3 w-3" />
                   {errors.confirmPassword}
+                </div>
+              )}
+            </div>
+
+            {/* Email */}
+            <div className="space-y-2">
+              <label htmlFor="email" className="text-sm font-semibold text-foreground">
+                Email <span className="text-xs font-normal text-muted-foreground">(optional)</span>
+              </label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  placeholder="your@email.com"
+                  value={formData.email}
+                  onChange={handleChange}
+                  disabled={isSubmitting}
+                  className={`pl-10 ${errors.email ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
+                />
+              </div>
+              {errors.email && (
+                <div className="flex items-center gap-1 text-xs text-red-500">
+                  <AlertCircle className="h-3 w-3" />
+                  {errors.email}
                 </div>
               )}
             </div>

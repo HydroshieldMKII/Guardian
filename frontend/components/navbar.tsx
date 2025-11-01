@@ -2,12 +2,14 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Settings, Moon, Sun, User, LogOut } from "lucide-react";
+import { Settings, Moon, Sun, User, LogOut, Edit } from "lucide-react";
 import { useTheme } from "@/hooks/use-theme";
 import { useVersion } from "@/contexts/version-context";
 import { useAuth } from "@/contexts/auth-context";
 import { NotificationMenu } from "@/components/notification-menu";
+import { EditProfileModal } from "@/components/edit-profile-modal";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -20,6 +22,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 
 export function Navbar() {
+  const [editProfileOpen, setEditProfileOpen] = useState(false);
   const { theme, toggleTheme } = useTheme();
   const { versionInfo } = useVersion();
   const { user, logout, setupRequired, isAuthenticated } = useAuth();
@@ -172,6 +175,15 @@ export function Navbar() {
 
                   <DropdownMenuSeparator />
 
+                  {/* Edit Profile */}
+                  <DropdownMenuItem
+                    onClick={() => setEditProfileOpen(true)}
+                    className="cursor-pointer"
+                  >
+                    <Edit className="mr-2 h-4 w-4" />
+                    <span>Edit Profile</span>
+                  </DropdownMenuItem>
+
                   {/* Logout */}
                   <DropdownMenuItem
                     onClick={handleLogout}
@@ -186,6 +198,12 @@ export function Navbar() {
           </div>
         </div>
       </div>
+
+      {/* Edit Profile Modal */}
+      <EditProfileModal
+        open={editProfileOpen}
+        onOpenChange={setEditProfileOpen}
+      />
     </nav>
   );
 }

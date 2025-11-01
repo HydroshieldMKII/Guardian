@@ -7,6 +7,7 @@ import React, {
   useState,
   ReactNode,
 } from 'react';
+import { apiClient } from '@/lib/api';
 
 export interface User {
   id: string;
@@ -31,6 +32,16 @@ export interface AuthContextType {
   ) => Promise<void>;
   checkAuth: () => Promise<void>;
   retryConnection: () => Promise<void>;
+  updateProfile: (data: {
+    username?: string;
+    email?: string;
+    avatarUrl?: string;
+  }) => Promise<void>;
+  updatePassword: (data: {
+    currentPassword: string;
+    newPassword: string;
+    confirmPassword: string;
+  }) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -193,6 +204,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await initAuth();
   };
 
+  const updateProfile = async (data: {
+    username?: string;
+    email?: string;
+    avatarUrl?: string;
+  }) => {
+    try {
+      const updatedUser = await apiClient.updateProfile(data);
+      setUser(updatedUser as User);
+    } catch (error) {
+      throw error instanceof Error ? error : new Error('Failed to update profile');
+    }
+  };
+
+  const updatePassword = async (data: {
+    currentPassword: string;
+    newPassword: string;
+    confirmPassword: string;
+  }) => {
+    try {
+      await apiClient.updatePassword(data);
+    } catch (error) {
+      throw error instanceof Error ? error : new Error('Failed to update password');
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -206,6 +242,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         createAdmin,
         checkAuth,
         retryConnection,
+        updateProfile,
+        updatePassword,
       }}
     >
       {children}

@@ -2,6 +2,7 @@ import {
   Controller,
   Post,
   Get,
+  Patch,
   Body,
   Res,
   Req,
@@ -11,6 +12,8 @@ import type { Response, Request } from 'express';
 import { AuthService } from './auth.service';
 import { CreateAdminDto } from './dto/create-admin.dto';
 import { LoginDto } from './dto/login.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
+import { UpdatePasswordDto } from './dto/update-password.dto';
 import { Public } from './decorators/public.decorator';
 import { CurrentUser } from './decorators/current-user.decorator';
 
@@ -134,6 +137,38 @@ export class AuthController {
       email: user.email,
       avatarUrl: user.avatarUrl,
     };
+  }
+
+  /**
+   * Update user profile
+   */
+  @Patch('profile')
+  async updateProfile(
+    @CurrentUser() user: any,
+    @Body() dto: UpdateProfileDto,
+  ) {
+    if (!user) {
+      throw new BadRequestException('Not authenticated');
+    }
+
+    const updatedUser = await this.authService.updateProfile(user.id, dto);
+    return updatedUser;
+  }
+
+  /**
+   * Update user password
+   */
+  @Patch('password')
+  async updatePassword(
+    @CurrentUser() user: any,
+    @Body() dto: UpdatePasswordDto,
+  ) {
+    if (!user) {
+      throw new BadRequestException('Not authenticated');
+    }
+
+    await this.authService.updatePassword(user.id, dto);
+    return { success: true };
   }
 
   /**
