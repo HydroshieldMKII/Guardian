@@ -1,4 +1,5 @@
 import { NestFactory } from '@nestjs/core';
+import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 import { GlobalExceptionFilter } from './filters/global-exception.filter';
 import { spawn } from 'child_process';
@@ -14,8 +15,6 @@ if (isDevelopment()) {
 } else {
   dotenv.config({ path: path.join(process.cwd(), '.env') });
 }
-
-const proxyProcess: ReturnType<typeof spawn> | null = null;
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -35,6 +34,13 @@ async function bootstrap() {
 
   app.use(helmet());
   app.useGlobalFilters(new GlobalExceptionFilter());
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+    }),
+  );
 
   const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
   await app.listen(config.app.port);

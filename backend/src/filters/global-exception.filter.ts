@@ -30,17 +30,13 @@ export class GlobalExceptionFilter implements ExceptionFilter {
 
     const errorResponse = {
       statusCode: status,
-      timestamp: new Date().toISOString(),
+      timestamp: new Date(),
       path: request.url,
       method: request.method,
       message:
         typeof message === 'string'
           ? message
-          : (message as any).message || message,
-      ...(isDevelopment() &&
-        exception instanceof Error && {
-          stack: exception.stack,
-        }),
+          : (message as any).message || message
     };
 
     this.logger.error(
