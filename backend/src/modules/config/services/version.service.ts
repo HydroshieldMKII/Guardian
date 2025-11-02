@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 
 // App version
-const CURRENT_APP_VERSION = '1.2.4';
+const CURRENT_APP_VERSION = '1.2.5';
 
 @Injectable()
 export class VersionService {
@@ -49,7 +49,9 @@ export class VersionService {
           `WARNING: Current app version ${CURRENT_APP_VERSION} is older than your data version ${currentDbVersion}. Please check your installation.`,
         );
       } else {
-        this.logger.log(`App version is up to date with database: ${CURRENT_APP_VERSION}`);
+        this.logger.log(
+          `App version is up to date with database: ${CURRENT_APP_VERSION}`,
+        );
       }
     } catch (error) {
       this.logger.warn('Failed to update app version:', error);
