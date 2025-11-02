@@ -32,53 +32,6 @@ export class AuthService {
   ) {}
 
   /**
-   * Generate a secure secret for session signing
-   * Uses 64 bytes of cryptographically secure random data
-   */
-  async generateAndStoreSecret(): Promise<string> {
-    try {
-      // Check if secret already exists
-      const existingSecret = await this.appSettingsRepository.findOne({
-        where: { key: 'auth_secret' },
-      });
-
-      if (existingSecret) {
-        return existingSecret.value;
-      }
-
-      // Generate new secret (64 bytes = 512 bits)
-      const secret = crypto.randomBytes(64).toString('base64');
-
-      // Store in database as private setting
-      await this.appSettingsRepository.save({
-        key: 'auth_secret',
-        value: secret,
-        type: 'string',
-        private: true,
-      });
-
-      return secret;
-    } catch (error) {
-      throw new InternalServerErrorException('Failed to generate auth secret');
-    }
-  }
-
-  /**
-   * Get the stored secret, generate if missing
-   */
-  async getSecret(): Promise<string> {
-    const secret = await this.appSettingsRepository.findOne({
-      where: { key: 'auth_secret' },
-    });
-
-    if (!secret) {
-      return this.generateAndStoreSecret();
-    }
-
-    return secret.value;
-  }
-
-  /**
    * Check if any admin user exists
    */
   async hasAdminUsers(): Promise<boolean> {
@@ -244,29 +197,6 @@ export class AuthService {
     });
 
     return result.affected || 0;
-  }
-
-  /**
-   * Get current user from token
-   */
-  async getCurrentUser(token: string): Promise<{
-    id: string;
-    username: string;
-    email: string;
-    avatarUrl?: string;
-  } | null> {
-    const user = await this.validateSession(token);
-
-    if (!user) {
-      return null;
-    }
-
-    return {
-      id: user.id,
-      username: user.username,
-      email: user.email,
-      avatarUrl: user.avatarUrl,
-    };
   }
 
   /**
