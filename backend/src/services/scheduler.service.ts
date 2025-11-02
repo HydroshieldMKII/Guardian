@@ -193,7 +193,9 @@ export class SchedulerService implements OnModuleInit {
     try {
       this.logger.log('Running scheduled session cleanup...');
       const deletedCount = await this.authService.cleanupExpiredSessions();
-      this.logger.log(`Session cleanup completed: ${deletedCount} expired sessions removed`);
+      this.logger.log(
+        `Session cleanup completed: ${deletedCount} expired sessions removed`,
+      );
     } catch (error) {
       this.logger.error('Error during scheduled session cleanup:', error);
     }
