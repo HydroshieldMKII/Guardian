@@ -44,11 +44,9 @@ async function bootstrap() {
     }),
   );
 
-  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
   await app.listen(config.app.port);
 
   console.log(`Server is running on port ${config.app.port}`);
-  console.log(`CORS enabled for: ${frontendUrl}`);
 
   const cleanup = () => {
     console.log('Shutting down server...');
