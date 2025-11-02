@@ -10,7 +10,7 @@ export class UpdatePasswordDto {
     /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};:'",./<>?\\|~])[A-Za-z\d!@#$%^&*()_+\-=\[\]{};:'",./<>?\\|~]{12,128}$/,
     {
       message:
-        'Password must contain uppercase, lowercase, number, and special character. Minimum length is 12 characters and maximum length is 128 characters.',
+        'Password must contain uppercase, lowercase, number, and special character. Minimum length is 12 characters.',
     },
   )
   newPassword: string;

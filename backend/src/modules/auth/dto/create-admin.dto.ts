@@ -1,11 +1,19 @@
-import { IsEmail, IsString, MinLength, Matches, ValidateIf } from 'class-validator';
+import {
+  IsEmail,
+  IsString,
+  MinLength,
+  Matches,
+  ValidateIf,
+} from 'class-validator';
 
 export class CreateAdminDto {
   @IsString()
   @MinLength(3)
   username: string;
 
-  @ValidateIf((o) => o.email !== undefined && o.email !== null && o.email !== '')
+  @ValidateIf(
+    (o) => o.email !== undefined && o.email !== null && o.email !== '',
+  )
   @IsEmail()
   email?: string;
 
@@ -15,7 +23,7 @@ export class CreateAdminDto {
     /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};:'",./<>?\\|~])[A-Za-z\d!@#$%^&*()_+\-=\[\]{};:'",./<>?\\|~]{12,128}$/,
     {
       message:
-        'Password must contain uppercase, lowercase, number, and special character. Minimum length is 12 characters and maximum length is 128 characters.',
+        'Password must contain uppercase, lowercase, number, and special character. Minimum length is 12 characters.',
     },
   )
   password: string;
