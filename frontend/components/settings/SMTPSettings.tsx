@@ -20,7 +20,7 @@ import {
   Mail,
   SendHorizontal,
 } from "lucide-react";
-import { config } from "@/lib/config";
+import { apiClient } from "@/lib/api";
 import { AppSetting } from "@/types";
 import {
   getSettingInfo,
@@ -85,17 +85,9 @@ export function SMTPSettings({
       setTestingConnection(true);
       setConnectionStatus(null);
 
-      const response = await fetch(
-        `${config.api.baseUrl}/config/test-smtp-connection`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-        }
-      );
+      const result = await apiClient.testSmtpConnection<any>();
 
-      const result = await response.json();
-
-      if (response.ok && result.success) {
+      if (result.success) {
         setConnectionStatus({ success: true, message: result.message });
       } else {
         setConnectionStatus({
@@ -104,7 +96,7 @@ export function SMTPSettings({
         });
       }
     } catch (error) {
-      const errorMessage = "Failed to test SMTP connection";
+      const errorMessage = error instanceof Error ? error.message : "Failed to test SMTP connection";
       setConnectionStatus({ success: false, message: errorMessage });
     } finally {
       setTestingConnection(false);

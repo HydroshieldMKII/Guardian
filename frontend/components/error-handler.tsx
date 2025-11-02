@@ -19,9 +19,11 @@ import {
 import { PlexStatus } from "@/types";
 import { PlexErrorCode, ERROR_DISPLAY_CONFIG } from "@/types/plex-errors";
 
-interface PlexErrorHandlerProps {
-  plexStatus: PlexStatus | null;
-  onShowSettings: () => void;
+interface ErrorHandlerProps {
+  plexStatus?: PlexStatus | null;
+  backendError?: string | null;
+  onShowSettings?: () => void;
+  onRetry?: () => void;
 }
 
 // Icon mapping for display config
@@ -33,13 +35,28 @@ const ICON_MAP = {
   AlertTriangle,
 };
 
-export function PlexErrorHandler({
+export function ErrorHandler({
   plexStatus,
+  backendError,
   onShowSettings,
-}: PlexErrorHandlerProps) {
+  onRetry,
+}: ErrorHandlerProps) {
   // Determine the appropriate display configuration based on the error
   const getErrorInfo = () => {
-    // Check for backend connection errors FIRST (before checking configured status)
+    // Check for backend errors FIRST
+    if (backendError) {
+      return {
+        title: "Backend Connection Error",
+        description: backendError,
+        icon: AlertTriangle,
+        iconColor: "text-red-600 dark:text-red-400",
+        iconBg: "bg-red-100 dark:bg-red-900/20",
+        showChecklist: false,
+        isBackendError: true,
+      };
+    }
+
+    // Check for plex connection errors
     const status = plexStatus?.connectionStatus || "";
 
     if (
@@ -70,7 +87,7 @@ export function PlexErrorHandler({
 
     let errorCode: PlexErrorCode | null = null;
 
-    // Check for the specific error codes that our backend now returns
+    // Check for the specific error codes from backend
     if (status.startsWith("PLEX_CONNECTION_REFUSED:")) {
       errorCode = PlexErrorCode.CONNECTION_REFUSED;
     } else if (status.startsWith("PLEX_CONNECTION_TIMEOUT:")) {
@@ -187,10 +204,19 @@ export function PlexErrorHandler({
               )}
 
               <div className="pt-4 mb-8">
-                <Button onClick={onShowSettings} className="w-full" size="lg">
-                  <Settings className="h-4 w-4 mr-2" />
-                  Go to settings
-                </Button>
+                {errorInfo.isBackendError && onRetry ? (
+                  <Button onClick={onRetry} className="w-full" size="lg">
+                    <Settings className="h-4 w-4 mr-2" />
+                    Retry Connection
+                  </Button>
+                ) : (
+                  onShowSettings && (
+                    <Button onClick={onShowSettings} className="w-full" size="lg">
+                      <Settings className="h-4 w-4 mr-2" />
+                      Go to settings
+                    </Button>
+                  )
+                )}
               </div>
             </CardContent>
           </Card>
@@ -199,3 +225,6 @@ export function PlexErrorHandler({
     </div>
   );
 }
+
+// Backward compatibility alias
+export const PlexErrorHandler = ErrorHandler;
