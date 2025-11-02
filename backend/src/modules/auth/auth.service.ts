@@ -1,6 +1,11 @@
-import { Injectable, BadRequestException, UnauthorizedException, InternalServerErrorException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  UnauthorizedException,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, LessThan } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import { AdminUser } from '../../entities/admin-user.entity';
@@ -12,8 +17,8 @@ import { AuthResponseDto } from './dto/session.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UpdatePasswordDto } from './dto/update-password.dto';
 
-// Session expiration: 30 days in milliseconds
-const SESSION_EXPIRATION_MS = 30 * 24 * 60 * 60 * 1000;
+// Session expiration: 7 days in ms
+const SESSION_EXPIRATION_MS = 7 * 24 * 60 * 60 * 1000;
 
 @Injectable()
 export class AuthService {
@@ -142,7 +147,10 @@ export class AuthService {
     }
 
     // Verify password
-    const passwordValid = await bcrypt.compare(dto.password, admin.passwordHash);
+    const passwordValid = await bcrypt.compare(
+      dto.password,
+      admin.passwordHash,
+    );
 
     if (!passwordValid) {
       throw new UnauthorizedException('Invalid credentials');
@@ -232,7 +240,7 @@ export class AuthService {
    */
   async cleanupExpiredSessions(): Promise<number> {
     const result = await this.sessionRepository.delete({
-      expiresAt: { $lt: new Date() } as any,
+      expiresAt: LessThan(new Date()),
     });
 
     return result.affected || 0;
@@ -241,7 +249,12 @@ export class AuthService {
   /**
    * Get current user from token
    */
-  async getCurrentUser(token: string): Promise<{ id: string; username: string; email: string; avatarUrl?: string } | null> {
+  async getCurrentUser(token: string): Promise<{
+    id: string;
+    username: string;
+    email: string;
+    avatarUrl?: string;
+  } | null> {
     const user = await this.validateSession(token);
 
     if (!user) {
@@ -259,7 +272,15 @@ export class AuthService {
   /**
    * Update user profile
    */
-  async updateProfile(userId: string, dto: UpdateProfileDto): Promise<{ id: string; username: string; email: string; avatarUrl?: string }> {
+  async updateProfile(
+    userId: string,
+    dto: UpdateProfileDto,
+  ): Promise<{
+    id: string;
+    username: string;
+    email: string;
+    avatarUrl?: string;
+  }> {
     const user = await this.adminUserRepository.findOne({
       where: { id: userId },
     });
@@ -325,7 +346,10 @@ export class AuthService {
     }
 
     // Verify current password
-    const passwordValid = await bcrypt.compare(dto.currentPassword, user.passwordHash);
+    const passwordValid = await bcrypt.compare(
+      dto.currentPassword,
+      user.passwordHash,
+    );
     if (!passwordValid) {
       throw new BadRequestException('Current password is incorrect');
     }

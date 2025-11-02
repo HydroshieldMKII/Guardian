@@ -24,7 +24,10 @@ const getCookieOptions = () => {
   return {
     httpOnly: true,
     secure: true,
-    sameSite: (process.env.NODE_ENV === 'production' ? 'strict' : 'none') as 'strict' | 'lax' | 'none',
+    sameSite: (process.env.NODE_ENV === 'production' ? 'strict' : 'none') as
+      | 'strict'
+      | 'lax'
+      | 'none',
     maxAge: COOKIE_MAX_AGE,
     path: '/',
   };
@@ -69,7 +72,7 @@ export class AuthController {
 
     const result = await this.authService.createAdmin(dto);
 
-    // Set secure session cookie
+    // Set session cookie
     res.cookie('session_token', result.session.token, getCookieOptions());
 
     return {
@@ -91,7 +94,7 @@ export class AuthController {
   ) {
     const result = await this.authService.login(dto);
 
-    // Set secure session cookie
+    // Set session cookie
     res.cookie('session_token', result.session.token, getCookieOptions());
 
     return {
@@ -106,10 +109,7 @@ export class AuthController {
    * Logout endpoint
    */
   @Post('logout')
-  async logout(
-    @Req() req: Request,
-    @Res({ passthrough: true }) res: Response,
-  ) {
+  async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
     const token = this.extractToken(req);
 
     if (token) {
@@ -143,10 +143,7 @@ export class AuthController {
    * Update user profile
    */
   @Patch('profile')
-  async updateProfile(
-    @CurrentUser() user: any,
-    @Body() dto: UpdateProfileDto,
-  ) {
+  async updateProfile(@CurrentUser() user: any, @Body() dto: UpdateProfileDto) {
     if (!user) {
       throw new BadRequestException('Not authenticated');
     }
@@ -178,12 +175,6 @@ export class AuthController {
     // Try cookie first (preferred, httpOnly)
     if (req.cookies && req.cookies.session_token) {
       return req.cookies.session_token;
-    }
-
-    // Try Authorization header (for API clients)
-    const authHeader = req.headers.authorization;
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      return authHeader.substring(7);
     }
 
     return null;
