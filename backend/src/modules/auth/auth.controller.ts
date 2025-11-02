@@ -21,13 +21,12 @@ import { CurrentUser } from './decorators/current-user.decorator';
 const COOKIE_MAX_AGE = 7 * 24 * 60 * 60 * 1000;
 
 const getCookieOptions = () => {
+  const isProduction = process.env.NODE_ENV === 'production';
+
   return {
     httpOnly: true,
-    secure: true,
-    sameSite: (process.env.NODE_ENV === 'production' ? 'strict' : 'none') as
-      | 'strict'
-      | 'lax'
-      | 'none',
+    secure: isProduction,
+    sameSite: (isProduction ? 'strict' : 'lax') as 'strict' | 'lax' | 'none',
     maxAge: COOKIE_MAX_AGE,
     path: '/',
   };
