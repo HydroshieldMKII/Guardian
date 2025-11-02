@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useNotificationContext } from "@/contexts/notification-context";
 import { useSettings } from "@/contexts/settings-context";
+import { useAuth } from "@/contexts/auth-context";
 import { UserHistoryModal } from "@/components/device-management/UserHistoryModal";
 import { apiClient } from "@/lib/api";
 import { Notification } from "@/types";
@@ -16,6 +17,7 @@ export function GlobalNotificationHandler() {
   } = useNotificationContext();
 
   const { settings } = useSettings();
+  const { setupRequired, isAuthenticated } = useAuth();
 
   // User History Modal state for notifications
   const [notificationHistoryModalOpen, setNotificationHistoryModalOpen] =
@@ -29,6 +31,11 @@ export function GlobalNotificationHandler() {
 
   // Independent notification fetching
   useEffect(() => {
+    // Skip fetching during setup or if not authenticated
+    if (setupRequired || !isAuthenticated) {
+      return;
+    }
+
     const fetchNotifications = async () => {
       try {
         const notificationData = await apiClient.getAllNotifications<any[]>();
@@ -53,7 +60,7 @@ export function GlobalNotificationHandler() {
     return () => {
       clearInterval(intervalNotification);
     };
-  }, [setNotifications]);
+  }, [setNotifications, setupRequired, isAuthenticated]);
 
   // Set up global notification click handler
   useEffect(() => {

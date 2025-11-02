@@ -9,6 +9,7 @@ import React, {
   useRef,
 } from "react";
 import { config } from "@/lib/config";
+import { useAuth } from "./auth-context";
 
 interface VersionInfo {
   version: string;
@@ -73,6 +74,7 @@ const isVersionNewer = (
 const VersionContext = createContext<VersionContextType | undefined>(undefined);
 
 export function VersionProvider({ children }: { children: React.ReactNode }) {
+  const { setupRequired, isLoading: authLoading, isAuthenticated } = useAuth();
   const [versionInfo, setVersionInfo] = useState<VersionInfo | null>(null);
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
   const [loading, setLoading] = useState(true);
@@ -92,6 +94,11 @@ export function VersionProvider({ children }: { children: React.ReactNode }) {
   const PERIODIC_UPDATE_CHECK_INTERVAL = 30 * 60 * 1000; // 30 minutes
 
   const fetchVersionInfo = useCallback(async () => {
+    // Skip fetching during setup or auth loading
+    if (setupRequired || authLoading || !isAuthenticated) {
+      setLoading(false);
+      return;
+    }
     try {
       setError(null);
       const response = await fetch(`${config.api.baseUrl}/config/version`);
@@ -115,10 +122,7 @@ export function VersionProvider({ children }: { children: React.ReactNode }) {
   }, [fetchVersionInfo]);
 
   const checkForUpdatesIfEnabled = useCallback(async () => {
-    if (!versionInfo?.version) {
-      console.log(
-        "Version check: No version info available, skipping update check",
-      );
+    if (setupRequired || !versionInfo?.version) {
       return null;
     }
 
@@ -228,7 +232,7 @@ export function VersionProvider({ children }: { children: React.ReactNode }) {
       );
       return null;
     }
-  }, [versionInfo?.version, UPDATE_CHECK_COOLDOWN]);
+  }, [setupRequired, versionInfo?.version, UPDATE_CHECK_COOLDOWN]);
 
   const checkForUpdatesManually = useCallback(async () => {
     if (!versionInfo?.version) return null;
@@ -284,7 +288,7 @@ export function VersionProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     fetchVersionInfo();
-  }, [fetchVersionInfo]);
+  }, [fetchVersionInfo, setupRequired, authLoading]);
 
   // Automatically check for updates once version info is available
   useEffect(() => {

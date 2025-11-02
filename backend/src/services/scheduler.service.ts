@@ -5,6 +5,7 @@ import { PlexService } from '../modules/plex/services/plex.service';
 import { ConfigService } from '../modules/config/services/config.service';
 import { DeviceTrackingService } from '../modules/devices/services/device-tracking.service';
 import { UsersService } from '../modules/users/services/users.service';
+import { AuthService } from '../modules/auth/auth.service';
 import { Logger } from '@nestjs/common';
 
 @Injectable()
@@ -17,6 +18,7 @@ export class SchedulerService implements OnModuleInit {
     private readonly configService: ConfigService,
     private readonly deviceTrackingService: DeviceTrackingService,
     private readonly usersService: UsersService,
+    private readonly authService: AuthService,
     private readonly schedulerRegistry: SchedulerRegistry,
   ) {}
 
@@ -181,6 +183,22 @@ export class SchedulerService implements OnModuleInit {
   })
   async handlePlexUserSync() {
     await this.syncPlexUsers();
+  }
+
+  // Clean up expired sessions every hour
+  @Cron('0 0 * * * *', {
+    name: 'sessionCleanup',
+  })
+  async handleSessionCleanup() {
+    try {
+      this.logger.log('Running scheduled session cleanup...');
+      const deletedCount = await this.authService.cleanupExpiredSessions();
+      this.logger.log(
+        `Session cleanup completed: ${deletedCount} expired sessions removed`,
+      );
+    } catch (error) {
+      this.logger.error('Error during scheduled session cleanup:', error);
+    }
   }
 
   private async syncPlexUsers() {
