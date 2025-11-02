@@ -24,13 +24,9 @@ export class AuthGuard implements CanActivate {
     }
 
     // Check if route is marked as public
-    const isPublic = this.reflector.get<boolean>(
-      PUBLIC_KEY,
-      context.getHandler(),
-    ) || this.reflector.get<boolean>(
-      PUBLIC_KEY,
-      context.getClass(),
-    );
+    const isPublic =
+      this.reflector.get<boolean>(PUBLIC_KEY, context.getHandler()) ||
+      this.reflector.get<boolean>(PUBLIC_KEY, context.getClass());
 
     if (isPublic) {
       return true;
@@ -60,12 +56,6 @@ export class AuthGuard implements CanActivate {
     // Try cookie
     if (req.cookies && req.cookies.session_token) {
       return req.cookies.session_token;
-    }
-
-    // Try Authorization header (Bearer)
-    const authHeader = req.headers.authorization;
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      return authHeader.substring(7);
     }
 
     return null;
