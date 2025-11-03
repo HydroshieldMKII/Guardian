@@ -361,7 +361,7 @@ update
 
 ### Password Recovery
 
-If you've lost access to your admin account, you can reset credentials using the built-in recovery scripts.
+If you've lost access to your admin account, you can reset credentials from the command line.
 
 #### Docker
 
@@ -386,14 +386,12 @@ All commands are run from inside the LXC container.
 **List all admin users:**
 
 ```bash
-# Find your admin username
 node /opt/guardian/backend/src/scripts/list-admins.js
 ```
 
 **Reset admin password:**
 
 ```bash
-# Update password for specified username
 node /opt/guardian/backend/src/scripts/update-admin.js "USERNAME_HERE" "NEW_PASSWORD_HERE"
 ```
 
