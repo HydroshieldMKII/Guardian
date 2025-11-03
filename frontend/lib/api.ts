@@ -169,20 +169,20 @@ class ApiClient {
   }
 
   // Admin/Script endpoints
-  async resetStreamCounts<T>(): Promise<T> {
-    return this.post<T>(`/config/scripts/reset-stream-counts`);
+  async resetStreamCounts<T>(password: string): Promise<T> {
+    return this.post<T>(`/config/scripts/reset-stream-counts`, { password });
   }
 
-  async clearSessionHistory<T>(): Promise<T> {
-    return this.post<T>(`/config/scripts/clear-session-history`);
+  async clearSessionHistory<T>(password: string): Promise<T> {
+    return this.post<T>(`/config/scripts/clear-session-history`, { password });
   }
 
-  async deleteAllDevices<T>(): Promise<T> {
-    return this.post<T>(`/config/scripts/delete-all-devices`);
+  async deleteAllDevices<T>(password: string): Promise<T> {
+    return this.post<T>(`/config/scripts/delete-all-devices`, { password });
   }
 
-  async resetDatabase<T>(): Promise<T> {
-    return this.post<T>(`/config/scripts/reset-database`);
+  async resetDatabase<T>(password: string): Promise<T> {
+    return this.post<T>(`/config/scripts/reset-database`, { password });
   }
 
   // Database export/import endpoints

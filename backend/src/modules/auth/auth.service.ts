@@ -54,7 +54,7 @@ export class AuthService {
       throw new BadRequestException('Passwords do not match');
     }
 
-    // Hash password with bcrypt (cost factor 12)
+    // Hash password with bcrypt
     const passwordHash = await bcrypt.hash(dto.password, 12);
 
     try {
@@ -298,5 +298,22 @@ export class AuthService {
     } catch (error) {
       throw new InternalServerErrorException('Failed to update password');
     }
+  }
+
+  /**
+   * Validate user's current password for admin operations
+   */
+  async validatePassword(userId: string, password: string): Promise<boolean> {
+    const user = await this.adminUserRepository.findOne({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    // Verify password
+    const passwordValid = await bcrypt.compare(password, user.passwordHash);
+    return passwordValid;
   }
 }
