@@ -139,7 +139,7 @@ export default function LoginPage() {
                 Password
               </label>
               <div className="relative">
-                <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground z-10" />
                 <Input
                   id="password"
                   name="password"
@@ -149,16 +149,17 @@ export default function LoginPage() {
                   onChange={handleChange}
                   disabled={isSubmitting}
                   autoComplete="current-password"
-                  className={`pl-10 pr-10 ${errors.password ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
+                  className={`pl-10 pr-12 ${errors.password ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                 />
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
                   onClick={() => setShowPassword(!showPassword)}
                   disabled={isSubmitting}
-                  className="absolute right-3 top-3 text-muted-foreground hover:text-foreground transition-colors"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0 hover:bg-muted/50 z-[9999] bg-background/90 border border-border/30 rounded shadow-sm"
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
+                </Button>
               </div>
               {errors.password && (
                 <div className="flex items-center gap-1 text-xs text-red-500">
