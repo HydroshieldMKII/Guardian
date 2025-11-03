@@ -22,6 +22,8 @@ services:
       - "${PLEXGUARD_FRONTEND_PORT:-3000}:3000"
     environment:
       NODE_ENV: production
+      # optional variable to specifically set internal link to backend
+      # BACKEND_URL: http://localhost:3001
     depends_on:
       - backend
     restart: unless-stopped
