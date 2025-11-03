@@ -6,13 +6,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Lock, Mail, User, CheckCircle2, AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { useTheme } from '@/hooks/use-theme';
+import { Lock, Mail, User, CheckCircle2, AlertCircle, Eye, EyeOff, Sun, Moon } from 'lucide-react';
 import { ThreeDotLoader } from '@/components/three-dot-loader';
 import { ErrorHandler } from '@/components/error-handler';
 
 export default function SetupPage() {
   const { createAdmin, isLoading, setupRequired, backendError, retryConnection } = useAuth();
   const { toast } = useToast();
+  const { theme, toggleTheme } = useTheme();
 
   const [formData, setFormData] = useState({
     username: '',
@@ -133,7 +135,22 @@ export default function SetupPage() {
   const requirements = getPasswordRequirements();
 
   return (
-    <div className="flex items-center justify-center h-screen bg-gradient-to-b from-background to-muted p-4 overflow-hidden">
+    <div className="flex items-center justify-center h-screen bg-gradient-to-b from-background to-muted p-4 overflow-hidden relative">
+      {/* Theme Toggle Button */}
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={toggleTheme}
+        className="absolute top-4 right-4 h-9 w-9 p-0 hover:bg-accent/50 z-10"
+      >
+        {theme === "dark" ? (
+          <Sun className="h-4 w-4" />
+        ) : (
+          <Moon className="h-4 w-4" />
+        )}
+        <span className="sr-only">Toggle theme</span>
+      </Button>
+
       <Card className="w-full max-w-md shadow-xl max-h-[90vh] overflow-y-auto">
         <CardHeader className="space-y-1 text-center pb-6 mt-4">
           <CardTitle className="text-3xl font-bold">Guardian</CardTitle>
