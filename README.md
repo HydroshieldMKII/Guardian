@@ -23,6 +23,10 @@
 - [Application Settings](#application-settings)
 - [Updating](#updating)
 - [Troubleshooting](#troubleshooting)
+  - [Password Recovery](#password-recovery)
+  - [Common Issues](#common-issues)
+  - [Viewing Logs](#viewing-logs)
+  - [Getting Help](#getting-help)
 - [Contributing](#contributing)
 
 ---
@@ -166,10 +170,10 @@ Guardian can be configured through environment variables or the web interface.
 
 Create a `.env` file to customize deployment settings:
 
-| Variable | Description | Default | Applies To |
-|----------|-------------|---------|------------|
-| `PLEXGUARD_FRONTEND_PORT` | Web interface port | `3000` | Docker, Proxmox, Unraid |
-| `VERSION` | Docker image version | `latest` | Docker, Unraid |
+| Variable                  | Description          | Default  | Applies To              |
+| ------------------------- | -------------------- | -------- | ----------------------- |
+| `PLEXGUARD_FRONTEND_PORT` | Web interface port   | `3000`   | Docker, Proxmox, Unraid |
+| `VERSION`                 | Docker image version | `latest` | Docker, Unraid          |
 
 **Example `.env` file:**
 
@@ -210,85 +214,85 @@ Configure Guardian through the web interface Settings page.
 
 Connect Guardian to your Plex Media Server.
 
-| Setting | Description |
-|---------|-------------|
-| **Plex Server IP** | IP address or hostname of your Plex server |
-| **Plex Server Port** | Port number (default: `32400`) |
+| Setting                  | Description                                                                                                                                                  |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Plex Server IP**       | IP address or hostname of your Plex server                                                                                                                   |
+| **Plex Server Port**     | Port number (default: `32400`)                                                                                                                               |
 | **Authentication Token** | Required for Guardian to communicate with Plex ([Find your token](https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/)) |
-| **Use SSL/HTTPS** | Enable secure connection to Plex |
-| **Ignore SSL Errors** | Skip certificate validation (not recommended for production) |
-| **Custom Plex URL** | Override default Plex URL for media links (e.g., `https://app.plex.tv`) |
+| **Use SSL/HTTPS**        | Enable secure connection to Plex                                                                                                                             |
+| **Ignore SSL Errors**    | Skip certificate validation (not recommended for production)                                                                                                 |
+| **Custom Plex URL**      | Override default Plex URL for media links (e.g., `https://app.plex.tv`)                                                                                      |
 
 ### Guardian Configuration
 
 Core behavior and monitoring settings.
 
-| Setting | Description | Default |
-|---------|-------------|---------|
-| **Auto-Check Updates** | Automatically check for new Guardian releases on startup | Enabled |
-| **Block New Devices** | Require manual approval for all new devices | Enabled |
-| **Refresh Interval** | Session monitoring frequency (seconds) | `10` |
-| **Auto Device Cleanup** | Remove inactive devices automatically | Disabled |
-| **Inactivity Threshold** | Days before inactive devices are removed | `30` |
-| **Timezone** | UTC offset for time-based restrictions (e.g., `+00:00`) | `+00:00` |
+| Setting                  | Description                                              | Default  |
+| ------------------------ | -------------------------------------------------------- | -------- |
+| **Auto-Check Updates**   | Automatically check for new Guardian releases on startup | Enabled  |
+| **Block New Devices**    | Require manual approval for all new devices              | Enabled  |
+| **Refresh Interval**     | Session monitoring frequency (seconds)                   | `10`     |
+| **Auto Device Cleanup**  | Remove inactive devices automatically                    | Disabled |
+| **Inactivity Threshold** | Days before inactive devices are removed                 | `30`     |
+| **Timezone**             | UTC offset for time-based restrictions (e.g., `+00:00`)  | `+00:00` |
 
 ### Customization
 
 Personalize the user interface and experience.
 
-| Setting | Description |
-|---------|-------------|
-| **Default Page** | Starting page on app load (`Devices` or `Streams`) |
-| **Show Thumbnails** | Display media thumbnails in active streams |
-| **Show Artwork** | Display background artwork for streams |
+| Setting             | Description                                        |
+| ------------------- | -------------------------------------------------- |
+| **Default Page**    | Starting page on app load (`Devices` or `Streams`) |
+| **Show Thumbnails** | Display media thumbnails in active streams         |
+| **Show Artwork**    | Display background artwork for streams             |
 
 #### Custom Messages
 
 Customize blocking messages for different scenarios:
 
-| Message Type | Description |
-|--------------|-------------|
-| **Pending Approval** | Displayed when a device awaits approval |
-| **Device Rejected** | Shown when a device has been rejected |
-| **LAN Only** | Displayed for LAN-only access restrictions |
-| **WAN Only** | Shown for WAN-only access restrictions |
-| **IP Not Allowed** | Displayed when IP is not in allowed list |
-| **Time Restricted** | Shown when time schedule conditions aren't met |
+| Message Type         | Description                                    |
+| -------------------- | ---------------------------------------------- |
+| **Pending Approval** | Displayed when a device awaits approval        |
+| **Device Rejected**  | Shown when a device has been rejected          |
+| **LAN Only**         | Displayed for LAN-only access restrictions     |
+| **WAN Only**         | Shown for WAN-only access restrictions         |
+| **IP Not Allowed**   | Displayed when IP is not in allowed list       |
+| **Time Restricted**  | Shown when time schedule conditions aren't met |
 
 ### Notification Settings
 
 Configure how notifications behave.
 
-| Setting | Description |
-|---------|-------------|
+| Setting            | Description                                           |
+| ------------------ | ----------------------------------------------------- |
 | **Auto-Mark Read** | Automatically mark notifications as read when clicked |
 
 #### Email Notifications (SMTP)
 
-| Setting | Description |
-|---------|-------------|
-| **Enable Email** | Enable SMTP notification system |
-| **Notify on New Device** | Email alerts for newly detected devices |
-| **Notify on Block** | Email alerts for blocked streams |
-| **SMTP Host** | Hostname or IP of your SMTP server (e.g., `smtp.gmail.com`) |
-| **SMTP Port** | Port number (587 for TLS, 465 for SSL, 25 for unencrypted) |
-| **SMTP Username** | Authentication username |
-| **SMTP Password** | Authentication password |
-| **Use TLS** | Enable TLS/STARTTLS encryption |
-| **From Email** | Sender email address |
-| **From Name** | Sender display name (e.g., `Guardian Notifications`) |
-| **To Emails** | Recipient addresses (comma or semicolon separated) |
+| Setting                  | Description                                                 |
+| ------------------------ | ----------------------------------------------------------- |
+| **Enable Email**         | Enable SMTP notification system                             |
+| **Notify on New Device** | Email alerts for newly detected devices                     |
+| **Notify on Block**      | Email alerts for blocked streams                            |
+| **SMTP Host**            | Hostname or IP of your SMTP server (e.g., `smtp.gmail.com`) |
+| **SMTP Port**            | Port number (587 for TLS, 465 for SSL, 25 for unencrypted)  |
+| **SMTP Username**        | Authentication username                                     |
+| **SMTP Password**        | Authentication password                                     |
+| **Use TLS**              | Enable TLS/STARTTLS encryption                              |
+| **From Email**           | Sender email address                                        |
+| **From Name**            | Sender display name (e.g., `Guardian Notifications`)        |
+| **To Emails**            | Recipient addresses (comma or semicolon separated)          |
 
 #### Apprise Notifications
 
 Send notifications to 100+ services including Discord, Slack, Telegram, Pushover, and more.
 
-| Setting | Description |
-|---------|-------------|
-| **Enable Apprise** | Enable Apprise notification system |
-| **Notify on New Device** | Apprise alerts for newly detected devices |
-| **Notify on Block** | Apprise alerts for blocked streams |
-| **Service URLs** | Notification service URLs (one per line, comma, or semicolon separated) |
+| Setting                  | Description                                                             |
+| ------------------------ | ----------------------------------------------------------------------- |
+| **Enable Apprise**       | Enable Apprise notification system                                      |
+| **Notify on New Device** | Apprise alerts for newly detected devices                               |
+| **Notify on Block**      | Apprise alerts for blocked streams                                      |
+| **Service URLs**         | Notification service URLs (one per line, comma, or semicolon separated) |
 
 > [!NOTE]
 > Each service has a specific URL format. View the [Apprise documentation](https://github.com/caronc/apprise/wiki) for service URL formats and configuration examples.
@@ -299,8 +303,8 @@ Send notifications to 100+ services including Discord, Slack, Telegram, Pushover
 
 Backup and restore your Guardian configuration.
 
-| Action | Description |
-|--------|-------------|
+| Action              | Description                                                |
+| ------------------- | ---------------------------------------------------------- |
 | **Export Database** | Download JSON backup of settings, devices, and preferences |
 | **Import Database** | Restore from a previous backup (merges with existing data) |
 
@@ -312,12 +316,12 @@ Backup and restore your Guardian configuration.
 > [!CAUTION]
 > These operations can permanently modify or delete data. Always export your database before performing administrative operations.
 
-| Tool | Description | Impact |
-|------|-------------|--------|
-| **Reset Stream Counts** | Clear session statistics | Preserves devices and settings |
-| **Clear Session History** | Delete all session history records | Cannot be undone |
-| **Delete All Devices** | Remove all device records | Users need re-approval, deletes notifications and history |
-| **Reset Database** | Complete database wipe | Restores default settings, cannot be undone |
+| Tool                      | Description                        | Impact                                                    |
+| ------------------------- | ---------------------------------- | --------------------------------------------------------- |
+| **Reset Stream Counts**   | Clear session statistics           | Preserves devices and settings                            |
+| **Clear Session History** | Delete all session history records | Cannot be undone                                          |
+| **Delete All Devices**    | Remove all device records          | Users need re-approval, deletes notifications and history |
+| **Reset Database**        | Complete database wipe             | Restores default settings, cannot be undone               |
 
 ---
 
@@ -355,19 +359,58 @@ update
 
 ## Troubleshooting
 
+### Password Recovery
+
+If you've lost access to your admin account, you can reset credentials from the command line.
+
+#### Docker
+
+**List all admin users:**
+
+```bash
+docker compose exec backend node src/scripts/list-admins.js
+```
+
+**Reset admin password:**
+
+```bash
+docker compose exec backend node src/scripts/update-admin.js "USERNAME_HERE" "NEW_PASSWORD_HERE"
+```
+
+Replace `USERNAME_HERE` with your admin username and `NEW_PASSWORD_HERE` with your desired password. The password will be automatically encrypted using bcrypt.
+
+#### Proxmox (LXC)
+
+All commands are run from inside the LXC container.
+
+**List all admin users:**
+
+```bash
+node /opt/guardian/backend/src/scripts/list-admins.js
+```
+
+**Reset admin password:**
+
+```bash
+node /opt/guardian/backend/src/scripts/update-admin.js "USERNAME_HERE" "NEW_PASSWORD_HERE"
+```
+
 ### Common Issues
 
 **Cannot connect to Plex**
+
 - Verify Plex is running and accessible
 - Confirm Plex token is valid
 - Check firewall rules
 
 **Device not showing up**
+
 - Ensure refresh interval is appropriate
 - Check Plex server connection
 - Verify device has attempted to stream
 
 **Notifications not working**
+
 - Test connection in Settings
 - Verify SMTP/Apprise credentials
 - Check email spam folder
