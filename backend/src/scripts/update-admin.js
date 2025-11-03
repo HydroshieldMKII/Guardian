@@ -1,0 +1,74 @@
+#!/usr/bin/env node
+/**
+ * Script to update admin user password with bcrypt encryption
+ * Usage: node update-admin.js <username> <new-password>
+ */
+
+const bcrypt = require('bcrypt');
+const sqlite3 = require('sqlite3').verbose();
+const path = require('path');
+const fs = require('fs');
+
+const args = process.argv.slice(2);
+
+if (args.length != 2) {
+  console.error('Usage: node update-admin.js <username> <new-password>');
+  process.exit(1);
+}
+
+const [username, newPassword] = args;
+
+async function updateAdmin() {
+  try {
+    const dockerPath = '/app/data/plex-guard.db';
+    const backendPath = path.join(process.cwd(), 'plex-guard.db');
+    const rootPath = path.join(process.cwd(), 'backend', 'plex-guard.db');
+    let dbPath;
+
+    if (fs.existsSync(dockerPath)) {
+      dbPath = dockerPath;
+    } else if (fs.existsSync(backendPath)) {
+      dbPath = backendPath;
+    } else if (fs.existsSync(rootPath)) {
+      dbPath = rootPath;
+    } else {
+      console.error('Error: Cannot find database file.');
+      process.exit(1);
+    }
+
+    console.log(`Using database: ${dbPath}\n`);
+
+    // Hash password
+    const passwordHash = await bcrypt.hash(newPassword, 12);
+
+    // Connect to database
+    const db = new sqlite3.Database(dbPath);
+
+    // Update user
+    db.run(
+      'UPDATE admin_users SET passwordHash = ?, updatedAt = datetime("now") WHERE username = ?',
+      [passwordHash, username],
+      function (err) {
+        if (err) {
+          console.error('Error updating user:', err);
+          process.exit(1);
+        }
+
+        if (this.changes === 0) {
+          console.log(`No user found with username: ${username}`);
+          process.exit(1);
+        }
+
+        console.log(`  Successfully updated password for user: ${username}`);
+        console.log(`  Rows affected: ${this.changes}`);
+
+        db.close();
+      },
+    );
+  } catch (error) {
+    console.error('Error:', error);
+    process.exit(1);
+  }
+}
+
+updateAdmin();
