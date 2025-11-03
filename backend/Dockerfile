@@ -35,6 +35,9 @@ COPY --from=builder /app/dist ./dist
 # Copy logo asset for emails
 COPY --from=builder /app/src/assets/logo_dark.svg ./dist/assets/logo_dark.svg
 
+# Copy scripts
+COPY --from=builder /app/src/scripts ./src/scripts
+
 # Expose (documentation only; compose will bind)
 EXPOSE 3001
 
