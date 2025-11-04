@@ -10,6 +10,8 @@ import { ConfigModule } from './modules/config/config.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { CommonModule } from './common/common.module';
+import { ServicesModule } from './services/services.module';
 import { SchedulerService } from './services/scheduler.service';
 import { UserDevice } from './entities/user-device.entity';
 import { SessionHistory } from './entities/session-history.entity';
@@ -54,6 +56,8 @@ import * as path from 'path';
     DashboardModule,
     NotificationsModule,
     AuthModule,
+    CommonModule,
+    ServicesModule,
   ],
   providers: [SchedulerService],
 })

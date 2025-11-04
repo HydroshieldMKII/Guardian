@@ -5,6 +5,7 @@ import { PlexSessionsResponse } from '../../../types/plex.types';
 import { DeviceTrackingService } from '../../devices/services/device-tracking.service';
 import { ActiveSessionService } from '../../sessions/services/active-session.service';
 import { ConfigService } from '../../config/services/config.service';
+import { SessionOrchestratorService } from '../../../services/session-orchestrator.service';
 import { config } from '../../../config/app.config';
 
 @Injectable()
@@ -19,6 +20,7 @@ export class PlexService {
     private readonly deviceTrackingService: DeviceTrackingService,
     private readonly activeSessionService: ActiveSessionService,
     private readonly configService: ConfigService,
+    private readonly sessionOrchestratorService: SessionOrchestratorService,
   ) {}
 
   async getServerIdentifier(): Promise<string | null> {
@@ -62,13 +64,11 @@ export class PlexService {
         this.configService.getSetting('ENABLE_MEDIA_ARTWORK'),
       ]);
 
-      // Add media URLs, server identifier, and device session count to session data
       if (sessions?.MediaContainer?.Metadata) {
         sessions.MediaContainer.Metadata = await Promise.all(
           sessions.MediaContainer.Metadata.map(async (session) => {
             let sessionCount = 0;
 
-            // Get device session count if available
             if (session.Player?.machineIdentifier) {
               try {
                 const device =
@@ -85,16 +85,12 @@ export class PlexService {
             }
 
             return {
-              ...session,
+              ...this.enrichSessionWithMediaUrls(
+                session,
+                enableThumbnails,
+                enableArtwork,
+              ),
               serverMachineIdentifier: serverIdentifier,
-              thumbnailUrl:
-                enableThumbnails && session.thumb
-                  ? this.buildMediaUrl('thumb', session.thumb)
-                  : undefined,
-              artUrl:
-                enableArtwork && session.art
-                  ? this.buildMediaUrl('art', session.art)
-                  : undefined,
               Session: {
                 ...session.Session,
                 sessionCount,
@@ -114,7 +110,6 @@ export class PlexService {
   private buildMediaUrl(type: 'thumb' | 'art', mediaPath: string): string {
     if (!mediaPath) return '';
 
-    // Parse the media path to extract ratingKey and timestamp
     const pathMatch = mediaPath.match(
       /\/library\/metadata\/(\d+)\/(thumb|art)(?:\/(\d+))?/,
     );
@@ -125,8 +120,6 @@ export class PlexService {
     }
 
     const [, ratingKey, , timestamp] = pathMatch;
-
-    // Build the proxy URL that points to our media controller
     let proxyUrl = `${config.api.baseUrl}/plex/media/${type}/${ratingKey}`;
 
     if (timestamp) {
@@ -134,6 +127,24 @@ export class PlexService {
     }
 
     return proxyUrl;
+  }
+
+  private enrichSessionWithMediaUrls(
+    session: any,
+    enableThumbnails: boolean,
+    enableArtwork: boolean,
+  ): any {
+    return {
+      ...session,
+      thumbnailUrl:
+        enableThumbnails && session.thumb
+          ? this.buildMediaUrl('thumb', session.thumb)
+          : undefined,
+      artUrl:
+        enableArtwork && session.art
+          ? this.buildMediaUrl('art', session.art)
+          : undefined,
+    };
   }
 
   async getPlexWebUrl(): Promise<string> {
@@ -166,39 +177,9 @@ export class PlexService {
   async updateActiveSessions(): Promise<PlexSessionsResponse> {
     try {
       const sessions = await this.getActiveSessions();
-
-      // this.logger.debug(JSON.stringify(sessions));
-
-      // Update active sessions in database
-      try {
-        await this.activeSessionService.updateActiveSessions(sessions);
-      } catch (sessionUpdateError) {
-        this.logger.error(
-          'Failed to update active sessions in database',
-          sessionUpdateError,
-        );
-      }
-
-      // Track devices from the sessions data
-      try {
-        await this.deviceTrackingService.processSessionsForDeviceTracking(
-          sessions,
-        );
-      } catch (trackingError) {
-        this.logger.error(
-          'Failed to track devices from sessions',
-          trackingError,
-        );
-      }
-
-      // Stop unapproved sessions
-      try {
-        await this.sessionTerminationService.stopUnapprovedSessions(sessions);
-      } catch (stopError) {
-        this.logger.error('Failed to stop unapproved sessions', stopError);
-      }
-
-      return sessions;
+      return await this.sessionOrchestratorService.orchestrateSessionUpdate(
+        sessions,
+      );
     } catch (error: any) {
       this.logger.error('Error in updateActiveSessions', error);
       throw error;
@@ -210,28 +191,19 @@ export class PlexService {
       const sessions =
         await this.activeSessionService.getActiveSessionsFormatted();
 
-      // Check if media thumbnails and artwork are enabled
       const [enableThumbnails, enableArtwork] = await Promise.all([
         this.configService.getSetting('ENABLE_MEDIA_THUMBNAILS'),
         this.configService.getSetting('ENABLE_MEDIA_ARTWORK'),
       ]);
 
-      // Add media URLs to session data
       if (sessions?.MediaContainer?.Metadata) {
         sessions.MediaContainer.Metadata = sessions.MediaContainer.Metadata.map(
-          (session) => {
-            return {
-              ...session,
-              thumbnailUrl:
-                enableThumbnails && session.thumb
-                  ? this.buildMediaUrl('thumb', session.thumb)
-                  : undefined,
-              artUrl:
-                enableArtwork && session.art
-                  ? this.buildMediaUrl('art', session.art)
-                  : undefined,
-            };
-          },
+          (session) =>
+            this.enrichSessionWithMediaUrls(
+              session,
+              enableThumbnails,
+              enableArtwork,
+            ),
         );
       }
 
