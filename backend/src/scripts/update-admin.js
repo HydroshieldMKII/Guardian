@@ -38,6 +38,16 @@ async function updateAdmin() {
 
     console.log(`Using database: ${dbPath}\n`);
 
+    //validate password requirements
+    const passwordRegex =
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};:'",./<>?\\|~])[A-Za-z\d!@#$%^&*()_+\-=\[\]{};:'",./<>?\\|~]{12,128}$/;
+    if (!passwordRegex.test(newPassword)) {
+      console.error(
+        'Error: Password must be 12-128 characters long and include at least one uppercase letter, one lowercase letter, one number, and one special character.',
+      );
+      process.exit(1);
+    }
+
     // Hash password
     const passwordHash = await bcrypt.hash(newPassword, 12);
 

@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import React, {
   createContext,
@@ -6,8 +6,8 @@ import React, {
   useEffect,
   useState,
   ReactNode,
-} from 'react';
-import { apiClient } from '@/lib/api';
+} from "react";
+import { apiClient } from "@/lib/api";
 
 export interface User {
   id: string;
@@ -28,7 +28,7 @@ export interface AuthContextType {
     username: string,
     email: string,
     password: string,
-    confirmPassword: string,
+    confirmPassword: string
   ) => Promise<void>;
   checkAuth: () => Promise<void>;
   retryConnection: () => Promise<void>;
@@ -41,6 +41,7 @@ export interface AuthContextType {
     currentPassword: string;
     newPassword: string;
     confirmPassword: string;
+    clearSessions?: boolean;
   }) => Promise<void>;
 }
 
@@ -57,10 +58,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setBackendError(null);
     try {
       // Check setup status
-      const setupRes = await fetch('/api/pg/auth/check-setup');
+      const setupRes = await fetch("/api/pg/auth/check-setup");
 
       if (!setupRes.ok) {
-        throw new Error(`Backend returned ${setupRes.status}: ${setupRes.statusText}`);
+        throw new Error(
+          `Backend returned ${setupRes.status}: ${setupRes.statusText}`
+        );
       }
 
       const setupData = await setupRes.json();
@@ -68,8 +71,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // Get current user if authenticated
       if (!setupData.setupRequired) {
-        const userRes = await fetch('/api/pg/auth/me', {
-          credentials: 'include',
+        const userRes = await fetch("/api/pg/auth/me", {
+          credentials: "include",
         });
 
         if (userRes.ok) {
@@ -80,26 +83,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
     } catch (error) {
-      console.error('Failed to initialize auth:', error);
+      console.error("Failed to initialize auth:", error);
       setUser(null);
 
       // Distinguish between network errors and server errors
-      let errorMessage = 'Unable to connect to Guardian backend service.';
+      let errorMessage = "Unable to connect to Guardian backend service.";
 
       if (error instanceof TypeError) {
         // Network/connection errors
-        errorMessage = 'Unable to reach Guardian backend service. Please ensure the service is running and accessible.';
+        errorMessage =
+          "Unable to reach Guardian backend service. Please ensure the service is running and accessible.";
       } else if (error instanceof Error) {
         // Server errors with specific codes
         const msg = error.message;
-        if (msg.includes('500')) {
-          errorMessage = 'The Guardian backend service encountered an internal error.';
-        } else if (msg.includes('502') || msg.includes('503')) {
-          errorMessage = 'The Guardian backend service is temporarily unavailable. Please try again shortly.';
-        } else if (msg.includes('404')) {
-          errorMessage = 'The Guardian backend service is not properly configured. Please check your setup.';
+        if (msg.includes("500")) {
+          errorMessage =
+            "The Guardian backend service encountered an internal error.";
+        } else if (msg.includes("502") || msg.includes("503")) {
+          errorMessage =
+            "The Guardian backend service is temporarily unavailable. Please try again shortly.";
+        } else if (msg.includes("404")) {
+          errorMessage =
+            "The Guardian backend service is not properly configured. Please check your setup.";
         } else {
-          errorMessage = 'The Guardian backend service is not responding correctly. Please try again.';
+          errorMessage =
+            "The Guardian backend service is not responding correctly. Please try again.";
         }
       }
 
@@ -115,18 +123,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = async (username: string, password: string) => {
-    const response = await fetch('/api/pg/auth/login', {
-      method: 'POST',
+    const response = await fetch("/api/pg/auth/login", {
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
-      credentials: 'include',
+      credentials: "include",
       body: JSON.stringify({ username, password }),
     });
 
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.message || 'Login failed');
+      throw new Error(error.message || "Login failed");
     }
 
     const data = await response.json();
@@ -134,15 +142,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = async () => {
-    const response = await fetch('/api/pg/auth/logout', {
-      method: 'POST',
-      credentials: 'include',
+    const response = await fetch("/api/pg/auth/logout", {
+      method: "POST",
+      credentials: "include",
     });
 
     if (response.ok) {
       setUser(null);
     } else {
-      throw new Error('Logout failed');
+      throw new Error("Logout failed");
     }
   };
 
@@ -150,14 +158,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     username: string,
     email: string,
     password: string,
-    confirmPassword: string,
+    confirmPassword: string
   ) => {
-    const response = await fetch('/api/pg/auth/create-admin', {
-      method: 'POST',
+    const response = await fetch("/api/pg/auth/create-admin", {
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
-      credentials: 'include',
+      credentials: "include",
       body: JSON.stringify({
         username,
         email,
@@ -168,7 +176,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.message || 'Failed to create admin');
+      throw new Error(error.message || "Failed to create admin");
     }
 
     const data = await response.json();
@@ -178,13 +186,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const checkAuth = async () => {
     try {
-      const setupRes = await fetch('/api/pg/auth/check-setup');
+      const setupRes = await fetch("/api/pg/auth/check-setup");
       const setupData = await setupRes.json();
       setSetupRequired(setupData.setupRequired);
 
       if (!setupData.setupRequired) {
-        const userRes = await fetch('/api/pg/auth/me', {
-          credentials: 'include',
+        const userRes = await fetch("/api/pg/auth/me", {
+          credentials: "include",
         });
 
         if (userRes.ok) {
@@ -195,7 +203,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
     } catch (error) {
-      console.error('Failed to check auth:', error);
+      console.error("Failed to check auth:", error);
       setUser(null);
     }
   };
@@ -213,7 +221,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const updatedUser = await apiClient.updateProfile(data);
       setUser(updatedUser as User);
     } catch (error) {
-      throw error instanceof Error ? error : new Error('Failed to update profile');
+      throw error instanceof Error
+        ? error
+        : new Error("Failed to update profile");
     }
   };
 
@@ -221,11 +231,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     currentPassword: string;
     newPassword: string;
     confirmPassword: string;
+    clearSessions?: boolean;
   }) => {
     try {
       await apiClient.updatePassword(data);
     } catch (error) {
-      throw error instanceof Error ? error : new Error('Failed to update password');
+      throw error instanceof Error
+        ? error
+        : new Error("Failed to update password");
     }
   };
 
@@ -254,7 +267,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 }
