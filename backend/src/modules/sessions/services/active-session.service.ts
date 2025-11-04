@@ -6,6 +6,7 @@ import { UserDevice } from '../../../entities/user-device.entity';
 import { UserPreference } from '../../../entities/user-preference.entity';
 import { DeviceTrackingService } from '../../devices/services/device-tracking.service';
 import { PlexClient } from '../../plex/services/plex-client';
+import { NotificationsService } from '../../notifications/services/notifications.service';
 
 interface PlexSessionData {
   sessionKey: string;

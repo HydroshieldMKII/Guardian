@@ -208,6 +208,7 @@ export class DeviceTrackingService {
       deviceInfo.username || "Unknown User",
       deviceInfo.deviceName || "Unknown Device",
       deviceInfo.ipAddress || 'Unknown IP',
+      deviceInfo.sessionKey,
     );
   }
 
