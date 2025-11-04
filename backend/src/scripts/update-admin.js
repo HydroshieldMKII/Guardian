@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Script to update admin user password with bcrypt encryption
- * Usage: node update-admin.js <username> <new-password>
+ * Usage: node update-admin.js <username> <new-password> [db-path]
  */
 
 const bcrypt = require('bcrypt');
@@ -11,32 +11,51 @@ const fs = require('fs');
 
 const args = process.argv.slice(2);
 
-if (args.length != 2) {
-  console.error('Usage: node update-admin.js <username> <new-password>');
+if (args.length < 2 || args.length > 3) {
+  console.error(
+    'Usage: node update-admin.js <username> <new-password> [db-path]',
+  );
   process.exit(1);
 }
 
-const [username, newPassword] = args;
+const [username, newPassword, customDbPath] = args;
 
 async function updateAdmin() {
   try {
-    const dockerPath = '/app/data/plex-guard.db';
-    const backendPath = path.join(process.cwd(), 'plex-guard.db');
-    const rootPath = path.join(process.cwd(), 'backend', 'plex-guard.db');
     let dbPath;
 
-    if (fs.existsSync(dockerPath)) {
-      dbPath = dockerPath;
-    } else if (fs.existsSync(backendPath)) {
-      dbPath = backendPath;
-    } else if (fs.existsSync(rootPath)) {
-      dbPath = rootPath;
+    if (customDbPath) {
+      // Use manually specified database path
+      if (!fs.existsSync(customDbPath)) {
+        console.error(
+          `Error: Database file not found at specified path: ${customDbPath}`,
+        );
+        process.exit(1);
+      }
+      dbPath = customDbPath;
+      console.log(`Using custom database path: ${dbPath}\n`);
     } else {
-      console.error('Error: Cannot find database file.');
-      process.exit(1);
-    }
+      // Try default locations
+      const dockerPath = '/app/data/plex-guard.db';
+      const backendPath = path.join(process.cwd(), 'plex-guard.db');
+      const rootPath = path.join(process.cwd(), 'backend', 'plex-guard.db');
 
-    console.log(`Using database: ${dbPath}\n`);
+      if (fs.existsSync(dockerPath)) {
+        dbPath = dockerPath;
+      } else if (fs.existsSync(backendPath)) {
+        dbPath = backendPath;
+      } else if (fs.existsSync(rootPath)) {
+        dbPath = rootPath;
+      } else {
+        console.error('Error: Cannot find database file in default locations.');
+        console.error('\nYou can specify a custom path as the third argument:');
+        console.error(
+          '  node update-admin.js <username> <new-password> <db-path>',
+        );
+        process.exit(1);
+      }
+      console.log(`Using database: ${dbPath}\n`);
+    }
 
     //validate password requirements
     const passwordRegex =
