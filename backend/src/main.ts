@@ -27,8 +27,8 @@ async function bootstrap() {
   app.use(cookieParser());
 
   app.enableCors({
-    origin: (origin, callback) => {
-      return callback(null, true);
+    origin: (_origin, callback) => {
+      callback(null, true);
     },
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
@@ -37,6 +37,7 @@ async function bootstrap() {
     optionsSuccessStatus: 200,
   });
 
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
   app.use(helmet());
   app.useGlobalFilters(new GlobalExceptionFilter());
   app.useGlobalPipes(
@@ -53,11 +54,11 @@ async function bootstrap() {
   const notificationOrchestrator = app.get(NotificationOrchestratorService);
 
   deviceTrackingService.onNewDeviceDetected((event) => {
-    notificationOrchestrator.notifyNewDevice(event);
+    void notificationOrchestrator.notifyNewDevice(event);
   });
 
   sessionTerminationService.onStreamBlocked((event) => {
-    notificationOrchestrator.notifyStreamBlocked(event);
+    void notificationOrchestrator.notifyStreamBlocked(event);
   });
 
   await app.listen(config.app.port);
@@ -72,4 +73,4 @@ async function bootstrap() {
   process.on('SIGINT', cleanup);
   process.on('SIGTERM', cleanup);
 }
-bootstrap();
+void bootstrap();

@@ -438,7 +438,7 @@ export class DeviceTrackingService {
     return isValid;
   }
 
-  async getTemporaryAccessTimeLeft(device: UserDevice): Promise<number | null> {
+  getTemporaryAccessTimeLeft(device: UserDevice): number | null {
     if (!device.temporaryAccessUntil) {
       return null;
     }

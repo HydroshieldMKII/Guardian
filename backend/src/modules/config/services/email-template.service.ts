@@ -21,7 +21,7 @@ export class EmailTemplateService {
           const logoContent = readFileSync(logoPath, 'utf8');
           const base64Logo = Buffer.from(logoContent).toString('base64');
           return `data:image/svg+xml;base64,${base64Logo}`;
-        } catch (error) {
+        } catch {
           // Try next path
           continue;
         }

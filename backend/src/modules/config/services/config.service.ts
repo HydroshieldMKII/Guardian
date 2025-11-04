@@ -2,23 +2,15 @@ import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AppSettings } from '../../../entities/app-settings.entity';
-import { UserDevice } from '../../../entities/user-device.entity';
-import { UserPreference } from '../../../entities/user-preference.entity';
-import { SessionHistory } from '../../../entities/session-history.entity';
 import { Notification } from '../../../entities/notification.entity';
 import { PlexResponse, PlexErrorCode } from '../../../types/plex-errors';
-import { StopCodeUtils } from '../../../common/utils/stop-code.utils';
-import {
-  EmailService,
-  SMTPConfig,
-  NotificationEmailData,
-} from './email.service';
+import { EmailService, SMTPConfig } from './email.service';
 import { EmailTemplateService } from './email-template.service';
 import { PlexConnectionService } from './plex-connection.service';
 import { TimezoneService } from './timezone.service';
 import { DatabaseService } from './database.service';
 import { VersionService } from './version.service';
-import { AppriseService, AppriseConfig } from './apprise.service';
+import { AppriseService } from './apprise.service';
 
 export interface ConfigSettingDto {
   key: string;
@@ -275,7 +267,7 @@ export class ConfigService {
     } else if (type === 'json') {
       try {
         return JSON.parse(value);
-      } catch (e) {
+      } catch {
         if (key) {
           this.logger.warn(`Failed to parse JSON for ${key}: ${value}`);
         }
@@ -608,6 +600,13 @@ export class ConfigService {
         message: `Unexpected error: ${error.message}`,
       };
     }
+  }
+
+  async testAppriseConnection(): Promise<{
+    success: boolean;
+    message: string;
+  }> {
+    return this.appriseService.testAppriseConnection();
   }
 
   async getPlexConfigurationStatus(): Promise<{

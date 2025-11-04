@@ -6,7 +6,6 @@ import { UserDevice } from '../../../entities/user-device.entity';
 import { UserPreference } from '../../../entities/user-preference.entity';
 import { DeviceTrackingService } from '../../devices/services/device-tracking.service';
 import { PlexClient } from '../../plex/services/plex-client';
-import { NotificationsService } from '../../notifications/services/notifications.service';
 
 interface PlexSessionData {
   sessionKey: string;
@@ -127,12 +126,15 @@ export class ActiveSessionService {
       .getMany();
   }
 
-  private extractSessionsFromData(data: any): PlexSessionData[] {
-    if (!data || !data.MediaContainer) {
+  private extractSessionsFromData(data: unknown): PlexSessionData[] {
+    if (!data || typeof data !== 'object' || !('MediaContainer' in data)) {
       return [];
     }
 
-    return data.MediaContainer.Metadata || [];
+    const container = (
+      data as { MediaContainer?: { Metadata?: PlexSessionData[] } }
+    ).MediaContainer;
+    return container?.Metadata || [];
   }
 
   private async upsertSession(sessionData: PlexSessionData): Promise<void> {
