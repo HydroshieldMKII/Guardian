@@ -49,7 +49,7 @@ export function EditProfileModal({
   const [clearSessions, setClearSessions] = useState(true);
 
   const [showPasswordError, setShowPasswordError] = useState<string | null>(
-    null,
+    null
   );
   const [showProfileError, setShowProfileError] = useState<string | null>(null);
 
@@ -87,7 +87,7 @@ export function EditProfileModal({
   };
 
   const validatePassword = (
-    password: string,
+    password: string
   ): { valid: boolean; error?: string } => {
     const passwordRegex =
       /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};:'",./<>?\\|~])[A-Za-z\d!@#$%^&*()_+\-=\[\]{};:'",./<>?\\|~]{12,128}$/;
@@ -461,7 +461,7 @@ export function EditProfileModal({
                   htmlFor="clearSessions"
                   className="text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                 >
-                  Clear all other sessions
+                  Force logout from all browsers after password change
                 </Label>
               </div>
 
