@@ -153,7 +153,7 @@ export class AuthService {
   /**
    * Validate and retrieve session
    */
-  async validateSession(token: string): Promise<AdminUser | null> {
+  async validateSession(token: string): Promise<any | null> {
     try {
       // Find session
       const session = await this.sessionRepository.findOne({
@@ -175,7 +175,10 @@ export class AuthService {
       session.lastActivityAt = new Date();
       await this.sessionRepository.save(session);
 
-      return session.user;
+      return {
+        ...session.user,
+        sessionId: session.id,
+      };
     } catch (error) {
       return null;
     }
@@ -266,7 +269,11 @@ export class AuthService {
   /**
    * Update user password
    */
-  async updatePassword(userId: string, dto: UpdatePasswordDto): Promise<void> {
+  async updatePassword(
+    userId: string,
+    dto: UpdatePasswordDto,
+    currentSessionId?: string,
+  ): Promise<void> {
     const user = await this.adminUserRepository.findOne({
       where: { id: userId },
     });
@@ -295,8 +302,39 @@ export class AuthService {
     try {
       user.passwordHash = newPasswordHash;
       await this.adminUserRepository.save(user);
+
+      // Clear all sessions except current one if requested
+      if (dto.clearSessions) {
+        await this.clearAllSessions(userId, currentSessionId);
+      }
     } catch (error) {
       throw new InternalServerErrorException('Failed to update password');
+    }
+  }
+
+  /**
+   * Clear all sessions for a user except optionally the current session
+   */
+  async clearAllSessions(
+    userId: string,
+    currentSessionId?: string,
+  ): Promise<void> {
+    try {
+      if (currentSessionId) {
+        // Delete all sessions except the current one
+        await this.sessionRepository
+          .createQueryBuilder()
+          .delete()
+          .where('userId = :userId AND id != :currentSessionId', {
+            userId,
+            currentSessionId,
+          })
+          .execute();
+      } else {
+        await this.sessionRepository.delete({ userId });
+      }
+    } catch (error) {
+      throw new InternalServerErrorException('Failed to clear sessions');
     }
   }
 
