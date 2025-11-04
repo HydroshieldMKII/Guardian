@@ -1,24 +1,48 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useAuth } from '@/contexts/auth-context';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useToast } from '@/hooks/use-toast';
-import { Lock, Mail, User, CheckCircle2, AlertCircle, Eye, EyeOff } from 'lucide-react';
-import { ThreeDotLoader } from '@/components/three-dot-loader';
-import { ErrorHandler } from '@/components/error-handler';
+import { useState } from "react";
+import { useAuth } from "@/contexts/auth-context";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { useToast } from "@/hooks/use-toast";
+import { useTheme } from "@/hooks/use-theme";
+import {
+  Lock,
+  Mail,
+  User,
+  CheckCircle2,
+  AlertCircle,
+  Eye,
+  EyeOff,
+  Sun,
+  Moon,
+} from "lucide-react";
+import { ThreeDotLoader } from "@/components/three-dot-loader";
+import { ErrorHandler } from "@/components/error-handler";
 
 export default function SetupPage() {
-  const { createAdmin, isLoading, setupRequired, backendError, retryConnection } = useAuth();
+  const {
+    createAdmin,
+    isLoading,
+    setupRequired,
+    backendError,
+    retryConnection,
+  } = useAuth();
   const { toast } = useToast();
+  const { theme, toggleTheme } = useTheme();
 
   const [formData, setFormData] = useState({
-    username: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
+    username: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -40,28 +64,32 @@ export default function SetupPage() {
     const newErrors: Record<string, string> = {};
 
     if (!formData.username || formData.username.length < 3) {
-      newErrors.username = 'Username must be at least 3 characters';
+      newErrors.username = "Username must be at least 3 characters";
     }
 
     // Email is optional, but if provided must be valid
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
     if (formData.email && !emailRegex.test(formData.email)) {
-      newErrors.email = 'Please enter a valid email address';
+      newErrors.email = "Please enter a valid email address";
     }
 
     if (!formData.password || formData.password.length < 12) {
-      newErrors.password = 'Password must be at least 12 characters';
+      newErrors.password = "Password must be at least 12 characters";
     }
 
     // Password complexity check
     const requirements = getPasswordRequirements();
-    if (!requirements.uppercase || !requirements.lowercase || !requirements.number || !requirements.special) {
-      newErrors.password =
-        'Password must match all complexity requirements';
+    if (
+      !requirements.uppercase ||
+      !requirements.lowercase ||
+      !requirements.number ||
+      !requirements.special
+    ) {
+      newErrors.password = "Password must match all complexity requirements";
     }
 
     if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match';
+      newErrors.confirmPassword = "Passwords do not match";
     }
 
     setErrors(newErrors);
@@ -70,10 +98,10 @@ export default function SetupPage() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
     // Clear error when user starts typing
     if (errors[name]) {
-      setErrors(prev => ({ ...prev, [name]: '' }));
+      setErrors((prev) => ({ ...prev, [name]: "" }));
     }
   };
 
@@ -90,21 +118,24 @@ export default function SetupPage() {
         formData.username,
         formData.email,
         formData.password,
-        formData.confirmPassword,
+        formData.confirmPassword
       );
 
       toast({
-        title: 'Success',
-        description: 'Admin account created successfully',
-        variant: 'success'
+        title: "Success",
+        description: "Admin account created successfully",
+        variant: "success",
       });
 
       // AuthGuard handle it once state updates
     } catch (error) {
       toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to create admin account',
-        variant: 'destructive',
+        title: "Error",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to create admin account",
+        variant: "destructive",
       });
     } finally {
       setIsSubmitting(false);
@@ -122,7 +153,9 @@ export default function SetupPage() {
 
   // Show error if backend is unavailable
   if (backendError) {
-    return <ErrorHandler backendError={backendError} onRetry={retryConnection} />;
+    return (
+      <ErrorHandler backendError={backendError} onRetry={retryConnection} />
+    );
   }
 
   // Don't render form if setup is not required
@@ -133,7 +166,22 @@ export default function SetupPage() {
   const requirements = getPasswordRequirements();
 
   return (
-    <div className="flex items-center justify-center h-screen bg-gradient-to-b from-background to-muted p-4 overflow-hidden">
+    <div className="flex items-center justify-center h-screen bg-gradient-to-b from-background to-muted p-4 overflow-hidden relative">
+      {/* Theme Toggle Button */}
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={toggleTheme}
+        className="absolute top-4 right-4 h-9 w-9 p-0 hover:bg-accent/50 z-10"
+      >
+        {theme === "dark" ? (
+          <Sun className="h-4 w-4" />
+        ) : (
+          <Moon className="h-4 w-4" />
+        )}
+        <span className="sr-only">Toggle theme</span>
+      </Button>
+
       <Card className="w-full max-w-md shadow-xl max-h-[90vh] overflow-y-auto">
         <CardHeader className="space-y-1 text-center pb-6 mt-4">
           <CardTitle className="text-3xl font-bold">Guardian</CardTitle>
@@ -146,7 +194,10 @@ export default function SetupPage() {
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Username */}
             <div className="space-y-2">
-              <label htmlFor="username" className="text-sm font-semibold text-foreground">
+              <label
+                htmlFor="username"
+                className="text-sm font-semibold text-foreground"
+              >
                 Username
               </label>
               <div className="relative">
@@ -159,7 +210,7 @@ export default function SetupPage() {
                   value={formData.username}
                   onChange={handleChange}
                   disabled={isSubmitting}
-                  className={`pl-10 ${errors.username ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
+                  className={`pl-10 ${errors.username ? "border-red-500 focus-visible:ring-red-500" : ""}`}
                 />
               </div>
               {errors.username && (
@@ -172,7 +223,10 @@ export default function SetupPage() {
 
             {/* Password */}
             <div className="space-y-3">
-              <label htmlFor="password" className="text-sm font-semibold text-foreground">
+              <label
+                htmlFor="password"
+                className="text-sm font-semibold text-foreground"
+              >
                 Password
               </label>
               <div className="relative">
@@ -180,12 +234,12 @@ export default function SetupPage() {
                 <Input
                   id="password"
                   name="password"
-                  type={showPassword ? 'text' : 'password'}
+                  type={showPassword ? "text" : "password"}
                   placeholder="Minimum 12 characters"
                   value={formData.password}
                   onChange={handleChange}
                   disabled={isSubmitting}
-                  className={`pl-10 pr-10 ${errors.password ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
+                  className={`pl-10 pr-10 ${errors.password ? "border-red-500 focus-visible:ring-red-500" : ""}`}
                 />
                 <button
                   type="button"
@@ -193,13 +247,19 @@ export default function SetupPage() {
                   disabled={isSubmitting}
                   className="absolute right-3 top-3 text-muted-foreground hover:text-foreground transition-colors"
                 >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
                 </button>
               </div>
 
               {/* Password Requirements */}
               <div className="space-y-2 bg-muted/50 rounded-lg p-3">
-                <p className="text-xs font-medium text-foreground">Requirements:</p>
+                <p className="text-xs font-medium text-foreground">
+                  Requirements:
+                </p>
                 <div className="space-y-1">
                   <div className="flex items-center gap-2 text-xs">
                     {requirements.length ? (
@@ -207,7 +267,13 @@ export default function SetupPage() {
                     ) : (
                       <div className="h-3 w-3 rounded-full border border-muted-foreground" />
                     )}
-                    <span className={requirements.length ? 'text-green-700' : 'text-muted-foreground'}>
+                    <span
+                      className={
+                        requirements.length
+                          ? "text-green-700"
+                          : "text-muted-foreground"
+                      }
+                    >
                       At least 12 characters
                     </span>
                   </div>
@@ -217,7 +283,13 @@ export default function SetupPage() {
                     ) : (
                       <div className="h-3 w-3 rounded-full border border-muted-foreground" />
                     )}
-                    <span className={requirements.uppercase ? 'text-green-700' : 'text-muted-foreground'}>
+                    <span
+                      className={
+                        requirements.uppercase
+                          ? "text-green-700"
+                          : "text-muted-foreground"
+                      }
+                    >
                       Uppercase letter (A-Z)
                     </span>
                   </div>
@@ -227,7 +299,13 @@ export default function SetupPage() {
                     ) : (
                       <div className="h-3 w-3 rounded-full border border-muted-foreground" />
                     )}
-                    <span className={requirements.lowercase ? 'text-green-700' : 'text-muted-foreground'}>
+                    <span
+                      className={
+                        requirements.lowercase
+                          ? "text-green-700"
+                          : "text-muted-foreground"
+                      }
+                    >
                       Lowercase letter (a-z)
                     </span>
                   </div>
@@ -237,7 +315,13 @@ export default function SetupPage() {
                     ) : (
                       <div className="h-3 w-3 rounded-full border border-muted-foreground" />
                     )}
-                    <span className={requirements.number ? 'text-green-700' : 'text-muted-foreground'}>
+                    <span
+                      className={
+                        requirements.number
+                          ? "text-green-700"
+                          : "text-muted-foreground"
+                      }
+                    >
                       Number (0-9)
                     </span>
                   </div>
@@ -247,7 +331,13 @@ export default function SetupPage() {
                     ) : (
                       <div className="h-3 w-3 rounded-full border border-muted-foreground" />
                     )}
-                    <span className={requirements.special ? 'text-green-700' : 'text-muted-foreground'}>
+                    <span
+                      className={
+                        requirements.special
+                          ? "text-green-700"
+                          : "text-muted-foreground"
+                      }
+                    >
                       Special character (!, @, #, $, %, etc.)
                     </span>
                   </div>
@@ -264,7 +354,10 @@ export default function SetupPage() {
 
             {/* Confirm Password */}
             <div className="space-y-2">
-              <label htmlFor="confirmPassword" className="text-sm font-semibold text-foreground">
+              <label
+                htmlFor="confirmPassword"
+                className="text-sm font-semibold text-foreground"
+              >
                 Confirm Password
               </label>
               <div className="relative">
@@ -272,12 +365,12 @@ export default function SetupPage() {
                 <Input
                   id="confirmPassword"
                   name="confirmPassword"
-                  type={showConfirmPassword ? 'text' : 'password'}
+                  type={showConfirmPassword ? "text" : "password"}
                   placeholder="Re-enter your password"
                   value={formData.confirmPassword}
                   onChange={handleChange}
                   disabled={isSubmitting}
-                  className={`pl-10 pr-10 ${errors.confirmPassword ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
+                  className={`pl-10 pr-10 ${errors.confirmPassword ? "border-red-500 focus-visible:ring-red-500" : ""}`}
                 />
                 <button
                   type="button"
@@ -285,7 +378,11 @@ export default function SetupPage() {
                   disabled={isSubmitting}
                   className="absolute right-3 top-3 text-muted-foreground hover:text-foreground transition-colors"
                 >
-                  {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {showConfirmPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
                 </button>
               </div>
               {errors.confirmPassword && (
@@ -298,8 +395,14 @@ export default function SetupPage() {
 
             {/* Email */}
             <div className="space-y-2">
-              <label htmlFor="email" className="text-sm font-semibold text-foreground">
-                Email <span className="text-xs font-normal text-muted-foreground">(optional)</span>
+              <label
+                htmlFor="email"
+                className="text-sm font-semibold text-foreground"
+              >
+                Email{" "}
+                <span className="text-xs font-normal text-muted-foreground">
+                  (optional)
+                </span>
               </label>
               <div className="relative">
                 <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
@@ -311,7 +414,7 @@ export default function SetupPage() {
                   value={formData.email}
                   onChange={handleChange}
                   disabled={isSubmitting}
-                  className={`pl-10 ${errors.email ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
+                  className={`pl-10 ${errors.email ? "border-red-500 focus-visible:ring-red-500" : ""}`}
                 />
               </div>
               {errors.email && (
@@ -329,7 +432,7 @@ export default function SetupPage() {
               className="w-full mt-2"
               size="lg"
             >
-              {isSubmitting ? 'Creating Account...' : 'Create Admin Account'}
+              {isSubmitting ? "Creating Account..." : "Create Admin Account"}
             </Button>
           </form>
         </CardContent>

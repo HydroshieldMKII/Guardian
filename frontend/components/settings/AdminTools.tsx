@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { apiClient } from "@/lib/api";
 import { ConfirmationModal } from "@/components/ui/confirmation-modal";
+import { PasswordConfirmationModal } from "@/components/ui/password-confirmation-modal";
 import { useVersion } from "@/contexts/version-context";
 import { VersionMismatchInfo } from "./settings-utils";
 
@@ -48,22 +49,50 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
   const [showDeleteAllDevicesModal, setShowDeleteAllDevicesModal] =
     useState(false);
   const [showResetDatabaseModal, setShowResetDatabaseModal] = useState(false);
+
+  // Password confirmation modal states
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [pendingAction, setPendingAction] = useState<{
+    type:
+      | "resetStreamCounts"
+      | "clearSessionHistory"
+      | "deleteAllDevices"
+      | "resetDatabase";
+    title: string;
+    description: string;
+    isDangerous?: boolean;
+  } | null>(null);
   const [showVersionMismatchModal, setShowVersionMismatchModal] =
     useState(false);
   const [pendingImportFile, setPendingImportFile] = useState<File | null>(null);
   const [versionMismatchInfo, setVersionMismatchInfo] =
     useState<VersionMismatchInfo | null>(null);
 
-  const handleResetStreamCounts = async () => {
+  const handleResetStreamCounts = async (password?: string) => {
+    if (!password) {
+      setPendingAction({
+        type: "resetStreamCounts",
+        title: "Reset Stream Counts",
+        description:
+          "Please enter your password to reset all stream statistics.",
+        isDangerous: false,
+      });
+      setShowPasswordModal(true);
+      setShowResetStreamCountsModal(false);
+      return;
+    }
+
     try {
       setResettingStreamCounts(true);
-      await apiClient.resetStreamCounts();
+      await apiClient.resetStreamCounts(password);
 
       toast({
         title: "Success",
         description: "Stream counts have been reset successfully.",
         variant: "success",
       });
+      setShowPasswordModal(false);
+      setPendingAction(null);
     } catch (error) {
       toast({
         title: "Error",
@@ -79,16 +108,31 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
     }
   };
 
-  const handleClearSessionHistory = async () => {
+  const handleClearSessionHistory = async (password?: string) => {
+    if (!password) {
+      setPendingAction({
+        type: "clearSessionHistory",
+        title: "Clear Session History",
+        description:
+          "Please enter your password to permanently delete all session history records.",
+        isDangerous: true,
+      });
+      setShowPasswordModal(true);
+      setShowClearSessionHistoryModal(false);
+      return;
+    }
+
     try {
       setClearingSessionHistory(true);
-      await apiClient.clearSessionHistory();
+      await apiClient.clearSessionHistory(password);
 
       toast({
         title: "Success",
         description: "Session history has been cleared successfully.",
         variant: "success",
       });
+      setShowPasswordModal(false);
+      setPendingAction(null);
     } catch (error) {
       toast({
         title: "Error",
@@ -104,10 +148,23 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
     }
   };
 
-  const handleDeleteAllDevices = async () => {
+  const handleDeleteAllDevices = async (password?: string) => {
+    if (!password) {
+      setPendingAction({
+        type: "deleteAllDevices",
+        title: "Delete All Devices",
+        description:
+          "Please enter your password to permanently delete all device records. Users will need re-approval.",
+        isDangerous: true,
+      });
+      setShowPasswordModal(true);
+      setShowDeleteAllDevicesModal(false);
+      return;
+    }
+
     try {
       setDeletingAllDevices(true);
-      await apiClient.deleteAllDevices();
+      await apiClient.deleteAllDevices(password);
 
       toast({
         title: "Success",
@@ -115,6 +172,8 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
         variant: "success",
       });
       onSettingsRefresh?.();
+      setShowPasswordModal(false);
+      setPendingAction(null);
     } catch (error) {
       toast({
         title: "Error",
@@ -130,18 +189,32 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
     }
   };
 
-  const handleResetDatabase = async () => {
+  const handleResetDatabase = async (password?: string) => {
+    if (!password) {
+      setPendingAction({
+        type: "resetDatabase",
+        title: "Factory Reset",
+        description:
+          "Please enter your password to completely wipe all your data and restore default settings.",
+        isDangerous: true,
+      });
+      setShowPasswordModal(true);
+      setShowResetDatabaseModal(false);
+      return;
+    }
+
     try {
       setResettingDatabase(true);
-      await apiClient.resetDatabase();
+      await apiClient.resetDatabase(password);
 
       toast({
         title: "Success",
-        description:
-          "Database has been reset successfully. Page will reload.",
+        description: "Database has been reset successfully. Page will reload.",
         variant: "success",
       });
       onSettingsRefresh?.();
+      setShowPasswordModal(false);
+      setPendingAction(null);
       setTimeout(() => {
         window.location.reload();
       }, 2000);
@@ -152,9 +225,29 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
           error instanceof Error ? error.message : "Failed to reset database",
         variant: "destructive",
       });
+      // Don't close password modal on error - let user try again
     } finally {
       setResettingDatabase(false);
       setShowResetDatabaseModal(false);
+    }
+  };
+
+  const handlePasswordConfirmation = async (password: string) => {
+    if (!pendingAction) return;
+
+    switch (pendingAction.type) {
+      case "resetStreamCounts":
+        await handleResetStreamCounts(password);
+        break;
+      case "clearSessionHistory":
+        await handleClearSessionHistory(password);
+        break;
+      case "deleteAllDevices":
+        await handleDeleteAllDevices(password);
+        break;
+      case "resetDatabase":
+        await handleResetDatabase(password);
+        break;
     }
   };
 
@@ -461,7 +554,7 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
                 <div>
                   <h4 className="text-sm font-medium flex items-center">
                     <AlertTriangle className="w-4 h-4 mr-2 text-red-500" />
-                    Reset Entire Database
+                    Factory Reset
                   </h4>
                   <p className="text-xs text-muted-foreground mt-1">
                     <strong>DANGER:</strong> This will permanently delete ALL
@@ -470,23 +563,19 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
                     restored.
                   </p>
                 </div>
-                <div className="text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 p-3 rounded border border-red-200 dark:border-red-800">
-                  <strong>IRREVERSIBLE ACTION:</strong> This will completely
-                  wipe your Guardian database. Export your database first if you
-                  want to keep any data. This action cannot be undone.
-                </div>
                 <Button
                   onClick={() => setShowResetDatabaseModal(true)}
                   disabled={resettingDatabase}
                   size="sm"
-                  variant="destructive"
+                  variant="outline"
+                  className="border-red-200 text-red-700 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900/20"
                 >
                   {resettingDatabase ? (
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                   ) : (
                     <XCircle className="w-4 h-4 mr-2" />
                   )}
-                  {resettingDatabase ? "Resetting..." : "Reset Database"}
+                  {resettingDatabase ? "Resetting..." : "Factory Reset"}
                 </Button>
               </div>
             </Card>
@@ -499,7 +588,7 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
         onClose={() => setShowResetStreamCountsModal(false)}
         onConfirm={handleResetStreamCounts}
         title="Reset Stream Counts"
-        description="This will reset session counts for all devices. Device records will remain but their stream statistics will be reset to zero. This action cannot be undone."
+        description="This will reset session counts for all devices. Device records will remain but their stream statistics will be reset to zero."
         confirmText="Reset Stream Counts"
         cancelText="Cancel"
         variant="default"
@@ -510,7 +599,7 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
         onClose={() => setShowClearSessionHistoryModal(false)}
         onConfirm={handleClearSessionHistory}
         title="Clear All Session History"
-        description="This will permanently remove all session history records from the database. This includes viewing history, timestamps, and session metadata for all users. This action cannot be undone."
+        description="This will permanently remove all session history records from the database. This includes viewing history, timestamps, and session metadata for all users."
         confirmText="Clear Session History"
         cancelText="Cancel"
         variant="destructive"
@@ -521,7 +610,7 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
         onClose={() => setShowDeleteAllDevicesModal(false)}
         onConfirm={handleDeleteAllDevices}
         title="Delete All Devices"
-        description="This will permanently remove all device records from the database. Devices will need to be detected again on their next stream attempt. Device preferences will be lost. This action cannot be undone."
+        description="This will permanently remove all device records from the database. Devices will need to be detected again on their next stream attempt. Device preferences will be lost."
         confirmText="Delete All Devices"
         cancelText="Cancel"
         variant="destructive"
@@ -531,9 +620,9 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
         isOpen={showResetDatabaseModal}
         onClose={() => setShowResetDatabaseModal(false)}
         onConfirm={handleResetDatabase}
-        title="Reset Entire Database"
-        description="DANGER: This will permanently delete ALL data including settings, devices, users, and sessions. Default settings will be restored. This action cannot be undone. Are you absolutely sure you want to proceed?"
-        confirmText="Yes, Reset Database"
+        title="Factory Reset"
+        description="DANGER: This will permanently delete ALL data including settings, devices, users, and sessions. Default settings will be restored like a fresh install."
+        confirmText="Yes, Wipe All Data"
         cancelText="Cancel"
         variant="destructive"
       />
@@ -551,6 +640,28 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
           variant="destructive"
         />
       )}
+
+      {/* Password Confirmation Modal */}
+      <PasswordConfirmationModal
+        isOpen={showPasswordModal}
+        onClose={() => {
+          setShowPasswordModal(false);
+          setPendingAction(null);
+        }}
+        onConfirm={handlePasswordConfirmation}
+        title={pendingAction?.title || "Confirm Action"}
+        description={
+          pendingAction?.description ||
+          "Please enter your password to continue."
+        }
+        isDangerous={pendingAction?.isDangerous}
+        isLoading={
+          resettingStreamCounts ||
+          clearingSessionHistory ||
+          deletingAllDevices ||
+          resettingDatabase
+        }
+      />
     </>
   );
 }

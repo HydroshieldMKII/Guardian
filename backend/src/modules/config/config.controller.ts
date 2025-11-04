@@ -15,10 +15,17 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import type { Response } from 'express';
 import { ConfigService, ConfigSettingDto } from './services/config.service';
 import { AppriseService } from './services/apprise.service';
+import { AuthService } from '../auth/auth.service';
+import { ConfirmPasswordDto } from '../auth/dto/confirm-password.dto';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
 @Controller('config')
 export class ConfigController {
-  constructor(private readonly configService: ConfigService, private readonly appriseService: AppriseService) {}
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly appriseService: AppriseService,
+    private readonly authService: AuthService,
+  ) {}
 
   @Get('version')
   async getVersion() {
@@ -195,11 +202,28 @@ export class ConfigController {
   }
 
   @Post('scripts/reset-database')
-  async resetDatabase() {
+  async resetDatabase(
+    @Body() dto: ConfirmPasswordDto,
+    @CurrentUser() user: any,
+  ) {
     try {
+      const isPasswordValid = await this.authService.validatePassword(
+        user.id,
+        dto.password,
+      );
+      if (!isPasswordValid) {
+        throw new HttpException('Invalid password', HttpStatus.FORBIDDEN);
+      }
+
       await this.configService.resetDatabase();
       return { message: 'Database reset successfully' };
     } catch (error) {
+      if (
+        error instanceof HttpException &&
+        error.getStatus() === HttpStatus.FORBIDDEN
+      ) {
+        throw error;
+      }
       throw new HttpException(
         error.message || 'Failed to reset database',
         HttpStatus.INTERNAL_SERVER_ERROR,
@@ -208,11 +232,28 @@ export class ConfigController {
   }
 
   @Post('scripts/reset-stream-counts')
-  async resetStreamCounts() {
+  async resetStreamCounts(
+    @Body() dto: ConfirmPasswordDto,
+    @CurrentUser() user: any,
+  ) {
     try {
+      const isPasswordValid = await this.authService.validatePassword(
+        user.id,
+        dto.password,
+      );
+      if (!isPasswordValid) {
+        throw new HttpException('Invalid password', HttpStatus.FORBIDDEN);
+      }
+
       await this.configService.resetStreamCounts();
       return { message: 'Stream counts reset successfully' };
     } catch (error) {
+      if (
+        error instanceof HttpException &&
+        error.getStatus() === HttpStatus.FORBIDDEN
+      ) {
+        throw error;
+      }
       throw new HttpException(
         error.message || 'Failed to reset stream counts',
         HttpStatus.INTERNAL_SERVER_ERROR,
@@ -221,11 +262,28 @@ export class ConfigController {
   }
 
   @Post('scripts/delete-all-devices')
-  async deleteAllDevices() {
+  async deleteAllDevices(
+    @Body() dto: ConfirmPasswordDto,
+    @CurrentUser() user: any,
+  ) {
     try {
+      const isPasswordValid = await this.authService.validatePassword(
+        user.id,
+        dto.password,
+      );
+      if (!isPasswordValid) {
+        throw new HttpException('Invalid password', HttpStatus.FORBIDDEN);
+      }
+
       await this.configService.deleteAllDevices();
       return { message: 'All devices deleted successfully' };
     } catch (error) {
+      if (
+        error instanceof HttpException &&
+        error.getStatus() === HttpStatus.FORBIDDEN
+      ) {
+        throw error;
+      }
       throw new HttpException(
         error.message || 'Failed to delete all devices',
         HttpStatus.INTERNAL_SERVER_ERROR,
@@ -234,11 +292,28 @@ export class ConfigController {
   }
 
   @Post('scripts/clear-session-history')
-  async clearSessionHistory() {
+  async clearSessionHistory(
+    @Body() dto: ConfirmPasswordDto,
+    @CurrentUser() user: any,
+  ) {
     try {
+      const isPasswordValid = await this.authService.validatePassword(
+        user.id,
+        dto.password,
+      );
+      if (!isPasswordValid) {
+        throw new HttpException('Invalid password', HttpStatus.FORBIDDEN);
+      }
+
       await this.configService.clearAllSessionHistory();
       return { message: 'Session history cleared successfully' };
     } catch (error) {
+      if (
+        error instanceof HttpException &&
+        error.getStatus() === HttpStatus.FORBIDDEN
+      ) {
+        throw error;
+      }
       throw new HttpException(
         error.message || 'Failed to clear session history',
         HttpStatus.INTERNAL_SERVER_ERROR,

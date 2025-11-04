@@ -10,9 +10,10 @@ import { DatabaseService } from './services/database.service';
 import { VersionService } from './services/version.service';
 import { AppriseService } from './services/apprise.service';
 import { AppSettings } from '../../entities/app-settings.entity';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([AppSettings])],
+  imports: [TypeOrmModule.forFeature([AppSettings]), AuthModule],
   controllers: [ConfigController],
   providers: [
     ConfigService,

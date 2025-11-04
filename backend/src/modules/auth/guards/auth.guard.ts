@@ -50,7 +50,7 @@ export class AuthGuard implements CanActivate {
   }
 
   /**
-   * Extract token from cookies or Authorization header
+   * Extract token from cookies
    */
   private extractToken(req: any): string | null {
     // Try cookie
