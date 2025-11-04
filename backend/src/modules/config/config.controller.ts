@@ -31,7 +31,7 @@ export class ConfigController {
   async getVersion() {
     try {
       return await this.configService.getVersionInfo();
-    } catch (error) {
+    } catch {
       throw new HttpException(
         'Failed to get version information',
         HttpStatus.INTERNAL_SERVER_ERROR,
@@ -43,7 +43,7 @@ export class ConfigController {
   async getAllSettings() {
     try {
       return await this.configService.getPublicSettings();
-    } catch (error) {
+    } catch {
       throw new HttpException(
         'Failed to fetch settings',
         HttpStatus.INTERNAL_SERVER_ERROR,
@@ -102,7 +102,7 @@ export class ConfigController {
     try {
       const result = await this.configService.testPlexConnection();
       return result;
-    } catch (error) {
+    } catch {
       throw new HttpException(
         'Failed to test connection',
         HttpStatus.INTERNAL_SERVER_ERROR,
@@ -115,7 +115,7 @@ export class ConfigController {
     try {
       const result = await this.configService.testSMTPConnection();
       return result;
-    } catch (error) {
+    } catch {
       throw new HttpException(
         'Failed to test SMTP connection',
         HttpStatus.INTERNAL_SERVER_ERROR,
@@ -126,9 +126,9 @@ export class ConfigController {
   @Post('test-apprise-connection')
   async testAppriseConnection() {
     try {
-      const result = await this.appriseService.testAppriseConnection();
+      const result = await this.configService.testAppriseConnection();
       return result;
-    } catch (error) {
+    } catch {
       throw new HttpException(
         'Failed to test Apprise connection',
         HttpStatus.INTERNAL_SERVER_ERROR,
@@ -141,7 +141,7 @@ export class ConfigController {
     try {
       const status = await this.configService.getPlexConfigurationStatus();
       return status;
-    } catch (error) {
+    } catch {
       throw new HttpException(
         'Failed to get Plex status',
         HttpStatus.INTERNAL_SERVER_ERROR,
@@ -162,7 +162,7 @@ export class ConfigController {
         `attachment; filename="${filename}"`,
       );
       res.send(exportData);
-    } catch (error) {
+    } catch {
       throw new HttpException(
         'Failed to export database',
         HttpStatus.INTERNAL_SERVER_ERROR,
@@ -183,7 +183,7 @@ export class ConfigController {
 
       try {
         importData = JSON.parse(fileContent);
-      } catch (parseError) {
+      } catch {
         throw new HttpException('Invalid JSON file', HttpStatus.BAD_REQUEST);
       }
 

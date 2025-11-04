@@ -126,12 +126,15 @@ export class ActiveSessionService {
       .getMany();
   }
 
-  private extractSessionsFromData(data: any): PlexSessionData[] {
-    if (!data || !data.MediaContainer) {
+  private extractSessionsFromData(data: unknown): PlexSessionData[] {
+    if (!data || typeof data !== 'object' || !('MediaContainer' in data)) {
       return [];
     }
 
-    return data.MediaContainer.Metadata || [];
+    const container = (
+      data as { MediaContainer?: { Metadata?: PlexSessionData[] } }
+    ).MediaContainer;
+    return container?.Metadata || [];
   }
 
   private async upsertSession(sessionData: PlexSessionData): Promise<void> {

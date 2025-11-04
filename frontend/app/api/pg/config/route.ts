@@ -53,14 +53,14 @@ export async function PUT(request: NextRequest) {
               errorData.error ||
               "Failed to update configuration",
           },
-          { status: response.status }
+          { status: response.status },
         );
       } catch {
         return NextResponse.json(
           {
             error: `Something went wrong check the server logs for more details`,
           },
-          { status: response.status }
+          { status: response.status },
         );
       }
     }

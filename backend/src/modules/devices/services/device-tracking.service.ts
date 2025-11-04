@@ -4,16 +4,34 @@ import { Repository, In } from 'typeorm';
 import { UserDevice } from '../../../entities/user-device.entity';
 import { SessionHistory } from '../../../entities/session-history.entity';
 import { UsersService } from '../../users/services/users.service';
-import { NotificationsService } from '../../notifications/services/notifications.service';
+import { ConfigService } from '../../config/services/config.service';
 import {
   PlexSession,
   DeviceInfo,
   PlexSessionsResponse,
 } from '../../../types/plex.types';
 
+export interface NewDeviceDetectedEvent {
+  userId: string;
+  username: string;
+  deviceName: string;
+  deviceIdentifier: string;
+  ipAddress: string;
+  platform: string;
+  sessionKey?: string;
+}
+
+/**
+ * Device Tracking Service
+ *
+ * Tracks device information from Plex sessions.
+ * Manages device records, approval status, and temporary access.
+ */
 @Injectable()
 export class DeviceTrackingService {
   private readonly logger = new Logger(DeviceTrackingService.name);
+  private newDeviceCallbacks: Array<(event: NewDeviceDetectedEvent) => void> =
+    [];
 
   constructor(
     @InjectRepository(UserDevice)
@@ -21,7 +39,7 @@ export class DeviceTrackingService {
     @InjectRepository(SessionHistory)
     private sessionHistoryRepository: Repository<SessionHistory>,
     private usersService: UsersService,
-    private notificationsService: NotificationsService,
+    private configService: ConfigService,
   ) {}
 
   // Function to process sessions and track devices
@@ -203,12 +221,31 @@ export class DeviceTrackingService {
       `🚨 NEW DEVICE DETECTED! User: ${deviceInfo.username || deviceInfo.userId}, IP: ${deviceInfo.ipAddress || 'Unknown IP'}, Device: ${deviceInfo.deviceName || deviceInfo.deviceIdentifier}, Platform: ${deviceInfo.devicePlatform || 'Unknown'}, Status: pending, App default action: ${defaultBlock ? 'Block' : 'Allow'}`,
     );
 
-    this.notificationsService.createNewDeviceNotification(
-      deviceInfo.userId,
-      deviceInfo.username || "Unknown User",
-      deviceInfo.deviceName || "Unknown Device",
-      deviceInfo.ipAddress || 'Unknown IP',
-    );
+    this.emitNewDeviceEvent({
+      userId: deviceInfo.userId,
+      username: deviceInfo.username || 'Unknown User',
+      deviceName: deviceInfo.deviceName || 'Unknown Device',
+      deviceIdentifier: deviceInfo.deviceIdentifier,
+      ipAddress: deviceInfo.ipAddress || 'Unknown IP',
+      platform: deviceInfo.devicePlatform || 'Unknown',
+      sessionKey: deviceInfo.sessionKey,
+    });
+  }
+
+  /** Register callback for new device events */
+  onNewDeviceDetected(callback: (event: NewDeviceDetectedEvent) => void): void {
+    this.newDeviceCallbacks.push(callback);
+  }
+
+  /** Emit new device event to all registered callbacks */
+  private emitNewDeviceEvent(event: NewDeviceDetectedEvent): void {
+    for (const callback of this.newDeviceCallbacks) {
+      try {
+        callback(event);
+      } catch (error) {
+        this.logger.error('Error in new device callback', error);
+      }
+    }
   }
 
   async getAllDevices(): Promise<UserDevice[]> {
@@ -310,18 +347,61 @@ export class DeviceTrackingService {
     deviceId: number,
     durationMinutes: number,
   ): Promise<void> {
-    const now = new Date();
-    const expiresAt = new Date(now.getTime() + durationMinutes * 60 * 1000);
+    // Work with pure UTC - get actual current UTC time
+    const nowUTC = new Date();
+    const expiresAtUTC = new Date(
+      nowUTC.getTime() + durationMinutes * 60 * 1000,
+    );
 
     await this.userDeviceRepository.update(deviceId, {
-      temporaryAccessUntil: expiresAt,
-      temporaryAccessGrantedAt: now,
+      temporaryAccessUntil: expiresAtUTC,
+      temporaryAccessGrantedAt: nowUTC,
       temporaryAccessDurationMinutes: durationMinutes,
     });
 
-    this.logger.log(
-      `Granted temporary access to device ${deviceId} for ${durationMinutes} minutes (expires at ${expiresAt.toISOString()})`,
-    );
+    // Get configured timezone for display purposes only
+    const timezoneOffset = await this.configService.getTimezone();
+    const offsetMatch = timezoneOffset.match(/^([+-])(\d{2}):(\d{2})$/);
+
+    if (offsetMatch) {
+      const sign = offsetMatch[1] === '+' ? 1 : -1;
+      const hours = parseInt(offsetMatch[2], 10);
+      const minutes = parseInt(offsetMatch[3], 10);
+      const offsetMs = sign * (hours * 60 + minutes) * 60 * 1000;
+
+      // Convert to true UTC first (remove system timezone), then apply configured timezone
+      const trueUTC =
+        expiresAtUTC.getTime() + expiresAtUTC.getTimezoneOffset() * 60000;
+      const expiresAtInTimezone = new Date(trueUTC + offsetMs);
+
+      // Format manually using UTC methods (the Date object now has TZ time, but we use getUTC* methods)
+      const year = expiresAtInTimezone.getUTCFullYear();
+      const month = String(expiresAtInTimezone.getUTCMonth() + 1).padStart(
+        2,
+        '0',
+      );
+      const day = String(expiresAtInTimezone.getUTCDate()).padStart(2, '0');
+      const hour = String(expiresAtInTimezone.getUTCHours()).padStart(2, '0');
+      const minute = String(expiresAtInTimezone.getUTCMinutes()).padStart(
+        2,
+        '0',
+      );
+      const second = String(expiresAtInTimezone.getUTCSeconds()).padStart(
+        2,
+        '0',
+      );
+
+      const formattedExpiry = `${year}-${month}-${day} ${hour}:${minute}:${second}`;
+
+      this.logger.log(
+        `Granted temporary access to device ${deviceId} for ${durationMinutes} minutes (expires at ${formattedExpiry} ${timezoneOffset})`,
+      );
+    } else {
+      // Fallback to UTC if timezone format is invalid
+      this.logger.log(
+        `Granted temporary access to device ${deviceId} for ${durationMinutes} minutes (expires at ${expiresAtUTC.toISOString()})`,
+      );
+    }
   }
 
   async revokeTemporaryAccess(deviceId: number): Promise<void> {
@@ -358,7 +438,7 @@ export class DeviceTrackingService {
     return isValid;
   }
 
-  async getTemporaryAccessTimeLeft(device: UserDevice): Promise<number | null> {
+  getTemporaryAccessTimeLeft(device: UserDevice): number | null {
     if (!device.temporaryAccessUntil) {
       return null;
     }

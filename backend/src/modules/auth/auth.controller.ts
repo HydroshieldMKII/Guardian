@@ -8,14 +8,15 @@ import {
   Req,
   BadRequestException,
 } from '@nestjs/common';
-import type { Response, Request } from 'express';
+import type { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import { CreateAdminDto } from './dto/create-admin.dto';
 import { LoginDto } from './dto/login.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UpdatePasswordDto } from './dto/update-password.dto';
-import { Public } from './decorators/public.decorator';
 import { CurrentUser } from './decorators/current-user.decorator';
+import { Public } from './decorators/public.decorator';
+import { AdminUser } from '../../entities/admin-user.entity';
 
 // 7 days
 const COOKIE_MAX_AGE = 7 * 24 * 60 * 60 * 1000;
@@ -123,16 +124,21 @@ export class AuthController {
    * Get current user
    */
   @Get('me')
-  async getCurrentUser(@CurrentUser() user: any) {
+  getCurrentUser(@CurrentUser() user: AdminUser) {
     if (!user) {
       throw new BadRequestException('Not authenticated');
     }
 
+    const id: string = user.id;
+    const username: string = user.username;
+    const email: string | null = user.email;
+    const avatarUrl: string | null = user.avatarUrl;
+
     return {
-      id: user.id,
-      username: user.username,
-      email: user.email,
-      avatarUrl: user.avatarUrl,
+      id,
+      username,
+      email,
+      avatarUrl,
     };
   }
 
@@ -140,7 +146,10 @@ export class AuthController {
    * Update user profile
    */
   @Patch('profile')
-  async updateProfile(@CurrentUser() user: any, @Body() dto: UpdateProfileDto) {
+  async updateProfile(
+    @CurrentUser() user: AdminUser,
+    @Body() dto: UpdateProfileDto,
+  ) {
     if (!user) {
       throw new BadRequestException('Not authenticated');
     }
@@ -154,7 +163,7 @@ export class AuthController {
    */
   @Patch('password')
   async updatePassword(
-    @CurrentUser() user: any,
+    @CurrentUser() user: AdminUser & { sessionId?: string },
     @Body() dto: UpdatePasswordDto,
   ) {
     if (!user) {

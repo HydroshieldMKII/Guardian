@@ -211,7 +211,11 @@ export function ErrorHandler({
                   </Button>
                 ) : (
                   onShowSettings && (
-                    <Button onClick={onShowSettings} className="w-full" size="lg">
+                    <Button
+                      onClick={onShowSettings}
+                      className="w-full"
+                      size="lg"
+                    >
                       <Settings className="h-4 w-4 mr-2" />
                       Go to settings
                     </Button>

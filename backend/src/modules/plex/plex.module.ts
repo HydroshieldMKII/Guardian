@@ -11,6 +11,8 @@ import { SessionsModule } from '../sessions/sessions.module';
 import { UsersModule } from '../users/users.module';
 import { ConfigModule } from '../config/config.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { CommonModule } from '../../common/common.module';
+import { ServicesModule } from '../../services/services.module';
 import { PlexController } from './controllers/plex.controller';
 
 @Module({
@@ -21,6 +23,8 @@ import { PlexController } from './controllers/plex.controller';
     forwardRef(() => UsersModule),
     ConfigModule,
     forwardRef(() => NotificationsModule),
+    CommonModule,
+    forwardRef(() => ServicesModule),
   ],
   controllers: [PlexController],
   providers: [PlexService, PlexClient, SessionTerminationService],

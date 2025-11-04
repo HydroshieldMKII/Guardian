@@ -63,14 +63,14 @@ export class NotificationsService {
     username: string,
     deviceName: string,
     ipAddress: string,
+    sessionHistoryId?: number,
   ): Promise<Notification> {
     const text = `New device detected for ${username} on ${deviceName} - ${ipAddress}`;
-
-    // Always create a notification
     const notification = await this.createNotification({
       userId,
       text,
       type: 'info',
+      sessionHistoryId,
     });
 
     // Send email notification for new device if enabled
@@ -87,7 +87,7 @@ export class NotificationsService {
           deviceName,
           ipAddress,
         );
-      }else{
+      } else {
         this.logger.log('SMTP email notification for new device is disabled.');
       }
     } catch (error) {
@@ -107,7 +107,7 @@ export class NotificationsService {
           deviceName,
           ipAddress,
         );
-      }else{
+      } else {
         this.logger.log('Apprise notification for new device is disabled.');
       }
     } catch (error) {
@@ -174,20 +174,6 @@ export class NotificationsService {
       // Fallback to generic message if no stop code provided
       text = `Stream blocked for ${username} on ${deviceDisplayName}`;
     }
-
-    //Mark in session history the stream was terminated
-    if (sessionHistoryId) {
-      const session = await this.sessionHistoryRepository.findOne({
-        where: { id: sessionHistoryId },
-      });
-
-      if (session) {
-        session.terminated = true;
-        await this.sessionHistoryRepository.save(session);
-      }
-    }
-
-    // Always create a notification
     const notification = await this.createNotification({
       userId,
       text,
@@ -209,8 +195,10 @@ export class NotificationsService {
           stopCode || 'N/A',
           ipAddress,
         );
-      }else{
-        this.logger.log('SMTP email notification for stream blocking is disabled.');
+      } else {
+        this.logger.log(
+          'SMTP email notification for stream blocking is disabled.',
+        );
       }
     } catch (error) {
       console.error('Failed to send stream blocked notification email:', error);
@@ -230,11 +218,16 @@ export class NotificationsService {
           ipAddress,
           stopCode,
         );
-      }else{
-        this.logger.log('Apprise notification for stream blocking is disabled.');
+      } else {
+        this.logger.log(
+          'Apprise notification for stream blocking is disabled.',
+        );
       }
     } catch (error) {
-      console.error('Failed to send Apprise stream blocked notification:', error);
+      console.error(
+        'Failed to send Apprise stream blocked notification:',
+        error,
+      );
     }
 
     return notification;
@@ -341,5 +334,54 @@ export class NotificationsService {
 
   async clearAll(): Promise<void> {
     await this.notificationRepository.clear();
+  }
+
+  async linkNotificationToSessionHistory(sessionKey: string): Promise<void> {
+    try {
+      // Find session history by session key
+      const sessionHistory = await this.sessionHistoryRepository.findOne({
+        where: { sessionKey },
+        order: { startedAt: 'DESC' },
+      });
+
+      if (!sessionHistory) {
+        this.logger.debug(
+          `No session history found for session key: ${sessionKey}`,
+        );
+        return;
+      }
+
+      // Find recent notifications for the same user that don't have a session history link
+      const recentNotifications = await this.notificationRepository
+        .createQueryBuilder('notification')
+        .where('notification.userId = :userId', {
+          userId: sessionHistory.userId,
+        })
+        .andWhere('notification.sessionHistoryId IS NULL')
+        .andWhere('notification.createdAt > :fiveMinutesAgo', {
+          fiveMinutesAgo: new Date(Date.now() - 5 * 60 * 1000),
+        })
+        .orderBy('notification.createdAt', 'DESC')
+        .limit(5)
+        .getMany();
+
+      // Link the most recent device detection notification
+      for (const notification of recentNotifications) {
+        if (notification.text.includes('New device detected')) {
+          await this.notificationRepository.update(notification.id, {
+            sessionHistoryId: sessionHistory.id,
+          });
+          this.logger.debug(
+            `Linked notification ${notification.id} to session history ${sessionHistory.id}`,
+          );
+          break; // Only link the first matching notification
+        }
+      }
+    } catch (error) {
+      this.logger.error(
+        `Error linking notification to session history for ${sessionKey}:`,
+        error,
+      );
+    }
   }
 }

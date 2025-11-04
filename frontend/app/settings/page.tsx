@@ -181,7 +181,7 @@ export default function SettingsPage() {
         changedSettings.map((setting) => ({
           key: setting.key,
           value: setting.value,
-        }))
+        })),
       );
 
       toast({
@@ -411,8 +411,7 @@ export default function SettingsPage() {
                 />
               )}
 
-              {(tab.id === "guardian" ||
-                tab.id === "customization") && (
+              {(tab.id === "guardian" || tab.id === "customization") && (
                 <GeneralSettings
                   settings={settings}
                   formData={formData}

@@ -78,7 +78,8 @@ export class AuthService {
         session,
       };
     } catch (error) {
-      if (error.code === 'SQLITE_CONSTRAINT') {
+      const dbError = error as { code?: string };
+      if (dbError.code === 'SQLITE_CONSTRAINT') {
         throw new BadRequestException('Username or email already exists');
       }
       throw new InternalServerErrorException('Failed to create admin user');
@@ -126,7 +127,13 @@ export class AuthService {
   /**
    * Create a new session for a user
    */
-  private async createSession(userId: string): Promise<any> {
+  private async createSession(userId: string): Promise<{
+    id: string;
+    userId: string;
+    token: string;
+    expiresAt: Date;
+    createdAt: Date;
+  }> {
     // Generate secure token (32 bytes/256 bits)
     const token = crypto.randomBytes(32).toString('hex');
 
@@ -153,7 +160,9 @@ export class AuthService {
   /**
    * Validate and retrieve session
    */
-  async validateSession(token: string): Promise<any | null> {
+  async validateSession(
+    token: string,
+  ): Promise<(AdminUser & { sessionId: string }) | null> {
     try {
       // Find session
       const session = await this.sessionRepository.findOne({
@@ -179,7 +188,7 @@ export class AuthService {
         ...session.user,
         sessionId: session.id,
       };
-    } catch (error) {
+    } catch {
       return null;
     }
   }
@@ -261,7 +270,7 @@ export class AuthService {
         email: user.email,
         avatarUrl: user.avatarUrl,
       };
-    } catch (error) {
+    } catch {
       throw new InternalServerErrorException('Failed to update profile');
     }
   }
@@ -307,7 +316,7 @@ export class AuthService {
       if (dto.clearSessions) {
         await this.clearAllSessions(userId, currentSessionId);
       }
-    } catch (error) {
+    } catch {
       throw new InternalServerErrorException('Failed to update password');
     }
   }
@@ -333,7 +342,7 @@ export class AuthService {
       } else {
         await this.sessionRepository.delete({ userId });
       }
-    } catch (error) {
+    } catch {
       throw new InternalServerErrorException('Failed to clear sessions');
     }
   }
