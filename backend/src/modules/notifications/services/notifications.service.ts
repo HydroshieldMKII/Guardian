@@ -63,48 +63,9 @@ export class NotificationsService {
     username: string,
     deviceName: string,
     ipAddress: string,
-    sessionKey?: string,
+    sessionHistoryId?: number,
   ): Promise<Notification> {
     const text = `New device detected for ${username} on ${deviceName} - ${ipAddress}`;
-
-    // Try to find session history if session key is provided
-    let sessionHistoryId: number | undefined;
-    if (sessionKey) {
-      try {
-        // Try to find existing session history first
-        let sessionHistory = await this.sessionHistoryRepository.findOne({
-          where: { sessionKey },
-          order: { startedAt: 'DESC' },
-        });
-
-        // If not found, wait a bit and try again (in case of race condition)
-        if (!sessionHistory) {
-          await new Promise((resolve) => setTimeout(resolve, 1000)); // Wait 1 second
-          sessionHistory = await this.sessionHistoryRepository.findOne({
-            where: { sessionKey },
-            order: { startedAt: 'DESC' },
-          });
-        }
-
-        if (sessionHistory) {
-          sessionHistoryId = sessionHistory.id;
-          this.logger.debug(
-            `Linked notification to session history ID: ${sessionHistoryId}`,
-          );
-        } else {
-          this.logger.warn(
-            `Session history not found for session key: ${sessionKey}`,
-          );
-        }
-      } catch (error) {
-        this.logger.error(
-          `Error finding session history for key ${sessionKey}:`,
-          error,
-        );
-      }
-    }
-
-    // Always create a notification
     const notification = await this.createNotification({
       userId,
       text,
@@ -213,20 +174,6 @@ export class NotificationsService {
       // Fallback to generic message if no stop code provided
       text = `Stream blocked for ${username} on ${deviceDisplayName}`;
     }
-
-    //Mark in session history the stream was terminated
-    if (sessionHistoryId) {
-      const session = await this.sessionHistoryRepository.findOne({
-        where: { id: sessionHistoryId },
-      });
-
-      if (session) {
-        session.terminated = true;
-        await this.sessionHistoryRepository.save(session);
-      }
-    }
-
-    // Always create a notification
     const notification = await this.createNotification({
       userId,
       text,

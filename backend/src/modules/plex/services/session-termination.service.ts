@@ -9,15 +9,32 @@ import { UsersService } from '../../users/services/users.service';
 import { TimePolicyService } from '../../users/services/time-policy.service';
 import { ConfigService } from '../../config/services/config.service';
 import { DeviceTrackingService } from '../../devices/services/device-tracking.service';
-import { NotificationsService } from '../../notifications/services/notifications.service';
 import {
   PlexSessionsResponse,
   SessionTerminationResult,
 } from '../../../types/plex.types';
+import { IPValidationService } from '../../../common/services/ip-validation.service';
 
+export interface StreamBlockedEvent {
+  userId: string;
+  username: string;
+  deviceIdentifier: string;
+  stopCode?: string;
+  sessionKey?: string;
+  ipAddress?: string;
+}
+
+/**
+ * Session Termination Service
+ *
+ * Validates session access based on device approval, IP policies, and time rules.
+ * Terminates unauthorized sessions and emits events when streams are blocked.
+ */
 @Injectable()
 export class SessionTerminationService {
   private readonly logger = new Logger(SessionTerminationService.name);
+  private streamBlockedCallbacks: Array<(event: StreamBlockedEvent) => void> =
+    [];
 
   constructor(
     @InjectRepository(UserDevice)
@@ -33,71 +50,26 @@ export class SessionTerminationService {
     private configService: ConfigService,
     @Inject(forwardRef(() => DeviceTrackingService))
     private deviceTrackingService: DeviceTrackingService,
-    @Inject(forwardRef(() => NotificationsService))
-    private notificationsService: NotificationsService,
+    private ipValidationService: IPValidationService,
   ) {}
 
-  // IP validation utilities
-  private isValidIPv4(ip: string): boolean {
-    const ipRegex =
-      /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
-    return ipRegex.test(ip.trim());
+  /** Register callback for stream blocked events */
+  onStreamBlocked(callback: (event: StreamBlockedEvent) => void): void {
+    this.streamBlockedCallbacks.push(callback);
   }
 
-  private isValidCIDR(cidr: string): boolean {
-    const cidrRegex =
-      /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\/(?:[0-9]|[1-2][0-9]|3[0-2])$/;
-    return cidrRegex.test(cidr.trim());
-  }
-
-  private isPrivateIP(ip: string): boolean {
-    if (!this.isValidIPv4(ip)) return false;
-    const parts = ip.split('.').map(Number);
-    const [a, b] = parts;
-    return (
-      a === 10 ||
-      (a === 172 && b >= 16 && b <= 31) ||
-      (a === 192 && b === 168) ||
-      a === 127
-    );
-  }
-
-  private getNetworkType(ip: string): 'lan' | 'wan' | 'unknown' {
-    if (!this.isValidIPv4(ip)) return 'unknown';
-    return this.isPrivateIP(ip) ? 'lan' : 'wan';
-  }
-
-  private ipToNumber(ip: string): number {
-    return (
-      ip.split('.').reduce((acc, octet) => (acc << 8) + parseInt(octet), 0) >>>
-      0
-    );
-  }
-
-  private isIPInCIDR(ip: string, cidr: string): boolean {
-    if (!this.isValidIPv4(ip) || !this.isValidCIDR(cidr)) return false;
-    const [network, prefixLength] = cidr.split('/');
-    const ipNum = this.ipToNumber(ip);
-    const networkNum = this.ipToNumber(network);
-    const mask = (0xffffffff << (32 - parseInt(prefixLength))) >>> 0;
-    return (ipNum & mask) === (networkNum & mask);
-  }
-
-  private isIPAllowed(clientIP: string, allowedIPs: string[]): boolean {
-    if (!this.isValidIPv4(clientIP)) return false;
-    if (!allowedIPs.length) return true;
-
-    for (const allowed of allowedIPs) {
-      const trimmed = allowed.trim();
-      if (this.isValidIPv4(trimmed)) {
-        if (clientIP === trimmed) return true;
-      } else if (this.isValidCIDR(trimmed)) {
-        if (this.isIPInCIDR(clientIP, trimmed)) return true;
+  /** Emit stream blocked event to all registered callbacks */
+  private emitStreamBlockedEvent(event: StreamBlockedEvent): void {
+    for (const callback of this.streamBlockedCallbacks) {
+      try {
+        callback(event);
+      } catch (error) {
+        this.logger.error('Error in stream blocked callback', error);
       }
     }
-    return false;
   }
 
+  /** Validates IP access for a session based on user preferences */
   private async validateIPAccess(
     session: any,
   ): Promise<{ allowed: boolean; reason?: string; stopCode?: string }> {
@@ -106,10 +78,10 @@ export class SessionTerminationService {
       const clientIP = session.Player?.address;
 
       if (!userId) {
-        return { allowed: true }; // No user ID, can't validate
+        return { allowed: true };
       }
 
-      if (!clientIP || !this.isValidIPv4(clientIP)) {
+      if (!clientIP) {
         return {
           allowed: false,
           reason: 'Invalid or missing client IP address from Plex',
@@ -122,59 +94,31 @@ export class SessionTerminationService {
       });
 
       if (!userPreference) {
-        return { allowed: true }; // No preferences set, allow access
+        return { allowed: true };
       }
-
-      const networkPolicy = userPreference.networkPolicy || 'both';
-      const ipAccessPolicy = userPreference.ipAccessPolicy || 'all';
-      const allowedIPs = userPreference.allowedIPs || [];
-
-      const networkType = this.getNetworkType(clientIP);
-
-      // Check network policy
-      if (networkPolicy === 'lan' && networkType !== 'lan') {
-        const message =
-          ((await this.configService.getSetting(
-            'MSG_IP_LAN_ONLY',
-          )) as string) || 'Only LAN access is allowed';
-        return {
-          allowed: false,
-          reason: message,
-          stopCode: 'IP_POLICY_LAN_ONLY',
-        };
-      }
-      if (networkPolicy === 'wan' && networkType !== 'wan') {
-        const message =
-          ((await this.configService.getSetting(
-            'MSG_IP_WAN_ONLY',
-          )) as string) || 'Only WAN access is allowed';
-        return {
-          allowed: false,
-          reason: message,
-          stopCode: 'IP_POLICY_WAN_ONLY',
-        };
-      }
-
-      // Check IP access policy
-      if (ipAccessPolicy === 'restricted') {
-        if (!this.isIPAllowed(clientIP, allowedIPs)) {
-          const message =
-            ((await this.configService.getSetting(
-              'MSG_IP_NOT_ALLOWED',
-            )) as string) ||
-            'Your current IP address is not in the allowed list';
-          return {
-            allowed: false,
-            reason: message,
-            stopCode: 'IP_POLICY_NOT_ALLOWED',
-          };
-        }
-      }
-
-      return { allowed: true };
+      const [msgLanOnly, msgWanOnly, msgNotAllowed] = await Promise.all([
+        this.configService.getSetting('MSG_IP_LAN_ONLY'),
+        this.configService.getSetting('MSG_IP_WAN_ONLY'),
+        this.configService.getSetting('MSG_IP_NOT_ALLOWED'),
+      ]);
+      return this.ipValidationService.validateIPAccess(
+        clientIP,
+        {
+          networkPolicy: userPreference.networkPolicy || 'both',
+          ipAccessPolicy: userPreference.ipAccessPolicy || 'all',
+          allowedIPs: userPreference.allowedIPs || [],
+        },
+        {
+          lanOnly: (msgLanOnly as string) || 'Only LAN access is allowed',
+          wanOnly: (msgWanOnly as string) || 'Only WAN access is allowed',
+          notAllowed:
+            (msgNotAllowed as string) ||
+            'Your current IP address is not in the allowed list',
+        },
+      );
     } catch (error) {
       this.logger.error('Error validating IP access', error);
-      return { allowed: true }; // Allow on error to be safe
+      return { allowed: true };
     }
   }
 
@@ -208,47 +152,17 @@ export class SessionTerminationService {
               const reason = shouldStopResult.reason;
               const stopCode = shouldStopResult.stopCode;
 
-              // Terminate the session
               await this.terminateSession(sessionId, reason);
               stoppedSessions.push(sessionId);
+              this.emitStreamBlockedEvent({
+                userId,
+                username,
+                deviceIdentifier,
+                stopCode,
+                sessionKey,
+                ipAddress: session.Player?.address,
+              });
 
-              // Create notification for the terminated session
-              try {
-                const sessionHistory =
-                  await this.sessionHistoryRepository.findOne({
-                    where: { sessionKey: sessionKey },
-                    relations: ['userPreference', 'userDevice'],
-                  });
-
-                if (sessionHistory) {
-                  this.logger.log(
-                    `Found session history with ID: ${sessionHistory.id} for sessionKey: ${sessionKey}`,
-                  );
-                } else {
-                  this.logger.error(
-                    `No session history found for sessionKey: ${sessionKey} (device: ${sessionId})`,
-                  );
-                }
-
-                // Create the in-app notification. SMTP and Apprise will be handled here
-                await this.notificationsService.createStreamBlockedNotification(
-                  userId,
-                  username,
-                  deviceIdentifier,
-                  stopCode,
-                  sessionHistory?.id,
-                  session.Player?.address,
-                );
-
-                this.logger.log(
-                  `Created notification for terminated session: ${username} on ${deviceName} (reason: ${reason}, sessionHistoryId: ${sessionHistory?.id || 'null'})`,
-                );
-              } catch (notificationError) {
-                this.logger.error(
-                  `Failed to create notification for terminated session ${sessionKey}`,
-                  notificationError,
-                );
-              }
               this.logger.warn(
                 `Stopped session: ${username} on ${deviceName} (Session: ${sessionId}) - Reason: ${reason}`,
               );
@@ -288,13 +202,9 @@ export class SessionTerminationService {
         );
         return { shouldStop: false };
       }
-
-      // If stream is a Plexamp, always allow
       if (session.Player?.product === 'Plexamp') {
         return { shouldStop: false };
       }
-
-      // First, validate IP access policies
       const ipValidation = await this.validateIPAccess(session);
       if (!ipValidation.allowed) {
         this.logger.warn(
@@ -332,19 +242,16 @@ export class SessionTerminationService {
           stopCode: 'TIME_RESTRICTED',
         };
       }
-      // Check if device is approved
       const device = await this.userDeviceRepository.findOne({
         where: { userId, deviceIdentifier },
       });
-
-      // If device not found or still pending, check for temporary access first
       if (!device || device.status === 'pending') {
         // Check if device has valid temporary access
         if (
           device &&
           (await this.deviceTrackingService.isTemporaryAccessValid(device))
         ) {
-          return { shouldStop: false }; // Don't stop - temporary access is valid
+          return { shouldStop: false };
         }
         const shouldBlock =
           await this.usersService.getEffectiveDefaultBlock(userId);
@@ -364,12 +271,8 @@ export class SessionTerminationService {
       }
 
       if (device.status === 'rejected') {
-        // Check if rejected device has valid temporary access
         if (await this.deviceTrackingService.isTemporaryAccessValid(device)) {
-          // this.logger.debug(
-          //   `Rejected device ${deviceIdentifier} for user ${userId} has valid temporary access, allowing session.`,
-          // );
-          return { shouldStop: false }; // Don't stop - temporary access overrides rejection
+          return { shouldStop: false };
         }
 
         this.logger.warn(
@@ -387,17 +290,16 @@ export class SessionTerminationService {
         };
       }
 
-      return { shouldStop: false }; // no terminate if device is approved and time is allowed
+      return { shouldStop: false };
     } catch (error) {
       this.logger.error('Error checking session approval status', error);
-      return { shouldStop: false }; // Don't stop on error to be safe
+      return { shouldStop: false };
     }
   }
 
   async terminateSession(sessionKey: string, reason?: string): Promise<void> {
     try {
       if (!reason) {
-        // Fallback to generic device pending message if no specific reason provided
         reason =
           ((await this.configService.getSetting(
             'MSG_DEVICE_PENDING',

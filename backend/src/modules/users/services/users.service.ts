@@ -39,46 +39,43 @@ export class UsersService {
     });
   }
 
-  // Toggle user visibility (hide/show)
+  async updateUserVisibility(
+    userId: string,
+    action: 'hide' | 'show' | 'toggle',
+  ): Promise<UserPreference> {
+    const user = await this.userPreferenceRepository.findOne({
+      where: { userId },
+    });
+
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    switch (action) {
+      case 'hide':
+        user.hidden = true;
+        break;
+      case 'show':
+        user.hidden = false;
+        break;
+      case 'toggle':
+        user.hidden = !user.hidden;
+        break;
+    }
+
+    return await this.userPreferenceRepository.save(user);
+  }
+
   async toggleUserVisibility(userId: string): Promise<UserPreference> {
-    const user = await this.userPreferenceRepository.findOne({
-      where: { userId },
-    });
-
-    if (!user) {
-      throw new Error('User not found');
-    }
-
-    user.hidden = !user.hidden;
-    return await this.userPreferenceRepository.save(user);
+    return this.updateUserVisibility(userId, 'toggle');
   }
 
-  // Hide a user
   async hideUser(userId: string): Promise<UserPreference> {
-    const user = await this.userPreferenceRepository.findOne({
-      where: { userId },
-    });
-
-    if (!user) {
-      throw new Error('User not found');
-    }
-
-    user.hidden = true;
-    return await this.userPreferenceRepository.save(user);
+    return this.updateUserVisibility(userId, 'hide');
   }
 
-  // Show a user (unhide)
   async showUser(userId: string): Promise<UserPreference> {
-    const user = await this.userPreferenceRepository.findOne({
-      where: { userId },
-    });
-
-    if (!user) {
-      throw new Error('User not found');
-    }
-
-    user.hidden = false;
-    return await this.userPreferenceRepository.save(user);
+    return this.updateUserVisibility(userId, 'show');
   }
 
   // Create user if not exists
