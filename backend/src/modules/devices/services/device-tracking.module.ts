@@ -11,8 +11,8 @@ import { NotificationsModule } from '../../notifications/notifications.module';
   imports: [
     TypeOrmModule.forFeature([UserDevice, SessionHistory]),
     forwardRef(() => UsersModule),
-  ConfigModule,
-  forwardRef(() => NotificationsModule),
+    ConfigModule,
+    forwardRef(() => NotificationsModule),
   ],
   providers: [DeviceTrackingService],
   exports: [DeviceTrackingService],

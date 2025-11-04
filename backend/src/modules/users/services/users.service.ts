@@ -166,7 +166,7 @@ export class UsersService {
       allowedIPs?: string[];
     },
   ): Promise<UserPreference> {
-    let preference = await this.userPreferenceRepository.findOne({
+    const preference = await this.userPreferenceRepository.findOne({
       where: { userId },
     });
 
