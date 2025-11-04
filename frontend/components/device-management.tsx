@@ -887,7 +887,7 @@ const DeviceManagement = memo(
 
     const startEditing = (device: UserDevice) => {
       setEditingDevice(device.id);
-      setNewDeviceName(device.deviceName || device.deviceIdentifier);
+      setNewDeviceName(device.deviceName || "");
     };
 
     const cancelEditing = () => {
