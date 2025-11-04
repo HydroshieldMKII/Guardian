@@ -46,7 +46,7 @@ export function PlexSettings({
   const [testingConnection, setTestingConnection] = useState(false);
   const [connectionStatus, setConnectionStatus] =
     useState<ConnectionStatus | null>(null);
-  
+
   useEffect(() => {
     if (!hasUnsavedChanges) {
       setConnectionStatus(null);
@@ -60,7 +60,7 @@ export function PlexSettings({
           setting.key !== "PLEX_GUARD_DEFAULT_BLOCK") ||
         setting.key === "USE_SSL" ||
         setting.key === "IGNORE_CERT_ERRORS" ||
-        setting.key === "CUSTOM_PLEX_URL"
+        setting.key === "CUSTOM_PLEX_URL",
     )
     .sort((a, b) => {
       const order = [
@@ -98,7 +98,8 @@ export function PlexSettings({
         });
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Failed to test connection";
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to test connection";
       setConnectionStatus({ success: false, message: errorMessage });
     } finally {
       setTestingConnection(false);
@@ -108,7 +109,7 @@ export function PlexSettings({
   const renderSSLSettingsGroup = () => {
     const useSslSetting = plexSettings.find((s) => s.key === "USE_SSL");
     const ignoreCertErrorsSetting = plexSettings.find(
-      (s) => s.key === "IGNORE_CERT_ERRORS"
+      (s) => s.key === "IGNORE_CERT_ERRORS",
     );
 
     if (!useSslSetting || !ignoreCertErrorsSetting) return null;
@@ -224,7 +225,7 @@ export function PlexSettings({
         {plexSettings
           .filter(
             (setting) =>
-              setting.key !== "USE_SSL" && setting.key !== "IGNORE_CERT_ERRORS"
+              setting.key !== "USE_SSL" && setting.key !== "IGNORE_CERT_ERRORS",
           )
           .map((setting) => (
             <Card key={setting.key} className="p-4 my-4">

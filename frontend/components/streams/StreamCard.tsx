@@ -114,7 +114,7 @@ export const StreamCard: React.FC<StreamCardProps> = ({
                     const target = e.target as HTMLImageElement;
                     target.style.display = "none";
                     const fallback = target.parentElement?.querySelector(
-                      ".thumbnail-fallback"
+                      ".thumbnail-fallback",
                     ) as HTMLElement;
                     if (fallback) {
                       fallback.style.display = "flex";
@@ -231,7 +231,7 @@ export const StreamCard: React.FC<StreamCardProps> = ({
                 ) {
                   onNavigateToDevice(
                     stream.User.id,
-                    stream.Player.machineIdentifier
+                    stream.Player.machineIdentifier,
                   );
                 }
               }}

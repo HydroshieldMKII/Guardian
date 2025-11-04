@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
-import { useEffect } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
-import { useAuth } from '@/contexts/auth-context';
-import { ThreeDotLoader } from '@/components/three-dot-loader';
+import { useEffect } from "react";
+import { useRouter, usePathname } from "next/navigation";
+import { useAuth } from "@/contexts/auth-context";
+import { ThreeDotLoader } from "@/components/three-dot-loader";
 
-const PUBLIC_ROUTES = ['/login', '/setup'];
+const PUBLIC_ROUTES = ["/login", "/setup"];
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -20,29 +20,36 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     const isPublicRoute = PUBLIC_ROUTES.includes(pathname);
 
     // If setup is required, redirect to setup page (unless already there)
-    if (setupRequired && pathname !== '/setup') {
-      router.push('/setup');
+    if (setupRequired && pathname !== "/setup") {
+      router.push("/setup");
       return;
     }
 
     // If setup is complete but user is on setup page, redirect to dashboard
-    if (!setupRequired && pathname === '/setup') {
-      router.push('/');
+    if (!setupRequired && pathname === "/setup") {
+      router.push("/");
       return;
     }
 
     // If not authenticated and not on a public route, redirect to login
     if (!isAuthenticated && !isPublicRoute && !setupRequired) {
-      router.push('/login');
+      router.push("/login");
       return;
     }
 
     // If authenticated and on login page, redirect to dashboard
-    if (isAuthenticated && pathname === '/login') {
-      router.push('/');
+    if (isAuthenticated && pathname === "/login") {
+      router.push("/");
       return;
     }
-  }, [isAuthenticated, isLoading, setupRequired, pathname, router, backendError]);
+  }, [
+    isAuthenticated,
+    isLoading,
+    setupRequired,
+    pathname,
+    router,
+    backendError,
+  ]);
 
   const isPublicRoute = PUBLIC_ROUTES.includes(pathname);
   const shouldRenderContent =

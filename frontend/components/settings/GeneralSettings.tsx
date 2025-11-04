@@ -97,7 +97,7 @@ export function GeneralSettings({
             "DEVICE_CLEANUP_ENABLED",
             "DEVICE_CLEANUP_INTERVAL_DAYS",
             "TIMEZONE",
-          ].includes(setting.key)
+          ].includes(setting.key),
         );
         break;
       case "customization":
@@ -107,12 +107,12 @@ export function GeneralSettings({
               "DEFAULT_PAGE",
               "ENABLE_MEDIA_THUMBNAILS",
               "ENABLE_MEDIA_ARTWORK",
-            ].includes(setting.key) || setting.key.startsWith("MSG_")
+            ].includes(setting.key) || setting.key.startsWith("MSG_"),
         );
         break;
       case "notifications":
         filteredSettings = settings.filter((setting) =>
-          ["AUTO_MARK_NOTIFICATION_READ"].includes(setting.key)
+          ["AUTO_MARK_NOTIFICATION_READ"].includes(setting.key),
         );
         break;
       default:
@@ -122,7 +122,7 @@ export function GeneralSettings({
     // Sort the filtered settings according to the defined order
     return filteredSettings.sort(
       (a, b) =>
-        getSettingOrder(section, a.key) - getSettingOrder(section, b.key)
+        getSettingOrder(section, a.key) - getSettingOrder(section, b.key),
     );
   };
 
@@ -158,10 +158,10 @@ export function GeneralSettings({
 
   const renderDeviceCleanupGroup = (settings: AppSetting[]) => {
     const cleanupEnabledSetting = settings.find(
-      (s) => s.key === "DEVICE_CLEANUP_ENABLED"
+      (s) => s.key === "DEVICE_CLEANUP_ENABLED",
     );
     const cleanupIntervalSetting = settings.find(
-      (s) => s.key === "DEVICE_CLEANUP_INTERVAL_DAYS"
+      (s) => s.key === "DEVICE_CLEANUP_INTERVAL_DAYS",
     );
 
     if (!cleanupEnabledSetting || !cleanupIntervalSetting) return null;
