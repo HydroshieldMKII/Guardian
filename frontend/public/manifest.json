@@ -1,5 +1,5 @@
 {
-  "name": "Guardian Dashboard",
+  "name": "Guardian",
   "short_name": "Guardian",
   "description": "Monitor active streams and manage device access",
   "start_url": "/",
@@ -9,14 +9,16 @@
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/icon.png",
+      "src": "/icon-192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     },
     {
-      "src": "/icon.png",
+      "src": "/icon-512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ]
 }
