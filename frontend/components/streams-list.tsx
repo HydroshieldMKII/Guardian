@@ -211,7 +211,7 @@ export default function StreamsList({
                   setExpandedStream(
                     expandedStream === stream.sessionKey
                       ? null
-                      : stream.sessionKey
+                      : stream.sessionKey,
                   )
                 }
                 onRemoveAccess={() => setConfirmRemoveStream(stream)}

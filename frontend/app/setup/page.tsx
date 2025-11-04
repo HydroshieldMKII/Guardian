@@ -118,7 +118,7 @@ export default function SetupPage() {
         formData.username,
         formData.email,
         formData.password,
-        formData.confirmPassword
+        formData.confirmPassword,
       );
 
       toast({

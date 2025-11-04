@@ -162,8 +162,7 @@ export const getSettingInfo = (setting: AppSetting): SettingInfo => {
     },
     SMTP_NOTIFY_ON_NEW_DEVICE: {
       label: "Email notifications for new devices",
-      description:
-        "Send email notifications when new devices are detected",
+      description: "Send email notifications when new devices are detected",
     },
     SMTP_NOTIFY_ON_BLOCK: {
       label: "Email notifications for blocked streams",
@@ -181,13 +180,11 @@ export const getSettingInfo = (setting: AppSetting): SettingInfo => {
     },
     APPRISE_NOTIFY_ON_NEW_DEVICE: {
       label: "Notify on new devices",
-      description:
-        "Send notifications when new devices are detected",
+      description: "Send notifications when new devices are detected",
     },
     APPRISE_NOTIFY_ON_BLOCK: {
       label: "Notify on blocked streams",
-      description:
-        "Send notifications when streams are blocked due to rules",
+      description: "Send notifications when streams are blocked due to rules",
     },
   };
 

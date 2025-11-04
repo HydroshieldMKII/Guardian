@@ -31,7 +31,12 @@ export function Navbar() {
   const pathname = usePathname();
 
   // Hide navbar if setup required, not authenticated, or on auth pages
-  if (setupRequired || !isAuthenticated || pathname === '/login' || pathname === '/setup') {
+  if (
+    setupRequired ||
+    !isAuthenticated ||
+    pathname === "/login" ||
+    pathname === "/setup"
+  ) {
     return null;
   }
 
@@ -39,26 +44,26 @@ export function Navbar() {
     try {
       await logout();
       toast({
-        title: 'Success',
-        description: 'Logged out successfully',
-        variant: 'success',
+        title: "Success",
+        description: "Logged out successfully",
+        variant: "success",
       });
-      router.push('/login');
+      router.push("/login");
     } catch (error) {
       toast({
-        title: 'Error',
-        description: 'Failed to logout',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to logout",
+        variant: "destructive",
       });
     }
   };
 
   const getAvatarInitials = () => {
-    if (!user) return '?';
+    if (!user) return "?";
     return user.username
-      .split(' ')
-      .map(n => n[0])
-      .join('')
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
       .toUpperCase()
       .substring(0, 2);
   };

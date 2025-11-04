@@ -94,7 +94,7 @@ export function Dashboard() {
   useEffect(() => {
     if (dashboardData && !initialTabSet) {
       const defaultPageSetting = dashboardData.settings.find(
-        (s) => s.key === "DEFAULT_PAGE"
+        (s) => s.key === "DEFAULT_PAGE",
       );
       const defaultPage = defaultPageSetting?.value || "devices";
       setActiveTab(defaultPage === "streams" ? "streams" : "devices");
@@ -155,14 +155,16 @@ export function Dashboard() {
 
     const interval = setInterval(
       () => refreshDashboard(true),
-      config.app.refreshInterval
+      config.app.refreshInterval,
     );
     return () => clearInterval(interval);
   }, [autoRefresh, refreshDashboard]);
 
   // Show error if backend is unavailable
   if (backendError) {
-    return <ErrorHandler backendError={backendError} onRetry={retryConnection} />;
+    return (
+      <ErrorHandler backendError={backendError} onRetry={retryConnection} />
+    );
   }
 
   // Don't render dashboard during setup
