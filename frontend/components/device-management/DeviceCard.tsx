@@ -117,7 +117,7 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-3 mb-1">
                     <h4 className="font-semibold text-foreground truncate text-base">
-                      {device.deviceName || device.deviceIdentifier}
+                      {device.deviceName || "Unknown"}
                     </h4>
                   </div>
                 </div>
@@ -393,7 +393,7 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
                 </div>
                 <div className="flex-1 min-w-0">
                   <h4 className="font-semibold text-foreground truncate text-base">
-                    {device.deviceName || device.deviceIdentifier}
+                    {device.deviceName || "Unknown"}
                   </h4>
                 </div>
               </div>
