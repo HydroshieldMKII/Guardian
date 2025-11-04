@@ -349,7 +349,9 @@ export class DeviceTrackingService {
   ): Promise<void> {
     // Work with pure UTC - get actual current UTC time
     const nowUTC = new Date();
-    const expiresAtUTC = new Date(nowUTC.getTime() + durationMinutes * 60 * 1000);
+    const expiresAtUTC = new Date(
+      nowUTC.getTime() + durationMinutes * 60 * 1000,
+    );
 
     await this.userDeviceRepository.update(deviceId, {
       temporaryAccessUntil: expiresAtUTC,
@@ -368,16 +370,26 @@ export class DeviceTrackingService {
       const offsetMs = sign * (hours * 60 + minutes) * 60 * 1000;
 
       // Convert to true UTC first (remove system timezone), then apply configured timezone
-      const trueUTC = expiresAtUTC.getTime() + (expiresAtUTC.getTimezoneOffset() * 60000);
+      const trueUTC =
+        expiresAtUTC.getTime() + expiresAtUTC.getTimezoneOffset() * 60000;
       const expiresAtInTimezone = new Date(trueUTC + offsetMs);
 
       // Format manually using UTC methods (the Date object now has TZ time, but we use getUTC* methods)
       const year = expiresAtInTimezone.getUTCFullYear();
-      const month = String(expiresAtInTimezone.getUTCMonth() + 1).padStart(2, '0');
+      const month = String(expiresAtInTimezone.getUTCMonth() + 1).padStart(
+        2,
+        '0',
+      );
       const day = String(expiresAtInTimezone.getUTCDate()).padStart(2, '0');
       const hour = String(expiresAtInTimezone.getUTCHours()).padStart(2, '0');
-      const minute = String(expiresAtInTimezone.getUTCMinutes()).padStart(2, '0');
-      const second = String(expiresAtInTimezone.getUTCSeconds()).padStart(2, '0');
+      const minute = String(expiresAtInTimezone.getUTCMinutes()).padStart(
+        2,
+        '0',
+      );
+      const second = String(expiresAtInTimezone.getUTCSeconds()).padStart(
+        2,
+        '0',
+      );
 
       const formattedExpiry = `${year}-${month}-${day} ${hour}:${minute}:${second}`;
 

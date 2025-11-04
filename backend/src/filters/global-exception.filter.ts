@@ -36,7 +36,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       message:
         typeof message === 'string'
           ? message
-          : (message as any).message || message
+          : (message as any).message || message,
     };
 
     this.logger.error(

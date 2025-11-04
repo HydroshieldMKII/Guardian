@@ -35,7 +35,15 @@ export class TimePolicyService {
     'Friday',
     'Saturday',
   ];
-  private readonly DAY_NAMES_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  private readonly DAY_NAMES_SHORT = [
+    'Sun',
+    'Mon',
+    'Tue',
+    'Wed',
+    'Thu',
+    'Fri',
+    'Sat',
+  ];
 
   constructor(
     @InjectRepository(UserTimeRule)

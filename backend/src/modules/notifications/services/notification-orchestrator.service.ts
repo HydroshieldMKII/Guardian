@@ -137,9 +137,7 @@ export class NotificationOrchestratorService {
   }
 
   /** Marks a session in history as terminated */
-  private async markSessionTerminated(
-    sessionHistoryId: number,
-  ): Promise<void> {
+  private async markSessionTerminated(sessionHistoryId: number): Promise<void> {
     try {
       const session = await this.sessionHistoryRepository.findOne({
         where: { id: sessionHistoryId },
