@@ -247,7 +247,7 @@ export class ConfigService {
         key: 'APPRISE_NOTIFY_ON_BLOCK',
         value: 'false',
         type: 'boolean' as const,
-      }
+      },
     ];
 
     // Update version number on startup if current version is higher
@@ -286,7 +286,7 @@ export class ConfigService {
   }
 
   private validateEmailFormat(email: string): boolean {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const emailRegex = /^[a-zA-Z0-9._%-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     return emailRegex.test(email);
   }
 
