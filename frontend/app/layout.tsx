@@ -17,15 +17,12 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Guardian Dashboard",
+  title: "Guardian",
   description: "Monitor active streams and manage device access",
-  viewport:
-    "width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no",
-  themeColor: "#0f172a",
   icons: {
-    icon: "/icon.png",
-    shortcut: "/icon.png",
-    apple: "/icon.png",
+    icon: "/icon-192.png",
+    shortcut: "/icon-192.png",
+    apple: "/apple-touch-icon.png",
   },
   appleWebApp: {
     capable: true,
@@ -33,6 +30,14 @@ export const metadata: Metadata = {
     title: "Guardian",
   },
   manifest: "/manifest.json",
+};
+
+export const viewport = {
+  width: "device-width",
+  initialScale: 1.0,
+  maximumScale: 1.0,
+  userScalable: false,
+  themeColor: "#0f172a",
 };
 
 export default function RootLayout({
@@ -63,9 +68,7 @@ export default function RootLayout({
         <ThemeProvider defaultTheme="dark" storageKey="guardian-ui-theme">
           <AuthProvider>
             <AuthGuard>
-              <AppProviders>
-                {children}
-              </AppProviders>
+              <AppProviders>{children}</AppProviders>
             </AuthGuard>
           </AuthProvider>
         </ThemeProvider>

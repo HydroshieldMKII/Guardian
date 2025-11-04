@@ -26,6 +26,24 @@ export interface UpdateTimePolicyDto {
 @Injectable()
 export class TimePolicyService {
   private readonly logger = new Logger(TimePolicyService.name);
+  private readonly DAY_NAMES = [
+    'Sunday',
+    'Monday',
+    'Tuesday',
+    'Wednesday',
+    'Thursday',
+    'Friday',
+    'Saturday',
+  ];
+  private readonly DAY_NAMES_SHORT = [
+    'Sun',
+    'Mon',
+    'Tue',
+    'Wed',
+    'Thu',
+    'Fri',
+    'Sat',
+  ];
 
   constructor(
     @InjectRepository(UserTimeRule)
@@ -133,26 +151,11 @@ export class TimePolicyService {
     currentDay: number,
     currentTime: string,
   ): boolean {
-    const dayNames = [
-      'Sunday',
-      'Monday',
-      'Tuesday',
-      'Wednesday',
-      'Thursday',
-      'Friday',
-      'Saturday',
-    ];
-
-    // Check if current day matches the policy's day
     if (policy.dayOfWeek !== currentDay) {
       return false;
     }
 
-    // Check if current time is within the policy's time range
-    const start = policy.startTime;
-    const end = policy.endTime;
-
-    return currentTime >= start && currentTime <= end;
+    return currentTime >= policy.startTime && currentTime <= policy.endTime;
   }
 
   /**
@@ -181,7 +184,6 @@ export class TimePolicyService {
   }
 
   private formatDayOfWeek(day: number): string {
-    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    return dayNames[day] || 'Invalid Day';
+    return this.DAY_NAMES_SHORT[day] || 'Invalid Day';
   }
 }

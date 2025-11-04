@@ -7,7 +7,6 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
-import { isDevelopment } from '../config/app.config';
 
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
@@ -36,7 +35,11 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       message:
         typeof message === 'string'
           ? message
-          : (message as any).message || message
+          : typeof message === 'object' &&
+              message !== null &&
+              'message' in message
+            ? (message as { message: string }).message
+            : 'Unknown error',
     };
 
     this.logger.error(

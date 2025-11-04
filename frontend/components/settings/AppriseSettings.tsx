@@ -47,14 +47,16 @@ export function AppriseSettings({
   const [connectionStatus, setConnectionStatus] =
     useState<ConnectionStatus | null>(null);
 
-    useEffect(() => {
-      if (!hasUnsavedChanges) {
-        setConnectionStatus(null);
-      }
-    }, [hasUnsavedChanges]);
-    
+  useEffect(() => {
+    if (!hasUnsavedChanges) {
+      setConnectionStatus(null);
+    }
+  }, [hasUnsavedChanges]);
+
   const appriseSettings = settings
-    .filter((setting) => setting && setting.key && setting.key.startsWith("APPRISE_"))
+    .filter(
+      (setting) => setting && setting.key && setting.key.startsWith("APPRISE_"),
+    )
     .sort((a, b) => {
       const order = [
         "APPRISE_ENABLED",
@@ -89,7 +91,10 @@ export function AppriseSettings({
         });
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Failed to test Apprise connection";
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Failed to test Apprise connection";
       setConnectionStatus({ success: false, message: errorMessage });
     } finally {
       setTestingConnection(false);
@@ -120,7 +125,8 @@ export function AppriseSettings({
             <CardTitle>Apprise Notifications</CardTitle>
           </div>
           <CardDescription>
-            Configure Apprise for sending notifications to various services like Discord, Slack, Telegram, and more.
+            Configure Apprise for sending notifications to various services like
+            Discord, Slack, Telegram, and more.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-2">
@@ -133,12 +139,18 @@ export function AppriseSettings({
                   About Apprise
                 </h4>
                 <p className="text-blue-700 dark:text-blue-300 text-sm mt-1">
-                  Apprise allows you to send notifications to 100+ services including Discord, Slack, Telegram, Pushover, and more.
-                  Each service URL follows a specific format.{" "}
+                  Apprise allows you to send notifications to 100+ services
+                  including Discord, Slack, Telegram, Pushover, and more. Each
+                  service URL follows a specific format.{" "}
                   <button
                     type="button"
                     className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 underline underline-offset-2 inline-flex items-center gap-1 cursor-pointer"
-                    onClick={() => window.open("https://github.com/caronc/apprise/wiki", "_blank")}
+                    onClick={() =>
+                      window.open(
+                        "https://github.com/caronc/apprise/wiki",
+                        "_blank",
+                      )
+                    }
                   >
                     View Apprise Documentation
                     <ExternalLink className="h-3 w-3" />
@@ -153,99 +165,113 @@ export function AppriseSettings({
           <Card className="p-4 my-4">
             <div className="space-y-4">
               {appriseSettings.map((setting) => {
-              const settingInfo = getSettingInfo(setting);
-              const currentValue = formData[setting.key] ?? setting.value;
+                const settingInfo = getSettingInfo(setting);
+                const currentValue = formData[setting.key] ?? setting.value;
 
-              if (setting.key === "APPRISE_ENABLED") {
-                return (
-                  <div key={setting.key} className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label className="text-base font-medium">
+                if (setting.key === "APPRISE_ENABLED") {
+                  return (
+                    <div
+                      key={setting.key}
+                      className="flex items-center justify-between"
+                    >
+                      <div className="space-y-0.5">
+                        <Label className="text-base font-medium">
+                          {settingInfo.label}
+                        </Label>
+                        <div className="text-sm text-muted-foreground">
+                          {settingInfo.description}
+                        </div>
+                      </div>
+                      <Switch
+                        checked={currentValue === "true"}
+                        onCheckedChange={(checked) =>
+                          handleInputChange(setting.key, checked.toString())
+                        }
+                      />
+                    </div>
+                  );
+                }
+
+                if (setting.key === "APPRISE_NOTIFY_ON_NEW_DEVICE") {
+                  return (
+                    <div
+                      key={setting.key}
+                      className="flex items-center justify-between ml-6 pl-4 border-l-2 border-muted"
+                    >
+                      <div className="space-y-0.5">
+                        <Label className="text-base font-medium">
+                          {settingInfo.label}
+                        </Label>
+                        <div className="text-sm text-muted-foreground">
+                          {settingInfo.description}
+                        </div>
+                      </div>
+                      <Switch
+                        checked={currentValue === "true"}
+                        onCheckedChange={(checked) =>
+                          handleInputChange(setting.key, checked.toString())
+                        }
+                        disabled={!isAppriseEnabled}
+                      />
+                    </div>
+                  );
+                }
+
+                if (setting.key === "APPRISE_NOTIFY_ON_BLOCK") {
+                  return (
+                    <div
+                      key={setting.key}
+                      className="flex items-center justify-between ml-6 pl-4 border-l-2 border-muted"
+                    >
+                      <div className="space-y-0.5">
+                        <Label className="text-base font-medium">
+                          {settingInfo.label}
+                        </Label>
+                        <div className="text-sm text-muted-foreground">
+                          {settingInfo.description}
+                        </div>
+                      </div>
+                      <Switch
+                        checked={currentValue === "true"}
+                        onCheckedChange={(checked) =>
+                          handleInputChange(setting.key, checked.toString())
+                        }
+                        disabled={!isAppriseEnabled}
+                      />
+                    </div>
+                  );
+                }
+
+                if (setting.key === "APPRISE_URLS") {
+                  return (
+                    <div key={setting.key} className="space-y-3">
+                      <Label
+                        htmlFor={setting.key}
+                        className="text-base font-medium"
+                      >
                         {settingInfo.label}
                       </Label>
                       <div className="text-sm text-muted-foreground">
                         {settingInfo.description}
                       </div>
-                    </div>
-                    <Switch
-                      checked={currentValue === "true"}
-                      onCheckedChange={(checked) =>
-                        handleInputChange(setting.key, checked.toString())
-                      }
-                    />
-                  </div>
-                );
-              }
-
-              if (setting.key === "APPRISE_NOTIFY_ON_NEW_DEVICE") {
-                return (
-                  <div key={setting.key} className="flex items-center justify-between ml-6 pl-4 border-l-2 border-muted">
-                    <div className="space-y-0.5">
-                      <Label className="text-base font-medium">
-                        {settingInfo.label}
-                      </Label>
-                      <div className="text-sm text-muted-foreground">
-                        {settingInfo.description}
-                      </div>
-                    </div>
-                    <Switch
-                      checked={currentValue === "true"}
-                      onCheckedChange={(checked) =>
-                        handleInputChange(setting.key, checked.toString())
-                      }
-                      disabled={!isAppriseEnabled}
-                    />
-                  </div>
-                );
-              }
-
-              if (setting.key === "APPRISE_NOTIFY_ON_BLOCK") {
-                return (
-                  <div key={setting.key} className="flex items-center justify-between ml-6 pl-4 border-l-2 border-muted">
-                    <div className="space-y-0.5">
-                      <Label className="text-base font-medium">
-                        {settingInfo.label}
-                      </Label>
-                      <div className="text-sm text-muted-foreground">
-                        {settingInfo.description}
-                      </div>
-                    </div>
-                    <Switch
-                      checked={currentValue === "true"}
-                      onCheckedChange={(checked) =>
-                        handleInputChange(setting.key, checked.toString())
-                      }
-                      disabled={!isAppriseEnabled}
-                    />
-                  </div>
-                );
-              }
-
-              if (setting.key === "APPRISE_URLS") {
-                return (
-                  <div key={setting.key} className="space-y-3">
-                    <Label htmlFor={setting.key} className="text-base font-medium">
-                      {settingInfo.label}
-                    </Label>
-                    <div className="text-sm text-muted-foreground">
-                      {settingInfo.description}
-                    </div>
-                    <Textarea
-                      id={setting.key}
-                      placeholder="discord://webhook_id/webhook_token
+                      <Textarea
+                        id={setting.key}
+                        placeholder="discord://webhook_id/webhook_token
 telegram://bot_token/chat_id
 slack://token_a/token_b/token_c"
-                      value={currentValue as string}
-                      onChange={(e) => handleInputChange(setting.key, e.target.value)}
-                      disabled={!isAppriseEnabled}
-                      className="min-h-[120px] font-mono text-sm mb-2"
-                    />
-                  </div>
-                );
-              }
+                        value={currentValue as string}
+                        onChange={(e) =>
+                          handleInputChange(setting.key, e.target.value)
+                        }
+                        disabled={!isAppriseEnabled}
+                        className="min-h-[120px] font-mono text-sm mb-2"
+                      />
+                    </div>
+                  );
+                }
 
-              return null;
-            })}
+                return null;
+              })}
             </div>
           </Card>
 
@@ -271,15 +297,15 @@ slack://token_a/token_b/token_c"
                 )}
 
                 {connectionStatus && !hasUnsavedChanges && (
-                  <div className={`p-3 rounded-md flex items-center gap-2 ${
-                    connectionStatus.success
-                      ? "bg-green-50 text-green-700 border border-green-200 dark:bg-green-950/20 dark:text-green-300 dark:border-green-800"
-                      : "bg-red-50 text-red-700 border border-red-200 dark:bg-red-950/20 dark:text-red-300 dark:border-red-800"
-                  }`}>
+                  <div
+                    className={`p-3 rounded-md flex items-center gap-2 ${
+                      connectionStatus.success
+                        ? "bg-green-50 text-green-700 border border-green-200 dark:bg-green-950/20 dark:text-green-300 dark:border-green-800"
+                        : "bg-red-50 text-red-700 border border-red-200 dark:bg-red-950/20 dark:text-red-300 dark:border-red-800"
+                    }`}
+                  >
                     {getStatusIcon()}
-                    <span className="text-sm">
-                      {connectionStatus.message}
-                    </span>
+                    <span className="text-sm">{connectionStatus.message}</span>
                   </div>
                 )}
 
@@ -294,7 +320,9 @@ slack://token_a/token_b/token_c"
                   ) : (
                     <SendHorizontal className="h-4 w-4 mr-2" />
                   )}
-                  {testingConnection ? "Testing..." : "Send a test notification"}
+                  {testingConnection
+                    ? "Testing..."
+                    : "Send a test notification"}
                 </Button>
               </div>
             </div>
@@ -331,11 +359,11 @@ slack://token_a/token_b/token_c"
                   Send Test
                 </Button>
 
-                  {!hasUnsavedChanges && (
-                    <p className="text-xs text-muted-foreground mb-2 text-center">
-                      Enable apprise to test the connection.
-                    </p>
-                  )}
+                {!hasUnsavedChanges && (
+                  <p className="text-xs text-muted-foreground mb-2 text-center">
+                    Enable apprise to test the connection.
+                  </p>
+                )}
               </div>
             </div>
           )}

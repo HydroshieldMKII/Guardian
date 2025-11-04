@@ -55,7 +55,7 @@ export class EmailService {
   }
 
   private validateEmailAddresses(emails: string[]): string[] {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const emailRegex = /^[a-zA-Z0-9._%-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     return emails.filter((email) => !emailRegex.test(email));
   }
 
@@ -183,7 +183,9 @@ export class EmailService {
     stopCode: string,
     ipAddress?: string,
   ): Promise<void> {
-    const notificationText = StopCodeUtils.getStopCodeDescription(stopCode) || `Stream blocked for ${username} on ${deviceName}`;
+    const notificationText =
+      StopCodeUtils.getStopCodeDescription(stopCode) ||
+      `Stream blocked for ${username} on ${deviceName}`;
     const type = 'block';
 
     const notificationData: NotificationEmailData = {
@@ -195,9 +197,7 @@ export class EmailService {
       ipAddress,
     };
 
-    await this.sendEmail(
-      notificationData
-    );
+    await this.sendEmail(notificationData);
   }
 
   async sendNewDeviceEmail(
@@ -207,26 +207,21 @@ export class EmailService {
     ipAddress?: string,
   ): Promise<void> {
     try {
-
       const notificationData: NotificationEmailData = {
-        type: "new-device",
+        type: 'new-device',
         text: notificationText,
         username,
         deviceName,
         ipAddress,
       };
 
-      await this.sendEmail(
-        notificationData
-      );
+      await this.sendEmail(notificationData);
     } catch (error) {
       this.logger.error('Error in sendNotificationEmail:', error);
     }
   }
 
-  async sendEmail(
-    data: NotificationEmailData,
-  ): Promise<void> {
+  async sendEmail(data: NotificationEmailData): Promise<void> {
     //Print all data
     this.logger.debug('Preparing to send notification email with data:', data);
 
@@ -293,7 +288,8 @@ export class EmailService {
           data.deviceName,
         );
 
-      const currentTimeInTimezone = await this.configService.getCurrentTimeInTimezone();
+      const currentTimeInTimezone =
+        await this.configService.getCurrentTimeInTimezone();
       const timestamp = this.timezoneService.formatTimestamp(
         currentTimeInTimezone,
       );
@@ -379,7 +375,7 @@ export class EmailService {
           statusLabel: 'NEW DEVICE',
           statusColor: '#4488ff',
           mainMessage: `A new device "${deviceName}" has been detected for user "${username}".`,
-        };  
+        };
       case 'info':
       default:
         return {

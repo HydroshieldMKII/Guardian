@@ -63,7 +63,7 @@ export function SystemInfo({ onSettingsRefresh, settings }: SystemInfoProps) {
 
   // Check if auto-update is enabled from settings
   const autoUpdateSetting = settings.find(
-    (s) => s.key === "AUTO_CHECK_UPDATES"
+    (s) => s.key === "AUTO_CHECK_UPDATES",
   );
   const autoUpdateEnabled = autoUpdateSetting?.value === "true";
 

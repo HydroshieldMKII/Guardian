@@ -1,13 +1,4 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Patch,
-  Delete,
-  Param,
-  Body,
-  Query,
-} from '@nestjs/common';
+import { Controller, Get, Patch, Delete, Param } from '@nestjs/common';
 import { NotificationsService } from './services/notifications.service';
 
 @Controller('notifications')

@@ -49,7 +49,7 @@ export function EditProfileModal({
   const [clearSessions, setClearSessions] = useState(true);
 
   const [showPasswordError, setShowPasswordError] = useState<string | null>(
-    null
+    null,
   );
   const [showProfileError, setShowProfileError] = useState<string | null>(null);
 
@@ -76,7 +76,7 @@ export function EditProfileModal({
     if (!email) {
       return { valid: true }; // Email is optional
     }
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+    const emailRegex = /^[a-zA-Z0-9._%-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     if (!emailRegex.test(email)) {
       return {
         valid: false,
@@ -87,7 +87,7 @@ export function EditProfileModal({
   };
 
   const validatePassword = (
-    password: string
+    password: string,
   ): { valid: boolean; error?: string } => {
     const passwordRegex =
       /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};:'",./<>?\\|~])[A-Za-z\d!@#$%^&*()_+\-=\[\]{};:'",./<>?\\|~]{12,128}$/;

@@ -2,23 +2,15 @@ import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AppSettings } from '../../../entities/app-settings.entity';
-import { UserDevice } from '../../../entities/user-device.entity';
-import { UserPreference } from '../../../entities/user-preference.entity';
-import { SessionHistory } from '../../../entities/session-history.entity';
 import { Notification } from '../../../entities/notification.entity';
 import { PlexResponse, PlexErrorCode } from '../../../types/plex-errors';
-import { StopCodeUtils } from '../../../common/utils/stop-code.utils';
-import {
-  EmailService,
-  SMTPConfig,
-  NotificationEmailData,
-} from './email.service';
+import { EmailService, SMTPConfig } from './email.service';
 import { EmailTemplateService } from './email-template.service';
 import { PlexConnectionService } from './plex-connection.service';
 import { TimezoneService } from './timezone.service';
 import { DatabaseService } from './database.service';
 import { VersionService } from './version.service';
-import { AppriseService, AppriseConfig } from './apprise.service';
+import { AppriseService } from './apprise.service';
 
 export interface ConfigSettingDto {
   key: string;
@@ -247,7 +239,7 @@ export class ConfigService {
         key: 'APPRISE_NOTIFY_ON_BLOCK',
         value: 'false',
         type: 'boolean' as const,
-      }
+      },
     ];
 
     // Update version number on startup if current version is higher
@@ -267,24 +259,37 @@ export class ConfigService {
     await this.loadCache();
   }
 
+  private parseSettingValue(value: string, type: string, key?: string): any {
+    if (type === 'boolean') {
+      return value === 'true';
+    } else if (type === 'number') {
+      return parseFloat(value);
+    } else if (type === 'json') {
+      try {
+        return JSON.parse(value);
+      } catch {
+        if (key) {
+          this.logger.warn(`Failed to parse JSON for ${key}: ${value}`);
+        }
+        return value;
+      }
+    }
+    return value;
+  }
+
+  private validateEmailFormat(email: string): boolean {
+    const emailRegex = /^[a-zA-Z0-9._%-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    return emailRegex.test(email);
+  }
+
   private async loadCache() {
     const settings = await this.settingsRepository.find();
     for (const setting of settings) {
-      let value: any = setting.value;
-
-      // Parse value based on type
-      if (setting.type === 'boolean') {
-        value = value === 'true';
-      } else if (setting.type === 'number') {
-        value = parseFloat(value);
-      } else if (setting.type === 'json') {
-        try {
-          value = JSON.parse(value);
-        } catch (e) {
-          this.logger.warn(`Failed to parse JSON for ${setting.key}: ${value}`);
-        }
-      }
-
+      const value = this.parseSettingValue(
+        setting.value,
+        setting.type,
+        setting.key,
+      );
       this.cache.set(setting.key, value);
     }
   }
@@ -356,19 +361,7 @@ export class ConfigService {
     const setting = await this.settingsRepository.findOne({ where: { key } });
     if (!setting) return null;
 
-    let value: any = setting.value;
-    if (setting.type === 'boolean') {
-      value = value === 'true';
-    } else if (setting.type === 'number') {
-      value = parseFloat(value);
-    } else if (setting.type === 'json') {
-      try {
-        value = JSON.parse(value);
-      } catch (e) {
-        this.logger.warn(`Failed to parse JSON for ${key}: ${value}`);
-      }
-    }
-
+    const value = this.parseSettingValue(setting.value, setting.type, key);
     this.cache.set(key, value);
     return value;
   }
@@ -404,15 +397,12 @@ export class ConfigService {
       }
     }
 
-    // Validate SMTP_FROM_EMAIL setting
     if (key === 'SMTP_FROM_EMAIL') {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (value && !emailRegex.test(String(value))) {
+      if (value && !this.validateEmailFormat(String(value))) {
         throw new Error('SMTP from email must be a valid email address');
       }
     }
 
-    // Validate SMTP_TO_EMAILS setting
     if (key === 'SMTP_TO_EMAILS') {
       if (value) {
         const emails = String(value)
@@ -420,9 +410,8 @@ export class ConfigService {
           .map((email) => email.trim())
           .filter((email) => email.length > 0);
 
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         for (const email of emails) {
-          if (!emailRegex.test(email)) {
+          if (!this.validateEmailFormat(email)) {
             throw new Error(`Invalid email address: ${email}`);
           }
         }
@@ -611,6 +600,13 @@ export class ConfigService {
         message: `Unexpected error: ${error.message}`,
       };
     }
+  }
+
+  async testAppriseConnection(): Promise<{
+    success: boolean;
+    message: string;
+  }> {
+    return this.appriseService.testAppriseConnection();
   }
 
   async getPlexConfigurationStatus(): Promise<{

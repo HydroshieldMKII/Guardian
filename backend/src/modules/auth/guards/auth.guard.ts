@@ -5,6 +5,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import { Request } from 'express';
 import { AuthService } from '../auth.service';
 import { PUBLIC_KEY } from '../decorators/public.decorator';
 
@@ -16,7 +17,7 @@ export class AuthGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const req = context.switchToHttp().getRequest();
+    const req = context.switchToHttp().getRequest<Request>();
 
     // (CORS preflight)
     if (req.method === 'OPTIONS') {
@@ -52,10 +53,11 @@ export class AuthGuard implements CanActivate {
   /**
    * Extract token from cookies
    */
-  private extractToken(req: any): string | null {
+  private extractToken(req: Request): string | null {
     // Try cookie
-    if (req.cookies && req.cookies.session_token) {
-      return req.cookies.session_token;
+    const cookies = req.cookies as Record<string, string> | undefined;
+    if (cookies?.session_token) {
+      return cookies.session_token;
     }
 
     return null;

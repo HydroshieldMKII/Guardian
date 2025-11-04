@@ -96,7 +96,10 @@ export function SMTPSettings({
         });
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Failed to test SMTP connection";
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Failed to test SMTP connection";
       setConnectionStatus({ success: false, message: errorMessage });
     } finally {
       setTestingConnection(false);
@@ -105,17 +108,22 @@ export function SMTPSettings({
 
   const renderEmailNotificationGroup = () => {
     const smtpEnabledSetting = smtpSettings.find(
-      (s) => s.key === "SMTP_ENABLED"
+      (s) => s.key === "SMTP_ENABLED",
     );
     const notifyOnBlockSetting = smtpSettings.find(
-      (s) => s.key === "SMTP_NOTIFY_ON_BLOCK"
+      (s) => s.key === "SMTP_NOTIFY_ON_BLOCK",
     );
 
     const notifyOnNewDeviceSetting = smtpSettings.find(
-      (s) => s.key === "SMTP_NOTIFY_ON_NEW_DEVICE"
+      (s) => s.key === "SMTP_NOTIFY_ON_NEW_DEVICE",
     );
 
-    if (!smtpEnabledSetting || !notifyOnBlockSetting || !notifyOnNewDeviceSetting) return null;
+    if (
+      !smtpEnabledSetting ||
+      !notifyOnBlockSetting ||
+      !notifyOnNewDeviceSetting
+    )
+      return null;
 
     const isSmtpEnabled =
       formData["SMTP_ENABLED"] === true || formData["SMTP_ENABLED"] === "true";
@@ -158,7 +166,7 @@ export function SMTPSettings({
                 />
               </div>
             </div>
-            
+
             <div className="pl-4 border-l-2 border-muted space-y-3">
               {/* Notify on block */}
               <div className="space-y-2">
@@ -279,7 +287,7 @@ export function SMTPSettings({
             (setting) =>
               setting.key !== "SMTP_ENABLED" &&
               setting.key !== "SMTP_NOTIFY_ON_NEW_DEVICE" &&
-              setting.key !== "SMTP_NOTIFY_ON_BLOCK"
+              setting.key !== "SMTP_NOTIFY_ON_BLOCK",
           )
           .map((setting) => (
             <Card key={setting.key} className="p-4 my-4">

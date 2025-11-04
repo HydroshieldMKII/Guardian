@@ -1,4 +1,10 @@
-import { IsString, IsEmail, IsOptional, MinLength, ValidateIf } from 'class-validator';
+import {
+  IsString,
+  IsEmail,
+  IsOptional,
+  MinLength,
+  ValidateIf,
+} from 'class-validator';
 
 export class UpdateProfileDto {
   @IsOptional()
@@ -6,7 +12,10 @@ export class UpdateProfileDto {
   @MinLength(3)
   username?: string;
 
-  @ValidateIf((o) => o.email !== undefined && o.email !== null && o.email !== '')
+  @ValidateIf(
+    (o: UpdateProfileDto) =>
+      o.email !== undefined && o.email !== null && o.email !== '',
+  )
   @IsEmail()
   email?: string;
 

@@ -57,7 +57,7 @@ export class SchedulerService implements OnModuleInit {
       // Remove existing job if it exists (e.g when interval changes)
       try {
         this.schedulerRegistry.deleteCronJob('sessionUpdates');
-      } catch (error) {
+      } catch {
         // Job doesn't exist yet, which is fine
       }
 
@@ -136,7 +136,7 @@ export class SchedulerService implements OnModuleInit {
 
       // getSetting returns actual boolean for boolean type settings, not string
       const isEnabled = cleanupEnabled === true;
-      let intervalDays = parseInt(cleanupIntervalDays as string, 10);
+      const intervalDays = parseInt(cleanupIntervalDays as string, 10);
 
       if (!isEnabled) {
         this.logger.debug(`Skipping device cleanup - feature is disabled`);

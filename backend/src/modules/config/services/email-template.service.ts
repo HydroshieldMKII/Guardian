@@ -7,24 +7,21 @@ export class EmailTemplateService {
   private getLogoBase64(): string {
     try {
       const possiblePaths = [
-            // If repo root is CWD
-            join(process.cwd(), 'backend', 'src', 'assets', 'logo_dark.svg'),
-            join(process.cwd(), 'src', 'assets', 'logo_dark.svg'),
-            // When running from dist
-            join(__dirname, '..', 'assets', 'logo_dark.svg'),
-            join(__dirname, '..', '..', 'assets', 'logo_dark.svg'),
-            join(__dirname, '..', '..', '..', 'assets', 'logo_dark.svg'),
-  
-          ];
-
-          
+        // If repo root is CWD
+        join(process.cwd(), 'backend', 'src', 'assets', 'logo_dark.svg'),
+        join(process.cwd(), 'src', 'assets', 'logo_dark.svg'),
+        // When running from dist
+        join(__dirname, '..', 'assets', 'logo_dark.svg'),
+        join(__dirname, '..', '..', 'assets', 'logo_dark.svg'),
+        join(__dirname, '..', '..', '..', 'assets', 'logo_dark.svg'),
+      ];
 
       for (const logoPath of possiblePaths) {
-        try {  
+        try {
           const logoContent = readFileSync(logoPath, 'utf8');
           const base64Logo = Buffer.from(logoContent).toString('base64');
           return `data:image/svg+xml;base64,${base64Logo}`;
-        } catch (error) {
+        } catch {
           // Try next path
           continue;
         }

@@ -68,7 +68,7 @@ export default function SetupPage() {
     }
 
     // Email is optional, but if provided must be valid
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+    const emailRegex = /^[a-zA-Z0-9._%-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     if (formData.email && !emailRegex.test(formData.email)) {
       newErrors.email = "Please enter a valid email address";
     }
@@ -118,7 +118,7 @@ export default function SetupPage() {
         formData.username,
         formData.email,
         formData.password,
-        formData.confirmPassword
+        formData.confirmPassword,
       );
 
       toast({

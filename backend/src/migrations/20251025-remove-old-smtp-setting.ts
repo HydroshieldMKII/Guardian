@@ -5,12 +5,10 @@ export class RemoveOldSmtpSetting1729870958000 implements MigrationInterface {
     const tableExists = await queryRunner.hasTable('app_settings');
     if (tableExists) {
       await queryRunner.query(
-      `DELETE FROM app_settings WHERE key = 'SMTP_NOTIFY_ON_NOTIFICATIONS'`
+        `DELETE FROM app_settings WHERE key = 'SMTP_NOTIFY_ON_NOTIFICATIONS'`,
       );
     }
   }
 
-  public async down(queryRunner: QueryRunner): Promise<void> {
-
-  }
+  public async down(): Promise<void> {}
 }
