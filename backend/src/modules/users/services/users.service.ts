@@ -82,7 +82,7 @@ export class UsersService {
   async updateUserFromSessionData(
     userId: string,
     username?: string,
-    avatarUrl?: string,
+    _avatarUrl?: string,
   ): Promise<void> {
     if (!userId) return;
 

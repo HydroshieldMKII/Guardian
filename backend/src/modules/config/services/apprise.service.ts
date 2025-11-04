@@ -125,13 +125,10 @@ export class AppriseService {
   async getAppriseConfig(): Promise<
     AppriseConfig | { success: boolean; message: string }
   > {
-    const [appriseEnabled, appriseUrls, notifyOnNewDevices] = await Promise.all(
-      [
-        this.configService.getSetting('APPRISE_ENABLED'),
-        this.configService.getSetting('APPRISE_URLS'),
-        this.configService.getSetting('APPRISE_NOTIFY_ON_NEW_DEVICE'),
-      ],
-    );
+    const [appriseEnabled, appriseUrls] = await Promise.all([
+      this.configService.getSetting('APPRISE_ENABLED'),
+      this.configService.getSetting('APPRISE_URLS'),
+    ]);
 
     // Handle case where Apprise is disabled
     if (appriseEnabled !== true) {

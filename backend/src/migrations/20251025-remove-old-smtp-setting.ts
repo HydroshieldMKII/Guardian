@@ -10,5 +10,5 @@ export class RemoveOldSmtpSetting1729870958000 implements MigrationInterface {
     }
   }
 
-  public async down(queryRunner: QueryRunner): Promise<void> {}
+  public async down(): Promise<void> {}
 }

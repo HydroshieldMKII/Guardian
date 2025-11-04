@@ -13,7 +13,8 @@ export class UpdateProfileDto {
   username?: string;
 
   @ValidateIf(
-    (o) => o.email !== undefined && o.email !== null && o.email !== '',
+    (o: UpdateProfileDto) =>
+      o.email !== undefined && o.email !== null && o.email !== '',
   )
   @IsEmail()
   email?: string;

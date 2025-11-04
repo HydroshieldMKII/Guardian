@@ -116,7 +116,7 @@ export class PlexClient {
                 json: () => jsonData,
                 text: () => data,
               });
-            } catch (parseError) {
+            } catch {
               resolve({
                 ok: true,
                 status: res.statusCode,
@@ -159,7 +159,7 @@ export class PlexClient {
       await this.getConfig();
     const baseUrl = `${useSSL ? 'https' : 'http'}://${ip}:${port}`;
 
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       const cleanEndpoint = endpoint.startsWith('/')
         ? endpoint.slice(1)
         : endpoint;
@@ -276,7 +276,7 @@ export class PlexClient {
                 json: () => jsonData,
                 text: () => data,
               });
-            } catch (parseError) {
+            } catch {
               resolve({
                 ok: true,
                 status: res.statusCode,
@@ -288,7 +288,7 @@ export class PlexClient {
             const error = new Error(
               `HTTP ${res.statusCode}: ${res.statusMessage} - ${data}`,
             );
-            this.logger.error(`External request failed for ${url}:`, error);
+            (error as any).statusCode = res.statusCode;
             reject(error);
           }
         });

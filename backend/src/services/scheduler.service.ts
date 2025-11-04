@@ -57,7 +57,7 @@ export class SchedulerService implements OnModuleInit {
       // Remove existing job if it exists (e.g when interval changes)
       try {
         this.schedulerRegistry.deleteCronJob('sessionUpdates');
-      } catch (error) {
+      } catch {
         // Job doesn't exist yet, which is fine
       }
 
