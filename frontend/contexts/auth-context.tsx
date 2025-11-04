@@ -41,6 +41,7 @@ export interface AuthContextType {
     currentPassword: string;
     newPassword: string;
     confirmPassword: string;
+    clearSessions?: boolean;
   }) => Promise<void>;
 }
 
@@ -221,6 +222,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     currentPassword: string;
     newPassword: string;
     confirmPassword: string;
+    clearSessions?: boolean;
   }) => {
     try {
       await apiClient.updatePassword(data);

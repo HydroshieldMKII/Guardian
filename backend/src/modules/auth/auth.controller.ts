@@ -161,7 +161,7 @@ export class AuthController {
       throw new BadRequestException('Not authenticated');
     }
 
-    await this.authService.updatePassword(user.id, dto);
+    await this.authService.updatePassword(user.id, dto, user.sessionId);
     return { success: true };
   }
 

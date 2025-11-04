@@ -23,7 +23,10 @@ interface EditProfileModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
-export function EditProfileModal({ open, onOpenChange }: EditProfileModalProps) {
+export function EditProfileModal({
+  open,
+  onOpenChange,
+}: EditProfileModalProps) {
   const { user, updateProfile, updatePassword } = useAuth();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -43,7 +46,11 @@ export function EditProfileModal({ open, onOpenChange }: EditProfileModalProps) 
     confirmPassword: "",
   });
 
-  const [showPasswordError, setShowPasswordError] = useState<string | null>(null);
+  const [clearSessions, setClearSessions] = useState(true);
+
+  const [showPasswordError, setShowPasswordError] = useState<string | null>(
+    null
+  );
   const [showProfileError, setShowProfileError] = useState<string | null>(null);
 
   // Reset form when modal closes
@@ -59,6 +66,7 @@ export function EditProfileModal({ open, onOpenChange }: EditProfileModalProps) 
         newPassword: "",
         confirmPassword: "",
       });
+      setClearSessions(true);
       setShowPasswordError(null);
       setShowProfileError(null);
     }
@@ -78,12 +86,16 @@ export function EditProfileModal({ open, onOpenChange }: EditProfileModalProps) 
     return { valid: true };
   };
 
-  const validatePassword = (password: string): { valid: boolean; error?: string } => {
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};:'",./<>?\\|~])[A-Za-z\d!@#$%^&*()_+\-=\[\]{};:'",./<>?\\|~]{12,128}$/;
+  const validatePassword = (
+    password: string
+  ): { valid: boolean; error?: string } => {
+    const passwordRegex =
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};:'",./<>?\\|~])[A-Za-z\d!@#$%^&*()_+\-=\[\]{};:'",./<>?\\|~]{12,128}$/;
     if (!passwordRegex.test(password)) {
       return {
         valid: false,
-        error: "Password must contain uppercase, lowercase, number, and special character. Minimum length is 12 characters.",
+        error:
+          "Password must contain uppercase, lowercase, number, and special character. Minimum length is 12 characters.",
       };
     }
     return { valid: true };
@@ -129,7 +141,8 @@ export function EditProfileModal({ open, onOpenChange }: EditProfileModalProps) 
     } catch (error) {
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to update profile",
+        description:
+          error instanceof Error ? error.message : "Failed to update profile",
         variant: "destructive",
       });
     } finally {
@@ -172,12 +185,16 @@ export function EditProfileModal({ open, onOpenChange }: EditProfileModalProps) 
         return;
       }
 
-      await updatePassword(passwordData);
+      await updatePassword({
+        ...passwordData,
+        clearSessions,
+      });
       setPasswordData({
         currentPassword: "",
         newPassword: "",
         confirmPassword: "",
       });
+      setClearSessions(true); // Reset to default
       toast({
         title: "Success",
         description: "Password updated successfully",
@@ -187,7 +204,8 @@ export function EditProfileModal({ open, onOpenChange }: EditProfileModalProps) 
     } catch (error) {
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to update password",
+        description:
+          error instanceof Error ? error.message : "Failed to update password",
         variant: "destructive",
       });
     } finally {
@@ -256,7 +274,10 @@ export function EditProfileModal({ open, onOpenChange }: EditProfileModalProps) 
               {/* Avatar Preview and Upload */}
               <Card className="p-4 flex flex-col items-center gap-4">
                 <Avatar className="h-20 w-20">
-                  <AvatarImage src={profileData.avatarUrl} alt={user?.username} />
+                  <AvatarImage
+                    src={profileData.avatarUrl}
+                    alt={user?.username}
+                  />
                   <AvatarFallback className="text-lg font-semibold">
                     {getAvatarInitials()}
                   </AvatarFallback>
@@ -315,7 +336,10 @@ export function EditProfileModal({ open, onOpenChange }: EditProfileModalProps) 
               {/* Email */}
               <div className="space-y-2">
                 <Label htmlFor="email">
-                  Email <span className="text-xs font-normal text-muted-foreground">(optional)</span>
+                  Email{" "}
+                  <span className="text-xs font-normal text-muted-foreground">
+                    (optional)
+                  </span>
                 </Label>
                 <Input
                   id="email"
@@ -326,7 +350,11 @@ export function EditProfileModal({ open, onOpenChange }: EditProfileModalProps) 
                   }
                   placeholder="Leave empty to remove email"
                   disabled={isLoading}
-                  className={showProfileError ? 'border-red-500 focus-visible:ring-red-500' : ''}
+                  className={
+                    showProfileError
+                      ? "border-red-500 focus-visible:ring-red-500"
+                      : ""
+                  }
                 />
               </div>
               {showProfileError && (
@@ -345,8 +373,13 @@ export function EditProfileModal({ open, onOpenChange }: EditProfileModalProps) 
                 >
                   Cancel
                 </Button>
-                <Button type="submit" disabled={isLoading || !hasProfileChanges}>
-                  {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                <Button
+                  type="submit"
+                  disabled={isLoading || !hasProfileChanges}
+                >
+                  {isLoading && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
                   Save Changes
                 </Button>
               </DialogFooter>
@@ -391,7 +424,8 @@ export function EditProfileModal({ open, onOpenChange }: EditProfileModalProps) 
                   disabled={isLoading}
                 />
                 <p className="text-xs text-muted-foreground">
-                  Must contain uppercase, lowercase, number, and special character. Min 12 characters.
+                  Must contain uppercase, lowercase, number, and special
+                  character. Min 12 characters.
                 </p>
               </div>
 
@@ -413,6 +447,24 @@ export function EditProfileModal({ open, onOpenChange }: EditProfileModalProps) 
                 />
               </div>
 
+              {/* Clear Sessions Checkbox */}
+              <div className="flex items-center space-x-2">
+                <input
+                  id="clearSessions"
+                  type="checkbox"
+                  checked={clearSessions}
+                  onChange={(e) => setClearSessions(e.target.checked)}
+                  disabled={isLoading}
+                  className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                />
+                <Label
+                  htmlFor="clearSessions"
+                  className="text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  Clear all other sessions
+                </Label>
+              </div>
+
               {/* Error Message */}
               {showPasswordError && (
                 <div className="flex items-center gap-1 text-xs text-red-500">
@@ -431,7 +483,9 @@ export function EditProfileModal({ open, onOpenChange }: EditProfileModalProps) 
                   Cancel
                 </Button>
                 <Button type="submit" disabled={isLoading}>
-                  {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {isLoading && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
                   Update Password
                 </Button>
               </DialogFooter>
