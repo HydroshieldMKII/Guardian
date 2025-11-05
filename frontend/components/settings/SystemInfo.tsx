@@ -115,15 +115,13 @@ export function SystemInfo({ onSettingsRefresh, settings }: SystemInfoProps) {
       setCheckingUpdates(true);
       setUpdateStatus(null);
 
-      console.log("Checking for updates, versionInfo:", versionInfo);
-
       if (!versionInfo?.version) {
-        throw new Error("Version information not available yet");
+        throw new Error(
+          "Current version information not available yet. Try again in a moment."
+        );
       }
 
       const result = await checkForUpdatesManually();
-
-      console.log("Update check result:", result);
 
       if (result) {
         const updateInfo = {
