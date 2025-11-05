@@ -17,7 +17,6 @@ import {
   Download,
   Loader2,
   RefreshCw,
-  Calendar,
   GitBranch,
   Database,
   Server,
@@ -48,24 +47,19 @@ interface HealthResponse {
 
 export function SystemInfo({ onSettingsRefresh, settings }: SystemInfoProps) {
   const [checkingUpdates, setCheckingUpdates] = useState(false);
-  const [lastUpdateCheck, setLastUpdateCheck] = useState<Date | null>(null);
   const [updateStatus, setUpdateStatus] = useState<{
     available: boolean;
     latestVersion?: string;
+    currentVersion?: string;
     message: string;
+    updateUrl?: string;
   } | null>(null);
   const [uptimeInfo, setUptimeInfo] = useState<UptimeInfo | null>(null);
   const [currentUptime, setCurrentUptime] = useState<number>(0);
   const [healthStatus, setHealthStatus] = useState<string>("checking");
 
   const { toast } = useToast();
-  const { versionInfo } = useVersion();
-
-  // Check if auto-update is enabled from settings
-  const autoUpdateSetting = settings.find(
-    (s) => s.key === "AUTO_CHECK_UPDATES",
-  );
-  const autoUpdateEnabled = autoUpdateSetting?.value === "true";
+  const { versionInfo, checkForUpdatesManually } = useVersion();
 
   // Fetch uptime information
   const fetchUptimeInfo = async () => {
@@ -86,11 +80,6 @@ export function SystemInfo({ onSettingsRefresh, settings }: SystemInfoProps) {
   useEffect(() => {
     fetchUptimeInfo();
 
-    // If auto-update is enabled, perform an automatic check
-    if (autoUpdateEnabled) {
-      checkForUpdates(true); // Pass true to indicate this is an automatic check
-    }
-
     const interval = setInterval(() => {
       setCurrentUptime((prev) => prev + 1);
     }, 1000);
@@ -102,7 +91,7 @@ export function SystemInfo({ onSettingsRefresh, settings }: SystemInfoProps) {
       clearInterval(interval);
       clearInterval(uptimeRefreshInterval);
     };
-  }, [autoUpdateEnabled]); // Add autoUpdateEnabled as dependency
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const formatUptime = (seconds: number): string => {
     const days = Math.floor(seconds / (24 * 3600));
@@ -121,31 +110,33 @@ export function SystemInfo({ onSettingsRefresh, settings }: SystemInfoProps) {
     }
   };
 
-  const checkForUpdates = async (isAutomatic: boolean = false) => {
+  const checkForUpdates = async () => {
     try {
       setCheckingUpdates(true);
       setUpdateStatus(null);
 
-      await apiClient.getHealth();
+      const result = await checkForUpdatesManually();
 
-      // For now, simulate no updates available
-      // In a real implementation, you'd check GitHub releases API
-      const updateInfo = {
-        available: false,
-        latestVersion: versionInfo?.version || "1.2.3",
-        message: "You are running the latest version of Guardian.",
-      };
+      if (result) {
+        const updateInfo = {
+          available: result.hasUpdate,
+          latestVersion: result.latestVersion,
+          currentVersion: result.currentVersion,
+          message: result.hasUpdate
+            ? `A new version (${result.latestVersion}) is available!`
+            : "You are running the latest version of Guardian.",
+          updateUrl: result.updateUrl,
+        };
 
-      setUpdateStatus(updateInfo);
-      setLastUpdateCheck(new Date());
+        setUpdateStatus(updateInfo);
 
-      // Only show toast for manual checks
-      if (!isAutomatic) {
         toast({
           title: "Update Check Complete",
           description: updateInfo.message,
           variant: updateInfo.available ? "default" : "success",
         });
+      } else {
+        throw new Error("Failed to check for updates");
       }
     } catch (error) {
       console.error("Update check error:", error);
@@ -154,14 +145,11 @@ export function SystemInfo({ onSettingsRefresh, settings }: SystemInfoProps) {
         message: "Failed to check for updates. Please try again later.",
       });
 
-      // Only show error toast for manual checks
-      if (!isAutomatic) {
-        toast({
-          title: "Update Check Failed",
-          description: "Unable to check for updates. Please try again later.",
-          variant: "destructive",
-        });
-      }
+      toast({
+        title: "Update Check Failed",
+        description: "Unable to check for updates. Please try again later.",
+        variant: "destructive",
+      });
     } finally {
       setCheckingUpdates(false);
     }
@@ -289,23 +277,6 @@ export function SystemInfo({ onSettingsRefresh, settings }: SystemInfoProps) {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Last Update Check */}
-          {lastUpdateCheck && (
-            <Card className="p-4 my-4">
-              <div>
-                <p className="text-sm font-medium">
-                  {autoUpdateEnabled
-                    ? "Last Automatic Update Check"
-                    : "Last Update Check"}
-                </p>
-                <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-                  <Calendar className="h-3 w-3" />
-                  {lastUpdateCheck.toLocaleString()}
-                </p>
-              </div>
-            </Card>
-          )}
-
           {/* Update Status */}
           {updateStatus && (
             <Card
@@ -342,7 +313,7 @@ export function SystemInfo({ onSettingsRefresh, settings }: SystemInfoProps) {
           {/* Manual Update Check Button */}
           <div className="pt-2 mb-4">
             <Button
-              onClick={() => checkForUpdates(false)}
+              onClick={() => checkForUpdates()}
               disabled={checkingUpdates}
               className="w-full"
               variant="outline"
@@ -360,20 +331,6 @@ export function SystemInfo({ onSettingsRefresh, settings }: SystemInfoProps) {
               )}
             </Button>
           </div>
-
-          {/* Auto-update Setting Info */}
-          {!autoUpdateEnabled && (
-            <div className="pt-4 border-t mb-4">
-              <div className="flex items-start gap-2">
-                <Info className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-                <p className="text-xs text-muted-foreground">
-                  <strong>Note:</strong> Automatic update checking can be
-                  configured in Guardian settings. This manual check allows you
-                  to immediately verify if newer versions are available.
-                </p>
-              </div>
-            </div>
-          )}
         </CardContent>
       </Card>
     </div>
