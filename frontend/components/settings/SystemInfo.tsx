@@ -115,7 +115,15 @@ export function SystemInfo({ onSettingsRefresh, settings }: SystemInfoProps) {
       setCheckingUpdates(true);
       setUpdateStatus(null);
 
+      console.log("Checking for updates, versionInfo:", versionInfo);
+
+      if (!versionInfo?.version) {
+        throw new Error("Version information not available yet");
+      }
+
       const result = await checkForUpdatesManually();
+
+      console.log("Update check result:", result);
 
       if (result) {
         const updateInfo = {
@@ -314,7 +322,7 @@ export function SystemInfo({ onSettingsRefresh, settings }: SystemInfoProps) {
           <div className="pt-2 mb-4">
             <Button
               onClick={() => checkForUpdates()}
-              disabled={checkingUpdates}
+              disabled={checkingUpdates || !versionInfo?.version}
               className="w-full"
               variant="outline"
             >
