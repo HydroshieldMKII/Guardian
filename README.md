@@ -365,6 +365,8 @@ If you've lost access to your admin account, you can reset credentials from the 
 
 #### Docker
 
+All commands are run next to the `docker-compose.yml` file.
+
 **List all admin users:**
 
 ```bash
@@ -377,7 +379,7 @@ docker compose exec backend node src/scripts/list-admins.js
 docker compose exec backend node src/scripts/update-admin.js "USERNAME_HERE" "NEW_PASSWORD_HERE"
 ```
 
-Replace `USERNAME_HERE` with your admin username and `NEW_PASSWORD_HERE` with your desired password. The password will be automatically encrypted using bcrypt.
+Replace `USERNAME_HERE` with your admin username and `NEW_PASSWORD_HERE` with your desired password.
 
 #### Proxmox (LXC)
 
