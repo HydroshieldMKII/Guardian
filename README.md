@@ -23,7 +23,7 @@
 - [Application Settings](#application-settings)
 - [Updating](#updating)
 - [Troubleshooting](#troubleshooting)
-  <!-- - [Password Recovery](#password-recovery) -->
+  - [Password Recovery](#password-recovery)
   - [Common Issues](#common-issues)
   - [Viewing Logs](#viewing-logs)
   - [Getting Help](#getting-help)
@@ -359,7 +359,7 @@ update
 
 ## Troubleshooting
 
-<!-- ### Password Recovery
+### Password Recovery
 
 If you've lost access to your admin account, you can reset credentials from the command line.
 
@@ -393,7 +393,7 @@ node /opt/guardian/backend/src/scripts/list-admins.js
 
 ```bash
 node /opt/guardian/backend/src/scripts/update-admin.js "USERNAME_HERE" "NEW_PASSWORD_HERE"
-``` -->
+```
 
 ### Common Issues
 
