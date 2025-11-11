@@ -294,7 +294,7 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
                       Default Device Policy
                     </h4>
                     <p className="text-xs text-muted-foreground">
-                      How new devices should be handled
+                      How pending devices should be handled
                     </p>
                   </div>
                 </div>
