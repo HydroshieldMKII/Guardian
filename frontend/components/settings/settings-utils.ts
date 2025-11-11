@@ -101,7 +101,7 @@ export const getSettingInfo = (setting: AppSetting): SettingInfo => {
     },
     AUTO_MARK_NOTIFICATION_READ: {
       label: "Auto-mark notifications as read",
-      description: "Automatically mark notifications as read when clicked (in app)",
+      description: "Automatically mark in-app notifications as read when clicked",
     },
     IN_APP_NOTIFY_ON_NEW_DEVICE: {
       label: "In-app notifications for new devices",

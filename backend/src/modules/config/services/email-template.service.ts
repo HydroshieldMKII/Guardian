@@ -300,7 +300,7 @@ export class EmailTemplateService {
   }
 
   generateNotificationEmail(
-    notificationType: 'block' | 'info' | 'warning' | 'error' | 'new-device',
+    notificationType: 'block' | 'info' | 'warning' | 'error' | 'new-device' | 'location-change',
     statusColor: string,
     statusLabel: string,
     mainMessage: string,
@@ -309,6 +309,7 @@ export class EmailTemplateService {
     stopCode?: string,
     timestamp?: string,
     ipAddress?: string,
+    oldIpAddress?: string,
   ): string {
     let detailsContent = `
       <div class="detail-row">
@@ -326,7 +327,19 @@ export class EmailTemplateService {
       `;
     }
 
-    if (ipAddress) {
+    // Special handling for location change - show both old and new IP
+    if (oldIpAddress && ipAddress) {
+      detailsContent += `
+        <div class="detail-row">
+          <span class="detail-label">Old IP Address</span>
+          <span class="detail-value"><a href="https://ipinfo.io/${oldIpAddress}" target="_blank" rel="noopener noreferrer" style="color: #4488ff; text-decoration: underline;">${oldIpAddress}</a></span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">New IP Address</span>
+          <span class="detail-value"><a href="https://ipinfo.io/${ipAddress}" target="_blank" rel="noopener noreferrer" style="color: #4488ff; text-decoration: underline;">${ipAddress}</a></span>
+        </div>
+      `;
+    } else if (ipAddress) {
       detailsContent += `
         <div class="detail-row">
           <span class="detail-label">IP Address</span>

@@ -17,12 +17,13 @@ export interface SMTPConfig {
 }
 
 export interface NotificationEmailData {
-  type: 'block' | 'info' | 'warning' | 'error' | 'new-device';
+  type: 'block' | 'info' | 'warning' | 'error' | 'new-device' | 'location-change';
   text: string;
   username: string;
   deviceName?: string;
   stopCode?: string;
   ipAddress?: string;
+  oldIpAddress?: string;
 }
 
 @Injectable()
@@ -221,6 +222,30 @@ export class EmailService {
     }
   }
 
+  async sendLocationChangeEmail(
+    username: string,
+    deviceName: string,
+    oldIpAddress: string,
+    newIpAddress: string,
+  ): Promise<void> {
+    try {
+      const notificationText = `Device location changed for ${username} on ${deviceName} - ${oldIpAddress} → ${newIpAddress}`;
+
+      const notificationData: NotificationEmailData = {
+        type: 'location-change',
+        text: notificationText,
+        username,
+        deviceName,
+        ipAddress: newIpAddress,
+        oldIpAddress,
+      };
+
+      await this.sendEmail(notificationData);
+    } catch (error) {
+      this.logger.error('Error in sendLocationChangeEmail:', error);
+    }
+  }
+
   async sendEmail(data: NotificationEmailData): Promise<void> {
     //Print all data
     this.logger.debug('Preparing to send notification email with data:', data);
@@ -304,6 +329,7 @@ export class EmailService {
         data.stopCode,
         timestamp,
         data.ipAddress,
+        data.oldIpAddress,
       );
 
       const mailOptions = {
@@ -334,7 +360,7 @@ export class EmailService {
   }
 
   private getNotificationEmailContent(
-    notificationType: 'block' | 'info' | 'warning' | 'error' | 'new-device',
+    notificationType: 'block' | 'info' | 'warning' | 'error' | 'new-device' | 'location-change',
     stopCode?: string,
     username?: string,
     deviceName?: string,
@@ -375,6 +401,13 @@ export class EmailService {
           statusLabel: 'NEW DEVICE',
           statusColor: '#4488ff',
           mainMessage: `A new device "${deviceName}" has been detected for user "${username}".`,
+        };
+      case 'location-change':
+        return {
+          subject: `Guardian Alert: Device Location Changed${deviceName ? ` - ${deviceName}` : ''}`,
+          statusLabel: 'LOCATION CHANGED',
+          statusColor: '#ff9900',
+          mainMessage: `The device "${deviceName}" used by "${username}" has changed its IP address location.`,
         };
       case 'info':
       default:

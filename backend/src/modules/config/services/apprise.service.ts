@@ -122,6 +122,39 @@ export class AppriseService {
     return this.sendNotification(notificationData);
   }
 
+  async sendLocationChangeNotification(
+    username: string,
+    deviceName: string,
+    oldIpAddress: string,
+    newIpAddress: string,
+  ): Promise<{ success: boolean; message: string }> {
+    //Check if notifications for location changes is enabled
+    const notifyOnLocationChange = await this.configService.getSetting(
+      'APPRISE_NOTIFY_ON_LOCATION_CHANGE',
+    );
+    if (notifyOnLocationChange !== true) {
+      this.logger.log('Apprise notification for location changes is disabled');
+      return {
+        success: false,
+        message: 'Apprise notification for location changes is disabled',
+      };
+    }
+
+    const notificationData: AppriseNotificationData = {
+      title: 'Device Location Changed - Guardian',
+      body:
+        `A device location has changed:\n\n` +
+        `User: ${username}\n` +
+        `Device: ${deviceName}\n` +
+        `Old IP: ${oldIpAddress}\n` +
+        `New IP: ${newIpAddress}\n\n` +
+        `This could indicate the device is being used from a different location.`,
+      type: 'info',
+    };
+
+    return this.sendNotification(notificationData);
+  }
+
   async getAppriseConfig(): Promise<
     AppriseConfig | { success: boolean; message: string }
   > {
