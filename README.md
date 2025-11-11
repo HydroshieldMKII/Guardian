@@ -93,13 +93,12 @@
 **Quick Start**
 
 ```bash
-# Clone the repository
-git clone https://github.com/HydroshieldMKII/Guardian.git
-cd Guardian
+# Create a directory for Guardian
+mkdir -p guardian && cd guardian
 
-# Copy configuration files
-cp docker-compose.example.yml docker-compose.yml
-cp .env.example .env  # Optional: customize settings
+# Download configuration files
+curl -o docker-compose.yml https://raw.githubusercontent.com/HydroshieldMKII/Guardian/main/docker-compose.example.yml
+curl -o .env https://raw.githubusercontent.com/HydroshieldMKII/Guardian/main/.env.example
 
 # Start Guardian
 docker compose up -d
@@ -111,6 +110,17 @@ docker compose up -d
 - Remote: `http://YOUR-SERVER-IP:3000`
 
 ---
+
+**Build from Source**
+
+```bash
+# Clone the repository
+git clone https://github.com/HydroshieldMKII/Guardian.git
+cd Guardian
+
+# Start Guardian with build
+docker compose up -d --build
+```
 
 ### Proxmox
 
@@ -396,6 +406,8 @@ node /opt/guardian/backend/src/scripts/list-admins.js
 ```bash
 node /opt/guardian/backend/src/scripts/update-admin.js "USERNAME_HERE" "NEW_PASSWORD_HERE"
 ```
+
+Replace `USERNAME_HERE` with your admin username and `NEW_PASSWORD_HERE` with your desired password.
 
 ### Common Issues
 
