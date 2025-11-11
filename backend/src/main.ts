@@ -57,6 +57,10 @@ async function bootstrap() {
     void notificationOrchestrator.notifyNewDevice(event);
   });
 
+  deviceTrackingService.onDeviceLocationChanged((event) => {
+    void notificationOrchestrator.notifyLocationChange(event);
+  });
+
   sessionTerminationService.onStreamBlocked((event) => {
     void notificationOrchestrator.notifyStreamBlocked(event);
   });

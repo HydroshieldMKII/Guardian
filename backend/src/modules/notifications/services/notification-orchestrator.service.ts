@@ -23,6 +23,15 @@ export interface StreamBlockedNotificationData {
   ipAddress?: string;
 }
 
+export interface DeviceLocationChangeNotificationData {
+  userId: string;
+  username: string;
+  deviceName: string;
+  oldIpAddress: string;
+  newIpAddress: string;
+  sessionKey?: string;
+}
+
 /**
  * Notification Orchestrator Service
  *
@@ -86,6 +95,30 @@ export class NotificationOrchestratorService {
       );
     } catch (error) {
       this.logger.error('Error creating stream blocked notification', error);
+      throw error;
+    }
+  }
+
+  /** Creates notification for device location change */
+  async notifyLocationChange(
+    data: DeviceLocationChangeNotificationData,
+  ): Promise<Notification | null> {
+    try {
+      // Find session history if session key is provided
+      const sessionHistoryId = data.sessionKey
+        ? await this.findSessionHistoryId(data.sessionKey)
+        : undefined;
+
+      return await this.notificationsService.createLocationChangeNotification(
+        data.userId,
+        data.username,
+        data.deviceName,
+        data.oldIpAddress,
+        data.newIpAddress,
+        sessionHistoryId,
+      );
+    } catch (error) {
+      this.logger.error('Error creating location change notification', error);
       throw error;
     }
   }

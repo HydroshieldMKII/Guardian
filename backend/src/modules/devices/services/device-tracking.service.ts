@@ -21,6 +21,16 @@ export interface NewDeviceDetectedEvent {
   sessionKey?: string;
 }
 
+export interface DeviceLocationChangedEvent {
+  userId: string;
+  username: string;
+  deviceName: string;
+  deviceIdentifier: string;
+  oldIpAddress: string;
+  newIpAddress: string;
+  sessionKey?: string;
+}
+
 /**
  * Device Tracking Service
  *
@@ -32,6 +42,9 @@ export class DeviceTrackingService {
   private readonly logger = new Logger(DeviceTrackingService.name);
   private newDeviceCallbacks: Array<(event: NewDeviceDetectedEvent) => void> =
     [];
+  private locationChangeCallbacks: Array<
+    (event: DeviceLocationChangedEvent) => void
+  > = [];
 
   constructor(
     @InjectRepository(UserDevice)
@@ -175,9 +188,36 @@ export class DeviceTrackingService {
     if (deviceInfo.deviceVersion) {
       existingDevice.deviceVersion = deviceInfo.deviceVersion;
     }
-    if (deviceInfo.ipAddress) {
+
+    // Detect IP address change and emit event
+    if (deviceInfo.ipAddress && existingDevice.ipAddress) {
+      if (deviceInfo.ipAddress !== existingDevice.ipAddress) {
+        this.logger.log(
+          `Device location changed for ${deviceInfo.deviceIdentifier}: ${existingDevice.ipAddress} -> ${deviceInfo.ipAddress}`,
+        );
+
+        // Emit location change event
+        this.emitLocationChangeEvent({
+          userId: deviceInfo.userId,
+          username: deviceInfo.username || existingDevice.username || 'Unknown',
+          deviceName:
+            deviceInfo.deviceName ||
+            existingDevice.deviceName ||
+            'Unknown Device',
+          deviceIdentifier: deviceInfo.deviceIdentifier,
+          oldIpAddress: existingDevice.ipAddress,
+          newIpAddress: deviceInfo.ipAddress,
+          sessionKey: deviceInfo.sessionKey,
+        });
+
+        // Update IP address after emitting event
+        existingDevice.ipAddress = deviceInfo.ipAddress;
+      }
+    } else if (deviceInfo.ipAddress) {
+      // First time setting IP address (no change event)
       existingDevice.ipAddress = deviceInfo.ipAddress;
     }
+
     if (deviceInfo.username && !existingDevice.username) {
       existingDevice.username = deviceInfo.username;
     }
@@ -244,6 +284,24 @@ export class DeviceTrackingService {
         callback(event);
       } catch (error) {
         this.logger.error('Error in new device callback', error);
+      }
+    }
+  }
+
+  /** Register callback for device location change events */
+  onDeviceLocationChanged(
+    callback: (event: DeviceLocationChangedEvent) => void,
+  ): void {
+    this.locationChangeCallbacks.push(callback);
+  }
+
+  /** Emit device location change event to all registered callbacks */
+  private emitLocationChangeEvent(event: DeviceLocationChangedEvent): void {
+    for (const callback of this.locationChangeCallbacks) {
+      try {
+        callback(event);
+      } catch (error) {
+        this.logger.error('Error in location change callback', error);
       }
     }
   }
