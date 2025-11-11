@@ -331,11 +331,11 @@ export class EmailTemplateService {
     if (oldIpAddress && ipAddress) {
       detailsContent += `
         <div class="detail-row">
-          <span class="detail-label">Old IP Address</span>
+          <span class="detail-label">Old IP</span>
           <span class="detail-value"><a href="https://ipinfo.io/${oldIpAddress}" target="_blank" rel="noopener noreferrer" style="color: #4488ff; text-decoration: underline;">${oldIpAddress}</a></span>
         </div>
         <div class="detail-row">
-          <span class="detail-label">New IP Address</span>
+          <span class="detail-label">New IP</span>
           <span class="detail-value"><a href="https://ipinfo.io/${ipAddress}" target="_blank" rel="noopener noreferrer" style="color: #4488ff; text-decoration: underline;">${ipAddress}</a></span>
         </div>
       `;
