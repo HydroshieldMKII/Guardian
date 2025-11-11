@@ -50,16 +50,12 @@ export class NotificationOrchestratorService {
     data: NewDeviceNotificationData,
   ): Promise<Notification> {
     try {
-      // Try to find session history if session key is provided
-      const sessionHistoryId = data.sessionKey
-        ? await this.findSessionHistoryId(data.sessionKey)
-        : undefined;
       return await this.notificationsService.createNewDeviceNotification(
         data.userId,
         data.username,
         data.deviceName,
         data.ipAddress,
-        sessionHistoryId,
+        undefined, // Will be linked later by linkOrphanedNotifications
       );
     } catch (error) {
       this.logger.error('Error creating new device notification', error);
@@ -161,6 +157,10 @@ export class NotificationOrchestratorService {
   /** Links orphaned notifications to their session history */
   async linkOrphanedNotifications(sessionKey: string): Promise<void> {
     try {
+      this.logger.debug(
+        `Attempting to link orphaned notifications for session key: ${sessionKey}`,
+      );
+
       const sessionHistory = await this.sessionHistoryRepository.findOne({
         where: { sessionKey },
         order: { startedAt: 'DESC' },
@@ -172,6 +172,11 @@ export class NotificationOrchestratorService {
         );
         return;
       }
+
+      this.logger.debug(
+        `Found session history ID ${sessionHistory.id} for session key ${sessionKey}, calling linkNotificationToSessionHistory`,
+      );
+
       await this.notificationsService.linkNotificationToSessionHistory(
         sessionKey,
       );
