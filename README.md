@@ -119,7 +119,7 @@ git clone https://github.com/HydroshieldMKII/Guardian.git
 cd Guardian
 
 # Start Guardian with build
-docker compose up -d --build
+docker compose -f docker-compose.dev.yml up -d --build
 ```
 
 ### Proxmox
