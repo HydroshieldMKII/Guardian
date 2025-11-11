@@ -103,6 +103,18 @@ export const getSettingInfo = (setting: AppSetting): SettingInfo => {
       label: "Auto-mark notifications as read",
       description: "Automatically mark notifications as read when clicked (in app)",
     },
+    IN_APP_NOTIFY_ON_NEW_DEVICE: {
+      label: "In-app notifications for new devices",
+      description: "Show in-app notifications when new devices are detected",
+    },
+    IN_APP_NOTIFY_ON_BLOCK: {
+      label: "In-app notifications for blocked streams",
+      description: "Show in-app notifications when streams are blocked due to policies",
+    },
+    IN_APP_NOTIFY_ON_LOCATION_CHANGE: {
+      label: "In-app notifications for device location changes",
+      description: "Show in-app notifications when device location changes",
+    },
     ENABLE_MEDIA_THUMBNAILS: {
       label: "Show media thumbnails",
       description: "Display thumbnail images for media in streams",
@@ -169,6 +181,10 @@ export const getSettingInfo = (setting: AppSetting): SettingInfo => {
       description:
         "Send email notifications when streams are blocked due to rules",
     },
+    SMTP_NOTIFY_ON_LOCATION_CHANGE: {
+      label: "Email notifications for device location changes",
+      description: "Send email notifications when device location changes",
+    },
     APPRISE_ENABLED: {
       label: "Enable Apprise notifications",
       description: "Enable the Apprise notification system",
@@ -185,6 +201,10 @@ export const getSettingInfo = (setting: AppSetting): SettingInfo => {
     APPRISE_NOTIFY_ON_BLOCK: {
       label: "Notify on blocked streams",
       description: "Send notifications when streams are blocked due to rules",
+    },
+    APPRISE_NOTIFY_ON_LOCATION_CHANGE: {
+      label: "Notify on device location changes",
+      description: "Send notifications when device location changes",
     },
   };
 

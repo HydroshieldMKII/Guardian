@@ -60,6 +60,7 @@ export function SMTPSettings({
         "SMTP_ENABLED",
         "SMTP_NOTIFY_ON_NEW_DEVICE",
         "SMTP_NOTIFY_ON_BLOCK",
+        "SMTP_NOTIFY_ON_LOCATION_CHANGE",
         "SMTP_HOST",
         "SMTP_PORT",
         "SMTP_USE_TLS",
@@ -118,10 +119,15 @@ export function SMTPSettings({
       (s) => s.key === "SMTP_NOTIFY_ON_NEW_DEVICE",
     );
 
+    const notifyOnLocationChangeSetting = smtpSettings.find(
+      (s) => s.key === "SMTP_NOTIFY_ON_LOCATION_CHANGE",
+    );
+
     if (
       !smtpEnabledSetting ||
       !notifyOnBlockSetting ||
-      !notifyOnNewDeviceSetting
+      !notifyOnNewDeviceSetting ||
+      !notifyOnLocationChangeSetting
     )
       return null;
 
@@ -192,6 +198,37 @@ export function SMTPSettings({
                     }
                     onCheckedChange={(checked) =>
                       handleInputChange(notifyOnBlockSetting.key, checked)
+                    }
+                    disabled={!isSmtpEnabled}
+                    className="cursor-pointer"
+                  />
+                </div>
+              </div>
+
+              {/* Notify on location change */}
+              <div className="space-y-2 mt-4">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label
+                      htmlFor={notifyOnLocationChangeSetting.key}
+                      className={!isSmtpEnabled ? "text-muted-foreground" : ""}
+                    >
+                      {getSettingInfo(notifyOnLocationChangeSetting).label}
+                    </Label>
+                    <p className="text-sm text-muted-foreground">
+                      {getSettingInfo(notifyOnLocationChangeSetting).description}
+                    </p>
+                  </div>
+                  <Switch
+                    id={notifyOnLocationChangeSetting.key}
+                    checked={
+                      (formData[notifyOnLocationChangeSetting.key] ??
+                        notifyOnLocationChangeSetting.value) === "true" ||
+                      (formData[notifyOnLocationChangeSetting.key] ??
+                        notifyOnLocationChangeSetting.value) === true
+                    }
+                    onCheckedChange={(checked) =>
+                      handleInputChange(notifyOnLocationChangeSetting.key, checked)
                     }
                     disabled={!isSmtpEnabled}
                     className="cursor-pointer"
@@ -287,7 +324,8 @@ export function SMTPSettings({
             (setting) =>
               setting.key !== "SMTP_ENABLED" &&
               setting.key !== "SMTP_NOTIFY_ON_NEW_DEVICE" &&
-              setting.key !== "SMTP_NOTIFY_ON_BLOCK",
+              setting.key !== "SMTP_NOTIFY_ON_BLOCK" &&
+              setting.key !== "SMTP_NOTIFY_ON_LOCATION_CHANGE",
           )
           .map((setting) => (
             <Card key={setting.key} className="p-4 my-4">

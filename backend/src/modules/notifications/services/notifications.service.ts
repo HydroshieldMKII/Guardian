@@ -64,14 +64,23 @@ export class NotificationsService {
     deviceName: string,
     ipAddress: string,
     sessionHistoryId?: number,
-  ): Promise<Notification> {
+  ): Promise<Notification | null> {
     const text = `New device detected for ${username} on ${deviceName} - ${ipAddress}`;
-    const notification = await this.createNotification({
-      userId,
-      text,
-      type: 'info',
-      sessionHistoryId,
-    });
+
+    // Check if in-app notifications are enabled for new devices
+    const inAppNotifyOnNewDevice = await this.configService.getSetting('IN_APP_NOTIFY_ON_NEW_DEVICE');
+
+    let notification: Notification | null = null;
+    if (inAppNotifyOnNewDevice) {
+      notification = await this.createNotification({
+        userId,
+        text,
+        type: 'info',
+        sessionHistoryId,
+      });
+    } else {
+      this.logger.log('In-app notification for new device is disabled.');
+    }
 
     // Send email notification for new device if enabled
     try {
@@ -124,7 +133,7 @@ export class NotificationsService {
     stopCode?: string,
     sessionHistoryId?: number,
     ipAddress?: string,
-  ): Promise<Notification> {
+  ): Promise<Notification | null> {
     // Look up the custom device name from the database
     let deviceDisplayName = 'Unknown Device'; // Default if not found
 
@@ -174,12 +183,21 @@ export class NotificationsService {
       // Fallback to generic message if no stop code provided
       text = `Stream blocked for ${username} on ${deviceDisplayName}`;
     }
-    const notification = await this.createNotification({
-      userId,
-      text,
-      type: 'block',
-      sessionHistoryId,
-    });
+
+    // Check if in-app notifications are enabled for blocked streams
+    const inAppNotifyOnBlock = await this.configService.getSetting('IN_APP_NOTIFY_ON_BLOCK');
+
+    let notification: Notification | null = null;
+    if (inAppNotifyOnBlock) {
+      notification = await this.createNotification({
+        userId,
+        text,
+        type: 'block',
+        sessionHistoryId,
+      });
+    } else {
+      this.logger.log('In-app notification for blocked stream is disabled.');
+    }
 
     // Send email notification for stream blocking if enabled
     try {
