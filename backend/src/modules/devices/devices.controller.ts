@@ -44,7 +44,12 @@ export class DevicesController {
 
   @Post('batch/temporary-access')
   async grantBatchTemporaryAccess(
-    @Body() body: { deviceIds: number[]; durationMinutes: number },
+    @Body()
+    body: {
+      deviceIds: number[];
+      durationMinutes: number;
+      bypassPolicies?: boolean;
+    },
   ): Promise<{
     message: string;
     results: { deviceId: number; success: boolean; error?: string }[];
@@ -99,6 +104,7 @@ export class DevicesController {
           await this.deviceTrackingService.grantTemporaryAccess(
             deviceId,
             body.durationMinutes,
+            body.bypassPolicies ?? false,
           );
           results.push({ deviceId, success: true });
           this.logger.log(
@@ -167,11 +173,12 @@ export class DevicesController {
   @Post(':id/temporary-access')
   async grantTemporaryAccess(
     @Param('id', ParseIntPipe) id: number,
-    @Body() body: { durationMinutes: number },
+    @Body() body: { durationMinutes: number; bypassPolicies?: boolean },
   ): Promise<{ message: string }> {
     await this.deviceTrackingService.grantTemporaryAccess(
       id,
       body.durationMinutes,
+      body.bypassPolicies ?? false,
     );
     return {
       message: `Temporary access granted to device ${id} for ${body.durationMinutes} minutes`,

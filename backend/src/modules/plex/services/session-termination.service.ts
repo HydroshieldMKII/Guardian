@@ -205,6 +205,21 @@ export class SessionTerminationService {
       if (session.Player?.product === 'Plexamp') {
         return { shouldStop: false };
       }
+
+      // Check temporary access - if bypass policies is enabled, skip all policy checks
+      const device = await this.userDeviceRepository.findOne({
+        where: { userId, deviceIdentifier },
+      });
+
+      if (device && (await this.deviceTrackingService.isTemporaryAccessValid(device))) {
+        if (device.temporaryAccessBypassPolicies) {
+          this.logger.log(
+            `Device ${deviceIdentifier} has temporary access with policy bypass enabled - allowing session`,
+          );
+          return { shouldStop: false };
+        }
+      }
+
       const ipValidation = await this.validateIPAccess(session);
       if (!ipValidation.allowed) {
         this.logger.warn(
@@ -242,11 +257,8 @@ export class SessionTerminationService {
           stopCode: 'TIME_RESTRICTED',
         };
       }
-      const device = await this.userDeviceRepository.findOne({
-        where: { userId, deviceIdentifier },
-      });
       if (!device || device.status === 'pending') {
-        // Check if device has valid temporary access
+        // Check if device has valid temporary access (without bypass)
         if (
           device &&
           (await this.deviceTrackingService.isTemporaryAccessValid(device))

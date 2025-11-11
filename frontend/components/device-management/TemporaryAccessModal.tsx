@@ -26,6 +26,8 @@ import { UserDevice } from "@/types";
 import { getDeviceIcon } from "./SharedComponents";
 import { useDeviceUtils } from "@/hooks/device-management/useDeviceUtils";
 import { Card, CardContent } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 interface TemporaryAccessModalProps {
   user: {
@@ -35,7 +37,11 @@ interface TemporaryAccessModalProps {
   userDevices: UserDevice[];
   isOpen: boolean;
   onClose: () => void;
-  onGrantAccess: (deviceIds: number[], durationMinutes: number) => void;
+  onGrantAccess: (
+    deviceIds: number[],
+    durationMinutes: number,
+    bypassPolicies?: boolean,
+  ) => void;
   actionLoading: number | null;
   shouldShowGrantTempAccess: (device: UserDevice) => boolean;
 }
@@ -54,6 +60,7 @@ export const TemporaryAccessModal: React.FC<TemporaryAccessModalProps> = ({
   const [durationUnit, setDurationUnit] = useState<
     "minutes" | "hours" | "days" | "weeks"
   >("hours");
+  const [bypassPolicies, setBypassPolicies] = useState<boolean>(false);
   const { convertToMinutes, isValidDuration, hasTemporaryAccess } =
     useDeviceUtils();
 
@@ -68,6 +75,7 @@ export const TemporaryAccessModal: React.FC<TemporaryAccessModalProps> = ({
       setSelectedDeviceIds([]);
       setDurationValue(1);
       setDurationUnit("hours");
+      setBypassPolicies(false);
     }
   }, [isOpen]);
 
@@ -95,7 +103,7 @@ export const TemporaryAccessModal: React.FC<TemporaryAccessModalProps> = ({
       isValidDuration(durationValue, durationUnit)
     ) {
       const totalMinutes = convertToMinutes(durationValue, durationUnit);
-      onGrantAccess(selectedDeviceIds, totalMinutes);
+      onGrantAccess(selectedDeviceIds, totalMinutes, bypassPolicies);
     }
   };
 
@@ -343,6 +351,36 @@ export const TemporaryAccessModal: React.FC<TemporaryAccessModalProps> = ({
                       Please enter a valid duration
                     </p>
                   )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Policy Bypass Option */}
+          {selectedDeviceIds.length > 0 && (
+            <div className="border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/20 rounded-lg p-4">
+              <div className="space-y-3">
+                <div>
+                  <h4 className="font-semibold text-sm text-foreground mb-1">
+                    Policy Bypass
+                  </h4>
+                  <p className="text-xs text-muted-foreground">
+                    Allow access even if IP restrictions, time rules, or other
+                    user policies would normally block the device.
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Switch
+                    id="bypass-policies"
+                    checked={bypassPolicies}
+                    onCheckedChange={setBypassPolicies}
+                  />
+                  <Label
+                    htmlFor="bypass-policies"
+                    className="text-sm font-medium cursor-pointer"
+                  >
+                    Bypass all user policies during temporary access
+                  </Label>
                 </div>
               </div>
             </div>

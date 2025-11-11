@@ -12,6 +12,7 @@ import {
   MapPin,
   Activity,
   Clock,
+  ShieldOff,
 } from "lucide-react";
 import { UserDevice, AppSetting } from "@/types";
 import { getDeviceIcon, ClickableIP } from "./SharedComponents";
@@ -125,7 +126,7 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
             </div>
 
             {/* Badges - Mobile */}
-            <div className="flex justify-start gap-2">
+            <div className="flex justify-start gap-2 flex-wrap">
               {getDeviceTypeBadge()}
               {hasTemporaryAccess(device) && (
                 <Badge
@@ -136,6 +137,16 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
                   {getTemporaryAccessTimeLeft(device)}
                 </Badge>
               )}
+              {hasTemporaryAccess(device) &&
+                device.temporaryAccessBypassPolicies && (
+                  <Badge
+                    variant="outline"
+                    className="text-xs bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-700"
+                  >
+                    <ShieldOff className="w-3 h-3 mr-1" />
+                    Policy Bypass
+                  </Badge>
+                )}
             </div>
           </div>{" "}
           {/* Device Info Grid - Mobile */}
@@ -398,7 +409,7 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
                 </div>
               </div>
               {/* Badges - Desktop */}
-              <div className="flex-shrink-0 flex gap-2">
+              <div className="flex-shrink-0 flex gap-2 flex-wrap">
                 {getDeviceTypeBadge()}
                 {hasTemporaryAccess(device) && (
                   <Badge
@@ -409,6 +420,16 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
                     {getTemporaryAccessTimeLeft(device)}
                   </Badge>
                 )}
+                {hasTemporaryAccess(device) &&
+                  device.temporaryAccessBypassPolicies && (
+                    <Badge
+                      variant="outline"
+                      className="text-xs bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-700"
+                    >
+                      <ShieldOff className="w-3 h-3 mr-1" />
+                      Policy Bypass
+                    </Badge>
+                  )}
               </div>
             </div>
             {/* Device Info Grid - Desktop */}

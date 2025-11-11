@@ -1,3 +1,4 @@
 .env
 docker-compose.yml
 plex-guard.db
+CLAUDE.md

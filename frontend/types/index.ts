@@ -85,6 +85,7 @@ export interface UserDevice {
   temporaryAccessUntil?: string;
   temporaryAccessGrantedAt?: string;
   temporaryAccessDurationMinutes?: number;
+  temporaryAccessBypassPolicies?: boolean;
 }
 
 export interface AppSetting {

@@ -64,4 +64,7 @@ export class UserDevice {
 
   @Column({ name: 'temporary_access_duration_minutes', nullable: true })
   temporaryAccessDurationMinutes: number;
+
+  @Column({ name: 'temporary_access_bypass_policies', default: false })
+  temporaryAccessBypassPolicies: boolean;
 }
