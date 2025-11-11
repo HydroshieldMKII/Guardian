@@ -154,6 +154,11 @@ export class SessionTerminationService {
 
               await this.terminateSession(sessionId, reason);
               stoppedSessions.push(sessionId);
+
+              this.logger.warn(
+                `STREAM BLOCKED! User: ${username}, Device: ${deviceName}, Session: ${sessionId}, Reason: ${reason}, Code: ${stopCode}`,
+              );
+
               this.emitStreamBlockedEvent({
                 userId,
                 username,
@@ -163,8 +168,8 @@ export class SessionTerminationService {
                 ipAddress: session.Player?.address,
               });
 
-              this.logger.warn(
-                `Stopped session: ${username} on ${deviceName} (Session: ${sessionId}) - Reason: ${reason}`,
+              this.logger.debug(
+                `Emitted streamBlocked event for session ${sessionKey}`,
               );
             } else {
               this.logger.warn(
