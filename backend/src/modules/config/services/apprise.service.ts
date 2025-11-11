@@ -146,8 +146,8 @@ export class AppriseService {
         `A device location has changed:\n\n` +
         `User: ${username}\n` +
         `Device: ${deviceName}\n` +
-        `Old IP: ${oldIpAddress}\n` +
-        `New IP: ${newIpAddress}\n\n` +
+        `Old IP Address: ${oldIpAddress}\n` +
+        `New IP Address: ${newIpAddress}\n\n` +
         `This could indicate the device is being used from a different location.`,
       type: 'info',
     };
