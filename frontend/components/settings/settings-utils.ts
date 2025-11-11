@@ -101,7 +101,7 @@ export const getSettingInfo = (setting: AppSetting): SettingInfo => {
     },
     AUTO_MARK_NOTIFICATION_READ: {
       label: "Auto-mark notifications as read",
-      description: "Automatically mark notifications as read after viewing",
+      description: "Automatically mark notifications as read when clicked (in app)",
     },
     ENABLE_MEDIA_THUMBNAILS: {
       label: "Show media thumbnails",
