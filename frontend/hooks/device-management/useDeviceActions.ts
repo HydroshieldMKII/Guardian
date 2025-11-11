@@ -87,6 +87,7 @@ export const useDeviceActions = () => {
   const grantTemporaryAccess = async (
     deviceId: number,
     durationMinutes: number,
+    bypassPolicies?: boolean,
   ): Promise<boolean> => {
     try {
       setActionLoading(deviceId);
@@ -97,7 +98,7 @@ export const useDeviceActions = () => {
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ durationMinutes }),
+          body: JSON.stringify({ durationMinutes, bypassPolicies }),
         },
       );
       return response.ok;
@@ -112,6 +113,7 @@ export const useDeviceActions = () => {
   const grantBatchTemporaryAccess = async (
     deviceIds: number[],
     durationMinutes: number,
+    bypassPolicies?: boolean,
   ): Promise<{ success: boolean; results?: any }> => {
     try {
       setActionLoading(deviceIds[0]); // Set loading for the first device as indicator
@@ -123,7 +125,7 @@ export const useDeviceActions = () => {
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ deviceIds, durationMinutes }),
+          body: JSON.stringify({ deviceIds, durationMinutes, bypassPolicies }),
         },
       );
 

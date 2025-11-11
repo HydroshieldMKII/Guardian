@@ -898,6 +898,7 @@ const DeviceManagement = memo(
     const handleGrantTemporaryAccess = async (
       deviceIds: number[],
       durationMinutes: number,
+      bypassPolicies?: boolean,
     ) => {
       try {
         if (deviceIds.length === 1) {
@@ -906,6 +907,7 @@ const DeviceManagement = memo(
           const success = await deviceActions.grantTemporaryAccess(
             deviceIds[0],
             durationMinutes,
+            bypassPolicies,
           );
           if (!success) {
             toast({
@@ -921,6 +923,7 @@ const DeviceManagement = memo(
           const result = await deviceActions.grantBatchTemporaryAccess(
             deviceIds,
             durationMinutes,
+            bypassPolicies,
           );
           if (!result.success) {
             toast({

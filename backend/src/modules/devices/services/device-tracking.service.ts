@@ -346,6 +346,7 @@ export class DeviceTrackingService {
   async grantTemporaryAccess(
     deviceId: number,
     durationMinutes: number,
+    bypassPolicies: boolean = false,
   ): Promise<void> {
     // Work with pure UTC - get actual current UTC time
     const nowUTC = new Date();
@@ -357,6 +358,7 @@ export class DeviceTrackingService {
       temporaryAccessUntil: expiresAtUTC,
       temporaryAccessGrantedAt: nowUTC,
       temporaryAccessDurationMinutes: durationMinutes,
+      temporaryAccessBypassPolicies: bypassPolicies,
     });
 
     // Get configured timezone for display purposes only
@@ -412,6 +414,7 @@ export class DeviceTrackingService {
         temporaryAccessUntil: () => 'NULL',
         temporaryAccessGrantedAt: () => 'NULL',
         temporaryAccessDurationMinutes: () => 'NULL',
+        temporaryAccessBypassPolicies: false,
       })
       .where('id = :deviceId', { deviceId })
       .execute();
