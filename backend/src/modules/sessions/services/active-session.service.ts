@@ -6,6 +6,7 @@ import { UserDevice } from '../../../entities/user-device.entity';
 import { UserPreference } from '../../../entities/user-preference.entity';
 import { DeviceTrackingService } from '../../devices/services/device-tracking.service';
 import { PlexClient } from '../../plex/services/plex-client';
+import { NotificationOrchestratorService } from '../../notifications/services/notification-orchestrator.service';
 
 interface PlexSessionData {
   sessionKey: string;
@@ -61,6 +62,8 @@ export class ActiveSessionService {
     private deviceTrackingService: DeviceTrackingService,
     @Inject(forwardRef(() => PlexClient))
     private plexClient: PlexClient,
+    @Inject(forwardRef(() => NotificationOrchestratorService))
+    private notificationOrchestrator: NotificationOrchestratorService,
   ) {}
 
   // Update active sessions in the database based on the latest sessions data from Plex
@@ -241,6 +244,11 @@ export class ActiveSessionService {
         // Create new session (startedAt will be auto-generated, no endedAt)
         await this.sessionHistoryRepository.save(
           this.sessionHistoryRepository.create(sessionData_partial),
+        );
+
+        // Link any orphaned notifications to this newly created session
+        await this.notificationOrchestrator.linkOrphanedNotifications(
+          sessionData.sessionKey,
         );
       }
     } catch (error) {
