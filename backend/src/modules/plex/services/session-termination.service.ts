@@ -277,7 +277,7 @@ export class SessionTerminationService {
             ((await this.configService.getSetting(
               'MSG_DEVICE_PENDING',
             )) as string) ||
-            'Device Pending Approval. The server owner must approve this device before it can be used.';
+            'Device pending approval. The server owner must approve this device before it can be used.';
           return {
             shouldStop: true,
             reason: message,
