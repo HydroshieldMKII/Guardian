@@ -173,7 +173,7 @@ export class SessionTerminationService {
               );
             } else {
               this.logger.warn(
-                'Could not find session identifier in session data',
+                'Could not find session identifier in session data: ' + sessionId,
               );
             }
           }
