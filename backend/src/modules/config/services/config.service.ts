@@ -81,7 +81,7 @@ export class ConfigService {
       {
         key: 'MSG_DEVICE_PENDING',
         value:
-          'Device Pending Approval. The server owner must approve this device before it can be used.',
+          'Device pending approval. The server owner must approve this device before it can be used.',
         type: 'string' as const,
       },
       {
