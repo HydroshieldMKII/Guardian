@@ -48,7 +48,7 @@ export class NotificationOrchestratorService {
   /** Creates notification for a newly detected device */
   async notifyNewDevice(
     data: NewDeviceNotificationData,
-  ): Promise<Notification> {
+  ): Promise<Notification | null> {
     try {
       return await this.notificationsService.createNewDeviceNotification(
         data.userId,
@@ -66,7 +66,7 @@ export class NotificationOrchestratorService {
   /** Creates notification for a blocked stream */
   async notifyStreamBlocked(
     data: StreamBlockedNotificationData,
-  ): Promise<Notification> {
+  ): Promise<Notification | null> {
     try {
       // Find session history if session key is provided
       const sessionHistoryId = data.sessionKey

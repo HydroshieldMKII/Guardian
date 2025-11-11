@@ -422,17 +422,17 @@ export default function SettingsPage() {
 
               {tab.id === "notifications" && (
                 <div className="space-y-6">
-                  <AppriseSettings
-                    settings={settings}
-                    formData={formData}
-                    onFormDataChange={handleFormDataChange}
-                    hasUnsavedChanges={hasUnsavedChanges}
-                  />
                   <GeneralSettings
                     settings={settings}
                     formData={formData}
                     onFormDataChange={handleFormDataChange}
                     sectionId={tab.id}
+                  />
+                  <AppriseSettings
+                    settings={settings}
+                    formData={formData}
+                    onFormDataChange={handleFormDataChange}
+                    hasUnsavedChanges={hasUnsavedChanges}
                   />
                 </div>
               )}

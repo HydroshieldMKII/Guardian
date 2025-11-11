@@ -78,7 +78,12 @@ export function GeneralSettings({
           "MSG_IP_WAN_ONLY",
           "MSG_IP_NOT_ALLOWED",
         ],
-        notifications: ["AUTO_MARK_NOTIFICATION_READ"],
+        notifications: [
+          "IN_APP_NOTIFY_ON_NEW_DEVICE",
+          "IN_APP_NOTIFY_ON_BLOCK",
+          "IN_APP_NOTIFY_ON_LOCATION_CHANGE",
+          "AUTO_MARK_NOTIFICATION_READ",
+        ],
       };
 
       const order = orderMaps[section as keyof typeof orderMaps];
@@ -112,7 +117,12 @@ export function GeneralSettings({
         break;
       case "notifications":
         filteredSettings = settings.filter((setting) =>
-          ["AUTO_MARK_NOTIFICATION_READ"].includes(setting.key),
+          [
+            "AUTO_MARK_NOTIFICATION_READ",
+            "IN_APP_NOTIFY_ON_NEW_DEVICE",
+            "IN_APP_NOTIFY_ON_BLOCK",
+            "IN_APP_NOTIFY_ON_LOCATION_CHANGE",
+          ].includes(setting.key),
         );
         break;
       default:
