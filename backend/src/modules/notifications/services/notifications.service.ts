@@ -351,6 +351,10 @@ export class NotificationsService {
         return;
       }
 
+      this.logger.debug(
+        `Searching for orphaned notifications for userId: ${sessionHistory.userId}, sessionHistoryId to link: ${sessionHistory.id}`,
+      );
+
       // Find recent notifications for the same user that don't have a session history link
       const recentNotifications = await this.notificationRepository
         .createQueryBuilder('notification')
@@ -365,14 +369,18 @@ export class NotificationsService {
         .limit(5)
         .getMany();
 
+      this.logger.debug(
+        `Found ${recentNotifications.length} orphaned notifications for user ${sessionHistory.userId}`,
+      );
+
       // Link the most recent device detection notification
       for (const notification of recentNotifications) {
         if (notification.text.includes('New device detected')) {
           await this.notificationRepository.update(notification.id, {
             sessionHistoryId: sessionHistory.id,
           });
-          this.logger.debug(
-            `Linked notification ${notification.id} to session history ${sessionHistory.id}`,
+          this.logger.log(
+            `Linked notification ${notification.id} to session history ${sessionHistory.id} for session key ${sessionKey}`,
           );
           break; // Only link the first matching notification
         }
