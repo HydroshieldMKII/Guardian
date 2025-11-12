@@ -109,8 +109,6 @@ docker compose up -d
 - Local: [http://localhost:3000](http://localhost:3000)
 - Remote: `http://YOUR-SERVER-IP:3000`
 
----
-
 **Build from Source**
 
 ```bash
@@ -121,6 +119,7 @@ cd Guardian
 # Start Guardian with build
 docker compose -f docker-compose.dev.yml up -d --build
 ```
+---
 
 ### Proxmox
 
