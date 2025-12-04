@@ -12,7 +12,14 @@ import {
   Laptop,
   Monitor,
   ExternalLink,
+  HelpCircle,
 } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { UserDevice, UserPreference } from "@/types";
 import { useDeviceUtils } from "@/hooks/device-management/useDeviceUtils";
 
@@ -31,7 +38,7 @@ export const ClickableIP = ({
     window.open(
       `https://ipinfo.io/${ipAddress}`,
       "_blank",
-      "noopener,noreferrer",
+      "noopener,noreferrer"
     );
   };
 
@@ -79,7 +86,7 @@ export const UserAvatar = ({
 // Device icon component
 export const getDeviceIcon = (
   platform: string | null | undefined,
-  product: string | null | undefined,
+  product: string | null | undefined
 ) => {
   const p = platform?.toLowerCase() || product?.toLowerCase() || "";
 
@@ -109,6 +116,14 @@ export const getDeviceIcon = (
 export const DeviceStatus = ({ device }: { device: UserDevice }) => {
   const { hasTemporaryAccess, getTemporaryAccessTimeLeft } = useDeviceUtils();
 
+  // Helper function to identify Plex Amp devices
+  const isPlexAmpDevice = (device: UserDevice) => {
+    return (
+      device.deviceProduct?.toLowerCase().includes("plexamp") ||
+      device.deviceName?.toLowerCase().includes("plexamp")
+    );
+  };
+
   // Check for temporary access first
   if (hasTemporaryAccess(device)) {
     const timeLeft = getTemporaryAccessTimeLeft(device);
@@ -122,6 +137,32 @@ export const DeviceStatus = ({ device }: { device: UserDevice }) => {
           Temporary Access ({timeLeft} left)
         </Badge>
       </div>
+    );
+  }
+
+  // Special handling for PlexAmp devices
+  if (isPlexAmpDevice(device) && device.status === "pending") {
+    return (
+      <TooltipProvider delayDuration={200}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Badge
+              variant="secondary"
+              className="bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 border-purple-300 dark:border-purple-700 cursor-help"
+            >
+              <HelpCircle className="w-3 h-3 mr-1" />
+              Not Manageable
+            </Badge>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p className="max-w-xs">
+              PlexAmp devices cannot be managed. Plex does not provide native
+              controls to terminate PlexAmp streams, so policies cannot be
+              enforced for this device.
+            </p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
     );
   }
 

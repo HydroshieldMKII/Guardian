@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 
 // App version
-const CURRENT_APP_VERSION = '1.2.8';
+const CURRENT_APP_VERSION = '1.2.9';
 
 @Injectable()
 export class VersionService {
