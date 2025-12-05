@@ -90,11 +90,21 @@ export const useDeviceUtils = () => {
     return totalMinutes > 0 && totalMinutes <= oneYearInMinutes;
   };
 
+  // Check if a device is not manageable (PlexAmp devices that cannot be managed)
+  const isNotManageableDevice = (device: UserDevice): boolean => {
+    const productLower = device.deviceProduct?.toLowerCase() ?? "";
+    const nameLower = device.deviceName?.toLowerCase() ?? "";
+    const isPlexAmp =
+      productLower.includes("plexamp") || nameLower.includes("plexamp");
+    return isPlexAmp && device.status === "pending";
+  };
+
   return {
     hasTemporaryAccess,
     getTemporaryAccessTimeLeft,
     convertToMinutes,
     formatDuration,
     isValidDuration,
+    isNotManageableDevice,
   };
 };

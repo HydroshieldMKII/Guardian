@@ -114,15 +114,11 @@ export const getDeviceIcon = (
 
 // Device status component
 export const DeviceStatus = ({ device }: { device: UserDevice }) => {
-  const { hasTemporaryAccess, getTemporaryAccessTimeLeft } = useDeviceUtils();
-
-  // Helper function to identify Plex Amp devices
-  const isPlexAmpDevice = (device: UserDevice) => {
-    return (
-      device.deviceProduct?.toLowerCase().includes("plexamp") ||
-      device.deviceName?.toLowerCase().includes("plexamp")
-    );
-  };
+  const {
+    hasTemporaryAccess,
+    getTemporaryAccessTimeLeft,
+    isNotManageableDevice,
+  } = useDeviceUtils();
 
   // Check for temporary access first
   if (hasTemporaryAccess(device)) {
@@ -140,8 +136,8 @@ export const DeviceStatus = ({ device }: { device: UserDevice }) => {
     );
   }
 
-  // Special handling for PlexAmp devices
-  if (isPlexAmpDevice(device) && device.status === "pending") {
+  // Special handling for not manageable devices (PlexAmp devices)
+  if (isNotManageableDevice(device)) {
     return (
       <TooltipProvider delayDuration={200}>
         <Tooltip>
