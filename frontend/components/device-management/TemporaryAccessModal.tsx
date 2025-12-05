@@ -69,7 +69,9 @@ export const TemporaryAccessModal: React.FC<TemporaryAccessModalProps> = ({
     "minutes" | "hours" | "days" | "weeks"
   >("hours");
   const [bypassPolicies, setBypassPolicies] = useState<boolean>(false);
-  const [inputMode, setInputMode] = useState<"duration" | "calendar">("duration");
+  const [inputMode, setInputMode] = useState<"duration" | "calendar">(
+    "duration"
+  );
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const { convertToMinutes, isValidDuration, hasTemporaryAccess } =
     useDeviceUtils();
@@ -82,7 +84,7 @@ export const TemporaryAccessModal: React.FC<TemporaryAccessModalProps> = ({
       if (selectedDate.getTime() <= Date.now()) return null;
       return selectedDate;
     }
-    
+
     if (durationValue <= 0 || !isValidDuration(durationValue, durationUnit)) {
       return null;
     }
@@ -137,15 +139,17 @@ export const TemporaryAccessModal: React.FC<TemporaryAccessModalProps> = ({
 
   const handleGrantAccess = () => {
     if (selectedDeviceIds.length === 0 || !isExpiryDateValid) return;
-    
+
     let totalMinutes: number;
     if (inputMode === "calendar" && selectedDate) {
       // Calculate minutes from now until selected date
-      totalMinutes = Math.ceil((selectedDate.getTime() - Date.now()) / (60 * 1000));
+      totalMinutes = Math.ceil(
+        (selectedDate.getTime() - Date.now()) / (60 * 1000)
+      );
     } else {
       totalMinutes = convertToMinutes(durationValue, durationUnit);
     }
-    
+
     onGrantAccess(selectedDeviceIds, totalMinutes, bypassPolicies);
   };
 
@@ -286,124 +290,126 @@ export const TemporaryAccessModal: React.FC<TemporaryAccessModalProps> = ({
               <div className="space-y-3">
                 {inputMode === "duration" ? (
                   <>
-                <div className="flex gap-2 items-end">
-                  <div className="flex-1">
-                    <label className="text-xs text-muted-foreground">
-                      Duration
-                    </label>
-                    <Input
-                      type="number"
-                      value={durationValue}
-                      onChange={(e) => setDurationValue(Number(e.target.value))}
-                      min="1"
-                      max="999"
-                      className="text-sm"
-                      placeholder="Enter duration"
-                    />
-                  </div>
-                  <div className="w-24">
-                    <label className="text-xs text-muted-foreground">
-                      Unit
-                    </label>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
+                    <div className="flex gap-2 items-end">
+                      <div className="flex-1">
+                        <label className="text-xs text-muted-foreground">
+                          Duration
+                        </label>
+                        <Input
+                          type="number"
+                          value={durationValue}
+                          onChange={(e) =>
+                            setDurationValue(Number(e.target.value))
+                          }
+                          min="1"
+                          max="999"
+                          className="text-sm"
+                          placeholder="Enter duration"
+                        />
+                      </div>
+                      <div className="w-24">
+                        <label className="text-xs text-muted-foreground">
+                          Unit
+                        </label>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="outline"
+                              className="w-full justify-between text-sm"
+                            >
+                              {durationUnit}
+                              <ChevronDown className="w-3 h-3" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={() => setDurationUnit("minutes")}
+                            >
+                              minutes
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => setDurationUnit("hours")}
+                            >
+                              hours
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => setDurationUnit("days")}
+                            >
+                              days
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => setDurationUnit("weeks")}
+                            >
+                              weeks
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </div>
+
+                    {/* Quick Duration Buttons */}
+                    <div>
+                      <label className="text-xs text-muted-foreground mb-2 block">
+                        Quick Select
+                      </label>
+                      <div className="flex flex-wrap gap-1">
                         <Button
                           variant="outline"
-                          className="w-full justify-between text-sm"
+                          size="sm"
+                          onClick={() => {
+                            setDurationValue(1);
+                            setDurationUnit("hours");
+                          }}
+                          className="text-xs"
                         >
-                          {durationUnit}
-                          <ChevronDown className="w-3 h-3" />
+                          1h
                         </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem
-                          onClick={() => setDurationUnit("minutes")}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setDurationValue(3);
+                            setDurationUnit("hours");
+                          }}
+                          className="text-xs"
                         >
-                          minutes
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => setDurationUnit("hours")}
+                          3h
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setDurationValue(6);
+                            setDurationUnit("hours");
+                          }}
+                          className="text-xs"
                         >
-                          hours
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => setDurationUnit("days")}
+                          6h
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setDurationValue(1);
+                            setDurationUnit("days");
+                          }}
+                          className="text-xs"
                         >
-                          days
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => setDurationUnit("weeks")}
+                          1d
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setDurationValue(1);
+                            setDurationUnit("weeks");
+                          }}
+                          className="text-xs"
                         >
-                          weeks
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </div>
-
-                {/* Quick Duration Buttons */}
-                <div>
-                  <label className="text-xs text-muted-foreground mb-2 block">
-                    Quick Select
-                  </label>
-                  <div className="flex flex-wrap gap-1">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setDurationValue(1);
-                        setDurationUnit("hours");
-                      }}
-                      className="text-xs"
-                    >
-                      1h
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setDurationValue(3);
-                        setDurationUnit("hours");
-                      }}
-                      className="text-xs"
-                    >
-                      3h
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setDurationValue(6);
-                        setDurationUnit("hours");
-                      }}
-                      className="text-xs"
-                    >
-                      6h
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setDurationValue(1);
-                        setDurationUnit("days");
-                      }}
-                      className="text-xs"
-                    >
-                      1d
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setDurationValue(1);
-                        setDurationUnit("weeks");
-                      }}
-                      className="text-xs"
-                    >
-                      1w
-                    </Button>
-                  </div>
-                </div>
+                          1w
+                        </Button>
+                      </div>
+                    </div>
                   </>
                 ) : (
                   <div>
@@ -466,7 +472,9 @@ export const TemporaryAccessModal: React.FC<TemporaryAccessModalProps> = ({
                                 onChange={(e) => {
                                   const hours = parseInt(e.target.value) || 0;
                                   const newDate = new Date(selectedDate);
-                                  newDate.setHours(Math.min(23, Math.max(0, hours)));
+                                  newDate.setHours(
+                                    Math.min(23, Math.max(0, hours))
+                                  );
                                   setSelectedDate(newDate);
                                 }}
                                 className="w-16 text-center"
@@ -481,7 +489,9 @@ export const TemporaryAccessModal: React.FC<TemporaryAccessModalProps> = ({
                                 onChange={(e) => {
                                   const minutes = parseInt(e.target.value) || 0;
                                   const newDate = new Date(selectedDate);
-                                  newDate.setMinutes(Math.min(59, Math.max(0, minutes)));
+                                  newDate.setMinutes(
+                                    Math.min(59, Math.max(0, minutes))
+                                  );
                                   setSelectedDate(newDate);
                                 }}
                                 className="w-16 text-center"
@@ -501,45 +511,48 @@ export const TemporaryAccessModal: React.FC<TemporaryAccessModalProps> = ({
                       Please enter a valid duration
                     </p>
                   )}
-                  
-                  {inputMode === "calendar" && selectedDate && selectedDate.getTime() <= Date.now() && (
-                    <p className="text-xs text-red-600">
-                      Selected date must be in the future
-                    </p>
-                  )}
+
+                  {inputMode === "calendar" &&
+                    selectedDate &&
+                    selectedDate.getTime() <= Date.now() && (
+                      <p className="text-xs text-red-600">
+                        Selected date must be in the future
+                      </p>
+                    )}
 
                   {/* Expiry Preview */}
-                  {((inputMode === "duration" && durationValue > 0 && isValidDuration(durationValue, durationUnit)) ||
+                  {((inputMode === "duration" &&
+                    durationValue > 0 &&
+                    isValidDuration(durationValue, durationUnit)) ||
                     (inputMode === "calendar" && selectedDate)) && (
-                      <>
-                        {isExpiryDateValid ? (
-                          <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 rounded-lg p-3">
-                            <p className="text-xs text-muted-foreground mb-1">
-                              Access will expire at:
-                            </p>
-                            <p className="text-sm font-medium text-foreground">
-                              {getExpiryDate()!.toLocaleString(undefined, {
-                                weekday: "short",
-                                year: "numeric",
-                                month: "short",
-                                day: "numeric",
-                                hour: "2-digit",
-                                minute: "2-digit",
-                                second: "2-digit",
-                                timeZoneName: "short",
-                              })}
-                            </p>
-                          </div>
-                        ) : (
-                          <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900 rounded-lg p-3">
-                            <p className="text-xs text-red-600">
-                              Duration is too large. Please enter a smaller
-                              value.
-                            </p>
-                          </div>
-                        )}
-                      </>
-                    )}
+                    <>
+                      {isExpiryDateValid ? (
+                        <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 rounded-lg p-3">
+                          <p className="text-xs text-muted-foreground mb-1">
+                            Access will expire at:
+                          </p>
+                          <p className="text-sm font-medium text-foreground">
+                            {getExpiryDate()!.toLocaleString(undefined, {
+                              weekday: "short",
+                              year: "numeric",
+                              month: "short",
+                              day: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                              second: "2-digit",
+                              timeZoneName: "short",
+                            })}
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900 rounded-lg p-3">
+                          <p className="text-xs text-red-600">
+                            Duration is too large. Please enter a smaller value.
+                          </p>
+                        </div>
+                      )}
+                    </>
+                  )}
                 </div>
               </div>
             </div>

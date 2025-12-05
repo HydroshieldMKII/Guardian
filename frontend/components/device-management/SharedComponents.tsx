@@ -113,7 +113,13 @@ export const getDeviceIcon = (
 };
 
 // Device status component
-export const DeviceStatus = ({ device, compact = false }: { device: UserDevice; compact?: boolean }) => {
+export const DeviceStatus = ({
+  device,
+  compact = false,
+}: {
+  device: UserDevice;
+  compact?: boolean;
+}) => {
   const { hasTemporaryAccess, getTemporaryAccessTimeLeft } = useDeviceUtils();
 
   // Helper function to identify Plex Amp devices

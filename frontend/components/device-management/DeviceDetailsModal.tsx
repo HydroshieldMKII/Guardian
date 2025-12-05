@@ -281,9 +281,11 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
                     <div>
                       <Badge
                         variant="outline"
-                        className={device.temporaryAccessBypassPolicies 
-                          ? "border-amber-600 dark:border-amber-700 text-amber-700 dark:text-amber-400" 
-                          : ""}
+                        className={
+                          device.temporaryAccessBypassPolicies
+                            ? "border-amber-600 dark:border-amber-700 text-amber-700 dark:text-amber-400"
+                            : ""
+                        }
                       >
                         {device.temporaryAccessBypassPolicies ? "Yes" : "No"}
                       </Badge>
