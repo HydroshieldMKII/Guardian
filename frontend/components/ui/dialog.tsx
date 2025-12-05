@@ -62,10 +62,10 @@ function DialogContent({
         className={cn(
           "bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed z-50 grid w-full border shadow-lg duration-200",
           // Mobile: bottom sheet style with full width
-          "bottom-0 left-0 right-0 max-h-[85vh] rounded-t-xl p-4 pb-6 gap-3",
+          "bottom-0 left-0 right-0 max-h-[85vh] rounded-t-xl p-4 pb-6 gap-3 w-full",
           "data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom",
           // Desktop: centered modal
-          "sm:bottom-auto sm:left-[50%] sm:right-auto sm:top-[50%] sm:translate-x-[-50%] sm:translate-y-[-50%] sm:max-w-lg sm:max-h-[90vh] sm:rounded-lg sm:p-6 sm:gap-4",
+          "sm:bottom-auto sm:left-[50%] sm:right-auto sm:top-[50%] sm:translate-x-[-50%] sm:translate-y-[-50%] sm:max-w-lg sm:max-h-[90vh] sm:rounded-lg sm:p-6 sm:gap-4 sm:w-full",
           "sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-95",
           "overflow-y-auto",
           className,
@@ -91,7 +91,7 @@ function DialogHeader({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="dialog-header"
-      className={cn("flex flex-col gap-2 text-center sm:text-left", className)}
+      className={cn("flex flex-col gap-2 text-left", className)}
       {...props}
     />
   );
