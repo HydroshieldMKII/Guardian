@@ -235,7 +235,7 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
                           } else {
                             const days = Math.floor(minutes / 1440);
                             const remainingHours = Math.floor(
-                              (minutes % 1440) / 60,
+                              (minutes % 1440) / 60
                             );
                             let result = `${days} day${days !== 1 ? "s" : ""}`;
                             if (remainingHours > 0) {
@@ -255,7 +255,7 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
                       </h4>
                       <p className="text-xs sm:text-sm text-foreground">
                         {new Date(
-                          device.temporaryAccessGrantedAt,
+                          device.temporaryAccessGrantedAt
                         ).toLocaleString()}
                       </p>
                     </div>
