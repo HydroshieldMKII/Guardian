@@ -40,7 +40,7 @@ interface TemporaryAccessModalProps {
   onGrantAccess: (
     deviceIds: number[],
     durationMinutes: number,
-    bypassPolicies?: boolean,
+    bypassPolicies?: boolean
   ) => void;
   actionLoading: number | null;
   shouldShowGrantTempAccess: (device: UserDevice) => boolean;
@@ -64,9 +64,28 @@ export const TemporaryAccessModal: React.FC<TemporaryAccessModalProps> = ({
   const { convertToMinutes, isValidDuration, hasTemporaryAccess } =
     useDeviceUtils();
 
+  // Check if the calculated expiry date is valid
+  const getExpiryDate = (): Date | null => {
+    if (durationValue <= 0 || !isValidDuration(durationValue, durationUnit)) {
+      return null;
+    }
+    const totalMinutes = convertToMinutes(durationValue, durationUnit);
+    const expiryDate = new Date(Date.now() + totalMinutes * 60 * 1000);
+    // Check if the date is valid (not NaN or beyond JS max date)
+    if (
+      isNaN(expiryDate.getTime()) ||
+      expiryDate.getTime() > 8640000000000000
+    ) {
+      return null;
+    }
+    return expiryDate;
+  };
+
+  const isExpiryDateValid = getExpiryDate() !== null;
+
   // Get eligible devices for temporary access
   const eligibleDevices = userDevices.filter((device) =>
-    shouldShowGrantTempAccess(device),
+    shouldShowGrantTempAccess(device)
   );
 
   // Reset when modal opens/closes
@@ -188,7 +207,7 @@ export const TemporaryAccessModal: React.FC<TemporaryAccessModalProps> = ({
                         </div>
                         {getDeviceIcon(
                           device.devicePlatform,
-                          device.deviceProduct,
+                          device.deviceProduct
                         )}
                         <div className="min-w-0 flex-1">
                           <div className="text-sm font-medium text-foreground truncate">
@@ -340,17 +359,44 @@ export const TemporaryAccessModal: React.FC<TemporaryAccessModalProps> = ({
                 </div>
 
                 <div className="mt-3">
-                  {!isValidDuration(durationValue, durationUnit) &&
-                    durationValue > 0 && (
-                      <p className="text-xs text-red-600">
-                        Duration is too long (maximum: 1 year)
-                      </p>
-                    )}
                   {durationValue <= 0 && (
                     <p className="text-xs text-red-600">
                       Please enter a valid duration
                     </p>
                   )}
+
+                  {/* Expiry Preview */}
+                  {durationValue > 0 &&
+                    isValidDuration(durationValue, durationUnit) && (
+                      <>
+                        {isExpiryDateValid ? (
+                          <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 rounded-lg p-3">
+                            <p className="text-xs text-muted-foreground mb-1">
+                              Access will expire at:
+                            </p>
+                            <p className="text-sm font-medium text-foreground">
+                              {getExpiryDate()!.toLocaleString(undefined, {
+                                weekday: "short",
+                                year: "numeric",
+                                month: "short",
+                                day: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                                second: "2-digit",
+                                timeZoneName: "short",
+                              })}
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900 rounded-lg p-3">
+                            <p className="text-xs text-red-600">
+                              Duration is too large. Please enter a smaller
+                              value.
+                            </p>
+                          </div>
+                        )}
+                      </>
+                    )}
                 </div>
               </div>
             </div>
@@ -401,7 +447,8 @@ export const TemporaryAccessModal: React.FC<TemporaryAccessModalProps> = ({
             disabled={
               actionLoading !== null ||
               selectedDeviceIds.length === 0 ||
-              !isValidDuration(durationValue, durationUnit)
+              !isValidDuration(durationValue, durationUnit) ||
+              !isExpiryDateValid
             }
             className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white"
           >

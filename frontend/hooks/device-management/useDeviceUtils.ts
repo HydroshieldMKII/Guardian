@@ -79,15 +79,14 @@ export const useDeviceUtils = () => {
     return `${value} ${unit}`;
   };
 
-  // Validate if duration is reasonable (not more than 1 year)
+  // Validate if duration is positive
   const isValidDuration = (
     value: number,
     unit: "minutes" | "hours" | "days" | "weeks",
   ): boolean => {
     if (value <= 0) return false; // Invalid if empty or zero
     const totalMinutes = convertToMinutes(value, unit);
-    const oneYearInMinutes = 365 * 24 * 60; // 525,600 minutes
-    return totalMinutes > 0 && totalMinutes <= oneYearInMinutes;
+    return totalMinutes > 0;
   };
 
   return {
