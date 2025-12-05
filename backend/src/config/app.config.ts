@@ -8,7 +8,10 @@ export const config = {
   },
   database: {
     path: process.env.DATABASE_PATH || 'plex-guard.db',
-    logging: process.env.NODE_ENV === 'development',
+    logging:
+      process.env.DB_LOGGING !== undefined
+        ? process.env.DB_LOGGING === 'true'
+        : process.env.NODE_ENV === 'development',
   },
 };
 

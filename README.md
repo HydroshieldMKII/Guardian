@@ -109,16 +109,42 @@ docker compose up -d
 - Local: [http://localhost:3000](http://localhost:3000)
 - Remote: `http://YOUR-SERVER-IP:3000`
 
-**Build from Source**
+**Build from Source (Production)**
+
+To build Guardian from source in production mode:
 
 ```bash
 # Clone the repository
 git clone https://github.com/HydroshieldMKII/Guardian.git
 cd Guardian
 
-# Start Guardian with build
+# Build and start Guardian in production mode
+docker compose -f docker-compose.prod.yml up -d --build
+```
+
+**Development Mode (For Contributors)**
+
+For development with hot-reload for both frontend and backend:
+
+```bash
+# Clone the repository
+git clone https://github.com/HydroshieldMKII/Guardian.git
+cd Guardian
+
+# Start Guardian in development mode (changes auto-reload)
 docker compose -f docker-compose.dev.yml up -d --build
 ```
+
+Development mode features:
+- **Frontend**: Hot-reload enabled - changes to React/Next.js files auto-refresh
+- **Backend**: Watch mode enabled - changes to NestJS/TypeScript files auto-reload
+- **Source code mounted**: Both frontend and backend source directories are mounted as volumes
+- **Fast iteration**: No need to rebuild containers after code changes
+
+> [!NOTE]
+> - `docker-compose.example.yml` - Uses pre-built images from Docker Hub (recommended for most users)
+> - `docker-compose.prod.yml` - Builds from source in production mode
+> - `docker-compose.dev.yml` - Development mode with hot-reload for both frontend and backend (for contributors)
 ---
 
 ### Proxmox

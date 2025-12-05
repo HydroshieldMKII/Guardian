@@ -1,30 +1,40 @@
 services:
   backend:
-    image: hydroshieldmkii/guardian-backend:${VERSION:-latest}
     build:
       context: ./backend
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.dev
     container_name: guardian-backend
     environment:
-      NODE_ENV: production
+      NODE_ENV: development
       DATABASE_PATH: /app/data/plex-guard.db
+      # Set DB_LOGGING=false to disable SQL query logging (defaults to true in dev)
+      # DB_LOGGING: "false"
     volumes:
+      # Mount source code for hot-reload
+      - ./backend:/app
+      - /app/node_modules
       - backend_data:/app/data
     restart: unless-stopped
 
   frontend:
-    image: hydroshieldmkii/guardian-frontend:${VERSION:-latest}
     build:
       context: ./frontend
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.dev
     container_name: guardian-frontend
     ports:
       - "${PLEXGUARD_FRONTEND_PORT:-3000}:3000"
     environment:
-      NODE_ENV: production
+      NODE_ENV: development
+      # Don't set DEPLOYMENT_MODE so it uses "backend" service name
+    volumes:
+      # Mount source code for hot-reload
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
     depends_on:
       - backend
     restart: unless-stopped
+    command: npm run dev
 
 volumes:
   backend_data:

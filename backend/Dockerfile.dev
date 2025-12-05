@@ -1,0 +1,23 @@
+# Development Dockerfile for hot-reload
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apk add --no-cache wget python3 py3-pip
+
+# Install Apprise (needed for notifications)
+RUN pip3 install --no-cache-dir --break-system-packages apprise
+
+# Copy package files
+COPY package*.json ./
+
+# Install all dependencies (including dev dependencies)
+RUN npm ci
+
+# Expose port
+EXPOSE 3001
+
+# Run dev server with watch mode for hot-reload
+CMD ["npm", "run", "start:dev"]
+

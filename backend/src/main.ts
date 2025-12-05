@@ -67,7 +67,7 @@ async function bootstrap() {
 
   await app.listen(config.app.port);
 
-  console.log(`Server is running on port ${config.app.port}`);
+  console.log(`Server is running on port ${config.app.port}, environment: ${process.env.NODE_ENV}`);
 
   const cleanup = () => {
     console.log('Shutting down server...');
