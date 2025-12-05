@@ -94,7 +94,7 @@ export function Dashboard() {
   useEffect(() => {
     if (dashboardData && !initialTabSet) {
       const defaultPageSetting = dashboardData.settings.find(
-        (s) => s.key === "DEFAULT_PAGE",
+        (s) => s.key === "DEFAULT_PAGE"
       );
       const defaultPage = defaultPageSetting?.value || "devices";
       setActiveTab(defaultPage === "streams" ? "streams" : "devices");
@@ -155,7 +155,7 @@ export function Dashboard() {
 
     const interval = setInterval(
       () => refreshDashboard(true),
-      config.app.refreshInterval,
+      config.app.refreshInterval
     );
     return () => clearInterval(interval);
   }, [autoRefresh, refreshDashboard]);
@@ -198,7 +198,7 @@ export function Dashboard() {
           <h3 className="text-lg sm:text-xl font-semibold text-foreground mb-3 sm:mb-4 flex items-center">
             Devices Overview
           </h3>
-          
+
           {/* Mobile: Compact horizontal layout */}
           <Card className="sm:hidden border-l-4 border-l-blue-500 overflow-hidden">
             <CardContent className="p-3">
@@ -207,36 +207,52 @@ export function Dashboard() {
                 <div className="flex flex-col items-center justify-center p-2 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
                   <div className="flex items-center gap-1 mb-2">
                     <Activity className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-                    <div className="text-[10px] font-medium text-muted-foreground">Streams</div>
+                    <div className="text-[10px] font-medium text-muted-foreground">
+                      Streams
+                    </div>
                   </div>
-                  <div className="text-2xl font-bold text-foreground">{stats.activeStreams}</div>
+                  <div className="text-2xl font-bold text-foreground">
+                    {stats.activeStreams}
+                  </div>
                 </div>
-                
+
                 {/* Pending */}
                 <div className="flex flex-col items-center justify-center p-2 bg-yellow-50 dark:bg-yellow-950/30 rounded-lg border border-yellow-200 dark:border-yellow-800">
                   <div className="flex items-center gap-1 mb-2">
                     <AlertTriangle className="w-3.5 h-3.5 text-yellow-600 dark:text-yellow-400" />
-                    <div className="text-[10px] font-medium text-muted-foreground">Pending</div>
+                    <div className="text-[10px] font-medium text-muted-foreground">
+                      Pending
+                    </div>
                   </div>
-                  <div className="text-2xl font-bold text-foreground">{stats.pendingDevices}</div>
+                  <div className="text-2xl font-bold text-foreground">
+                    {stats.pendingDevices}
+                  </div>
                 </div>
-                
+
                 {/* Approved */}
                 <div className="flex flex-col items-center justify-center p-2 bg-green-50 dark:bg-green-950/30 rounded-lg border border-green-200 dark:border-green-800">
                   <div className="flex items-center gap-1 mb-2">
                     <CheckCircle className="w-3.5 h-3.5 text-green-600 dark:text-green-400" />
-                    <div className="text-[10px] font-medium text-muted-foreground">Approved</div>
+                    <div className="text-[10px] font-medium text-muted-foreground">
+                      Approved
+                    </div>
                   </div>
-                  <div className="text-2xl font-bold text-foreground">{stats.approvedDevices}</div>
+                  <div className="text-2xl font-bold text-foreground">
+                    {stats.approvedDevices}
+                  </div>
                 </div>
-                
+
                 {/* Total */}
                 <div className="flex flex-col items-center justify-center p-2 bg-purple-50 dark:bg-purple-950/30 rounded-lg border border-purple-200 dark:border-purple-800">
                   <div className="flex items-center gap-1 mb-2">
                     <Users className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
-                    <div className="text-[10px] font-medium text-muted-foreground">Total</div>
+                    <div className="text-[10px] font-medium text-muted-foreground">
+                      Total
+                    </div>
                   </div>
-                  <div className="text-2xl font-bold text-foreground">{stats.totalDevices}</div>
+                  <div className="text-2xl font-bold text-foreground">
+                    {stats.totalDevices}
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -303,7 +319,9 @@ export function Dashboard() {
               className="flex-1 lg:flex-none px-2 sm:px-4 lg:px-8 py-2 sm:py-2.5 text-xs sm:text-sm font-medium relative min-w-0"
             >
               <Shield className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1 sm:mr-2 flex-shrink-0" />
-              <span className="truncate hidden sm:inline">Device Management</span>
+              <span className="truncate hidden sm:inline">
+                Device Management
+              </span>
               <span className="truncate sm:hidden">Devices</span>
               {stats.pendingDevices > 0 && (
                 <Badge

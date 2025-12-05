@@ -146,13 +146,18 @@ export const DeviceStatus = ({ device }: { device: UserDevice }) => {
       <TooltipProvider delayDuration={200}>
         <Tooltip>
           <TooltipTrigger asChild>
-            <Badge
-              variant="secondary"
-              className="bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 border-purple-300 dark:border-purple-700 cursor-help"
+            <button
+              type="button"
+              className="inline-flex focus:outline-none focus:ring-2 focus:ring-purple-500 rounded-md"
             >
-              <HelpCircle className="w-3 h-3 mr-1" />
-              Not Manageable
-            </Badge>
+              <Badge
+                variant="secondary"
+                className="bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 border-purple-300 dark:border-purple-700 cursor-help"
+              >
+                <HelpCircle className="w-3 h-3 mr-1" />
+                Not Manageable
+              </Badge>
+            </button>
           </TooltipTrigger>
           <TooltipContent>
             <p className="max-w-xs">
