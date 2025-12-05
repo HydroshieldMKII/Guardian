@@ -167,7 +167,7 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
                 Status
               </h4>
               <div>
-                <DeviceStatus device={device} />
+                <DeviceStatus device={device} compact />
               </div>
             </div>
           </div>
@@ -276,28 +276,17 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
 
                   <div>
                     <h4 className="font-semibold text-xs sm:text-sm text-muted-foreground">
-                      Current Status
+                      Bypass Policies
                     </h4>
                     <div>
-                      {hasTemporaryAccess(device) ? (
-                        <Badge
-                          variant="default"
-                          className="bg-blue-600 dark:bg-blue-700 text-white"
-                        >
-                          <Clock className="w-3 h-3 mr-1" />
-                          Active Temporary Access
-                        </Badge>
-                      ) : device.temporaryAccessUntil ? (
-                        <Badge
-                          variant="secondary"
-                          className="bg-muted text-muted-foreground"
-                        >
-                          <Clock className="w-3 h-3 mr-1" />
-                          Temporary Access Expired
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline">No Temporary Access</Badge>
-                      )}
+                      <Badge
+                        variant="outline"
+                        className={device.temporaryAccessBypassPolicies 
+                          ? "border-amber-600 dark:border-amber-700 text-amber-700 dark:text-amber-400" 
+                          : ""}
+                      >
+                        {device.temporaryAccessBypassPolicies ? "Yes" : "No"}
+                      </Badge>
                     </div>
                   </div>
                 </div>
