@@ -264,8 +264,12 @@ export function EditProfileModal({
 
         <Tabs defaultValue="profile" className="w-full">
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="profile">Profile</TabsTrigger>
-            <TabsTrigger value="password">Password</TabsTrigger>
+            <TabsTrigger value="profile" className="cursor-pointer">
+              Profile
+            </TabsTrigger>
+            <TabsTrigger value="password" className="cursor-pointer">
+              Password
+            </TabsTrigger>
           </TabsList>
 
           {/* Profile Tab */}
