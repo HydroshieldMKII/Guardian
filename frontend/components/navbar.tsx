@@ -70,11 +70,11 @@ export function Navbar() {
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="w-full max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex h-16 items-center justify-between">
+      <div className="w-full max-w-[1400px] mx-auto px-2 sm:px-4 md:px-6 lg:px-8">
+        <div className="flex h-14 sm:h-16 items-center justify-between">
           <Link
             href="/"
-            className="flex items-center space-x-3 hover:opacity-80 transition-opacity cursor-pointer"
+            className="flex items-center space-x-2 sm:space-x-3 hover:opacity-80 transition-opacity cursor-pointer"
           >
             <div className="flex items-center">
               {/* Light theme logo (dark logo) */}
@@ -83,8 +83,7 @@ export function Navbar() {
                 alt="Guardian"
                 width={300}
                 height={48}
-                className="block dark:hidden"
-                style={{ height: "64px", width: "auto" }}
+                className="block dark:hidden h-[36px] sm:h-[48px] w-auto"
                 priority
               />
               {/* Dark theme logo (light logo) */}
@@ -93,27 +92,26 @@ export function Navbar() {
                 alt="Guardian"
                 width={300}
                 height={48}
-                className="hidden dark:block"
-                style={{ height: "64px", width: "auto" }}
+                className="hidden dark:block h-[36px] sm:h-[48px] w-auto"
                 priority
               />
             </div>
           </Link>
 
           {/* Right side with theme toggle, notifications, settings, and user menu */}
-          <div className="flex items-center space-x-1">
+          <div className="flex items-center space-x-0.5 sm:space-x-1">
             {/* Theme Toggle Button */}
             <Button
               variant="ghost"
               size="icon"
               onClick={toggleTheme}
-              className="h-9 w-9 rounded-full hover:bg-muted transition-colors"
+              className="h-8 w-8 sm:h-9 sm:w-9 rounded-full hover:bg-muted transition-colors"
               title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
             >
               {theme === "dark" ? (
-                <Sun className="h-[18px] w-[18px]" />
+                <Sun className="h-4 w-4 sm:h-[18px] sm:w-[18px]" />
               ) : (
-                <Moon className="h-[18px] w-[18px]" />
+                <Moon className="h-4 w-4 sm:h-[18px] sm:w-[18px]" />
               )}
             </Button>
 
@@ -125,16 +123,16 @@ export function Navbar() {
               variant="ghost"
               size="icon"
               asChild
-              className="h-9 w-9 rounded-full hover:bg-muted transition-colors relative"
+              className="h-8 w-8 sm:h-9 sm:w-9 rounded-full hover:bg-muted transition-colors relative"
               title="Settings"
             >
               <Link
                 href="/settings"
                 className="flex items-center justify-center"
               >
-                <Settings className="h-[18px] w-[18px]" />
+                <Settings className="h-4 w-4 sm:h-[18px] sm:w-[18px]" />
                 {versionInfo?.isVersionMismatch && (
-                  <div className="absolute -top-1 -right-1 h-2.5 w-2.5 bg-red-500 rounded-full border border-background" />
+                  <div className="absolute -top-1 -right-1 h-2 w-2 sm:h-2.5 sm:w-2.5 bg-red-500 rounded-full border border-background" />
                 )}
               </Link>
             </Button>
@@ -146,12 +144,12 @@ export function Navbar() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-9 w-9 rounded-full hover:bg-muted transition-colors ml-2"
+                    className="h-8 w-8 sm:h-9 sm:w-9 rounded-full hover:bg-muted transition-colors ml-1 sm:ml-2"
                     title={user.username}
                   >
-                    <Avatar className="h-8 w-8">
+                    <Avatar className="h-7 w-7 sm:h-8 sm:w-8">
                       <AvatarImage src={user.avatarUrl} alt={user.username} />
-                      <AvatarFallback className="text-xs font-semibold">
+                      <AvatarFallback className="text-[10px] sm:text-xs font-semibold">
                         {getAvatarInitials()}
                       </AvatarFallback>
                     </Avatar>

@@ -174,7 +174,7 @@ export function Dashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-[calc(100vh-3.5rem)] flex items-center justify-center">
+      <div className="min-h-[calc(100vh-3.5rem)] sm:min-h-[calc(100vh-4rem)] flex items-center justify-center">
         <ThreeDotLoader />
       </div>
     );
@@ -191,57 +191,61 @@ export function Dashboard() {
   }
 
   return (
-    <div className="min-h-[calc(100vh-3.5rem)]">
-      <div className="w-full max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
+    <div className="min-h-[calc(100vh-3.5rem)] sm:min-h-[calc(100vh-4rem)]">
+      <div className="w-full max-w-[1400px] mx-auto px-2 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
         {/* Server Statistics */}
-        <div className="mb-6 lg:mb-10">
-          <h3 className="text-xl font-semibold text-foreground mb-6 flex items-center">
+        <div className="mb-4 sm:mb-6 lg:mb-10">
+          <h3 className="text-lg sm:text-xl font-semibold text-foreground mb-4 sm:mb-6 flex items-center">
             Devices Overview
           </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 lg:gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-2 xl:grid-cols-4 gap-2 sm:gap-4 lg:gap-6">
             <Card className="border-l-4 border-l-blue-500 transition-all hover:shadow-md">
-              <CardHeader className="pb-3 lg:pb-4">
-                <CardTitle className="text-sm font-medium text-muted-foreground flex items-center mb-2 mt-2">
-                  <Activity className="w-4 h-4 mr-2" />
-                  Active Streams
+              <CardHeader className="p-3 sm:p-4 lg:pb-4">
+                <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center mb-1 sm:mb-2">
+                  <Activity className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
+                  <span className="hidden sm:inline">Active Streams</span>
+                  <span className="sm:hidden">Streams</span>
                 </CardTitle>
-                <CardDescription className="text-2xl lg:text-3xl xl:text-4xl font-bold text-foreground">
+                <CardDescription className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-bold text-foreground">
                   {stats.activeStreams}
                 </CardDescription>
               </CardHeader>
             </Card>
 
             <Card className="border-l-4 border-l-yellow-500 transition-all hover:shadow-md">
-              <CardHeader className="pb-3 lg:pb-4">
-                <CardTitle className="text-sm font-medium text-muted-foreground flex items-center mb-2 mt-2">
-                  <AlertTriangle className="w-4 h-4 mr-2" />
-                  Pending Approval
+              <CardHeader className="p-3 sm:p-4 lg:pb-4">
+                <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center mb-1 sm:mb-2">
+                  <AlertTriangle className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
+                  <span className="hidden sm:inline">Pending Approval</span>
+                  <span className="sm:hidden">Pending</span>
                 </CardTitle>
-                <CardDescription className="text-2xl lg:text-3xl xl:text-4xl font-bold text-foreground">
+                <CardDescription className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-bold text-foreground">
                   {stats.pendingDevices}
                 </CardDescription>
               </CardHeader>
             </Card>
 
             <Card className="border-l-4 border-l-green-500 transition-all hover:shadow-md">
-              <CardHeader className="pb-3 lg:pb-4">
-                <CardTitle className="text-sm font-medium text-muted-foreground flex items-center mb-2 mt-2">
-                  <CheckCircle className="w-4 h-4 mr-2" />
-                  Approved Devices
+              <CardHeader className="p-3 sm:p-4 lg:pb-4">
+                <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center mb-1 sm:mb-2">
+                  <CheckCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
+                  <span className="hidden sm:inline">Approved Devices</span>
+                  <span className="sm:hidden">Approved</span>
                 </CardTitle>
-                <CardDescription className="text-2xl lg:text-3xl xl:text-4xl font-bold text-foreground">
+                <CardDescription className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-bold text-foreground">
                   {stats.approvedDevices}
                 </CardDescription>
               </CardHeader>
             </Card>
 
             <Card className="border-l-4 border-l-purple-500 transition-all hover:shadow-md">
-              <CardHeader className="pb-3 lg:pb-4">
-                <CardTitle className="text-sm font-medium text-muted-foreground flex items-center mb-2 mt-2">
-                  <Users className="w-4 h-4 mr-2" />
-                  Total Devices
+              <CardHeader className="p-3 sm:p-4 lg:pb-4">
+                <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center mb-1 sm:mb-2">
+                  <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
+                  <span className="hidden sm:inline">Total Devices</span>
+                  <span className="sm:hidden">Total</span>
                 </CardTitle>
-                <CardDescription className="text-2xl lg:text-3xl xl:text-4xl font-bold text-foreground">
+                <CardDescription className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-bold text-foreground">
                   {stats.totalDevices}
                 </CardDescription>
               </CardHeader>
@@ -250,19 +254,20 @@ export function Dashboard() {
         </div>
 
         {/* Tab Navigation */}
-        <div className="mb-6 lg:mb-8">
-          <div className="flex w-full lg:w-fit space-x-1 bg-muted p-1.5 rounded-lg">
+        <div className="mb-4 sm:mb-6 lg:mb-8">
+          <div className="flex w-full lg:w-fit space-x-1 bg-muted p-1 sm:p-1.5 rounded-lg">
             <Button
               variant={activeTab === "devices" ? "default" : "ghost"}
               onClick={() => setActiveTab("devices")}
-              className="flex-1 lg:flex-none px-4 lg:px-8 py-2.5 text-sm font-medium relative min-w-0"
+              className="flex-1 lg:flex-none px-2 sm:px-4 lg:px-8 py-2 sm:py-2.5 text-xs sm:text-sm font-medium relative min-w-0"
             >
-              <Shield className="w-4 h-4 mr-2 flex-shrink-0" />
-              <span className="truncate">Device Management</span>
+              <Shield className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1 sm:mr-2 flex-shrink-0" />
+              <span className="truncate hidden sm:inline">Device Management</span>
+              <span className="truncate sm:hidden">Devices</span>
               {stats.pendingDevices > 0 && (
                 <Badge
                   variant="destructive"
-                  className="ml-2 min-w-5 h-5 text-xs bg-red-600 dark:bg-red-700 text-white flex-shrink-0"
+                  className="ml-1 sm:ml-2 min-w-4 sm:min-w-5 h-4 sm:h-5 text-[10px] sm:text-xs bg-red-600 dark:bg-red-700 text-white flex-shrink-0"
                 >
                   {stats.pendingDevices}
                 </Badge>
@@ -271,14 +276,15 @@ export function Dashboard() {
             <Button
               variant={activeTab === "streams" ? "default" : "ghost"}
               onClick={() => setActiveTab("streams")}
-              className="flex-1 lg:flex-none px-4 lg:px-8 py-2.5 text-sm font-medium relative min-w-0"
+              className="flex-1 lg:flex-none px-2 sm:px-4 lg:px-8 py-2 sm:py-2.5 text-xs sm:text-sm font-medium relative min-w-0"
             >
-              <Activity className="w-4 h-4 mr-2 flex-shrink-0" />
-              <span className="truncate">Active Streams</span>
+              <Activity className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1 sm:mr-2 flex-shrink-0" />
+              <span className="truncate hidden sm:inline">Active Streams</span>
+              <span className="truncate sm:hidden">Streams</span>
               {stats.activeStreams > 0 && (
                 <Badge
                   variant="default"
-                  className="ml-2 min-w-5 h-5 text-xs bg-blue-600 dark:bg-blue-700 text-white flex-shrink-0"
+                  className="ml-1 sm:ml-2 min-w-4 sm:min-w-5 h-4 sm:h-5 text-[10px] sm:text-xs bg-blue-600 dark:bg-blue-700 text-white flex-shrink-0"
                 >
                   {stats.activeStreams}
                 </Badge>

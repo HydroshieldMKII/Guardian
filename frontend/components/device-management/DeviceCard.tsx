@@ -105,35 +105,33 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
       />
 
       {/* Mobile-first layout */}
-      <div className="space-y-4 sm:space-y-0">
+      <div className="space-y-3 sm:space-y-0">
         {/* Mobile: Stacked layout */}
-        <div className="sm:hidden p-4 pt-5 space-y-4">
+        <div className="sm:hidden p-3 pt-4 space-y-3">
           {/* Device Header */}
-          <div className="space-y-3">
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex items-start gap-3 flex-1 min-w-0">
+          <div className="space-y-2">
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex items-start gap-2 flex-1 min-w-0">
                 <div className="flex-shrink-0 mt-0.5">
                   {getDeviceIcon(device.devicePlatform, device.deviceProduct)}
                 </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between gap-3 mb-1">
-                    <h4 className="font-semibold text-foreground truncate text-base">
-                      {device.deviceName || "Unknown"}
-                    </h4>
-                  </div>
+                <div className="flex-1 min-w-0 max-w-[180px]">
+                  <h4 className="font-semibold text-foreground truncate text-sm">
+                    {device.deviceName || "Unknown"}
+                  </h4>
                 </div>
               </div>
             </div>
 
             {/* Badges - Mobile */}
-            <div className="flex justify-start gap-2 flex-wrap">
+            <div className="flex justify-start gap-1.5 flex-wrap">
               {getDeviceTypeBadge()}
               {hasTemporaryAccess(device) && (
                 <Badge
                   variant="outline"
-                  className="text-xs bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 border-orange-200 dark:border-orange-700"
+                  className="text-[10px] px-1.5 py-0.5 bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 border-orange-200 dark:border-orange-700"
                 >
-                  <Timer className="w-3 h-3 mr-1" />
+                  <Timer className="w-2.5 h-2.5 mr-0.5" />
                   {getTemporaryAccessTimeLeft(device)}
                 </Badge>
               )}
@@ -141,69 +139,51 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
                 device.temporaryAccessBypassPolicies && (
                   <Badge
                     variant="outline"
-                    className="text-xs bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-700"
+                    className="text-[10px] px-1.5 py-0.5 bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-700"
                   >
-                    <ShieldOff className="w-3 h-3 mr-1" />
-                    Policy Bypass
+                    <ShieldOff className="w-2.5 h-2.5 mr-0.5" />
+                    Bypass
                   </Badge>
                 )}
             </div>
           </div>{" "}
           {/* Device Info Grid - Mobile */}
-          <div className="grid grid-cols-1 gap-3 text-sm">
-            <div className="flex items-center justify-between p-2.5 bg-muted/30 rounded-lg">
-              <div className="flex items-center gap-2">
-                <Monitor className="w-4 h-4 text-muted-foreground" />
-                <span className="font-medium text-foreground">Platform</span>
-              </div>
-              <span className="text-muted-foreground truncate ml-2">
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            <div className="flex items-center gap-1.5 p-2 bg-muted/30 rounded-lg">
+              <Monitor className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+              <span className="truncate text-foreground">
                 {device.devicePlatform || "Unknown"}
               </span>
             </div>
-            <div className="flex items-center justify-between p-2.5 bg-muted/30 rounded-lg">
-              <div className="flex items-center gap-2">
-                <MapPin className="w-4 h-4 text-muted-foreground" />
-                <span className="font-medium text-foreground">IP Address</span>
-              </div>
-              <div className="ml-2">
+            <div className="flex items-center gap-1.5 p-2 bg-muted/30 rounded-lg">
+              <MapPin className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+              <div className="truncate">
                 <ClickableIP ipAddress={device.ipAddress} />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-2">
-              <div className="flex flex-col p-2.5 bg-muted/30 rounded-lg">
-                <div className="flex items-center gap-1.5 mb-1">
-                  <Activity className="w-3.5 h-3.5 text-muted-foreground" />
-                  <span className="text-xs font-medium text-muted-foreground">
-                    Streams
-                  </span>
-                </div>
-                <span className="font-semibold text-foreground">
-                  {device.sessionCount}
-                </span>
-              </div>
-              <div className="flex flex-col p-2.5 bg-muted/30 rounded-lg">
-                <div className="flex items-center gap-1.5 mb-1">
-                  <Clock className="w-3.5 h-3.5 text-muted-foreground" />
-                  <span className="text-xs font-medium text-muted-foreground">
-                    Last Seen
-                  </span>
-                </div>
-                <span className="font-semibold text-foreground text-xs">
-                  {new Date(device.lastSeen).toLocaleDateString()}
-                </span>
-              </div>
+            <div className="flex items-center gap-1.5 p-2 bg-muted/30 rounded-lg">
+              <Activity className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+              <span className="text-foreground">
+                {device.sessionCount} streams
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5 p-2 bg-muted/30 rounded-lg">
+              <Clock className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+              <span className="text-foreground">
+                {new Date(device.lastSeen).toLocaleDateString()}
+              </span>
             </div>
           </div>
           {/* Action Buttons - Mobile */}
-          <div className="flex flex-col gap-3 pt-3 border-t border-border/50">
+          <div className="flex flex-col gap-2 pt-2 border-t border-border/50">
             {/* Details Button - Full width on mobile */}
             <Button
               variant="outline"
               size="sm"
               onClick={() => onShowDetails(device)}
-              className="text-sm px-4 py-2.5 w-full font-medium shadow-sm hover:shadow-md transition-shadow"
+              className="text-xs px-3 py-2 w-full font-medium shadow-sm hover:shadow-md transition-shadow"
             >
-              <Eye className="w-4 h-4 mr-2" />
+              <Eye className="w-3.5 h-3.5 mr-1.5" />
               View Details
             </Button>
 
@@ -215,26 +195,26 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
                 size="sm"
                 onClick={() => onDelete(device)}
                 disabled={actionLoading === device.id}
-                className="text-sm px-4 py-2.5 w-full border-red-600 text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-700 dark:hover:bg-red-900/20"
+                className="text-xs px-3 py-2 w-full border-red-600 text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-700 dark:hover:bg-red-900/20"
               >
                 {actionLoading === device.id ? (
-                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
                 ) : (
                   <>
-                    <Trash2 className="w-4 h-4 mr-2" />
+                    <Trash2 className="w-3.5 h-3.5 mr-1.5" />
                     <span>Delete</span>
                   </>
                 )}
               </Button>
             ) : device.status === "pending" ? (
-              <div className="space-y-3">
-                <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-2">
+                <div className="grid grid-cols-2 gap-1.5">
                   <Button
                     variant="default"
                     size="sm"
                     onClick={() => onApprove(device)}
                     disabled={actionLoading === device.id}
-                    className="bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white text-xs px-3 py-2"
+                    className="bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white text-xs px-2 py-1.5"
                   >
                     {actionLoading === device.id ? (
                       <RefreshCw className="w-3 h-3 animate-spin" />
@@ -250,7 +230,7 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
                     size="sm"
                     onClick={() => onReject(device)}
                     disabled={actionLoading === device.id}
-                    className="text-xs px-3 py-2 bg-red-600 dark:bg-red-700 text-white hover:bg-red-700 dark:hover:bg-red-800"
+                    className="text-xs px-2 py-1.5 bg-red-600 dark:bg-red-700 text-white hover:bg-red-700 dark:hover:bg-red-800"
                   >
                     {actionLoading === device.id ? (
                       <RefreshCw className="w-3 h-3 animate-spin" />
@@ -267,13 +247,13 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
                   size="sm"
                   onClick={() => onDelete(device)}
                   disabled={actionLoading === device.id}
-                  className="w-full text-sm px-4 py-2.5 border-red-600 text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-700 dark:hover:bg-red-900/20"
+                  className="w-full text-xs px-3 py-2 border-red-600 text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-700 dark:hover:bg-red-900/20"
                 >
                   {actionLoading === device.id ? (
-                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
                   ) : (
                     <>
-                      <Trash2 className="w-4 h-4 mr-2" />
+                      <Trash2 className="w-3.5 h-3.5 mr-1.5" />
                       Delete
                     </>
                   )}
@@ -285,28 +265,28 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
                     size="sm"
                     onClick={() => onRevokeTempAccess(device.id)}
                     disabled={actionLoading === device.id}
-                    className="w-full text-sm px-4 py-2.5 border-slate-600 text-slate-600 hover:bg-slate-50 dark:border-slate-400 dark:text-slate-400 dark:hover:bg-slate-900/20 font-medium shadow-sm hover:shadow-md transition-all"
+                    className="w-full text-xs px-3 py-2 border-slate-600 text-slate-600 hover:bg-slate-50 dark:border-slate-400 dark:text-slate-400 dark:hover:bg-slate-900/20 font-medium"
                   >
                     {actionLoading === device.id ? (
-                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
                     ) : (
                       <>
-                        <Timer className="w-4 h-4 mr-1.5" />
-                        <span>Revoke temporary Access</span>
+                        <Timer className="w-3.5 h-3.5 mr-1" />
+                        <span>Revoke Temp Access</span>
                       </>
                     )}
                   </Button>
                 ) : null}
               </div>
             ) : device.status === "rejected" ? (
-              <div className="space-y-3">
-                <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-2">
+                <div className="grid grid-cols-2 gap-1.5">
                   <Button
                     variant="default"
                     size="sm"
                     onClick={() => onToggleApproval(device)}
                     disabled={actionLoading === device.id}
-                    className="bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white text-xs px-3 py-2"
+                    className="bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white text-xs px-2 py-1.5"
                   >
                     {actionLoading === device.id ? (
                       <RefreshCw className="w-3 h-3 animate-spin" />
@@ -322,7 +302,7 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
                     size="sm"
                     onClick={() => onDelete(device)}
                     disabled={actionLoading === device.id}
-                    className="text-xs px-3 py-2 border-red-600 text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-700 dark:hover:bg-red-900/20"
+                    className="text-xs px-2 py-1.5 border-red-600 text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-700 dark:hover:bg-red-900/20"
                   >
                     {actionLoading === device.id ? (
                       <RefreshCw className="w-3 h-3 animate-spin" />
@@ -341,27 +321,27 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
                     size="sm"
                     onClick={() => onRevokeTempAccess(device.id)}
                     disabled={actionLoading === device.id}
-                    className="w-full text-sm px-4 py-2.5 border-slate-600 text-slate-600 hover:bg-slate-50 dark:border-slate-400 dark:text-slate-400 dark:hover:bg-slate-900/20 font-medium shadow-sm hover:shadow-md transition-all"
+                    className="w-full text-xs px-3 py-2 border-slate-600 text-slate-600 hover:bg-slate-50 dark:border-slate-400 dark:text-slate-400 dark:hover:bg-slate-900/20 font-medium"
                   >
                     {actionLoading === device.id ? (
-                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
                     ) : (
                       <>
-                        <Timer className="w-4 h-4 mr-1.5" />
-                        <span>Revoke temporary Access</span>
+                        <Timer className="w-3.5 h-3.5 mr-1" />
+                        <span>Revoke Temp Access</span>
                       </>
                     )}
                   </Button>
                 ) : null}
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-1.5">
                 <Button
                   variant="destructive"
                   size="sm"
                   onClick={() => onToggleApproval(device)}
                   disabled={actionLoading === device.id}
-                  className="text-xs px-3 py-2 bg-red-600 dark:bg-red-700 text-white hover:bg-red-700 dark:hover:bg-red-800"
+                  className="text-xs px-2 py-1.5 bg-red-600 dark:bg-red-700 text-white hover:bg-red-700 dark:hover:bg-red-800"
                 >
                   {actionLoading === device.id ? (
                     <RefreshCw className="w-3 h-3 animate-spin" />
@@ -377,7 +357,7 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
                   size="sm"
                   onClick={() => onDelete(device)}
                   disabled={actionLoading === device.id}
-                  className="text-xs px-3 py-2 border-red-600 text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-700 dark:hover:bg-red-900/20"
+                  className="text-xs px-2 py-1.5 border-red-600 text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-700 dark:hover:bg-red-900/20"
                 >
                   {actionLoading === device.id ? (
                     <RefreshCw className="w-3 h-3 animate-spin" />
@@ -402,7 +382,7 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
                 <div className="flex-shrink-0">
                   {getDeviceIcon(device.devicePlatform, device.deviceProduct)}
                 </div>
-                <div className="flex-1 min-w-0">
+                <div className="flex-1 min-w-0 max-w-[180px]">
                   <h4 className="font-semibold text-foreground truncate text-base">
                     {device.deviceName || "Unknown"}
                   </h4>
