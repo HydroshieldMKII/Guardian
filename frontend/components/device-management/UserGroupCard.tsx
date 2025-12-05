@@ -52,11 +52,11 @@ interface UserGroupCardProps {
   onToggleExpansion: (userId: string) => void;
   onUpdateUserPreference: (
     userId: string,
-    defaultBlock: boolean | null,
+    defaultBlock: boolean | null
   ) => void;
   onUpdateUserIPPolicy?: (
     userId: string,
-    updates: Partial<UserPreference>,
+    updates: Partial<UserPreference>
   ) => void;
   onToggleUserVisibility?: (userId: string) => void;
   onShowHistory?: (userId: string) => void;
@@ -166,7 +166,10 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
                 {group.user.preference &&
                   getUserPreferenceBadge(group.user.preference.defaultBlock)}
                 {hasTimeSchedules && (
-                  <Badge variant="outline" className="text-[10px] px-1.5 py-0.5">
+                  <Badge
+                    variant="outline"
+                    className="text-[10px] px-1.5 py-0.5"
+                  >
                     <Timer className="w-2.5 h-2.5 mr-0.5" />
                     Scheduled
                   </Badge>
@@ -310,7 +313,11 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
                     ) : (
                       <Settings className="w-3 h-3 mr-2" />
                     )}
-                    <span>Global{" "}{!configLoading && `(${getGlobalDefaultBlock() ? "Block" : "Allow"})`}</span>
+                    <span>
+                      Global{" "}
+                      {!configLoading &&
+                        `(${getGlobalDefaultBlock() ? "Block" : "Allow"})`}
+                    </span>
                   </button>
                   <button
                     onClick={() =>
@@ -356,7 +363,9 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
             {group.devices.length === 0 ? (
               <div className="text-center text-muted-foreground py-6 sm:py-8">
                 <Monitor className="w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-2" />
-                <p className="text-xs sm:text-sm">No devices found for this user</p>
+                <p className="text-xs sm:text-sm">
+                  No devices found for this user
+                </p>
               </div>
             ) : (
               <div className="space-y-3 sm:space-y-4">
