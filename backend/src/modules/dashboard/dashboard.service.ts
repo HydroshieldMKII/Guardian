@@ -83,11 +83,24 @@ export class DashboardService {
         this.usersService.getAllUsers(true),
       ]);
 
+      // Helper function to identify PlexAmp devices
+      const isPlexAmpDevice = (device: any) => {
+        return (
+          device.deviceProduct?.toLowerCase().includes('plexamp') ||
+          device.deviceName?.toLowerCase().includes('plexamp')
+        );
+      };
+
+      // Filter out PlexAmp devices from pending count
+      const manageablePendingDevices = pendingDevices.filter(
+        (device) => !isPlexAmpDevice(device),
+      );
+
       // Calculate stats
       const stats = {
         activeStreams: sessions?.MediaContainer?.size || 0,
         totalDevices: allDevices.length,
-        pendingDevices: pendingDevices.length,
+        pendingDevices: manageablePendingDevices.length,
         approvedDevices: approvedDevices.length,
       };
 

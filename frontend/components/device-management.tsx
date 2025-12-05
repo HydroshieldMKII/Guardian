@@ -316,10 +316,21 @@ const DeviceManagement = memo(
           const group = deviceGroups.get(userId)!;
           group.devices.push(device);
 
-          // Update counts
+          // Helper function to identify PlexAmp devices
+          const isPlexAmpDevice = (device: UserDevice) => {
+            return (
+              device.deviceProduct?.toLowerCase().includes("plexamp") ||
+              device.deviceName?.toLowerCase().includes("plexamp")
+            );
+          };
+
+          // Update counts (exclude PlexAmp from pending count)
           switch (device.status) {
             case "pending":
-              group.pendingCount++;
+              // Only count pending devices that are not PlexAmp
+              if (!isPlexAmpDevice(device)) {
+                group.pendingCount++;
+              }
               break;
             case "approved":
               group.approvedCount++;
