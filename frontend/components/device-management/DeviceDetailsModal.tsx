@@ -47,13 +47,13 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-full sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center text-base sm:text-lg text-foreground">
+          <DialogTitle className="flex items-center text-base sm:text-lg text-foreground text-left">
             <Settings className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
             Device Details
           </DialogTitle>
-          <DialogDescription className="text-sm text-muted-foreground">
+          <DialogDescription className="text-sm text-muted-foreground text-left">
             Detailed information about this device
           </DialogDescription>
         </DialogHeader>
@@ -99,7 +99,7 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
-                  <p className="text-sm sm:text-base text-foreground break-words flex-1">
+                  <p className="text-sm sm:text-base text-foreground break-words flex-1 max-w-[200px] truncate">
                     {device.deviceName || "Unknown"}
                   </p>
                   <Button
