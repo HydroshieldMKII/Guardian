@@ -495,8 +495,8 @@ export function TimeRuleModal({
           </DialogHeader>
 
           <div className="flex flex-col lg:flex-row gap-6 flex-1 overflow-y-auto lg:overflow-hidden min-h-0">
-            {/* Right Column - New Rules (Show first on mobile) */}
-            <div className="lg:w-1/2 flex flex-col min-h-0 space-y-4 flex-shrink-0 lg:flex-1 lg:flex-initial order-1 lg:order-2">
+            {/* Right Column - New Rules (Show second on mobile and desktop) */}
+            <div className="lg:w-1/2 flex flex-col min-h-0 space-y-4 flex-shrink-0 lg:flex-1 lg:flex-initial order-2">
               <div className="flex items-center justify-between">
                 <Label className="text-sm font-medium">
                   Add New Blocking Rule
@@ -659,8 +659,8 @@ export function TimeRuleModal({
               </div>
             </div>
 
-            {/* Left Column - Existing Rules (Show second on mobile) */}
-            <div className="lg:w-1/2 flex flex-col min-h-0 flex-shrink-0 lg:flex-1 order-2 lg:order-1">
+            {/* Left Column - Existing Rules (Show first on mobile and desktop) */}
+            <div className="lg:w-1/2 flex flex-col min-h-0 flex-shrink-0 lg:flex-1 order-1">
               <div className="flex items-center justify-between mb-3 pr-2">
                 <Label className="text-sm font-medium">
                   Active Blocking Rules
