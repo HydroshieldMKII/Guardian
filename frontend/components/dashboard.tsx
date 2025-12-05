@@ -200,7 +200,7 @@ export function Dashboard() {
           </h3>
 
           {/* Mobile: Compact horizontal layout */}
-          <Card className="sm:hidden border-l-4 border-l-blue-500 overflow-hidden">
+          <Card className="sm:hidden overflow-hidden">
             <CardContent className="p-3">
               <div className="grid grid-cols-4 gap-2">
                 {/* Streams */}

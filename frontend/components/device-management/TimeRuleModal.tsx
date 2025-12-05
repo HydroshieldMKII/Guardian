@@ -482,7 +482,7 @@ export function TimeRuleModal({
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-[95vw] w-full sm:max-w-[1100px] max-h-[90vh] flex flex-col">
+        <DialogContent className="sm:max-w-[1100px] max-h-[90vh] flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               Manage Blocking Rules
@@ -544,7 +544,7 @@ export function TimeRuleModal({
                 </div>
               </div>
 
-              <div className="flex-1 overflow-y-auto pr-2">
+              <div className="flex-1 overflow-y-auto">
                 <Card>
                   <CardContent className="px-4 py-3 space-y-4">
                     {/* Rule Name */}
@@ -682,7 +682,7 @@ export function TimeRuleModal({
                   </Button>
                 )}
               </div>
-              <div className="flex-1 overflow-y-auto space-y-2 pr-2 scrollbar-hide">
+              <div className="flex-1 overflow-y-auto space-y-2 scrollbar-hide">
                 {loadingRules ? (
                   <div className="text-center py-4">Loading rules...</div>
                 ) : rules.length === 0 ? (
