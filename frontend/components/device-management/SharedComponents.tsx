@@ -113,7 +113,7 @@ export const getDeviceIcon = (
 };
 
 // Device status component
-export const DeviceStatus = ({ device }: { device: UserDevice }) => {
+export const DeviceStatus = ({ device, compact = false }: { device: UserDevice; compact?: boolean }) => {
   const { hasTemporaryAccess, getTemporaryAccessTimeLeft } = useDeviceUtils();
 
   // Helper function to identify Plex Amp devices
@@ -134,7 +134,7 @@ export const DeviceStatus = ({ device }: { device: UserDevice }) => {
           className="bg-blue-600 dark:bg-blue-700 text-white"
         >
           <Timer className="w-3 h-3 mr-1" />
-          Temporary Access ({timeLeft} left)
+          {compact ? "Temporary Access" : `Temporary Access (${timeLeft} left)`}
         </Badge>
       </div>
     );

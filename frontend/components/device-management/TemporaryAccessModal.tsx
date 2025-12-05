@@ -21,6 +21,7 @@ import {
   ChevronDown,
   Monitor,
   CheckCircle,
+  Calendar as CalendarIcon,
 } from "lucide-react";
 import { UserDevice } from "@/types";
 import { getDeviceIcon } from "./SharedComponents";
@@ -28,6 +29,13 @@ import { useDeviceUtils } from "@/hooks/device-management/useDeviceUtils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 
 interface TemporaryAccessModalProps {
   user: {
@@ -61,11 +69,20 @@ export const TemporaryAccessModal: React.FC<TemporaryAccessModalProps> = ({
     "minutes" | "hours" | "days" | "weeks"
   >("hours");
   const [bypassPolicies, setBypassPolicies] = useState<boolean>(false);
+  const [inputMode, setInputMode] = useState<"duration" | "calendar">("duration");
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const { convertToMinutes, isValidDuration, hasTemporaryAccess } =
     useDeviceUtils();
 
   // Check if the calculated expiry date is valid
   const getExpiryDate = (): Date | null => {
+    if (inputMode === "calendar") {
+      if (!selectedDate) return null;
+      // Ensure the selected date is in the future
+      if (selectedDate.getTime() <= Date.now()) return null;
+      return selectedDate;
+    }
+    
     if (durationValue <= 0 || !isValidDuration(durationValue, durationUnit)) {
       return null;
     }
@@ -95,6 +112,8 @@ export const TemporaryAccessModal: React.FC<TemporaryAccessModalProps> = ({
       setDurationValue(1);
       setDurationUnit("hours");
       setBypassPolicies(false);
+      setInputMode("duration");
+      setSelectedDate(undefined);
     }
   }, [isOpen]);
 
@@ -117,13 +136,17 @@ export const TemporaryAccessModal: React.FC<TemporaryAccessModalProps> = ({
   };
 
   const handleGrantAccess = () => {
-    if (
-      selectedDeviceIds.length > 0 &&
-      isValidDuration(durationValue, durationUnit)
-    ) {
-      const totalMinutes = convertToMinutes(durationValue, durationUnit);
-      onGrantAccess(selectedDeviceIds, totalMinutes, bypassPolicies);
+    if (selectedDeviceIds.length === 0 || !isExpiryDateValid) return;
+    
+    let totalMinutes: number;
+    if (inputMode === "calendar" && selectedDate) {
+      // Calculate minutes from now until selected date
+      totalMinutes = Math.ceil((selectedDate.getTime() - Date.now()) / (60 * 1000));
+    } else {
+      totalMinutes = convertToMinutes(durationValue, durationUnit);
     }
+    
+    onGrantAccess(selectedDeviceIds, totalMinutes, bypassPolicies);
   };
 
   if (!user) return null;
@@ -233,12 +256,36 @@ export const TemporaryAccessModal: React.FC<TemporaryAccessModalProps> = ({
           {/* Duration Settings - Only show when devices are selected */}
           {selectedDeviceIds.length > 0 && (
             <div>
-              <h4 className="font-semibold text-sm text-foreground mb-3 flex items-center">
-                <Timer className="w-4 h-4 mr-2" />
-                Access Duration
-              </h4>
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="font-semibold text-sm text-foreground flex items-center">
+                  <Timer className="w-4 h-4 mr-2" />
+                  Access Duration
+                </h4>
+                <div className="flex gap-2">
+                  <Button
+                    variant={inputMode === "duration" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setInputMode("duration")}
+                    className="text-xs"
+                  >
+                    <Timer className="w-3 h-3 mr-1" />
+                    Duration
+                  </Button>
+                  <Button
+                    variant={inputMode === "calendar" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setInputMode("calendar")}
+                    className="text-xs"
+                  >
+                    <CalendarIcon className="w-3 h-3 mr-1" />
+                    Calendar
+                  </Button>
+                </div>
+              </div>
 
               <div className="space-y-3">
+                {inputMode === "duration" ? (
+                  <>
                 <div className="flex gap-2 items-end">
                   <div className="flex-1">
                     <label className="text-xs text-muted-foreground">
@@ -357,17 +404,113 @@ export const TemporaryAccessModal: React.FC<TemporaryAccessModalProps> = ({
                     </Button>
                   </div>
                 </div>
+                  </>
+                ) : (
+                  <div>
+                    <label className="text-xs text-muted-foreground mb-2 block">
+                      Select Expiry Date & Time
+                    </label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-full justify-start text-left font-normal",
+                            !selectedDate && "text-muted-foreground"
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {selectedDate ? (
+                            selectedDate.toLocaleString(undefined, {
+                              weekday: "short",
+                              year: "numeric",
+                              month: "short",
+                              day: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })
+                          ) : (
+                            <span>Pick a date and time</span>
+                          )}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={selectedDate}
+                          onSelect={(date) => {
+                            if (date) {
+                              // Set time to current time + 1 hour by default
+                              const now = new Date();
+                              date.setHours(now.getHours() + 1);
+                              date.setMinutes(now.getMinutes());
+                              setSelectedDate(date);
+                            } else {
+                              setSelectedDate(undefined);
+                            }
+                          }}
+                          disabled={(date) => date < new Date()}
+                          autoFocus
+                        />
+                        {selectedDate && (
+                          <div className="p-3 border-t">
+                            <label className="text-xs text-muted-foreground mb-2 block">
+                              Time
+                            </label>
+                            <div className="flex gap-2">
+                              <Input
+                                type="number"
+                                min="0"
+                                max="23"
+                                value={selectedDate.getHours()}
+                                onChange={(e) => {
+                                  const hours = parseInt(e.target.value) || 0;
+                                  const newDate = new Date(selectedDate);
+                                  newDate.setHours(Math.min(23, Math.max(0, hours)));
+                                  setSelectedDate(newDate);
+                                }}
+                                className="w-16 text-center"
+                                placeholder="HH"
+                              />
+                              <span className="self-center">:</span>
+                              <Input
+                                type="number"
+                                min="0"
+                                max="59"
+                                value={selectedDate.getMinutes()}
+                                onChange={(e) => {
+                                  const minutes = parseInt(e.target.value) || 0;
+                                  const newDate = new Date(selectedDate);
+                                  newDate.setMinutes(Math.min(59, Math.max(0, minutes)));
+                                  setSelectedDate(newDate);
+                                }}
+                                className="w-16 text-center"
+                                placeholder="MM"
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                )}
 
                 <div className="mt-3">
-                  {durationValue <= 0 && (
+                  {inputMode === "duration" && durationValue <= 0 && (
                     <p className="text-xs text-red-600">
                       Please enter a valid duration
                     </p>
                   )}
+                  
+                  {inputMode === "calendar" && selectedDate && selectedDate.getTime() <= Date.now() && (
+                    <p className="text-xs text-red-600">
+                      Selected date must be in the future
+                    </p>
+                  )}
 
                   {/* Expiry Preview */}
-                  {durationValue > 0 &&
-                    isValidDuration(durationValue, durationUnit) && (
+                  {((inputMode === "duration" && durationValue > 0 && isValidDuration(durationValue, durationUnit)) ||
+                    (inputMode === "calendar" && selectedDate)) && (
                       <>
                         {isExpiryDateValid ? (
                           <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 rounded-lg p-3">

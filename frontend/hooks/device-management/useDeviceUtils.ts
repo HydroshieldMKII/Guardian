@@ -50,7 +50,7 @@ export const useDeviceUtils = () => {
   // Convert duration value and unit to minutes
   const convertToMinutes = (
     value: number,
-    unit: "minutes" | "hours" | "days" | "weeks",
+    unit: "minutes" | "hours" | "days" | "weeks"
   ): number => {
     if (value <= 0) return 1; // Minimum 1 minute
 
@@ -71,7 +71,7 @@ export const useDeviceUtils = () => {
   // Format duration for display
   const formatDuration = (
     value: number,
-    unit: "minutes" | "hours" | "days" | "weeks",
+    unit: "minutes" | "hours" | "days" | "weeks"
   ): string => {
     if (value === 1) {
       return `1 ${unit.slice(0, -1)}`; // Remove 's' for singular
@@ -82,7 +82,7 @@ export const useDeviceUtils = () => {
   // Validate if duration is positive
   const isValidDuration = (
     value: number,
-    unit: "minutes" | "hours" | "days" | "weeks",
+    unit: "minutes" | "hours" | "days" | "weeks"
   ): boolean => {
     if (value <= 0) return false; // Invalid if empty or zero
     const totalMinutes = convertToMinutes(value, unit);
