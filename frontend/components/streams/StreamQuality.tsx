@@ -74,7 +74,7 @@ export const StreamQualityDetails: React.FC<StreamQualityDetailsProps> = ({
               </div>
             </div>
             <div className="flex items-center gap-2 bg-card p-2 rounded-md border border-border/30 min-w-0">
-              <Wifi className="w-3 h-3 flex-shrink-0 text-purple-600 dark:text-purple-400" />
+              <Wifi className="w-3 h-3 flex-shrink-0 text-cyan-600 dark:text-cyan-400" />
               <div className="min-w-0 flex-1">
                 <div className="font-semibold text-foreground/80 dark:text-foreground/70">
                   Bandwidth
@@ -85,7 +85,7 @@ export const StreamQualityDetails: React.FC<StreamQualityDetailsProps> = ({
               </div>
             </div>
             <div className="flex items-center gap-2 bg-card p-2 rounded-md border border-border/30 min-w-0">
-              <Video className="w-3 h-3 flex-shrink-0 text-orange-600 dark:text-orange-400" />
+              <Video className="w-3 h-3 flex-shrink-0 text-green-600 dark:text-green-400" />
               <div className="min-w-0 flex-1">
                 <div className="font-semibold text-foreground/80 dark:text-foreground/70">
                   Video Codec
@@ -98,7 +98,7 @@ export const StreamQualityDetails: React.FC<StreamQualityDetailsProps> = ({
           </>
         )}
         <div className="flex items-center gap-2 bg-card p-2 rounded-md border border-border/30 min-w-0">
-          <Signal className="w-3 h-3 flex-shrink-0 text-green-600 dark:text-green-400" />
+          <Signal className="w-3 h-3 flex-shrink-0 text-purple-600 dark:text-purple-400" />
           <div className="min-w-0 flex-1">
             <div className="font-semibold text-foreground/80 dark:text-foreground/70">
               Bitrate
