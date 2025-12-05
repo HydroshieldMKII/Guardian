@@ -29,17 +29,20 @@ import {
   UnifiedDashboardData,
   PlexStatus,
   Notification,
+  UserDevice,
 } from "@/types";
 import { apiClient } from "@/lib/api";
 import { config } from "@/lib/config";
 import { useVersion } from "@/contexts/version-context";
 import { useAuth } from "@/contexts/auth-context";
+import { useDeviceUtils } from "@/hooks/device-management/useDeviceUtils";
 
 export function Dashboard() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { versionInfo, checkForUpdatesIfEnabled } = useVersion();
   const { setupRequired, backendError, retryConnection } = useAuth();
+  const { isNotManageableDevice } = useDeviceUtils();
 
   const [dashboardData, setDashboardData] =
     useState<UnifiedDashboardData | null>(null);
@@ -73,10 +76,30 @@ export function Dashboard() {
       const newDashboardData =
         await apiClient.getDashboardData<UnifiedDashboardData>();
 
+      // Recalculate stats excluding not manageable devices from pending count
+      const pendingDevices = newDashboardData.devices?.pending || [];
+      const { notManageableCount, actualPendingCount } = pendingDevices.reduce(
+        (acc, device) => {
+          if (isNotManageableDevice(device)) {
+            acc.notManageableCount++;
+          } else {
+            acc.actualPendingCount++;
+          }
+          return acc;
+        },
+        { notManageableCount: 0, actualPendingCount: 0 },
+      );
+
+      const recalculatedStats: DashboardStats = {
+        ...newDashboardData.stats,
+        pendingDevices: actualPendingCount,
+        notManageableDevices: notManageableCount,
+      };
+
       // Always update the data
       setDashboardData(newDashboardData);
       setPlexStatus(newDashboardData.plexStatus);
-      setStats(newDashboardData.stats);
+      setStats(recalculatedStats);
     } catch (error) {
       console.error("Failed to fetch dashboard stats:", error);
       setPlexStatus({
