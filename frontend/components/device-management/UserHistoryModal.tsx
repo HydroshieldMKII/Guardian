@@ -371,12 +371,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent
-        className="!max-w-[95vw] !w-[95vw] max-h-[90vh] h-[90vh] overflow-hidden flex flex-col"
-        style={{
-          width: "95vw !important",
-          maxWidth: "95vw !important",
-          minWidth: "95vw",
-        }}
+        className="sm:!max-w-[95vw] sm:!w-[95vw] max-h-[90vh] h-[90vh] overflow-hidden flex flex-col"
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
         <DialogHeader>

@@ -157,7 +157,7 @@ export const TemporaryAccessModal: React.FC<TemporaryAccessModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-base sm:text-lg text-foreground">
             <Timer className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
