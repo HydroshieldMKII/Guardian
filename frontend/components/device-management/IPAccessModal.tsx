@@ -357,7 +357,10 @@ export const IPAccessModal: React.FC<IPAccessModalProps> = ({
                         variant="outline"
                         className="text-xs bg-blue-100 dark:bg-blue-800/50"
                       >
-                        {device.deviceName || device.deviceIdentifier}:{" "}
+                        <span className="truncate max-w-[120px]">
+                          {device.deviceName || device.deviceIdentifier}
+                        </span>
+                        :{" "}
                         {device.ipAddress} ({networkType.toUpperCase()})
                       </Badge>
                     );
