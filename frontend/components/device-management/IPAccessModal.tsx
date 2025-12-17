@@ -167,7 +167,10 @@ export const IPAccessModal: React.FC<IPAccessModalProps> = ({
           </DialogTitle>
           <DialogDescription>
             Configure network and IP-based access restrictions for{" "}
-            {user.username || user.userId}
+            <span className="font-semibold text-foreground">
+              {user.username || user.userId}
+            </span>
+            .
           </DialogDescription>
         </DialogHeader>
 

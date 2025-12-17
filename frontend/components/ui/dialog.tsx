@@ -67,7 +67,7 @@ function DialogContent({
           // Desktop: centered modal
           "sm:bottom-auto sm:left-[50%] sm:right-auto sm:top-[50%] sm:translate-x-[-50%] sm:translate-y-[-50%] sm:max-w-lg sm:max-h-[90vh] sm:rounded-lg sm:p-6 sm:gap-4 sm:w-full",
           "sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-95",
-          "overflow-y-auto",
+          "overflow-y-auto overflow-x-hidden",
           className
         )}
         {...props}

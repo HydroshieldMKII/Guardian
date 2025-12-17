@@ -165,7 +165,7 @@ export const TemporaryAccessModal: React.FC<TemporaryAccessModalProps> = ({
           </DialogTitle>
           <DialogDescription className="text-sm text-muted-foreground">
             Grant temporary streaming access to{" "}
-            <span className="font-medium">{user.username || user.userId}</span>
+            <span className="font-semibold text-foreground">{user.username || user.userId}</span>
             's devices.
           </DialogDescription>
         </DialogHeader>

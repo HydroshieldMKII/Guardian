@@ -488,9 +488,10 @@ export function TimeRuleModal({
               Manage Blocking Rules
             </DialogTitle>
             <p className="text-sm text-muted-foreground">
-              Managing blocking rules for <strong>{username}</strong>. Streaming
-              is allowed by default - add rules to block access during specific
-              times.
+              Managing blocking rules for{" "}
+              <span className="font-semibold text-foreground">{username}</span>.
+              Streaming is allowed by default - add rules to block access during
+              specific times.
             </p>
           </DialogHeader>
 

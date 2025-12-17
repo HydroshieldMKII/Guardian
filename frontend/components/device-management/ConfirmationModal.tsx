@@ -34,6 +34,8 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
 }) => {
   if (!confirmAction) return null;
 
+  const deviceName = confirmAction.device.deviceName || confirmAction.device.deviceIdentifier;
+
   const getActionIcon = () => {
     switch (confirmAction.action) {
       case "approve":
@@ -50,6 +52,40 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
         );
       default:
         return null;
+    }
+  };
+
+  const getDescriptionText = () => {
+    switch (confirmAction.action) {
+      case "approve":
+        return "Are you sure you want to approve this device?";
+      case "reject":
+        return "Are you sure you want to reject this device?";
+      case "delete":
+        return "Are you sure you want to permanently delete this device record? This action cannot be undone.";
+      case "toggle":
+        return confirmAction.device.status === "approved"
+          ? "Are you sure you want to reject this device?"
+          : "Are you sure you want to approve this device?";
+      default:
+        return "";
+    }
+  };
+
+  const getAdditionalInfo = () => {
+    switch (confirmAction.action) {
+      case "approve":
+        return "will be able to access your Plex server.";
+      case "reject":
+        return "will be blocked from accessing your Plex server.";
+      case "delete":
+        return "will need to be re-approved if it tries to connect again.";
+      case "toggle":
+        return confirmAction.device.status === "approved"
+          ? "will be blocked from accessing your Plex server."
+          : "will be able to access your Plex server.";
+      default:
+        return "";
     }
   };
 
@@ -132,24 +168,24 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
 
   return (
     <Dialog open={!!confirmAction} onOpenChange={onCancel}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-lg overflow-x-hidden">
+        <DialogHeader className="overflow-hidden">
           <DialogTitle className="flex items-center gap-2 text-base sm:text-lg text-foreground">
             {getActionIcon()}
             {confirmAction.title}
           </DialogTitle>
-          <DialogDescription className="text-sm text-muted-foreground">
-            {confirmAction.description}
+          <DialogDescription className="text-sm text-muted-foreground pt-1.5">
+            {getDescriptionText()}
           </DialogDescription>
         </DialogHeader>
 
-        <div className="my-4 p-3 sm:p-4 bg-muted rounded-lg">
+        <div className="my-4 p-3 sm:p-4 bg-muted rounded-lg overflow-hidden">
           <div className="flex items-center gap-3 mb-2">
             {getDeviceIcon(
               confirmAction.device.devicePlatform,
               confirmAction.device.deviceProduct,
             )}
-            <div className="min-w-0 flex-1">
+            <div className="min-w-0 flex-1 overflow-hidden">
               <div className="text-sm font-medium text-foreground truncate">
                 {confirmAction.device.deviceName ||
                   confirmAction.device.deviceIdentifier}

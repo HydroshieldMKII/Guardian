@@ -24,6 +24,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -202,6 +203,11 @@ const DeviceManagement = memo(
     // Confirmation dialog states
     const [confirmAction, setConfirmAction] =
       useState<ConfirmActionData | null>(null);
+    const [hideUserConfirmation, setHideUserConfirmation] = useState<{
+      userId: string;
+      username: string;
+      isCurrentlyHidden: boolean;
+    } | null>(null);
 
     // Custom hooks
     const deviceActions = useDeviceActions();
@@ -695,6 +701,13 @@ const DeviceManagement = memo(
         const isCurrentlyHidden = user?.hidden || false;
         const username = user?.username || userId;
 
+        // If hiding a user, show confirmation modal first
+        if (!isCurrentlyHidden) {
+          setHideUserConfirmation({ userId, username, isCurrentlyHidden });
+          return;
+        }
+
+        // Directly show user without confirmation
         await apiClient.toggleUserVisibility(userId);
 
         if (isCurrentlyHidden) {
@@ -725,6 +738,36 @@ const DeviceManagement = memo(
           description: "Failed to update user visibility",
           variant: "destructive",
         });
+      }
+    };
+
+    // Confirm hiding user
+    const confirmHideUser = async () => {
+      if (!hideUserConfirmation) return;
+
+      try {
+        const { userId, username } = hideUserConfirmation;
+        await apiClient.toggleUserVisibility(userId);
+
+        toast({
+          title: "User Hidden",
+          description: `${username} has been hidden from the user list. You can manage hidden users at the bottom of the user list.`,
+          variant: "success",
+        });
+
+        handleRefresh();
+        if (hiddenUsersModalOpen) {
+          await loadHiddenUsers();
+        }
+      } catch (error) {
+        console.error("Failed to hide user:", error);
+        toast({
+          title: "Error",
+          description: "Failed to hide user",
+          variant: "destructive",
+        });
+      } finally {
+        setHideUserConfirmation(null);
       }
     };
 
@@ -1502,6 +1545,52 @@ const DeviceManagement = memo(
           username={selectedTimeRuleUser?.username || "Unknown User"}
           deviceIdentifier={selectedTimeRuleUser?.deviceIdentifier}
         />
+
+        {/* Hide User Confirmation Dialog */}
+        <Dialog
+          open={!!hideUserConfirmation}
+          onOpenChange={(open) => !open && setHideUserConfirmation(null)}
+        >
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center">
+                <EyeOff className="w-5 h-5 mr-2" />
+                Hide User?
+              </DialogTitle>
+              <DialogDescription className="pt-2">
+                Are you sure you want to hide{" "}
+                <span className="font-semibold text-foreground">
+                  {hideUserConfirmation?.username}
+                </span>{" "}
+                from the user list?
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3 py-4">
+              <div className="bg-muted/50 p-3 rounded-md text-sm">
+                <p className="text-muted-foreground">
+                  Hidden users can be managed from the "Manage Hidden Users"
+                  section at the bottom of the user list.
+                </p>
+              </div>
+            </div>
+            <DialogFooter className="flex-col sm:flex-row gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setHideUserConfirmation(null)}
+                className="w-full sm:w-auto"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={confirmHideUser}
+                className="w-full sm:w-auto"
+              >
+                <EyeOff className="w-4 h-4 mr-2" />
+                Hide User
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </>
     );
   },

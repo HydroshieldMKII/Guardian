@@ -132,13 +132,13 @@ export function Dashboard() {
           userElement.classList.add(
             "ring-2",
             "ring-blue-500",
-            "ring-opacity-75",
+            "ring-opacity-75"
           );
           setTimeout(() => {
             userElement.classList.remove(
               "ring-2",
               "ring-blue-500",
-              "ring-opacity-75",
+              "ring-opacity-75"
             );
           }, 1500);
         }, 200);

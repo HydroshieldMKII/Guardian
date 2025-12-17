@@ -20,7 +20,6 @@ import {
   Play,
   Eye,
   X,
-  UserRoundSearch,
   RefreshCw,
   Radio,
   Trash2,
@@ -409,10 +408,14 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Clock className="w-5 h-5" />
-            Streaming History - {username || userId}
+            Streaming History
           </DialogTitle>
           <DialogDescription>
-            View and manage streaming session history for this user.
+            View and manage streaming session history for{" "}
+            <span className="font-semibold text-foreground">
+              {username || userId}
+            </span>
+            .
           </DialogDescription>
         </DialogHeader>
 
@@ -513,11 +516,11 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
                     >
                       {/* Content Title */}
                       <div className="overflow-hidden">
-                        <div className="font-medium break-words">
+                        <div className="font-medium truncate" title={formatTitle(session)}>
                           {formatTitle(session)}
                         </div>
                         {formatSubtitle(session) && (
-                          <div className="text-xs text-muted-foreground">
+                          <div className="text-xs text-muted-foreground truncate" title={formatSubtitle(session) || undefined}>
                             {formatSubtitle(session)}
                           </div>
                         )}
@@ -525,7 +528,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
 
                       {/* Device */}
                       <div className="overflow-hidden">
-                        <div className="text-sm break-words">
+                        <div className="text-sm truncate" title={getDeviceDisplayName(session)}>
                           {getDeviceDisplayName(session)}
                         </div>
                       </div>
@@ -533,7 +536,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
                       {/* Platform */}
                       <div className="overflow-hidden">
                         {session.userDevice?.devicePlatform && (
-                          <div className="text-xs text-muted-foreground capitalize">
+                          <div className="text-xs text-muted-foreground capitalize truncate" title={session.userDevice.devicePlatform}>
                             {session.userDevice.devicePlatform}
                           </div>
                         )}
@@ -541,7 +544,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
 
                       {/* Product */}
                       <div className="overflow-hidden">
-                        <div className="text-xs text-muted-foreground">
+                        <div className="text-xs text-muted-foreground truncate" title={formatProduct(session)}>
                           {formatProduct(session)}
                         </div>
                       </div>
@@ -594,7 +597,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
                           className="h-8 w-8 p-0"
                           title="Scroll to Device"
                         >
-                          <UserRoundSearch className="w-4 h-4" />
+                          <Monitor className="w-4 h-4" />
                         </Button>
                         {/* Only show delete button for completed sessions */}
                         {session.endedAt && (
@@ -628,13 +631,13 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
                       }`}
                     >
                       {/* Title and Active Status */}
-                      <div className="flex items-start justify-between mb-2">
+                      <div className="flex items-start justify-between mb-4">
                         <div className="flex-1 min-w-0">
-                          <div className="font-medium text-sm break-words">
+                          <div className="font-medium text-sm truncate" title={formatTitle(session)}>
                             {formatTitle(session)}
                           </div>
                           {formatSubtitle(session) && (
-                            <div className="text-xs text-muted-foreground mt-1">
+                            <div className="text-xs text-muted-foreground/70 mt-0.5 truncate" title={formatSubtitle(session) || undefined}>
                               {formatSubtitle(session)}
                             </div>
                           )}
@@ -664,7 +667,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
                           <span className="text-xs text-muted-foreground">
                             Device:
                           </span>
-                          <span className="text-sm break-words text-right max-w-[60%]">
+                          <span className="text-sm truncate text-right max-w-[60%]" title={getDeviceDisplayName(session)}>
                             {getDeviceDisplayName(session)}
                           </span>
                         </div>
@@ -741,7 +744,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
                           className="h-8 px-3 text-xs"
                           title="Scroll to Device"
                         >
-                          <UserRoundSearch className="w-3 h-3 mr-1" />
+                          <Monitor className="w-3 h-3 mr-1" />
                           Find Device
                         </Button>
                         {/* Only show delete button for completed sessions */}
