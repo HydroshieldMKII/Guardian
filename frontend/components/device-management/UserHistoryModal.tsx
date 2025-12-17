@@ -640,7 +640,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
                     <Card
                       key={session.id}
                       data-session-id={session.id}
-                      className={`p-4 transition-colors ${
+                      className={`p-4 transition-colors rounded-none ${
                         !session.endedAt
                           ? "bg-green-50/20 hover:bg-green-50/30 border-l-4 border-l-green-500"
                           : session.terminated
