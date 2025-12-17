@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -112,6 +112,73 @@ export const getDeviceIcon = (
   return <Monitor className="w-4 h-4" />;
 };
 
+// Not Manageable badge component with controlled tooltip for mobile support
+const NotManageableBadge = () => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Detect mobile on mount
+  React.useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 640);
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
+  // Handle open change - only allow Radix to control on desktop
+  const handleOpenChange = (open: boolean) => {
+    if (!isMobile) {
+      setIsOpen(open);
+    }
+  };
+
+  return (
+    <TooltipProvider delayDuration={0}>
+      <Tooltip open={isOpen} onOpenChange={handleOpenChange}>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            className="inline-flex focus:outline-none rounded-md"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              if (isMobile) {
+                setIsOpen((prev) => !prev);
+              }
+            }}
+            onMouseEnter={() => {
+              if (!isMobile) setIsOpen(true);
+            }}
+            onMouseLeave={() => {
+              if (!isMobile) setIsOpen(false);
+            }}
+          >
+            <Badge
+              variant="secondary"
+              className="bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 border-purple-300 dark:border-purple-700 cursor-help"
+            >
+              <HelpCircle className="w-3 h-3 mr-1" />
+              Not Manageable
+            </Badge>
+          </button>
+        </TooltipTrigger>
+        <TooltipContent
+          onPointerDownOutside={(e) => {
+            e.preventDefault();
+            setIsOpen(false);
+          }}
+        >
+          <p className="max-w-xs">
+            PlexAmp devices cannot be managed. Plex does not provide native
+            controls to terminate PlexAmp streams, so policies cannot be
+            enforced for this device.
+          </p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+};
+
 // Device status component
 export const DeviceStatus = ({
   device,
@@ -148,33 +215,7 @@ export const DeviceStatus = ({
 
   // Special handling for PlexAmp devices
   if (isPlexAmpDevice(device) && device.status === "pending") {
-    return (
-      <TooltipProvider delayDuration={200}>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              type="button"
-              className="inline-flex focus:outline-none focus:ring-2 focus:ring-purple-500 rounded-md"
-            >
-              <Badge
-                variant="secondary"
-                className="bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 border-purple-300 dark:border-purple-700 cursor-help"
-              >
-                <HelpCircle className="w-3 h-3 mr-1" />
-                Not Manageable
-              </Badge>
-            </button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p className="max-w-xs">
-              PlexAmp devices cannot be managed. Plex does not provide native
-              controls to terminate PlexAmp streams, so policies cannot be
-              enforced for this device.
-            </p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-    );
+    return <NotManageableBadge />;
   }
 
   switch (device.status) {
