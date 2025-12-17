@@ -409,8 +409,8 @@ export const StreamCard: React.FC<StreamCardProps> = ({
         <div
           className={`space-y-2 sm:space-y-3 mt-2 sm:mt-0 pt-2 sm:pt-3 border-t animate-in slide-in-from-top-2 duration-200 relative z-10 ${artUrl ? "border-white/30" : "border-border"}`}
         >
-          <StreamQualityDetails session={stream} />
-          <StreamDeviceInfo session={stream} />
+          <StreamQualityDetails session={stream} hasArt={!!artUrl} />
+          <StreamDeviceInfo session={stream} hasArt={!!artUrl} />
         </div>
       )}
     </div>

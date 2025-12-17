@@ -38,22 +38,24 @@ export const StreamQuality: React.FC<StreamQualityProps> = ({
     return (
       <>
         {!isMusic && quality.resolution !== "Unknown" && (
-          <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full text-xs ${
-            hasArt 
-              ? "bg-blue-600/80 text-white" 
-              : "bg-blue-600/90 text-white"
-          }`}>
+          <div
+            className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full text-xs ${
+              hasArt ? "bg-blue-600/80 text-white" : "bg-blue-600/90 text-white"
+            }`}
+          >
             <Video className="w-3 h-3" />
             <span>{quality.resolution}</span>
           </div>
         )}
         {/* Video codec - hidden on mobile for video content */}
         {!isMusic && quality.videoCodec !== "Unknown" && (
-          <div className={`hidden sm:flex items-center gap-1 px-1.5 py-0.5 rounded-full text-xs ${
-            hasArt 
-              ? "bg-green-600/80 text-white" 
-              : "bg-green-600/90 text-white"
-          }`}>
+          <div
+            className={`hidden sm:flex items-center gap-1 px-1.5 py-0.5 rounded-full text-xs ${
+              hasArt
+                ? "bg-green-600/80 text-white"
+                : "bg-green-600/90 text-white"
+            }`}
+          >
             <span>{quality.videoCodec}</span>
           </div>
         )}
@@ -61,9 +63,7 @@ export const StreamQuality: React.FC<StreamQualityProps> = ({
         {quality.container !== "Unknown" && (
           <div
             className={`${isMusic ? "flex" : "hidden sm:flex"} items-center gap-1 px-1.5 py-0.5 rounded-full text-xs ${
-              hasArt 
-                ? "bg-gray-600/80 text-white" 
-                : "bg-gray-600/90 text-white"
+              hasArt ? "bg-gray-600/80 text-white" : "bg-gray-600/90 text-white"
             }`}
           >
             <HardDrive className="w-3 h-3" />
@@ -71,11 +71,13 @@ export const StreamQuality: React.FC<StreamQualityProps> = ({
           </div>
         )}
         {quality.bitrate !== "Unknown" && (
-          <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full text-xs ${
-            hasArt 
-              ? "bg-purple-600/80 text-white" 
-              : "bg-purple-600/90 text-white"
-          }`}>
+          <div
+            className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full text-xs ${
+              hasArt
+                ? "bg-purple-600/80 text-white"
+                : "bg-purple-600/90 text-white"
+            }`}
+          >
             <Signal className="w-3 h-3" />
             <span>{quality.bitrate}</span>
           </div>
@@ -117,10 +119,12 @@ export const StreamQuality: React.FC<StreamQualityProps> = ({
 
 interface StreamQualityDetailsProps {
   session: any;
+  hasArt?: boolean;
 }
 
 export const StreamQualityDetails: React.FC<StreamQualityDetailsProps> = ({
   session,
+  hasArt = false,
 }) => {
   const quality = getDetailedQuality(session);
 
@@ -129,8 +133,14 @@ export const StreamQualityDetails: React.FC<StreamQualityDetailsProps> = ({
   const isMusic = session.type === "track";
 
   return (
-    <div className="space-y-2 bg-muted/30 dark:bg-muted/20 p-3 rounded-md border border-border/50">
-      <h4 className="text-sm font-semibold text-foreground/90 dark:text-foreground mb-2">
+    <div className={`space-y-2 p-3 rounded-md border ${
+      hasArt 
+        ? "bg-black/60 border-white/30" 
+        : "bg-muted/30 dark:bg-muted/20 border-border/50"
+    }`}>
+      <h4 className={`text-sm font-semibold mb-2 ${
+        hasArt ? "text-white" : "text-foreground/90 dark:text-foreground"
+      }`}>
         Stream Quality
       </h4>
       <div
@@ -138,70 +148,106 @@ export const StreamQualityDetails: React.FC<StreamQualityDetailsProps> = ({
       >
         {!isMusic && (
           <>
-            <div className="flex items-center gap-2 bg-card p-2 rounded-md border border-border/30 min-w-0">
+            <div className={`flex items-center gap-2 p-2 rounded-md border min-w-0 ${
+              hasArt ? "bg-black/40 border-white/20" : "bg-card border-border/30"
+            }`}>
               <Video className="w-3 h-3 flex-shrink-0 text-blue-600 dark:text-blue-400" />
               <div className="min-w-0 flex-1">
-                <div className="font-semibold text-foreground/80 dark:text-foreground/70">
+                <div className={`font-semibold ${
+                  hasArt ? "text-white/80" : "text-foreground/80 dark:text-foreground/70"
+                }`}>
                   Resolution
                 </div>
-                <div className="truncate text-foreground/60 dark:text-foreground/50 font-medium">
+                <div className={`truncate font-medium ${
+                  hasArt ? "text-white/60" : "text-foreground/60 dark:text-foreground/50"
+                }`}>
                   {quality.resolution}
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-2 bg-card p-2 rounded-md border border-border/30 min-w-0">
+            <div className={`flex items-center gap-2 p-2 rounded-md border min-w-0 ${
+              hasArt ? "bg-black/40 border-white/20" : "bg-card border-border/30"
+            }`}>
               <Wifi className="w-3 h-3 flex-shrink-0 text-cyan-600 dark:text-cyan-400" />
               <div className="min-w-0 flex-1">
-                <div className="font-semibold text-foreground/80 dark:text-foreground/70">
+                <div className={`font-semibold ${
+                  hasArt ? "text-white/80" : "text-foreground/80 dark:text-foreground/70"
+                }`}>
                   Bandwidth
                 </div>
-                <div className="truncate text-foreground/60 dark:text-foreground/50 font-medium">
+                <div className={`truncate font-medium ${
+                  hasArt ? "text-white/60" : "text-foreground/60 dark:text-foreground/50"
+                }`}>
                   {quality.bandwidth}
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-2 bg-card p-2 rounded-md border border-border/30 min-w-0">
+            <div className={`flex items-center gap-2 p-2 rounded-md border min-w-0 ${
+              hasArt ? "bg-black/40 border-white/20" : "bg-card border-border/30"
+            }`}>
               <Video className="w-3 h-3 flex-shrink-0 text-green-600 dark:text-green-400" />
               <div className="min-w-0 flex-1">
-                <div className="font-semibold text-foreground/80 dark:text-foreground/70">
+                <div className={`font-semibold ${
+                  hasArt ? "text-white/80" : "text-foreground/80 dark:text-foreground/70"
+                }`}>
                   Video Codec
                 </div>
-                <div className="truncate text-foreground/60 dark:text-foreground/50 font-medium">
+                <div className={`truncate font-medium ${
+                  hasArt ? "text-white/60" : "text-foreground/60 dark:text-foreground/50"
+                }`}>
                   {quality.videoCodec}
                 </div>
               </div>
             </div>
           </>
         )}
-        <div className="flex items-center gap-2 bg-card p-2 rounded-md border border-border/30 min-w-0">
+        <div className={`flex items-center gap-2 p-2 rounded-md border min-w-0 ${
+          hasArt ? "bg-black/40 border-white/20" : "bg-card border-border/30"
+        }`}>
           <Signal className="w-3 h-3 flex-shrink-0 text-purple-600 dark:text-purple-400" />
           <div className="min-w-0 flex-1">
-            <div className="font-semibold text-foreground/80 dark:text-foreground/70">
+            <div className={`font-semibold ${
+              hasArt ? "text-white/80" : "text-foreground/80 dark:text-foreground/70"
+            }`}>
               Bitrate
             </div>
-            <div className="truncate text-foreground/60 dark:text-foreground/50 font-medium">
+            <div className={`truncate font-medium ${
+              hasArt ? "text-white/60" : "text-foreground/60 dark:text-foreground/50"
+            }`}>
               {quality.bitrate}
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-2 bg-card p-2 rounded-md border border-border/30 min-w-0">
+        <div className={`flex items-center gap-2 p-2 rounded-md border min-w-0 ${
+          hasArt ? "bg-black/40 border-white/20" : "bg-card border-border/30"
+        }`}>
           <Headphones className="w-3 h-3 flex-shrink-0 text-red-600 dark:text-red-400" />
           <div className="min-w-0 flex-1">
-            <div className="font-semibold text-foreground/80 dark:text-foreground/70">
+            <div className={`font-semibold ${
+              hasArt ? "text-white/80" : "text-foreground/80 dark:text-foreground/70"
+            }`}>
               Audio Codec
             </div>
-            <div className="truncate text-foreground/60 dark:text-foreground/50 font-medium">
+            <div className={`truncate font-medium ${
+              hasArt ? "text-white/60" : "text-foreground/60 dark:text-foreground/50"
+            }`}>
               {quality.audioCodec}
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-2 bg-card p-2 rounded-md border border-border/30 min-w-0">
+        <div className={`flex items-center gap-2 p-2 rounded-md border min-w-0 ${
+          hasArt ? "bg-black/40 border-white/20" : "bg-card border-border/30"
+        }`}>
           <HardDrive className="w-3 h-3 flex-shrink-0 text-gray-600 dark:text-gray-400" />
           <div className="min-w-0 flex-1">
-            <div className="font-semibold text-foreground/80 dark:text-foreground/70">
+            <div className={`font-semibold ${
+              hasArt ? "text-white/80" : "text-foreground/80 dark:text-foreground/70"
+            }`}>
               Container
             </div>
-            <div className="truncate text-foreground/60 dark:text-foreground/50 font-medium">
+            <div className={`truncate font-medium ${
+              hasArt ? "text-white/60" : "text-foreground/60 dark:text-foreground/50"
+            }`}>
               {quality.container}
             </div>
           </div>
