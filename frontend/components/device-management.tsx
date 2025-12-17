@@ -166,7 +166,7 @@ const DeviceManagement = memo(
     const [autoRefresh, setAutoRefresh] = useState(parentAutoRefresh ?? true);
     const [actionLoading, setActionLoading] = useState<number | null>(null);
     const [selectedDevice, setSelectedDevice] = useState<UserDevice | null>(
-      null,
+      null
     );
     const [expandedUsers, setExpandedUsers] = useState<Set<string>>(new Set());
     const [searchTerm, setSearchTerm] = useState("");
@@ -184,7 +184,7 @@ const DeviceManagement = memo(
       username?: string;
     } | null>(null);
     const [scrollToSessionId, setScrollToSessionId] = useState<number | null>(
-      null,
+      null
     );
     const [timeRuleModalOpen, setTimeRuleModalOpen] = useState(false);
     const [selectedTimeRuleUser, setSelectedTimeRuleUser] = useState<{
@@ -282,10 +282,10 @@ const DeviceManagement = memo(
           | "deviceCount"
           | "pendingCount"
           | "lastSeen"
-          | "streamCount",
+          | "streamCount"
     );
     const [sortOrder, setSortOrder] = useState<"asc" | "desc">(
-      () => getStoredValue(USER_SORT_ORDER_KEY, "desc") as "asc" | "desc",
+      () => getStoredValue(USER_SORT_ORDER_KEY, "desc") as "asc" | "desc"
     );
 
     // Save sorting preferences to localStorage when they change
@@ -478,7 +478,7 @@ const DeviceManagement = memo(
 
         setTimeout(() => {
           const deviceElement = document.querySelector(
-            `[data-device-identifier="${deviceIdentifier}"]`,
+            `[data-device-identifier="${deviceIdentifier}"]`
           );
           if (deviceElement) {
             // Scroll directly to the device with some padding above
@@ -493,13 +493,13 @@ const DeviceManagement = memo(
               deviceElement.classList.add(
                 "ring-2",
                 "ring-blue-500",
-                "ring-opacity-75",
+                "ring-opacity-75"
               );
               setTimeout(() => {
                 deviceElement.classList.remove(
                   "ring-2",
                   "ring-blue-500",
-                  "ring-opacity-75",
+                  "ring-opacity-75"
                 );
                 // Call completion callback
                 if (onNavigationComplete) {
@@ -589,11 +589,11 @@ const DeviceManagement = memo(
               // Sum up session counts across all devices for each user
               valueA = a.devices.reduce(
                 (total, device) => total + (device.sessionCount || 0),
-                0,
+                0
               );
               valueB = b.devices.reduce(
                 (total, device) => total + (device.sessionCount || 0),
-                0,
+                0
               );
               break;
             default:
@@ -633,13 +633,13 @@ const DeviceManagement = memo(
     // User preference update handler
     const handleUpdateUserPreference = async (
       userId: string,
-      defaultBlock: boolean | null,
+      defaultBlock: boolean | null
     ) => {
       setUpdatingUserPreference(userId);
       try {
         const success = await userPreferences.updateUserPreference(
           userId,
-          defaultBlock,
+          defaultBlock
         );
         if (success) {
           // Refresh data without clearing time rule status to prevent "Scheduled" tag flickering
@@ -673,7 +673,7 @@ const DeviceManagement = memo(
     // User IP policy update handler
     const handleUpdateUserIPPolicy = async (
       userId: string,
-      updates: Partial<UserPreference>,
+      updates: Partial<UserPreference>
     ) => {
       const success = await userPreferences.updateUserIPPolicy(userId, updates);
       if (success) {
@@ -774,7 +774,7 @@ const DeviceManagement = memo(
     const handleShowHistory = (userId: string) => {
       // Find the username for this userId
       const userGroup = userGroups.find(
-        (group) => group.user.userId === userId,
+        (group) => group.user.userId === userId
       );
       const username =
         userGroup?.user.username || userGroup?.user.preference?.username;
@@ -785,7 +785,7 @@ const DeviceManagement = memo(
 
     const handleNavigateToDeviceFromHistory = (
       userId: string,
-      deviceIdentifier: string,
+      deviceIdentifier: string
     ) => {
       // Expand the user group
       setExpandedUsers((prev) => new Set(prev).add(userId));
@@ -801,7 +801,7 @@ const DeviceManagement = memo(
 
         setTimeout(() => {
           const deviceElement = document.querySelector(
-            `[data-device-identifier="${deviceIdentifier}"]`,
+            `[data-device-identifier="${deviceIdentifier}"]`
           );
           if (deviceElement) {
             deviceElement.scrollIntoView({
@@ -815,13 +815,13 @@ const DeviceManagement = memo(
               deviceElement.classList.add(
                 "ring-2",
                 "ring-blue-500",
-                "ring-opacity-75",
+                "ring-opacity-75"
               );
               setTimeout(() => {
                 deviceElement.classList.remove(
                   "ring-2",
                   "ring-blue-500",
-                  "ring-opacity-75",
+                  "ring-opacity-75"
                 );
               }, 1500);
             }, 200);
@@ -952,7 +952,7 @@ const DeviceManagement = memo(
     const handleGrantTemporaryAccess = async (
       deviceIds: number[],
       durationMinutes: number,
-      bypassPolicies?: boolean,
+      bypassPolicies?: boolean
     ) => {
       try {
         if (deviceIds.length === 1) {
@@ -961,7 +961,7 @@ const DeviceManagement = memo(
           const success = await deviceActions.grantTemporaryAccess(
             deviceIds[0],
             durationMinutes,
-            bypassPolicies,
+            bypassPolicies
           );
           if (!success) {
             toast({
@@ -977,7 +977,7 @@ const DeviceManagement = memo(
           const result = await deviceActions.grantBatchTemporaryAccess(
             deviceIds,
             durationMinutes,
-            bypassPolicies,
+            bypassPolicies
           );
           if (!result.success) {
             toast({
@@ -1014,7 +1014,7 @@ const DeviceManagement = memo(
 
     const handleGrantUserTempAccess = (userId: string) => {
       const userGroup = userGroups.find(
-        (group) => group.user.userId === userId,
+        (group) => group.user.userId === userId
       );
       if (userGroup) {
         setTempAccessUser({
@@ -1043,10 +1043,10 @@ const DeviceManagement = memo(
 
     const handleShowTimePolicy = (
       userId: string,
-      deviceIdentifier?: string,
+      deviceIdentifier?: string
     ) => {
       const userGroup = userGroups.find(
-        (group) => group.user.userId === userId,
+        (group) => group.user.userId === userId
       );
       if (userGroup) {
         setSelectedTimeRuleUser({
@@ -1120,7 +1120,7 @@ const DeviceManagement = memo(
       if (!userPreference || userPreference.defaultBlock === null) {
         // Find global default block setting
         const globalDefaultBlock = settingsData?.find(
-          (s) => s.key === "PLEX_GUARD_DEFAULT_BLOCK",
+          (s) => s.key === "PLEX_GUARD_DEFAULT_BLOCK"
         );
 
         // If global setting is to allow (value "false"), don't show Grant Temp Access for pending devices
@@ -1374,7 +1374,7 @@ const DeviceManagement = memo(
                     }
                     hasIPPolicies={(() => {
                       const pref = usersData?.find(
-                        (u) => u.userId === group.user.userId,
+                        (u) => u.userId === group.user.userId
                       );
                       if (!pref) return false;
                       const networkPolicyIsCustom =
@@ -1449,7 +1449,7 @@ const DeviceManagement = memo(
           userDevices={
             tempAccessUser
               ? userGroups.find(
-                  (group) => group.user.userId === tempAccessUser.userId,
+                  (group) => group.user.userId === tempAccessUser.userId
                 )?.devices || []
               : []
           }
@@ -1581,10 +1581,7 @@ const DeviceManagement = memo(
               >
                 Cancel
               </Button>
-              <Button
-                onClick={confirmHideUser}
-                className="w-full sm:w-auto"
-              >
+              <Button onClick={confirmHideUser} className="w-full sm:w-auto">
                 <EyeOff className="w-4 h-4 mr-2" />
                 Hide User
               </Button>
@@ -1593,7 +1590,7 @@ const DeviceManagement = memo(
         </Dialog>
       </>
     );
-  },
+  }
 );
 
 DeviceManagement.displayName = "DeviceManagement";

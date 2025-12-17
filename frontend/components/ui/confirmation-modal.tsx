@@ -65,7 +65,7 @@ export function ConfirmationModal({
               )}
               {title}
             </DialogTitle>
-            <DialogDescription className="text-left whitespace-pre-line">
+            <DialogDescription className="text-left whitespace-pre-line break-words">
               {description}
             </DialogDescription>
           </DialogHeader>

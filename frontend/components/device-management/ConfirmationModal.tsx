@@ -34,7 +34,8 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
 }) => {
   if (!confirmAction) return null;
 
-  const deviceName = confirmAction.device.deviceName || confirmAction.device.deviceIdentifier;
+  const deviceName =
+    confirmAction.device.deviceName || confirmAction.device.deviceIdentifier;
 
   const getActionIcon = () => {
     switch (confirmAction.action) {
@@ -183,7 +184,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
           <div className="flex items-center gap-3 mb-2">
             {getDeviceIcon(
               confirmAction.device.devicePlatform,
-              confirmAction.device.deviceProduct,
+              confirmAction.device.deviceProduct
             )}
             <div className="min-w-0 flex-1 overflow-hidden">
               <div className="text-sm font-medium text-foreground truncate">

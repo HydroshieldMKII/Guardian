@@ -89,37 +89,40 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
   const sessionsListRef = React.useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
-  const fetchUserHistory = useCallback(async (showLoadingIndicator = true) => {
-    if (!userId) return;
+  const fetchUserHistory = useCallback(
+    async (showLoadingIndicator = true) => {
+      if (!userId) return;
 
-    if (showLoadingIndicator) {
-      setLoading(true);
-    }
-    try {
-      const response = await fetch(
-        `${config.api.baseUrl}/sessions/history/${userId}?limit=100&includeActive=true`
-      );
-      if (response.ok) {
-        const data = await response.json();
-        // Sort by most recent first (startedAt descending)
-        const sortedData = (data || []).sort(
-          (a: SessionHistoryEntry, b: SessionHistoryEntry) =>
-            new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime()
-        );
-        setSessions(sortedData);
-      } else {
-        console.error("Failed to fetch user history");
-        setSessions([]);
-      }
-    } catch (error) {
-      console.error("Error fetching user history:", error);
-      setSessions([]);
-    } finally {
       if (showLoadingIndicator) {
-        setLoading(false);
+        setLoading(true);
       }
-    }
-  }, [userId]);
+      try {
+        const response = await fetch(
+          `${config.api.baseUrl}/sessions/history/${userId}?limit=100&includeActive=true`
+        );
+        if (response.ok) {
+          const data = await response.json();
+          // Sort by most recent first (startedAt descending)
+          const sortedData = (data || []).sort(
+            (a: SessionHistoryEntry, b: SessionHistoryEntry) =>
+              new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime()
+          );
+          setSessions(sortedData);
+        } else {
+          console.error("Failed to fetch user history");
+          setSessions([]);
+        }
+      } catch (error) {
+        console.error("Error fetching user history:", error);
+        setSessions([]);
+      } finally {
+        if (showLoadingIndicator) {
+          setLoading(false);
+        }
+      }
+    },
+    [userId]
+  );
 
   // Initial fetch when modal opens
   useEffect(() => {
@@ -516,11 +519,17 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
                     >
                       {/* Content Title */}
                       <div className="overflow-hidden">
-                        <div className="font-medium truncate" title={formatTitle(session)}>
+                        <div
+                          className="font-medium truncate"
+                          title={formatTitle(session)}
+                        >
                           {formatTitle(session)}
                         </div>
                         {formatSubtitle(session) && (
-                          <div className="text-xs text-muted-foreground truncate" title={formatSubtitle(session) || undefined}>
+                          <div
+                            className="text-xs text-muted-foreground truncate"
+                            title={formatSubtitle(session) || undefined}
+                          >
                             {formatSubtitle(session)}
                           </div>
                         )}
@@ -528,7 +537,10 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
 
                       {/* Device */}
                       <div className="overflow-hidden">
-                        <div className="text-sm truncate" title={getDeviceDisplayName(session)}>
+                        <div
+                          className="text-sm truncate"
+                          title={getDeviceDisplayName(session)}
+                        >
                           {getDeviceDisplayName(session)}
                         </div>
                       </div>
@@ -536,7 +548,10 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
                       {/* Platform */}
                       <div className="overflow-hidden">
                         {session.userDevice?.devicePlatform && (
-                          <div className="text-xs text-muted-foreground capitalize truncate" title={session.userDevice.devicePlatform}>
+                          <div
+                            className="text-xs text-muted-foreground capitalize truncate"
+                            title={session.userDevice.devicePlatform}
+                          >
                             {session.userDevice.devicePlatform}
                           </div>
                         )}
@@ -544,7 +559,10 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
 
                       {/* Product */}
                       <div className="overflow-hidden">
-                        <div className="text-xs text-muted-foreground truncate" title={formatProduct(session)}>
+                        <div
+                          className="text-xs text-muted-foreground truncate"
+                          title={formatProduct(session)}
+                        >
                           {formatProduct(session)}
                         </div>
                       </div>
@@ -633,11 +651,17 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
                       {/* Title and Active Status */}
                       <div className="flex items-start justify-between mb-4">
                         <div className="flex-1 min-w-0">
-                          <div className="font-medium text-sm truncate" title={formatTitle(session)}>
+                          <div
+                            className="font-medium text-sm truncate"
+                            title={formatTitle(session)}
+                          >
                             {formatTitle(session)}
                           </div>
                           {formatSubtitle(session) && (
-                            <div className="text-xs text-muted-foreground/70 mt-0.5 truncate" title={formatSubtitle(session) || undefined}>
+                            <div
+                              className="text-xs text-muted-foreground/70 mt-0.5 truncate"
+                              title={formatSubtitle(session) || undefined}
+                            >
                               {formatSubtitle(session)}
                             </div>
                           )}
@@ -667,7 +691,10 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
                           <span className="text-xs text-muted-foreground">
                             Device:
                           </span>
-                          <span className="text-sm truncate text-right max-w-[60%]" title={getDeviceDisplayName(session)}>
+                          <span
+                            className="text-sm truncate text-right max-w-[60%]"
+                            title={getDeviceDisplayName(session)}
+                          >
                             {getDeviceDisplayName(session)}
                           </span>
                         </div>
@@ -792,11 +819,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
         onClose={cancelDelete}
         onConfirm={confirmDelete}
         title="Delete Session History"
-        description={
-          sessionToDelete
-            ? `Are you sure you want to delete this session history for "${formatTitle(sessionToDelete)}"? This action cannot be undone.`
-            : ""
-        }
+        description="Are you sure you want to delete this session history? This action cannot be undone."
         confirmText="Delete"
         cancelText="Cancel"
         variant="destructive"
