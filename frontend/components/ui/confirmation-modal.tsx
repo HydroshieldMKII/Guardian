@@ -55,7 +55,7 @@ export function ConfirmationModal({
           style={{ zIndex: 999999 }}
         />
         <DialogPrimitive.Content
-          className="bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border p-6 shadow-2xl duration-200 sm:max-w-[425px]"
+          className="bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed grid w-full border shadow-2xl duration-200 bottom-0 left-0 right-0 max-h-[85vh] rounded-t-xl p-4 pb-6 gap-3 data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom sm:bottom-auto sm:left-[50%] sm:right-auto sm:top-[50%] sm:translate-x-[-50%] sm:translate-y-[-50%] sm:max-w-[425px] sm:max-h-[90vh] sm:rounded-lg sm:p-6 sm:gap-4 sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-95 overflow-y-auto"
           style={{ zIndex: 999999 }}
         >
           <DialogHeader>

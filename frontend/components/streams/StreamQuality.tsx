@@ -9,26 +9,45 @@ interface StreamQualityProps {
 export const StreamQuality: React.FC<StreamQualityProps> = ({ session }) => {
   const quality = getDetailedQuality(session);
 
-  if (
-    !quality ||
-    (quality.resolution === "Unknown" && quality.videoCodec === "Unknown")
-  ) {
+  if (!quality) {
     return null;
+  }
+
+  // For music tracks, only show if we have bitrate
+  const isMusic = session.type === "track";
+  if (isMusic) {
+    console.log(quality.bitrate);
+    if (quality.bitrate === "Unknown") {
+      return null;
+    }
+  } else {
+    // For video content, require at least resolution or video codec
+    if (quality.resolution === "Unknown" && quality.videoCodec === "Unknown") {
+      return null;
+    }
   }
 
   return (
     <div className="flex items-center gap-1 text-xs text-muted-foreground mb-2 flex-wrap">
-      {quality.resolution !== "Unknown" && (
+      {!isMusic && quality.resolution !== "Unknown" && (
         <div className="flex items-center gap-1 bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full">
           <Video className="w-3 h-3" />
           <span>{quality.resolution}</span>
         </div>
       )}
-      {quality.videoCodec !== "Unknown" && (
+      {!isMusic && quality.videoCodec !== "Unknown" && (
         <div className="flex items-center gap-1 bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-300 px-2 py-0.5 rounded-full">
           <span>{quality.videoCodec}</span>
         </div>
       )}
+      {/* music container */}
+      {quality.container !== "Unknown" && (
+        <div className="flex items-center gap-1 bg-gray-50 dark:bg-gray-950/30 text-gray-700 dark:text-gray-300 px-2 py-0.5 rounded-full">
+          <HardDrive className="w-3 h-3" />
+          <span>{quality.container}</span>
+        </div>
+      )}
+
       {quality.bitrate !== "Unknown" && (
         <div className="flex items-center gap-1 bg-purple-50 dark:bg-purple-950/30 text-purple-700 dark:text-purple-300 px-2 py-0.5 rounded-full">
           <Signal className="w-3 h-3" />

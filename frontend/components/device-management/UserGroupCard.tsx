@@ -209,7 +209,7 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
                     {onShowTimePolicy && (
                       <button
                         onClick={() => onShowTimePolicy(group.user.userId)}
-                        className="text-xs px-3 py-2 rounded-md transition-all duration-200 flex items-center cursor-pointer text-foreground hover:bg-background/50 whitespace-nowrap"
+                        className="text-xs px-3 py-2 rounded-md transition-all duration-200 flex items-center cursor-pointer text-foreground hover:bg-accent whitespace-nowrap"
                         title="Manage time-based access policies"
                       >
                         <Timer className="w-3 h-3 mr-2" />
@@ -219,7 +219,7 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
                     {onGrantUserTempAccess && (
                       <button
                         onClick={() => onGrantUserTempAccess(group.user.userId)}
-                        className="text-xs px-3 py-2 rounded-md transition-all duration-200 flex items-center cursor-pointer text-foreground hover:text-foreground hover:bg-background/50 whitespace-nowrap"
+                        className="text-xs px-3 py-2 rounded-md transition-all duration-200 flex items-center cursor-pointer text-foreground hover:bg-accent whitespace-nowrap"
                         title="Grant temporary access to user devices"
                       >
                         <Timer className="w-3 h-3 mr-2" />
@@ -229,7 +229,7 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
                     {onUpdateUserIPPolicy && (
                       <button
                         onClick={() => setShowIPModal(true)}
-                        className="text-xs px-3 py-2 rounded-md transition-all duration-200 flex items-center cursor-pointer text-foreground hover:text-foreground hover:bg-background/50 whitespace-nowrap"
+                        className="text-xs px-3 py-2 rounded-md transition-all duration-200 flex items-center cursor-pointer text-foreground hover:bg-accent whitespace-nowrap"
                         title="Configure IP and network access policies"
                       >
                         <Shield className="w-3 h-3 mr-2" />
@@ -239,7 +239,7 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
                     {onShowHistory && (
                       <button
                         onClick={() => onShowHistory(group.user.userId)}
-                        className="text-xs px-3 py-2 rounded-md transition-all duration-200 flex items-center cursor-pointer text-foreground hover:bg-background/50 whitespace-nowrap"
+                        className="text-xs px-3 py-2 rounded-md transition-all duration-200 flex items-center cursor-pointer text-foreground hover:bg-accent whitespace-nowrap"
                         title="Show user history"
                       >
                         <History className="w-3 h-3 mr-2" />
@@ -251,7 +251,7 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
                         onClick={() =>
                           onToggleUserVisibility(group.user.userId)
                         }
-                        className="text-xs px-3 py-2 rounded-md transition-all duration-200 flex items-center cursor-pointer text-foreground hover:text-foreground hover:bg-background/50 whitespace-nowrap"
+                        className="text-xs px-3 py-2 rounded-md transition-all duration-200 flex items-center cursor-pointer text-foreground hover:bg-accent whitespace-nowrap"
                         title={
                           group.user.preference?.hidden
                             ? "Show user"
@@ -305,7 +305,7 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
                       !group.user.preference ||
                       group.user.preference.defaultBlock === null
                         ? "bg-gray-200 text-black shadow-sm font-medium hover:bg-gray-100"
-                        : "text-foreground hover:text-foreground hover:bg-background/50"
+                        : "text-foreground hover:bg-accent"
                     } ${updatingUserPreference === group.user.userId ? "opacity-50 cursor-not-allowed" : ""}`}
                   >
                     {updatingUserPreference === group.user.userId ? (
@@ -327,7 +327,7 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
                     className={`flex-1 text-xs px-3 py-2.5 rounded-md transition-all duration-200 flex items-center justify-center cursor-pointer ${
                       group.user.preference?.defaultBlock === false
                         ? "bg-green-600 text-white shadow-sm font-medium hover:bg-green-600"
-                        : "text-foreground hover:text-foreground hover:bg-background/50"
+                        : "text-foreground hover:bg-accent"
                     } ${updatingUserPreference === group.user.userId ? "opacity-50 cursor-not-allowed" : ""}`}
                   >
                     {updatingUserPreference === group.user.userId ? (
@@ -345,7 +345,7 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
                     className={`flex-1 text-xs px-3 py-2.5 rounded-md transition-all duration-200 flex items-center justify-center cursor-pointer ${
                       group.user.preference?.defaultBlock === true
                         ? "bg-red-600 dark:bg-red-700 text-white shadow-sm font-medium hover:bg-red-700 dark:hover:bg-red-800"
-                        : "text-foreground hover:text-foreground hover:bg-background/50"
+                        : "text-foreground hover:bg-accent"
                     } ${updatingUserPreference === group.user.userId ? "opacity-50 cursor-not-allowed" : ""}`}
                   >
                     {updatingUserPreference === group.user.userId ? (

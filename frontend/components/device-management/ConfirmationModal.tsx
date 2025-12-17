@@ -132,7 +132,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
 
   return (
     <Dialog open={!!confirmAction} onOpenChange={onCancel}>
-      <DialogContent className="max-w-[95vw] sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-base sm:text-lg text-foreground">
             {getActionIcon()}

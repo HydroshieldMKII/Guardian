@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
   Dialog,
@@ -90,10 +90,12 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
   const sessionsListRef = React.useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
-  const fetchUserHistory = async () => {
+  const fetchUserHistory = useCallback(async (showLoadingIndicator = true) => {
     if (!userId) return;
 
-    setLoading(true);
+    if (showLoadingIndicator) {
+      setLoading(true);
+    }
     try {
       const response = await fetch(
         `${config.api.baseUrl}/sessions/history/${userId}?limit=100&includeActive=true`
@@ -114,15 +116,33 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
       console.error("Error fetching user history:", error);
       setSessions([]);
     } finally {
-      setLoading(false);
+      if (showLoadingIndicator) {
+        setLoading(false);
+      }
     }
-  };
+  }, [userId]);
 
+  // Initial fetch when modal opens
   useEffect(() => {
     if (isOpen && userId) {
-      fetchUserHistory();
+      fetchUserHistory(true);
     }
-  }, [isOpen, userId]);
+  }, [isOpen, userId, fetchUserHistory]);
+
+  // Poll for updates when there are active sessions
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const hasActiveSessions = sessions.some((session) => !session.endedAt);
+    if (!hasActiveSessions) return;
+
+    // Poll every 10 seconds when there are active sessions
+    const intervalId = setInterval(() => {
+      fetchUserHistory(false); // Don't show loading indicator for background refreshes
+    }, 10000);
+
+    return () => clearInterval(intervalId);
+  }, [isOpen, sessions, fetchUserHistory]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -152,6 +172,19 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
 
     // For movies or other content
     return session.contentTitle || "Unknown Title";
+  };
+
+  const formatSubtitle = (session: SessionHistoryEntry) => {
+    // For music tracks: show "Artist • Year" or just "Artist"
+    if (session.contentType === "track" && session.grandparentTitle) {
+      if (session.year) {
+        return `${session.grandparentTitle} • ${session.year}`;
+      }
+      return session.grandparentTitle;
+    }
+
+    // For other content types, show year only
+    return session.year ? String(session.year) : null;
   };
 
   const getDeviceDisplayName = (session: SessionHistoryEntry) => {
@@ -280,12 +313,11 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
   }, [scrollToSessionId, sessions, loading]);
 
   const formatDuration = (session: SessionHistoryEntry) => {
-    if (!session.endedAt) {
-      return "N/A";
-    }
-
     const startTime = new Date(session.startedAt).getTime();
-    const endTime = new Date(session.endedAt).getTime();
+    // For active sessions (no endedAt), calculate duration from start to now
+    const endTime = session.endedAt
+      ? new Date(session.endedAt).getTime()
+      : Date.now();
     const durationMs = endTime - startTime;
 
     if (durationMs < 0) return "Unknown";
@@ -410,7 +442,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={fetchUserHistory}
+                onClick={() => fetchUserHistory(true)}
                 disabled={loading}
                 className="flex-shrink-0"
               >
@@ -484,9 +516,9 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
                         <div className="font-medium break-words">
                           {formatTitle(session)}
                         </div>
-                        {session.year && (
+                        {formatSubtitle(session) && (
                           <div className="text-xs text-muted-foreground">
-                            {session.year}
+                            {formatSubtitle(session)}
                           </div>
                         )}
                       </div>
@@ -601,9 +633,9 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
                           <div className="font-medium text-sm break-words">
                             {formatTitle(session)}
                           </div>
-                          {session.year && (
+                          {formatSubtitle(session) && (
                             <div className="text-xs text-muted-foreground mt-1">
-                              {session.year}
+                              {formatSubtitle(session)}
                             </div>
                           )}
                         </div>

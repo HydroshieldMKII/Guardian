@@ -4,13 +4,22 @@ import Link from "next/link";
 import Image from "next/image";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Settings, Moon, Sun, User, LogOut, Edit } from "lucide-react";
+import { Settings, Moon, Sun, User, LogOut, Edit, AlertTriangle, Save, Loader2 } from "lucide-react";
 import { useTheme } from "@/hooks/use-theme";
 import { useVersion } from "@/contexts/version-context";
 import { useAuth } from "@/contexts/auth-context";
+import { useUnsavedChanges } from "@/contexts/unsaved-changes-context";
 import { NotificationMenu } from "@/components/notification-menu";
 import { EditProfileModal } from "@/components/edit-profile-modal";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,12 +32,24 @@ import { useToast } from "@/hooks/use-toast";
 
 export function Navbar() {
   const [editProfileOpen, setEditProfileOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const { theme, toggleTheme } = useTheme();
   const { versionInfo } = useVersion();
   const { user, logout, setupRequired, isAuthenticated } = useAuth();
+  const {
+    hasUnsavedChanges,
+    showUnsavedWarning,
+    setShowUnsavedWarning,
+    pendingNavigation,
+    setPendingNavigation,
+    onSaveAndLeave,
+    onDiscardChanges,
+  } = useUnsavedChanges();
   const router = useRouter();
   const { toast } = useToast();
   const pathname = usePathname();
+
+  const isOnSettingsPage = pathname === "/settings";
 
   // Hide navbar if setup required, not authenticated, or on auth pages
   if (
@@ -39,6 +60,47 @@ export function Navbar() {
   ) {
     return null;
   }
+
+  const handleLogoClick = (e: React.MouseEvent) => {
+    // Only intercept if on settings page with unsaved changes
+    if (isOnSettingsPage && hasUnsavedChanges) {
+      e.preventDefault();
+      setPendingNavigation("/");
+      setShowUnsavedWarning(true);
+    }
+  };
+
+  const handleCancelLeave = () => {
+    setShowUnsavedWarning(false);
+    setPendingNavigation(null);
+  };
+
+  const handleConfirmLeave = () => {
+    setShowUnsavedWarning(false);
+    if (onDiscardChanges) {
+      onDiscardChanges();
+    }
+    if (pendingNavigation) {
+      router.push(pendingNavigation);
+    }
+    setPendingNavigation(null);
+  };
+
+  const handleSaveAndLeave = async () => {
+    if (onSaveAndLeave) {
+      setIsSaving(true);
+      try {
+        await onSaveAndLeave();
+        setShowUnsavedWarning(false);
+        if (pendingNavigation) {
+          router.push(pendingNavigation);
+        }
+        setPendingNavigation(null);
+      } finally {
+        setIsSaving(false);
+      }
+    }
+  };
 
   const handleLogout = async () => {
     try {
@@ -74,6 +136,7 @@ export function Navbar() {
         <div className="flex h-14 sm:h-16 items-center justify-between">
           <Link
             href="/"
+            onClick={handleLogoClick}
             className="flex items-center space-x-2 sm:space-x-3 hover:opacity-80 transition-opacity cursor-pointer"
           >
             <div className="flex items-center">
@@ -207,6 +270,53 @@ export function Navbar() {
         open={editProfileOpen}
         onOpenChange={setEditProfileOpen}
       />
+
+      {/* Unsaved Changes Warning Modal */}
+      <Dialog
+        open={showUnsavedWarning}
+        onOpenChange={(open) => !open && handleCancelLeave()}
+      >
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-orange-500" />
+              Unsaved Changes
+            </DialogTitle>
+            <DialogDescription>
+              You have unsaved changes that will be lost if you leave this page.
+              What would you like to do?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+            <Button
+              variant="outline"
+              onClick={handleCancelLeave}
+              className="order-1 sm:order-1"
+            >
+              Stay on Page
+            </Button>
+            <Button
+              onClick={handleSaveAndLeave}
+              disabled={isSaving}
+              className="order-2 sm:order-2"
+            >
+              {isSaving ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <Save className="h-4 w-4 mr-2" />
+              )}
+              Save & Leave
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmLeave}
+              className="order-3 sm:order-3"
+            >
+              Discard Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </nav>
   );
 }

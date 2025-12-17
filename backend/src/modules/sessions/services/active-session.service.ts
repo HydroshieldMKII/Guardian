@@ -46,6 +46,7 @@ interface PlexSessionData {
   art?: string;
   ratingKey?: string;
   parentRatingKey?: string;
+  parentYear?: number;
 }
 
 @Injectable()
@@ -140,6 +141,10 @@ export class ActiveSessionService {
     return container?.Metadata || [];
   }
 
+  private isPlexampDevice(product?: string): boolean {
+    return product?.toLowerCase().includes('plexamp') ?? false;
+  }
+
   private async upsertSession(sessionData: PlexSessionData): Promise<void> {
     try {
       if (!sessionData.sessionKey) {
@@ -153,13 +158,37 @@ export class ActiveSessionService {
       const session = sessionData.Session;
 
       // Check if session exists (active session = no endedAt)
-      const existingSession = await this.sessionHistoryRepository
+      let existingSession = await this.sessionHistoryRepository
         .createQueryBuilder('session')
         .where('session.sessionKey = :sessionKey', {
           sessionKey: sessionData.sessionKey,
         })
         .andWhere('session.endedAt IS NULL')
         .getOne();
+
+      // For Plexamp devices: if the track (ratingKey) changed, end the old session
+      // and create a new one. This ensures each song appears as a separate entry in history.
+      if (
+        existingSession &&
+        this.isPlexampDevice(player?.product) &&
+        sessionData.ratingKey &&
+        existingSession.ratingKey &&
+        sessionData.ratingKey !== existingSession.ratingKey
+      ) {
+        // End the current session for the previous track
+        await this.sessionHistoryRepository
+          .createQueryBuilder()
+          .update(SessionHistory)
+          .set({
+            endedAt: new Date(),
+            playerState: 'stopped',
+          })
+          .where('id = :id', { id: existingSession.id })
+          .execute();
+
+        // Clear existingSession so a new one will be created below
+        existingSession = null;
+      }
 
       // Find the UserDevice to get the foreign key
       let userDevice: UserDevice | null = null;
@@ -207,7 +236,7 @@ export class ActiveSessionService {
         ...(sessionData.parentTitle && {
           parentTitle: sessionData.parentTitle,
         }),
-        ...(sessionData.year && { year: sessionData.year }),
+        ...((sessionData.year || sessionData.parentYear) && { year: sessionData.year || sessionData.parentYear }),
         ...(sessionData.duration && { duration: sessionData.duration }),
         ...(sessionData.viewOffset !== undefined && {
           viewOffset: sessionData.viewOffset,

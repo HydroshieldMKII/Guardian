@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -38,6 +38,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useSettings } from "@/contexts/settings-context";
 import { useVersion } from "@/contexts/version-context";
+import { useUnsavedChanges } from "@/contexts/unsaved-changes-context";
 import { apiClient } from "@/lib/api";
 
 import { PlexSettings } from "@/components/settings/PlexSettings";
@@ -55,6 +56,11 @@ export default function SettingsPage() {
   const { toast } = useToast();
   const { settings, loading, refreshSettings, updateSettings } = useSettings();
   const { versionInfo } = useVersion();
+  const {
+    setHasUnsavedChanges: setGlobalUnsavedChanges,
+    setOnSaveAndLeave,
+    setOnDiscardChanges,
+  } = useUnsavedChanges();
 
   const [formData, setFormData] = useState<SettingsFormData>({});
   const [isSaving, setIsSaving] = useState(false);
@@ -91,6 +97,91 @@ export default function SettingsPage() {
       setHasUnsavedChanges(hasChanges);
     }
   }, [formData, settings]);
+
+  // Sync local unsaved changes with global context
+  useEffect(() => {
+    setGlobalUnsavedChanges(hasUnsavedChanges);
+  }, [hasUnsavedChanges, setGlobalUnsavedChanges]);
+
+  // Save handler for navbar context
+  const performSave = useCallback(async () => {
+    if (!hasUnsavedChanges || !settings) return;
+
+    setIsSaving(true);
+    try {
+      const changedSettings = settings
+        .filter((setting) => {
+          const newValue = formData[setting.key];
+          return newValue !== undefined && newValue !== setting.value;
+        })
+        .map((setting) => ({
+          key: setting.key,
+          value: String(formData[setting.key]),
+          type: setting.type,
+        }));
+
+      if (changedSettings.length === 0) return;
+
+      await apiClient.updateConfig(changedSettings);
+
+      updateSettings(
+        changedSettings.map((setting) => ({
+          key: setting.key,
+          value: setting.value,
+        }))
+      );
+
+      toast({
+        title: "Settings Saved",
+        description: `Successfully updated ${changedSettings.length} setting(s).`,
+        variant: "success",
+      });
+
+      setHasUnsavedChanges(false);
+    } catch (error) {
+      console.error("Error saving settings:", error);
+      toast({
+        title: "Error",
+        description:
+          error instanceof Error ? error.message : "Failed to save settings",
+        variant: "destructive",
+      });
+      throw error; // Re-throw so navbar knows save failed
+    } finally {
+      setIsSaving(false);
+    }
+  }, [hasUnsavedChanges, settings, formData, updateSettings, toast]);
+
+  // Discard handler for navbar context
+  const performDiscard = useCallback(() => {
+    if (settings && settings.length > 0) {
+      const originalData: SettingsFormData = {};
+      settings.forEach((setting) => {
+        originalData[setting.key] = setting.value;
+      });
+      setFormData(originalData);
+    }
+    setHasUnsavedChanges(false);
+  }, [settings]);
+
+  // Register callbacks with the global context
+  useEffect(() => {
+    setOnSaveAndLeave(performSave);
+    setOnDiscardChanges(performDiscard);
+
+    // Cleanup on unmount
+    return () => {
+      setGlobalUnsavedChanges(false);
+      setOnSaveAndLeave(null);
+      setOnDiscardChanges(null);
+    };
+  }, [
+    performSave,
+    performDiscard,
+    setOnSaveAndLeave,
+    setOnDiscardChanges,
+    setGlobalUnsavedChanges,
+  ]);
 
   const handleFormDataChange = (updates: Partial<SettingsFormData>) => {
     setFormData((prev) => {
@@ -181,7 +272,7 @@ export default function SettingsPage() {
         changedSettings.map((setting) => ({
           key: setting.key,
           value: setting.value,
-        })),
+        }))
       );
 
       toast({
