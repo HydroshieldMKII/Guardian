@@ -111,6 +111,41 @@ export function Dashboard() {
     setNavigationTarget({ userId, deviceIdentifier });
   };
 
+  // Navigate to user in device management (scroll to user card)
+  const handleNavigateToUser = (userId: string) => {
+    // Switch to devices tab
+    setActiveTab("devices");
+
+    // Wait for tab switch to complete before scrolling
+    setTimeout(() => {
+      const userElement = document.querySelector(`[data-user-id="${userId}"]`);
+      if (userElement) {
+        // Scroll to the user card
+        userElement.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+          inline: "nearest",
+        });
+
+        // Add highlight effect
+        setTimeout(() => {
+          userElement.classList.add(
+            "ring-2",
+            "ring-blue-500",
+            "ring-opacity-75",
+          );
+          setTimeout(() => {
+            userElement.classList.remove(
+              "ring-2",
+              "ring-blue-500",
+              "ring-opacity-75",
+            );
+          }, 1500);
+        }, 200);
+      }
+    }, 100);
+  };
+
   // Handle navigation completion
   const handleNavigationComplete = () => {
     setNavigationTarget(null);
@@ -361,6 +396,7 @@ export function Dashboard() {
               autoRefresh={autoRefresh}
               onAutoRefreshChange={setAutoRefresh}
               onNavigateToDevice={handleNavigateToDevice}
+              onNavigateToUser={handleNavigateToUser}
             />
           ) : (
             <DeviceManagement

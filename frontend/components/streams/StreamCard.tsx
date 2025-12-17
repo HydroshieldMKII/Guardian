@@ -7,7 +7,8 @@ import {
   User,
   RefreshCw,
   X,
-  UserRoundSearch,
+  UserRound,
+  Monitor,
   ChevronDown,
   ChevronUp,
   Image,
@@ -27,6 +28,7 @@ interface StreamCardProps {
   onToggleExpand: () => void;
   onRemoveAccess: () => void;
   onNavigateToDevice?: (userId: string, deviceIdentifier: string) => void;
+  onNavigateToUser?: (userId: string) => void;
 }
 
 export const StreamCard: React.FC<StreamCardProps> = ({
@@ -37,6 +39,7 @@ export const StreamCard: React.FC<StreamCardProps> = ({
   onToggleExpand,
   onRemoveAccess,
   onNavigateToDevice,
+  onNavigateToUser,
 }) => {
   // Separate thumbnail and art URLs
   const thumbnailUrl = stream.thumbnailUrl || "";
@@ -131,7 +134,7 @@ export const StreamCard: React.FC<StreamCardProps> = ({
           {/* Content info */}
           <div className="flex-1 min-w-0 relative z-10">
             <div
-              className={`inline-block px-2 py-1 rounded-md cursor-pointer transition-all duration-200 bg-black/20 text-white hover:bg-black/30`}
+              className={`inline-block px-2 py-1 rounded-md cursor-pointer transition-all duration-200 ${artUrl ? "bg-black/20 text-white hover:bg-black/30" : "bg-gray-200/80 dark:bg-muted/50 text-gray-900 dark:text-foreground hover:bg-gray-300/80 dark:hover:bg-muted/70"}`}
             >
               <h3
                 onClick={openInPlex}
@@ -149,7 +152,7 @@ export const StreamCard: React.FC<StreamCardProps> = ({
             {/* Primary info row */}
             <div className="flex items-center gap-2 text-xs sm:text-sm my-2 flex-wrap">
               <div
-                className={`flex items-center gap-1 px-2 py-1 rounded-full min-w-0 transition-colors ${artUrl ? "bg-black/30 text-white" : "bg-orange-50 dark:bg-orange-950/30 text-orange-700 dark:text-orange-300"}`}
+                className={`flex items-center gap-1 px-2 py-1 rounded-full min-w-0 transition-colors ${artUrl ? "bg-black/30 text-white" : "bg-gray-200/80 dark:bg-muted/50 text-gray-900 dark:text-foreground"}`}
               >
                 <User className="w-3 h-3 flex-shrink-0" />
                 <span className="truncate max-w-[120px] sm:max-w-[150px]">
@@ -157,7 +160,7 @@ export const StreamCard: React.FC<StreamCardProps> = ({
                 </span>
               </div>
               <div
-                className={`flex items-center gap-1 px-2 py-1 rounded-full min-w-0 transition-colors ${artUrl ? "bg-black/30 text-white" : "bg-cyan-50 dark:bg-cyan-950/30 text-cyan-700 dark:text-cyan-300"}`}
+                className={`flex items-center gap-1 px-2 py-1 rounded-full min-w-0 transition-colors ${artUrl ? "bg-black/30 text-white" : "bg-gray-200/80 dark:bg-muted/50 text-gray-900 dark:text-foreground"}`}
               >
                 {getDeviceIcon(stream.Player?.platform)}
                 <span className="truncate max-w-[100px] sm:max-w-[120px]">
@@ -175,13 +178,9 @@ export const StreamCard: React.FC<StreamCardProps> = ({
         <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-2 w-full sm:w-auto order-first sm:order-last relative z-10">
           <div
             className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs transition-all duration-200 ${
-              stream.Player?.state === "playing"
-                ? artUrl
-                  ? "bg-black/30 text-white"
-                  : "bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-300"
-                : artUrl
-                  ? "bg-black/30 text-white"
-                  : "bg-yellow-50 dark:bg-yellow-950/30 text-yellow-700 dark:text-yellow-300"
+              artUrl
+                ? "bg-black/30 text-white"
+                : "bg-gray-200/80 dark:bg-muted/50 text-gray-900 dark:text-foreground"
             }`}
           >
             {stream.Player?.state === "playing" ? (
@@ -224,6 +223,24 @@ export const StreamCard: React.FC<StreamCardProps> = ({
 
             <div
               onClick={() => {
+                if (onNavigateToUser && stream.User?.id) {
+                  onNavigateToUser(stream.User.id);
+                }
+              }}
+              className={`flex items-center justify-center w-6 h-6 rounded-full transition-all duration-200 cursor-pointer ${
+                !stream.User?.id
+                  ? "opacity-50 cursor-not-allowed"
+                  : artUrl
+                    ? "bg-black/30 text-white hover:bg-purple-500/30"
+                    : "bg-purple-50 dark:bg-purple-950/30 text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-950/50"
+              }`}
+              title="Scroll to user"
+            >
+              <UserRound className="w-3 h-3" />
+            </div>
+
+            <div
+              onClick={() => {
                 if (
                   onNavigateToDevice &&
                   stream.User?.id &&
@@ -242,9 +259,9 @@ export const StreamCard: React.FC<StreamCardProps> = ({
                     ? "bg-black/30 text-white hover:bg-blue-500/30"
                     : "bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-950/50"
               }`}
-              title="View device details"
+              title="Scroll to device"
             >
-              <UserRoundSearch className="w-3 h-3" />
+              <Monitor className="w-3 h-3" />
             </div>
 
             <div

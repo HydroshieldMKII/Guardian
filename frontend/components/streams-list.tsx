@@ -29,6 +29,7 @@ interface StreamsListProps {
   autoRefresh?: boolean;
   onAutoRefreshChange?: (value: boolean) => void;
   onNavigateToDevice?: (userId: string, deviceIdentifier: string) => void;
+  onNavigateToUser?: (userId: string) => void;
 }
 
 export default function StreamsList({
@@ -37,6 +38,7 @@ export default function StreamsList({
   autoRefresh = false,
   onAutoRefreshChange = () => {},
   onNavigateToDevice,
+  onNavigateToUser,
 }: StreamsListProps) {
   // Custom hooks
   const { streams, loading, error, fetchStreamsData, updateStreamsFromProps } =
@@ -112,11 +114,7 @@ export default function StreamsList({
           <div>
             <CardTitle className="flex items-center text-lg sm:text-xl mt-4">
               <Tv className="w-5 h-5 mr-2" />
-              Active Streams (
-              {searchTerm
-                ? `${filteredStreams.length}/${streams.length}`
-                : streams.length}
-              )
+              Active Streams
             </CardTitle>
             <CardDescription className="mt-1 text-sm">
               Real-time view of all active Plex streams
@@ -216,6 +214,7 @@ export default function StreamsList({
                 }
                 onRemoveAccess={() => setConfirmRemoveStream(stream)}
                 onNavigateToDevice={onNavigateToDevice}
+                onNavigateToUser={onNavigateToUser}
               />
             ))}
           </div>
