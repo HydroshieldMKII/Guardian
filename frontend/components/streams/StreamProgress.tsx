@@ -20,20 +20,20 @@ export const StreamProgress: React.FC<StreamProgressProps> = ({
     <div className="mb-1 sm:mb-2 mt-3 sm:mt-4">
       <div className="relative flex items-center justify-between text-xs mb-1">
         <span
-          className={`flex-shrink-0 px-1.5 py-0.5 rounded-md font-medium ${hasArt ? "bg-black/30 text-white" : "text-muted-foreground"}`}
+          className={`flex-shrink-0 px-1.5 py-0.5 rounded-md font-medium ${hasArt ? "bg-black/60 text-white" : "text-muted-foreground"}`}
         >
           {formatDuration(session.viewOffset)}
         </span>
         {/* Status text absolutely centered */}
         <span
-          className={`absolute left-1/2 -translate-x-1/2 text-xs ${
-            hasArt ? "text-white" : "text-muted-foreground"
+          className={`absolute left-1/2 -translate-x-1/2 text-xs px-1.5 py-0.5 rounded-md ${
+            hasArt ? "bg-black/60 text-white" : "text-muted-foreground"
           }`}
         >
           {playerState}
         </span>
         <span
-          className={`flex-shrink-0 px-1.5 py-0.5 rounded-md font-medium ${hasArt ? "bg-black/30 text-white" : "text-muted-foreground"}`}
+          className={`flex-shrink-0 px-1.5 py-0.5 rounded-md font-medium ${hasArt ? "bg-black/60 text-white" : "text-muted-foreground"}`}
         >
           {formatDuration(session.duration)}
         </span>

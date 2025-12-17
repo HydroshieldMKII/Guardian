@@ -119,7 +119,33 @@ export const StreamCard: React.FC<StreamCardProps> = ({
       <div className="relative z-10">
         {/* Desktop: 2-column layout, Mobile: stacked rows */}
         <div className="flex gap-2 sm:gap-4">
-          {/* Left column: Title + User/Device/Quality */}
+          {/* Left column: Poster (desktop only) */}
+          {thumbnailUrl && (
+            <div className="hidden sm:block flex-shrink-0">
+              <div className="relative w-16 h-24 rounded-md overflow-hidden bg-muted border border-white/10 shadow-lg">
+                <img
+                  src={thumbnailUrl}
+                  alt={getContentTitle(stream)}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.style.display = "none";
+                    const fallback = target.parentElement?.querySelector(
+                      ".thumbnail-fallback"
+                    ) as HTMLElement;
+                    if (fallback) {
+                      fallback.style.display = "flex";
+                    }
+                  }}
+                />
+                <div className="thumbnail-fallback absolute inset-0 hidden items-center justify-center bg-muted">
+                  <Image className="w-6 h-6 text-muted-foreground" />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Middle column: Title + User/Device/Quality */}
           <div className="flex-1 min-w-0">
             {/* Row 1: Title (+ Action icons on desktop, + User badge on mobile) */}
             <div className="flex items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
@@ -127,7 +153,7 @@ export const StreamCard: React.FC<StreamCardProps> = ({
               <div
                 className={`inline-block px-2 py-0.5 rounded-md cursor-pointer transition-all duration-200 min-w-0 flex-shrink ${
                   artUrl
-                    ? "bg-black/20 text-white hover:bg-black/30"
+                    ? "bg-black/60 text-white hover:bg-black/70"
                     : "bg-gray-200/80 dark:bg-muted/50 text-gray-900 dark:text-foreground hover:bg-gray-300/80 dark:hover:bg-muted/70"
                 }`}
               >
@@ -151,7 +177,7 @@ export const StreamCard: React.FC<StreamCardProps> = ({
               <div
                 className={`flex sm:hidden items-center gap-1 px-1.5 py-0.5 rounded-full text-xs ${
                   artUrl
-                    ? "bg-black/30 text-white"
+                    ? "bg-black/60 text-white"
                     : "bg-gray-200/80 dark:bg-muted/50 text-gray-900 dark:text-foreground"
                 }`}
               >
@@ -162,7 +188,7 @@ export const StreamCard: React.FC<StreamCardProps> = ({
               </div>
 
               {/* Desktop only: Action Icons */}
-              <div className="hidden sm:flex items-center gap-1">
+              <div className="hidden sm:flex items-center gap-1.5">
                 {stream.Player?.product !== "Plexamp" && (
                   <div
                     onClick={
@@ -172,21 +198,21 @@ export const StreamCard: React.FC<StreamCardProps> = ({
                         ? onRemoveAccess
                         : undefined
                     }
-                    className={`flex items-center justify-center w-5 h-5 rounded-full transition-all duration-200 cursor-pointer ${
+                    className={`flex items-center justify-center w-6 h-6 rounded-full transition-all duration-200 cursor-pointer ${
                       isRevoking ||
                       !stream.User?.id ||
                       !stream.Player?.machineIdentifier
                         ? "opacity-50 cursor-not-allowed"
                         : artUrl
-                          ? "bg-black/30 text-white hover:bg-red-500/30"
+                          ? "bg-red-600/80 text-white hover:bg-red-500"
                           : "bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-950/50"
                     }`}
                     title={isRevoking ? "Removing access..." : "Remove access"}
                   >
                     {isRevoking ? (
-                      <RefreshCw className="w-3 h-3 animate-spin" />
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
                     ) : (
-                      <X className="w-3 h-3" />
+                      <X className="w-3.5 h-3.5" />
                     )}
                   </div>
                 )}
@@ -196,16 +222,16 @@ export const StreamCard: React.FC<StreamCardProps> = ({
                       onNavigateToUser(stream.User.id);
                     }
                   }}
-                  className={`flex items-center justify-center w-5 h-5 rounded-full transition-all duration-200 cursor-pointer ${
+                  className={`flex items-center justify-center w-6 h-6 rounded-full transition-all duration-200 cursor-pointer ${
                     !stream.User?.id
                       ? "opacity-50 cursor-not-allowed"
                       : artUrl
-                        ? "bg-black/30 text-white hover:bg-purple-500/30"
+                        ? "bg-black/60 text-white hover:bg-purple-500/50"
                         : "bg-gray-50 dark:bg-gray-950/30 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-950/50"
                   }`}
                   title="Scroll to user"
                 >
-                  <UserRound className="w-3 h-3" />
+                  <UserRound className="w-3.5 h-3.5" />
                 </div>
                 <div
                   onClick={() => {
@@ -220,29 +246,29 @@ export const StreamCard: React.FC<StreamCardProps> = ({
                       );
                     }
                   }}
-                  className={`flex items-center justify-center w-5 h-5 rounded-full transition-all duration-200 cursor-pointer ${
+                  className={`flex items-center justify-center w-6 h-6 rounded-full transition-all duration-200 cursor-pointer ${
                     !stream.User?.id || !stream.Player?.machineIdentifier
                       ? "opacity-50 cursor-not-allowed"
                       : artUrl
-                        ? "bg-black/30 text-white hover:bg-blue-500/30"
+                        ? "bg-black/60 text-white hover:bg-blue-500/50"
                         : "bg-gray-50 dark:bg-gray-950/30 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-950/50"
                   }`}
                   title="Scroll to device"
                 >
-                  <Monitor className="w-3 h-3" />
+                  <Monitor className="w-3.5 h-3.5" />
                 </div>
                 <div
                   onClick={onToggleExpand}
-                  className={`flex items-center justify-center w-5 h-5 rounded-full transition-all duration-200 cursor-pointer ${
+                  className={`flex items-center justify-center w-6 h-6 rounded-full transition-all duration-200 cursor-pointer ${
                     artUrl
-                      ? "bg-black/30 text-white hover:bg-white/20"
+                      ? "bg-black/60 text-white hover:bg-black/70"
                       : "bg-gray-50 dark:bg-gray-950/30 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-950/50"
                   }`}
                 >
                   {isExpanded ? (
-                    <ChevronUp className="w-3 h-3" />
+                    <ChevronUp className="w-3.5 h-3.5" />
                   ) : (
-                    <ChevronDown className="w-3 h-3" />
+                    <ChevronDown className="w-3.5 h-3.5" />
                   )}
                 </div>
               </div>
@@ -254,7 +280,7 @@ export const StreamCard: React.FC<StreamCardProps> = ({
               <div
                 className={`hidden sm:flex items-center gap-1 px-1.5 py-0.5 rounded-full text-xs ${
                   artUrl
-                    ? "bg-black/30 text-white"
+                    ? "bg-black/60 text-white"
                     : "bg-gray-200/80 dark:bg-muted/50 text-gray-900 dark:text-foreground"
                 }`}
               >
@@ -268,7 +294,7 @@ export const StreamCard: React.FC<StreamCardProps> = ({
               <div
                 className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full text-xs ${
                   artUrl
-                    ? "bg-black/30 text-white"
+                    ? "bg-black/60 text-white"
                     : "bg-gray-200/80 dark:bg-muted/50 text-gray-900 dark:text-foreground"
                 }`}
               >
@@ -286,7 +312,7 @@ export const StreamCard: React.FC<StreamCardProps> = ({
               </span>
 
               {/* Inline Quality */}
-              <StreamQuality session={stream} inline />
+              <StreamQuality session={stream} inline hasArt={!!artUrl} />
             </div>
           </div>
         </div>
@@ -311,7 +337,7 @@ export const StreamCard: React.FC<StreamCardProps> = ({
           disabled={!stream.User?.id}
           className={`flex-1 h-8 text-xs ${
             artUrl
-              ? "bg-black/30 border-white/20 text-white hover:bg-black/50"
+              ? "!bg-black/60 !border-white/30 !text-white hover:!bg-black/70"
               : ""
           }`}
         >
@@ -337,7 +363,7 @@ export const StreamCard: React.FC<StreamCardProps> = ({
           disabled={!stream.User?.id || !stream.Player?.machineIdentifier}
           className={`flex-1 h-8 text-xs ${
             artUrl
-              ? "bg-black/30 border-white/20 text-white hover:bg-black/50"
+              ? "!bg-black/60 !border-white/30 !text-white hover:!bg-black/70"
               : ""
           }`}
         >
@@ -365,7 +391,7 @@ export const StreamCard: React.FC<StreamCardProps> = ({
             }
             className={`h-8 w-8 p-0 ${
               artUrl
-                ? "bg-black/30 border-white/20 text-white hover:bg-red-500/50"
+                ? "!bg-black/60 !border-white/30 !text-white hover:!bg-red-500/70"
                 : "hover:bg-red-50 hover:text-red-700 hover:border-red-200 dark:hover:bg-red-950/30 dark:hover:text-red-300 dark:hover:border-red-800"
             }`}
           >

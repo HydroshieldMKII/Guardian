@@ -42,19 +42,19 @@ export const RemoveAccessModal: React.FC<RemoveAccessModalProps> = ({
 
         {stream && (
           <div className="my-4 p-4 bg-muted rounded-lg">
-            <div className="text-sm font-medium text-foreground mb-2 line-clamp-2 break-words leading-tight">
+            <div className="text-sm font-medium text-foreground mb-2 truncate">
               {getContentTitle(stream)}
             </div>
             <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
               <div className="flex items-center gap-1 min-w-0">
                 <User className="w-3 h-3 flex-shrink-0" />
-                <span className="truncate max-w-[120px]">
+                <span className="truncate max-w-[100px]">
                   {stream.User?.title || "Unknown User"}
                 </span>
               </div>
               <div className="flex items-center gap-1 min-w-0">
                 {getDeviceIcon(stream.Player?.platform)}
-                <span className="truncate max-w-[120px]">
+                <span className="truncate max-w-[100px]">
                   {stream.Player?.title || "Unknown Device"}
                 </span>
               </div>

@@ -423,7 +423,7 @@ export default function SettingsPage() {
                 </p>
               </div>
             </div>
-            <div className="flex gap-2 shrink-0">
+            <div className="flex gap-2 shrink-0 ml-auto">
               <Button
                 onClick={handleCancel}
                 disabled={isSaving}
