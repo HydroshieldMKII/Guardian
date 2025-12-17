@@ -101,9 +101,10 @@ export const StreamCard: React.FC<StreamCardProps> = ({
         // Only toggle expand on mobile when clicking the card background
         // Check if click is on the card itself, not on interactive elements
         const target = e.target as HTMLElement;
-        const isInteractive = target.closest('button, [role="button"], a, [onclick]') || 
-                             target.tagName === 'BUTTON' || 
-                             target.closest('[title]');
+        const isInteractive =
+          target.closest('button, [role="button"], a, [onclick]') ||
+          target.tagName === "BUTTON" ||
+          target.closest("[title]");
         if (!isInteractive && window.innerWidth < 640) {
           onToggleExpand();
         }
@@ -114,176 +115,166 @@ export const StreamCard: React.FC<StreamCardProps> = ({
         <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/50 to-black/30 backdrop-blur-[0.5px]" />
       )}
 
-      {/* Unified single-line layout */}
+      {/* Main content layout */}
       <div className="relative z-10">
-        {/* Row 1: Title + Status + Actions */}
-        <div className="flex items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
-          {/* Title */}
-          <div
-            className={`inline-block px-2 py-0.5 rounded-md cursor-pointer transition-all duration-200 min-w-0 flex-shrink ${
-              artUrl
-                ? "bg-black/20 text-white hover:bg-black/30"
-                : "bg-gray-200/80 dark:bg-muted/50 text-gray-900 dark:text-foreground hover:bg-gray-300/80 dark:hover:bg-muted/70"
-            }`}
-          >
-            <h3
-              onClick={openInPlex}
-              className="font-semibold text-xs sm:text-sm leading-tight truncate"
-              title={
-                stream.type === "track"
-                  ? "Click to open album in Plex"
-                  : "Click to open in Plex"
-              }
-            >
-              {getContentTitle(stream)}
-            </h3>
-          </div>
-
-          {/* Spacer */}
-          <div className="flex-1" />
-
-          {/* Status */}
-          <div
-            className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full text-xs flex-shrink-0 ${
-              artUrl
-                ? "bg-black/30 text-white"
-                : "bg-gray-200/80 dark:bg-muted/50 text-gray-900 dark:text-foreground"
-            }`}
-          >
-            {stream.Player?.state === "playing" ? (
-              <Play className="w-3 h-3" />
-            ) : (
-              <Pause className="w-3 h-3" />
-            )}
-            <span>{stream.Player?.state || "unknown"}</span>
-          </div>
-
-          {/* Desktop Action Icons - right aligned next to status */}
-          <div className="hidden sm:flex items-center gap-1 flex-shrink-0">
-            {stream.Player?.product !== "Plexamp" && (
+        {/* Desktop: 2-column layout, Mobile: stacked rows */}
+        <div className="flex gap-2 sm:gap-4">
+          {/* Left column: Title + User/Device/Quality */}
+          <div className="flex-1 min-w-0">
+            {/* Row 1: Title (+ Action icons on desktop) */}
+            <div className="flex items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
+              {/* Title */}
               <div
-                onClick={
-                  !isRevoking &&
-                  stream.User?.id &&
-                  stream.Player?.machineIdentifier
-                    ? onRemoveAccess
-                    : undefined
-                }
-                className={`flex items-center justify-center w-5 h-5 rounded-full transition-all duration-200 cursor-pointer ${
-                  isRevoking ||
-                  !stream.User?.id ||
-                  !stream.Player?.machineIdentifier
-                    ? "opacity-50 cursor-not-allowed"
-                    : artUrl
-                      ? "bg-black/30 text-white hover:bg-red-500/30"
-                      : "bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-950/50"
+                className={`inline-block px-2 py-0.5 rounded-md cursor-pointer transition-all duration-200 min-w-0 flex-shrink ${
+                  artUrl
+                    ? "bg-black/20 text-white hover:bg-black/30"
+                    : "bg-gray-200/80 dark:bg-muted/50 text-gray-900 dark:text-foreground hover:bg-gray-300/80 dark:hover:bg-muted/70"
                 }`}
-                title={isRevoking ? "Removing access..." : "Remove access"}
               >
-                {isRevoking ? (
-                  <RefreshCw className="w-3 h-3 animate-spin" />
-                ) : (
-                  <X className="w-3 h-3" />
-                )}
+                <h3
+                  onClick={openInPlex}
+                  className="font-semibold text-xs sm:text-sm leading-tight truncate"
+                  title={
+                    stream.type === "track"
+                      ? "Click to open album in Plex"
+                      : "Click to open in Plex"
+                  }
+                >
+                  {getContentTitle(stream)}
+                </h3>
               </div>
-            )}
-            <div
-              onClick={() => {
-                if (onNavigateToUser && stream.User?.id) {
-                  onNavigateToUser(stream.User.id);
-                }
-              }}
-              className={`flex items-center justify-center w-5 h-5 rounded-full transition-all duration-200 cursor-pointer ${
-                !stream.User?.id
-                  ? "opacity-50 cursor-not-allowed"
-                  : artUrl
-                    ? "bg-black/30 text-white hover:bg-purple-500/30"
-                    : "bg-gray-50 dark:bg-gray-950/30 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-950/50"
-              }`}
-              title="Scroll to user"
-            >
-              <UserRound className="w-3 h-3" />
+
+              {/* Spacer to push action icons to the right */}
+              <div className="flex-1" />
+
+              {/* Desktop only: Action Icons */}
+              <div className="hidden sm:flex items-center gap-1">
+                {stream.Player?.product !== "Plexamp" && (
+                  <div
+                    onClick={
+                      !isRevoking &&
+                      stream.User?.id &&
+                      stream.Player?.machineIdentifier
+                        ? onRemoveAccess
+                        : undefined
+                    }
+                    className={`flex items-center justify-center w-5 h-5 rounded-full transition-all duration-200 cursor-pointer ${
+                      isRevoking ||
+                      !stream.User?.id ||
+                      !stream.Player?.machineIdentifier
+                        ? "opacity-50 cursor-not-allowed"
+                        : artUrl
+                          ? "bg-black/30 text-white hover:bg-red-500/30"
+                          : "bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-950/50"
+                    }`}
+                    title={isRevoking ? "Removing access..." : "Remove access"}
+                  >
+                    {isRevoking ? (
+                      <RefreshCw className="w-3 h-3 animate-spin" />
+                    ) : (
+                      <X className="w-3 h-3" />
+                    )}
+                  </div>
+                )}
+                <div
+                  onClick={() => {
+                    if (onNavigateToUser && stream.User?.id) {
+                      onNavigateToUser(stream.User.id);
+                    }
+                  }}
+                  className={`flex items-center justify-center w-5 h-5 rounded-full transition-all duration-200 cursor-pointer ${
+                    !stream.User?.id
+                      ? "opacity-50 cursor-not-allowed"
+                      : artUrl
+                        ? "bg-black/30 text-white hover:bg-purple-500/30"
+                        : "bg-gray-50 dark:bg-gray-950/30 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-950/50"
+                  }`}
+                  title="Scroll to user"
+                >
+                  <UserRound className="w-3 h-3" />
+                </div>
+                <div
+                  onClick={() => {
+                    if (
+                      onNavigateToDevice &&
+                      stream.User?.id &&
+                      stream.Player?.machineIdentifier
+                    ) {
+                      onNavigateToDevice(
+                        stream.User.id,
+                        stream.Player.machineIdentifier
+                      );
+                    }
+                  }}
+                  className={`flex items-center justify-center w-5 h-5 rounded-full transition-all duration-200 cursor-pointer ${
+                    !stream.User?.id || !stream.Player?.machineIdentifier
+                      ? "opacity-50 cursor-not-allowed"
+                      : artUrl
+                        ? "bg-black/30 text-white hover:bg-blue-500/30"
+                        : "bg-gray-50 dark:bg-gray-950/30 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-950/50"
+                  }`}
+                  title="Scroll to device"
+                >
+                  <Monitor className="w-3 h-3" />
+                </div>
+                <div
+                  onClick={onToggleExpand}
+                  className={`flex items-center justify-center w-5 h-5 rounded-full transition-all duration-200 cursor-pointer ${
+                    artUrl
+                      ? "bg-black/30 text-white hover:bg-white/20"
+                      : "bg-gray-50 dark:bg-gray-950/30 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-950/50"
+                  }`}
+                >
+                  {isExpanded ? (
+                    <ChevronUp className="w-3 h-3" />
+                  ) : (
+                    <ChevronDown className="w-3 h-3" />
+                  )}
+                </div>
+              </div>
             </div>
-            <div
-              onClick={() => {
-                if (
-                  onNavigateToDevice &&
-                  stream.User?.id &&
-                  stream.Player?.machineIdentifier
-                ) {
-                  onNavigateToDevice(
-                    stream.User.id,
-                    stream.Player.machineIdentifier
-                  );
-                }
-              }}
-              className={`flex items-center justify-center w-5 h-5 rounded-full transition-all duration-200 cursor-pointer ${
-                !stream.User?.id || !stream.Player?.machineIdentifier
-                  ? "opacity-50 cursor-not-allowed"
-                  : artUrl
-                    ? "bg-black/30 text-white hover:bg-blue-500/30"
-                    : "bg-gray-50 dark:bg-gray-950/30 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-950/50"
-              }`}
-              title="Scroll to device"
-            >
-              <Monitor className="w-3 h-3" />
-            </div>
-            <div
-              onClick={onToggleExpand}
-              className={`flex items-center justify-center w-5 h-5 rounded-full transition-all duration-200 cursor-pointer ${
-                artUrl
-                  ? "bg-black/30 text-white hover:bg-white/20"
-                  : "bg-gray-50 dark:bg-gray-950/30 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-950/50"
-              }`}
-            >
-              {isExpanded ? (
-                <ChevronUp className="w-3 h-3" />
-              ) : (
-                <ChevronDown className="w-3 h-3" />
-              )}
+
+            {/* Row 2: User, Device, Quality specs */}
+            <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap mb-2 mt-2">
+              {/* User */}
+              <div
+                className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full text-xs ${
+                  artUrl
+                    ? "bg-black/30 text-white"
+                    : "bg-gray-200/80 dark:bg-muted/50 text-gray-900 dark:text-foreground"
+                }`}
+              >
+                <User className="w-3 h-3 flex-shrink-0" />
+                <span className="truncate max-w-[80px] sm:max-w-[120px]">
+                  {stream.User?.title || "Unknown"}
+                </span>
+              </div>
+
+              {/* Device */}
+              <div
+                className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full text-xs ${
+                  artUrl
+                    ? "bg-black/30 text-white"
+                    : "bg-gray-200/80 dark:bg-muted/50 text-gray-900 dark:text-foreground"
+                }`}
+              >
+                {getDeviceIcon(stream.Player?.platform)}
+                <span className="truncate max-w-[60px] sm:max-w-[100px]">
+                  {stream.Player?.title || "Device"}
+                </span>
+              </div>
+
+              {/* Separator dot - hidden on mobile */}
+              <span
+                className={`text-xs hidden sm:inline ${artUrl ? "text-white/50" : "text-gray-400 dark:text-gray-500"}`}
+              >
+                •
+              </span>
+
+              {/* Inline Quality */}
+              <StreamQuality session={stream} inline />
             </div>
           </div>
-        </div>
-
-        {/* Row 2: User, Device, Quality specs */}
-        <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap mb-2 mt-2">
-          {/* User */}
-          <div
-            className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full text-xs ${
-              artUrl
-                ? "bg-black/30 text-white"
-                : "bg-gray-200/80 dark:bg-muted/50 text-gray-900 dark:text-foreground"
-            }`}
-          >
-            <User className="w-3 h-3 flex-shrink-0" />
-            <span className="truncate max-w-[80px] sm:max-w-[120px]">
-              {stream.User?.title || "Unknown"}
-            </span>
-          </div>
-
-          {/* Device */}
-          <div
-            className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full text-xs ${
-              artUrl
-                ? "bg-black/30 text-white"
-                : "bg-gray-200/80 dark:bg-muted/50 text-gray-900 dark:text-foreground"
-            }`}
-          >
-            {getDeviceIcon(stream.Player?.platform)}
-            <span className="truncate max-w-[60px] sm:max-w-[100px]">
-              {stream.Player?.title || "Device"}
-            </span>
-          </div>
-
-          {/* Separator dot - hidden on mobile */}
-          <span
-            className={`text-xs hidden sm:inline ${artUrl ? "text-white/50" : "text-gray-400 dark:text-gray-500"}`}
-          >
-            •
-          </span>
-
-          {/* Inline Quality */}
-          <StreamQuality session={stream} inline />
         </div>
       </div>
 
@@ -318,8 +309,15 @@ export const StreamCard: React.FC<StreamCardProps> = ({
           size="sm"
           onClick={(e) => {
             e.stopPropagation();
-            if (onNavigateToDevice && stream.User?.id && stream.Player?.machineIdentifier) {
-              onNavigateToDevice(stream.User.id, stream.Player.machineIdentifier);
+            if (
+              onNavigateToDevice &&
+              stream.User?.id &&
+              stream.Player?.machineIdentifier
+            ) {
+              onNavigateToDevice(
+                stream.User.id,
+                stream.Player.machineIdentifier
+              );
             }
           }}
           disabled={!stream.User?.id || !stream.Player?.machineIdentifier}
@@ -338,11 +336,19 @@ export const StreamCard: React.FC<StreamCardProps> = ({
             size="sm"
             onClick={(e) => {
               e.stopPropagation();
-              if (!isRevoking && stream.User?.id && stream.Player?.machineIdentifier) {
+              if (
+                !isRevoking &&
+                stream.User?.id &&
+                stream.Player?.machineIdentifier
+              ) {
                 onRemoveAccess();
               }
             }}
-            disabled={isRevoking || !stream.User?.id || !stream.Player?.machineIdentifier}
+            disabled={
+              isRevoking ||
+              !stream.User?.id ||
+              !stream.Player?.machineIdentifier
+            }
             className={`h-8 w-8 p-0 ${
               artUrl
                 ? "bg-black/30 border-white/20 text-white hover:bg-red-500/50"

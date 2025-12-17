@@ -7,7 +7,10 @@ interface StreamQualityProps {
   inline?: boolean;
 }
 
-export const StreamQuality: React.FC<StreamQualityProps> = ({ session, inline = false }) => {
+export const StreamQuality: React.FC<StreamQualityProps> = ({
+  session,
+  inline = false,
+}) => {
   const quality = getDetailedQuality(session);
 
   if (!quality) {
@@ -46,7 +49,9 @@ export const StreamQuality: React.FC<StreamQualityProps> = ({ session, inline = 
         )}
         {/* Container - hidden on mobile for video content, always shown for music */}
         {quality.container !== "Unknown" && (
-          <div className={`${isMusic ? 'flex' : 'hidden sm:flex'} items-center gap-1 px-1.5 py-0.5 rounded-full text-xs bg-gray-50 dark:bg-gray-950/30 text-gray-700 dark:text-gray-300`}>
+          <div
+            className={`${isMusic ? "flex" : "hidden sm:flex"} items-center gap-1 px-1.5 py-0.5 rounded-full text-xs bg-gray-50 dark:bg-gray-950/30 text-gray-700 dark:text-gray-300`}
+          >
             <HardDrive className="w-3 h-3" />
             <span>{quality.container}</span>
           </div>
