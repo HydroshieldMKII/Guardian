@@ -121,7 +121,7 @@ export const StreamCard: React.FC<StreamCardProps> = ({
         <div className="flex gap-2 sm:gap-4">
           {/* Left column: Title + User/Device/Quality */}
           <div className="flex-1 min-w-0">
-            {/* Row 1: Title (+ Action icons on desktop) */}
+            {/* Row 1: Title (+ Action icons on desktop, + User badge on mobile) */}
             <div className="flex items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
               {/* Title */}
               <div
@@ -144,8 +144,22 @@ export const StreamCard: React.FC<StreamCardProps> = ({
                 </h3>
               </div>
 
-              {/* Spacer to push action icons to the right */}
+              {/* Spacer to push items to the right */}
               <div className="flex-1" />
+
+              {/* Mobile only: User badge */}
+              <div
+                className={`flex sm:hidden items-center gap-1 px-1.5 py-0.5 rounded-full text-xs ${
+                  artUrl
+                    ? "bg-black/30 text-white"
+                    : "bg-gray-200/80 dark:bg-muted/50 text-gray-900 dark:text-foreground"
+                }`}
+              >
+                <User className="w-3 h-3 flex-shrink-0" />
+                <span className="truncate max-w-[80px]">
+                  {stream.User?.title || "Unknown"}
+                </span>
+              </div>
 
               {/* Desktop only: Action Icons */}
               <div className="hidden sm:flex items-center gap-1">
@@ -234,18 +248,18 @@ export const StreamCard: React.FC<StreamCardProps> = ({
               </div>
             </div>
 
-            {/* Row 2: User, Device, Quality specs */}
+            {/* Row 2: User (desktop only), Device, Quality specs */}
             <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap mb-2 mt-2">
-              {/* User */}
+              {/* User - hidden on mobile, shown on desktop */}
               <div
-                className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full text-xs ${
+                className={`hidden sm:flex items-center gap-1 px-1.5 py-0.5 rounded-full text-xs ${
                   artUrl
                     ? "bg-black/30 text-white"
                     : "bg-gray-200/80 dark:bg-muted/50 text-gray-900 dark:text-foreground"
                 }`}
               >
                 <User className="w-3 h-3 flex-shrink-0" />
-                <span className="truncate max-w-[80px] sm:max-w-[120px]">
+                <span className="truncate max-w-[120px]">
                   {stream.User?.title || "Unknown"}
                 </span>
               </div>

@@ -40,7 +40,11 @@ export const StreamProgress: React.FC<StreamProgressProps> = ({
       </div>
       <div className="w-full bg-muted rounded-full h-1.5 sm:h-2">
         <div
-          className="bg-gradient-to-r from-blue-500 to-blue-600 h-1.5 sm:h-2 rounded-full transition-all duration-500 relative overflow-hidden"
+          className={`h-1.5 sm:h-2 rounded-full transition-all duration-500 relative overflow-hidden ${
+            playerState === "playing"
+              ? "bg-gradient-to-r from-blue-500 to-blue-600"
+              : "bg-gradient-to-r from-yellow-500 to-yellow-600"
+          }`}
           style={{
             width: `${getProgressPercentage(
               session.viewOffset,
@@ -48,7 +52,7 @@ export const StreamProgress: React.FC<StreamProgressProps> = ({
             )}%`,
           }}
         >
-          {session.Player?.state === "playing" && (
+          {playerState === "playing" && (
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-pulse" />
           )}
         </div>
