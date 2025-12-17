@@ -3,26 +3,27 @@ import { formatDuration, getProgressPercentage } from "./SharedComponents";
 
 interface StreamProgressProps {
   session: any;
+  hasArt?: boolean;
 }
 
-export const StreamProgress: React.FC<StreamProgressProps> = ({ session }) => {
+export const StreamProgress: React.FC<StreamProgressProps> = ({ session, hasArt = false }) => {
   if (!session.duration || session.viewOffset === undefined) {
     return null;
   }
 
   return (
-    <div className="mb-3">
+    <div className="mb-1 sm:mb-2">
       <div className="flex items-center justify-between text-xs mb-1 gap-2">
-        <span className="flex-shrink-0 px-2 py-1 rounded-md bg-black/30 text-white font-medium">
+        <span className={`flex-shrink-0 px-1.5 py-0.5 rounded-md font-medium ${hasArt ? "bg-black/30 text-white" : "text-muted-foreground"}`}>
           {formatDuration(session.viewOffset)}
         </span>
-        <span className="flex-shrink-0 px-2 py-1 rounded-md bg-black/30 text-white font-medium">
+        <span className={`flex-shrink-0 px-1.5 py-0.5 rounded-md font-medium ${hasArt ? "bg-black/30 text-white" : "text-muted-foreground"}`}>
           {formatDuration(session.duration)}
         </span>
       </div>
-      <div className="w-full bg-muted rounded-full h-2">
+      <div className="w-full bg-muted rounded-full h-1.5 sm:h-2">
         <div
-          className="bg-gradient-to-r from-blue-500 to-blue-600 h-2 rounded-full transition-all duration-500 relative overflow-hidden"
+          className="bg-gradient-to-r from-blue-500 to-blue-600 h-1.5 sm:h-2 rounded-full transition-all duration-500 relative overflow-hidden"
           style={{
             width: `${getProgressPercentage(
               session.viewOffset,

@@ -90,94 +90,61 @@ export const StreamCard: React.FC<StreamCardProps> = ({
   return (
     <div
       key={stream.sessionKey || index}
-      className={`relative p-3 sm:p-4 rounded-lg bg-card shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden ${artUrl ? "" : "border"}`}
+      className={`relative rounded-lg bg-card shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden p-3 sm:p-4 cursor-pointer sm:cursor-default ${artUrl ? "" : "border"}`}
       style={{
         backgroundImage: artUrl ? `url(${artUrl})` : "none",
         backgroundSize: "cover",
         backgroundPosition: "center",
         backgroundRepeat: "no-repeat",
       }}
+      onClick={(e) => {
+        // Only toggle expand on mobile when clicking the card background
+        // Check if click is on the card itself, not on interactive elements
+        const target = e.target as HTMLElement;
+        const isInteractive = target.closest('button, [role="button"], a, [onclick]') || 
+                             target.tagName === 'BUTTON' || 
+                             target.closest('[title]');
+        if (!isInteractive && window.innerWidth < 640) {
+          onToggleExpand();
+        }
+      }}
     >
       {/* Background overlay for better text readability */}
       {artUrl && (
         <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/50 to-black/30 backdrop-blur-[0.5px]" />
       )}
-      {/* Responsive header */}
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-3 gap-3">
-        <div className={`flex flex-1 min-w-0 ${thumbnailUrl ? "gap-3" : ""}`}>
-          {/* Thumbnail */}
-          {thumbnailUrl && (
-            <div className="flex-shrink-0 relative z-10">
-              <div className="relative w-16 h-24 sm:w-20 sm:h-30 rounded-md overflow-hidden bg-muted border shadow-lg">
-                <img
-                  src={thumbnailUrl}
-                  alt={getContentTitle(stream)}
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.style.display = "none";
-                    const fallback = target.parentElement?.querySelector(
-                      ".thumbnail-fallback"
-                    ) as HTMLElement;
-                    if (fallback) {
-                      fallback.style.display = "flex";
-                    }
-                  }}
-                />
-                <div className="thumbnail-fallback absolute inset-0 hidden items-center justify-center bg-muted">
-                  <Image className="w-6 h-6 text-muted-foreground" />
-                </div>
-              </div>
-            </div>
-          )}
 
-          {/* Content info */}
-          <div className="flex-1 min-w-0 relative z-10">
-            <div
-              className={`inline-block px-2 py-1 rounded-md cursor-pointer transition-all duration-200 ${artUrl ? "bg-black/20 text-white hover:bg-black/30" : "bg-gray-200/80 dark:bg-muted/50 text-gray-900 dark:text-foreground hover:bg-gray-300/80 dark:hover:bg-muted/70"}`}
-            >
-              <h3
-                onClick={openInPlex}
-                className="font-semibold text-sm sm:text-base break-words leading-tight"
-                title={
-                  stream.type === "track"
-                    ? "Click to open album in Plex"
-                    : "Click to open in Plex"
-                }
-              >
-                {getContentTitle(stream)}
-              </h3>
-            </div>
-
-            {/* Primary info row */}
-            <div className="flex items-center gap-2 text-xs sm:text-sm my-2 flex-wrap">
-              <div
-                className={`flex items-center gap-1 px-2 py-1 rounded-full min-w-0 transition-colors ${artUrl ? "bg-black/30 text-white" : "bg-gray-200/80 dark:bg-muted/50 text-gray-900 dark:text-foreground"}`}
-              >
-                <User className="w-3 h-3 flex-shrink-0" />
-                <span className="truncate max-w-[120px] sm:max-w-[150px]">
-                  {stream.User?.title || "Unknown"}
-                </span>
-              </div>
-              <div
-                className={`flex items-center gap-1 px-2 py-1 rounded-full min-w-0 transition-colors ${artUrl ? "bg-black/30 text-white" : "bg-gray-200/80 dark:bg-muted/50 text-gray-900 dark:text-foreground"}`}
-              >
-                {getDeviceIcon(stream.Player?.platform)}
-                <span className="truncate max-w-[100px] sm:max-w-[120px]">
-                  {stream.Player?.title || "Device"}
-                </span>
-              </div>
-            </div>
-
-            {/* Quality info row - compact */}
-            <StreamQuality session={stream} />
-          </div>
-        </div>
-
-        {/* Status and actions */}
-        <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-2 w-full sm:w-auto order-first sm:order-last relative z-10">
+      {/* Unified single-line layout */}
+      <div className="relative z-10">
+        {/* Row 1: Title + Status + Actions */}
+        <div className="flex items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
+          {/* Title */}
           <div
-            className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs transition-all duration-200 ${
+            className={`inline-block px-2 py-0.5 rounded-md cursor-pointer transition-all duration-200 min-w-0 flex-shrink ${
+              artUrl
+                ? "bg-black/20 text-white hover:bg-black/30"
+                : "bg-gray-200/80 dark:bg-muted/50 text-gray-900 dark:text-foreground hover:bg-gray-300/80 dark:hover:bg-muted/70"
+            }`}
+          >
+            <h3
+              onClick={openInPlex}
+              className="font-semibold text-xs sm:text-sm leading-tight truncate"
+              title={
+                stream.type === "track"
+                  ? "Click to open album in Plex"
+                  : "Click to open in Plex"
+              }
+            >
+              {getContentTitle(stream)}
+            </h3>
+          </div>
+
+          {/* Spacer */}
+          <div className="flex-1" />
+
+          {/* Status */}
+          <div
+            className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full text-xs flex-shrink-0 ${
               artUrl
                 ? "bg-black/30 text-white"
                 : "bg-gray-200/80 dark:bg-muted/50 text-gray-900 dark:text-foreground"
@@ -191,8 +158,8 @@ export const StreamCard: React.FC<StreamCardProps> = ({
             <span>{stream.Player?.state || "unknown"}</span>
           </div>
 
-          <div className="flex items-center gap-2">
-            {/* Only show Remove Access button for non-Plexamp streams */}
+          {/* Desktop Action Icons - right aligned next to status */}
+          <div className="hidden sm:flex items-center gap-1 flex-shrink-0">
             {stream.Player?.product !== "Plexamp" && (
               <div
                 onClick={
@@ -202,7 +169,7 @@ export const StreamCard: React.FC<StreamCardProps> = ({
                     ? onRemoveAccess
                     : undefined
                 }
-                className={`flex items-center justify-center w-6 h-6 rounded-full transition-all duration-200 cursor-pointer ${
+                className={`flex items-center justify-center w-5 h-5 rounded-full transition-all duration-200 cursor-pointer ${
                   isRevoking ||
                   !stream.User?.id ||
                   !stream.Player?.machineIdentifier
@@ -220,25 +187,23 @@ export const StreamCard: React.FC<StreamCardProps> = ({
                 )}
               </div>
             )}
-
             <div
               onClick={() => {
                 if (onNavigateToUser && stream.User?.id) {
                   onNavigateToUser(stream.User.id);
                 }
               }}
-              className={`flex items-center justify-center w-6 h-6 rounded-full transition-all duration-200 cursor-pointer ${
+              className={`flex items-center justify-center w-5 h-5 rounded-full transition-all duration-200 cursor-pointer ${
                 !stream.User?.id
                   ? "opacity-50 cursor-not-allowed"
                   : artUrl
                     ? "bg-black/30 text-white hover:bg-purple-500/30"
-                    : "bg-purple-50 dark:bg-purple-950/30 text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-950/50"
+                    : "bg-gray-50 dark:bg-gray-950/30 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-950/50"
               }`}
               title="Scroll to user"
             >
               <UserRound className="w-3 h-3" />
             </div>
-
             <div
               onClick={() => {
                 if (
@@ -252,41 +217,151 @@ export const StreamCard: React.FC<StreamCardProps> = ({
                   );
                 }
               }}
-              className={`flex items-center justify-center w-6 h-6 rounded-full transition-all duration-200 cursor-pointer ${
+              className={`flex items-center justify-center w-5 h-5 rounded-full transition-all duration-200 cursor-pointer ${
                 !stream.User?.id || !stream.Player?.machineIdentifier
                   ? "opacity-50 cursor-not-allowed"
                   : artUrl
                     ? "bg-black/30 text-white hover:bg-blue-500/30"
-                    : "bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-950/50"
+                    : "bg-gray-50 dark:bg-gray-950/30 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-950/50"
               }`}
               title="Scroll to device"
             >
               <Monitor className="w-3 h-3" />
             </div>
-
             <div
               onClick={onToggleExpand}
-              className={`flex items-center justify-center w-6 h-6 rounded-full transition-all duration-200 cursor-pointer ${artUrl ? "bg-black/30 text-white hover:bg-white/20" : "bg-gray-50 dark:bg-gray-950/30 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-950/50"}`}
+              className={`flex items-center justify-center w-5 h-5 rounded-full transition-all duration-200 cursor-pointer ${
+                artUrl
+                  ? "bg-black/30 text-white hover:bg-white/20"
+                  : "bg-gray-50 dark:bg-gray-950/30 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-950/50"
+              }`}
             >
               {isExpanded ? (
-                <ChevronUp className="w-4 h-4" />
+                <ChevronUp className="w-3 h-3" />
               ) : (
-                <ChevronDown className="w-4 h-4" />
+                <ChevronDown className="w-3 h-3" />
               )}
             </div>
           </div>
+        </div>
+
+        {/* Row 2: User, Device, Quality specs */}
+        <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap mb-2 mt-2">
+          {/* User */}
+          <div
+            className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full text-xs ${
+              artUrl
+                ? "bg-black/30 text-white"
+                : "bg-gray-200/80 dark:bg-muted/50 text-gray-900 dark:text-foreground"
+            }`}
+          >
+            <User className="w-3 h-3 flex-shrink-0" />
+            <span className="truncate max-w-[80px] sm:max-w-[120px]">
+              {stream.User?.title || "Unknown"}
+            </span>
+          </div>
+
+          {/* Device */}
+          <div
+            className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full text-xs ${
+              artUrl
+                ? "bg-black/30 text-white"
+                : "bg-gray-200/80 dark:bg-muted/50 text-gray-900 dark:text-foreground"
+            }`}
+          >
+            {getDeviceIcon(stream.Player?.platform)}
+            <span className="truncate max-w-[60px] sm:max-w-[100px]">
+              {stream.Player?.title || "Device"}
+            </span>
+          </div>
+
+          {/* Separator dot - hidden on mobile */}
+          <span
+            className={`text-xs hidden sm:inline ${artUrl ? "text-white/50" : "text-gray-400 dark:text-gray-500"}`}
+          >
+            •
+          </span>
+
+          {/* Inline Quality */}
+          <StreamQuality session={stream} inline />
         </div>
       </div>
 
       {/* Progress Bar */}
       <div className="relative z-10">
-        <StreamProgress session={stream} />
+        <StreamProgress session={stream} hasArt={!!artUrl} />
+      </div>
+
+      {/* Mobile Navigation Buttons */}
+      <div className="flex sm:hidden gap-2 mt-2 relative z-10">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={(e) => {
+            e.stopPropagation();
+            if (onNavigateToUser && stream.User?.id) {
+              onNavigateToUser(stream.User.id);
+            }
+          }}
+          disabled={!stream.User?.id}
+          className={`flex-1 h-8 text-xs ${
+            artUrl
+              ? "bg-black/30 border-white/20 text-white hover:bg-black/50"
+              : ""
+          }`}
+        >
+          <UserRound className="w-3.5 h-3.5 mr-1.5" />
+          Go to User
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={(e) => {
+            e.stopPropagation();
+            if (onNavigateToDevice && stream.User?.id && stream.Player?.machineIdentifier) {
+              onNavigateToDevice(stream.User.id, stream.Player.machineIdentifier);
+            }
+          }}
+          disabled={!stream.User?.id || !stream.Player?.machineIdentifier}
+          className={`flex-1 h-8 text-xs ${
+            artUrl
+              ? "bg-black/30 border-white/20 text-white hover:bg-black/50"
+              : ""
+          }`}
+        >
+          <Monitor className="w-3.5 h-3.5 mr-1.5" />
+          Go to Device
+        </Button>
+        {stream.Player?.product !== "Plexamp" && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (!isRevoking && stream.User?.id && stream.Player?.machineIdentifier) {
+                onRemoveAccess();
+              }
+            }}
+            disabled={isRevoking || !stream.User?.id || !stream.Player?.machineIdentifier}
+            className={`h-8 w-8 p-0 ${
+              artUrl
+                ? "bg-black/30 border-white/20 text-white hover:bg-red-500/50"
+                : "hover:bg-red-50 hover:text-red-700 hover:border-red-200 dark:hover:bg-red-950/30 dark:hover:text-red-300 dark:hover:border-red-800"
+            }`}
+          >
+            {isRevoking ? (
+              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <X className="w-3.5 h-3.5" />
+            )}
+          </Button>
+        )}
       </div>
 
       {/* Expandable details */}
       {isExpanded && (
         <div
-          className={`space-y-3 pt-3 border-t animate-in slide-in-from-top-2 duration-200 relative z-10 ${artUrl ? "border-white/30" : "border-border"}`}
+          className={`space-y-2 sm:space-y-3 mt-2 sm:mt-0 pt-2 sm:pt-3 border-t animate-in slide-in-from-top-2 duration-200 relative z-10 ${artUrl ? "border-white/30" : "border-border"}`}
         >
           <StreamQualityDetails session={stream} />
           <StreamDeviceInfo session={stream} />

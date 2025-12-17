@@ -4,9 +4,10 @@ import { getDetailedQuality } from "./SharedComponents";
 
 interface StreamQualityProps {
   session: any;
+  inline?: boolean;
 }
 
-export const StreamQuality: React.FC<StreamQualityProps> = ({ session }) => {
+export const StreamQuality: React.FC<StreamQualityProps> = ({ session, inline = false }) => {
   const quality = getDetailedQuality(session);
 
   if (!quality) {
@@ -25,6 +26,39 @@ export const StreamQuality: React.FC<StreamQualityProps> = ({ session }) => {
     if (quality.resolution === "Unknown" && quality.videoCodec === "Unknown") {
       return null;
     }
+  }
+
+  // Inline mode - returns fragments for parent to arrange (keep original colors)
+  if (inline) {
+    return (
+      <>
+        {!isMusic && quality.resolution !== "Unknown" && (
+          <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-full text-xs bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300">
+            <Video className="w-3 h-3" />
+            <span>{quality.resolution}</span>
+          </div>
+        )}
+        {/* Video codec - hidden on mobile for video content */}
+        {!isMusic && quality.videoCodec !== "Unknown" && (
+          <div className="hidden sm:flex items-center gap-1 px-1.5 py-0.5 rounded-full text-xs bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-300">
+            <span>{quality.videoCodec}</span>
+          </div>
+        )}
+        {/* Container - hidden on mobile for video content, always shown for music */}
+        {quality.container !== "Unknown" && (
+          <div className={`${isMusic ? 'flex' : 'hidden sm:flex'} items-center gap-1 px-1.5 py-0.5 rounded-full text-xs bg-gray-50 dark:bg-gray-950/30 text-gray-700 dark:text-gray-300`}>
+            <HardDrive className="w-3 h-3" />
+            <span>{quality.container}</span>
+          </div>
+        )}
+        {quality.bitrate !== "Unknown" && (
+          <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-full text-xs bg-purple-50 dark:bg-purple-950/30 text-purple-700 dark:text-purple-300">
+            <Signal className="w-3 h-3" />
+            <span>{quality.bitrate}</span>
+          </div>
+        )}
+      </>
+    );
   }
 
   return (
