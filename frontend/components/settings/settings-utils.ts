@@ -99,6 +99,11 @@ export const getSettingInfo = (setting: AppSetting): SettingInfo => {
       label: "Automatically check for updates",
       description: "Check for new Guardian versions automatically",
     },
+    IN_APP_ENABLED: {
+      label: "Enable in-app notifications",
+      description:
+        "Enable all in-app notifications in Guardian",
+    },
     AUTO_MARK_NOTIFICATION_READ: {
       label: "Auto-mark notifications as read",
       description:

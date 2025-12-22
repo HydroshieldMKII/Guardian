@@ -306,8 +306,7 @@ export function SMTPSettings({
   return (
     <Card>
       <CardHeader className="mt-4">
-        <CardTitle className="flex items-center gap-2">
-          <Mail className="h-5 w-5" />
+        <CardTitle>
           Email Notifications (SMTP)
         </CardTitle>
         <CardDescription>

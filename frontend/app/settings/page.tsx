@@ -51,6 +51,9 @@ import { SystemInfo } from "@/components/settings/SystemInfo";
 import { SettingsFormData } from "@/components/settings/settings-utils";
 import { ThreeDotLoader } from "@/components/three-dot-loader";
 
+// Valid tab IDs for URL hash validation
+const validTabs = ["plex", "guardian", "customization", "smtp", "notifications", "admin", "system"];
+
 export default function SettingsPage() {
   const router = useRouter();
   const { toast } = useToast();
@@ -66,7 +69,36 @@ export default function SettingsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showUnsavedWarning, setShowUnsavedWarning] = useState(false);
-  const [activeTab, setActiveTab] = useState("plex");
+  const [activeTab, setActiveTab] = useState(() => {
+    // Initialize from URL hash if available (client-side only)
+    if (typeof window !== "undefined") {
+      const hash = window.location.hash.slice(1);
+      if (hash && validTabs.includes(hash)) {
+        return hash;
+      }
+    }
+    return "plex";
+  });
+
+  // Sync URL hash with active tab
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      window.history.replaceState(null, "", `#${activeTab}`);
+    }
+  }, [activeTab]);
+
+  // Handle browser back/forward navigation
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.slice(1);
+      if (hash && validTabs.includes(hash)) {
+        setActiveTab(hash);
+      }
+    };
+
+    window.addEventListener("hashchange", handleHashChange);
+    return () => window.removeEventListener("hashchange", handleHashChange);
+  }, []);
 
   // Initialize form data when settings load
   useEffect(() => {

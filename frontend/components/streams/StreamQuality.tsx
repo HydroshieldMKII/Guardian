@@ -43,7 +43,6 @@ export const StreamQuality: React.FC<StreamQualityProps> = ({
               hasArt ? "bg-blue-600/80 text-white" : "bg-blue-600/90 text-white"
             }`}
           >
-            <Video className="w-3 h-3" />
             <span>{quality.resolution}</span>
           </div>
         )}
@@ -66,7 +65,6 @@ export const StreamQuality: React.FC<StreamQualityProps> = ({
               hasArt ? "bg-gray-600/80 text-white" : "bg-gray-600/90 text-white"
             }`}
           >
-            <HardDrive className="w-3 h-3" />
             <span>{quality.container}</span>
           </div>
         )}
@@ -78,7 +76,6 @@ export const StreamQuality: React.FC<StreamQualityProps> = ({
                 : "bg-purple-600/90 text-white"
             }`}
           >
-            <Signal className="w-3 h-3" />
             <span>{quality.bitrate}</span>
           </div>
         )}
@@ -90,7 +87,6 @@ export const StreamQuality: React.FC<StreamQualityProps> = ({
     <div className="flex items-center gap-1 text-xs text-muted-foreground mb-2 flex-wrap">
       {!isMusic && quality.resolution !== "Unknown" && (
         <div className="flex items-center gap-1 bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full">
-          <Video className="w-3 h-3" />
           <span>{quality.resolution}</span>
         </div>
       )}
@@ -102,14 +98,12 @@ export const StreamQuality: React.FC<StreamQualityProps> = ({
       {/* music container */}
       {quality.container !== "Unknown" && (
         <div className="flex items-center gap-1 bg-gray-50 dark:bg-gray-950/30 text-gray-700 dark:text-gray-300 px-2 py-0.5 rounded-full">
-          <HardDrive className="w-3 h-3" />
           <span>{quality.container}</span>
         </div>
       )}
 
       {quality.bitrate !== "Unknown" && (
         <div className="flex items-center gap-1 bg-purple-50 dark:bg-purple-950/30 text-purple-700 dark:text-purple-300 px-2 py-0.5 rounded-full">
-          <Signal className="w-3 h-3" />
           <span>{quality.bitrate}</span>
         </div>
       )}

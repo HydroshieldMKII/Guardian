@@ -82,6 +82,7 @@ export function GeneralSettings({
           "MSG_IP_NOT_ALLOWED",
         ],
         notifications: [
+          "IN_APP_ENABLED",
           "IN_APP_NOTIFY_ON_NEW_DEVICE",
           "IN_APP_NOTIFY_ON_BLOCK",
           "IN_APP_NOTIFY_ON_LOCATION_CHANGE",
@@ -123,6 +124,7 @@ export function GeneralSettings({
       case "notifications":
         filteredSettings = settings.filter((setting) =>
           [
+            "IN_APP_ENABLED",
             "AUTO_MARK_NOTIFICATION_READ",
             "IN_APP_NOTIFY_ON_NEW_DEVICE",
             "IN_APP_NOTIFY_ON_BLOCK",
@@ -344,6 +346,108 @@ export function GeneralSettings({
     );
   };
 
+  const renderNotificationGroup = (settings: AppSetting[]) => {
+    const inAppEnabledSetting = settings.find(
+      (s) => s.key === "IN_APP_ENABLED"
+    );
+    const notifyOnNewDeviceSetting = settings.find(
+      (s) => s.key === "IN_APP_NOTIFY_ON_NEW_DEVICE"
+    );
+    const notifyOnBlockSetting = settings.find(
+      (s) => s.key === "IN_APP_NOTIFY_ON_BLOCK"
+    );
+    const notifyOnLocationChangeSetting = settings.find(
+      (s) => s.key === "IN_APP_NOTIFY_ON_LOCATION_CHANGE"
+    );
+    const autoMarkReadSetting = settings.find(
+      (s) => s.key === "AUTO_MARK_NOTIFICATION_READ"
+    );
+
+    if (
+      !inAppEnabledSetting ||
+      !notifyOnNewDeviceSetting ||
+      !notifyOnBlockSetting ||
+      !notifyOnLocationChangeSetting ||
+      !autoMarkReadSetting
+    )
+      return null;
+
+    const inAppEnabledInfo = getSettingInfo(inAppEnabledSetting);
+    const inAppEnabledValue =
+      formData[inAppEnabledSetting.key] ?? inAppEnabledSetting.value;
+    const isInAppEnabled =
+      inAppEnabledValue === "true" || inAppEnabledValue === true;
+
+    const renderNotificationSwitch = (setting: AppSetting) => {
+      const info = getSettingInfo(setting);
+      const value = formData[setting.key] ?? setting.value;
+      const isChecked = value === "true" || value === true;
+
+      return (
+        <div className="pl-4 border-l-2 border-muted space-y-2 mb-4 last:mb-0">
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label
+                htmlFor={setting.key}
+                className={!isInAppEnabled ? "text-muted-foreground" : ""}
+              >
+                {info.label}
+              </Label>
+              {info.description && (
+                <p className="text-sm text-muted-foreground">
+                  {info.description}
+                </p>
+              )}
+            </div>
+            <Switch
+              id={setting.key}
+              checked={isChecked}
+              onCheckedChange={(checked) =>
+                handleInputChange(setting.key, checked)
+              }
+              disabled={!isInAppEnabled}
+              className="cursor-pointer"
+            />
+          </div>
+        </div>
+      );
+    };
+
+    return (
+      <div className="space-y-4">
+        {/* Parent setting: IN_APP_ENABLED */}
+        <div className="flex items-center justify-between">
+          <div className="space-y-0.5">
+            <Label htmlFor={inAppEnabledSetting.key}>
+              {inAppEnabledInfo.label}
+            </Label>
+            {inAppEnabledInfo.description && (
+              <p className="text-sm text-muted-foreground">
+                {inAppEnabledInfo.description}
+              </p>
+            )}
+          </div>
+          <Switch
+            id={inAppEnabledSetting.key}
+            checked={isInAppEnabled}
+            onCheckedChange={(checked) =>
+              handleInputChange(inAppEnabledSetting.key, checked)
+            }
+            className="cursor-pointer"
+          />
+        </div>
+
+        {/* Child settings */}
+        <div className={`ml-6 ${!isInAppEnabled ? "opacity-50" : ""}`}>
+          {renderNotificationSwitch(notifyOnNewDeviceSetting)}
+          {renderNotificationSwitch(notifyOnBlockSetting)}
+          {renderNotificationSwitch(notifyOnLocationChangeSetting)}
+          {renderNotificationSwitch(autoMarkReadSetting)}
+        </div>
+      </div>
+    );
+  };
+
   const renderSetting = (setting: AppSetting) => {
     const { label, description } = getSettingInfo(setting);
     const value = formData[setting.key] ?? setting.value;
@@ -558,49 +662,55 @@ export function GeneralSettings({
   return (
     <Card>
       <CardHeader className="mt-4">
-        <CardTitle className="flex items-center gap-2">
-          <IconComponent className="h-5 w-5" />
+        <CardTitle>
           {sectionInfo.title}
         </CardTitle>
         <CardDescription>{sectionInfo.description}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {sectionSettings.map((setting, index) => {
-          // Handle device cleanup group
-          if (setting.key === "DEVICE_CLEANUP_ENABLED") {
+        {/* Handle notifications section with grouped rendering */}
+        {sectionId === "notifications" ? (
+          <Card className="p-4 my-4">
+            {renderNotificationGroup(sectionSettings)}
+          </Card>
+        ) : (
+          sectionSettings.map((setting, index) => {
+            // Handle device cleanup group
+            if (setting.key === "DEVICE_CLEANUP_ENABLED") {
+              return (
+                <Card key="device-cleanup-group" className="p-4 my-4">
+                  {renderDeviceCleanupGroup(sectionSettings)}
+                </Card>
+              );
+            }
+
+            // Skip the interval setting since it's handled in the group
+            if (setting.key === "DEVICE_CLEANUP_INTERVAL_DAYS") {
+              return null;
+            }
+
+            // Handle concurrent stream limit group
+            if (setting.key === "CONCURRENT_STREAM_LIMIT") {
+              return (
+                <Card key="concurrent-stream-group" className="p-4 my-4">
+                  {renderConcurrentStreamGroup(sectionSettings)}
+                </Card>
+              );
+            }
+
+            // Skip the include temp access setting since it's handled in the group
+            if (setting.key === "CONCURRENT_LIMIT_INCLUDE_TEMP_ACCESS") {
+              return null;
+            }
+
+            // Render other settings normally
             return (
-              <Card key="device-cleanup-group" className="p-4 my-4">
-                {renderDeviceCleanupGroup(sectionSettings)}
+              <Card key={setting.key} className="p-4 my-4">
+                {renderSetting(setting)}
               </Card>
             );
-          }
-
-          // Skip the interval setting since it's handled in the group
-          if (setting.key === "DEVICE_CLEANUP_INTERVAL_DAYS") {
-            return null;
-          }
-
-          // Handle concurrent stream limit group
-          if (setting.key === "CONCURRENT_STREAM_LIMIT") {
-            return (
-              <Card key="concurrent-stream-group" className="p-4 my-4">
-                {renderConcurrentStreamGroup(sectionSettings)}
-              </Card>
-            );
-          }
-
-          // Skip the include temp access setting since it's handled in the group
-          if (setting.key === "CONCURRENT_LIMIT_INCLUDE_TEMP_ACCESS") {
-            return null;
-          }
-
-          // Render other settings normally
-          return (
-            <Card key={setting.key} className="p-4 my-4">
-              {renderSetting(setting)}
-            </Card>
-          );
-        })}
+          })
+        )}
       </CardContent>
     </Card>
   );

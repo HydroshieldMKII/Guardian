@@ -212,8 +212,7 @@ export function PlexSettings({
   return (
     <Card>
       <CardHeader className="mt-4">
-        <CardTitle className="flex items-center gap-2">
-          <Server className="h-5 w-5" />
+        <CardTitle>
           Plex Integration
         </CardTitle>
         <CardDescription>

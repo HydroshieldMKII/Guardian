@@ -202,8 +202,7 @@ export function DatabaseManagement({
     <>
       <Card>
         <CardHeader className="mt-4 mb-4">
-          <CardTitle className="flex items-center gap-2">
-            <Database className="h-5 w-5" />
+          <CardTitle>
             Database Management
           </CardTitle>
           <CardDescription>

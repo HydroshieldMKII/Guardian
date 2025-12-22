@@ -12,12 +12,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import {
   Loader2,
-  RefreshCw,
-  XCircle,
   AlertTriangle,
-  Settings2,
-  Download,
-  Upload,
 } from "lucide-react";
 import { apiClient } from "@/lib/api";
 import { ConfirmationModal } from "@/components/ui/confirmation-modal";
@@ -378,10 +373,7 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
     <>
       <Card>
         <CardHeader className="mt-4">
-          <CardTitle className="flex items-center gap-2">
-            <Settings2 className="h-5 w-5" />
-            Administrative Tools
-          </CardTitle>
+          <CardTitle>Administrative Tools</CardTitle>
           <CardDescription>
             Dangerous operations for database management. Use with caution.
           </CardDescription>
@@ -404,9 +396,7 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
               >
                 {resettingStreamCounts ? (
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                ) : (
-                  <RefreshCw className="w-4 h-4 mr-2" />
-                )}
+                ) : null}
                 {resettingStreamCounts ? "Resetting..." : "Reset Stream Counts"}
               </Button>
             </div>
@@ -430,9 +420,7 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
               >
                 {clearingSessionHistory ? (
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                ) : (
-                  <XCircle className="w-4 h-4 mr-2" />
-                )}
+                ) : null}
                 {clearingSessionHistory
                   ? "Clearing..."
                   : "Clear Session History"}
@@ -442,10 +430,7 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
 
           {/* Database Management Section */}
           <div className="border-t pt-4 mt-6">
-            <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
-              <Download className="h-5 w-5" />
-              Database Management
-            </h3>
+            <h3 className="text-lg font-medium mb-4">Database Management</h3>
 
             <Card className="p-4 my-4">
               <div className="space-y-4">
@@ -464,9 +449,7 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
                 >
                   {exportingDatabase ? (
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  ) : (
-                    <Download className="w-4 h-4 mr-2" />
-                  )}
+                  ) : null}
                   {exportingDatabase ? "Exporting..." : "Export Database"}
                 </Button>
               </div>
@@ -500,9 +483,7 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
                       <span>
                         {importingDatabase ? (
                           <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        ) : (
-                          <Upload className="w-4 h-4 mr-2" />
-                        )}
+                        ) : null}
                         {importingDatabase ? "Importing..." : "Import Database"}
                       </span>
                     </Button>
@@ -514,8 +495,7 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
 
           {/* Dangerous Operations Section */}
           <div className="border-t pt-4 mt-6">
-            <h3 className="text-lg font-medium mb-4 flex items-center gap-2 text-red-600 dark:text-red-400">
-              <AlertTriangle className="h-5 w-5" />
+            <h3 className="text-lg font-medium mb-4 text-red-600 dark:text-red-400">
               Dangerous Operations
             </h3>
 
@@ -541,9 +521,7 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
                 >
                   {deletingAllDevices ? (
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  ) : (
-                    <XCircle className="w-4 h-4 mr-2" />
-                  )}
+                  ) : null}
                   {deletingAllDevices ? "Deleting..." : "Delete All Devices"}
                 </Button>
               </div>
@@ -572,9 +550,7 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
                 >
                   {resettingDatabase ? (
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  ) : (
-                    <XCircle className="w-4 h-4 mr-2" />
-                  )}
+                  ) : null}
                   {resettingDatabase ? "Resetting..." : "Factory Reset"}
                 </Button>
               </div>

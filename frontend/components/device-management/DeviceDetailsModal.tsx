@@ -75,7 +75,7 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
   const [identifierOpen, setIdentifierOpen] = useState(false);
   const [activityOpen, setActivityOpen] = useState(false);
   const [tempAccessOpen, setTempAccessOpen] = useState(true);
-  const [deviceSettingsOpen, setDeviceSettingsOpen] = useState(true);
+  const [deviceSettingsOpen, setDeviceSettingsOpen] = useState(false);
 
   // Sync local state when device prop changes
   React.useEffect(() => {
@@ -136,11 +136,8 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
         <div className="space-y-2">
           {/* Basic Information Section */}
           <Collapsible open={basicInfoOpen} onOpenChange={setBasicInfoOpen}>
-            <CollapsibleTrigger className="flex items-center justify-between w-full p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors">
-              <div className="flex items-center gap-2">
-                <Monitor className="w-4 h-4 text-muted-foreground" />
-                <span className="font-semibold text-sm">Basic Information</span>
-              </div>
+            <CollapsibleTrigger className="flex items-center justify-between w-full p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer">
+              <span className="font-semibold text-sm">Basic Information</span>
               <ChevronDown
                 className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${
                   basicInfoOpen ? "rotate-180" : ""
@@ -265,11 +262,8 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
 
           {/* Device Identifier Section */}
           <Collapsible open={identifierOpen} onOpenChange={setIdentifierOpen}>
-            <CollapsibleTrigger className="flex items-center justify-between w-full p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors">
-              <div className="flex items-center gap-2">
-                <Fingerprint className="w-4 h-4 text-muted-foreground" />
-                <span className="font-semibold text-sm">Device Identifier</span>
-              </div>
+            <CollapsibleTrigger className="flex items-center justify-between w-full p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer">
+              <span className="font-semibold text-sm">Device Identifier</span>
               <ChevronDown
                 className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${
                   identifierOpen ? "rotate-180" : ""
@@ -285,11 +279,8 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
 
           {/* Activity Section */}
           <Collapsible open={activityOpen} onOpenChange={setActivityOpen}>
-            <CollapsibleTrigger className="flex items-center justify-between w-full p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors">
-              <div className="flex items-center gap-2">
-                <Activity className="w-4 h-4 text-muted-foreground" />
-                <span className="font-semibold text-sm">Activity</span>
-              </div>
+            <CollapsibleTrigger className="flex items-center justify-between w-full p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer">
+              <span className="font-semibold text-sm">Activity</span>
               <ChevronDown
                 className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${
                   activityOpen ? "rotate-180" : ""
@@ -323,9 +314,8 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
             device.temporaryAccessGrantedAt ||
             device.temporaryAccessDurationMinutes) && (
             <Collapsible open={tempAccessOpen} onOpenChange={setTempAccessOpen}>
-              <CollapsibleTrigger className="flex items-center justify-between w-full p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors">
+              <CollapsibleTrigger className="flex items-center justify-between w-full p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer">
                 <div className="flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-muted-foreground" />
                   <span className="font-semibold text-sm">
                     Temporary Access
                   </span>
@@ -433,11 +423,8 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
             open={deviceSettingsOpen}
             onOpenChange={setDeviceSettingsOpen}
           >
-            <CollapsibleTrigger className="flex items-center justify-between w-full p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors">
-              <div className="flex items-center gap-2">
-                <Settings className="w-4 h-4 text-muted-foreground" />
-                <span className="font-semibold text-sm">Device Settings</span>
-              </div>
+            <CollapsibleTrigger className="flex items-center justify-between w-full p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer">
+              <span className="font-semibold text-sm">Device Settings</span>
               <ChevronDown
                 className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${
                   deviceSettingsOpen ? "rotate-180" : ""

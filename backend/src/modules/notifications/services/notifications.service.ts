@@ -31,6 +31,7 @@ export interface NotificationResponseDto {
 @Injectable()
 export class NotificationsService {
   private readonly logger = new Logger(NotificationsService.name);
+  private readonly maxDeviceNameLength = 30;
 
   constructor(
     @InjectRepository(Notification)
@@ -43,6 +44,16 @@ export class NotificationsService {
     private appriseService: AppriseService,
     private emailService: EmailService,
   ) {}
+
+  /**
+   * Truncates a device name if it exceeds the maximum length
+   */
+  private truncateDeviceName(name: string): string {
+    if (name.length > this.maxDeviceNameLength) {
+      return name.substring(0, this.maxDeviceNameLength) + '...';
+    }
+    return name;
+  }
 
   async createNotification(
     createDto: CreateNotificationDto,
@@ -65,13 +76,17 @@ export class NotificationsService {
     ipAddress: string,
     sessionHistoryId?: number,
   ): Promise<Notification | null> {
-    const text = `New device detected for ${username} on ${deviceName} - ${ipAddress}`;
+    const truncatedDeviceName = this.truncateDeviceName(deviceName);
+    const text = `New device detected for ${username} on ${truncatedDeviceName} - ${ipAddress}`;
 
-    // Check if in-app notifications are enabled for new devices
-    const inAppNotifyOnNewDevice = await this.configService.getSetting('IN_APP_NOTIFY_ON_NEW_DEVICE');
+    // Check if in-app notifications are enabled globally and for new devices
+    const [inAppEnabled, inAppNotifyOnNewDevice] = await Promise.all([
+      this.configService.getSetting('IN_APP_ENABLED'),
+      this.configService.getSetting('IN_APP_NOTIFY_ON_NEW_DEVICE'),
+    ]);
 
     let notification: Notification | null = null;
-    if (inAppNotifyOnNewDevice) {
+    if (inAppEnabled && inAppNotifyOnNewDevice) {
       notification = await this.createNotification({
         userId,
         text,
@@ -146,7 +161,7 @@ export class NotificationsService {
       });
 
       if (userDevice && userDevice.deviceName) {
-        deviceDisplayName = userDevice.deviceName; // Use custom name from database
+        deviceDisplayName = this.truncateDeviceName(userDevice.deviceName);
       }
     } catch (error) {
       // If lookup fails, use default
@@ -175,6 +190,9 @@ export class NotificationsService {
         case 'TIME_RESTRICTED':
           text = `Stream blocked for ${username} on ${deviceDisplayName} - user schedule doesn't allow streaming at this moment`;
           break;
+        case 'CONCURRENT_LIMIT':
+          text = `Stream blocked for ${username} on ${deviceDisplayName} - user exceeded concurrent stream limit`;
+          break;
         default:
           text = `Stream blocked for ${username} on ${deviceDisplayName} - ${stopCode}`;
           break;
@@ -184,11 +202,14 @@ export class NotificationsService {
       text = `Stream blocked for ${username} on ${deviceDisplayName}`;
     }
 
-    // Check if in-app notifications are enabled for blocked streams
-    const inAppNotifyOnBlock = await this.configService.getSetting('IN_APP_NOTIFY_ON_BLOCK');
+    // Check if in-app notifications are enabled globally and for blocked streams
+    const [inAppEnabled, inAppNotifyEnabled] = await Promise.all([
+      this.configService.getSetting('IN_APP_ENABLED'),
+      this.configService.getSetting('IN_APP_NOTIFY_ON_BLOCK'),
+    ]);
 
     let notification: Notification | null = null;
-    if (inAppNotifyOnBlock) {
+    if (inAppEnabled && inAppNotifyEnabled) {
       notification = await this.createNotification({
         userId,
         text,
@@ -201,12 +222,12 @@ export class NotificationsService {
 
     // Send email notification for stream blocking if enabled
     try {
-      const [smtpEnabled, smtpNotifyOnBlock] = await Promise.all([
+      const [smtpEnabled, smtpNotifyEnabled] = await Promise.all([
         this.configService.getSetting('SMTP_ENABLED'),
         this.configService.getSetting('SMTP_NOTIFY_ON_BLOCK'),
       ]);
 
-      if (smtpEnabled && smtpNotifyOnBlock) {
+      if (smtpEnabled && smtpNotifyEnabled) {
         await this.emailService.sendBlockedEmail(
           username,
           deviceDisplayName,
@@ -214,9 +235,7 @@ export class NotificationsService {
           ipAddress,
         );
       } else {
-        this.logger.log(
-          'SMTP email notification for stream blocking is disabled.',
-        );
+        this.logger.log('SMTP email notification for stream blocking is disabled.');
       }
     } catch (error) {
       console.error('Failed to send stream blocked notification email:', error);
@@ -224,12 +243,12 @@ export class NotificationsService {
 
     // Send Apprise notification for stream blocking if enabled
     try {
-      const [appriseEnabled, appriseNotifyOnBlock] = await Promise.all([
+      const [appriseEnabled, appriseNotifyEnabled] = await Promise.all([
         this.configService.getSetting('APPRISE_ENABLED'),
         this.configService.getSetting('APPRISE_NOTIFY_ON_BLOCK'),
       ]);
 
-      if (appriseEnabled && appriseNotifyOnBlock) {
+      if (appriseEnabled && appriseNotifyEnabled) {
         await this.appriseService.sendBlockedNotification(
           username,
           deviceDisplayName,
@@ -237,9 +256,7 @@ export class NotificationsService {
           stopCode,
         );
       } else {
-        this.logger.log(
-          'Apprise notification for stream blocking is disabled.',
-        );
+        this.logger.log('Apprise notification for stream blocking is disabled.');
       }
     } catch (error) {
       console.error(
@@ -259,15 +276,17 @@ export class NotificationsService {
     newIpAddress: string,
     sessionHistoryId?: number,
   ): Promise<Notification | null> {
-    const text = `Device location changed for ${username} on ${deviceName} - ${oldIpAddress} → ${newIpAddress}`;
+    const truncatedDeviceName = this.truncateDeviceName(deviceName);
+    const text = `Device location changed for ${username} on ${truncatedDeviceName} - ${oldIpAddress} → ${newIpAddress}`;
 
-    // Check if in-app notifications are enabled for location changes
-    const inAppNotifyOnLocationChange = await this.configService.getSetting(
-      'IN_APP_NOTIFY_ON_LOCATION_CHANGE',
-    );
+    // Check if in-app notifications are enabled globally and for location changes
+    const [inAppEnabled, inAppNotifyOnLocationChange] = await Promise.all([
+      this.configService.getSetting('IN_APP_ENABLED'),
+      this.configService.getSetting('IN_APP_NOTIFY_ON_LOCATION_CHANGE'),
+    ]);
 
     let notification: Notification | null = null;
-    if (inAppNotifyOnLocationChange) {
+    if (inAppEnabled && inAppNotifyOnLocationChange) {
       notification = await this.createNotification({
         userId,
         text,

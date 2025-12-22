@@ -121,8 +121,7 @@ export function AppriseSettings({
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <div className="flex items-center gap-2 mt-4">
-            <Bell className="h-5 w-5" />
+          <div className="mt-4">
             <CardTitle>Apprise Notifications</CardTitle>
           </div>
           <CardDescription>

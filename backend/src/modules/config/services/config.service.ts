@@ -138,6 +138,11 @@ export class ConfigService {
         private: false,
       },
       {
+        key: 'IN_APP_ENABLED',
+        value: 'true',
+        type: 'boolean' as const,
+      },
+      {
         key: 'AUTO_MARK_NOTIFICATION_READ',
         value: 'true',
         type: 'boolean' as const,

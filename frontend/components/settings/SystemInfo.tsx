@@ -165,8 +165,7 @@ export function SystemInfo({ onSettingsRefresh, settings }: SystemInfoProps) {
       {/* System Information Card */}
       <Card>
         <CardHeader className="mt-4">
-          <CardTitle className="flex items-center gap-2">
-            <Info className="h-5 w-5" />
+          <CardTitle>
             System Information
           </CardTitle>
           <CardDescription>
@@ -274,8 +273,7 @@ export function SystemInfo({ onSettingsRefresh, settings }: SystemInfoProps) {
       {/* Update Management Card */}
       <Card>
         <CardHeader className="mt-4">
-          <CardTitle className="flex items-center gap-2">
-            <Download className="h-5 w-5" />
+          <CardTitle>
             Update Management
           </CardTitle>
           <CardDescription>

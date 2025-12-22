@@ -45,6 +45,13 @@ export class DeviceTrackingService {
   private locationChangeCallbacks: Array<
     (event: DeviceLocationChangedEvent) => void
   > = [];
+  // Track known session keys in memory to avoid counting the same session multiple times
+  // Key: `${userId}:${deviceIdentifier}`, Value: Set of known session keys
+  private knownSessionKeys: Map<string, Set<string>> = new Map();
+  // Track last activity time for each device key to allow cleanup of stale entries
+  private deviceKeyLastActivity: Map<string, number> = new Map();
+  // Cleanup stale entries after 24 hours of inactivity
+  private readonly STALE_ENTRY_THRESHOLD_MS = 24 * 60 * 60 * 1000;
 
   constructor(
     @InjectRepository(UserDevice)
@@ -163,16 +170,35 @@ export class DeviceTrackingService {
   ): Promise<void> {
     existingDevice.lastSeen = new Date();
 
-    // Only increment session count if this is a new session
-    if (
-      deviceInfo.sessionKey &&
-      existingDevice.currentSessionKey !== deviceInfo.sessionKey
-    ) {
-      existingDevice.sessionCount += 1;
-      existingDevice.currentSessionKey = deviceInfo.sessionKey;
-      this.logger.debug(
-        `New session started for device ${deviceInfo.deviceIdentifier}. Session count: ${existingDevice.sessionCount}`,
-      );
+    // Only increment session count if this is a truly new session we haven't seen before
+    if (deviceInfo.sessionKey) {
+      const deviceKey = `${deviceInfo.userId}:${deviceInfo.deviceIdentifier}`;
+
+      // Get or create the set of known session keys for this device
+      if (!this.knownSessionKeys.has(deviceKey)) {
+        this.knownSessionKeys.set(deviceKey, new Set());
+        // If this is a fresh start, add the current session key from DB if it exists
+        if (existingDevice.currentSessionKey) {
+          this.knownSessionKeys
+            .get(deviceKey)!
+            .add(existingDevice.currentSessionKey);
+        }
+      }
+
+      // Update last activity time for this device key
+      this.deviceKeyLastActivity.set(deviceKey, Date.now());
+
+      const knownKeys = this.knownSessionKeys.get(deviceKey)!;
+
+      // Only count as new session if we've never seen this session key before
+      if (!knownKeys.has(deviceInfo.sessionKey)) {
+        knownKeys.add(deviceInfo.sessionKey);
+        existingDevice.sessionCount += 1;
+        existingDevice.currentSessionKey = deviceInfo.sessionKey;
+        this.logger.debug(
+          `New session started for device ${deviceInfo.deviceIdentifier}. Session count: ${existingDevice.sessionCount}`,
+        );
+      }
     }
 
     // Update device info if it has changed or was null
@@ -270,6 +296,29 @@ export class DeviceTrackingService {
       platform: deviceInfo.devicePlatform || 'Unknown',
       sessionKey: deviceInfo.sessionKey,
     });
+  }
+
+  /** Cleanup stale session key entries to prevent memory leak */
+  cleanupStaleSessionKeys(): void {
+    const now = Date.now();
+    let cleanedCount = 0;
+
+    for (const [
+      deviceKey,
+      lastActivity,
+    ] of this.deviceKeyLastActivity.entries()) {
+      if (now - lastActivity > this.STALE_ENTRY_THRESHOLD_MS) {
+        this.knownSessionKeys.delete(deviceKey);
+        this.deviceKeyLastActivity.delete(deviceKey);
+        cleanedCount++;
+      }
+    }
+
+    if (cleanedCount > 0) {
+      this.logger.debug(
+        `Cleaned up ${cleanedCount} stale session key entries from memory`,
+      );
+    }
   }
 
   /** Register callback for new device events */
@@ -528,12 +577,21 @@ export class DeviceTrackingService {
     // Find devices with this session key first
     const devicesWithSession = await this.userDeviceRepository.find({
       where: { currentSessionKey: sessionKey },
-      select: ['id', 'deviceIdentifier', 'currentSessionKey'],
+      select: ['id', 'deviceIdentifier', 'currentSessionKey', 'userId'],
     });
 
     this.logger.debug(
       `Found ${devicesWithSession.length} device(s) with session key ${sessionKey}`,
     );
+
+    // Remove from in-memory tracking
+    for (const device of devicesWithSession) {
+      const deviceKey = `${device.userId}:${device.deviceIdentifier}`;
+      const knownKeys = this.knownSessionKeys.get(deviceKey);
+      if (knownKeys) {
+        knownKeys.delete(sessionKey);
+      }
+    }
 
     // Clear specific session key for device that stopped streaming
     const result = await this.userDeviceRepository

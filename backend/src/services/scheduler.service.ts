@@ -201,6 +201,14 @@ export class SchedulerService implements OnModuleInit {
     }
   }
 
+  // Clean up stale in-memory session key tracking every hour
+  @Cron('0 0 * * * *', {
+    name: 'sessionKeyMemoryCleanup',
+  })
+  handleSessionKeyMemoryCleanup() {
+    this.deviceTrackingService.cleanupStaleSessionKeys();
+  }
+
   private async syncPlexUsers() {
     try {
       // Check if Plex is configured before attempting sync
