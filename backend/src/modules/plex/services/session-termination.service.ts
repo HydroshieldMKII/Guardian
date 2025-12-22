@@ -7,11 +7,13 @@ import { UserPreference } from '../../../entities/user-preference.entity';
 import { PlexClient } from './plex-client';
 import { UsersService } from '../../users/services/users.service';
 import { TimePolicyService } from '../../users/services/time-policy.service';
+import { ConcurrentStreamService } from '../../users/services/concurrent-stream.service';
 import { ConfigService } from '../../config/services/config.service';
 import { DeviceTrackingService } from '../../devices/services/device-tracking.service';
 import {
   PlexSessionsResponse,
   SessionTerminationResult,
+  isPlexampSession,
 } from '../../../types/plex.types';
 import { IPValidationService } from '../../../common/services/ip-validation.service';
 
@@ -27,7 +29,8 @@ export interface StreamBlockedEvent {
 /**
  * Session Termination Service
  *
- * Validates session access based on device approval, IP policies, and time rules.
+ * Validates session access based on device approval, IP policies, time rules,
+ * and concurrent stream limits.
  * Terminates unauthorized sessions and emits events when streams are blocked.
  */
 @Injectable()
@@ -35,6 +38,7 @@ export class SessionTerminationService {
   private readonly logger = new Logger(SessionTerminationService.name);
   private streamBlockedCallbacks: Array<(event: StreamBlockedEvent) => void> =
     [];
+  private sessionsData: PlexSessionsResponse | null = null;
 
   constructor(
     @InjectRepository(UserDevice)
@@ -46,6 +50,8 @@ export class SessionTerminationService {
     private plexClient: PlexClient,
     private usersService: UsersService,
     private timePolicyService: TimePolicyService,
+    @Inject(forwardRef(() => ConcurrentStreamService))
+    private concurrentStreamService: ConcurrentStreamService,
     @Inject(forwardRef(() => ConfigService))
     private configService: ConfigService,
     @Inject(forwardRef(() => DeviceTrackingService))
@@ -128,6 +134,9 @@ export class SessionTerminationService {
     const stoppedSessions: string[] = [];
     const errors: string[] = [];
 
+    // Store sessions data for concurrent stream checking
+    this.sessionsData = sessionsData;
+
     try {
       const sessions = sessionsData?.MediaContainer?.Metadata || [];
 
@@ -135,12 +144,29 @@ export class SessionTerminationService {
         return { stoppedSessions, errors };
       }
 
+      // First, handle concurrent stream limits - only terminate youngest sessions
+      const concurrentTerminations = await this.handleConcurrentStreamLimits(
+        sessions,
+        sessionsData,
+      );
+      stoppedSessions.push(...concurrentTerminations.stoppedSessions);
+      errors.push(...concurrentTerminations.errors);
+
+      // Create a set of already terminated session IDs to avoid double-termination
+      const terminatedSessionIds = new Set(stoppedSessions);
+
+      // Then check other policies (device approval, IP, time rules)
       for (const session of sessions) {
         try {
-          const shouldStopResult = await this.shouldStopSession(session);
+          // Skip if already terminated due to concurrent limit
+          const sessionId = session.Session?.id;
+          if (sessionId && terminatedSessionIds.has(sessionId)) {
+            continue;
+          }
+
+          const shouldStopResult = await this.shouldStopSession(session, true); // skipConcurrentCheck = true
 
           if (shouldStopResult.shouldStop) {
-            const sessionId = session.Session?.id; // Session ID for termination
             const deviceIdentifier =
               session.Player?.machineIdentifier || 'unknown'; // Device identifier for notification lookup
             const sessionKey = session.sessionKey; // Session key for history lookup
@@ -173,17 +199,17 @@ export class SessionTerminationService {
               );
             } else {
               this.logger.warn(
-                'Could not find session identifier in session data: ' + sessionId,
+                'Could not find session identifier in session data',
               );
             }
           }
         } catch (error) {
-          const sessionKey =
+          const sessionKeyForError =
             session.sessionKey || session.Session?.id || 'unknown';
           errors.push(
-            `Error processing session ${sessionKey}: ${error.message}`,
+            `Error processing session ${sessionKeyForError}: ${error.message}`,
           );
-          this.logger.error(`Error processing session ${sessionKey}`, error);
+          this.logger.error(`Error processing session ${sessionKeyForError}`, error);
         }
       }
 
@@ -194,8 +220,174 @@ export class SessionTerminationService {
     }
   }
 
+  /**
+   * Handle concurrent stream limits for all users.
+   * Only terminates the youngest (most recently started) sessions when over limit.
+   */
+  private async handleConcurrentStreamLimits(
+    sessions: any[],
+    sessionsData: PlexSessionsResponse,
+  ): Promise<SessionTerminationResult> {
+    const stoppedSessions: string[] = [];
+    const errors: string[] = [];
+
+    // Group sessions by user
+    const sessionsByUser = new Map<string, any[]>();
+    for (const session of sessions) {
+      const userId = session.User?.id || session.User?.uuid;
+      if (!userId) continue;
+
+      // Skip Plexamp sessions - they don't count
+      if (isPlexampSession(session)) continue;
+
+      if (!sessionsByUser.has(userId)) {
+        sessionsByUser.set(userId, []);
+      }
+      sessionsByUser.get(userId)!.push(session);
+    }
+
+    // Check each user's concurrent limit
+    for (const [userId, userSessions] of sessionsByUser) {
+      try {
+        // Get the user's effective limit
+        const limit = await this.concurrentStreamService.getEffectiveLimit(userId);
+        
+        // 0 means unlimited
+        if (limit === 0) continue;
+
+        // Filter sessions that count toward limit (exclude excluded devices, temp access, etc.)
+        const countableSessions = await this.filterCountableSessions(userId, userSessions);
+        
+        if (countableSessions.length <= limit) continue;
+
+        // Get session start times from history to determine which are newest
+        const sessionsWithTimes = await this.getSessionStartTimes(countableSessions);
+        
+        // Sort by start time descending (newest first)
+        sessionsWithTimes.sort((a, b) => b.startTime - a.startTime);
+
+        // Calculate how many to terminate
+        const toTerminate = sessionsWithTimes.length - limit;
+        
+        // Get the termination message
+        const message = await this.configService.getSetting('MSG_CONCURRENT_LIMIT');
+        const reason = (message as string) || 
+          'You have reached your concurrent stream limit. Please stop another stream before starting a new one.';
+
+        // Terminate the newest sessions (they're at the front after sorting)
+        for (let i = 0; i < toTerminate; i++) {
+          const sessionInfo = sessionsWithTimes[i];
+          const session = sessionInfo.session;
+          const sessionId = session.Session?.id;
+
+          if (!sessionId) continue;
+
+          try {
+            const username = session.User?.title || 'Unknown';
+            const deviceName = session.Player?.title || 'Unknown Device';
+            const deviceIdentifier = session.Player?.machineIdentifier || 'unknown';
+            const sessionKey = session.sessionKey;
+
+            await this.terminateSession(sessionId, reason);
+            stoppedSessions.push(sessionId);
+
+            this.logger.warn(
+              `STREAM BLOCKED (Concurrent Limit)! User: ${username}, Device: ${deviceName}, ` +
+              `Session: ${sessionId}, Streams: ${countableSessions.length}/${limit} (terminating newest)`,
+            );
+
+            this.emitStreamBlockedEvent({
+              userId,
+              username,
+              deviceIdentifier,
+              stopCode: 'CONCURRENT_LIMIT',
+              sessionKey,
+              ipAddress: session.Player?.address,
+            });
+          } catch (error) {
+            errors.push(`Error terminating session ${sessionId}: ${error.message}`);
+            this.logger.error(`Error terminating session ${sessionId}`, error);
+          }
+        }
+      } catch (error) {
+        errors.push(`Error checking concurrent limits for user ${userId}: ${error.message}`);
+        this.logger.error(`Error checking concurrent limits for user ${userId}`, error);
+      }
+    }
+
+    return { stoppedSessions, errors };
+  }
+
+  /**
+   * Filter sessions to only those that count toward concurrent limit.
+   */
+  private async filterCountableSessions(userId: string, sessions: any[]): Promise<any[]> {
+    const includeTempAccess = await this.configService.getSetting(
+      'CONCURRENT_LIMIT_INCLUDE_TEMP_ACCESS',
+    );
+
+    const countable: any[] = [];
+
+    for (const session of sessions) {
+      const deviceIdentifier = session.Player?.machineIdentifier;
+      if (!deviceIdentifier) continue;
+
+      // Get device info
+      const device = await this.userDeviceRepository.findOne({
+        where: { userId, deviceIdentifier },
+      });
+
+      // Skip devices marked as excluded
+      if (device?.excludeFromConcurrentLimit) {
+        this.logger.debug(`Device ${deviceIdentifier} excluded from concurrent limit check`);
+        continue;
+      }
+
+      // Skip temp access devices if configured
+      if (!includeTempAccess && device && await this.deviceTrackingService.isTemporaryAccessValid(device)) {
+        this.logger.debug(`Device ${deviceIdentifier} with temp access excluded from concurrent limit check`);
+        continue;
+      }
+
+      countable.push(session);
+    }
+
+    return countable;
+  }
+
+  /**
+   * Get session start times from session history.
+   * Uses sessionKey to look up when each session started.
+   */
+  private async getSessionStartTimes(sessions: any[]): Promise<Array<{ session: any; startTime: number }>> {
+    const results: Array<{ session: any; startTime: number }> = [];
+
+    for (const session of sessions) {
+      const sessionKey = session.sessionKey;
+      
+      // Try to find session history entry
+      let startTime = Date.now(); // Default to now if not found
+      
+      if (sessionKey) {
+        const history = await this.sessionHistoryRepository.findOne({
+          where: { sessionKey },
+          order: { startedAt: 'DESC' },
+        });
+        
+        if (history?.startedAt) {
+          startTime = history.startedAt.getTime();
+        }
+      }
+
+      results.push({ session, startTime });
+    }
+
+    return results;
+  }
+
   private async shouldStopSession(
     session: any,
+    skipConcurrentCheck: boolean = false,
   ): Promise<{ shouldStop: boolean; reason?: string; stopCode?: string }> {
     try {
       const userId = session.User?.id || session.User?.uuid;
@@ -207,9 +399,14 @@ export class SessionTerminationService {
         );
         return { shouldStop: false };
       }
-      if (session.Player?.product === 'Plexamp') {
+
+      // Plexamp bypass - Plexamp is excluded from all checks including concurrent limits
+      if (isPlexampSession(session)) {
         return { shouldStop: false };
       }
+
+      // Skip concurrent stream limit check if handled separately
+      // (concurrent limits are now handled in handleConcurrentStreamLimits to terminate only newest sessions)
 
       // Check temporary access - if bypass policies is enabled, skip all policy checks
       const device = await this.userDeviceRepository.findOne({

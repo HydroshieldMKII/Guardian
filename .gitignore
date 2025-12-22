@@ -2,3 +2,4 @@
 docker-compose.yml
 plex-guard.db
 CLAUDE.md
+backend/plex-guard.db-journal

@@ -63,6 +63,8 @@ export function GeneralSettings({
           "AUTO_CHECK_UPDATES", // Application updates - now at top
           "PLEX_GUARD_DEFAULT_BLOCK", // Core security
           "PLEXGUARD_REFRESH_INTERVAL", // Session monitoring interval
+          "CONCURRENT_STREAM_LIMIT", // Concurrent stream limit
+          "CONCURRENT_LIMIT_INCLUDE_TEMP_ACCESS", // Include temp access in limit
           "DEVICE_CLEANUP_ENABLED", // Device cleanup feature
           "DEVICE_CLEANUP_INTERVAL_DAYS", // Device cleanup interval (follows the feature toggle)
           "TIMEZONE", // Display/locale setting
@@ -74,6 +76,7 @@ export function GeneralSettings({
           "MSG_DEVICE_PENDING",
           "MSG_DEVICE_REJECTED",
           "MSG_TIME_RESTRICTED",
+          "MSG_CONCURRENT_LIMIT",
           "MSG_IP_LAN_ONLY",
           "MSG_IP_WAN_ONLY",
           "MSG_IP_NOT_ALLOWED",
@@ -99,10 +102,12 @@ export function GeneralSettings({
             "PLEX_GUARD_DEFAULT_BLOCK",
             "PLEXGUARD_REFRESH_INTERVAL",
             "AUTO_CHECK_UPDATES",
+            "CONCURRENT_STREAM_LIMIT",
+            "CONCURRENT_LIMIT_INCLUDE_TEMP_ACCESS",
             "DEVICE_CLEANUP_ENABLED",
             "DEVICE_CLEANUP_INTERVAL_DAYS",
             "TIMEZONE",
-          ].includes(setting.key),
+          ].includes(setting.key)
         );
         break;
       case "customization":
@@ -112,7 +117,7 @@ export function GeneralSettings({
               "DEFAULT_PAGE",
               "ENABLE_MEDIA_THUMBNAILS",
               "ENABLE_MEDIA_ARTWORK",
-            ].includes(setting.key) || setting.key.startsWith("MSG_"),
+            ].includes(setting.key) || setting.key.startsWith("MSG_")
         );
         break;
       case "notifications":
@@ -122,7 +127,7 @@ export function GeneralSettings({
             "IN_APP_NOTIFY_ON_NEW_DEVICE",
             "IN_APP_NOTIFY_ON_BLOCK",
             "IN_APP_NOTIFY_ON_LOCATION_CHANGE",
-          ].includes(setting.key),
+          ].includes(setting.key)
         );
         break;
       default:
@@ -132,7 +137,7 @@ export function GeneralSettings({
     // Sort the filtered settings according to the defined order
     return filteredSettings.sort(
       (a, b) =>
-        getSettingOrder(section, a.key) - getSettingOrder(section, b.key),
+        getSettingOrder(section, a.key) - getSettingOrder(section, b.key)
     );
   };
 
@@ -168,10 +173,10 @@ export function GeneralSettings({
 
   const renderDeviceCleanupGroup = (settings: AppSetting[]) => {
     const cleanupEnabledSetting = settings.find(
-      (s) => s.key === "DEVICE_CLEANUP_ENABLED",
+      (s) => s.key === "DEVICE_CLEANUP_ENABLED"
     );
     const cleanupIntervalSetting = settings.find(
-      (s) => s.key === "DEVICE_CLEANUP_INTERVAL_DAYS",
+      (s) => s.key === "DEVICE_CLEANUP_INTERVAL_DAYS"
     );
 
     if (!cleanupEnabledSetting || !cleanupIntervalSetting) return null;
@@ -242,6 +247,99 @@ export function GeneralSettings({
             className="cursor-pointer"
           />
         </div>
+      </div>
+    );
+  };
+
+  const renderConcurrentStreamGroup = (settings: AppSetting[]) => {
+    const concurrentLimitSetting = settings.find(
+      (s) => s.key === "CONCURRENT_STREAM_LIMIT"
+    );
+    const includeTempAccessSetting = settings.find(
+      (s) => s.key === "CONCURRENT_LIMIT_INCLUDE_TEMP_ACCESS"
+    );
+
+    if (!concurrentLimitSetting) return null;
+
+    const concurrentLimitInfo = getSettingInfo(concurrentLimitSetting);
+    const includeTempAccessInfo = includeTempAccessSetting
+      ? getSettingInfo(includeTempAccessSetting)
+      : null;
+
+    const concurrentLimitValue =
+      formData[concurrentLimitSetting.key] ?? concurrentLimitSetting.value;
+    const includeTempAccessValue = includeTempAccessSetting
+      ? (formData[includeTempAccessSetting.key] ??
+        includeTempAccessSetting.value)
+      : false;
+
+    return (
+      <div className="space-y-4">
+        {/* Parent setting - concurrent stream limit */}
+        <div className="space-y-2">
+          <Label htmlFor={concurrentLimitSetting.key}>
+            {concurrentLimitInfo.label}
+          </Label>
+          {concurrentLimitInfo.description && (
+            <p className="text-sm text-muted-foreground">
+              {concurrentLimitInfo.description}
+            </p>
+          )}
+          <Input
+            id={concurrentLimitSetting.key}
+            type="number"
+            min="0"
+            value={
+              typeof concurrentLimitValue === "string"
+                ? concurrentLimitValue
+                : String(concurrentLimitValue)
+            }
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+              handleInputChange(concurrentLimitSetting.key, e.target.value)
+            }
+            placeholder="0 = unlimited"
+            className="cursor-pointer"
+          />
+        </div>
+
+        {/* Child setting - include temp access */}
+        {includeTempAccessSetting && includeTempAccessInfo && (
+          <div
+            className={`ml-6 transition-opacity duration-200 ${Number(concurrentLimitValue) === 0 ? "opacity-50" : ""}`}
+          >
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label
+                  htmlFor={includeTempAccessSetting.key}
+                  className={
+                    Number(concurrentLimitValue) === 0
+                      ? "text-muted-foreground"
+                      : ""
+                  }
+                >
+                  {includeTempAccessInfo.label}
+                </Label>
+                {includeTempAccessInfo.description && (
+                  <p className="text-sm text-muted-foreground">
+                    {includeTempAccessInfo.description}
+                  </p>
+                )}
+              </div>
+              <Switch
+                id={includeTempAccessSetting.key}
+                checked={
+                  includeTempAccessValue === "true" ||
+                  includeTempAccessValue === true
+                }
+                onCheckedChange={(checked) =>
+                  handleInputChange(includeTempAccessSetting.key, checked)
+                }
+                disabled={Number(concurrentLimitValue) === 0}
+                className="cursor-pointer"
+              />
+            </div>
+          </div>
+        )}
       </div>
     );
   };
@@ -479,6 +577,20 @@ export function GeneralSettings({
 
           // Skip the interval setting since it's handled in the group
           if (setting.key === "DEVICE_CLEANUP_INTERVAL_DAYS") {
+            return null;
+          }
+
+          // Handle concurrent stream limit group
+          if (setting.key === "CONCURRENT_STREAM_LIMIT") {
+            return (
+              <Card key="concurrent-stream-group" className="p-4 my-4">
+                {renderConcurrentStreamGroup(sectionSettings)}
+              </Card>
+            );
+          }
+
+          // Skip the include temp access setting since it's handled in the group
+          if (setting.key === "CONCURRENT_LIMIT_INCLUDE_TEMP_ACCESS") {
             return null;
           }
 

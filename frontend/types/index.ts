@@ -86,6 +86,7 @@ export interface UserDevice {
   temporaryAccessGrantedAt?: string;
   temporaryAccessDurationMinutes?: number;
   temporaryAccessBypassPolicies?: boolean;
+  excludeFromConcurrentLimit?: boolean;
 }
 
 export interface AppSetting {
@@ -115,6 +116,8 @@ export interface UserPreference {
   networkPolicy: "both" | "lan" | "wan";
   ipAccessPolicy: "all" | "restricted";
   allowedIPs?: string[];
+  // Concurrent stream limit (null = use global default, 0 = unlimited)
+  concurrentStreamLimit?: number | null;
   createdAt: string;
   updatedAt: string;
 }

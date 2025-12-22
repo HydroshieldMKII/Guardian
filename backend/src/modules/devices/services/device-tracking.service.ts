@@ -401,6 +401,18 @@ export class DeviceTrackingService {
     this.logger.log(`Device ${deviceId} has been renamed to "${newName}"`);
   }
 
+  async updateExcludeFromConcurrentLimit(
+    deviceId: number,
+    exclude: boolean,
+  ): Promise<void> {
+    await this.userDeviceRepository.update(deviceId, {
+      excludeFromConcurrentLimit: exclude,
+    });
+    this.logger.log(
+      `Device ${deviceId} ${exclude ? 'excluded from' : 'included in'} concurrent stream limit`,
+    );
+  }
+
   async grantTemporaryAccess(
     deviceId: number,
     durationMinutes: number,

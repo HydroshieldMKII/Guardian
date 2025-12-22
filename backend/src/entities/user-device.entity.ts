@@ -67,4 +67,7 @@ export class UserDevice {
 
   @Column({ name: 'temporary_access_bypass_policies', default: false })
   temporaryAccessBypassPolicies: boolean;
+
+  @Column({ name: 'exclude_from_concurrent_limit', default: false })
+  excludeFromConcurrentLimit: boolean;
 }

@@ -38,6 +38,10 @@ export class UserPreference {
   @Column({ name: 'allowed_ips', type: 'json', nullable: true })
   allowedIPs: string[]; // IP addresses or ranges
 
+  // Concurrent stream limit (null = use global default, 0 = unlimited)
+  @Column({ name: 'concurrent_stream_limit', type: 'int', nullable: true })
+  concurrentStreamLimit: number | null;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 

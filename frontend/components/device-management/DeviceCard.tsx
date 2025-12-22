@@ -13,6 +13,7 @@ import {
   Activity,
   Clock,
   ShieldOff,
+  Users,
 } from "lucide-react";
 import { UserDevice, AppSetting } from "@/types";
 import { getDeviceIcon, ClickableIP } from "./SharedComponents";
@@ -143,6 +144,16 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
                   >
                     <ShieldOff className="w-2.5 h-2.5 mr-0.5" />
                     Bypass
+                  </Badge>
+                )}
+              {device.status === "approved" &&
+                device.excludeFromConcurrentLimit && (
+                  <Badge
+                    variant="outline"
+                    className="text-[10px] px-1.5 py-0.5 bg-cyan-50 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-300 border-cyan-200 dark:border-cyan-700"
+                  >
+                    <Users className="w-2.5 h-2.5 mr-0.5" />
+                    No Limit
                   </Badge>
                 )}
             </div>
@@ -408,6 +419,16 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
                     >
                       <ShieldOff className="w-3 h-3 mr-1" />
                       Policy Bypass
+                    </Badge>
+                  )}
+                {device.status === "approved" &&
+                  device.excludeFromConcurrentLimit && (
+                    <Badge
+                      variant="outline"
+                      className="text-xs bg-cyan-50 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-300 border-cyan-200 dark:border-cyan-700"
+                    >
+                      <Users className="w-3 h-3 mr-1" />
+                      No Stream Limit
                     </Badge>
                   )}
               </div>

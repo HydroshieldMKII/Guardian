@@ -193,6 +193,20 @@ export class DevicesController {
     return { message: `Temporary access revoked for device ${id}` };
   }
 
+  @Post(':id/exclude-from-concurrent-limit')
+  async updateExcludeFromConcurrentLimit(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: { exclude: boolean },
+  ): Promise<{ message: string }> {
+    await this.deviceTrackingService.updateExcludeFromConcurrentLimit(
+      id,
+      body.exclude,
+    );
+    return {
+      message: `Device ${id} ${body.exclude ? 'excluded from' : 'included in'} concurrent stream limit`,
+    };
+  }
+
   @Post('revoke/:userId/:deviceIdentifier')
   async revokeDeviceByIdentifier(
     @Param('userId') userId: string,

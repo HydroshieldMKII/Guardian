@@ -195,6 +195,26 @@ export class UsersService {
     return savedPreference;
   }
 
+  async updateConcurrentStreamLimit(
+    userId: string,
+    concurrentStreamLimit: number | null,
+  ): Promise<UserPreference> {
+    const preference = await this.userPreferenceRepository.findOne({
+      where: { userId },
+    });
+
+    if (!preference) {
+      throw new Error('User preference not found. Does the user exist?');
+    }
+
+    preference.concurrentStreamLimit = concurrentStreamLimit;
+    this.logger.log(
+      `Updating concurrent stream limit for user: ${userId} to ${concurrentStreamLimit === null ? 'global default' : concurrentStreamLimit === 0 ? 'unlimited' : concurrentStreamLimit}`,
+    );
+
+    return await this.userPreferenceRepository.save(preference);
+  }
+
   async getEffectiveDefaultBlock(userId: string): Promise<boolean> {
     const preference = await this.getUserPreference(userId);
 

@@ -111,6 +111,28 @@ class ApiClient {
     return this.post<T>(`/users/${userId}/ip-policy`, updates);
   }
 
+  async updateUserConcurrentStreamLimit<T>(
+    userId: string,
+    concurrentStreamLimit: number | null,
+  ): Promise<T> {
+    return this.post<T>(`/users/${userId}/concurrent-stream-limit`, {
+      concurrentStreamLimit,
+    });
+  }
+
+  async getUserConcurrentStreamInfo<T>(userId: string): Promise<T> {
+    return this.get<T>(`/users/${userId}/concurrent-stream-info`);
+  }
+
+  async updateDeviceExcludeFromConcurrentLimit<T>(
+    deviceId: number,
+    exclude: boolean,
+  ): Promise<T> {
+    return this.post<T>(`/devices/${deviceId}/exclude-from-concurrent-limit`, {
+      exclude,
+    });
+  }
+
   // Notification methods
   async getAllNotifications<T>(): Promise<T> {
     return this.get<T>("/notifications");

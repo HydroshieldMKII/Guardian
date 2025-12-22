@@ -265,6 +265,23 @@ export class ConfigService {
         value: 'false',
         type: 'boolean' as const,
       },
+      // Concurrent Stream Limit Settings
+      {
+        key: 'CONCURRENT_STREAM_LIMIT',
+        value: '0',
+        type: 'number' as const,
+      },
+      {
+        key: 'CONCURRENT_LIMIT_INCLUDE_TEMP_ACCESS',
+        value: 'true',
+        type: 'boolean' as const,
+      },
+      {
+        key: 'MSG_CONCURRENT_LIMIT',
+        value:
+          'You have reached your concurrent stream limit. Please stop another stream before starting a new one.',
+        type: 'string' as const,
+      },
     ];
 
     // Update version number on startup if current version is higher

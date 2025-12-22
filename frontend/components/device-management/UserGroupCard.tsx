@@ -19,11 +19,13 @@ import {
   SquareUser,
   Shield,
   Timer,
+  Users,
 } from "lucide-react";
 import { UserDevice, UserPreference, AppSetting } from "@/types";
 import { UserAvatar, getUserPreferenceBadge } from "./SharedComponents";
 import { DeviceCard } from "./DeviceCard";
 import { IPAccessModal } from "./IPAccessModal";
+import { ConcurrentStreamModal } from "./ConcurrentStreamModal";
 import { useSettings } from "@/contexts/settings-context";
 
 // User-Device group interface
@@ -103,6 +105,8 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
   onNewDeviceNameChange,
 }) => {
   const [showIPModal, setShowIPModal] = useState(false);
+  const [showConcurrentStreamModal, setShowConcurrentStreamModal] =
+    useState(false);
   const { getGlobalDefaultBlock, loading: configLoading } = useSettings();
 
   return (
@@ -158,6 +162,16 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
                       IP Policy
                     </Badge>
                   )}
+                  {group.user.preference?.concurrentStreamLimit !== null &&
+                    group.user.preference?.concurrentStreamLimit !==
+                      undefined && (
+                      <Badge variant="outline" className="text-xs">
+                        <Users className="w-3 h-3 mr-1" />
+                        {group.user.preference.concurrentStreamLimit === 0
+                          ? "Unlimited"
+                          : `${group.user.preference.concurrentStreamLimit} Stream${group.user.preference.concurrentStreamLimit !== 1 ? "s" : ""}`}
+                      </Badge>
+                    )}
                 </div>
               </div>
 
@@ -174,6 +188,17 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
                     Scheduled
                   </Badge>
                 )}
+                {group.user.preference?.concurrentStreamLimit !== null &&
+                  group.user.preference?.concurrentStreamLimit !==
+                    undefined && (
+                    <Badge
+                      variant="outline"
+                      className="text-[10px] px-1.5 py-0.5"
+                    >
+                      <Users className="w-2.5 h-2.5 mr-0.5" />
+                      {group.user.preference.concurrentStreamLimit}
+                    </Badge>
+                  )}
               </div>
             </div>
           </div>
@@ -236,6 +261,14 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
                         <span>IP Policy</span>
                       </button>
                     )}
+                    <button
+                      onClick={() => setShowConcurrentStreamModal(true)}
+                      className="text-xs px-3 py-2 rounded-md transition-all duration-200 flex items-center cursor-pointer text-foreground hover:bg-accent whitespace-nowrap"
+                      title="Configure concurrent stream limit for this user"
+                    >
+                      <Users className="w-3 h-3 mr-2" />
+                      <span>Stream Limit</span>
+                    </button>
                     {onShowHistory && (
                       <button
                         onClick={() => onShowHistory(group.user.userId)}
@@ -405,6 +438,14 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
           onSave={onUpdateUserIPPolicy}
         />
       )}
+
+      {/* Concurrent Stream Modal */}
+      <ConcurrentStreamModal
+        isOpen={showConcurrentStreamModal}
+        onClose={() => setShowConcurrentStreamModal(false)}
+        userId={group.user.userId}
+        username={group.user.username}
+      />
     </Collapsible>
   );
 };

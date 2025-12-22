@@ -89,7 +89,7 @@ export const getSettingInfo = (setting: AppSetting): SettingInfo => {
     DEVICE_CLEANUP_INTERVAL_DAYS: {
       label: "Device cleanup interval (days)",
       description:
-        "Number of days before inactive devices are automatically removed",
+        "Number of days before inactive devices are automatically deleted",
     },
     DEFAULT_PAGE: {
       label: "Default dashboard page",
@@ -101,7 +101,8 @@ export const getSettingInfo = (setting: AppSetting): SettingInfo => {
     },
     AUTO_MARK_NOTIFICATION_READ: {
       label: "Auto-mark notifications as read",
-      description: "Automatically mark in-app notifications as read when clicked",
+      description:
+        "Automatically mark in-app notifications as read when clicked",
     },
     IN_APP_NOTIFY_ON_NEW_DEVICE: {
       label: "In-app notifications for new devices",
@@ -109,7 +110,8 @@ export const getSettingInfo = (setting: AppSetting): SettingInfo => {
     },
     IN_APP_NOTIFY_ON_BLOCK: {
       label: "In-app notifications for blocked streams",
-      description: "Show in-app notifications when streams are blocked due to policies",
+      description:
+        "Show in-app notifications when streams are blocked due to policies",
     },
     IN_APP_NOTIFY_ON_LOCATION_CHANGE: {
       label: "In-app notifications for device location changes",
@@ -205,6 +207,22 @@ export const getSettingInfo = (setting: AppSetting): SettingInfo => {
     APPRISE_NOTIFY_ON_LOCATION_CHANGE: {
       label: "Notify on device location changes",
       description: "Send notifications when device location changes",
+    },
+    // Concurrent Stream Limit Settings
+    CONCURRENT_STREAM_LIMIT: {
+      label: "Global concurrent stream limit",
+      description:
+        "Maximum number of simultaneous streams per user (0 = unlimited)",
+    },
+    CONCURRENT_LIMIT_INCLUDE_TEMP_ACCESS: {
+      label: "Include temp access in stream limit",
+      description:
+        "Count devices with temporary access towards the concurrent stream limit",
+    },
+    MSG_CONCURRENT_LIMIT: {
+      label: "Concurrent limit message",
+      description:
+        "Message shown when a user exceeds their concurrent stream limit",
     },
   };
 

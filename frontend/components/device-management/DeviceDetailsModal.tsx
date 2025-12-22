@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -9,12 +9,32 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { Settings, Edit2, Save, X, RefreshCw, Clock } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
+  Settings,
+  Edit2,
+  Save,
+  X,
+  RefreshCw,
+  Clock,
+  Users,
+  ChevronDown,
+  Monitor,
+  Fingerprint,
+  Activity,
+} from "lucide-react";
 import { UserDevice } from "@/types";
 import { ClickableIP, DeviceStatus } from "./SharedComponents";
 import { useDeviceUtils } from "@/hooks/device-management/useDeviceUtils";
+import { apiClient } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
 
 interface DeviceDetailsModalProps {
   device: UserDevice | null;
@@ -27,6 +47,7 @@ interface DeviceDetailsModalProps {
   onCancelEdit: () => void;
   onRename: (deviceId: number, newName: string) => void;
   onNewDeviceNameChange: (name: string) => void;
+  onDeviceUpdate?: (device: UserDevice) => void;
 }
 
 export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
@@ -40,8 +61,59 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
   onCancelEdit,
   onRename,
   onNewDeviceNameChange,
+  onDeviceUpdate,
 }) => {
   const { hasTemporaryAccess, getTemporaryAccessTimeLeft } = useDeviceUtils();
+  const { toast } = useToast();
+  const [excludeLoading, setExcludeLoading] = useState(false);
+  const [excludeFromConcurrentLimit, setExcludeFromConcurrentLimit] = useState(
+    device?.excludeFromConcurrentLimit ?? false
+  );
+  
+  // Collapsible section states
+  const [basicInfoOpen, setBasicInfoOpen] = useState(true);
+  const [identifierOpen, setIdentifierOpen] = useState(false);
+  const [activityOpen, setActivityOpen] = useState(false);
+  const [tempAccessOpen, setTempAccessOpen] = useState(true);
+  const [deviceSettingsOpen, setDeviceSettingsOpen] = useState(true);
+
+  // Sync local state when device prop changes
+  React.useEffect(() => {
+    if (device) {
+      setExcludeFromConcurrentLimit(device.excludeFromConcurrentLimit ?? false);
+    }
+  }, [device?.id, device?.excludeFromConcurrentLimit]);
+
+  if (!device) return null;
+
+  const handleExcludeFromConcurrentLimitChange = async (exclude: boolean) => {
+    setExcludeLoading(true);
+    try {
+      await apiClient.updateDeviceExcludeFromConcurrentLimit(device.id, exclude);
+      // Update local state immediately
+      setExcludeFromConcurrentLimit(exclude);
+      toast({
+        title: "Success",
+        description: `Device ${exclude ? "excluded from" : "included in"} concurrent stream limit`,
+        variant: "success",
+      });
+      // Update the parent device state
+      if (onDeviceUpdate) {
+        onDeviceUpdate({ ...device, excludeFromConcurrentLimit: exclude });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to update device setting",
+        variant: "destructive",
+      });
+    } finally {
+      setExcludeLoading(false);
+    }
+  };
 
   if (!device) return null;
 
@@ -58,161 +130,213 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-3 sm:gap-4">
-            <div>
-              <h4 className="font-semibold text-xs sm:text-sm text-muted-foreground">
-                Device Name
-              </h4>
-              {editingDevice === device.id ? (
-                <div className="flex items-center gap-2">
-                  <Input
-                    value={newDeviceName}
-                    onChange={(e) => onNewDeviceNameChange(e.target.value)}
-                    className="text-sm flex-1"
-                    placeholder="Enter device name"
-                  />
-                  <Button
-                    size="sm"
-                    variant="default"
-                    onClick={() => onRename(device.id, newDeviceName)}
-                    disabled={
-                      !newDeviceName.trim() || actionLoading === device.id
-                    }
-                    className="px-2"
-                  >
-                    {actionLoading === device.id ? (
-                      <RefreshCw className="w-3 h-3 animate-spin" />
-                    ) : (
-                      <Save className="w-3 h-3" />
-                    )}
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={onCancelEdit}
-                    disabled={actionLoading === device.id}
-                    className="px-2"
-                  >
-                    <X className="w-3 h-3" />
-                  </Button>
+        <div className="space-y-2">
+          {/* Basic Information Section */}
+          <Collapsible open={basicInfoOpen} onOpenChange={setBasicInfoOpen}>
+            <CollapsibleTrigger className="flex items-center justify-between w-full p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors">
+              <div className="flex items-center gap-2">
+                <Monitor className="w-4 h-4 text-muted-foreground" />
+                <span className="font-semibold text-sm">Basic Information</span>
+              </div>
+              <ChevronDown
+                className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${
+                  basicInfoOpen ? "rotate-180" : ""
+                }`}
+              />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pt-3 px-3">
+              <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                <div>
+                  <h4 className="font-semibold text-xs sm:text-sm text-muted-foreground">
+                    Device Name
+                  </h4>
+                  {editingDevice === device.id ? (
+                    <div className="flex items-center gap-2">
+                      <Input
+                        value={newDeviceName}
+                        onChange={(e) => onNewDeviceNameChange(e.target.value)}
+                        className="text-sm flex-1"
+                        placeholder="Enter device name"
+                      />
+                      <Button
+                        size="sm"
+                        variant="default"
+                        onClick={() => onRename(device.id, newDeviceName)}
+                        disabled={
+                          !newDeviceName.trim() || actionLoading === device.id
+                        }
+                        className="px-2"
+                      >
+                        {actionLoading === device.id ? (
+                          <RefreshCw className="w-3 h-3 animate-spin" />
+                        ) : (
+                          <Save className="w-3 h-3" />
+                        )}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={onCancelEdit}
+                        disabled={actionLoading === device.id}
+                        className="px-2"
+                      >
+                        <X className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm sm:text-base text-foreground break-words flex-1 max-w-[200px] truncate">
+                        {device.deviceName || "Unknown"}
+                      </p>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => onEdit(device)}
+                        className="px-2 h-6"
+                        title="Rename device"
+                      >
+                        <Edit2 className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  )}
                 </div>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <p className="text-sm sm:text-base text-foreground break-words flex-1 max-w-[200px] truncate">
-                    {device.deviceName || "Unknown"}
+                <div>
+                  <h4 className="font-semibold text-xs sm:text-sm text-muted-foreground">
+                    User
+                  </h4>
+                  <p className="text-sm sm:text-base text-foreground break-words">
+                    {device.username || device.userId}
                   </p>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => onEdit(device)}
-                    className="px-2 h-6"
-                    title="Rename device"
-                  >
-                    <Edit2 className="w-3 h-3" />
-                  </Button>
                 </div>
-              )}
-            </div>
-            <div>
-              <h4 className="font-semibold text-xs sm:text-sm text-muted-foreground">
-                User
-              </h4>
-              <p className="text-sm sm:text-base text-foreground break-words">
-                {device.username || device.userId}
-              </p>
-            </div>
-            <div>
-              <h4 className="font-semibold text-xs sm:text-sm text-muted-foreground">
-                Platform
-              </h4>
-              <p className="text-sm sm:text-base text-foreground">
-                {device.devicePlatform || "Unknown"}
-              </p>
-            </div>
-            <div>
-              <h4 className="font-semibold text-xs sm:text-sm text-muted-foreground">
-                Product
-              </h4>
-              <p className="text-sm sm:text-base text-foreground">
-                {device.deviceProduct || "Unknown"}
-              </p>
-            </div>
-            <div>
-              <h4 className="font-semibold text-xs sm:text-sm text-muted-foreground">
-                Version
-              </h4>
-              <p className="text-sm sm:text-base text-foreground">
-                {device.deviceVersion || "Unknown"}
-              </p>
-            </div>
-            <div>
-              <h4 className="font-semibold text-xs sm:text-sm text-muted-foreground">
-                IP Address
-              </h4>
-              <div className="text-sm sm:text-base text-foreground">
-                <ClickableIP ipAddress={device.ipAddress} />
+                <div>
+                  <h4 className="font-semibold text-xs sm:text-sm text-muted-foreground">
+                    Platform
+                  </h4>
+                  <p className="text-sm sm:text-base text-foreground">
+                    {device.devicePlatform || "Unknown"}
+                  </p>
+                </div>
+                <div>
+                  <h4 className="font-semibold text-xs sm:text-sm text-muted-foreground">
+                    Product
+                  </h4>
+                  <p className="text-sm sm:text-base text-foreground">
+                    {device.deviceProduct || "Unknown"}
+                  </p>
+                </div>
+                <div>
+                  <h4 className="font-semibold text-xs sm:text-sm text-muted-foreground">
+                    Version
+                  </h4>
+                  <p className="text-sm sm:text-base text-foreground">
+                    {device.deviceVersion || "Unknown"}
+                  </p>
+                </div>
+                <div>
+                  <h4 className="font-semibold text-xs sm:text-sm text-muted-foreground">
+                    IP Address
+                  </h4>
+                  <div className="text-sm sm:text-base text-foreground">
+                    <ClickableIP ipAddress={device.ipAddress} />
+                  </div>
+                </div>
+                <div>
+                  <h4 className="font-semibold text-xs sm:text-sm text-muted-foreground">
+                    Streams Started
+                  </h4>
+                  <p className="text-sm sm:text-base text-foreground">
+                    {device.sessionCount}
+                  </p>
+                </div>
+                <div>
+                  <h4 className="font-semibold text-xs sm:text-sm text-muted-foreground">
+                    Status
+                  </h4>
+                  <div>
+                    <DeviceStatus device={device} compact />
+                  </div>
+                </div>
               </div>
-            </div>
-            <div>
-              <h4 className="font-semibold text-xs sm:text-sm text-muted-foreground">
-                Streams Started
-              </h4>
-              <p className="text-sm sm:text-base text-foreground">
-                {device.sessionCount}
-              </p>
-            </div>
-            <div>
-              <h4 className="font-semibold text-xs sm:text-sm text-muted-foreground">
-                Status
-              </h4>
-              <div>
-                <DeviceStatus device={device} compact />
+            </CollapsibleContent>
+          </Collapsible>
+
+          {/* Device Identifier Section */}
+          <Collapsible open={identifierOpen} onOpenChange={setIdentifierOpen}>
+            <CollapsibleTrigger className="flex items-center justify-between w-full p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors">
+              <div className="flex items-center gap-2">
+                <Fingerprint className="w-4 h-4 text-muted-foreground" />
+                <span className="font-semibold text-sm">Device Identifier</span>
               </div>
-            </div>
-          </div>
-
-          <Separator />
-
-          <div>
-            <h4 className="font-semibold text-xs sm:text-sm text-muted-foreground mb-2">
-              Device Identifier
-            </h4>
-            <p className="text-xs font-mono bg-muted p-2 rounded break-all">
-              {device.deviceIdentifier}
-            </p>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3 sm:gap-4">
-            <div>
-              <h4 className="font-semibold text-xs sm:text-sm text-muted-foreground">
-                First Seen
-              </h4>
-              <p className="text-xs sm:text-sm text-foreground">
-                {new Date(device.firstSeen).toLocaleString()}
+              <ChevronDown
+                className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${
+                  identifierOpen ? "rotate-180" : ""
+                }`}
+              />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pt-3 px-3">
+              <p className="text-xs font-mono bg-muted p-2 rounded break-all">
+                {device.deviceIdentifier}
               </p>
-            </div>
-            <div>
-              <h4 className="font-semibold text-xs sm:text-sm text-muted-foreground">
-                Last Seen
-              </h4>
-              <p className="text-xs sm:text-sm text-foreground">
-                {new Date(device.lastSeen).toLocaleString()}
-              </p>
-            </div>
-          </div>
+            </CollapsibleContent>
+          </Collapsible>
+
+          {/* Activity Section */}
+          <Collapsible open={activityOpen} onOpenChange={setActivityOpen}>
+            <CollapsibleTrigger className="flex items-center justify-between w-full p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors">
+              <div className="flex items-center gap-2">
+                <Activity className="w-4 h-4 text-muted-foreground" />
+                <span className="font-semibold text-sm">Activity</span>
+              </div>
+              <ChevronDown
+                className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${
+                  activityOpen ? "rotate-180" : ""
+                }`}
+              />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pt-3 px-3">
+              <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                <div>
+                  <h4 className="font-semibold text-xs sm:text-sm text-muted-foreground">
+                    First Seen
+                  </h4>
+                  <p className="text-xs sm:text-sm text-foreground">
+                    {new Date(device.firstSeen).toLocaleString()}
+                  </p>
+                </div>
+                <div>
+                  <h4 className="font-semibold text-xs sm:text-sm text-muted-foreground">
+                    Last Seen
+                  </h4>
+                  <p className="text-xs sm:text-sm text-foreground">
+                    {new Date(device.lastSeen).toLocaleString()}
+                  </p>
+                </div>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
 
           {/* Temporary Access Section - Only show if device has or had temporary access */}
           {(device.temporaryAccessUntil ||
             device.temporaryAccessGrantedAt ||
             device.temporaryAccessDurationMinutes) && (
-            <>
-              <Separator />
-              <div>
-                <h4 className="font-semibold text-sm text-muted-foreground mb-3 flex items-center">
-                  <Clock className="w-4 h-4 mr-2" />
-                  Temporary Access Information
-                </h4>
+            <Collapsible open={tempAccessOpen} onOpenChange={setTempAccessOpen}>
+              <CollapsibleTrigger className="flex items-center justify-between w-full p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors">
+                <div className="flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-muted-foreground" />
+                  <span className="font-semibold text-sm">Temporary Access</span>
+                  {hasTemporaryAccess(device) && (
+                    <Badge variant="outline" className="ml-2 border-green-600 dark:border-green-700 text-green-700 dark:text-green-400">
+                      Active
+                    </Badge>
+                  )}
+                </div>
+                <ChevronDown
+                  className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${
+                    tempAccessOpen ? "rotate-180" : ""
+                  }`}
+                />
+              </CollapsibleTrigger>
+              <CollapsibleContent className="pt-3 px-3">
                 <div className="grid grid-cols-2 gap-3 sm:gap-4">
                   {device.temporaryAccessDurationMinutes && (
                     <div>
@@ -292,9 +416,49 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
                     </div>
                   </div>
                 </div>
-              </div>
-            </>
+              </CollapsibleContent>
+            </Collapsible>
           )}
+
+          {/* Device Settings Section */}
+          <Collapsible open={deviceSettingsOpen} onOpenChange={setDeviceSettingsOpen}>
+            <CollapsibleTrigger className="flex items-center justify-between w-full p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors">
+              <div className="flex items-center gap-2">
+                <Settings className="w-4 h-4 text-muted-foreground" />
+                <span className="font-semibold text-sm">Device Settings</span>
+              </div>
+              <ChevronDown
+                className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${
+                  deviceSettingsOpen ? "rotate-180" : ""
+                }`}
+              />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pt-3 px-3 space-y-3">
+              {/* Exclude from concurrent stream limit */}
+              <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                <div className="space-y-0.5">
+                  <Label
+                    htmlFor="exclude-concurrent-limit"
+                    className="text-sm font-medium"
+                  >
+                    Exclude from concurrent stream limit
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    When enabled, streams from this device won&apos;t count
+                    towards the user&apos;s concurrent stream limit
+                  </p>
+                </div>
+                <Switch
+                  id="exclude-concurrent-limit"
+                  checked={excludeFromConcurrentLimit}
+                  onCheckedChange={handleExcludeFromConcurrentLimitChange}
+                  disabled={excludeLoading}
+                  className="cursor-pointer"
+                />
+              </div>
+              {/* Add more settings here in the future */}
+            </CollapsibleContent>
+          </Collapsible>
         </div>
 
         <DialogFooter className="flex-col sm:flex-row gap-2">

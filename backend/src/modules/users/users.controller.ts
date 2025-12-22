@@ -8,6 +8,7 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { UsersService } from './services/users.service';
+import { ConcurrentStreamService } from './services/concurrent-stream.service';
 import { UserPreference } from '../../entities/user-preference.entity';
 
 interface UpdateUserPreferenceDto {
@@ -20,9 +21,16 @@ interface UpdateUserIPPolicyDto {
   allowedIPs?: string[];
 }
 
+interface UpdateConcurrentStreamLimitDto {
+  concurrentStreamLimit: number | null;
+}
+
 @Controller('users')
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly concurrentStreamService: ConcurrentStreamService,
+  ) {}
 
   @Get()
   async getAllUsers(): Promise<any[]> {
@@ -111,6 +119,42 @@ export class UsersController {
     return {
       message: 'User IP policy updated successfully',
       preference,
+    };
+  }
+
+  @Post(':userId/concurrent-stream-limit')
+  @HttpCode(HttpStatus.OK)
+  async updateConcurrentStreamLimit(
+    @Param('userId') userId: string,
+    @Body() dto: UpdateConcurrentStreamLimitDto,
+  ): Promise<{ message: string; preference: UserPreference }> {
+    const preference = await this.usersService.updateConcurrentStreamLimit(
+      userId,
+      dto.concurrentStreamLimit,
+    );
+
+    return {
+      message: 'User concurrent stream limit updated successfully',
+      preference,
+    };
+  }
+
+  @Get(':userId/concurrent-stream-info')
+  async getConcurrentStreamInfo(@Param('userId') userId: string): Promise<{
+    limit: number | null;
+    effectiveLimit: number;
+    isUnlimited: boolean;
+    isOverridden: boolean;
+  }> {
+    const preference = await this.usersService.getUserPreference(userId);
+    const effectiveLimit =
+      await this.concurrentStreamService.getEffectiveLimit(userId);
+
+    return {
+      limit: preference?.concurrentStreamLimit ?? null,
+      effectiveLimit,
+      isUnlimited: effectiveLimit === 0,
+      isOverridden: preference?.concurrentStreamLimit !== null,
     };
   }
 }

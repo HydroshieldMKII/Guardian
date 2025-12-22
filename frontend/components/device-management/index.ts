@@ -6,6 +6,7 @@ export { ConfirmationModal } from "./ConfirmationModal";
 export { UserHistoryModal } from "./UserHistoryModal";
 export { IPAccessModal } from "./IPAccessModal";
 export { TimeRuleModal } from "./TimeRuleModal";
+export { ConcurrentStreamModal } from "./ConcurrentStreamModal";
 export {
   ClickableIP,
   UserAvatar,
