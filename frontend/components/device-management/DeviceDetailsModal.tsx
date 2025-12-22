@@ -170,7 +170,7 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
 
   const handleSetPending = async () => {
     if (!onSetPending || !device) return;
-    
+
     setSetPendingLoading(true);
     try {
       const success = await onSetPending(device.id);
@@ -572,57 +572,60 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
             <CollapsibleContent className="pt-3 px-3 space-y-3">
               {/* Exclude from concurrent stream limit - Hide for PlexAmp devices since they're always excluded */}
               {!isPlexampDevice && (
-                  <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
-                    <div className="space-y-0.5">
-                      <Label
-                        htmlFor="exclude-concurrent-limit"
-                        className="text-sm font-medium"
-                      >
-                        Exclude from concurrent stream limit
-                      </Label>
-                      <p className="text-xs text-muted-foreground">
-                        When enabled, streams from this device won&apos;t count
-                        towards the user&apos;s concurrent stream limit
-                      </p>
-                    </div>
-                    <Switch
-                      id="exclude-concurrent-limit"
-                      checked={excludeFromConcurrentLimit}
-                      onCheckedChange={handleExcludeFromConcurrentLimitChange}
-                      disabled={excludeLoading}
-                      className="cursor-pointer"
-                    />
-                  </div>
-                )}
-              {/* Set to pending - Hide for PlexAmp devices and only show if not already pending */}
-              {!isPlexampDevice && device.status !== "pending" && onSetPending && (
-                <div className="p-3 bg-muted/30 rounded-lg">
-                  <div className="space-y-2">
-                    <div className="space-y-0.5">
-                      <Label className="text-sm font-medium">
-                        Revert to pending status
-                      </Label>
-                      <p className="text-xs text-muted-foreground">
-                        Move this device back to pending status. The device will need to be approved again.
-                      </p>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleSetPending}
-                      disabled={setPendingLoading}
-                      className="w-full border-amber-600 text-amber-700 hover:bg-amber-50 dark:border-amber-700 dark:text-amber-400 dark:hover:bg-amber-900/30"
+                <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                  <div className="space-y-0.5">
+                    <Label
+                      htmlFor="exclude-concurrent-limit"
+                      className="text-sm font-medium"
                     >
-                      {setPendingLoading ? (
-                        <RefreshCw className="w-4 h-4 animate-spin mr-2" />
-                      ) : (
-                        <RotateCcw className="w-4 h-4 mr-2" />
-                      )}
-                      Set to Pending
-                    </Button>
+                      Exclude from concurrent stream limit
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      When enabled, streams from this device won&apos;t count
+                      towards the user&apos;s concurrent stream limit
+                    </p>
                   </div>
+                  <Switch
+                    id="exclude-concurrent-limit"
+                    checked={excludeFromConcurrentLimit}
+                    onCheckedChange={handleExcludeFromConcurrentLimitChange}
+                    disabled={excludeLoading}
+                    className="cursor-pointer"
+                  />
                 </div>
               )}
+              {/* Set to pending - Hide for PlexAmp devices and only show if not already pending */}
+              {!isPlexampDevice &&
+                device.status !== "pending" &&
+                onSetPending && (
+                  <div className="p-3 bg-muted/30 rounded-lg">
+                    <div className="space-y-2">
+                      <div className="space-y-0.5">
+                        <Label className="text-sm font-medium">
+                          Revert to pending status
+                        </Label>
+                        <p className="text-xs text-muted-foreground">
+                          Move this device back to pending status. The device
+                          will need to be approved again.
+                        </p>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleSetPending}
+                        disabled={setPendingLoading}
+                        className="w-full border-amber-600 text-amber-700 hover:bg-amber-50 dark:border-amber-700 dark:text-amber-400 dark:hover:bg-amber-900/30"
+                      >
+                        {setPendingLoading ? (
+                          <RefreshCw className="w-4 h-4 animate-spin mr-2" />
+                        ) : (
+                          <RotateCcw className="w-4 h-4 mr-2" />
+                        )}
+                        Set to Pending
+                      </Button>
+                    </div>
+                  </div>
+                )}
               {/* Show message for PlexAmp devices */}
               {isPlexampDevice && (
                 <div className="p-3 bg-muted/30 rounded-lg">
