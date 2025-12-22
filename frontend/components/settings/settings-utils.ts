@@ -55,6 +55,11 @@ export const getSettingInfo = (setting: AppSetting): SettingInfo => {
       label: "Block new devices by default",
       description: "Block access for all pending devices",
     },
+    PLEX_GUARD_STRICT_MODE: {
+      label: "Strict mode",
+      description:
+        "Automatically approve or reject new devices based on the default policy. No devices will remain pending.",
+    },
     MSG_DEVICE_PENDING: {
       label: "Device pending message",
       description: "Message shown when a device is waiting for approval",

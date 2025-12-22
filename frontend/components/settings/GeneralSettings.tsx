@@ -62,6 +62,7 @@ export function GeneralSettings({
         guardian: [
           "AUTO_CHECK_UPDATES", // Application updates - now at top
           "PLEX_GUARD_DEFAULT_BLOCK", // Core security
+          "PLEX_GUARD_STRICT_MODE", // Strict mode (auto-approve/reject)
           "PLEXGUARD_REFRESH_INTERVAL", // Session monitoring interval
           "CONCURRENT_STREAM_LIMIT", // Concurrent stream limit
           "CONCURRENT_LIMIT_INCLUDE_TEMP_ACCESS", // Include temp access in limit
@@ -105,6 +106,7 @@ export function GeneralSettings({
         filteredSettings = settings.filter((setting) =>
           [
             "PLEX_GUARD_DEFAULT_BLOCK",
+            "PLEX_GUARD_STRICT_MODE",
             "PLEXGUARD_REFRESH_INTERVAL",
             "AUTO_CHECK_UPDATES",
             "CONCURRENT_STREAM_LIMIT",

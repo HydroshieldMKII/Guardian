@@ -259,12 +259,38 @@ export class DeviceTrackingService {
       deviceInfo.userId,
     ); // User wont have a preference yet, so this will return app default
 
+    // Check for strict mode
+    const strictMode = await this.configService.getSetting(
+      'PLEX_GUARD_STRICT_MODE',
+    );
+    const isStrictMode = strictMode?.value === 'true';
+
+    // Check if this is a Plexamp device (they are always allowed)
+    const isPlexampDevice =
+      deviceInfo.deviceProduct?.toLowerCase().includes('plexamp') ||
+      deviceInfo.deviceName?.toLowerCase().includes('plexamp');
+
+    // Determine initial status based on strict mode
+    let initialStatus: 'pending' | 'approved' | 'rejected' = 'pending';
+    if (isStrictMode) {
+      if (isPlexampDevice) {
+        // Plexamp devices are always approved in strict mode
+        initialStatus = 'approved';
+      } else {
+        // Apply default block policy immediately
+        initialStatus = defaultBlock ? 'rejected' : 'approved';
+      }
+    }
+
     this.logger.log('New device detected', {
       userId: deviceInfo.userId,
       username: deviceInfo.username,
       deviceName: deviceInfo.deviceName,
       deviceIdentifier: deviceInfo.deviceIdentifier,
       platform: deviceInfo.devicePlatform,
+      strictMode: isStrictMode,
+      isPlexampDevice,
+      initialStatus,
     });
 
     const newDevice = this.userDeviceRepository.create({
@@ -275,7 +301,7 @@ export class DeviceTrackingService {
       devicePlatform: deviceInfo.devicePlatform,
       deviceProduct: deviceInfo.deviceProduct,
       deviceVersion: deviceInfo.deviceVersion,
-      status: 'pending',
+      status: initialStatus,
       sessionCount: 1,
       currentSessionKey: deviceInfo.sessionKey,
       ipAddress: deviceInfo.ipAddress,
@@ -283,8 +309,12 @@ export class DeviceTrackingService {
 
     await this.userDeviceRepository.save(newDevice);
 
+    const statusMessage = isStrictMode
+      ? `Status: ${initialStatus} (strict mode)`
+      : `Status: pending, App default action: ${defaultBlock ? 'Block' : 'Allow'}`;
+
     this.logger.warn(
-      `🚨 NEW DEVICE DETECTED! User: ${deviceInfo.username || deviceInfo.userId}, IP: ${deviceInfo.ipAddress || 'Unknown IP'}, Device: ${deviceInfo.deviceName || deviceInfo.deviceIdentifier}, Platform: ${deviceInfo.devicePlatform || 'Unknown'}, Status: pending, App default action: ${defaultBlock ? 'Block' : 'Allow'}`,
+      `🚨 NEW DEVICE DETECTED! User: ${deviceInfo.username || deviceInfo.userId}, IP: ${deviceInfo.ipAddress || 'Unknown IP'}, Device: ${deviceInfo.deviceName || deviceInfo.deviceIdentifier}, Platform: ${deviceInfo.devicePlatform || 'Unknown'}, ${statusMessage}`,
     );
 
     this.emitNewDeviceEvent({

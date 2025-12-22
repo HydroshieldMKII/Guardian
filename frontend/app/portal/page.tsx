@@ -93,6 +93,7 @@ interface UserPortalUserRules {
   concurrentStreamLimit: number | null;
   effectiveConcurrentStreamLimit: number;
   defaultBlock: boolean | null;
+  effectiveDefaultBlock: boolean;
   timeRules: UserPortalTimeRule[];
 }
 
@@ -206,6 +207,99 @@ const TemporaryAccessBadge = ({ device }: { device: UserPortalDevice }) => {
               </p>
             )}
           </div>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+};
+
+// Status Badge component with controlled tooltip for mobile support
+const StatusBadge = ({
+  type,
+  device,
+}: {
+  type: "approved" | "rejected" | "pending";
+  device: UserPortalDevice;
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Detect mobile on mount
+  React.useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 640);
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
+  // Handle open change - only allow Radix to control on desktop
+  const handleOpenChange = (open: boolean) => {
+    if (!isMobile) {
+      setIsOpen(open);
+    }
+  };
+
+  const badgeConfig = {
+    approved: {
+      className: "text-green-500 border-green-500",
+      icon: <CheckCircle className="mr-1 h-3 w-3" />,
+      label: "Approved",
+      tooltip: "This device has been approved by the administrator",
+    },
+    rejected: {
+      className: "text-red-500 border-red-500",
+      icon: <XCircle className="mr-1 h-3 w-3" />,
+      label: "Rejected",
+      tooltip: "This device has been rejected by the administrator.",
+    },
+    pending: {
+      className: "text-yellow-500 border-yellow-500",
+      icon: <AlertCircle className="mr-1 h-3 w-3" />,
+      label: "Pending",
+      tooltip: `This device has not been reviewed by the administrator yet${device.requestSubmittedAt ? ". Your note has been submitted." : ""}`,
+    },
+  };
+
+  const config = badgeConfig[type];
+
+  return (
+    <TooltipProvider delayDuration={0}>
+      <Tooltip open={isOpen} onOpenChange={handleOpenChange}>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            className="inline-flex focus:outline-none rounded-md"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              if (isMobile) {
+                setIsOpen((prev) => !prev);
+              }
+            }}
+            onMouseEnter={() => {
+              if (!isMobile) setIsOpen(true);
+            }}
+            onMouseLeave={() => {
+              if (!isMobile) setIsOpen(false);
+            }}
+          >
+            <Badge
+              variant="outline"
+              className={`cursor-help ${config.className}`}
+            >
+              {config.icon}
+              {config.label}
+            </Badge>
+          </button>
+        </TooltipTrigger>
+        <TooltipContent
+          className="max-w-xs"
+          onPointerDownOutside={(e) => {
+            e.preventDefault();
+            setIsOpen(false);
+          }}
+        >
+          <p>{config.tooltip}</p>
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
@@ -375,61 +469,11 @@ export default function UserPortalPage() {
 
     switch (device.status) {
       case "approved":
-        return (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Badge
-                variant="outline"
-                className="text-green-500 border-green-500 cursor-help"
-              >
-                <CheckCircle className="mr-1 h-3 w-3" />
-                Approved
-              </Badge>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>This device has been approved by the administrator</p>
-            </TooltipContent>
-          </Tooltip>
-        );
+        return <StatusBadge type="approved" device={device} />;
       case "rejected":
-        return (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Badge
-                variant="outline"
-                className="text-red-500 border-red-500 cursor-help"
-              >
-                <XCircle className="mr-1 h-3 w-3" />
-                Rejected
-              </Badge>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>This device has been rejected by the administrator.</p>
-            </TooltipContent>
-          </Tooltip>
-        );
+        return <StatusBadge type="rejected" device={device} />;
       default:
-        return (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Badge
-                variant="outline"
-                className="text-yellow-500 border-yellow-500 cursor-help"
-              >
-                <AlertCircle className="mr-1 h-3 w-3" />
-                Pending
-              </Badge>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>
-                This device is awaiting approval from the administrator
-                {device.requestSubmittedAt
-                  ? ". Your note has been submitted."
-                  : ""}
-              </p>
-            </TooltipContent>
-          </Tooltip>
-        );
+        return <StatusBadge type="pending" device={device} />;
     }
   };
 
@@ -620,9 +664,7 @@ export default function UserPortalPage() {
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() =>
-                                    handleRequestApproval(device)
-                                  }
+                                  onClick={() => handleRequestApproval(device)}
                                   className="text-xs"
                                 >
                                   Add Note
@@ -634,9 +676,7 @@ export default function UserPortalPage() {
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() =>
-                                    handleRequestApproval(device)
-                                  }
+                                  onClick={() => handleRequestApproval(device)}
                                   className="text-xs"
                                 >
                                   Add Note
@@ -755,11 +795,14 @@ export default function UserPortalPage() {
               <div className="space-y-4">
                 {/* Network & Access Policy */}
                 <Card>
-                  <CardHeader className="mt-2">
+                  <CardHeader className="mt-2 pb-3">
                     <CardTitle className="text-lg flex items-center gap-2">
                       <Globe className="h-5 w-5 text-primary" />
                       Network Access
                     </CardTitle>
+                    <CardDescription>
+                      Controls where you can stream from
+                    </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="flex items-center justify-between mt-2">
@@ -807,13 +850,48 @@ export default function UserPortalPage() {
                   </CardContent>
                 </Card>
 
+                {/* New Device Policy */}
+                <Card>
+                  <CardHeader className="mt-2 pb-3">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Smartphone className="h-5 w-5 text-primary" />
+                      New Device Policy
+                    </CardTitle>
+                    <CardDescription>
+                      How new devices are handled when they first connect
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="mb-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm">
+                        Default action for new devices
+                      </span>
+                      <Badge
+                        variant="outline"
+                        className={
+                          userRules.effectiveDefaultBlock
+                            ? "text-red-500 border-red-500"
+                            : "text-green-500 border-green-500"
+                        }
+                      >
+                        {userRules.effectiveDefaultBlock
+                          ? "Block until approved"
+                          : "Allowed by default"}
+                      </Badge>
+                    </div>
+                  </CardContent>
+                </Card>
+
                 {/* Concurrent Stream Limit */}
                 <Card>
-                  <CardHeader className="mt-2">
+                  <CardHeader className="mt-2 pb-3">
                     <CardTitle className="text-lg flex items-center gap-2">
                       <Users className="h-5 w-5 text-primary" />
                       Concurrent Streams
                     </CardTitle>
+                    <CardDescription>
+                      How many devices can stream at the same time
+                    </CardDescription>
                   </CardHeader>
                   <CardContent className="mb-2">
                     <div className="flex items-center justify-between">
@@ -832,7 +910,7 @@ export default function UserPortalPage() {
                 {/* User-wide Time Rules */}
                 {userRules.timeRules.length > 0 && (
                   <Card>
-                    <CardHeader className="pb-3">
+                    <CardHeader className="pb-3 mt-2">
                       <CardTitle className="text-lg flex items-center gap-2">
                         <Clock className="h-5 w-5 text-primary" />
                         Viewing Schedule
@@ -842,7 +920,7 @@ export default function UserPortalPage() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="space-y-2">
+                      <div className="space-y-2 mb-2">
                         {userRules.timeRules.map((rule) => (
                           <div
                             key={rule.id}
@@ -852,7 +930,7 @@ export default function UserPortalPage() {
                               <div
                                 className={`h-8 w-8 rounded-lg flex items-center justify-center ${
                                   rule.enabled
-                                    ? "bg-green-500/10 text-green-500"
+                                    ? "bg-red-500/10 text-red-500"
                                     : "bg-muted text-muted-foreground"
                                 }`}
                               >
@@ -861,11 +939,6 @@ export default function UserPortalPage() {
                               <div>
                                 <p className="text-sm font-medium">
                                   {DAY_NAMES[rule.dayOfWeek]}
-                                  {rule.ruleName && (
-                                    <span className="text-muted-foreground font-normal ml-2">
-                                      — {rule.ruleName}
-                                    </span>
-                                  )}
                                 </p>
                                 <p className="text-xs text-muted-foreground">
                                   {rule.startTime} - {rule.endTime}
@@ -876,7 +949,7 @@ export default function UserPortalPage() {
                               variant={rule.enabled ? "default" : "secondary"}
                               className="text-xs"
                             >
-                              {rule.enabled ? "Active" : "Inactive"}
+                              {rule.enabled ? "Blocking" : "Inactive"}
                             </Badge>
                           </div>
                         ))}

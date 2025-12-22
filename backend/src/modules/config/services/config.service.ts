@@ -82,6 +82,11 @@ export class ConfigService {
         type: 'boolean' as const,
       },
       {
+        key: 'PLEX_GUARD_STRICT_MODE',
+        value: 'false',
+        type: 'boolean' as const,
+      },
+      {
         key: 'MSG_DEVICE_PENDING',
         value:
           'Device pending approval. The server owner must approve this device before it can be used.',

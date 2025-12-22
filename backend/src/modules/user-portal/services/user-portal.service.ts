@@ -53,6 +53,7 @@ export interface UserPortalUserRules {
   concurrentStreamLimit: number | null; // null = global default, 0 = unlimited
   effectiveConcurrentStreamLimit: number; // The actual limit (resolved from user or global)
   defaultBlock: boolean | null; // null = global default
+  effectiveDefaultBlock: boolean; // The actual default (resolved from user or global)
   // User-wide time rules (no device specified)
   timeRules: UserPortalTimeRule[];
 }
@@ -230,6 +231,17 @@ export class UserPortalService {
       effectiveConcurrentStreamLimit = isNaN(parsed) ? 0 : parsed;
     }
 
+    // Get effective default block value
+    let effectiveDefaultBlock: boolean;
+    if (userPreference?.defaultBlock !== null && userPreference?.defaultBlock !== undefined) {
+      effectiveDefaultBlock = userPreference.defaultBlock;
+    } else {
+      const globalDefaultBlock = await this.appSettingsRepository.findOne({
+        where: { key: 'PLEX_GUARD_DEFAULT_BLOCK' },
+      });
+      effectiveDefaultBlock = globalDefaultBlock?.value === 'true';
+    }
+
     return {
       networkPolicy: userPreference?.networkPolicy || 'both',
       ipAccessPolicy: userPreference?.ipAccessPolicy || 'all',
@@ -237,6 +249,7 @@ export class UserPortalService {
       concurrentStreamLimit: userPreference?.concurrentStreamLimit ?? null,
       effectiveConcurrentStreamLimit,
       defaultBlock: userPreference?.defaultBlock ?? null,
+      effectiveDefaultBlock,
       timeRules: allUserTimeRules.map((rule) => ({
         id: rule.id,
         dayOfWeek: rule.dayOfWeek,
