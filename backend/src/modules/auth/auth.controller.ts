@@ -237,7 +237,7 @@ export class AuthController {
     const userPortalEnabled = await this.configService.getSetting(
       'USER_PORTAL_ENABLED',
     );
-    
+
     return { enabled: userPortalEnabled === true };
   }
 

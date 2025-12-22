@@ -51,7 +51,7 @@ interface VersionContextType {
 // Helper function for version comparison
 const isVersionNewer = (
   newVersion: string,
-  currentVersion: string,
+  currentVersion: string
 ): boolean => {
   const parseVersion = (version: string) => {
     return version.split(".").map((v) => parseInt(v) || 0);
@@ -74,7 +74,12 @@ const isVersionNewer = (
 const VersionContext = createContext<VersionContextType | undefined>(undefined);
 
 export function VersionProvider({ children }: { children: React.ReactNode }) {
-  const { setupRequired, isLoading: authLoading, isAuthenticated, user } = useAuth();
+  const {
+    setupRequired,
+    isLoading: authLoading,
+    isAuthenticated,
+    user,
+  } = useAuth();
   const isAdmin = user && isAdminUser(user);
   const [versionInfo, setVersionInfo] = useState<VersionInfo | null>(null);
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
@@ -155,14 +160,14 @@ export function VersionProvider({ children }: { children: React.ReactNode }) {
       const settingsResponse = await fetch(`${config.api.baseUrl}/config`);
       if (!settingsResponse.ok) {
         console.warn(
-          "Version check: Failed to fetch settings for update check",
+          "Version check: Failed to fetch settings for update check"
         );
         return null;
       }
 
       const settings = await settingsResponse.json();
       const autoCheckSetting = settings.find(
-        (setting: any) => setting.key === "AUTO_CHECK_UPDATES",
+        (setting: any) => setting.key === "AUTO_CHECK_UPDATES"
       );
       const shouldAutoCheck = autoCheckSetting?.value === "true";
 
@@ -172,19 +177,19 @@ export function VersionProvider({ children }: { children: React.ReactNode }) {
       }
 
       console.log(
-        "Version check: Auto-check enabled, fetching latest release informations...",
+        "Version check: Auto-check enabled, fetching latest release informations..."
       );
       // Update last check time
       lastUpdateCheckRef.current = now;
 
       // Fetch latest release from GitHub API
       const response = await fetch(
-        "https://api.github.com/repos/HydroshieldMKII/Guardian/releases/latest",
+        "https://api.github.com/repos/HydroshieldMKII/Guardian/releases/latest"
       );
       if (!response.ok) {
         console.warn(
           "Version check: Failed to check for updates:",
-          response.status,
+          response.status
         );
         return null;
       }
@@ -194,7 +199,7 @@ export function VersionProvider({ children }: { children: React.ReactNode }) {
       const currentVersion = versionInfo.version;
 
       console.log(
-        `Version check: Current: ${currentVersion}, Latest: ${latestVersion}`,
+        `Version check: Current: ${currentVersion}, Latest: ${latestVersion}`
       );
 
       // Compare versions
@@ -229,7 +234,7 @@ export function VersionProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error(
         "Version check: Failed to check for updates automatically:",
-        error,
+        error
       );
       return null;
     }
@@ -241,7 +246,7 @@ export function VersionProvider({ children }: { children: React.ReactNode }) {
     try {
       // Manual check bypasses the AUTO_CHECK_UPDATES setting
       const response = await fetch(
-        "https://api.github.com/repos/HydroshieldMKII/Guardian/releases/latest",
+        "https://api.github.com/repos/HydroshieldMKII/Guardian/releases/latest"
       );
       if (!response.ok) {
         console.warn("Failed to check for updates:", response.status);

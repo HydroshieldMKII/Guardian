@@ -11,13 +11,8 @@ const USER_PORTAL_ROUTES = ["/portal"];
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const {
-    isAuthenticated,
-    isLoading,
-    setupRequired,
-    backendError,
-    userType,
-  } = useAuth();
+  const { isAuthenticated, isLoading, setupRequired, backendError, userType } =
+    useAuth();
 
   useEffect(() => {
     if (isLoading || backendError) {
@@ -26,7 +21,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
 
     const isPublicRoute = PUBLIC_ROUTES.includes(pathname);
     const isUserPortalRoute = USER_PORTAL_ROUTES.some((route) =>
-      pathname.startsWith(route),
+      pathname.startsWith(route)
     );
 
     // If setup is required, redirect to setup page (unless already there)
@@ -81,7 +76,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
 
   const isPublicRoute = PUBLIC_ROUTES.includes(pathname);
   const isUserPortalRoute = USER_PORTAL_ROUTES.some((route) =>
-    pathname.startsWith(route),
+    pathname.startsWith(route)
   );
 
   const shouldRenderContent =

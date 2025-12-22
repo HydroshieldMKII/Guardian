@@ -8,7 +8,14 @@ import { UserPortalService } from './services/user-portal.service';
 import { UserPortalController } from './user-portal.controller';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([UserDevice, UserTimeRule, UserPreference, AppSettings])],
+  imports: [
+    TypeOrmModule.forFeature([
+      UserDevice,
+      UserTimeRule,
+      UserPreference,
+      AppSettings,
+    ]),
+  ],
   providers: [UserPortalService],
   controllers: [UserPortalController],
   exports: [UserPortalService],

@@ -57,7 +57,7 @@ export interface AuthContextType {
     username: string,
     email: string,
     password: string,
-    confirmPassword: string,
+    confirmPassword: string
   ) => Promise<void>;
   checkAuth: () => Promise<void>;
   retryConnection: () => Promise<void>;
@@ -108,7 +108,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (!setupRes.ok) {
         throw new Error(
-          `Backend returned ${setupRes.status}: ${setupRes.statusText}`,
+          `Backend returned ${setupRes.status}: ${setupRes.statusText}`
         );
       }
 
@@ -243,7 +243,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     username: string,
     email: string,
     password: string,
-    confirmPassword: string,
+    confirmPassword: string
   ) => {
     const response = await fetch("/api/pg/auth/create-admin", {
       method: "POST",

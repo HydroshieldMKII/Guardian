@@ -204,9 +204,7 @@ export class AuthService {
   /**
    * Validate and retrieve session - supports both admin and Plex user sessions
    */
-  async validateSession(
-    token: string,
-  ): Promise<
+  async validateSession(token: string): Promise<
     | (AdminUser & { sessionId: string; userType: SessionUserType })
     | {
         sessionId: string;

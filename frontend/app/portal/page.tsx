@@ -125,7 +125,7 @@ export default function UserPortalPage() {
   const [requestModalOpen, setRequestModalOpen] = useState(false);
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
   const [selectedDevice, setSelectedDevice] = useState<UserPortalDevice | null>(
-    null,
+    null
   );
   const [requestDescription, setRequestDescription] = useState("");
   const [isRequesting, setIsRequesting] = useState(false);
@@ -219,7 +219,7 @@ export default function UserPortalPage() {
           },
           credentials: "include",
           body: JSON.stringify({ description: requestDescription }),
-        },
+        }
       );
 
       if (!response.ok) {
@@ -265,12 +265,19 @@ export default function UserPortalPage() {
     return <Monitor className="h-5 w-5" />;
   };
 
-  const getStatusBadge = (status: string, hasTemporaryAccess: boolean, hasSubmittedNote?: boolean) => {
+  const getStatusBadge = (
+    status: string,
+    hasTemporaryAccess: boolean,
+    hasSubmittedNote?: boolean
+  ) => {
     if (hasTemporaryAccess) {
       return (
         <Tooltip>
           <TooltipTrigger asChild>
-            <Badge variant="outline" className="text-blue-500 border-blue-500 cursor-help">
+            <Badge
+              variant="outline"
+              className="text-blue-500 border-blue-500 cursor-help"
+            >
               <Clock className="mr-1 h-3 w-3" />
               Temporary Access
             </Badge>
@@ -287,7 +294,10 @@ export default function UserPortalPage() {
         return (
           <Tooltip>
             <TooltipTrigger asChild>
-              <Badge variant="outline" className="text-green-500 border-green-500 cursor-help">
+              <Badge
+                variant="outline"
+                className="text-green-500 border-green-500 cursor-help"
+              >
                 <CheckCircle className="mr-1 h-3 w-3" />
                 Approved
               </Badge>
@@ -301,13 +311,19 @@ export default function UserPortalPage() {
         return (
           <Tooltip>
             <TooltipTrigger asChild>
-              <Badge variant="outline" className="text-red-500 border-red-500 cursor-help">
+              <Badge
+                variant="outline"
+                className="text-red-500 border-red-500 cursor-help"
+              >
                 <XCircle className="mr-1 h-3 w-3" />
                 Rejected
               </Badge>
             </TooltipTrigger>
             <TooltipContent>
-              <p>This device has been rejected by the administrator.{hasSubmittedNote ? " Your note has been submitted." : ""}</p>
+              <p>
+                This device has been rejected by the administrator.
+                {hasSubmittedNote ? " Your note has been submitted." : ""}
+              </p>
             </TooltipContent>
           </Tooltip>
         );
@@ -324,7 +340,10 @@ export default function UserPortalPage() {
               </Badge>
             </TooltipTrigger>
             <TooltipContent>
-              <p>This device is awaiting approval from the administrator{hasSubmittedNote ? ". Your note has been submitted." : ""}</p>
+              <p>
+                This device is awaiting approval from the administrator
+                {hasSubmittedNote ? ". Your note has been submitted." : ""}
+              </p>
             </TooltipContent>
           </Tooltip>
         );
@@ -369,14 +388,19 @@ export default function UserPortalPage() {
           <div className="flex items-center gap-4">
             <Avatar className="h-10 w-10 ring-2 ring-primary/10">
               {getUserAvatar() && (
-                <AvatarImage src={getUserAvatar()!} alt={getUserDisplayName()} />
+                <AvatarImage
+                  src={getUserAvatar()!}
+                  alt={getUserDisplayName()}
+                />
               )}
               <AvatarFallback className="bg-primary/10 text-primary font-semibold">
                 {getUserDisplayName().charAt(0).toUpperCase()}
               </AvatarFallback>
             </Avatar>
             <div className="flex flex-col">
-              <span className="font-semibold text-lg">{getUserDisplayName()}</span>
+              <span className="font-semibold text-lg">
+                {getUserDisplayName()}
+              </span>
               <span className="text-xs text-muted-foreground">Plex User</span>
             </div>
           </div>
@@ -407,9 +431,9 @@ export default function UserPortalPage() {
                 <Moon className="h-4 w-4" />
               )}
             </Button>
-            <Button 
-              variant="ghost" 
-              size="sm" 
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={handleLogout}
               className="ml-2"
             >
@@ -456,7 +480,9 @@ export default function UserPortalPage() {
                               {getDeviceIcon(device.devicePlatform)}
                             </div>
                             <div className="min-w-0">
-                              <p className="font-semibold truncate">{device.deviceName}</p>
+                              <p className="font-semibold truncate">
+                                {device.deviceName}
+                              </p>
                               <p className="text-sm text-muted-foreground truncate">
                                 {device.deviceProduct} • {device.devicePlatform}
                               </p>
@@ -464,18 +490,23 @@ export default function UserPortalPage() {
                           </div>
 
                           <div className="flex items-center gap-3 flex-shrink-0">
-                            {getStatusBadge(device.status, device.hasTemporaryAccess, !!device.requestSubmittedAt)}
+                            {getStatusBadge(
+                              device.status,
+                              device.hasTemporaryAccess,
+                              !!device.requestSubmittedAt
+                            )}
 
                             {/* Show request button only if note not already submitted */}
-                            {!device.requestSubmittedAt && device.status === "pending" && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleRequestApproval(device)}
-                              >
-                                Add Note
-                              </Button>
-                            )}
+                            {!device.requestSubmittedAt &&
+                              device.status === "pending" && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleRequestApproval(device)}
+                                >
+                                  Add Note
+                                </Button>
+                              )}
                             {!device.requestSubmittedAt &&
                               device.status === "rejected" &&
                               settings?.allowRejectedRequests && (
@@ -489,38 +520,56 @@ export default function UserPortalPage() {
                               )}
                           </div>
                         </div>
-                        
+
                         {/* Show submitted note */}
-                        {device.requestSubmittedAt && device.requestDescription && (
-                          <div className="px-4 sm:px-5 pb-4 sm:pb-5 pt-0">
-                            <div className={`rounded-lg p-3 border ${device.requestNoteReadAt ? 'bg-green-500/5 border-green-500/20' : 'bg-muted/50 border-border/50'}`}>
-                              <div className="flex items-start gap-2">
-                                <MessageSquare className={`h-4 w-4 mt-0.5 flex-shrink-0 ${device.requestNoteReadAt ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground'}`} />
-                                <div className="min-w-0 flex-1">
-                                  <div className="flex items-center justify-between mb-1">
-                                    <p className="text-xs text-muted-foreground">Your note to admin:</p>
-                                    {device.requestNoteReadAt ? (
-                                      <Badge variant="outline" className="text-xs border-green-600 dark:border-green-700 text-green-700 dark:text-green-400">
-                                        <CheckCircle className="h-3 w-3 mr-1" />
-                                        Read
-                                      </Badge>
-                                    ) : (
-                                      <Badge variant="outline" className="text-xs border-amber-600 dark:border-amber-700 text-amber-700 dark:text-amber-400">
-                                        Pending
-                                      </Badge>
+                        {device.requestSubmittedAt &&
+                          device.requestDescription && (
+                            <div className="px-4 sm:px-5 pb-4 sm:pb-5 pt-0">
+                              <div
+                                className={`rounded-lg p-3 border ${device.requestNoteReadAt ? "bg-green-500/5 border-green-500/20" : "bg-muted/50 border-border/50"}`}
+                              >
+                                <div className="flex items-start gap-2">
+                                  <MessageSquare
+                                    className={`h-4 w-4 mt-0.5 flex-shrink-0 ${device.requestNoteReadAt ? "text-green-600 dark:text-green-400" : "text-muted-foreground"}`}
+                                  />
+                                  <div className="min-w-0 flex-1">
+                                    <div className="flex items-center justify-between mb-1">
+                                      <p className="text-xs text-muted-foreground">
+                                        Your note to admin:
+                                      </p>
+                                      {device.requestNoteReadAt ? (
+                                        <Badge
+                                          variant="outline"
+                                          className="text-xs border-green-600 dark:border-green-700 text-green-700 dark:text-green-400"
+                                        >
+                                          <CheckCircle className="h-3 w-3 mr-1" />
+                                          Read
+                                        </Badge>
+                                      ) : (
+                                        <Badge
+                                          variant="outline"
+                                          className="text-xs border-amber-600 dark:border-amber-700 text-amber-700 dark:text-amber-400"
+                                        >
+                                          Pending
+                                        </Badge>
+                                      )}
+                                    </div>
+                                    <p className="text-sm">
+                                      {device.requestDescription}
+                                    </p>
+                                    {device.requestNoteReadAt && (
+                                      <p className="text-xs text-green-600 dark:text-green-400 mt-2">
+                                        Read on{" "}
+                                        {new Date(
+                                          device.requestNoteReadAt
+                                        ).toLocaleString()}
+                                      </p>
                                     )}
                                   </div>
-                                  <p className="text-sm">{device.requestDescription}</p>
-                                  {device.requestNoteReadAt && (
-                                    <p className="text-xs text-green-600 dark:text-green-400 mt-2">
-                                      Read on {new Date(device.requestNoteReadAt).toLocaleString()}
-                                    </p>
-                                  )}
                                 </div>
                               </div>
                             </div>
-                          </div>
-                        )}
+                          )}
 
                         {/* Show device-specific rules if available */}
                         {device.rules && device.rules.timeRules.length > 0 && (
@@ -532,12 +581,25 @@ export default function UserPortalPage() {
                               </p>
                               <div className="space-y-1">
                                 {device.rules.timeRules.map((rule) => (
-                                  <div key={rule.id} className="flex items-center justify-between text-sm">
+                                  <div
+                                    key={rule.id}
+                                    className="flex items-center justify-between text-sm"
+                                  >
                                     <span className="text-muted-foreground">
-                                      {DAY_NAMES[rule.dayOfWeek]}: {rule.startTime} - {rule.endTime}
-                                      {rule.ruleName && <span className="ml-1 italic">({rule.ruleName})</span>}
+                                      {DAY_NAMES[rule.dayOfWeek]}:{" "}
+                                      {rule.startTime} - {rule.endTime}
+                                      {rule.ruleName && (
+                                        <span className="ml-1 italic">
+                                          ({rule.ruleName})
+                                        </span>
+                                      )}
                                     </span>
-                                    <Badge variant={rule.enabled ? "outline" : "secondary"} className="text-xs">
+                                    <Badge
+                                      variant={
+                                        rule.enabled ? "outline" : "secondary"
+                                      }
+                                      className="text-xs"
+                                    >
                                       {rule.enabled ? "Active" : "Inactive"}
                                     </Badge>
                                   </div>
@@ -558,126 +620,146 @@ export default function UserPortalPage() {
           {userRules && (
             <section>
               <div className="mb-6">
-                <h2 className="text-2xl font-bold tracking-tight">Your Rules</h2>
+                <h2 className="text-2xl font-bold tracking-tight">
+                  Your Rules
+                </h2>
                 <p className="text-muted-foreground mt-1">
                   Access rules set by the server administrator for your account
                 </p>
               </div>
 
               <div className="space-y-4">
-              {/* Network & Access Policy */}
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <Globe className="h-5 w-5 text-primary" />
-                    Network Access
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4 pt-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Wifi className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm">Network Policy</span>
-                    </div>
-                    <Badge variant="outline" className="capitalize">
-                      {userRules.networkPolicy === "both" 
-                        ? "LAN & WAN" 
-                        : userRules.networkPolicy.toUpperCase()}
-                    </Badge>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Shield className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm">IP Access</span>
-                    </div>
-                    <Badge variant="outline" className="capitalize">
-                      {userRules.ipAccessPolicy === "all" 
-                        ? "All IPs Allowed" 
-                        : "Restricted IPs"}
-                    </Badge>
-                  </div>
-                  {userRules.ipAccessPolicy === "restricted" && userRules.allowedIPs && userRules.allowedIPs.length > 0 && (
-                    <div className="pt-2 border-t">
-                      <p className="text-xs text-muted-foreground mb-1">Allowed IP addresses:</p>
-                      <div className="flex flex-wrap gap-1">
-                        {userRules.allowedIPs.map((ip, idx) => (
-                          <Badge key={idx} variant="secondary" className="text-xs font-mono">
-                            {ip}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Concurrent Stream Limit */}
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <Users className="h-5 w-5 text-primary" />
-                    Concurrent Streams
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="pt-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Maximum simultaneous streams</span>
-                    <Badge variant="outline">
-                      {userRules.effectiveConcurrentStreamLimit === 0
-                        ? "Unlimited"
-                        : `${userRules.effectiveConcurrentStreamLimit} stream${userRules.effectiveConcurrentStreamLimit > 1 ? "s" : ""}`}
-                    </Badge>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* User-wide Time Rules */}
-              {userRules.timeRules.length > 0 && (
+                {/* Network & Access Policy */}
                 <Card>
-                  <CardHeader className="pb-3">
+                  <CardHeader className="pb-2">
                     <CardTitle className="text-lg flex items-center gap-2">
-                      <Clock className="h-5 w-5 text-primary" />
-                      Viewing Schedule
+                      <Globe className="h-5 w-5 text-primary" />
+                      Network Access
                     </CardTitle>
-                    <CardDescription>
-                      Time restrictions that apply to all your devices
-                    </CardDescription>
                   </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      {userRules.timeRules.map((rule) => (
-                        <div key={rule.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
-                          <div className="flex items-center gap-3">
-                            <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${
-                              rule.enabled 
-                                ? "bg-green-500/10 text-green-500" 
-                                : "bg-muted text-muted-foreground"
-                            }`}>
-                              <Clock className="h-4 w-4" />
-                            </div>
-                            <div>
-                              <p className="text-sm font-medium">
-                                {DAY_NAMES[rule.dayOfWeek]}
-                                {rule.ruleName && (
-                                  <span className="text-muted-foreground font-normal ml-2">
-                                    — {rule.ruleName}
-                                  </span>
-                                )}
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                {rule.startTime} - {rule.endTime}
-                              </p>
-                            </div>
+                  <CardContent className="space-y-4 pt-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Wifi className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm">Network Policy</span>
+                      </div>
+                      <Badge variant="outline" className="capitalize">
+                        {userRules.networkPolicy === "both"
+                          ? "LAN & WAN"
+                          : userRules.networkPolicy.toUpperCase()}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Shield className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm">IP Access</span>
+                      </div>
+                      <Badge variant="outline" className="capitalize">
+                        {userRules.ipAccessPolicy === "all"
+                          ? "All IPs Allowed"
+                          : "Restricted IPs"}
+                      </Badge>
+                    </div>
+                    {userRules.ipAccessPolicy === "restricted" &&
+                      userRules.allowedIPs &&
+                      userRules.allowedIPs.length > 0 && (
+                        <div className="pt-2 border-t">
+                          <p className="text-xs text-muted-foreground mb-1">
+                            Allowed IP addresses:
+                          </p>
+                          <div className="flex flex-wrap gap-1">
+                            {userRules.allowedIPs.map((ip, idx) => (
+                              <Badge
+                                key={idx}
+                                variant="secondary"
+                                className="text-xs font-mono"
+                              >
+                                {ip}
+                              </Badge>
+                            ))}
                           </div>
-                          <Badge variant={rule.enabled ? "default" : "secondary"} className="text-xs">
-                            {rule.enabled ? "Active" : "Inactive"}
-                          </Badge>
                         </div>
-                      ))}
+                      )}
+                  </CardContent>
+                </Card>
+
+                {/* Concurrent Stream Limit */}
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Users className="h-5 w-5 text-primary" />
+                      Concurrent Streams
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm">
+                        Maximum simultaneous streams
+                      </span>
+                      <Badge variant="outline">
+                        {userRules.effectiveConcurrentStreamLimit === 0
+                          ? "Unlimited"
+                          : `${userRules.effectiveConcurrentStreamLimit} stream${userRules.effectiveConcurrentStreamLimit > 1 ? "s" : ""}`}
+                      </Badge>
                     </div>
                   </CardContent>
                 </Card>
-              )}
+
+                {/* User-wide Time Rules */}
+                {userRules.timeRules.length > 0 && (
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        <Clock className="h-5 w-5 text-primary" />
+                        Viewing Schedule
+                      </CardTitle>
+                      <CardDescription>
+                        Time restrictions that apply to all your devices
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        {userRules.timeRules.map((rule) => (
+                          <div
+                            key={rule.id}
+                            className="flex items-center justify-between p-2 rounded-lg bg-muted/50"
+                          >
+                            <div className="flex items-center gap-3">
+                              <div
+                                className={`h-8 w-8 rounded-lg flex items-center justify-center ${
+                                  rule.enabled
+                                    ? "bg-green-500/10 text-green-500"
+                                    : "bg-muted text-muted-foreground"
+                                }`}
+                              >
+                                <Clock className="h-4 w-4" />
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium">
+                                  {DAY_NAMES[rule.dayOfWeek]}
+                                  {rule.ruleName && (
+                                    <span className="text-muted-foreground font-normal ml-2">
+                                      — {rule.ruleName}
+                                    </span>
+                                  )}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  {rule.startTime} - {rule.endTime}
+                                </p>
+                              </div>
+                            </div>
+                            <Badge
+                              variant={rule.enabled ? "default" : "secondary"}
+                              className="text-xs"
+                            >
+                              {rule.enabled ? "Active" : "Inactive"}
+                            </Badge>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
               </div>
             </section>
           )}
@@ -705,9 +787,7 @@ export default function UserPortalPage() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">
-                Note (optional)
-              </label>
+              <label className="text-sm font-medium">Note (optional)</label>
               <Textarea
                 placeholder="e.g., This is my living room TV..."
                 value={requestDescription}
@@ -729,10 +809,12 @@ export default function UserPortalPage() {
             >
               Cancel
             </Button>
-            <Button onClick={() => {
-              setRequestModalOpen(false);
-              setConfirmModalOpen(true);
-            }}>
+            <Button
+              onClick={() => {
+                setRequestModalOpen(false);
+                setConfirmModalOpen(true);
+              }}
+            >
               Continue
             </Button>
           </DialogFooter>
@@ -748,8 +830,11 @@ export default function UserPortalPage() {
               Confirm Submission
             </DialogTitle>
             <DialogDescription className="pt-2">
-              <strong className="text-foreground">Important:</strong> You can only submit a note <strong className="text-foreground">once per device</strong>. 
-              After submission, you will not be able to modify or add another note for this device.
+              <strong className="text-foreground">Important:</strong> You can
+              only submit a note{" "}
+              <strong className="text-foreground">once per device</strong>.
+              After submission, you will not be able to modify or add another
+              note for this device.
             </DialogDescription>
           </DialogHeader>
 
@@ -768,7 +853,7 @@ export default function UserPortalPage() {
                 <p className="text-sm">{requestDescription}</p>
               </div>
             )}
-            
+
             {!requestDescription && (
               <p className="text-sm text-muted-foreground italic">
                 No note provided. You can go back to add one.
@@ -787,8 +872,8 @@ export default function UserPortalPage() {
             >
               Go Back
             </Button>
-            <Button 
-              onClick={submitApprovalRequest} 
+            <Button
+              onClick={submitApprovalRequest}
               disabled={isRequesting}
               variant="default"
             >

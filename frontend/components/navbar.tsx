@@ -4,7 +4,17 @@ import Link from "next/link";
 import Image from "next/image";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Settings, Moon, Sun, User, LogOut, Edit, AlertTriangle, Save, Loader2 } from "lucide-react";
+import {
+  Settings,
+  Moon,
+  Sun,
+  User,
+  LogOut,
+  Edit,
+  AlertTriangle,
+  Save,
+  Loader2,
+} from "lucide-react";
 import { useTheme } from "@/hooks/use-theme";
 import { useVersion } from "@/contexts/version-context";
 import { useAuth, isAdminUser, isPlexUser } from "@/contexts/auth-context";
@@ -235,7 +245,10 @@ export function Navbar() {
                     title={getDisplayName()}
                   >
                     <Avatar className="h-7 w-7 sm:h-8 sm:w-8">
-                      <AvatarImage src={getAvatarUrl()} alt={getDisplayName()} />
+                      <AvatarImage
+                        src={getAvatarUrl()}
+                        alt={getDisplayName()}
+                      />
                       <AvatarFallback className="text-[10px] sm:text-xs font-semibold">
                         {getAvatarInitials()}
                       </AvatarFallback>
@@ -247,7 +260,10 @@ export function Navbar() {
                   <div className="px-3 py-2">
                     <div className="flex items-center gap-3">
                       <Avatar className="h-10 w-10">
-                        <AvatarImage src={getAvatarUrl()} alt={getDisplayName()} />
+                        <AvatarImage
+                          src={getAvatarUrl()}
+                          alt={getDisplayName()}
+                        />
                         <AvatarFallback className="text-sm font-semibold">
                           {getAvatarInitials()}
                         </AvatarFallback>

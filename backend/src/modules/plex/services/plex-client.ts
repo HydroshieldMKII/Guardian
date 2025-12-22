@@ -136,8 +136,14 @@ export class PlexClient {
 
       req.on('error', (error: NodeJS.ErrnoException) => {
         // Only log as error for unexpected failures, use warn for transient network issues
-        if (error.code === 'EHOSTUNREACH' || error.code === 'ECONNREFUSED' || error.code === 'ETIMEDOUT') {
-          this.logger.warn(`Plex server unreachable (${error.code}): ${ip}:${port}`);
+        if (
+          error.code === 'EHOSTUNREACH' ||
+          error.code === 'ECONNREFUSED' ||
+          error.code === 'ETIMEDOUT'
+        ) {
+          this.logger.warn(
+            `Plex server unreachable (${error.code}): ${ip}:${port}`,
+          );
         } else {
           this.logger.error(`Request failed for ${fullUrl}:`, error);
         }

@@ -465,7 +465,8 @@ export function GeneralSettings({
       (s) => s.key === "USER_PORTAL_ALLOW_REJECTED_REQUESTS"
     );
 
-    if (!portalEnabledSetting && !showRulesSetting && !allowRejectedSetting) return null;
+    if (!portalEnabledSetting && !showRulesSetting && !allowRejectedSetting)
+      return null;
 
     const portalEnabledValue = portalEnabledSetting
       ? (formData[portalEnabledSetting.key] ?? portalEnabledSetting.value)
@@ -520,7 +521,7 @@ export function GeneralSettings({
             Allow Plex users to log in and manage their devices
           </p>
         </div>
-        
+
         {/* Parent setting: USER_PORTAL_ENABLED */}
         {portalEnabledSetting && portalEnabledInfo && (
           <div className="flex items-center justify-between">
@@ -550,7 +551,8 @@ export function GeneralSettings({
           className={`ml-6 space-y-4 transition-opacity duration-200 ${!isPortalEnabled ? "opacity-50" : ""}`}
         >
           {showRulesSetting && renderSwitch(showRulesSetting, !isPortalEnabled)}
-          {allowRejectedSetting && renderSwitch(allowRejectedSetting, !isPortalEnabled)}
+          {allowRejectedSetting &&
+            renderSwitch(allowRejectedSetting, !isPortalEnabled)}
         </div>
       </div>
     );

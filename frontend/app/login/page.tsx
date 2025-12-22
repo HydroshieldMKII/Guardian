@@ -109,18 +109,15 @@ export default function LoginPage() {
 
     // Check if PIN has expired
     const expiresAt = new Date(plexPin.expiresAt);
-    const timeout = setTimeout(
-      () => {
-        setPlexPin(null);
-        setPlexLoading(false);
-        toast({
-          title: "Plex Login Expired",
-          description: "Please try again",
-          variant: "destructive",
-        });
-      },
-      expiresAt.getTime() - Date.now(),
-    );
+    const timeout = setTimeout(() => {
+      setPlexPin(null);
+      setPlexLoading(false);
+      toast({
+        title: "Plex Login Expired",
+        description: "Please try again",
+        variant: "destructive",
+      });
+    }, expiresAt.getTime() - Date.now());
 
     return () => {
       clearInterval(interval);
@@ -163,7 +160,7 @@ export default function LoginPage() {
       const popup = window.open(
         authUrl,
         "PlexAuth",
-        `width=${width},height=${height},left=${left},top=${top},toolbar=no,menubar=no,scrollbars=yes,resizable=yes`,
+        `width=${width},height=${height},left=${left},top=${top},toolbar=no,menubar=no,scrollbars=yes,resizable=yes`
       );
 
       if (popup) {

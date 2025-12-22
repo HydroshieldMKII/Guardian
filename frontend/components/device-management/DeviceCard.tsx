@@ -63,7 +63,9 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
   const { hasTemporaryAccess, getTemporaryAccessTimeLeft } = useDeviceUtils();
   const { toast } = useToast();
   const [markingAsRead, setMarkingAsRead] = useState(false);
-  const [noteReadAt, setNoteReadAt] = useState<string | undefined>(device.requestNoteReadAt);
+  const [noteReadAt, setNoteReadAt] = useState<string | undefined>(
+    device.requestNoteReadAt
+  );
 
   // Sync noteReadAt when device prop changes
   React.useEffect(() => {
@@ -88,7 +90,10 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
     } catch (error) {
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to mark note as read",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to mark note as read",
         variant: "destructive",
       });
     } finally {
@@ -225,16 +230,22 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
               </span>
             </div>
           </div>
-          
           {/* User Note - Mobile */}
           {device.requestDescription && device.requestSubmittedAt && (
-            <div className={`rounded-lg p-2.5 border ${noteReadAt ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800' : 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800'}`}>
+            <div
+              className={`rounded-lg p-2.5 border ${noteReadAt ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800" : "bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800"}`}
+            >
               <div className="flex items-start gap-2">
-                <MessageSquare className={`w-3.5 h-3.5 mt-0.5 flex-shrink-0 ${noteReadAt ? 'text-green-600 dark:text-green-400' : 'text-amber-600 dark:text-amber-400'}`} />
+                <MessageSquare
+                  className={`w-3.5 h-3.5 mt-0.5 flex-shrink-0 ${noteReadAt ? "text-green-600 dark:text-green-400" : "text-amber-600 dark:text-amber-400"}`}
+                />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center justify-between mb-0.5">
-                    <p className={`text-[10px] font-medium ${noteReadAt ? 'text-green-700 dark:text-green-300' : 'text-amber-700 dark:text-amber-300'}`}>
-                      User Note {noteReadAt && <span className="ml-1">(Read)</span>}
+                    <p
+                      className={`text-[10px] font-medium ${noteReadAt ? "text-green-700 dark:text-green-300" : "text-amber-700 dark:text-amber-300"}`}
+                    >
+                      User Note{" "}
+                      {noteReadAt && <span className="ml-1">(Read)</span>}
                     </p>
                     {!noteReadAt && (
                       <Button
@@ -255,12 +266,15 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
                       </Button>
                     )}
                   </div>
-                  <p className={`text-xs ${noteReadAt ? 'text-green-800 dark:text-green-200' : 'text-amber-800 dark:text-amber-200'}`}>{device.requestDescription}</p>
+                  <p
+                    className={`text-xs ${noteReadAt ? "text-green-800 dark:text-green-200" : "text-amber-800 dark:text-amber-200"}`}
+                  >
+                    {device.requestDescription}
+                  </p>
                 </div>
               </div>
             </div>
           )}
-          
           {/* Action Buttons - Mobile */}
           <div className="flex flex-col gap-2 pt-2 border-t border-border/50">
             {/* Details Button - Full width on mobile */}
@@ -534,16 +548,23 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
                 </span>
               </div>
             </div>
-            
+
             {/* User Note - Desktop */}
             {device.requestDescription && device.requestSubmittedAt && (
-              <div className={`mt-3 rounded-lg p-3 border ${noteReadAt ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800' : 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800'}`}>
+              <div
+                className={`mt-3 rounded-lg p-3 border ${noteReadAt ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800" : "bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800"}`}
+              >
                 <div className="flex items-start gap-2">
-                  <MessageSquare className={`w-4 h-4 mt-0.5 flex-shrink-0 ${noteReadAt ? 'text-green-600 dark:text-green-400' : 'text-amber-600 dark:text-amber-400'}`} />
+                  <MessageSquare
+                    className={`w-4 h-4 mt-0.5 flex-shrink-0 ${noteReadAt ? "text-green-600 dark:text-green-400" : "text-amber-600 dark:text-amber-400"}`}
+                  />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between mb-1">
-                      <p className={`text-xs font-medium ${noteReadAt ? 'text-green-700 dark:text-green-300' : 'text-amber-700 dark:text-amber-300'}`}>
-                        User Note {noteReadAt && <span className="ml-1">(Read)</span>}
+                      <p
+                        className={`text-xs font-medium ${noteReadAt ? "text-green-700 dark:text-green-300" : "text-amber-700 dark:text-amber-300"}`}
+                      >
+                        User Note{" "}
+                        {noteReadAt && <span className="ml-1">(Read)</span>}
                       </p>
                       {!noteReadAt && (
                         <Button
@@ -551,7 +572,7 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
                           size="sm"
                           onClick={handleMarkNoteAsRead}
                           disabled={markingAsRead}
-                          className={`h-6 px-2 text-xs ${noteReadAt ? 'text-green-700 dark:text-green-300 hover:bg-green-100 dark:hover:bg-green-800/30' : 'text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-800/30'}`}
+                          className={`h-6 px-2 text-xs ${noteReadAt ? "text-green-700 dark:text-green-300 hover:bg-green-100 dark:hover:bg-green-800/30" : "text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-800/30"}`}
                         >
                           {markingAsRead ? (
                             <RefreshCw className="w-3 h-3 animate-spin" />
@@ -564,7 +585,11 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
                         </Button>
                       )}
                     </div>
-                    <p className={`text-sm ${noteReadAt ? 'text-green-800 dark:text-green-200' : 'text-amber-800 dark:text-amber-200'}`}>{device.requestDescription}</p>
+                    <p
+                      className={`text-sm ${noteReadAt ? "text-green-800 dark:text-green-200" : "text-amber-800 dark:text-amber-200"}`}
+                    >
+                      {device.requestDescription}
+                    </p>
                   </div>
                 </div>
               </div>

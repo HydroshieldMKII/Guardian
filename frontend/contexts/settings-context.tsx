@@ -24,7 +24,7 @@ interface SettingsContextType {
 }
 
 const SettingsContext = createContext<SettingsContextType | undefined>(
-  undefined,
+  undefined
 );
 
 interface SettingsProviderProps {
@@ -34,7 +34,12 @@ interface SettingsProviderProps {
 export const SettingsProvider: React.FC<SettingsProviderProps> = ({
   children,
 }) => {
-  const { setupRequired, isLoading: authLoading, isAuthenticated, user } = useAuth();
+  const {
+    setupRequired,
+    isLoading: authLoading,
+    isAuthenticated,
+    user,
+  } = useAuth();
   const isAdmin = user && isAdminUser(user);
   const [settings, setSettings] = useState<AppSetting[]>([]);
   const [loading, setLoading] = useState(true);

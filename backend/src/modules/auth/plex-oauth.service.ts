@@ -196,7 +196,10 @@ export class PlexOAuthService {
                 reject(error);
               });
           } catch (error) {
-            this.logger.error('Failed to parse Plex PIN check response:', error);
+            this.logger.error(
+              'Failed to parse Plex PIN check response:',
+              error,
+            );
             resolve(null);
           }
         });
@@ -326,7 +329,9 @@ export class PlexOAuthService {
   /**
    * Check if a Plex account is linked to an admin
    */
-  async isPlexAccountLinkedToAdmin(plexUserId: string): Promise<AdminUser | null> {
+  async isPlexAccountLinkedToAdmin(
+    plexUserId: string,
+  ): Promise<AdminUser | null> {
     return this.adminUserRepository.findOne({
       where: { plexUserId: plexUserId },
     });
