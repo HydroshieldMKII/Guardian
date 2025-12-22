@@ -60,7 +60,10 @@ export const ConcurrentStreamModal: React.FC<ConcurrentStreamModalProps> = ({
       const fetchCurrentLimit = async () => {
         setFetching(true);
         try {
-          const info = await apiClient.getUserConcurrentStreamInfo<ConcurrentStreamInfo>(userId);
+          const info =
+            await apiClient.getUserConcurrentStreamInfo<ConcurrentStreamInfo>(
+              userId
+            );
           const hasCustomLimit = info.isOverridden;
           setUseGlobalDefault(!hasCustomLimit);
           setCustomLimit(hasCustomLimit ? String(info.limit ?? 0) : "0");
@@ -133,71 +136,71 @@ export const ConcurrentStreamModal: React.FC<ConcurrentStreamModalProps> = ({
           </div>
         ) : (
           <div className="space-y-4 py-4">
-          {/* Global limit info */}
-          <div className="flex items-start gap-2 p-3 bg-muted/50 rounded-lg">
-            <Info className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-            <div className="text-sm">
-              <p className="text-muted-foreground">
-                Global limit:{" "}
-                <span className="font-medium text-foreground">
-                  {globalLimitValue === 0 ? "Unlimited" : globalLimitValue}
+            {/* Global limit info */}
+            <div className="flex items-start gap-2 p-3 bg-muted/50 rounded-lg">
+              <Info className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+              <div className="text-sm">
+                <p className="text-muted-foreground">
+                  Global limit:{" "}
+                  <span className="font-medium text-foreground">
+                    {globalLimitValue === 0 ? "Unlimited" : globalLimitValue}
+                  </span>
+                </p>
+              </div>
+            </div>
+
+            {/* Use global default toggle */}
+            <div className="flex items-center justify-between p-3 border rounded-lg">
+              <div className="space-y-0.5">
+                <Label htmlFor="use-global" className="text-sm font-medium">
+                  Use global default
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Apply the global concurrent stream limit to this user
+                </p>
+              </div>
+              <Switch
+                id="use-global"
+                checked={useGlobalDefault}
+                onCheckedChange={setUseGlobalDefault}
+                className="cursor-pointer"
+              />
+            </div>
+
+            {/* Custom limit input */}
+            <div
+              className={`space-y-2 transition-opacity duration-200 ${useGlobalDefault ? "opacity-50" : ""}`}
+            >
+              <Label htmlFor="custom-limit" className="text-sm font-medium">
+                Custom limit for this user
+              </Label>
+              <Input
+                id="custom-limit"
+                type="number"
+                min="0"
+                value={customLimit}
+                onChange={(e) => setCustomLimit(e.target.value)}
+                disabled={useGlobalDefault}
+                placeholder="0 = unlimited"
+                className="cursor-pointer"
+              />
+              <p className="text-xs text-muted-foreground">
+                Set to 0 for unlimited streams, or enter a specific limit
+              </p>
+            </div>
+
+            {/* Effective limit display */}
+            <div className="p-3 bg-primary/5 border border-primary/20 rounded-lg">
+              <p className="text-sm">
+                <span className="text-muted-foreground">Effective limit: </span>
+                <span className="font-semibold">
+                  {effectiveLimit === 0
+                    ? "Unlimited"
+                    : `${effectiveLimit} concurrent stream${effectiveLimit !== 1 ? "s" : ""}`}
                 </span>
               </p>
             </div>
           </div>
-
-          {/* Use global default toggle */}
-          <div className="flex items-center justify-between p-3 border rounded-lg">
-            <div className="space-y-0.5">
-              <Label htmlFor="use-global" className="text-sm font-medium">
-                Use global default
-              </Label>
-              <p className="text-xs text-muted-foreground">
-                Apply the global concurrent stream limit to this user
-              </p>
-            </div>
-            <Switch
-              id="use-global"
-              checked={useGlobalDefault}
-              onCheckedChange={setUseGlobalDefault}
-              className="cursor-pointer"
-            />
-          </div>
-
-          {/* Custom limit input */}
-          <div
-            className={`space-y-2 transition-opacity duration-200 ${useGlobalDefault ? "opacity-50" : ""}`}
-          >
-            <Label htmlFor="custom-limit" className="text-sm font-medium">
-              Custom limit for this user
-            </Label>
-            <Input
-              id="custom-limit"
-              type="number"
-              min="0"
-              value={customLimit}
-              onChange={(e) => setCustomLimit(e.target.value)}
-              disabled={useGlobalDefault}
-              placeholder="0 = unlimited"
-              className="cursor-pointer"
-            />
-            <p className="text-xs text-muted-foreground">
-              Set to 0 for unlimited streams, or enter a specific limit
-            </p>
-          </div>
-
-          {/* Effective limit display */}
-          <div className="p-3 bg-primary/5 border border-primary/20 rounded-lg">
-            <p className="text-sm">
-              <span className="text-muted-foreground">Effective limit: </span>
-              <span className="font-semibold">
-                {effectiveLimit === 0
-                  ? "Unlimited"
-                  : `${effectiveLimit} concurrent stream${effectiveLimit !== 1 ? "s" : ""}`}
-              </span>
-            </p>
-          </div>
-        </div>
         )}
 
         <DialogFooter>

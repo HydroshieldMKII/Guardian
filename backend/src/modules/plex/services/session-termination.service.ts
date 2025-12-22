@@ -38,7 +38,6 @@ export class SessionTerminationService {
   private readonly logger = new Logger(SessionTerminationService.name);
   private streamBlockedCallbacks: Array<(event: StreamBlockedEvent) => void> =
     [];
-  private sessionsData: PlexSessionsResponse | null = null;
 
   constructor(
     @InjectRepository(UserDevice)
@@ -134,9 +133,6 @@ export class SessionTerminationService {
     const stoppedSessions: string[] = [];
     const errors: string[] = [];
 
-    // Store sessions data for concurrent stream checking
-    this.sessionsData = sessionsData;
-
     try {
       const sessions = sessionsData?.MediaContainer?.Metadata || [];
 
@@ -164,7 +160,7 @@ export class SessionTerminationService {
             continue;
           }
 
-          const shouldStopResult = await this.shouldStopSession(session, true); // skipConcurrentCheck = true
+          const shouldStopResult = await this.shouldStopSession(session);
 
           if (shouldStopResult.shouldStop) {
             const deviceIdentifier =
@@ -209,7 +205,10 @@ export class SessionTerminationService {
           errors.push(
             `Error processing session ${sessionKeyForError}: ${error.message}`,
           );
-          this.logger.error(`Error processing session ${sessionKeyForError}`, error);
+          this.logger.error(
+            `Error processing session ${sessionKeyForError}`,
+            error,
+          );
         }
       }
 
@@ -250,28 +249,37 @@ export class SessionTerminationService {
     for (const [userId, userSessions] of sessionsByUser) {
       try {
         // Get the user's effective limit
-        const limit = await this.concurrentStreamService.getEffectiveLimit(userId);
-        
+        const limit =
+          await this.concurrentStreamService.getEffectiveLimit(userId);
+
         // 0 means unlimited
         if (limit === 0) continue;
 
         // Filter sessions that count toward limit (exclude excluded devices, temp access, etc.)
-        const countableSessions = await this.filterCountableSessions(userId, userSessions);
-        
+        const countableSessions =
+          await this.concurrentStreamService.filterCountableSessions(
+            userId,
+            userSessions,
+          );
+
         if (countableSessions.length <= limit) continue;
 
         // Get session start times from history to determine which are newest
-        const sessionsWithTimes = await this.getSessionStartTimes(countableSessions);
-        
+        const sessionsWithTimes =
+          await this.getSessionStartTimes(countableSessions);
+
         // Sort by start time descending (newest first)
         sessionsWithTimes.sort((a, b) => b.startTime - a.startTime);
 
         // Calculate how many to terminate
         const toTerminate = sessionsWithTimes.length - limit;
-        
+
         // Get the termination message
-        const message = await this.configService.getSetting('MSG_CONCURRENT_LIMIT');
-        const reason = (message as string) || 
+        const message = await this.configService.getSetting(
+          'MSG_CONCURRENT_LIMIT',
+        );
+        const reason =
+          (message as string) ||
           'You have reached your concurrent stream limit. Please stop another stream before starting a new one.';
 
         // Terminate the newest sessions (they're at the front after sorting)
@@ -285,7 +293,8 @@ export class SessionTerminationService {
           try {
             const username = session.User?.title || 'Unknown';
             const deviceName = session.Player?.title || 'Unknown Device';
-            const deviceIdentifier = session.Player?.machineIdentifier || 'unknown';
+            const deviceIdentifier =
+              session.Player?.machineIdentifier || 'unknown';
             const sessionKey = session.sessionKey;
 
             await this.terminateSession(sessionId, reason);
@@ -293,7 +302,7 @@ export class SessionTerminationService {
 
             this.logger.warn(
               `STREAM BLOCKED (Concurrent Limit)! User: ${username}, Device: ${deviceName}, ` +
-              `Session: ${sessionId}, Streams: ${countableSessions.length}/${limit} (terminating newest)`,
+                `Session: ${sessionId}, Streams: ${countableSessions.length}/${limit} (terminating newest)`,
             );
 
             this.emitStreamBlockedEvent({
@@ -305,13 +314,20 @@ export class SessionTerminationService {
               ipAddress: session.Player?.address,
             });
           } catch (error) {
-            errors.push(`Error terminating session ${sessionId}: ${error.message}`);
+            errors.push(
+              `Error terminating session ${sessionId}: ${error.message}`,
+            );
             this.logger.error(`Error terminating session ${sessionId}`, error);
           }
         }
       } catch (error) {
-        errors.push(`Error checking concurrent limits for user ${userId}: ${error.message}`);
-        this.logger.error(`Error checking concurrent limits for user ${userId}`, error);
+        errors.push(
+          `Error checking concurrent limits for user ${userId}: ${error.message}`,
+        );
+        this.logger.error(
+          `Error checking concurrent limits for user ${userId}`,
+          error,
+        );
       }
     }
 
@@ -319,61 +335,26 @@ export class SessionTerminationService {
   }
 
   /**
-   * Filter sessions to only those that count toward concurrent limit.
-   */
-  private async filterCountableSessions(userId: string, sessions: any[]): Promise<any[]> {
-    const includeTempAccess = await this.configService.getSetting(
-      'CONCURRENT_LIMIT_INCLUDE_TEMP_ACCESS',
-    );
-
-    const countable: any[] = [];
-
-    for (const session of sessions) {
-      const deviceIdentifier = session.Player?.machineIdentifier;
-      if (!deviceIdentifier) continue;
-
-      // Get device info
-      const device = await this.userDeviceRepository.findOne({
-        where: { userId, deviceIdentifier },
-      });
-
-      // Skip devices marked as excluded
-      if (device?.excludeFromConcurrentLimit) {
-        this.logger.debug(`Device ${deviceIdentifier} excluded from concurrent limit check`);
-        continue;
-      }
-
-      // Skip temp access devices if configured
-      if (!includeTempAccess && device && await this.deviceTrackingService.isTemporaryAccessValid(device)) {
-        this.logger.debug(`Device ${deviceIdentifier} with temp access excluded from concurrent limit check`);
-        continue;
-      }
-
-      countable.push(session);
-    }
-
-    return countable;
-  }
-
-  /**
    * Get session start times from session history.
    * Uses sessionKey to look up when each session started.
    */
-  private async getSessionStartTimes(sessions: any[]): Promise<Array<{ session: any; startTime: number }>> {
+  private async getSessionStartTimes(
+    sessions: any[],
+  ): Promise<Array<{ session: any; startTime: number }>> {
     const results: Array<{ session: any; startTime: number }> = [];
 
     for (const session of sessions) {
       const sessionKey = session.sessionKey;
-      
+
       // Try to find session history entry
       let startTime = Date.now(); // Default to now if not found
-      
+
       if (sessionKey) {
         const history = await this.sessionHistoryRepository.findOne({
           where: { sessionKey },
           order: { startedAt: 'DESC' },
         });
-        
+
         if (history?.startedAt) {
           startTime = history.startedAt.getTime();
         }
@@ -387,7 +368,6 @@ export class SessionTerminationService {
 
   private async shouldStopSession(
     session: any,
-    skipConcurrentCheck: boolean = false,
   ): Promise<{ shouldStop: boolean; reason?: string; stopCode?: string }> {
     try {
       const userId = session.User?.id || session.User?.uuid;
@@ -413,7 +393,10 @@ export class SessionTerminationService {
         where: { userId, deviceIdentifier },
       });
 
-      if (device && (await this.deviceTrackingService.isTemporaryAccessValid(device))) {
+      if (
+        device &&
+        (await this.deviceTrackingService.isTemporaryAccessValid(device))
+      ) {
         if (device.temporaryAccessBypassPolicies) {
           this.logger.log(
             `Device ${deviceIdentifier} has temporary access with policy bypass enabled - allowing session`,

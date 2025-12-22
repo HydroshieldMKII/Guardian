@@ -11,14 +11,6 @@ import {
   isPlexampSession,
 } from '../../../types/plex.types';
 
-export interface ConcurrentStreamResult {
-  allowed: boolean;
-  reason?: string;
-  stopCode?: string;
-  currentStreams: number;
-  limit: number;
-}
-
 /**
  * Concurrent Stream Service
  *
@@ -65,17 +57,13 @@ export class ConcurrentStreamService {
   }
 
   /**
-   * Count current active streams for a user from session data.
-   * Excludes Plexamp sessions, devices marked as excluded from concurrent limit,
-   * and optionally excludes devices with temporary access.
+   * Filter sessions to only those that count toward concurrent limit.
+   * Excludes Plexamp sessions, excluded devices, and optionally temp access devices.
    */
-  async countActiveStreams(
+  async filterCountableSessions(
     userId: string,
-    sessionsData: PlexSessionsResponse,
-  ): Promise<number> {
-    const sessions = sessionsData?.MediaContainer?.Metadata || [];
-
-    // Get settings for temp access inclusion
+    sessions: PlexSession[],
+  ): Promise<PlexSession[]> {
     const includeTempAccess = await this.configService.getSetting(
       'CONCURRENT_LIMIT_INCLUDE_TEMP_ACCESS',
     );
@@ -94,24 +82,24 @@ export class ConcurrentStreamService {
         device.excludeFromConcurrentLimit,
       );
 
-      // Check if device has valid temporary access
       const hasValidTempAccess =
         await this.deviceTrackingService.isTemporaryAccessValid(device);
       deviceTempAccessMap.set(device.deviceIdentifier, hasValidTempAccess);
     }
 
-    let count = 0;
+    const countable: PlexSession[] = [];
+
     for (const session of sessions) {
       const sessionUserId = String(
         session.User?.id || session.User?.uuid || '',
       );
       const deviceIdentifier = session.Player?.machineIdentifier;
 
-      // Ensure string comparison for user IDs (Plex can return numbers or strings)
+      // Filter by user
       if (sessionUserId !== String(userId)) continue;
       if (!deviceIdentifier) continue;
 
-      // Skip Plexamp sessions - they don't count toward concurrent limit
+      // Skip Plexamp sessions
       if (isPlexampSession(session)) {
         this.logger.debug(
           `Plexamp session excluded from concurrent stream count`,
@@ -119,7 +107,7 @@ export class ConcurrentStreamService {
         continue;
       }
 
-      // Skip devices marked as excluded from concurrent limit
+      // Skip devices marked as excluded
       if (deviceExclusionMap.get(deviceIdentifier)) {
         this.logger.debug(
           `Device ${deviceIdentifier} excluded from concurrent stream count`,
@@ -127,7 +115,7 @@ export class ConcurrentStreamService {
         continue;
       }
 
-      // Skip temp access devices if configured to exclude them
+      // Skip temp access devices if configured
       if (!includeTempAccess && deviceTempAccessMap.get(deviceIdentifier)) {
         this.logger.debug(
           `Device ${deviceIdentifier} with temp access excluded from concurrent stream count`,
@@ -135,114 +123,24 @@ export class ConcurrentStreamService {
         continue;
       }
 
-      count++;
+      countable.push(session);
     }
 
-    return count;
+    return countable;
   }
 
   /**
-   * Validate if a new session from a device would exceed the concurrent stream limit.
-   * Returns whether the session is allowed and details about the limit.
-   * @param playerProduct - Optional player product name (e.g., 'Plexamp') to check for exclusions
+   * Count current active streams for a user from session data.
+   * Excludes Plexamp sessions, devices marked as excluded from concurrent limit,
+   * and optionally excludes devices with temporary access.
    */
-  async validateConcurrentLimit(
+  async countActiveStreams(
     userId: string,
-    deviceIdentifier: string,
     sessionsData: PlexSessionsResponse,
-    playerProduct?: string,
-  ): Promise<ConcurrentStreamResult> {
-    // Plexamp is always excluded from concurrent limit checks
-    if (isPlexampSession(playerProduct)) {
-      this.logger.debug('Plexamp device excluded from concurrent limit check');
-      return {
-        allowed: true,
-        currentStreams: 0,
-        limit: 0,
-      };
-    }
-
-    const limit = await this.getEffectiveLimit(userId);
-
-    // 0 means unlimited
-    if (limit === 0) {
-      return {
-        allowed: true,
-        currentStreams: 0,
-        limit: 0,
-      };
-    }
-
-    // Check if this specific device is excluded
-    const device = await this.userDeviceRepository.findOne({
-      where: { userId, deviceIdentifier },
-    });
-
-    if (device?.excludeFromConcurrentLimit) {
-      this.logger.debug(
-        `Device ${deviceIdentifier} is excluded from concurrent limit check`,
-      );
-      return {
-        allowed: true,
-        currentStreams: 0,
-        limit,
-      };
-    }
-
-    // Check temp access exclusion
-    const includeTempAccess = await this.configService.getSetting(
-      'CONCURRENT_LIMIT_INCLUDE_TEMP_ACCESS',
-    );
-
-    if (
-      !includeTempAccess &&
-      device &&
-      (await this.deviceTrackingService.isTemporaryAccessValid(device))
-    ) {
-      this.logger.debug(
-        `Device ${deviceIdentifier} with temp access is excluded from concurrent limit check`,
-      );
-      return {
-        allowed: true,
-        currentStreams: 0,
-        limit,
-      };
-    }
-
-    // Count ALL current streams for this user (not excluding current device)
-    // We count all streams and check if over the limit
-    const currentStreams = await this.countActiveStreams(
-      userId,
-      sessionsData,
-    );
-
-    this.logger.debug(
-      `Concurrent limit check for user ${userId}, device ${deviceIdentifier}: ` +
-        `currentStreams=${currentStreams}, limit=${limit}`,
-    );
-
-    // Check if current streams exceed the limit
-    // If user has 2 streams and limit is 1, terminate the excess
-    if (currentStreams > limit) {
-      const message = await this.configService.getSetting(
-        'MSG_CONCURRENT_LIMIT',
-      );
-      return {
-        allowed: false,
-        reason:
-          (message as string) ||
-          'You have reached your concurrent stream limit. Please stop another stream before starting a new one.',
-        stopCode: 'CONCURRENT_LIMIT',
-        currentStreams,
-        limit,
-      };
-    }
-
-    return {
-      allowed: true,
-      currentStreams,
-      limit,
-    };
+  ): Promise<number> {
+    const sessions = sessionsData?.MediaContainer?.Metadata || [];
+    const countable = await this.filterCountableSessions(userId, sessions);
+    return countable.length;
   }
 
   /**

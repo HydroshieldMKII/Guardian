@@ -69,7 +69,7 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
   const [excludeFromConcurrentLimit, setExcludeFromConcurrentLimit] = useState(
     device?.excludeFromConcurrentLimit ?? false
   );
-  
+
   // Collapsible section states
   const [basicInfoOpen, setBasicInfoOpen] = useState(true);
   const [identifierOpen, setIdentifierOpen] = useState(false);
@@ -89,7 +89,10 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
   const handleExcludeFromConcurrentLimitChange = async (exclude: boolean) => {
     setExcludeLoading(true);
     try {
-      await apiClient.updateDeviceExcludeFromConcurrentLimit(device.id, exclude);
+      await apiClient.updateDeviceExcludeFromConcurrentLimit(
+        device.id,
+        exclude
+      );
       // Update local state immediately
       setExcludeFromConcurrentLimit(exclude);
       toast({
@@ -323,9 +326,14 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
               <CollapsibleTrigger className="flex items-center justify-between w-full p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors">
                 <div className="flex items-center gap-2">
                   <Clock className="w-4 h-4 text-muted-foreground" />
-                  <span className="font-semibold text-sm">Temporary Access</span>
+                  <span className="font-semibold text-sm">
+                    Temporary Access
+                  </span>
                   {hasTemporaryAccess(device) && (
-                    <Badge variant="outline" className="ml-2 border-green-600 dark:border-green-700 text-green-700 dark:text-green-400">
+                    <Badge
+                      variant="outline"
+                      className="ml-2 border-green-600 dark:border-green-700 text-green-700 dark:text-green-400"
+                    >
                       Active
                     </Badge>
                   )}
@@ -421,7 +429,10 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
           )}
 
           {/* Device Settings Section */}
-          <Collapsible open={deviceSettingsOpen} onOpenChange={setDeviceSettingsOpen}>
+          <Collapsible
+            open={deviceSettingsOpen}
+            onOpenChange={setDeviceSettingsOpen}
+          >
             <CollapsibleTrigger className="flex items-center justify-between w-full p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors">
               <div className="flex items-center gap-2">
                 <Settings className="w-4 h-4 text-muted-foreground" />
