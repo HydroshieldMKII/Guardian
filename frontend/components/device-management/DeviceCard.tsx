@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -14,10 +14,14 @@ import {
   Clock,
   ShieldOff,
   Users,
+  MessageSquare,
+  CheckCheck,
 } from "lucide-react";
 import { UserDevice, AppSetting } from "@/types";
 import { getDeviceIcon, ClickableIP } from "./SharedComponents";
 import { useDeviceUtils } from "@/hooks/device-management/useDeviceUtils";
+import { apiClient } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
 
 interface DeviceCardProps {
   device: UserDevice;
@@ -35,6 +39,7 @@ interface DeviceCardProps {
   onRevokeTempAccess: (deviceId: number) => void;
   onShowDetails: (device: UserDevice) => void;
   onNewDeviceNameChange: (name: string) => void;
+  onDeviceUpdate?: (device: UserDevice) => void;
 }
 
 export const DeviceCard: React.FC<DeviceCardProps> = ({
@@ -53,8 +58,43 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
   onRevokeTempAccess,
   onShowDetails,
   onNewDeviceNameChange,
+  onDeviceUpdate,
 }) => {
   const { hasTemporaryAccess, getTemporaryAccessTimeLeft } = useDeviceUtils();
+  const { toast } = useToast();
+  const [markingAsRead, setMarkingAsRead] = useState(false);
+  const [noteReadAt, setNoteReadAt] = useState<string | undefined>(device.requestNoteReadAt);
+
+  // Sync noteReadAt when device prop changes
+  React.useEffect(() => {
+    setNoteReadAt(device.requestNoteReadAt);
+  }, [device.requestNoteReadAt]);
+
+  const handleMarkNoteAsRead = async () => {
+    setMarkingAsRead(true);
+    try {
+      await apiClient.markDeviceNoteAsRead(device.id);
+      const now = new Date().toISOString();
+      setNoteReadAt(now);
+      toast({
+        title: "Note marked as read",
+        description: "The user will be notified that their note has been read.",
+        variant: "success",
+      });
+      // Update parent state if callback provided
+      if (onDeviceUpdate) {
+        onDeviceUpdate({ ...device, requestNoteReadAt: now });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to mark note as read",
+        variant: "destructive",
+      });
+    } finally {
+      setMarkingAsRead(false);
+    }
+  };
 
   // Helper function to identify Plex Amp devices
   const isPlexAmpDevice = (device: UserDevice) => {
@@ -185,6 +225,42 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
               </span>
             </div>
           </div>
+          
+          {/* User Note - Mobile */}
+          {device.requestDescription && device.requestSubmittedAt && (
+            <div className={`rounded-lg p-2.5 border ${noteReadAt ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800' : 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800'}`}>
+              <div className="flex items-start gap-2">
+                <MessageSquare className={`w-3.5 h-3.5 mt-0.5 flex-shrink-0 ${noteReadAt ? 'text-green-600 dark:text-green-400' : 'text-amber-600 dark:text-amber-400'}`} />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between mb-0.5">
+                    <p className={`text-[10px] font-medium ${noteReadAt ? 'text-green-700 dark:text-green-300' : 'text-amber-700 dark:text-amber-300'}`}>
+                      User Note {noteReadAt && <span className="ml-1">(Read)</span>}
+                    </p>
+                    {!noteReadAt && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleMarkNoteAsRead}
+                        disabled={markingAsRead}
+                        className="h-5 px-1.5 text-[10px] text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-800/30"
+                      >
+                        {markingAsRead ? (
+                          <RefreshCw className="w-3 h-3 animate-spin" />
+                        ) : (
+                          <>
+                            <CheckCheck className="w-3 h-3 mr-0.5" />
+                            Mark Read
+                          </>
+                        )}
+                      </Button>
+                    )}
+                  </div>
+                  <p className={`text-xs ${noteReadAt ? 'text-green-800 dark:text-green-200' : 'text-amber-800 dark:text-amber-200'}`}>{device.requestDescription}</p>
+                </div>
+              </div>
+            </div>
+          )}
+          
           {/* Action Buttons - Mobile */}
           <div className="flex flex-col gap-2 pt-2 border-t border-border/50">
             {/* Details Button - Full width on mobile */}
@@ -458,6 +534,41 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
                 </span>
               </div>
             </div>
+            
+            {/* User Note - Desktop */}
+            {device.requestDescription && device.requestSubmittedAt && (
+              <div className={`mt-3 rounded-lg p-3 border ${noteReadAt ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800' : 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800'}`}>
+                <div className="flex items-start gap-2">
+                  <MessageSquare className={`w-4 h-4 mt-0.5 flex-shrink-0 ${noteReadAt ? 'text-green-600 dark:text-green-400' : 'text-amber-600 dark:text-amber-400'}`} />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between mb-1">
+                      <p className={`text-xs font-medium ${noteReadAt ? 'text-green-700 dark:text-green-300' : 'text-amber-700 dark:text-amber-300'}`}>
+                        User Note {noteReadAt && <span className="ml-1">(Read)</span>}
+                      </p>
+                      {!noteReadAt && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleMarkNoteAsRead}
+                          disabled={markingAsRead}
+                          className={`h-6 px-2 text-xs ${noteReadAt ? 'text-green-700 dark:text-green-300 hover:bg-green-100 dark:hover:bg-green-800/30' : 'text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-800/30'}`}
+                        >
+                          {markingAsRead ? (
+                            <RefreshCw className="w-3 h-3 animate-spin" />
+                          ) : (
+                            <>
+                              <CheckCheck className="w-3 h-3 mr-1" />
+                              Mark as Read
+                            </>
+                          )}
+                        </Button>
+                      )}
+                    </div>
+                    <p className={`text-sm ${noteReadAt ? 'text-green-800 dark:text-green-200' : 'text-amber-800 dark:text-amber-200'}`}>{device.requestDescription}</p>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Action Buttons - Desktop (Right side) */}

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { useAuth } from "@/contexts/auth-context";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { useAuth, isAdminUser } from "@/contexts/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import {
   Dialog,
@@ -16,7 +16,18 @@ import { Label } from "@/components/ui/label";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Upload, Loader2, X, AlertCircle } from "lucide-react";
+import { Upload, Loader2, X, AlertCircle, Link2, Unlink } from "lucide-react";
+
+// Plex OAuth constants
+const PLEX_AUTH_URL = "https://app.plex.tv/auth";
+const PIN_CHECK_INTERVAL = 2000;
+
+interface PlexPin {
+  id: number;
+  code: string;
+  clientId: string;
+  expiresAt: string;
+}
 
 interface EditProfileModalProps {
   open: boolean;
@@ -27,16 +38,22 @@ export function EditProfileModal({
   open,
   onOpenChange,
 }: EditProfileModalProps) {
-  const { user, updateProfile, updatePassword } = useAuth();
+  const {
+    user,
+    updateProfile,
+    updatePassword,
+    linkPlexAccount,
+    unlinkPlexAccount,
+  } = useAuth();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   // Profile form state
   const [profileData, setProfileData] = useState({
-    username: user?.username || "",
-    email: user?.email || "",
-    avatarUrl: user?.avatarUrl || "",
+    username: "",
+    email: "",
+    avatarUrl: "",
   });
 
   // Password form state
@@ -53,14 +70,21 @@ export function EditProfileModal({
   );
   const [showProfileError, setShowProfileError] = useState<string | null>(null);
 
-  // Reset form when modal closes
+  // Plex linking state
+  const [plexLoading, setPlexLoading] = useState(false);
+  const [plexPin, setPlexPin] = useState<PlexPin | null>(null);
+  const [plexPopup, setPlexPopup] = useState<Window | null>(null);
+
+  // Reset form when modal opens/closes
   useEffect(() => {
-    if (!open) {
+    if (open && user && isAdminUser(user)) {
       setProfileData({
-        username: user?.username || "",
-        email: user?.email || "",
-        avatarUrl: user?.avatarUrl || "",
+        username: user.username || "",
+        email: user.email || "",
+        avatarUrl: user.avatarUrl || "",
       });
+    }
+    if (!open) {
       setPasswordData({
         currentPassword: "",
         newPassword: "",
@@ -69,8 +93,80 @@ export function EditProfileModal({
       setClearSessions(true);
       setShowPasswordError(null);
       setShowProfileError(null);
+      setPlexPin(null);
+      setPlexLoading(false);
     }
   }, [open, user]);
+
+  // Check Plex PIN status for linking
+  const checkPlexPin = useCallback(async () => {
+    if (!plexPin) return;
+
+    try {
+      const response = await fetch(`/api/pg/auth/plex/pin/${plexPin.clientId}`);
+      if (!response.ok) return;
+
+      const data = await response.json();
+
+      if (data.authToken) {
+        // User authenticated with Plex - link the account
+        try {
+          await linkPlexAccount(data.authToken);
+          toast({
+            title: "Success",
+            description: "Plex account linked successfully",
+            variant: "success",
+          });
+        } catch (error) {
+          toast({
+            title: "Link Failed",
+            description:
+              error instanceof Error
+                ? error.message
+                : "Failed to link Plex account",
+            variant: "destructive",
+          });
+        } finally {
+          setPlexLoading(false);
+          setPlexPin(null);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to check Plex PIN:", error);
+    }
+  }, [plexPin, linkPlexAccount, toast]);
+
+  // Poll for Plex PIN completion
+  useEffect(() => {
+    if (!plexPin) return;
+
+    const interval = setInterval(checkPlexPin, PIN_CHECK_INTERVAL);
+
+    // Check if PIN has expired
+    const expiresAt = new Date(plexPin.expiresAt);
+    const timeout = setTimeout(() => {
+      setPlexPin(null);
+      setPlexLoading(false);
+      toast({
+        title: "Plex Link Expired",
+        description: "Please try again",
+        variant: "destructive",
+      });
+    }, expiresAt.getTime() - Date.now());
+
+    return () => {
+      clearInterval(interval);
+      clearTimeout(timeout);
+    };
+  }, [plexPin, checkPlexPin, toast]);
+
+  // Close popup when done
+  useEffect(() => {
+    if (!plexPin && plexPopup && !plexPopup.closed) {
+      plexPopup.close();
+      setPlexPopup(null);
+    }
+  }, [plexPin, plexPopup]);
 
   const validateEmail = (email: string): { valid: boolean; error?: string } => {
     if (!email) {
@@ -102,9 +198,90 @@ export function EditProfileModal({
   };
 
   const hasProfileChanges =
-    profileData.username !== user?.username ||
-    profileData.email !== user?.email ||
-    profileData.avatarUrl !== user?.avatarUrl;
+    user &&
+    isAdminUser(user) &&
+    (profileData.username !== user.username ||
+      profileData.email !== user.email ||
+      profileData.avatarUrl !== user.avatarUrl);
+
+  const handlePlexLink = async () => {
+    setPlexLoading(true);
+
+    try {
+      // Create PIN
+      const response = await fetch("/api/pg/auth/plex/pin", {
+        method: "POST",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to create Plex PIN");
+      }
+
+      const pinData: PlexPin = await response.json();
+      setPlexPin(pinData);
+
+      // Open Plex auth popup
+      const authUrl = `${PLEX_AUTH_URL}#?clientID=${pinData.clientId}&code=${pinData.code}&context%5Bdevice%5D%5Bproduct%5D=Guardian`;
+
+      const width = 600;
+      const height = 700;
+      const left = window.screenX + (window.outerWidth - width) / 2;
+      const top = window.screenY + (window.outerHeight - height) / 2;
+
+      const popup = window.open(
+        authUrl,
+        "PlexAuth",
+        `width=${width},height=${height},left=${left},top=${top},toolbar=no,menubar=no,scrollbars=yes,resizable=yes`
+      );
+
+      if (popup) {
+        setPlexPopup(popup);
+
+        // Check if popup was closed without completing auth
+        const popupCheck = setInterval(() => {
+          if (popup.closed) {
+            clearInterval(popupCheck);
+            if (plexPin) {
+              setPlexLoading(false);
+            }
+          }
+        }, 500);
+      }
+    } catch (error) {
+      toast({
+        title: "Plex Link Failed",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to start Plex linking",
+        variant: "destructive",
+      });
+      setPlexLoading(false);
+    }
+  };
+
+  const handlePlexUnlink = async () => {
+    setPlexLoading(true);
+    try {
+      await unlinkPlexAccount();
+      toast({
+        title: "Success",
+        description: "Plex account unlinked successfully",
+        variant: "success",
+      });
+    } catch (error) {
+      toast({
+        title: "Unlink Failed",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to unlink Plex account",
+        variant: "destructive",
+      });
+    } finally {
+      setPlexLoading(false);
+    }
+  };
 
   const handleProfileSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -247,13 +424,26 @@ export function EditProfileModal({
 
   const getAvatarInitials = () => {
     if (!user) return "?";
-    return user.username
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .substring(0, 2);
+    if (isAdminUser(user)) {
+      return user.username
+        .split(" ")
+        .map((n) => n[0])
+        .join("")
+        .toUpperCase()
+        .substring(0, 2);
+    }
+    return "?";
   };
+
+  // Get linked Plex info for admin users
+  const linkedPlex =
+    user && isAdminUser(user) && user.plexUserId
+      ? {
+          plexUserId: user.plexUserId,
+          plexUsername: user.plexUsername,
+          plexThumb: user.plexThumb,
+        }
+      : null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -263,12 +453,15 @@ export function EditProfileModal({
         </DialogHeader>
 
         <Tabs defaultValue="profile" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="profile" className="cursor-pointer">
               Profile
             </TabsTrigger>
             <TabsTrigger value="password" className="cursor-pointer">
               Password
+            </TabsTrigger>
+            <TabsTrigger value="plex" className="cursor-pointer">
+              Plex
             </TabsTrigger>
           </TabsList>
 
@@ -494,6 +687,91 @@ export function EditProfileModal({
                 </Button>
               </DialogFooter>
             </form>
+          </TabsContent>
+
+          {/* Plex Tab */}
+          <TabsContent value="plex" className="space-y-4">
+            <div className="space-y-4">
+              {linkedPlex ? (
+                <>
+                  {/* Linked Plex Account */}
+                  <Card className="p-4">
+                    <div className="flex items-center gap-4">
+                      <Avatar className="h-12 w-12">
+                        {linkedPlex.plexThumb && (
+                          <AvatarImage
+                            src={linkedPlex.plexThumb}
+                            alt={linkedPlex.plexUsername || "Plex User"}
+                          />
+                        )}
+                        <AvatarFallback className="bg-[#e5a00d]">
+                          <img
+                            src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAYAAADimHc4AAAACXBIWXMAAAsTAAALEwEAmpwYAAADDklEQVR4nO2dPWxOURjHfz5S7UCURKiEsEiYDBYGs8FKLKiOEiaCdjBZWEzslXTSdmqYDa2PVGLwObVdJE20vBUaH0eOXBOGc3M+nnvf/y/57//n+ee97733POdcEEIIIYQQQgghhBAinC3AOWASeA2sAK4lWqlqmgAGgX4M0QcMAx8NNMpl0jJwtaq9KAPAEwMNcYX0HNhVqvk7gQUDTXCFtVD1Iiv+p/fMQPHOiPxVoDdnACMGinbGdCXn3c6ygYKdMS3lujsaMlCsM6qzOQKYNFCoM6rxHAG8M1CoMyr/sJacjoFCnVH53iSndJHOuBQACqCrlZzUBYwBewN1w0DjWxPAD+BwoKf1wKyB5rciAAe8AHoCfR0EvimAeBqp4e2mAoinr8D+QG8bgJcKIJ6mgbWB/o4CPxVAPJ2v4fGOAoi7IL4n0OMmYE4BxNNUDZ/HFEBcnarhdVQBxNMisC3Q61bgvQKIp9Eafk8ogLg6XsPzfQUQT3PAxkDP24EPCiCebtfw7edWFUDEN6ZHanh/oADi6VWNabTdwCcFEE/Xa/i/oADiaRU4EOjfv9x7pADiaQZYF1jDPuCLAiCa/GUllGsKgGj6XC3Oh64jpxixT07pZjsF0I5L0HAiL8lxxjSjP+FyWtVtaPMexC4m9pQc1/BXER0FUOZl3BrgYQZvyXENfR09lMlbcpq4ILNDCzJllyTHM/pLTtMW5U9m9picUs1f1FhK8waz7hXwmZwSzZ+q4VOjiYWHc+cVQLnx9LuFmt+6AKa1QeNvLG9R6gPeFmy+6/ZNercKN7+rt6keAr4rgDIbtXuq0Eo3vxUBjOmogrIBuIZLAaAAulrJ0ZFl/Ff+/OzkvDFQqDMqPyiQnAkDhTqj8psBkzNooFBnVKdzBOCP59XRxfzz6OLNZCLVbL1rsC6RET+R9tRA0c6IHuc+vt6jDzjwW/PVl0SKMFCl77pUsyU/YfKH3urjBUsGGuIyydd6uTqjzgz91fn549UDSZuemDtVTb62MznvdoQQQgghhBBCCCEEreEXCfyL3FOHoLAAAAAASUVORK5CYII="
+                            alt="Plex"
+                            className="h-6 w-6"
+                          />
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium truncate">
+                          {linkedPlex.plexUsername || "Plex User"}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          Linked Plex Account
+                        </p>
+                      </div>
+                    </div>
+                  </Card>
+
+                  <Button
+                    variant="destructive"
+                    onClick={handlePlexUnlink}
+                    disabled={plexLoading}
+                    className="w-full"
+                  >
+                    {plexLoading ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Unlink className="mr-2 h-4 w-4" />
+                    )}
+                    Unlink Plex Account
+                  </Button>
+                </>
+              ) : (
+                <>
+                  {/* No Plex Account Linked */}
+                  <Card className="p-4 border-dashed">
+                    <div className="flex flex-col items-center gap-2 text-center">
+                      <p className="text-sm text-muted-foreground">
+                        No Plex account linked
+                      </p>
+                    </div>
+                  </Card>
+
+                  <Button
+                    onClick={handlePlexLink}
+                    disabled={plexLoading}
+                    className="w-full bg-[#e5a00d] hover:bg-[#cc8f0c] text-black border-[#e5a00d] hover:border-[#cc8f0c]"
+                  >
+                    {plexLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Waiting for Plex...
+                      </>
+                    ) : (
+                      <>
+                        <img
+                          src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAYAAADimHc4AAAACXBIWXMAAAsTAAALEwEAmpwYAAADDklEQVR4nO2dPWxOURjHfz5S7UCURKiEsEiYDBYGs8FKLKiOEiaCdjBZWEzslXTSdmqYDa2PVGLwObVdJE20vBUaH0eOXBOGc3M+nnvf/y/57//n+ee97733POdcEEIIIYQQQgghhBAinC3AOWASeA2sAK4lWqlqmgAGgX4M0QcMAx8NNMpl0jJwtaq9KAPAEwMNcYX0HNhVqvk7gQUDTXCFtVD1Iiv+p/fMQPHOiPxVoDdnACMGinbGdCXn3c6ygYKdMS3lujsaMlCsM6qzOQKYNFCoM6rxHAG8M1CoMyr/sJacjoFCnVH53iSndJHOuBQACqCrlZzUBYwBewN1w0DjWxPAD+BwoKf1wKyB5rciAAe8AHoCfR0EvimAeBqp4e2mAoinr8D+QG8bgJcKIJ6mgbWB/o4CPxVAPJ2v4fGOAoi7IL4n0OMmYE4BxNNUDZ/HFEBcnarhdVQBxNMisC3Q61bgvQKIp9Eafk8ogLg6XsPzfQUQT3PAxkDP24EPCiCebtfw7edWFUDEN6ZHanh/oADi6VWNabTdwCcFEE/Xa/i/oADiaRU4EOjfv9x7pADiaQZYF1jDPuCLAiCa/GUllGsKgGj6XC3Oh64jpxixT07pZjsF0I5L0HAiL8lxxjSjP+FyWtVtaPMexC4m9pQc1/BXER0FUOZl3BrgYQZvyXENfR09lMlbcpq4ILNDCzJllyTHM/pLTtMW5U9m9picUs1f1FhK8waz7hXwmZwSzZ+q4VOjiYWHc+cVQLnx9LuFmt+6AKa1QeNvLG9R6gPeFmy+6/ZNercKN7+rt6keAr4rgDIbtXuq0Eo3vxUBjOmogrIBuIZLAaAAulrJ0ZFl/Ff+/OzkvDFQqDMqPyiQnAkDhTqj8psBkzNooFBnVKdzBOCP59XRxfzz6OLNZCLVbL1rsC6RET+R9tRA0c6IHuc+vt6jDzjwW/PVl0SKMFCl77pUsyU/YfKH3urjBUsGGuIyydd6uTqjzgz91fn549UDSZuemDtVTb62MznvdoQQQgghhBBCCCEEreEXCfyL3FOHoLAAAAAASUVORK5CYII="
+                          alt="Plex"
+                          className="mr-2 h-4 w-4"
+                        />
+                        Link Plex Account
+                      </>
+                    )}
+                  </Button>
+                </>
+              )}
+            </div>
           </TabsContent>
         </Tabs>
       </DialogContent>

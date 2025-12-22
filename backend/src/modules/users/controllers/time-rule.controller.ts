@@ -19,19 +19,21 @@ import type {
   CreatePresetDto,
 } from '../services/time-rule.service';
 import { UserTimeRule } from '../../../entities/user-time-rule.entity';
+import { AdminOnly } from '../../auth/decorators/admin-only.decorator';
 
 export interface BatchTimeRulesDto {
   userIds: string[];
 }
 
 @Controller()
+@AdminOnly()
 export class TimeRuleController {
   private readonly logger = new Logger(TimeRuleController.name);
 
   constructor(private readonly timeRuleService: TimeRuleService) {}
 
-  // Batch endpoint for fetching multiple users' time rules
-  @Post('time-rules/batch')
+  // Batch endpoint for fetching multiple users' rules
+  @Post('rules/batch')
   async getTimeRulesBatch(
     @Body() dto: BatchTimeRulesDto,
   ): Promise<Record<string, UserTimeRule[]>> {
@@ -54,7 +56,7 @@ export class TimeRuleController {
     return result;
   }
 
-  @Post('users/:userId/time-rules')
+  @Post('users/:userId/rules')
   async createTimeRule(
     @Param('userId') userId: string,
     @Body() createDto: Omit<CreateTimeRuleDto, 'userId'>,
@@ -65,7 +67,7 @@ export class TimeRuleController {
     });
   }
 
-  @Get('users/:userId/time-rules')
+  @Get('users/:userId/rules')
   async getTimeRules(
     @Param('userId') userId: string,
     @Query('deviceIdentifier') deviceIdentifier?: string,
@@ -73,14 +75,14 @@ export class TimeRuleController {
     return this.timeRuleService.getTimeRules(userId, deviceIdentifier);
   }
 
-  @Get('users/:userId/time-rules/all')
+  @Get('users/:userId/rules/all')
   async getAllTimeRules(
     @Param('userId') userId: string,
   ): Promise<UserTimeRule[]> {
     return this.timeRuleService.getAllTimeRules(userId);
   }
 
-  @Get('users/:userId/time-rules/device/:deviceIdentifier')
+  @Get('users/:userId/rules/device/:deviceIdentifier')
   async getTimeRulesForDevice(
     @Param('userId') userId: string,
     @Param('deviceIdentifier') deviceIdentifier: string,
@@ -88,7 +90,7 @@ export class TimeRuleController {
     return this.timeRuleService.getTimeRules(userId, deviceIdentifier);
   }
 
-  @Put('users/:userId/time-rules/:ruleId')
+  @Put('users/:userId/rules/:ruleId')
   async updateTimeRule(
     @Param('userId') userId: string,
     @Param('ruleId', ParseIntPipe) ruleId: number,
@@ -97,7 +99,7 @@ export class TimeRuleController {
     return this.timeRuleService.updateTimeRule(userId, ruleId, updateDto);
   }
 
-  @Put('users/:userId/time-rules/:ruleId/toggle')
+  @Put('users/:userId/rules/:ruleId/toggle')
   async toggleTimeRule(
     @Param('userId') userId: string,
     @Param('ruleId', ParseIntPipe) ruleId: number,
@@ -105,7 +107,7 @@ export class TimeRuleController {
     return this.timeRuleService.toggleTimeRule(userId, ruleId);
   }
 
-  @Delete('users/:userId/time-rules/:ruleId')
+  @Delete('users/:userId/rules/:ruleId')
   async deleteTimeRule(
     @Param('userId') userId: string,
     @Param('ruleId', ParseIntPipe) ruleId: number,
@@ -113,7 +115,7 @@ export class TimeRuleController {
     return this.timeRuleService.deleteTimeRule(userId, ruleId);
   }
 
-  @Get('users/:userId/time-rules/check')
+  @Get('users/:userId/rules/check')
   async checkStreamingAllowed(
     @Param('userId') userId: string,
     @Query('deviceIdentifier') deviceIdentifier?: string,
@@ -121,7 +123,7 @@ export class TimeRuleController {
     return this.timeRuleService.checkStreamingAllowed(userId, deviceIdentifier);
   }
 
-  @Post('users/:userId/time-rules/preset')
+  @Post('users/:userId/rules/preset')
   async createPreset(
     @Param('userId') userId: string,
     @Body() createDto: Omit<CreatePresetDto, 'userId'>,

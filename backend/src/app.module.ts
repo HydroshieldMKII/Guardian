@@ -12,6 +12,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { AuthModule } from './modules/auth/auth.module';
 import { CommonModule } from './common/common.module';
 import { ServicesModule } from './services/services.module';
+import { UserPortalModule } from './modules/user-portal/user-portal.module';
 import { SchedulerService } from './services/scheduler.service';
 import { UserDevice } from './entities/user-device.entity';
 import { SessionHistory } from './entities/session-history.entity';
@@ -58,6 +59,7 @@ import * as path from 'path';
     AuthModule,
     CommonModule,
     ServicesModule,
+    UserPortalModule,
   ],
   providers: [SchedulerService],
 })

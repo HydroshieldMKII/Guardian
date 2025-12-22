@@ -10,6 +10,7 @@ import {
 import { UsersService } from './services/users.service';
 import { ConcurrentStreamService } from './services/concurrent-stream.service';
 import { UserPreference } from '../../entities/user-preference.entity';
+import { AdminOnly } from '../auth/decorators/admin-only.decorator';
 
 interface UpdateUserPreferenceDto {
   defaultBlock: boolean | null;
@@ -26,6 +27,7 @@ interface UpdateConcurrentStreamLimitDto {
 }
 
 @Controller('users')
+@AdminOnly()
 export class UsersController {
   constructor(
     private readonly usersService: UsersService,

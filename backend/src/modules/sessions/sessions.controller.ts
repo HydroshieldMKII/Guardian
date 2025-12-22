@@ -2,8 +2,10 @@ import { Controller, Get, Param, Query, Delete } from '@nestjs/common';
 import { ActiveSessionService } from './services/active-session.service';
 import { PlexSessionsResponse } from '../../types/plex.types';
 import { SessionHistory } from '../../entities/session-history.entity';
+import { AdminOnly } from '../auth/decorators/admin-only.decorator';
 
 @Controller('sessions')
+@AdminOnly()
 export class SessionsController {
   constructor(private readonly activeSessionService: ActiveSessionService) {}
 

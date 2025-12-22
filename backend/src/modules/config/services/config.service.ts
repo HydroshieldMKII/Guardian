@@ -2,6 +2,7 @@ import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AppSettings } from '../../../entities/app-settings.entity';
+import { Session } from '../../../entities/session.entity';
 import { Notification } from '../../../entities/notification.entity';
 import { PlexResponse, PlexErrorCode } from '../../../types/plex-errors';
 import { EmailService, SMTPConfig } from './email.service';
@@ -28,6 +29,8 @@ export class ConfigService {
   constructor(
     @InjectRepository(AppSettings)
     private settingsRepository: Repository<AppSettings>,
+    @InjectRepository(Session)
+    private sessionRepository: Repository<Session>,
     @Inject(forwardRef(() => EmailService))
     private readonly emailService: EmailService,
     private readonly emailTemplateService: EmailTemplateService,
@@ -287,6 +290,22 @@ export class ConfigService {
           'You have reached your concurrent stream limit. Please stop another stream before starting a new one.',
         type: 'string' as const,
       },
+      // User Portal Settings (for Plex OAuth users)
+      {
+        key: 'USER_PORTAL_ENABLED',
+        value: 'false',
+        type: 'boolean' as const,
+      },
+      {
+        key: 'USER_PORTAL_SHOW_RULES',
+        value: 'false',
+        type: 'boolean' as const,
+      },
+      {
+        key: 'USER_PORTAL_ALLOW_REJECTED_REQUESTS',
+        value: 'true',
+        type: 'boolean' as const,
+      },
     ];
 
     // Update version number on startup if current version is higher
@@ -523,10 +542,32 @@ export class ConfigService {
       this.logger.log(`Updated setting: ${key}`);
     }
 
+    // If USER_PORTAL_ENABLED is set to false, revoke all Plex user sessions
+    if (key === 'USER_PORTAL_ENABLED' && stringValue === 'false') {
+      const revokedCount = await this.revokeAllPlexUserSessions();
+      if (revokedCount > 0) {
+        this.logger.log(
+          `User portal disabled - revoked ${revokedCount} Plex user session(s)`,
+        );
+      }
+    }
+
     // Notify listeners of the config change
     this.notifyConfigChange(key);
 
     return updated;
+  }
+
+  /**
+   * Revoke all Plex user sessions (non-admin sessions)
+   * Called when the user portal is disabled
+   */
+  private async revokeAllPlexUserSessions(): Promise<number> {
+    const result = await this.sessionRepository.delete({
+      userType: 'plex_user',
+    });
+
+    return result.affected || 0;
   }
 
   async updateMultipleSettings(

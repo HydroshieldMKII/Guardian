@@ -9,7 +9,7 @@ import React, {
   useRef,
 } from "react";
 import { config } from "@/lib/config";
-import { useAuth } from "./auth-context";
+import { useAuth, isAdminUser } from "./auth-context";
 
 interface VersionInfo {
   version: string;
@@ -74,7 +74,8 @@ const isVersionNewer = (
 const VersionContext = createContext<VersionContextType | undefined>(undefined);
 
 export function VersionProvider({ children }: { children: React.ReactNode }) {
-  const { setupRequired, isLoading: authLoading, isAuthenticated } = useAuth();
+  const { setupRequired, isLoading: authLoading, isAuthenticated, user } = useAuth();
+  const isAdmin = user && isAdminUser(user);
   const [versionInfo, setVersionInfo] = useState<VersionInfo | null>(null);
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
   const [loading, setLoading] = useState(true);
@@ -94,8 +95,8 @@ export function VersionProvider({ children }: { children: React.ReactNode }) {
   const PERIODIC_UPDATE_CHECK_INTERVAL = 30 * 60 * 1000; // 30 minutes
 
   const fetchVersionInfo = useCallback(async () => {
-    // Skip fetching during setup or auth loading
-    if (setupRequired || authLoading || !isAuthenticated) {
+    // Skip fetching during setup, auth loading, or if not admin
+    if (setupRequired || authLoading || !isAuthenticated || !isAdmin) {
       setLoading(false);
       return;
     }

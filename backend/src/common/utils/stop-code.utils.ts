@@ -16,6 +16,8 @@ export class StopCodeUtils {
         return 'A streaming session was blocked because the device IP address is not in the approved access list';
       case 'TIME_RESTRICTED':
         return 'A streaming session was blocked due to time-based scheduling restrictions';
+      case 'CONCURRENT_LIMIT':
+        return 'A streaming session was blocked because the user has reached their concurrent stream limit';
       default:
         return `A streaming session was blocked: ${stopCode}`;
     }

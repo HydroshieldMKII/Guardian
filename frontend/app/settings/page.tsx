@@ -396,7 +396,7 @@ export default function SettingsPage() {
     },
     {
       id: "smtp",
-      label: "Email/SMTP",
+      label: "Email",
       description: "Email notification configuration",
     },
     {

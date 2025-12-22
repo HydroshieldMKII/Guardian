@@ -462,6 +462,13 @@ export class DeviceTrackingService {
     );
   }
 
+  async markNoteAsRead(deviceId: number): Promise<void> {
+    await this.userDeviceRepository.update(deviceId, {
+      requestNoteReadAt: new Date(),
+    });
+    this.logger.log(`Note marked as read for device ${deviceId}`);
+  }
+
   async grantTemporaryAccess(
     deviceId: number,
     durationMinutes: number,

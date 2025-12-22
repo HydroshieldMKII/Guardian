@@ -70,4 +70,21 @@ export class UserDevice {
 
   @Column({ name: 'exclude_from_concurrent_limit', default: false })
   excludeFromConcurrentLimit: boolean;
+
+  // Description provided by user when requesting device approval
+  @Column({
+    name: 'request_description',
+    nullable: true,
+    type: 'varchar',
+    length: 500,
+  })
+  requestDescription: string;
+
+  // Timestamp when user submitted a note/request
+  @Column({ name: 'request_submitted_at', nullable: true })
+  requestSubmittedAt: Date;
+
+  // Timestamp when admin read the user's note
+  @Column({ name: 'request_note_read_at', nullable: true })
+  requestNoteReadAt: Date;
 }

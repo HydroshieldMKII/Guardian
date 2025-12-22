@@ -9,7 +9,7 @@ import { Repository, LessThan } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import { AdminUser } from '../../entities/admin-user.entity';
-import { Session } from '../../entities/session.entity';
+import { Session, SessionUserType } from '../../entities/session.entity';
 import { AppSettings } from '../../entities/app-settings.entity';
 import { CreateAdminDto } from './dto/create-admin.dto';
 import { LoginDto } from './dto/login.dto';
@@ -144,6 +144,7 @@ export class AuthService {
     const session = await this.sessionRepository.save({
       token,
       userId,
+      userType: 'admin' as SessionUserType,
       expiresAt,
       lastActivityAt: new Date(),
     });
@@ -158,11 +159,64 @@ export class AuthService {
   }
 
   /**
-   * Validate and retrieve session
+   * Create a session for a Plex user (non-admin)
+   */
+  async createPlexUserSession(plexUserInfo: {
+    plexUserId: string;
+    plexUsername: string;
+    plexThumb?: string;
+  }): Promise<{
+    token: string;
+    expiresAt: Date;
+    userType: SessionUserType;
+    plexUserId: string;
+    plexUsername: string;
+    plexThumb?: string;
+  }> {
+    // Generate secure token (32 bytes/256 bits)
+    const token = crypto.randomBytes(32).toString('hex');
+
+    // Set expiration
+    const expiresAt = new Date(Date.now() + SESSION_EXPIRATION_MS);
+
+    // Store session for Plex user
+    const session = await this.sessionRepository.save({
+      token,
+      userId: null, // Plex users don't have an admin user ID
+      userType: 'plex_user' as SessionUserType,
+      plexUserId: plexUserInfo.plexUserId,
+      plexUsername: plexUserInfo.plexUsername,
+      plexThumb: plexUserInfo.plexThumb || null,
+      expiresAt,
+      lastActivityAt: new Date(),
+    });
+
+    return {
+      token: session.token,
+      expiresAt: session.expiresAt,
+      userType: session.userType,
+      plexUserId: session.plexUserId,
+      plexUsername: session.plexUsername,
+      plexThumb: session.plexThumb || undefined,
+    };
+  }
+
+  /**
+   * Validate and retrieve session - supports both admin and Plex user sessions
    */
   async validateSession(
     token: string,
-  ): Promise<(AdminUser & { sessionId: string }) | null> {
+  ): Promise<
+    | (AdminUser & { sessionId: string; userType: SessionUserType })
+    | {
+        sessionId: string;
+        userType: 'plex_user';
+        plexUserId: string;
+        plexUsername: string;
+        plexThumb?: string;
+      }
+    | null
+  > {
     try {
       // Find session
       const session = await this.sessionRepository.findOne({
@@ -184,9 +238,29 @@ export class AuthService {
       session.lastActivityAt = new Date();
       await this.sessionRepository.save(session);
 
+      // Return appropriate user data based on session type
+      if (session.userType === 'plex_user') {
+        if (!session.plexUserId || !session.plexUsername) {
+          return null;
+        }
+        return {
+          sessionId: session.id,
+          userType: 'plex_user',
+          plexUserId: session.plexUserId,
+          plexUsername: session.plexUsername,
+          plexThumb: session.plexThumb || undefined,
+        };
+      }
+
+      // Admin session
+      if (!session.user) {
+        return null;
+      }
+
       return {
         ...session.user,
         sessionId: session.id,
+        userType: 'admin' as SessionUserType,
       };
     } catch {
       return null;
@@ -206,6 +280,18 @@ export class AuthService {
   async cleanupExpiredSessions(): Promise<number> {
     const result = await this.sessionRepository.delete({
       expiresAt: LessThan(new Date()),
+    });
+
+    return result.affected || 0;
+  }
+
+  /**
+   * Revoke all Plex user sessions (non-admin sessions)
+   * Called when the user portal is disabled
+   */
+  async revokeAllPlexUserSessions(): Promise<number> {
+    const result = await this.sessionRepository.delete({
+      userType: 'plex_user',
     });
 
     return result.affected || 0;
@@ -348,6 +434,22 @@ export class AuthService {
   }
 
   /**
+   * Clear all Plex user sessions by Plex user ID
+   */
+  async clearPlexUserSessions(plexUserId: string): Promise<void> {
+    try {
+      await this.sessionRepository.delete({
+        userType: 'plex_user',
+        plexUserId,
+      });
+    } catch {
+      throw new InternalServerErrorException(
+        'Failed to clear Plex user sessions',
+      );
+    }
+  }
+
+  /**
    * Validate user's current password for admin operations
    */
   async validatePassword(userId: string, password: string): Promise<boolean> {
@@ -362,5 +464,39 @@ export class AuthService {
     // Verify password
     const passwordValid = await bcrypt.compare(password, user.passwordHash);
     return passwordValid;
+  }
+
+  /**
+   * Find admin user by linked Plex user ID
+   */
+  async findAdminByPlexUserId(plexUserId: string): Promise<AdminUser | null> {
+    return this.adminUserRepository.findOne({
+      where: { plexUserId },
+    });
+  }
+
+  /**
+   * Create admin session by Plex login (for linked accounts)
+   */
+  async createAdminSessionByPlex(adminId: string): Promise<AuthResponseDto> {
+    const admin = await this.adminUserRepository.findOne({
+      where: { id: adminId },
+    });
+
+    if (!admin) {
+      throw new UnauthorizedException('Admin not found');
+    }
+
+    const session = await this.createSession(admin.id);
+
+    return {
+      user: {
+        id: admin.id,
+        username: admin.username,
+        email: admin.email,
+        avatarUrl: admin.avatarUrl,
+      },
+      session,
+    };
   }
 }

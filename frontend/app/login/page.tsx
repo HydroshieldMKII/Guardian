@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/auth-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,13 +13,40 @@ import {
 } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useTheme } from "@/hooks/use-theme";
-import { Lock, User, Eye, EyeOff, AlertCircle, Sun, Moon } from "lucide-react";
+import {
+  Lock,
+  User,
+  Eye,
+  EyeOff,
+  AlertCircle,
+  Sun,
+  Moon,
+  Loader2,
+} from "lucide-react";
 import { ThreeDotLoader } from "@/components/three-dot-loader";
 import { ErrorHandler } from "@/components/error-handler";
 
+// Plex OAuth constants
+const PLEX_AUTH_URL = "https://app.plex.tv/auth";
+const PIN_CHECK_INTERVAL = 2000; // 2 seconds
+
+interface PlexPin {
+  id: number;
+  code: string;
+  clientId: string;
+  expiresAt: string;
+}
+
 export default function LoginPage() {
-  const { login, isLoading, isAuthenticated, backendError, retryConnection } =
-    useAuth();
+  const {
+    login,
+    loginWithPlex,
+    isLoading,
+    isAuthenticated,
+    backendError,
+    retryConnection,
+    plexOAuthEnabled,
+  } = useAuth();
   const { toast } = useToast();
   const { theme, toggleTheme } = useTheme();
 
@@ -30,6 +57,139 @@ export default function LoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showPassword, setShowPassword] = useState(false);
+
+  // Plex OAuth state
+  const [plexLoading, setPlexLoading] = useState(false);
+  const [plexPin, setPlexPin] = useState<PlexPin | null>(null);
+  const [plexPopup, setPlexPopup] = useState<Window | null>(null);
+
+  // Check Plex PIN status
+  const checkPlexPin = useCallback(async () => {
+    if (!plexPin) return;
+
+    try {
+      const response = await fetch(`/api/pg/auth/plex/pin/${plexPin.clientId}`);
+      if (!response.ok) return;
+
+      const data = await response.json();
+
+      if (data.authToken) {
+        // User authenticated with Plex
+        setPlexLoading(true);
+
+        try {
+          await loginWithPlex(data.authToken);
+          toast({
+            title: "Success",
+            description: "Logged in with Plex successfully",
+            variant: "success",
+          });
+        } catch (error) {
+          toast({
+            title: "Login Failed",
+            description:
+              error instanceof Error ? error.message : "Plex login failed",
+            variant: "destructive",
+          });
+        } finally {
+          setPlexLoading(false);
+          setPlexPin(null);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to check Plex PIN:", error);
+    }
+  }, [plexPin, loginWithPlex, toast]);
+
+  // Poll for Plex PIN completion
+  useEffect(() => {
+    if (!plexPin) return;
+
+    const interval = setInterval(checkPlexPin, PIN_CHECK_INTERVAL);
+
+    // Check if PIN has expired
+    const expiresAt = new Date(plexPin.expiresAt);
+    const timeout = setTimeout(
+      () => {
+        setPlexPin(null);
+        setPlexLoading(false);
+        toast({
+          title: "Plex Login Expired",
+          description: "Please try again",
+          variant: "destructive",
+        });
+      },
+      expiresAt.getTime() - Date.now(),
+    );
+
+    return () => {
+      clearInterval(interval);
+      clearTimeout(timeout);
+    };
+  }, [plexPin, checkPlexPin, toast]);
+
+  // Close popup when done
+  useEffect(() => {
+    if (!plexPin && plexPopup && !plexPopup.closed) {
+      plexPopup.close();
+      setPlexPopup(null);
+    }
+  }, [plexPin, plexPopup]);
+
+  const handlePlexLogin = async () => {
+    setPlexLoading(true);
+
+    try {
+      // Create PIN
+      const response = await fetch("/api/pg/auth/plex/pin", {
+        method: "POST",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to create Plex PIN");
+      }
+
+      const pinData: PlexPin = await response.json();
+      setPlexPin(pinData);
+
+      // Open Plex auth popup
+      const authUrl = `${PLEX_AUTH_URL}#?clientID=${pinData.clientId}&code=${pinData.code}&context%5Bdevice%5D%5Bproduct%5D=Guardian`;
+
+      const width = 600;
+      const height = 700;
+      const left = window.screenX + (window.outerWidth - width) / 2;
+      const top = window.screenY + (window.outerHeight - height) / 2;
+
+      const popup = window.open(
+        authUrl,
+        "PlexAuth",
+        `width=${width},height=${height},left=${left},top=${top},toolbar=no,menubar=no,scrollbars=yes,resizable=yes`,
+      );
+
+      if (popup) {
+        setPlexPopup(popup);
+
+        // Check if popup was closed without completing auth
+        const popupCheck = setInterval(() => {
+          if (popup.closed) {
+            clearInterval(popupCheck);
+            // Only clear if we haven't received auth token
+            if (plexPin) {
+              setPlexLoading(false);
+            }
+          }
+        }, 500);
+      }
+    } catch (error) {
+      toast({
+        title: "Plex Login Failed",
+        description:
+          error instanceof Error ? error.message : "Failed to start Plex login",
+        variant: "destructive",
+      });
+      setPlexLoading(false);
+    }
+  };
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -208,13 +368,52 @@ export default function LoginPage() {
             {/* Submit Button */}
             <Button
               type="submit"
-              disabled={isSubmitting}
+              disabled={isSubmitting || plexLoading}
               className="w-full mt-2"
               size="lg"
             >
               {isSubmitting ? "Signing in..." : "Sign In"}
             </Button>
           </form>
+
+          {/* Plex OAuth Button - only show if enabled */}
+          {plexOAuthEnabled && (
+            <>
+              <div className="relative my-4">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-card px-2 text-muted-foreground">Or</span>
+                </div>
+              </div>
+
+              <Button
+                type="button"
+                variant="outline"
+                disabled={isSubmitting || plexLoading}
+                onClick={handlePlexLogin}
+                className="w-full !bg-[#e5a00d] hover:!bg-[#cc8f0c] !text-black !border-[#e5a00d] hover:!border-[#cc8f0c]"
+                size="lg"
+              >
+                {plexLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Waiting for Plex...
+                  </>
+                ) : (
+                  <>
+                    <img
+                      src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAYAAADimHc4AAAACXBIWXMAAAsTAAALEwEAmpwYAAADDklEQVR4nO2dPWxOURjHfz5S7UCURKiEsEiYDBYGs8FKLKiOEiaCdjBZWEzslXTSdmqYDa2PVGLwObVdJE20vBUaH0eOXBOGc3M+nnvf/y/57//n+ee97733POdcEEIIIYQQQgghhBAinC3AOWASeA2sAK4lWqlqmgAGgX4M0QcMAx8NNMpl0jJwtaq9KAPAEwMNcYX0HNhVqvk7gQUDTXCFtVD1Iiv+p/fMQPHOiPxVoDdnACMGinbGdCXn3c6ygYKdMS3lujsaMlCsM6qzOQKYNFCoM6rxHAG8M1CoMyr/sJacjoFCnVH53iSndJHOuBQACqCrlZzUBYwBewN1w0DjWxPAD+BwoKf1wKyB5rciAAe8AHoCfR0EvimAeBqp4e2mAoinr8D+QG8bgJcKIJ6mgbWB/o4CPxVAPJ2v4fGOAoi7IL4n0OMmYE4BxNNUDZ/HFEBcnarhdVQBxNMisC3Q61bgvQKIp9Eafk8ogLg6XsPzfQUQT3PAxkDP24EPCiCebtfw7edWFUDEN6ZHanh/oADi6VWNabTdwCcFEE/Xa/i/oADiaRU4EOjfv9x7pADiaQZYF1jDPuCLAiCa/GUllGsKgGj6XC3Oh64jpxixT07pZjsF0I5L0HAiL8lxxjSjP+FyWtVtaPMexC4m9pQc1/BXER0FUOZl3BrgYQZvyXENfR09lMlbcpq4ILNDCzJllyTHM/pLTtMW5U9m9picUs1f1FhK8waz7hXwmZwSzZ+q4VOjiYWHc+cVQLnx9LuFmt+6AKa1QeNvLG9R6gPeFmy+6/ZNercKN7+rt6keAr4rgDIbtXuq0Eo3vxUBjOmogrIBuIZLAaAAulrJ0ZFl/Ff+/OzkvDFQqDMqPyiQnAkDhTqj8psBkzNooFBnVKdzBOCP59XRxfzz6OLNZCLVbL1rsC6RET+R9tRA0c6IHuc+vt6jDzjwW/PVl0SKMFCl77pUsyU/YfKH3urjBUsGGuIyydd6uTqjzgz91fn549UDSZuemDtVTb62MznvdoQQQgghhBBCCCEEreEXCfyL3FOHoLAAAAAASUVORK5CYII="
+                      alt="Plex"
+                      className="mr-2 h-5 w-5"
+                    />
+                    Sign in with Plex
+                  </>
+                )}
+              </Button>
+            </>
+          )}
         </CardContent>
       </Card>
     </div>

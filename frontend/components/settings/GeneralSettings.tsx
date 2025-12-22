@@ -68,6 +68,9 @@ export function GeneralSettings({
           "DEVICE_CLEANUP_ENABLED", // Device cleanup feature
           "DEVICE_CLEANUP_INTERVAL_DAYS", // Device cleanup interval (follows the feature toggle)
           "TIMEZONE", // Display/locale setting
+          "USER_PORTAL_ENABLED", // User portal settings
+          "USER_PORTAL_SHOW_RULES",
+          "USER_PORTAL_ALLOW_REJECTED_REQUESTS",
         ],
         customization: [
           "DEFAULT_PAGE",
@@ -108,6 +111,9 @@ export function GeneralSettings({
             "DEVICE_CLEANUP_ENABLED",
             "DEVICE_CLEANUP_INTERVAL_DAYS",
             "TIMEZONE",
+            "USER_PORTAL_ENABLED",
+            "USER_PORTAL_SHOW_RULES",
+            "USER_PORTAL_ALLOW_REJECTED_REQUESTS",
           ].includes(setting.key)
         );
         break;
@@ -448,6 +454,108 @@ export function GeneralSettings({
     );
   };
 
+  const renderUserPortalGroup = (settings: AppSetting[]) => {
+    const portalEnabledSetting = settings.find(
+      (s) => s.key === "USER_PORTAL_ENABLED"
+    );
+    const showRulesSetting = settings.find(
+      (s) => s.key === "USER_PORTAL_SHOW_RULES"
+    );
+    const allowRejectedSetting = settings.find(
+      (s) => s.key === "USER_PORTAL_ALLOW_REJECTED_REQUESTS"
+    );
+
+    if (!portalEnabledSetting && !showRulesSetting && !allowRejectedSetting) return null;
+
+    const portalEnabledValue = portalEnabledSetting
+      ? (formData[portalEnabledSetting.key] ?? portalEnabledSetting.value)
+      : false;
+    const isPortalEnabled =
+      portalEnabledValue === "true" || portalEnabledValue === true;
+
+    const renderSwitch = (setting: AppSetting, disabled: boolean = false) => {
+      const info = getSettingInfo(setting);
+      const value = formData[setting.key] ?? setting.value;
+      const isChecked = value === "true" || value === true;
+
+      return (
+        <div className="space-y-2 mb-4 last:mb-0">
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label
+                htmlFor={setting.key}
+                className={disabled ? "text-muted-foreground" : ""}
+              >
+                {info.label}
+              </Label>
+              {info.description && (
+                <p className="text-sm text-muted-foreground">
+                  {info.description}
+                </p>
+              )}
+            </div>
+            <Switch
+              id={setting.key}
+              checked={isChecked}
+              onCheckedChange={(checked) =>
+                handleInputChange(setting.key, checked)
+              }
+              disabled={disabled}
+              className="cursor-pointer"
+            />
+          </div>
+        </div>
+      );
+    };
+
+    const portalEnabledInfo = portalEnabledSetting
+      ? getSettingInfo(portalEnabledSetting)
+      : null;
+
+    return (
+      <div className="space-y-4">
+        <div className="space-y-1">
+          <h4 className="text-sm font-medium">User Portal</h4>
+          <p className="text-sm text-muted-foreground">
+            Allow Plex users to log in and manage their devices
+          </p>
+        </div>
+        
+        {/* Parent setting: USER_PORTAL_ENABLED */}
+        {portalEnabledSetting && portalEnabledInfo && (
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label htmlFor={portalEnabledSetting.key}>
+                {portalEnabledInfo.label}
+              </Label>
+              {portalEnabledInfo.description && (
+                <p className="text-sm text-muted-foreground">
+                  {portalEnabledInfo.description}
+                </p>
+              )}
+            </div>
+            <Switch
+              id={portalEnabledSetting.key}
+              checked={isPortalEnabled}
+              onCheckedChange={(checked) =>
+                handleInputChange(portalEnabledSetting.key, checked)
+              }
+              className="cursor-pointer"
+            />
+          </div>
+        )}
+
+        {/* Child settings - indented */}
+        <div
+          className={`ml-6 space-y-4 transition-opacity duration-200 ${!isPortalEnabled ? "opacity-50" : ""}`}
+        >
+          {showRulesSetting && renderSwitch(showRulesSetting, !isPortalEnabled)}
+          {allowRejectedSetting && renderSwitch(allowRejectedSetting, !isPortalEnabled)}
+        </div>
+      </div>
+    );
+  };
+
   const renderSetting = (setting: AppSetting) => {
     const { label, description } = getSettingInfo(setting);
     const value = formData[setting.key] ?? setting.value;
@@ -672,7 +780,7 @@ export function GeneralSettings({
             {renderNotificationGroup(sectionSettings)}
           </Card>
         ) : (
-          sectionSettings.map((setting, index) => {
+          sectionSettings.map((setting) => {
             // Handle device cleanup group
             if (setting.key === "DEVICE_CLEANUP_ENABLED") {
               return (
@@ -698,6 +806,23 @@ export function GeneralSettings({
 
             // Skip the include temp access setting since it's handled in the group
             if (setting.key === "CONCURRENT_LIMIT_INCLUDE_TEMP_ACCESS") {
+              return null;
+            }
+
+            // Handle User Portal group
+            if (setting.key === "USER_PORTAL_ENABLED") {
+              return (
+                <Card key="user-portal-group" className="p-4 my-4">
+                  {renderUserPortalGroup(sectionSettings)}
+                </Card>
+              );
+            }
+
+            // Skip child settings since they're handled in the group
+            if (
+              setting.key === "USER_PORTAL_SHOW_RULES" ||
+              setting.key === "USER_PORTAL_ALLOW_REJECTED_REQUESTS"
+            ) {
               return null;
             }
 

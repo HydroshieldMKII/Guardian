@@ -133,6 +133,10 @@ class ApiClient {
     });
   }
 
+  async markDeviceNoteAsRead<T>(deviceId: number): Promise<T> {
+    return this.post<T>(`/devices/${deviceId}/mark-note-read`, {});
+  }
+
   // Notification methods
   async getAllNotifications<T>(): Promise<T> {
     return this.get<T>("/notifications");

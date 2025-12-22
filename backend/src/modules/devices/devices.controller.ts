@@ -12,8 +12,10 @@ import {
 import { DeviceTrackingService } from './services/device-tracking.service';
 import { UserDevice } from '../../entities/user-device.entity';
 import { PlexClient } from '../plex/services/plex-client';
+import { AdminOnly } from '../auth/decorators/admin-only.decorator';
 
 @Controller('devices')
+@AdminOnly()
 export class DevicesController {
   private readonly logger = new Logger(DevicesController.name);
 
@@ -205,6 +207,14 @@ export class DevicesController {
     return {
       message: `Device ${id} ${body.exclude ? 'excluded from' : 'included in'} concurrent stream limit`,
     };
+  }
+
+  @Post(':id/mark-note-read')
+  async markNoteAsRead(
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<{ message: string }> {
+    await this.deviceTrackingService.markNoteAsRead(id);
+    return { message: `Note marked as read for device ${id}` };
   }
 
   @Post('revoke/:userId/:deviceIdentifier')

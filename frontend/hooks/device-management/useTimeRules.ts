@@ -30,8 +30,8 @@ export const useTimeRules = () => {
         return;
       }
 
-      // Make a single API call to fetch all time rules for multiple users
-      const response = await fetch(`${config.api.baseUrl}/time-rules/batch`, {
+      // Make a single API call to fetch all rules for multiple users
+      const response = await fetch(`${config.api.baseUrl}/rules/batch`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -94,8 +94,8 @@ export const useTimeRules = () => {
     try {
       setLoading(true);
       const endpoint = deviceIdentifier
-        ? `${config.api.baseUrl}/users/${encodeURIComponent(userId)}/time-rules/device/${encodeURIComponent(deviceIdentifier)}`
-        : `${config.api.baseUrl}/users/${encodeURIComponent(userId)}/time-rules`;
+        ? `${config.api.baseUrl}/users/${encodeURIComponent(userId)}/rules/device/${encodeURIComponent(deviceIdentifier)}`
+        : `${config.api.baseUrl}/users/${encodeURIComponent(userId)}/rules`;
 
       const response = await fetch(endpoint);
       if (response.ok) {
@@ -127,7 +127,7 @@ export const useTimeRules = () => {
     try {
       setLoading(true);
       const response = await fetch(
-        `${config.api.baseUrl}/users/${encodeURIComponent(userId)}/time-rules/all`,
+        `${config.api.baseUrl}/users/${encodeURIComponent(userId)}/rules/all`,
       );
       if (response.ok) {
         const data = await response.json();
@@ -157,7 +157,7 @@ export const useTimeRules = () => {
       }
 
       const response = await fetch(
-        `${config.api.baseUrl}/users/${encodeURIComponent(userId)}/time-rules`,
+        `${config.api.baseUrl}/users/${encodeURIComponent(userId)}/rules`,
         {
           method: "POST",
           headers: {
@@ -214,7 +214,7 @@ export const useTimeRules = () => {
       }
 
       const response = await fetch(
-        `${config.api.baseUrl}/users/${encodeURIComponent(userId)}/time-rules/${ruleId}`,
+        `${config.api.baseUrl}/users/${encodeURIComponent(userId)}/rules/${ruleId}`,
         {
           method: "PUT",
           headers: {
@@ -259,7 +259,7 @@ export const useTimeRules = () => {
     try {
       setLoading(true);
       const response = await fetch(
-        `${config.api.baseUrl}/users/${encodeURIComponent(userId)}/time-rules/${ruleId}`,
+        `${config.api.baseUrl}/users/${encodeURIComponent(userId)}/rules/${ruleId}`,
         {
           method: "DELETE",
         },
@@ -293,7 +293,7 @@ export const useTimeRules = () => {
       setLoading(true);
 
       const response = await fetch(
-        `${config.api.baseUrl}/users/${encodeURIComponent(userId)}/time-rules/preset`,
+        `${config.api.baseUrl}/users/${encodeURIComponent(userId)}/rules/preset`,
         {
           method: "POST",
           headers: {
@@ -337,7 +337,7 @@ export const useTimeRules = () => {
     try {
       setLoading(true);
       const response = await fetch(
-        `${config.api.baseUrl}/users/${encodeURIComponent(userId)}/time-rules/${ruleId}/toggle`,
+        `${config.api.baseUrl}/users/${encodeURIComponent(userId)}/rules/${ruleId}/toggle`,
         {
           method: "PUT",
         },
@@ -377,7 +377,7 @@ export const useTimeRules = () => {
         ? `?deviceIdentifier=${encodeURIComponent(deviceIdentifier)}`
         : "";
       const response = await fetch(
-        `${config.api.baseUrl}/users/${encodeURIComponent(userId)}/time-rules/check${queryParams}`,
+        `${config.api.baseUrl}/users/${encodeURIComponent(userId)}/rules/check${queryParams}`,
       );
       if (response.ok) {
         return await response.json();
@@ -412,7 +412,7 @@ export const useTimeRules = () => {
 
       // Make a request to check if enabled rules exist
       const response = await fetch(
-        `${config.api.baseUrl}/users/${encodeURIComponent(userId)}/time-rules`,
+        `${config.api.baseUrl}/users/${encodeURIComponent(userId)}/rules`,
       );
 
       if (response.ok) {

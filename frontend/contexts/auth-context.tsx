@@ -9,20 +9,49 @@ import React, {
 } from "react";
 import { apiClient } from "@/lib/api";
 
-export interface User {
+// Admin user type
+export interface AdminUser {
   id: string;
   username: string;
   email: string;
   avatarUrl?: string;
+  plexUserId?: string;
+  plexUsername?: string;
+  plexEmail?: string;
+  plexThumb?: string;
 }
+
+// Plex user type (non-admin)
+export interface PlexUser {
+  plexUserId: string;
+  plexUsername: string;
+  plexThumb?: string;
+}
+
+// Combined user type
+export type User = AdminUser | PlexUser;
+
+// Type guards
+export function isAdminUser(user: User | null): user is AdminUser {
+  return user !== null && "id" in user && "username" in user;
+}
+
+export function isPlexUser(user: User | null): user is PlexUser {
+  return user !== null && "plexUserId" in user && !("id" in user);
+}
+
+export type UserType = "admin" | "plex_user";
 
 export interface AuthContextType {
   user: User | null;
+  userType: UserType | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   setupRequired: boolean;
   backendError: string | null;
+  plexOAuthEnabled: boolean;
   login: (username: string, password: string) => Promise<void>;
+  loginWithPlex: (authToken: string) => Promise<void>;
   logout: () => Promise<void>;
   createAdmin: (
     username: string,
@@ -43,15 +72,32 @@ export interface AuthContextType {
     confirmPassword: string;
     clearSessions?: boolean;
   }) => Promise<void>;
+  linkPlexAccount: (authToken: string) => Promise<void>;
+  unlinkPlexAccount: () => Promise<void>;
+  refreshPlexOAuthStatus: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [userType, setUserType] = useState<UserType | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [setupRequired, setSetupRequired] = useState(true);
   const [backendError, setBackendError] = useState<string | null>(null);
+  const [plexOAuthEnabled, setPlexOAuthEnabled] = useState(false);
+
+  const checkPlexOAuthEnabled = async () => {
+    try {
+      const res = await fetch("/api/pg/auth/plex/enabled");
+      if (res.ok) {
+        const data = await res.json();
+        setPlexOAuthEnabled(data.enabled);
+      }
+    } catch (error) {
+      console.error("Failed to check Plex OAuth status:", error);
+    }
+  };
 
   const initAuth = async () => {
     setIsLoading(true);
@@ -69,6 +115,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const setupData = await setupRes.json();
       setSetupRequired(setupData.setupRequired);
 
+      // Check Plex OAuth status
+      await checkPlexOAuthEnabled();
+
       // Get current user if authenticated
       if (!setupData.setupRequired) {
         const userRes = await fetch("/api/pg/auth/me", {
@@ -77,14 +126,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         if (userRes.ok) {
           const userData = await userRes.json();
-          setUser(userData);
+          // Determine user type from response
+          if (userData.id) {
+            // Admin user
+            setUser(userData as AdminUser);
+            setUserType("admin");
+          } else if (userData.plexUserId) {
+            // Plex user
+            setUser(userData as PlexUser);
+            setUserType("plex_user");
+          } else {
+            setUser(null);
+            setUserType(null);
+          }
         } else {
           setUser(null);
+          setUserType(null);
         }
       }
     } catch (error) {
       console.error("Failed to initialize auth:", error);
       setUser(null);
+      setUserType(null);
 
       // Distinguish between network errors and server errors
       let errorMessage = "Unable to connect to Guardian backend service.";
@@ -139,6 +202,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const data = await response.json();
     setUser(data.user);
+    setUserType("admin");
+  };
+
+  const loginWithPlex = async (authToken: string) => {
+    const response = await fetch("/api/pg/auth/plex/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+      body: JSON.stringify({ authToken }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || "Plex login failed");
+    }
+
+    const data = await response.json();
+    setUser(data.user);
+    setUserType(data.userType);
   };
 
   const logout = async () => {
@@ -149,6 +233,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (response.ok) {
       setUser(null);
+      setUserType(null);
     } else {
       throw new Error("Logout failed");
     }
@@ -190,6 +275,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const setupData = await setupRes.json();
       setSetupRequired(setupData.setupRequired);
 
+      // Check Plex OAuth status
+      await checkPlexOAuthEnabled();
+
       if (!setupData.setupRequired) {
         const userRes = await fetch("/api/pg/auth/me", {
           credentials: "include",
@@ -197,14 +285,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         if (userRes.ok) {
           const userData = await userRes.json();
-          setUser(userData);
+          // Determine user type from response
+          if (userData.id) {
+            setUser(userData as AdminUser);
+            setUserType("admin");
+          } else if (userData.plexUserId) {
+            setUser(userData as PlexUser);
+            setUserType("plex_user");
+          } else {
+            setUser(null);
+            setUserType(null);
+          }
         } else {
           setUser(null);
+          setUserType(null);
         }
       }
     } catch (error) {
       console.error("Failed to check auth:", error);
       setUser(null);
+      setUserType(null);
     }
   };
 
@@ -242,21 +342,89 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const linkPlexAccount = async (authToken: string) => {
+    const response = await fetch("/api/pg/auth/plex/link", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+      body: JSON.stringify({ authToken }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || "Failed to link Plex account");
+    }
+
+    const data = await response.json();
+
+    // Update user with Plex info
+    if (user && isAdminUser(user)) {
+      setUser({
+        ...user,
+        plexUserId: data.plexUserId,
+        plexUsername: data.plexUsername,
+        plexEmail: data.plexEmail,
+        plexThumb: data.plexThumb,
+      });
+    }
+
+    // Refresh Plex OAuth status since an admin linked their account
+    await checkPlexOAuthEnabled();
+  };
+
+  const unlinkPlexAccount = async () => {
+    const response = await fetch("/api/pg/auth/plex/link", {
+      method: "DELETE",
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || "Failed to unlink Plex account");
+    }
+
+    // Update user to remove Plex info
+    if (user && isAdminUser(user)) {
+      setUser({
+        ...user,
+        plexUserId: undefined,
+        plexUsername: undefined,
+        plexEmail: undefined,
+        plexThumb: undefined,
+      });
+    }
+
+    // Refresh Plex OAuth status
+    await checkPlexOAuthEnabled();
+  };
+
+  const refreshPlexOAuthStatus = async () => {
+    await checkPlexOAuthEnabled();
+  };
+
   return (
     <AuthContext.Provider
       value={{
         user,
+        userType,
         isAuthenticated: !!user,
         isLoading,
         setupRequired,
         backendError,
+        plexOAuthEnabled,
         login,
+        loginWithPlex,
         logout,
         createAdmin,
         checkAuth,
         retryConnection,
         updateProfile,
         updatePassword,
+        linkPlexAccount,
+        unlinkPlexAccount,
+        refreshPlexOAuthStatus,
       }}
     >
       {children}

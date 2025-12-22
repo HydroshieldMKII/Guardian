@@ -9,7 +9,7 @@ import React, {
 } from "react";
 import { config } from "@/lib/config";
 import { AppSetting } from "@/types";
-import { useAuth } from "./auth-context";
+import { useAuth, isAdminUser } from "./auth-context";
 
 interface SettingsContextType {
   settings: AppSetting[];
@@ -34,14 +34,15 @@ interface SettingsProviderProps {
 export const SettingsProvider: React.FC<SettingsProviderProps> = ({
   children,
 }) => {
-  const { setupRequired, isLoading: authLoading, isAuthenticated } = useAuth();
+  const { setupRequired, isLoading: authLoading, isAuthenticated, user } = useAuth();
+  const isAdmin = user && isAdminUser(user);
   const [settings, setSettings] = useState<AppSetting[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const fetchSettings = async () => {
-    // Skip fetching during setup or auth loading
-    if (setupRequired || authLoading) {
+    // Skip fetching during setup, auth loading, or if not admin
+    if (setupRequired || authLoading || !isAdmin) {
       setLoading(false);
       return;
     }
@@ -65,10 +66,10 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({
   };
 
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated && isAdmin) {
       fetchSettings();
     }
-  }, [setupRequired, authLoading, isAuthenticated]);
+  }, [setupRequired, authLoading, isAuthenticated, isAdmin]);
 
   const refreshSettings = async () => {
     await fetchSettings();

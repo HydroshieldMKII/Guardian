@@ -29,6 +29,8 @@ import {
   Monitor,
   Fingerprint,
   Activity,
+  MessageSquare,
+  CheckCheck,
 } from "lucide-react";
 import { UserDevice } from "@/types";
 import { ClickableIP, DeviceStatus } from "./SharedComponents";
@@ -66,8 +68,12 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
   const { hasTemporaryAccess, getTemporaryAccessTimeLeft } = useDeviceUtils();
   const { toast } = useToast();
   const [excludeLoading, setExcludeLoading] = useState(false);
+  const [markingAsRead, setMarkingAsRead] = useState(false);
   const [excludeFromConcurrentLimit, setExcludeFromConcurrentLimit] = useState(
     device?.excludeFromConcurrentLimit ?? false
+  );
+  const [noteReadAt, setNoteReadAt] = useState<string | undefined>(
+    device?.requestNoteReadAt
   );
 
   // Collapsible section states
@@ -76,15 +82,43 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
   const [activityOpen, setActivityOpen] = useState(false);
   const [tempAccessOpen, setTempAccessOpen] = useState(true);
   const [deviceSettingsOpen, setDeviceSettingsOpen] = useState(false);
+  const [userNoteOpen, setUserNoteOpen] = useState(true);
 
   // Sync local state when device prop changes
   React.useEffect(() => {
     if (device) {
       setExcludeFromConcurrentLimit(device.excludeFromConcurrentLimit ?? false);
+      setNoteReadAt(device.requestNoteReadAt);
     }
-  }, [device?.id, device?.excludeFromConcurrentLimit]);
+  }, [device?.id, device?.excludeFromConcurrentLimit, device?.requestNoteReadAt]);
 
   if (!device) return null;
+
+  const handleMarkNoteAsRead = async () => {
+    setMarkingAsRead(true);
+    try {
+      await apiClient.markDeviceNoteAsRead(device.id);
+      const now = new Date().toISOString();
+      setNoteReadAt(now);
+      toast({
+        title: "Note marked as read",
+        description: "The user will be notified that their note has been read.",
+        variant: "success",
+      });
+      // Update parent state if callback provided
+      if (onDeviceUpdate) {
+        onDeviceUpdate({ ...device, requestNoteReadAt: now });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to mark note as read",
+        variant: "destructive",
+      });
+    } finally {
+      setMarkingAsRead(false);
+    }
+  };
 
   const handleExcludeFromConcurrentLimitChange = async (exclude: boolean) => {
     setExcludeLoading(true);
@@ -309,6 +343,73 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
             </CollapsibleContent>
           </Collapsible>
 
+          {/* User Note Section - Only show if device has a note */}
+          {device.requestDescription && device.requestSubmittedAt && (
+            <Collapsible open={userNoteOpen} onOpenChange={setUserNoteOpen}>
+              <CollapsibleTrigger className="flex items-center justify-between w-full p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer">
+                <div className="flex items-center gap-2">
+                  <MessageSquare className={`w-4 h-4 ${noteReadAt ? 'text-green-600 dark:text-green-400' : 'text-amber-600 dark:text-amber-400'}`} />
+                  <span className="font-semibold text-sm">User Note</span>
+                  {noteReadAt ? (
+                    <Badge
+                      variant="outline"
+                      className="ml-2 border-green-600 dark:border-green-700 text-green-700 dark:text-green-400"
+                    >
+                      Read
+                    </Badge>
+                  ) : (
+                    <Badge
+                      variant="outline"
+                      className="ml-2 border-amber-600 dark:border-amber-700 text-amber-700 dark:text-amber-400"
+                    >
+                      Unread
+                    </Badge>
+                  )}
+                </div>
+                <ChevronDown
+                  className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${
+                    userNoteOpen ? "rotate-180" : ""
+                  }`}
+                />
+              </CollapsibleTrigger>
+              <CollapsibleContent className="pt-3 px-3">
+                <div className="space-y-3">
+                  <div className={`p-3 rounded-lg ${noteReadAt ? 'bg-green-50 dark:bg-green-900/20' : 'bg-amber-50 dark:bg-amber-900/20'}`}>
+                    <p className={`text-sm ${noteReadAt ? 'text-green-800 dark:text-green-200' : 'text-amber-800 dark:text-amber-200'}`}>
+                      {device.requestDescription}
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span>
+                      Submitted: {new Date(device.requestSubmittedAt).toLocaleString()}
+                    </span>
+                    {noteReadAt && (
+                      <span>
+                        Read: {new Date(noteReadAt).toLocaleString()}
+                      </span>
+                    )}
+                  </div>
+                  {!noteReadAt && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleMarkNoteAsRead}
+                      disabled={markingAsRead}
+                      className="w-full border-amber-600 text-amber-700 hover:bg-amber-50 dark:border-amber-700 dark:text-amber-400 dark:hover:bg-amber-900/30"
+                    >
+                      {markingAsRead ? (
+                        <RefreshCw className="w-4 h-4 animate-spin mr-2" />
+                      ) : (
+                        <CheckCheck className="w-4 h-4 mr-2" />
+                      )}
+                      Mark as Read
+                    </Button>
+                  )}
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+          )}
+
           {/* Temporary Access Section - Only show if device has or had temporary access */}
           {(device.temporaryAccessUntil ||
             device.temporaryAccessGrantedAt ||
@@ -432,28 +533,41 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
               />
             </CollapsibleTrigger>
             <CollapsibleContent className="pt-3 px-3 space-y-3">
-              {/* Exclude from concurrent stream limit */}
-              <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
-                <div className="space-y-0.5">
-                  <Label
-                    htmlFor="exclude-concurrent-limit"
-                    className="text-sm font-medium"
-                  >
-                    Exclude from concurrent stream limit
-                  </Label>
+              {/* Exclude from concurrent stream limit - Hide for PlexAmp devices since they're always excluded */}
+              {!device.deviceProduct?.toLowerCase().includes("plexamp") &&
+                !device.deviceName?.toLowerCase().includes("plexamp") && (
+                  <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                    <div className="space-y-0.5">
+                      <Label
+                        htmlFor="exclude-concurrent-limit"
+                        className="text-sm font-medium"
+                      >
+                        Exclude from concurrent stream limit
+                      </Label>
+                      <p className="text-xs text-muted-foreground">
+                        When enabled, streams from this device won&apos;t count
+                        towards the user&apos;s concurrent stream limit
+                      </p>
+                    </div>
+                    <Switch
+                      id="exclude-concurrent-limit"
+                      checked={excludeFromConcurrentLimit}
+                      onCheckedChange={handleExcludeFromConcurrentLimitChange}
+                      disabled={excludeLoading}
+                      className="cursor-pointer"
+                    />
+                  </div>
+                )}
+              {/* Show message for PlexAmp devices */}
+              {(device.deviceProduct?.toLowerCase().includes("plexamp") ||
+                device.deviceName?.toLowerCase().includes("plexamp")) && (
+                <div className="p-3 bg-muted/30 rounded-lg">
                   <p className="text-xs text-muted-foreground">
-                    When enabled, streams from this device won&apos;t count
-                    towards the user&apos;s concurrent stream limit
+                    PlexAmp devices are automatically excluded from all policy
+                    checks including concurrent stream limits.
                   </p>
                 </div>
-                <Switch
-                  id="exclude-concurrent-limit"
-                  checked={excludeFromConcurrentLimit}
-                  onCheckedChange={handleExcludeFromConcurrentLimitChange}
-                  disabled={excludeLoading}
-                  className="cursor-pointer"
-                />
-              </div>
+              )}
               {/* Add more settings here in the future */}
             </CollapsibleContent>
           </Collapsible>

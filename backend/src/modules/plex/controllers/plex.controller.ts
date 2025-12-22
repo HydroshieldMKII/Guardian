@@ -2,8 +2,10 @@ import { Controller, Get, Param, Res, Query, Logger } from '@nestjs/common';
 import type { Response } from 'express';
 import { PlexClient } from '../services/plex-client';
 import { PlexService } from '../services/plex.service';
+import { AdminOnly } from '../../auth/decorators/admin-only.decorator';
 
 @Controller('plex')
+@AdminOnly()
 export class PlexController {
   private readonly logger = new Logger(PlexController.name);
 

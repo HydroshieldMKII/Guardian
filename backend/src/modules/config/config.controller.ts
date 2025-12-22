@@ -18,8 +18,10 @@ import { AppriseService } from './services/apprise.service';
 import { AuthService } from '../auth/auth.service';
 import { ConfirmPasswordDto } from '../auth/dto/confirm-password.dto';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { AdminOnly } from '../auth/decorators/admin-only.decorator';
 
 @Controller('config')
+@AdminOnly()
 export class ConfigController {
   constructor(
     private readonly configService: ConfigService,

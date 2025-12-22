@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Settings, Moon, Sun, User, LogOut, Edit, AlertTriangle, Save, Loader2 } from "lucide-react";
 import { useTheme } from "@/hooks/use-theme";
 import { useVersion } from "@/contexts/version-context";
-import { useAuth } from "@/contexts/auth-context";
+import { useAuth, isAdminUser, isPlexUser } from "@/contexts/auth-context";
 import { useUnsavedChanges } from "@/contexts/unsaved-changes-context";
 import { NotificationMenu } from "@/components/notification-menu";
 import { EditProfileModal } from "@/components/edit-profile-modal";
@@ -35,7 +35,7 @@ export function Navbar() {
   const [isSaving, setIsSaving] = useState(false);
   const { theme, toggleTheme } = useTheme();
   const { versionInfo } = useVersion();
-  const { user, logout, setupRequired, isAuthenticated } = useAuth();
+  const { user, userType, logout, setupRequired, isAuthenticated } = useAuth();
   const {
     hasUnsavedChanges,
     showUnsavedWarning,
@@ -51,12 +51,13 @@ export function Navbar() {
 
   const isOnSettingsPage = pathname === "/settings";
 
-  // Hide navbar if setup required, not authenticated, or on auth pages
+  // Hide navbar if setup required, not authenticated, on auth pages, or plex user (portal has own header)
   if (
     setupRequired ||
     !isAuthenticated ||
     pathname === "/login" ||
-    pathname === "/setup"
+    pathname === "/setup" ||
+    userType === "plex_user"
   ) {
     return null;
   }
@@ -120,9 +121,32 @@ export function Navbar() {
     }
   };
 
+  // Helper functions to get display values for both user types
+  const getDisplayName = () => {
+    if (!user) return "";
+    if (isAdminUser(user)) return user.username;
+    if (isPlexUser(user)) return user.plexUsername;
+    return "";
+  };
+
+  const getDisplayEmail = () => {
+    if (!user) return "";
+    if (isAdminUser(user)) return user.email;
+    return ""; // Plex users don't have email exposed
+  };
+
+  const getAvatarUrl = () => {
+    if (!user) return undefined;
+    if (isAdminUser(user)) return user.avatarUrl;
+    if (isPlexUser(user)) return user.plexThumb;
+    return undefined;
+  };
+
   const getAvatarInitials = () => {
     if (!user) return "?";
-    return user.username
+    const name = getDisplayName();
+    if (!name) return "?";
+    return name
       .split(" ")
       .map((n) => n[0])
       .join("")
@@ -208,10 +232,10 @@ export function Navbar() {
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8 sm:h-9 sm:w-9 rounded-full hover:bg-muted transition-colors ml-1 sm:ml-2"
-                    title={user.username}
+                    title={getDisplayName()}
                   >
                     <Avatar className="h-7 w-7 sm:h-8 sm:w-8">
-                      <AvatarImage src={user.avatarUrl} alt={user.username} />
+                      <AvatarImage src={getAvatarUrl()} alt={getDisplayName()} />
                       <AvatarFallback className="text-[10px] sm:text-xs font-semibold">
                         {getAvatarInitials()}
                       </AvatarFallback>
@@ -223,18 +247,20 @@ export function Navbar() {
                   <div className="px-3 py-2">
                     <div className="flex items-center gap-3">
                       <Avatar className="h-10 w-10">
-                        <AvatarImage src={user.avatarUrl} alt={user.username} />
+                        <AvatarImage src={getAvatarUrl()} alt={getDisplayName()} />
                         <AvatarFallback className="text-sm font-semibold">
                           {getAvatarInitials()}
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex flex-col min-w-0">
                         <p className="text-sm font-medium truncate">
-                          {user.username}
+                          {getDisplayName()}
                         </p>
-                        <p className="text-xs text-muted-foreground truncate">
-                          {user.email}
-                        </p>
+                        {getDisplayEmail() && (
+                          <p className="text-xs text-muted-foreground truncate">
+                            {getDisplayEmail()}
+                          </p>
+                        )}
                       </div>
                     </div>
                   </div>

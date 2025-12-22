@@ -228,6 +228,22 @@ export const getSettingInfo = (setting: AppSetting): SettingInfo => {
       description:
         "Message shown when a user exceeds their concurrent stream limit",
     },
+    // User Portal Settings
+    USER_PORTAL_ENABLED: {
+      label: "Enable Plex user portal",
+      description:
+        "Allow Plex users to log in and view their devices. If disabled, Plex login only works if admin has linked their account.",
+    },
+    USER_PORTAL_SHOW_RULES: {
+      label: "Show rules in user portal",
+      description:
+        "Allow Plex users to see their assigned rules (network policy, concurrent limits, time rules, etc.)",
+    },
+    USER_PORTAL_ALLOW_REJECTED_REQUESTS: {
+      label: "Allow notes on rejected devices",
+      description:
+        "Allow Plex users to submit notes for devices that have been rejected",
+    },
   };
 
   const info = settingInfoMap[setting.key];

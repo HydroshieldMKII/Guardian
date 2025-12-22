@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useNotificationContext } from "@/contexts/notification-context";
 import { useSettings } from "@/contexts/settings-context";
-import { useAuth } from "@/contexts/auth-context";
+import { useAuth, isAdminUser } from "@/contexts/auth-context";
 import { UserHistoryModal } from "@/components/device-management/UserHistoryModal";
 import { apiClient } from "@/lib/api";
 import { Notification } from "@/types";
@@ -17,7 +17,8 @@ export function GlobalNotificationHandler() {
   } = useNotificationContext();
 
   const { settings } = useSettings();
-  const { setupRequired, isAuthenticated } = useAuth();
+  const { setupRequired, isAuthenticated, user } = useAuth();
+  const isAdmin = user && isAdminUser(user);
 
   // User History Modal state for notifications
   const [notificationHistoryModalOpen, setNotificationHistoryModalOpen] =
@@ -29,10 +30,10 @@ export function GlobalNotificationHandler() {
   const [notificationScrollToSessionId, setNotificationScrollToSessionId] =
     useState<number | null>(null);
 
-  // Independent notification fetching
+  // Independent notification fetching (admin only)
   useEffect(() => {
-    // Skip fetching during setup or if not authenticated
-    if (setupRequired || !isAuthenticated) {
+    // Skip fetching during setup, if not authenticated, or if not admin
+    if (setupRequired || !isAuthenticated || !isAdmin) {
       return;
     }
 
@@ -60,7 +61,7 @@ export function GlobalNotificationHandler() {
     return () => {
       clearInterval(intervalNotification);
     };
-  }, [setNotifications, setupRequired, isAuthenticated]);
+  }, [setNotifications, setupRequired, isAuthenticated, isAdmin]);
 
   // Set up global notification click handler
   useEffect(() => {
