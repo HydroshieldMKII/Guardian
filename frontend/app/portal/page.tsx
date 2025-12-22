@@ -575,7 +575,8 @@ export default function UserPortalPage() {
                               </div>
                             </div>
 
-                            <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0 ml-[52px] sm:ml-0">
+                            {/* Desktop: Badge row on the right */}
+                            <div className="hidden sm:flex items-center gap-3 flex-shrink-0">
                               {getStatusBadge(device)}
 
                               {/* Show request button only if note not already submitted */}
@@ -587,7 +588,7 @@ export default function UserPortalPage() {
                                     onClick={() =>
                                       handleRequestApproval(device)
                                     }
-                                    className="text-xs sm:text-sm"
+                                    className="text-sm"
                                   >
                                     Add Note
                                   </Button>
@@ -601,12 +602,46 @@ export default function UserPortalPage() {
                                     onClick={() =>
                                       handleRequestApproval(device)
                                     }
-                                    className="text-xs sm:text-sm"
+                                    className="text-sm"
                                   >
                                     Add Note
                                   </Button>
                                 )}
                             </div>
+                          </div>
+
+                          {/* Mobile: Badge row fully aligned to left edge */}
+                          <div className="flex items-center gap-2 mt-3 sm:hidden">
+                            {getStatusBadge(device)}
+
+                            {/* Show request button only if note not already submitted */}
+                            {!device.requestSubmittedAt &&
+                              device.status === "pending" && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() =>
+                                    handleRequestApproval(device)
+                                  }
+                                  className="text-xs"
+                                >
+                                  Add Note
+                                </Button>
+                              )}
+                            {!device.requestSubmittedAt &&
+                              device.status === "rejected" &&
+                              settings?.allowRejectedRequests && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() =>
+                                    handleRequestApproval(device)
+                                  }
+                                  className="text-xs"
+                                >
+                                  Add Note
+                                </Button>
+                              )}
                           </div>
                         </div>
 

@@ -300,7 +300,14 @@ export class EmailTemplateService {
   }
 
   generateNotificationEmail(
-    notificationType: 'block' | 'info' | 'warning' | 'error' | 'new-device' | 'location-change' | 'device-note',
+    notificationType:
+      | 'block'
+      | 'info'
+      | 'warning'
+      | 'error'
+      | 'new-device'
+      | 'location-change'
+      | 'device-note',
     statusColor: string,
     statusLabel: string,
     mainMessage: string,
