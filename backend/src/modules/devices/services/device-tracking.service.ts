@@ -398,6 +398,80 @@ export class DeviceTrackingService {
     });
   }
 
+  /**
+   * Enforce strict mode on all pending devices.
+   * When strict mode is enabled, pending devices are automatically approved or rejected
+   * based on the user's default block policy. Plexamp devices are always approved.
+   * @returns The number of devices that were processed
+   */
+  async enforceStrictModeOnPendingDevices(): Promise<number> {
+    const strictMode = await this.configService.getSetting(
+      'PLEX_GUARD_STRICT_MODE',
+    );
+    const isStrictMode = strictMode?.value === 'true';
+
+    if (!isStrictMode) {
+      return 0;
+    }
+
+    const pendingDevices = await this.getPendingDevices();
+
+    if (pendingDevices.length === 0) {
+      return 0;
+    }
+
+    this.logger.log(
+      `Strict mode enabled: Processing ${pendingDevices.length} pending device(s)`,
+    );
+
+    let processedCount = 0;
+
+    for (const device of pendingDevices) {
+      try {
+        // Check if this is a Plexamp device (they are always allowed)
+        const isPlexampDevice =
+          device.deviceProduct?.toLowerCase().includes('plexamp') ||
+          device.deviceName?.toLowerCase().includes('plexamp');
+
+        // Get user's effective default block setting
+        const defaultBlock = await this.usersService.getEffectiveDefaultBlock(
+          device.userId,
+        );
+
+        // Determine new status
+        let newStatus: 'approved' | 'rejected';
+        if (isPlexampDevice) {
+          newStatus = 'approved';
+        } else {
+          newStatus = defaultBlock ? 'rejected' : 'approved';
+        }
+
+        // Update device status
+        device.status = newStatus;
+        await this.userDeviceRepository.save(device);
+
+        this.logger.log(
+          `Strict mode: Device "${device.deviceName || device.deviceIdentifier}" for user "${device.username || device.userId}" -> ${newStatus}${isPlexampDevice ? ' (Plexamp)' : ''}`,
+        );
+
+        processedCount++;
+      } catch (error) {
+        this.logger.error(
+          `Error processing device ${device.deviceIdentifier} in strict mode:`,
+          error,
+        );
+      }
+    }
+
+    if (processedCount > 0) {
+      this.logger.log(
+        `Strict mode enforcement complete: ${processedCount} device(s) processed`,
+      );
+    }
+
+    return processedCount;
+  }
+
   async getProcessedDevices(): Promise<UserDevice[]> {
     return this.userDeviceRepository.find({
       where: [{ status: 'approved' }, { status: 'rejected' }],
@@ -446,6 +520,18 @@ export class DeviceTrackingService {
       status: 'rejected',
     });
     this.logger.log(`Device ${deviceId} has been rejected`);
+  }
+
+  async setPendingDevice(deviceId: number): Promise<void> {
+    // First update the status to pending
+    await this.userDeviceRepository.update(deviceId, {
+      status: 'pending',
+    });
+
+    // Then revoke any temporary access
+    await this.revokeTemporaryAccess(deviceId);
+
+    this.logger.log(`Device ${deviceId} has been set to pending`);
   }
 
   async deleteDevice(deviceId: number): Promise<void> {

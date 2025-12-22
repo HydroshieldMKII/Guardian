@@ -37,10 +37,22 @@ export class SchedulerService implements OnModuleInit {
       },
     );
 
+    // Set up config change listener for strict mode - when enabled, process pending devices
+    this.configService.addConfigChangeListener(
+      'PLEX_GUARD_STRICT_MODE',
+      async () => {
+        this.logger.log(
+          'Strict mode setting changed, checking pending devices...',
+        );
+        await this.enforceStrictMode();
+      },
+    );
+
     // Perform tasks on startup
     await this.handleSessionUpdates();
     await this.performDeviceCleanup();
     await this.syncPlexUsers();
+    await this.enforceStrictMode();
   }
 
   private async setupDynamicSessionUpdatesCron() {
@@ -149,6 +161,20 @@ export class SchedulerService implements OnModuleInit {
       await this.deviceTrackingService.cleanupInactiveDevices(intervalDays);
     } catch (error) {
       this.logger.error('Error during device cleanup:', error);
+    }
+  }
+
+  private async enforceStrictMode(): Promise<void> {
+    try {
+      const processedCount =
+        await this.deviceTrackingService.enforceStrictModeOnPendingDevices();
+      if (processedCount > 0) {
+        this.logger.log(
+          `Strict mode enforcement: ${processedCount} pending device(s) processed`,
+        );
+      }
+    } catch (error) {
+      this.logger.error('Error enforcing strict mode:', error);
     }
   }
 

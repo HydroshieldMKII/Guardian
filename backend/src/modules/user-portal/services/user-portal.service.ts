@@ -233,7 +233,10 @@ export class UserPortalService {
 
     // Get effective default block value
     let effectiveDefaultBlock: boolean;
-    if (userPreference?.defaultBlock !== null && userPreference?.defaultBlock !== undefined) {
+    if (
+      userPreference?.defaultBlock !== null &&
+      userPreference?.defaultBlock !== undefined
+    ) {
       effectiveDefaultBlock = userPreference.defaultBlock;
     } else {
       const globalDefaultBlock = await this.appSettingsRepository.findOne({

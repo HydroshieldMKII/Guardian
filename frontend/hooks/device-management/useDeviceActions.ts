@@ -41,6 +41,24 @@ export const useDeviceActions = () => {
     }
   };
 
+  const setPendingDevice = async (deviceId: number): Promise<boolean> => {
+    try {
+      setActionLoading(deviceId);
+      const response = await fetch(
+        `${config.api.baseUrl}/devices/${deviceId}/set-pending`,
+        {
+          method: "POST",
+        },
+      );
+      return response.ok;
+    } catch (error) {
+      console.error("Error setting device to pending:", error);
+      return false;
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const deleteDevice = async (deviceId: number): Promise<boolean> => {
     try {
       setActionLoading(deviceId);
@@ -178,6 +196,7 @@ export const useDeviceActions = () => {
     actionLoading,
     approveDevice,
     rejectDevice,
+    setPendingDevice,
     deleteDevice,
     renameDevice,
     grantTemporaryAccess,

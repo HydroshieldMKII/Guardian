@@ -163,6 +163,14 @@ export class DevicesController {
     return { message: `Device ${id} rejected and deleted successfully` };
   }
 
+  @Post(':id/set-pending')
+  async setPendingDevice(
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<{ message: string }> {
+    await this.deviceTrackingService.setPendingDevice(id);
+    return { message: `Device ${id} set to pending successfully` };
+  }
+
   @Post(':id/rename')
   async renameDevice(
     @Param('id', ParseIntPipe) id: number,

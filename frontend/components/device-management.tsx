@@ -891,6 +891,25 @@ const DeviceManagement = memo(
       }
     };
 
+    const handleSetPending = async (deviceId: number): Promise<boolean> => {
+      try {
+        setActionLoading(deviceId);
+        const success = await deviceActions.setPendingDevice(deviceId);
+        if (success) {
+          setTimeout(handleRefresh, 100);
+          toast({
+            title: "Device Set to Pending",
+            description: "Device has been moved back to pending status",
+            variant: "success",
+          });
+          setSelectedDevice(null);
+        }
+        return success;
+      } finally {
+        setActionLoading(null);
+      }
+    };
+
     const handleDelete = async (deviceId: number) => {
       try {
         setActionLoading(deviceId);
@@ -1441,6 +1460,7 @@ const DeviceManagement = memo(
           onCancelEdit={cancelEditing}
           onRename={handleRename}
           onNewDeviceNameChange={setNewDeviceName}
+          onSetPending={handleSetPending}
         />
 
         {/* Temporary Access Modal */}

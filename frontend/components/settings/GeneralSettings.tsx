@@ -369,6 +369,9 @@ export function GeneralSettings({
     const notifyOnLocationChangeSetting = settings.find(
       (s) => s.key === "IN_APP_NOTIFY_ON_LOCATION_CHANGE"
     );
+    const notifyOnDeviceNoteSetting = settings.find(
+      (s) => s.key === "IN_APP_NOTIFY_ON_DEVICE_NOTE"
+    );
     const autoMarkReadSetting = settings.find(
       (s) => s.key === "AUTO_MARK_NOTIFICATION_READ"
     );
@@ -378,6 +381,7 @@ export function GeneralSettings({
       !notifyOnNewDeviceSetting ||
       !notifyOnBlockSetting ||
       !notifyOnLocationChangeSetting ||
+      !notifyOnDeviceNoteSetting ||
       !autoMarkReadSetting
     )
       return null;
@@ -452,6 +456,7 @@ export function GeneralSettings({
           {renderNotificationSwitch(notifyOnNewDeviceSetting)}
           {renderNotificationSwitch(notifyOnBlockSetting)}
           {renderNotificationSwitch(notifyOnLocationChangeSetting)}
+          {renderNotificationSwitch(notifyOnDeviceNoteSetting)}
           {renderNotificationSwitch(autoMarkReadSetting)}
         </div>
       </div>

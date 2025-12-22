@@ -31,6 +31,7 @@ import {
   Activity,
   MessageSquare,
   CheckCheck,
+  RotateCcw,
 } from "lucide-react";
 import { UserDevice } from "@/types";
 import { ClickableIP, DeviceStatus } from "./SharedComponents";
@@ -50,6 +51,7 @@ interface DeviceDetailsModalProps {
   onRename: (deviceId: number, newName: string) => void;
   onNewDeviceNameChange: (name: string) => void;
   onDeviceUpdate?: (device: UserDevice) => void;
+  onSetPending?: (deviceId: number) => Promise<boolean>;
 }
 
 export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
@@ -64,11 +66,13 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
   onRename,
   onNewDeviceNameChange,
   onDeviceUpdate,
+  onSetPending,
 }) => {
   const { hasTemporaryAccess, getTemporaryAccessTimeLeft } = useDeviceUtils();
   const { toast } = useToast();
   const [excludeLoading, setExcludeLoading] = useState(false);
   const [markingAsRead, setMarkingAsRead] = useState(false);
+  const [setPendingLoading, setSetPendingLoading] = useState(false);
   const [excludeFromConcurrentLimit, setExcludeFromConcurrentLimit] = useState(
     device?.excludeFromConcurrentLimit ?? false
   );
@@ -83,6 +87,11 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
   const [tempAccessOpen, setTempAccessOpen] = useState(true);
   const [deviceSettingsOpen, setDeviceSettingsOpen] = useState(false);
   const [userNoteOpen, setUserNoteOpen] = useState(false);
+
+  // Check if device is Plexamp
+  const isPlexampDevice =
+    device?.deviceProduct?.toLowerCase().includes("plexamp") ||
+    device?.deviceName?.toLowerCase().includes("plexamp");
 
   // Sync local state when device prop changes
   React.useEffect(() => {
@@ -156,6 +165,44 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
       });
     } finally {
       setExcludeLoading(false);
+    }
+  };
+
+  const handleSetPending = async () => {
+    if (!onSetPending || !device) return;
+    
+    setSetPendingLoading(true);
+    try {
+      const success = await onSetPending(device.id);
+      if (success) {
+        toast({
+          title: "Device set to pending",
+          description: "The device has been moved back to pending status.",
+          variant: "success",
+        });
+        // Update parent state
+        if (onDeviceUpdate) {
+          onDeviceUpdate({ ...device, status: "pending" });
+        }
+        onClose();
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to set device to pending",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to set device to pending",
+        variant: "destructive",
+      });
+    } finally {
+      setSetPendingLoading(false);
     }
   };
 
@@ -524,8 +571,7 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
             </CollapsibleTrigger>
             <CollapsibleContent className="pt-3 px-3 space-y-3">
               {/* Exclude from concurrent stream limit - Hide for PlexAmp devices since they're always excluded */}
-              {!device.deviceProduct?.toLowerCase().includes("plexamp") &&
-                !device.deviceName?.toLowerCase().includes("plexamp") && (
+              {!isPlexampDevice && (
                   <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
                     <div className="space-y-0.5">
                       <Label
@@ -548,9 +594,37 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
                     />
                   </div>
                 )}
+              {/* Set to pending - Hide for PlexAmp devices and only show if not already pending */}
+              {!isPlexampDevice && device.status !== "pending" && onSetPending && (
+                <div className="p-3 bg-muted/30 rounded-lg">
+                  <div className="space-y-2">
+                    <div className="space-y-0.5">
+                      <Label className="text-sm font-medium">
+                        Revert to pending status
+                      </Label>
+                      <p className="text-xs text-muted-foreground">
+                        Move this device back to pending status. The device will need to be approved again.
+                      </p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleSetPending}
+                      disabled={setPendingLoading}
+                      className="w-full border-amber-600 text-amber-700 hover:bg-amber-50 dark:border-amber-700 dark:text-amber-400 dark:hover:bg-amber-900/30"
+                    >
+                      {setPendingLoading ? (
+                        <RefreshCw className="w-4 h-4 animate-spin mr-2" />
+                      ) : (
+                        <RotateCcw className="w-4 h-4 mr-2" />
+                      )}
+                      Set to Pending
+                    </Button>
+                  </div>
+                </div>
+              )}
               {/* Show message for PlexAmp devices */}
-              {(device.deviceProduct?.toLowerCase().includes("plexamp") ||
-                device.deviceName?.toLowerCase().includes("plexamp")) && (
+              {isPlexampDevice && (
                 <div className="p-3 bg-muted/30 rounded-lg">
                   <p className="text-xs text-muted-foreground">
                     PlexAmp devices are automatically excluded from all policy
@@ -558,7 +632,6 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
                   </p>
                 </div>
               )}
-              {/* Add more settings here in the future */}
             </CollapsibleContent>
           </Collapsible>
         </div>
