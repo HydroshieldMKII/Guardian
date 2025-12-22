@@ -61,6 +61,7 @@ export function SMTPSettings({
         "SMTP_NOTIFY_ON_NEW_DEVICE",
         "SMTP_NOTIFY_ON_BLOCK",
         "SMTP_NOTIFY_ON_LOCATION_CHANGE",
+        "SMTP_NOTIFY_ON_DEVICE_NOTE",
         "SMTP_HOST",
         "SMTP_PORT",
         "SMTP_USE_TLS",
@@ -121,6 +122,10 @@ export function SMTPSettings({
 
     const notifyOnLocationChangeSetting = smtpSettings.find(
       (s) => s.key === "SMTP_NOTIFY_ON_LOCATION_CHANGE"
+    );
+
+    const notifyOnDeviceNoteSetting = smtpSettings.find(
+      (s) => s.key === "SMTP_NOTIFY_ON_DEVICE_NOTE"
     );
 
     if (
@@ -241,6 +246,39 @@ export function SMTPSettings({
                   />
                 </div>
               </div>
+
+              {/* Notify on device note */}
+              {notifyOnDeviceNoteSetting && (
+                <div className="space-y-2 mt-4">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label
+                        htmlFor={notifyOnDeviceNoteSetting.key}
+                        className={!isSmtpEnabled ? "text-muted-foreground" : ""}
+                      >
+                        {getSettingInfo(notifyOnDeviceNoteSetting).label}
+                      </Label>
+                      <p className="text-sm text-muted-foreground">
+                        {getSettingInfo(notifyOnDeviceNoteSetting).description}
+                      </p>
+                    </div>
+                    <Switch
+                      id={notifyOnDeviceNoteSetting.key}
+                      checked={
+                        (formData[notifyOnDeviceNoteSetting.key] ??
+                          notifyOnDeviceNoteSetting.value) === "true" ||
+                        (formData[notifyOnDeviceNoteSetting.key] ??
+                          notifyOnDeviceNoteSetting.value) === true
+                      }
+                      onCheckedChange={(checked) =>
+                        handleInputChange(notifyOnDeviceNoteSetting.key, checked)
+                      }
+                      disabled={!isSmtpEnabled}
+                      className="cursor-pointer"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -328,7 +366,8 @@ export function SMTPSettings({
               setting.key !== "SMTP_ENABLED" &&
               setting.key !== "SMTP_NOTIFY_ON_NEW_DEVICE" &&
               setting.key !== "SMTP_NOTIFY_ON_BLOCK" &&
-              setting.key !== "SMTP_NOTIFY_ON_LOCATION_CHANGE"
+              setting.key !== "SMTP_NOTIFY_ON_LOCATION_CHANGE" &&
+              setting.key !== "SMTP_NOTIFY_ON_DEVICE_NOTE"
           )
           .map((setting) => (
             <Card key={setting.key} className="p-4 my-4">

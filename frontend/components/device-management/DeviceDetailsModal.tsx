@@ -355,25 +355,7 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
             <Collapsible open={userNoteOpen} onOpenChange={setUserNoteOpen}>
               <CollapsibleTrigger className="flex items-center justify-between w-full p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer">
                 <div className="flex items-center gap-2">
-                  <MessageSquare
-                    className={`w-4 h-4 ${noteReadAt ? "text-green-600 dark:text-green-400" : "text-amber-600 dark:text-amber-400"}`}
-                  />
                   <span className="font-semibold text-sm">User Note</span>
-                  {noteReadAt ? (
-                    <Badge
-                      variant="outline"
-                      className="ml-2 border-green-600 dark:border-green-700 text-green-700 dark:text-green-400"
-                    >
-                      Read
-                    </Badge>
-                  ) : (
-                    <Badge
-                      variant="outline"
-                      className="ml-2 border-amber-600 dark:border-amber-700 text-amber-700 dark:text-amber-400"
-                    >
-                      Unread
-                    </Badge>
-                  )}
                 </div>
                 <ChevronDown
                   className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${
@@ -383,12 +365,8 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
               </CollapsibleTrigger>
               <CollapsibleContent className="pt-3 px-3">
                 <div className="space-y-3">
-                  <div
-                    className={`p-3 rounded-lg ${noteReadAt ? "bg-green-50 dark:bg-green-900/20" : "bg-amber-50 dark:bg-amber-900/20"}`}
-                  >
-                    <p
-                      className={`text-sm ${noteReadAt ? "text-green-800 dark:text-green-200" : "text-amber-800 dark:text-amber-200"}`}
-                    >
+                  <div className="p-3 rounded-lg bg-muted/50">
+                    <p className="text-sm text-foreground">
                       {device.requestDescription}
                     </p>
                   </div>

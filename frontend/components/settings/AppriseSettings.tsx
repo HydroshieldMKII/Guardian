@@ -63,6 +63,7 @@ export function AppriseSettings({
         "APPRISE_NOTIFY_ON_NEW_DEVICE",
         "APPRISE_NOTIFY_ON_BLOCK",
         "APPRISE_NOTIFY_ON_LOCATION_CHANGE",
+        "APPRISE_NOTIFY_ON_DEVICE_NOTE",
         "APPRISE_URLS",
       ];
 
@@ -243,6 +244,31 @@ export function AppriseSettings({
                 }
 
                 if (setting.key === "APPRISE_NOTIFY_ON_LOCATION_CHANGE") {
+                  return (
+                    <div
+                      key={setting.key}
+                      className="flex items-center justify-between ml-6 pl-4 border-l-2 border-muted"
+                    >
+                      <div className="space-y-0.5">
+                        <Label className="text-base font-medium">
+                          {settingInfo.label}
+                        </Label>
+                        <div className="text-sm text-muted-foreground">
+                          {settingInfo.description}
+                        </div>
+                      </div>
+                      <Switch
+                        checked={currentValue === "true"}
+                        onCheckedChange={(checked) =>
+                          handleInputChange(setting.key, checked.toString())
+                        }
+                        disabled={!isAppriseEnabled}
+                      />
+                    </div>
+                  );
+                }
+
+                if (setting.key === "APPRISE_NOTIFY_ON_DEVICE_NOTE") {
                   return (
                     <div
                       key={setting.key}

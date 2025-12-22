@@ -155,6 +155,37 @@ export class AppriseService {
     return this.sendNotification(notificationData);
   }
 
+  async sendDeviceNoteNotification(
+    username: string,
+    deviceName: string,
+    note: string,
+  ): Promise<{ success: boolean; message: string }> {
+    //Check if notifications for device notes is enabled
+    const notifyOnDeviceNote = await this.configService.getSetting(
+      'APPRISE_NOTIFY_ON_DEVICE_NOTE',
+    );
+    if (notifyOnDeviceNote !== true) {
+      this.logger.log('Apprise notification for device notes is disabled');
+      return {
+        success: false,
+        message: 'Apprise notification for device notes is disabled',
+      };
+    }
+
+    const notificationData: AppriseNotificationData = {
+      title: 'Device Note Received - Guardian',
+      body:
+        `A user has left a note on their device:\n\n` +
+        `User: ${username}\n` +
+        `Device: ${deviceName}\n` +
+        `Note: ${note}\n\n` +
+        `Review this device in Guardian to take action.`,
+      type: 'info',
+    };
+
+    return this.sendNotification(notificationData);
+  }
+
   async getAppriseConfig(): Promise<
     AppriseConfig | { success: boolean; message: string }
   > {

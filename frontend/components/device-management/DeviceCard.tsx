@@ -231,47 +231,41 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
             </div>
           </div>
           {/* User Note - Mobile (only show unread notes) */}
-          {device.requestDescription && device.requestSubmittedAt && !noteReadAt && (
-            <div
-              className="rounded-lg p-2.5 border bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800"
-            >
-              <div className="flex items-start gap-2">
-                <MessageSquare
-                  className="w-3.5 h-3.5 mt-0.5 flex-shrink-0 text-amber-600 dark:text-amber-400"
-                />
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between mb-0.5">
-                    <p
-                      className="text-[10px] font-medium text-amber-700 dark:text-amber-300"
-                    >
-                      User Note
+          {device.requestDescription &&
+            device.requestSubmittedAt &&
+            !noteReadAt && (
+              <div className="rounded-lg p-2.5 border bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800">
+                <div className="flex items-start gap-2">
+                  <MessageSquare className="w-3.5 h-3.5 mt-0.5 flex-shrink-0 text-amber-600 dark:text-amber-400" />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between mb-0.5">
+                      <p className="text-[10px] font-medium text-amber-700 dark:text-amber-300">
+                        User Note
+                      </p>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleMarkNoteAsRead}
+                        disabled={markingAsRead}
+                        className="h-5 px-1.5 text-[10px] text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-800/30"
+                      >
+                        {markingAsRead ? (
+                          <RefreshCw className="w-3 h-3 animate-spin" />
+                        ) : (
+                          <>
+                            <CheckCheck className="w-3 h-3 mr-0.5" />
+                            Mark Read
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                    <p className="text-xs text-amber-800 dark:text-amber-200">
+                      {device.requestDescription}
                     </p>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleMarkNoteAsRead}
-                      disabled={markingAsRead}
-                      className="h-5 px-1.5 text-[10px] text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-800/30"
-                    >
-                      {markingAsRead ? (
-                        <RefreshCw className="w-3 h-3 animate-spin" />
-                      ) : (
-                        <>
-                          <CheckCheck className="w-3 h-3 mr-0.5" />
-                          Mark Read
-                        </>
-                      )}
-                    </Button>
                   </div>
-                  <p
-                    className="text-xs text-amber-800 dark:text-amber-200"
-                  >
-                    {device.requestDescription}
-                  </p>
                 </div>
               </div>
-            </div>
-          )}
+            )}
           {/* Action Buttons - Mobile */}
           <div className="flex flex-col gap-2 pt-2 border-t border-border/50">
             {/* Details Button - Full width on mobile */}
@@ -547,47 +541,41 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
             </div>
 
             {/* User Note - Desktop (only show unread notes) */}
-            {device.requestDescription && device.requestSubmittedAt && !noteReadAt && (
-              <div
-                className="mt-3 rounded-lg p-3 border bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800"
-              >
-                <div className="flex items-start gap-2">
-                  <MessageSquare
-                    className="w-4 h-4 mt-0.5 flex-shrink-0 text-amber-600 dark:text-amber-400"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center justify-between mb-1">
-                      <p
-                        className="text-xs font-medium text-amber-700 dark:text-amber-300"
-                      >
-                        User Note
+            {device.requestDescription &&
+              device.requestSubmittedAt &&
+              !noteReadAt && (
+                <div className="mt-3 rounded-lg p-3 border bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800">
+                  <div className="flex items-start gap-2">
+                    <MessageSquare className="w-4 h-4 mt-0.5 flex-shrink-0 text-amber-600 dark:text-amber-400" />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between mb-1">
+                        <p className="text-xs font-medium text-amber-700 dark:text-amber-300">
+                          User Note
+                        </p>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleMarkNoteAsRead}
+                          disabled={markingAsRead}
+                          className="h-6 px-2 text-xs text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-800/30"
+                        >
+                          {markingAsRead ? (
+                            <RefreshCw className="w-3 h-3 animate-spin" />
+                          ) : (
+                            <>
+                              <CheckCheck className="w-3 h-3 mr-1" />
+                              Mark as Read
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                      <p className="text-sm text-amber-800 dark:text-amber-200">
+                        {device.requestDescription}
                       </p>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleMarkNoteAsRead}
-                        disabled={markingAsRead}
-                        className="h-6 px-2 text-xs text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-800/30"
-                      >
-                        {markingAsRead ? (
-                          <RefreshCw className="w-3 h-3 animate-spin" />
-                        ) : (
-                          <>
-                            <CheckCheck className="w-3 h-3 mr-1" />
-                            Mark as Read
-                          </>
-                        )}
-                      </Button>
                     </div>
-                    <p
-                      className="text-sm text-amber-800 dark:text-amber-200"
-                    >
-                      {device.requestDescription}
-                    </p>
                   </div>
                 </div>
-              </div>
-            )}
+              )}
           </div>
 
           {/* Action Buttons - Desktop (Right side) */}

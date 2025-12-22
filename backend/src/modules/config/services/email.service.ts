@@ -17,13 +17,14 @@ export interface SMTPConfig {
 }
 
 export interface NotificationEmailData {
-  type: 'block' | 'info' | 'warning' | 'error' | 'new-device' | 'location-change';
+  type: 'block' | 'info' | 'warning' | 'error' | 'new-device' | 'location-change' | 'device-note';
   text: string;
   username: string;
   deviceName?: string;
   stopCode?: string;
   ipAddress?: string;
   oldIpAddress?: string;
+  note?: string;
 }
 
 @Injectable()
@@ -243,6 +244,28 @@ export class EmailService {
       await this.sendEmail(notificationData);
     } catch (error) {
       this.logger.error('Error in sendLocationChangeEmail:', error);
+    }
+  }
+
+  async sendDeviceNoteEmail(
+    username: string,
+    deviceName: string,
+    note: string,
+  ): Promise<void> {
+    try {
+      const notificationText = `${username} left a note on device ${deviceName}`;
+
+      const notificationData: NotificationEmailData = {
+        type: 'device-note',
+        text: notificationText,
+        username,
+        deviceName,
+        note,
+      };
+
+      await this.sendEmail(notificationData);
+    } catch (error) {
+      this.logger.error('Error in sendDeviceNoteEmail:', error);
     }
   }
 

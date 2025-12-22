@@ -358,6 +358,86 @@ export class NotificationsService {
     return notification;
   }
 
+  async createDeviceNoteNotification(
+    userId: string,
+    username: string,
+    deviceName: string,
+    note: string,
+  ): Promise<Notification | null> {
+    const truncatedDeviceName = this.truncateDeviceName(deviceName);
+    const truncatedNote = note.length > 100 ? note.substring(0, 100) + '...' : note;
+    const text = `${username} left a note on ${truncatedDeviceName}: "${truncatedNote}"`;
+
+    // Check if in-app notifications are enabled globally and for device notes
+    const [inAppEnabled, inAppNotifyOnDeviceNote] = await Promise.all([
+      this.configService.getSetting('IN_APP_ENABLED'),
+      this.configService.getSetting('IN_APP_NOTIFY_ON_DEVICE_NOTE'),
+    ]);
+
+    let notification: Notification | null = null;
+    if (inAppEnabled && inAppNotifyOnDeviceNote) {
+      notification = await this.createNotification({
+        userId,
+        text,
+        type: 'info',
+      });
+    } else {
+      this.logger.log('In-app notification for device note is disabled.');
+    }
+
+    // Send email notification for device note if enabled
+    try {
+      const [smtpEnabled, smtpNotifyOnDeviceNote] = await Promise.all([
+        this.configService.getSetting('SMTP_ENABLED'),
+        this.configService.getSetting('SMTP_NOTIFY_ON_DEVICE_NOTE'),
+      ]);
+
+      if (smtpEnabled && smtpNotifyOnDeviceNote) {
+        await this.emailService.sendDeviceNoteEmail(
+          username,
+          deviceName,
+          note,
+        );
+      } else {
+        this.logger.log(
+          'SMTP email notification for device note is disabled.',
+        );
+      }
+    } catch (error) {
+      console.error(
+        'Failed to send device note notification email:',
+        error,
+      );
+    }
+
+    // Send Apprise notification for device note if enabled
+    try {
+      const [appriseEnabled, appriseNotifyOnDeviceNote] = await Promise.all([
+        this.configService.getSetting('APPRISE_ENABLED'),
+        this.configService.getSetting('APPRISE_NOTIFY_ON_DEVICE_NOTE'),
+      ]);
+
+      if (appriseEnabled && appriseNotifyOnDeviceNote) {
+        await this.appriseService.sendDeviceNoteNotification(
+          username,
+          deviceName,
+          note,
+        );
+      } else {
+        this.logger.log(
+          'Apprise notification for device note is disabled.',
+        );
+      }
+    } catch (error) {
+      console.error(
+        'Failed to send Apprise device note notification:',
+        error,
+      );
+    }
+
+    return notification;
+  }
+
   async getNotificationsForUser(
     userId: string,
   ): Promise<NotificationResponseDto[]> {

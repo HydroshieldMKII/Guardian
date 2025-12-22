@@ -166,6 +166,11 @@ export class ConfigService {
         type: 'boolean' as const,
       },
       {
+        key: 'IN_APP_NOTIFY_ON_DEVICE_NOTE',
+        value: 'true',
+        type: 'boolean' as const,
+      },
+      {
         key: 'ENABLE_MEDIA_THUMBNAILS',
         value: 'true',
         type: 'boolean' as const,
@@ -247,6 +252,11 @@ export class ConfigService {
         value: 'false',
         type: 'boolean' as const,
       },
+      {
+        key: 'SMTP_NOTIFY_ON_DEVICE_NOTE',
+        value: 'false',
+        type: 'boolean' as const,
+      },
       // Apprise Configuration Settings
       {
         key: 'APPRISE_ENABLED',
@@ -270,6 +280,11 @@ export class ConfigService {
       },
       {
         key: 'APPRISE_NOTIFY_ON_LOCATION_CHANGE',
+        value: 'false',
+        type: 'boolean' as const,
+      },
+      {
+        key: 'APPRISE_NOTIFY_ON_DEVICE_NOTE',
         value: 'false',
         type: 'boolean' as const,
       },

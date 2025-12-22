@@ -89,6 +89,7 @@ export function GeneralSettings({
           "IN_APP_NOTIFY_ON_NEW_DEVICE",
           "IN_APP_NOTIFY_ON_BLOCK",
           "IN_APP_NOTIFY_ON_LOCATION_CHANGE",
+          "IN_APP_NOTIFY_ON_DEVICE_NOTE",
           "AUTO_MARK_NOTIFICATION_READ",
         ],
       };
@@ -135,6 +136,7 @@ export function GeneralSettings({
             "IN_APP_NOTIFY_ON_NEW_DEVICE",
             "IN_APP_NOTIFY_ON_BLOCK",
             "IN_APP_NOTIFY_ON_LOCATION_CHANGE",
+            "IN_APP_NOTIFY_ON_DEVICE_NOTE",
           ].includes(setting.key)
         );
         break;

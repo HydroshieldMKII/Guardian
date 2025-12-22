@@ -1,10 +1,11 @@
-import { Injectable, Logger, ForbiddenException } from '@nestjs/common';
+import { Injectable, Logger, ForbiddenException, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UserDevice } from '../../../entities/user-device.entity';
 import { UserTimeRule } from '../../../entities/user-time-rule.entity';
 import { UserPreference } from '../../../entities/user-preference.entity';
 import { AppSettings } from '../../../entities/app-settings.entity';
+import { NotificationsService } from '../../notifications/services/notifications.service';
 
 export interface UserPortalDevice {
   id: number;
@@ -20,6 +21,7 @@ export interface UserPortalDevice {
   requestNoteReadAt?: Date;
   hasTemporaryAccess: boolean;
   temporaryAccessUntil?: Date;
+  temporaryAccessBypassPolicies?: boolean;
   excludeFromConcurrentLimit: boolean;
   // Device-specific rules
   rules?: {
@@ -62,6 +64,8 @@ export class UserPortalService {
     private userPreferenceRepository: Repository<UserPreference>,
     @InjectRepository(AppSettings)
     private appSettingsRepository: Repository<AppSettings>,
+    @Inject(forwardRef(() => NotificationsService))
+    private notificationsService: NotificationsService,
   ) {}
 
   /**
@@ -135,7 +139,7 @@ export class UserPortalService {
 
     return devices.map((device) => {
       const deviceRules = deviceTimeRulesMap.get(device.deviceIdentifier);
-      
+
       // Plexamp devices are always effectively approved (they bypass all checks)
       const isPlexamp = device.deviceProduct?.toLowerCase().includes('plexamp');
       const effectiveStatus = isPlexamp ? 'approved' : device.status;
@@ -155,8 +159,12 @@ export class UserPortalService {
         hasTemporaryAccess:
           device.temporaryAccessUntil && device.temporaryAccessUntil > now,
         temporaryAccessUntil:
-          device.temporaryAccessUntil > now
+          device.temporaryAccessUntil && device.temporaryAccessUntil > now
             ? device.temporaryAccessUntil
+            : undefined,
+        temporaryAccessBypassPolicies:
+          device.temporaryAccessUntil && device.temporaryAccessUntil > now
+            ? device.temporaryAccessBypassPolicies
             : undefined,
         excludeFromConcurrentLimit: device.excludeFromConcurrentLimit,
         rules:
@@ -289,6 +297,26 @@ export class UserPortalService {
       requestDescription: description || '',
       requestSubmittedAt: new Date(),
     });
+
+    // Send notification about the device note
+    if (description) {
+      try {
+        // Get the username from UserPreference
+        const userPreference = await this.userPreferenceRepository.findOne({
+          where: { userId: plexUserId },
+        });
+        const username = userPreference?.username || 'Unknown User';
+        
+        await this.notificationsService.createDeviceNoteNotification(
+          plexUserId,
+          username,
+          device.deviceName,
+          description,
+        );
+      } catch (error) {
+        this.logger.error('Failed to send device note notification:', error);
+      }
+    }
 
     this.logger.log(
       `User ${plexUserId} requested approval for device ${deviceId}`,

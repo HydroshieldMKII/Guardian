@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useAuth, isPlexUser, isAdminUser } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
 import { useTheme } from "@/hooks/use-theme";
@@ -48,6 +48,7 @@ import {
   Globe,
   Wifi,
   Shield,
+  HelpCircle,
   Users,
 } from "lucide-react";
 import { ThreeDotLoader } from "@/components/three-dot-loader";
@@ -80,6 +81,7 @@ interface UserPortalDevice {
   requestNoteReadAt?: string;
   hasTemporaryAccess: boolean;
   temporaryAccessUntil?: string;
+  temporaryAccessBypassPolicies?: boolean;
   excludeFromConcurrentLimit: boolean;
   rules?: UserPortalDeviceRules;
 }
@@ -108,6 +110,109 @@ const DAY_NAMES = [
   "Friday",
   "Saturday",
 ];
+
+// Helper function to calculate time left
+const getTemporaryAccessTimeLeft = (until: string) => {
+  const now = new Date();
+  const endTime = new Date(until);
+  const diffMs = endTime.getTime() - now.getTime();
+
+  if (diffMs <= 0) return "Expired";
+
+  const diffMins = Math.floor(diffMs / 60000);
+  const totalHours = Math.floor(diffMins / 60);
+  const days = Math.floor(totalHours / 24);
+  const hours = totalHours % 24;
+  const mins = diffMins % 60;
+
+  const parts: string[] = [];
+  if (days > 0) parts.push(`${days}d`);
+  if (hours > 0) parts.push(`${hours}h`);
+  if (mins > 0 || parts.length === 0) parts.push(`${mins}m`);
+
+  return parts.join(" ");
+};
+
+// Temporary Access Badge component with controlled tooltip for mobile support
+const TemporaryAccessBadge = ({
+  device,
+}: {
+  device: UserPortalDevice;
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Detect mobile on mount
+  React.useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 640);
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
+  // Handle open change - only allow Radix to control on desktop
+  const handleOpenChange = (open: boolean) => {
+    if (!isMobile) {
+      setIsOpen(open);
+    }
+  };
+
+  const timeLeft = getTemporaryAccessTimeLeft(device.temporaryAccessUntil!);
+
+  return (
+    <TooltipProvider delayDuration={0}>
+      <Tooltip open={isOpen} onOpenChange={handleOpenChange}>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            className="inline-flex focus:outline-none rounded-md"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              if (isMobile) {
+                setIsOpen((prev) => !prev);
+              }
+            }}
+            onMouseEnter={() => {
+              if (!isMobile) setIsOpen(true);
+            }}
+            onMouseLeave={() => {
+              if (!isMobile) setIsOpen(false);
+            }}
+          >
+            <Badge
+              variant="outline"
+              className={`cursor-help ${
+                device.temporaryAccessBypassPolicies
+                  ? "text-purple-500 border-purple-500"
+                  : "text-blue-500 border-blue-500"
+              }`}
+            >
+              <Clock className="mr-1 h-3 w-3" />
+              Temporary Access
+              <HelpCircle className="ml-1 h-3 w-3 opacity-60" />
+            </Badge>
+          </button>
+        </TooltipTrigger>
+        <TooltipContent
+          className="max-w-xs"
+          onPointerDownOutside={(e) => {
+            e.preventDefault();
+            setIsOpen(false);
+          }}
+        >
+          <div className="space-y-1">
+            <p className="font-medium">Temporary access granted</p>
+            <p className="text-sm">Time remaining: {timeLeft}</p>
+            {device.temporaryAccessBypassPolicies && (
+              <p className="text-sm text-purple-400">✓ Bypasses all account rules</p>
+            )}
+          </div>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+};
 
 export default function UserPortalPage() {
   const { user, userType, logout, isLoading: authLoading } = useAuth();
@@ -265,31 +370,12 @@ export default function UserPortalPage() {
     return <Monitor className="h-5 w-5" />;
   };
 
-  const getStatusBadge = (
-    status: string,
-    hasTemporaryAccess: boolean,
-    hasSubmittedNote?: boolean
-  ) => {
-    if (hasTemporaryAccess) {
-      return (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Badge
-              variant="outline"
-              className="text-blue-500 border-blue-500 cursor-help"
-            >
-              <Clock className="mr-1 h-3 w-3" />
-              Temporary Access
-            </Badge>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>You have been granted temporary access to this device</p>
-          </TooltipContent>
-        </Tooltip>
-      );
+  const getStatusBadge = (device: UserPortalDevice) => {
+    if (device.hasTemporaryAccess && device.temporaryAccessUntil) {
+      return <TemporaryAccessBadge device={device} />;
     }
 
-    switch (status) {
+    switch (device.status) {
       case "approved":
         return (
           <Tooltip>
@@ -339,7 +425,7 @@ export default function UserPortalPage() {
             <TooltipContent>
               <p>
                 This device is awaiting approval from the administrator
-                {hasSubmittedNote ? ". Your note has been submitted." : ""}
+                {device.requestSubmittedAt ? ". Your note has been submitted." : ""}
               </p>
             </TooltipContent>
           </Tooltip>
@@ -466,55 +552,56 @@ export default function UserPortalPage() {
                 </CardContent>
               </Card>
             ) : (
-              <TooltipProvider>
+              <TooltipProvider delayDuration={0}>
                 <div className="grid gap-4">
                   {devices.map((device) => (
                     <Card key={device.id} className="overflow-hidden">
                       <CardContent className="p-0">
-                        <div className="flex items-center justify-between p-4 sm:p-5">
-                          <div className="flex items-center gap-4">
-                            <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-                              {getDeviceIcon(device.devicePlatform)}
+                        <div className="p-4 sm:p-5">
+                          {/* Mobile: Stack vertically, Desktop: Row layout */}
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                            <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+                              <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary flex-shrink-0">
+                                {getDeviceIcon(device.devicePlatform)}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <p className="font-semibold truncate text-sm sm:text-base">
+                                  {device.deviceName}
+                                </p>
+                                <p className="text-xs sm:text-sm text-muted-foreground truncate">
+                                  {device.deviceProduct} • {device.devicePlatform}
+                                </p>
+                              </div>
                             </div>
-                            <div className="min-w-0">
-                              <p className="font-semibold truncate">
-                                {device.deviceName}
-                              </p>
-                              <p className="text-sm text-muted-foreground truncate">
-                                {device.deviceProduct} • {device.devicePlatform}
-                              </p>
+
+                            <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0 pl-[52px] sm:pl-0">
+                              {getStatusBadge(device)}
+
+                              {/* Show request button only if note not already submitted */}
+                              {!device.requestSubmittedAt &&
+                                device.status === "pending" && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleRequestApproval(device)}
+                                    className="text-xs sm:text-sm"
+                                  >
+                                    Add Note
+                                  </Button>
+                                )}
+                              {!device.requestSubmittedAt &&
+                                device.status === "rejected" &&
+                                settings?.allowRejectedRequests && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleRequestApproval(device)}
+                                    className="text-xs sm:text-sm"
+                                  >
+                                    Add Note
+                                  </Button>
+                                )}
                             </div>
-                          </div>
-
-                          <div className="flex items-center gap-3 flex-shrink-0">
-                            {getStatusBadge(
-                              device.status,
-                              device.hasTemporaryAccess,
-                              !!device.requestSubmittedAt
-                            )}
-
-                            {/* Show request button only if note not already submitted */}
-                            {!device.requestSubmittedAt &&
-                              device.status === "pending" && (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleRequestApproval(device)}
-                                >
-                                  Add Note
-                                </Button>
-                              )}
-                            {!device.requestSubmittedAt &&
-                              device.status === "rejected" &&
-                              settings?.allowRejectedRequests && (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleRequestApproval(device)}
-                                >
-                                  Add Note
-                                </Button>
-                              )}
                           </div>
                         </div>
 
@@ -660,7 +747,7 @@ export default function UserPortalPage() {
                     {userRules.ipAccessPolicy === "restricted" &&
                       userRules.allowedIPs &&
                       userRules.allowedIPs.length > 0 && (
-                        <div className="pt-2 border-t">
+                        <div className="pt-2 border-t mb-2">
                           <p className="text-xs text-muted-foreground mb-1">
                             Allowed IP addresses:
                           </p>

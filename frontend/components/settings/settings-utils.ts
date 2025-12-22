@@ -121,6 +121,10 @@ export const getSettingInfo = (setting: AppSetting): SettingInfo => {
       label: "In-app notifications for device location changes",
       description: "Show in-app notifications when device location changes",
     },
+    IN_APP_NOTIFY_ON_DEVICE_NOTE: {
+      label: "In-app notifications for device notes",
+      description: "Show in-app notifications when a user leaves a note on their device",
+    },
     ENABLE_MEDIA_THUMBNAILS: {
       label: "Show media thumbnails",
       description: "Display thumbnail images for media in streams",
@@ -191,6 +195,10 @@ export const getSettingInfo = (setting: AppSetting): SettingInfo => {
       label: "Email notifications for device location changes",
       description: "Send email notifications when device location changes",
     },
+    SMTP_NOTIFY_ON_DEVICE_NOTE: {
+      label: "Email notifications for device notes",
+      description: "Send email notifications when a user leaves a note on their device",
+    },
     APPRISE_ENABLED: {
       label: "Enable Apprise notifications",
       description: "Enable the Apprise notification system",
@@ -211,6 +219,10 @@ export const getSettingInfo = (setting: AppSetting): SettingInfo => {
     APPRISE_NOTIFY_ON_LOCATION_CHANGE: {
       label: "Notify on device location changes",
       description: "Send notifications when device location changes",
+    },
+    APPRISE_NOTIFY_ON_DEVICE_NOTE: {
+      label: "Notify on device notes",
+      description: "Send notifications when a user leaves a note on their device",
     },
     // Concurrent Stream Limit Settings
     CONCURRENT_STREAM_LIMIT: {
