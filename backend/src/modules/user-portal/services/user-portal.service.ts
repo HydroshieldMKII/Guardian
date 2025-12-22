@@ -135,6 +135,10 @@ export class UserPortalService {
 
     return devices.map((device) => {
       const deviceRules = deviceTimeRulesMap.get(device.deviceIdentifier);
+      
+      // Plexamp devices are always effectively approved (they bypass all checks)
+      const isPlexamp = device.deviceProduct?.toLowerCase().includes('plexamp');
+      const effectiveStatus = isPlexamp ? 'approved' : device.status;
 
       return {
         id: device.id,
@@ -142,7 +146,7 @@ export class UserPortalService {
         deviceName: device.deviceName || 'Unknown Device',
         devicePlatform: device.devicePlatform || 'Unknown',
         deviceProduct: device.deviceProduct || 'Unknown',
-        status: device.status,
+        status: effectiveStatus,
         firstSeen: device.firstSeen,
         lastSeen: device.lastSeen,
         requestDescription: device.requestDescription || undefined,

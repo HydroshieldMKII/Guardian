@@ -82,7 +82,7 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
   const [activityOpen, setActivityOpen] = useState(false);
   const [tempAccessOpen, setTempAccessOpen] = useState(true);
   const [deviceSettingsOpen, setDeviceSettingsOpen] = useState(false);
-  const [userNoteOpen, setUserNoteOpen] = useState(true);
+  const [userNoteOpen, setUserNoteOpen] = useState(false);
 
   // Sync local state when device prop changes
   React.useEffect(() => {

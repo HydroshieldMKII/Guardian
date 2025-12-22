@@ -27,8 +27,8 @@ export interface BatchTimeRulesDto {
 
 @Controller()
 @AdminOnly()
-export class TimeRuleController {
-  private readonly logger = new Logger(TimeRuleController.name);
+export class RuleController {
+  private readonly logger = new Logger(RuleController.name);
 
   constructor(private readonly timeRuleService: TimeRuleService) {}
 

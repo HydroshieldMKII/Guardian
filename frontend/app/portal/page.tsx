@@ -320,10 +320,7 @@ export default function UserPortalPage() {
               </Badge>
             </TooltipTrigger>
             <TooltipContent>
-              <p>
-                This device has been rejected by the administrator.
-                {hasSubmittedNote ? " Your note has been submitted." : ""}
-              </p>
+              <p>This device has been rejected by the administrator.</p>
             </TooltipContent>
           </Tooltip>
         );
@@ -548,9 +545,9 @@ export default function UserPortalPage() {
                                       ) : (
                                         <Badge
                                           variant="outline"
-                                          className="text-xs border-amber-600 dark:border-amber-700 text-amber-700 dark:text-amber-400"
+                                          className="text-xs border-muted-foreground text-muted-foreground"
                                         >
-                                          Pending
+                                          Not Read
                                         </Badge>
                                       )}
                                     </div>
@@ -631,15 +628,15 @@ export default function UserPortalPage() {
               <div className="space-y-4">
                 {/* Network & Access Policy */}
                 <Card>
-                  <CardHeader className="pb-2">
+                  <CardHeader className="mt-2">
                     <CardTitle className="text-lg flex items-center gap-2">
                       <Globe className="h-5 w-5 text-primary" />
                       Network Access
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-4 pt-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
+                  <CardContent>
+                    <div className="flex items-center justify-between mt-2">
+                      <div className="flex items-center gap-2 mb-2">
                         <Wifi className="h-4 w-4 text-muted-foreground" />
                         <span className="text-sm">Network Policy</span>
                       </div>
@@ -649,7 +646,7 @@ export default function UserPortalPage() {
                           : userRules.networkPolicy.toUpperCase()}
                       </Badge>
                     </div>
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
                         <Shield className="h-4 w-4 text-muted-foreground" />
                         <span className="text-sm">IP Access</span>
@@ -685,13 +682,13 @@ export default function UserPortalPage() {
 
                 {/* Concurrent Stream Limit */}
                 <Card>
-                  <CardHeader className="pb-2">
+                  <CardHeader className="mt-2">
                     <CardTitle className="text-lg flex items-center gap-2">
                       <Users className="h-5 w-5 text-primary" />
                       Concurrent Streams
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="pt-2">
+                  <CardContent className="mb-2">
                     <div className="flex items-center justify-between">
                       <span className="text-sm">
                         Maximum simultaneous streams

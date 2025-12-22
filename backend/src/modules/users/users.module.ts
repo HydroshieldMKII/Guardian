@@ -1,7 +1,7 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UsersController } from './users.controller';
-import { TimeRuleController } from './controllers/time-rule.controller';
+import { RuleController } from './controllers/rule.controller';
 import { UsersService } from './services/users.service';
 import { TimeRuleService } from './services/time-rule.service';
 import { TimePolicyService } from './services/time-policy.service';
@@ -20,7 +20,7 @@ import { DevicesModule } from '../devices/devices.module';
     forwardRef(() => PlexModule),
     forwardRef(() => DevicesModule),
   ],
-  controllers: [UsersController, TimeRuleController],
+  controllers: [UsersController, RuleController],
   providers: [
     UsersService,
     TimeRuleService,
