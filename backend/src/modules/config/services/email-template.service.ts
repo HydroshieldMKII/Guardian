@@ -300,7 +300,7 @@ export class EmailTemplateService {
   }
 
   generateNotificationEmail(
-    notificationType: 'block' | 'info' | 'warning' | 'error' | 'new-device' | 'location-change',
+    notificationType: 'block' | 'info' | 'warning' | 'error' | 'new-device' | 'location-change' | 'device-note',
     statusColor: string,
     statusLabel: string,
     mainMessage: string,
@@ -310,6 +310,7 @@ export class EmailTemplateService {
     timestamp?: string,
     ipAddress?: string,
     oldIpAddress?: string,
+    note?: string,
   ): string {
     let detailsContent = `
       <div class="detail-row">
@@ -360,6 +361,15 @@ export class EmailTemplateService {
         <div class="detail-row">
           <span class="detail-label">Code</span>
           <span class="detail-value"><span class="stop-code">${stopCode}</span></span>
+        </div>
+      `;
+    }
+
+    if (note && notificationType === 'device-note') {
+      detailsContent += `
+        <div class="detail-row">
+          <span class="detail-label">Note</span>
+          <span class="detail-value" style="white-space: pre-wrap;">${note}</span>
         </div>
       `;
     }

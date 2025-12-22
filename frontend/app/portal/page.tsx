@@ -134,11 +134,7 @@ const getTemporaryAccessTimeLeft = (until: string) => {
 };
 
 // Temporary Access Badge component with controlled tooltip for mobile support
-const TemporaryAccessBadge = ({
-  device,
-}: {
-  device: UserPortalDevice;
-}) => {
+const TemporaryAccessBadge = ({ device }: { device: UserPortalDevice }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
@@ -205,7 +201,9 @@ const TemporaryAccessBadge = ({
             <p className="font-medium">Temporary access granted</p>
             <p className="text-sm">Time remaining: {timeLeft}</p>
             {device.temporaryAccessBypassPolicies && (
-              <p className="text-sm text-purple-400">✓ Bypasses all account rules</p>
+              <p className="text-sm text-purple-400">
+                ✓ Bypasses all account rules
+              </p>
             )}
           </div>
         </TooltipContent>
@@ -425,7 +423,9 @@ export default function UserPortalPage() {
             <TooltipContent>
               <p>
                 This device is awaiting approval from the administrator
-                {device.requestSubmittedAt ? ". Your note has been submitted." : ""}
+                {device.requestSubmittedAt
+                  ? ". Your note has been submitted."
+                  : ""}
               </p>
             </TooltipContent>
           </Tooltip>
@@ -468,8 +468,8 @@ export default function UserPortalPage() {
       {/* Header */}
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-          <div className="flex items-center gap-4">
-            <Avatar className="h-10 w-10 ring-2 ring-primary/10">
+          <div className="flex items-center gap-4 min-w-0 flex-1">
+            <Avatar className="h-10 w-10 ring-2 ring-primary/10 flex-shrink-0">
               {getUserAvatar() && (
                 <AvatarImage
                   src={getUserAvatar()!}
@@ -480,8 +480,8 @@ export default function UserPortalPage() {
                 {getUserDisplayName().charAt(0).toUpperCase()}
               </AvatarFallback>
             </Avatar>
-            <div className="flex flex-col">
-              <span className="font-semibold text-lg">
+            <div className="flex flex-col min-w-0">
+              <span className="font-semibold text-lg truncate max-w-[120px] sm:max-w-[200px]">
                 {getUserDisplayName()}
               </span>
               <span className="text-xs text-muted-foreground">Plex User</span>
@@ -569,12 +569,13 @@ export default function UserPortalPage() {
                                   {device.deviceName}
                                 </p>
                                 <p className="text-xs sm:text-sm text-muted-foreground truncate">
-                                  {device.deviceProduct} • {device.devicePlatform}
+                                  {device.deviceProduct} •{" "}
+                                  {device.devicePlatform}
                                 </p>
                               </div>
                             </div>
 
-                            <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0 pl-[52px] sm:pl-0">
+                            <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0 ml-[52px] sm:ml-0">
                               {getStatusBadge(device)}
 
                               {/* Show request button only if note not already submitted */}
@@ -583,7 +584,9 @@ export default function UserPortalPage() {
                                   <Button
                                     variant="outline"
                                     size="sm"
-                                    onClick={() => handleRequestApproval(device)}
+                                    onClick={() =>
+                                      handleRequestApproval(device)
+                                    }
                                     className="text-xs sm:text-sm"
                                   >
                                     Add Note
@@ -595,7 +598,9 @@ export default function UserPortalPage() {
                                   <Button
                                     variant="outline"
                                     size="sm"
-                                    onClick={() => handleRequestApproval(device)}
+                                    onClick={() =>
+                                      handleRequestApproval(device)
+                                    }
                                     className="text-xs sm:text-sm"
                                   >
                                     Add Note

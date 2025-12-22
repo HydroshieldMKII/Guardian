@@ -17,7 +17,14 @@ export interface SMTPConfig {
 }
 
 export interface NotificationEmailData {
-  type: 'block' | 'info' | 'warning' | 'error' | 'new-device' | 'location-change' | 'device-note';
+  type:
+    | 'block'
+    | 'info'
+    | 'warning'
+    | 'error'
+    | 'new-device'
+    | 'location-change'
+    | 'device-note';
   text: string;
   username: string;
   deviceName?: string;
@@ -353,6 +360,7 @@ export class EmailService {
         timestamp,
         data.ipAddress,
         data.oldIpAddress,
+        data.note,
       );
 
       const mailOptions = {
@@ -383,7 +391,14 @@ export class EmailService {
   }
 
   private getNotificationEmailContent(
-    notificationType: 'block' | 'info' | 'warning' | 'error' | 'new-device' | 'location-change',
+    notificationType:
+      | 'block'
+      | 'info'
+      | 'warning'
+      | 'error'
+      | 'new-device'
+      | 'location-change'
+      | 'device-note',
     stopCode?: string,
     username?: string,
     deviceName?: string,
@@ -431,6 +446,13 @@ export class EmailService {
           statusLabel: 'LOCATION CHANGED',
           statusColor: '#ff9900',
           mainMessage: `The device "${deviceName}" used by "${username}" has changed its IP address location.`,
+        };
+      case 'device-note':
+        return {
+          subject: `Guardian Alert: Device Note Received${deviceName ? ` - ${deviceName}` : ''}`,
+          statusLabel: 'DEVICE NOTE',
+          statusColor: '#9966ff',
+          mainMessage: `User "${username}" has left a note on device "${deviceName}".`,
         };
       case 'info':
       default:

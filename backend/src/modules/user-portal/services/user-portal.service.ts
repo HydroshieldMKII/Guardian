@@ -1,4 +1,10 @@
-import { Injectable, Logger, ForbiddenException, Inject, forwardRef } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  ForbiddenException,
+  Inject,
+  forwardRef,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UserDevice } from '../../../entities/user-device.entity';
@@ -306,7 +312,7 @@ export class UserPortalService {
           where: { userId: plexUserId },
         });
         const username = userPreference?.username || 'Unknown User';
-        
+
         await this.notificationsService.createDeviceNoteNotification(
           plexUserId,
           username,

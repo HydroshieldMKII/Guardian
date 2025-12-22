@@ -254,7 +254,9 @@ export function SMTPSettings({
                     <div className="space-y-0.5">
                       <Label
                         htmlFor={notifyOnDeviceNoteSetting.key}
-                        className={!isSmtpEnabled ? "text-muted-foreground" : ""}
+                        className={
+                          !isSmtpEnabled ? "text-muted-foreground" : ""
+                        }
                       >
                         {getSettingInfo(notifyOnDeviceNoteSetting).label}
                       </Label>
@@ -271,7 +273,10 @@ export function SMTPSettings({
                           notifyOnDeviceNoteSetting.value) === true
                       }
                       onCheckedChange={(checked) =>
-                        handleInputChange(notifyOnDeviceNoteSetting.key, checked)
+                        handleInputChange(
+                          notifyOnDeviceNoteSetting.key,
+                          checked
+                        )
                       }
                       disabled={!isSmtpEnabled}
                       className="cursor-pointer"

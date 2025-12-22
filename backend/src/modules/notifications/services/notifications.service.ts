@@ -365,7 +365,8 @@ export class NotificationsService {
     note: string,
   ): Promise<Notification | null> {
     const truncatedDeviceName = this.truncateDeviceName(deviceName);
-    const truncatedNote = note.length > 100 ? note.substring(0, 100) + '...' : note;
+    const truncatedNote =
+      note.length > 100 ? note.substring(0, 100) + '...' : note;
     const text = `${username} left a note on ${truncatedDeviceName}: "${truncatedNote}"`;
 
     // Check if in-app notifications are enabled globally and for device notes
@@ -393,21 +394,12 @@ export class NotificationsService {
       ]);
 
       if (smtpEnabled && smtpNotifyOnDeviceNote) {
-        await this.emailService.sendDeviceNoteEmail(
-          username,
-          deviceName,
-          note,
-        );
+        await this.emailService.sendDeviceNoteEmail(username, deviceName, note);
       } else {
-        this.logger.log(
-          'SMTP email notification for device note is disabled.',
-        );
+        this.logger.log('SMTP email notification for device note is disabled.');
       }
     } catch (error) {
-      console.error(
-        'Failed to send device note notification email:',
-        error,
-      );
+      console.error('Failed to send device note notification email:', error);
     }
 
     // Send Apprise notification for device note if enabled
@@ -424,15 +416,10 @@ export class NotificationsService {
           note,
         );
       } else {
-        this.logger.log(
-          'Apprise notification for device note is disabled.',
-        );
+        this.logger.log('Apprise notification for device note is disabled.');
       }
     } catch (error) {
-      console.error(
-        'Failed to send Apprise device note notification:',
-        error,
-      );
+      console.error('Failed to send Apprise device note notification:', error);
     }
 
     return notification;

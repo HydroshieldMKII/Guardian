@@ -123,7 +123,8 @@ export const getSettingInfo = (setting: AppSetting): SettingInfo => {
     },
     IN_APP_NOTIFY_ON_DEVICE_NOTE: {
       label: "In-app notifications for device notes",
-      description: "Show in-app notifications when a user leaves a note on their device",
+      description:
+        "Show in-app notifications when a user leaves a note on their device",
     },
     ENABLE_MEDIA_THUMBNAILS: {
       label: "Show media thumbnails",
@@ -197,7 +198,8 @@ export const getSettingInfo = (setting: AppSetting): SettingInfo => {
     },
     SMTP_NOTIFY_ON_DEVICE_NOTE: {
       label: "Email notifications for device notes",
-      description: "Send email notifications when a user leaves a note on their device",
+      description:
+        "Send email notifications when a user leaves a note on their device",
     },
     APPRISE_ENABLED: {
       label: "Enable Apprise notifications",
@@ -222,7 +224,8 @@ export const getSettingInfo = (setting: AppSetting): SettingInfo => {
     },
     APPRISE_NOTIFY_ON_DEVICE_NOTE: {
       label: "Notify on device notes",
-      description: "Send notifications when a user leaves a note on their device",
+      description:
+        "Send notifications when a user leaves a note on their device",
     },
     // Concurrent Stream Limit Settings
     CONCURRENT_STREAM_LIMIT: {
