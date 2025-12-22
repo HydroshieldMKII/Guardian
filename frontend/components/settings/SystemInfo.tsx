@@ -165,9 +165,7 @@ export function SystemInfo({ onSettingsRefresh, settings }: SystemInfoProps) {
       {/* System Information Card */}
       <Card>
         <CardHeader className="mt-4">
-          <CardTitle>
-            System Information
-          </CardTitle>
+          <CardTitle>System Information</CardTitle>
           <CardDescription>
             Current system status and version information
           </CardDescription>
@@ -273,9 +271,7 @@ export function SystemInfo({ onSettingsRefresh, settings }: SystemInfoProps) {
       {/* Update Management Card */}
       <Card>
         <CardHeader className="mt-4">
-          <CardTitle>
-            Update Management
-          </CardTitle>
+          <CardTitle>Update Management</CardTitle>
           <CardDescription>
             Check for application updates and manage versions
           </CardDescription>

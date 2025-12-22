@@ -10,10 +10,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import {
-  Loader2,
-  AlertTriangle,
-} from "lucide-react";
+import { Loader2, AlertTriangle } from "lucide-react";
 import { apiClient } from "@/lib/api";
 import { ConfirmationModal } from "@/components/ui/confirmation-modal";
 import { PasswordConfirmationModal } from "@/components/ui/password-confirmation-modal";

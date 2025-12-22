@@ -109,18 +109,18 @@ export function SMTPSettings({
 
   const renderEmailNotificationGroup = () => {
     const smtpEnabledSetting = smtpSettings.find(
-      (s) => s.key === "SMTP_ENABLED",
+      (s) => s.key === "SMTP_ENABLED"
     );
     const notifyOnBlockSetting = smtpSettings.find(
-      (s) => s.key === "SMTP_NOTIFY_ON_BLOCK",
+      (s) => s.key === "SMTP_NOTIFY_ON_BLOCK"
     );
 
     const notifyOnNewDeviceSetting = smtpSettings.find(
-      (s) => s.key === "SMTP_NOTIFY_ON_NEW_DEVICE",
+      (s) => s.key === "SMTP_NOTIFY_ON_NEW_DEVICE"
     );
 
     const notifyOnLocationChangeSetting = smtpSettings.find(
-      (s) => s.key === "SMTP_NOTIFY_ON_LOCATION_CHANGE",
+      (s) => s.key === "SMTP_NOTIFY_ON_LOCATION_CHANGE"
     );
 
     if (
@@ -216,7 +216,10 @@ export function SMTPSettings({
                       {getSettingInfo(notifyOnLocationChangeSetting).label}
                     </Label>
                     <p className="text-sm text-muted-foreground">
-                      {getSettingInfo(notifyOnLocationChangeSetting).description}
+                      {
+                        getSettingInfo(notifyOnLocationChangeSetting)
+                          .description
+                      }
                     </p>
                   </div>
                   <Switch
@@ -228,7 +231,10 @@ export function SMTPSettings({
                         notifyOnLocationChangeSetting.value) === true
                     }
                     onCheckedChange={(checked) =>
-                      handleInputChange(notifyOnLocationChangeSetting.key, checked)
+                      handleInputChange(
+                        notifyOnLocationChangeSetting.key,
+                        checked
+                      )
                     }
                     disabled={!isSmtpEnabled}
                     className="cursor-pointer"
@@ -306,9 +312,7 @@ export function SMTPSettings({
   return (
     <Card>
       <CardHeader className="mt-4">
-        <CardTitle>
-          Email Notifications (SMTP)
-        </CardTitle>
+        <CardTitle>Email Notifications (SMTP)</CardTitle>
         <CardDescription>
           Configure email notifications for Guardian events and alerts
         </CardDescription>
@@ -324,7 +328,7 @@ export function SMTPSettings({
               setting.key !== "SMTP_ENABLED" &&
               setting.key !== "SMTP_NOTIFY_ON_NEW_DEVICE" &&
               setting.key !== "SMTP_NOTIFY_ON_BLOCK" &&
-              setting.key !== "SMTP_NOTIFY_ON_LOCATION_CHANGE",
+              setting.key !== "SMTP_NOTIFY_ON_LOCATION_CHANGE"
           )
           .map((setting) => (
             <Card key={setting.key} className="p-4 my-4">

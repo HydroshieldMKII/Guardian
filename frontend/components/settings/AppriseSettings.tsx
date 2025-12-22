@@ -55,7 +55,7 @@ export function AppriseSettings({
 
   const appriseSettings = settings
     .filter(
-      (setting) => setting && setting.key && setting.key.startsWith("APPRISE_"),
+      (setting) => setting && setting.key && setting.key.startsWith("APPRISE_")
     )
     .sort((a, b) => {
       const order = [
@@ -148,7 +148,7 @@ export function AppriseSettings({
                     onClick={() =>
                       window.open(
                         "https://github.com/caronc/apprise/wiki",
-                        "_blank",
+                        "_blank"
                       )
                     }
                   >

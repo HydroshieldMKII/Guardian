@@ -662,9 +662,7 @@ export function GeneralSettings({
   return (
     <Card>
       <CardHeader className="mt-4">
-        <CardTitle>
-          {sectionInfo.title}
-        </CardTitle>
+        <CardTitle>{sectionInfo.title}</CardTitle>
         <CardDescription>{sectionInfo.description}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">

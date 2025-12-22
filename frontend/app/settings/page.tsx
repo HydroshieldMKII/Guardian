@@ -52,7 +52,15 @@ import { SettingsFormData } from "@/components/settings/settings-utils";
 import { ThreeDotLoader } from "@/components/three-dot-loader";
 
 // Valid tab IDs for URL hash validation
-const validTabs = ["plex", "guardian", "customization", "smtp", "notifications", "admin", "system"];
+const validTabs = [
+  "plex",
+  "guardian",
+  "customization",
+  "smtp",
+  "notifications",
+  "admin",
+  "system",
+];
 
 export default function SettingsPage() {
   const router = useRouter();

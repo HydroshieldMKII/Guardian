@@ -101,8 +101,7 @@ export const getSettingInfo = (setting: AppSetting): SettingInfo => {
     },
     IN_APP_ENABLED: {
       label: "Enable in-app notifications",
-      description:
-        "Enable all in-app notifications in Guardian",
+      description: "Enable all in-app notifications in Guardian",
     },
     AUTO_MARK_NOTIFICATION_READ: {
       label: "Auto-mark notifications as read",

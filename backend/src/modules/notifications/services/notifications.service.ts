@@ -235,7 +235,9 @@ export class NotificationsService {
           ipAddress,
         );
       } else {
-        this.logger.log('SMTP email notification for stream blocking is disabled.');
+        this.logger.log(
+          'SMTP email notification for stream blocking is disabled.',
+        );
       }
     } catch (error) {
       console.error('Failed to send stream blocked notification email:', error);
@@ -256,7 +258,9 @@ export class NotificationsService {
           stopCode,
         );
       } else {
-        this.logger.log('Apprise notification for stream blocking is disabled.');
+        this.logger.log(
+          'Apprise notification for stream blocking is disabled.',
+        );
       }
     } catch (error) {
       console.error(
@@ -325,11 +329,12 @@ export class NotificationsService {
 
     // Send Apprise notification for location change if enabled
     try {
-      const [appriseEnabled, appriseNotifyOnLocationChange] =
-        await Promise.all([
+      const [appriseEnabled, appriseNotifyOnLocationChange] = await Promise.all(
+        [
           this.configService.getSetting('APPRISE_ENABLED'),
           this.configService.getSetting('APPRISE_NOTIFY_ON_LOCATION_CHANGE'),
-        ]);
+        ],
+      );
 
       if (appriseEnabled && appriseNotifyOnLocationChange) {
         await this.appriseService.sendLocationChangeNotification(

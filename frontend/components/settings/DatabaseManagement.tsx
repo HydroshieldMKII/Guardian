@@ -202,9 +202,7 @@ export function DatabaseManagement({
     <>
       <Card>
         <CardHeader className="mt-4 mb-4">
-          <CardTitle>
-            Database Management
-          </CardTitle>
+          <CardTitle>Database Management</CardTitle>
           <CardDescription>
             Export and import Guardian database settings and configuration
           </CardDescription>
