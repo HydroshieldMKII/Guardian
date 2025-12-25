@@ -87,7 +87,7 @@ export function EditProfileModal({
     if (open && user && isAdminUser(user)) {
       // Fetch fresh user data to get Plex account info
       fetch("/api/pg/auth/me", { credentials: "include" })
-        .then((res) => res.ok ? res.json() : null)
+        .then((res) => (res.ok ? res.json() : null))
         .then((data) => {
           if (data) {
             setFreshUserData({
@@ -467,20 +467,19 @@ export function EditProfileModal({
   };
 
   // Get linked Plex info for admin users - prefer freshUserData over context user
-  const linkedPlex =
-    freshUserData?.plexUserId
+  const linkedPlex = freshUserData?.plexUserId
+    ? {
+        plexUserId: freshUserData.plexUserId,
+        plexUsername: freshUserData.plexUsername,
+        plexThumb: freshUserData.plexThumb,
+      }
+    : user && isAdminUser(user) && user.plexUserId
       ? {
-          plexUserId: freshUserData.plexUserId,
-          plexUsername: freshUserData.plexUsername,
-          plexThumb: freshUserData.plexThumb,
+          plexUserId: user.plexUserId,
+          plexUsername: user.plexUsername,
+          plexThumb: user.plexThumb,
         }
-      : user && isAdminUser(user) && user.plexUserId
-        ? {
-            plexUserId: user.plexUserId,
-            plexUsername: user.plexUsername,
-            plexThumb: user.plexThumb,
-          }
-        : null;
+      : null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

@@ -381,10 +381,6 @@ export class PlexOAuthService {
       throw new Error('Admin not found');
     }
 
-    this.logger.log(
-      `Admin before unlink - plexUserId: ${admin.plexUserId}, plexUsername: ${admin.plexUsername}`,
-    );
-
     // Clear the Plex fields using raw SQL update to properly set NULL
     await this.adminUserRepository
       .createQueryBuilder()
@@ -402,10 +398,6 @@ export class PlexOAuthService {
     const freshAdmin = await this.adminUserRepository.findOneOrFail({
       where: { id: adminId },
     });
-
-    this.logger.log(
-      `Admin after unlink - plexUserId: ${freshAdmin.plexUserId}, plexUsername: ${freshAdmin.plexUsername}`,
-    );
 
     return freshAdmin;
   }

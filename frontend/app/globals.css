@@ -211,7 +211,8 @@
   }
 
   /* Prevent text selection on interactive elements */
-  button, [role="button"] {
+  button,
+  [role="button"] {
     -webkit-user-select: none;
     user-select: none;
   }

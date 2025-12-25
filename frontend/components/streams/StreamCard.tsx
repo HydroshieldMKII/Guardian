@@ -46,7 +46,9 @@ export const StreamCard: React.FC<StreamCardProps> = ({
   const artUrl = stream.artUrl || "";
 
   // Function to open content in Plex
-  const openInPlex = async () => {
+  const openInPlex = async (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent card expand on mobile
+    
     // For music tracks, use the album's ratingKey (parentRatingKey) instead of the track's ratingKey
     let ratingKey = stream.ratingKey;
 
@@ -60,6 +62,17 @@ export const StreamCard: React.FC<StreamCardProps> = ({
       return;
     }
 
+    const serverIdentifier = stream.serverMachineIdentifier;
+
+    if (!serverIdentifier) {
+      console.error("No server machine identifier available");
+      return;
+    }
+
+    // Open a blank window immediately to avoid popup blockers on mobile
+    // Mobile browsers block window.open() if it's not called directly in the click handler
+    const newWindow = window.open("about:blank", "_blank");
+
     try {
       // Get the proper Plex web URL from backend
       const response = await fetch(`${config.api.baseUrl}/plex/web-url`);
@@ -67,23 +80,20 @@ export const StreamCard: React.FC<StreamCardProps> = ({
 
       if (!data.webUrl) {
         console.warn("No Plex web URL available");
-        return;
-      }
-
-      const serverIdentifier = stream.serverMachineIdentifier;
-
-      if (!serverIdentifier) {
-        console.error("No server machine identifier available");
+        newWindow?.close();
         return;
       }
 
       // Use the server-specific URL format
       const plexUrl = `${data.webUrl}/web/index.html#!/server/${serverIdentifier}/details?key=%2Flibrary%2Fmetadata%2F${ratingKey}`;
 
-      // Open in new tab
-      window.open(plexUrl, "_blank");
+      // Navigate the already-opened window to the Plex URL
+      if (newWindow) {
+        newWindow.location.href = plexUrl;
+      }
     } catch (error) {
       console.error("Failed to get Plex web URL:", error);
+      newWindow?.close();
     }
   };
 
