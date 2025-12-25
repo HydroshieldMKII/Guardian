@@ -20,8 +20,8 @@
   - [Proxmox](#proxmox)
   - [Unraid](#unraid)
 - [Configuration](#configuration)
-- [Application Settings](#application-settings)
 - [Updating](#updating)
+- [Application Settings](#application-settings)
 - [Troubleshooting](#troubleshooting)
   - [Password Recovery](#password-recovery)
   - [Common Issues](#common-issues)
@@ -216,6 +216,38 @@ systemctl restart guardian-backend guardian-frontend
 
 ---
 
+## Updating
+
+> [!IMPORTANT]
+> Always backup your database before updating (Settings → Admin Tools → Export Database).
+
+### Docker
+
+**Manual Update:**
+
+```bash
+docker compose pull
+docker compose up -d
+```
+
+**Automated Updates with Watchtower:**
+
+Guardian works seamlessly with [Watchtower](https://containrrr.dev/watchtower/) for automatic updates.
+
+### Proxmox
+
+Update from the LXC console:
+
+```bash
+# Method 1
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/guardian.sh)" -u
+
+# Method 2
+update
+```
+
+---
+
 ## Application Settings
 
 Configure Guardian through the web interface Settings page.
@@ -359,38 +391,6 @@ Backup and restore your Guardian configuration, devices, and settings.
 | **Clear Session History** | Permanently delete all historical session records from the database      | Cannot be undone; active sessions are not affected                                    |
 | **Delete All Devices**    | Remove all registered device records from Guardian                       | All users will need to re-register; also deletes associated notifications and history |
 | **Reset Database**        | Complete factory reset that wipes all data and restores default settings | Cannot be undone; you will need to reconfigure Guardian from scratch                  |
-
----
-
-## Updating
-
-> [!IMPORTANT]
-> Always backup your database before updating (Settings → Admin Tools → Export Database).
-
-### Docker
-
-**Manual Update:**
-
-```bash
-docker compose pull
-docker compose up -d
-```
-
-**Automated Updates with Watchtower:**
-
-Guardian works seamlessly with [Watchtower](https://containrrr.dev/watchtower/) for automatic updates.
-
-### Proxmox
-
-Update from the LXC console:
-
-```bash
-# Method 1
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/guardian.sh)" -u
-
-# Method 2
-update
-```
 
 ---
 
