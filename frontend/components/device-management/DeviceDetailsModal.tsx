@@ -32,6 +32,7 @@ import {
   MessageSquare,
   CheckCheck,
   RotateCcw,
+  Trash2,
 } from "lucide-react";
 import { UserDevice } from "@/types";
 import { ClickableIP, DeviceStatus } from "./SharedComponents";
@@ -72,6 +73,7 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
   const { toast } = useToast();
   const [excludeLoading, setExcludeLoading] = useState(false);
   const [markingAsRead, setMarkingAsRead] = useState(false);
+  const [deletingNote, setDeletingNote] = useState(false);
   const [setPendingLoading, setSetPendingLoading] = useState(false);
   const [excludeFromConcurrentLimit, setExcludeFromConcurrentLimit] = useState(
     device?.excludeFromConcurrentLimit ?? false
@@ -84,7 +86,7 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
   const [basicInfoOpen, setBasicInfoOpen] = useState(true);
   const [identifierOpen, setIdentifierOpen] = useState(false);
   const [activityOpen, setActivityOpen] = useState(false);
-  const [tempAccessOpen, setTempAccessOpen] = useState(true);
+  const [tempAccessOpen, setTempAccessOpen] = useState(false);
   const [deviceSettingsOpen, setDeviceSettingsOpen] = useState(false);
   const [userNoteOpen, setUserNoteOpen] = useState(false);
 
@@ -133,6 +135,37 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
       });
     } finally {
       setMarkingAsRead(false);
+    }
+  };
+
+  const handleDeleteNote = async () => {
+    setDeletingNote(true);
+    try {
+      await apiClient.deleteDeviceNote(device.id);
+      setNoteReadAt(undefined);
+      toast({
+        title: "Note deleted",
+        description: "The user note has been permanently deleted.",
+        variant: "success",
+      });
+      // Update parent state if callback provided
+      if (onDeviceUpdate) {
+        onDeviceUpdate({
+          ...device,
+          requestDescription: undefined,
+          requestSubmittedAt: undefined,
+          requestNoteReadAt: undefined,
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description:
+          error instanceof Error ? error.message : "Failed to delete note",
+        variant: "destructive",
+      });
+    } finally {
+      setDeletingNote(false);
     }
   };
 
@@ -397,55 +430,53 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
             </CollapsibleContent>
           </Collapsible>
 
-          {/* User Note Section - Only show if device has a note */}
-          {device.requestDescription && device.requestSubmittedAt && (
-            <Collapsible open={userNoteOpen} onOpenChange={setUserNoteOpen}>
-              <CollapsibleTrigger className="flex items-center justify-between w-full p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer">
-                <div className="flex items-center gap-2">
-                  <span className="font-semibold text-sm">User Note</span>
-                </div>
-                <ChevronDown
-                  className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${
-                    userNoteOpen ? "rotate-180" : ""
-                  }`}
-                />
-              </CollapsibleTrigger>
-              <CollapsibleContent className="pt-3 px-3">
-                <div className="space-y-3">
-                  <div className="p-3 rounded-lg bg-muted/50">
-                    <p className="text-sm text-foreground">
-                      {device.requestDescription}
-                    </p>
+          {/* User Note Section - Only show if note has been read (archived view) */}
+          {device.requestDescription &&
+            device.requestSubmittedAt &&
+            noteReadAt && (
+              <Collapsible open={userNoteOpen} onOpenChange={setUserNoteOpen}>
+                <CollapsibleTrigger className="flex items-center justify-between w-full p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-sm">User Note</span>
                   </div>
-                  <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span>
-                      Submitted:{" "}
-                      {new Date(device.requestSubmittedAt).toLocaleString()}
-                    </span>
-                    {noteReadAt && (
+                  <ChevronDown
+                    className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${
+                      userNoteOpen ? "rotate-180" : ""
+                    }`}
+                  />
+                </CollapsibleTrigger>
+                <CollapsibleContent className="pt-3 px-3">
+                  <div className="space-y-3">
+                    <div className="p-3 rounded-lg bg-muted/50">
+                      <p className="text-sm text-foreground">
+                        {device.requestDescription}
+                      </p>
+                    </div>
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span>
+                        Submitted:{" "}
+                        {new Date(device.requestSubmittedAt).toLocaleString()}
+                      </span>
                       <span>Read: {new Date(noteReadAt).toLocaleString()}</span>
-                    )}
-                  </div>
-                  {!noteReadAt && (
+                    </div>
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={handleMarkNoteAsRead}
-                      disabled={markingAsRead}
-                      className="w-full border-amber-600 text-amber-700 hover:bg-amber-50 dark:border-amber-700 dark:text-amber-400 dark:hover:bg-amber-900/30"
+                      onClick={handleDeleteNote}
+                      disabled={deletingNote}
+                      className="w-full border-red-600 text-red-700 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-900/30"
                     >
-                      {markingAsRead ? (
+                      {deletingNote ? (
                         <RefreshCw className="w-4 h-4 animate-spin mr-2" />
                       ) : (
-                        <CheckCheck className="w-4 h-4 mr-2" />
+                        <Trash2 className="w-4 h-4 mr-2" />
                       )}
-                      Mark as Read
+                      Delete Note
                     </Button>
-                  )}
-                </div>
-              </CollapsibleContent>
-            </Collapsible>
-          )}
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+            )}
 
           {/* Temporary Access Section - Only show if device has or had temporary access */}
           {(device.temporaryAccessUntil ||

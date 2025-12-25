@@ -119,6 +119,7 @@ cd Guardian
 # Start Guardian with build
 docker compose -f docker-compose.dev.yml up -d --build
 ```
+
 ---
 
 ### Proxmox
@@ -221,116 +222,143 @@ Configure Guardian through the web interface Settings page.
 
 ### Plex Integration
 
-Connect Guardian to your Plex Media Server.
+Connect Guardian to your Plex Media Server to enable session monitoring and device management.
 
-| Setting                  | Description                                                                                                                                                  |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Plex Server IP**       | IP address or hostname of your Plex server                                                                                                                   |
-| **Plex Server Port**     | Port number (default: `32400`)                                                                                                                               |
-| **Authentication Token** | Required for Guardian to communicate with Plex ([Find your token](https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/)) |
-| **Use SSL/HTTPS**        | Enable secure connection to Plex                                                                                                                             |
-| **Ignore SSL Errors**    | Skip certificate validation (not recommended for production)                                                                                                 |
-| **Custom Plex URL**      | Override default Plex URL for media links (e.g., `https://app.plex.tv`)                                                                                      |
+| Setting                           | Description                                                                                                                                                                                               | Default  |
+| --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| **Plex Server IP**                | The IP address or hostname where your Plex Media Server is running (e.g., `192.168.1.100` or `plex.local`)                                                                                                | -        |
+| **Plex Server Port**              | The port number your Plex server listens on for API requests                                                                                                                                              | `32400`  |
+| **Plex Authentication Token**     | Your Plex authentication token required for Guardian to communicate with your server ([How to find your token](https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/)) | -        |
+| **Use SSL/HTTPS**                 | Connect to your Plex server using encrypted HTTPS instead of unencrypted HTTP                                                                                                                             | Disabled |
+| **Ignore SSL Certificate Errors** | Skip SSL certificate validation when connecting to Plex (useful for self-signed certificates, but not recommended for production environments)                                                            | Disabled |
+| **Custom Plex URL**               | Override the default Plex URL used when opening media links (e.g., `https://app.plex.tv` or your custom domain)                                                                                           | -        |
 
 ### Guardian Configuration
 
-Core behavior and monitoring settings.
+Core security behavior, monitoring settings, and access control options.
 
-| Setting                  | Description                                              | Default  |
-| ------------------------ | -------------------------------------------------------- | -------- |
-| **Auto-Check Updates**   | Automatically check for new Guardian releases on startup | Enabled  |
-| **Block New Devices**    | Require manual approval for all new devices              | Enabled  |
-| **Refresh Interval**     | Session monitoring frequency (seconds)                   | `10`     |
-| **Auto Device Cleanup**  | Remove inactive devices automatically                    | Disabled |
-| **Inactivity Threshold** | Days before inactive devices are removed                 | `30`     |
-| **Timezone**             | UTC offset for time-based restrictions (e.g., `+00:00`)  | `+00:00` |
+| Setting                            | Description                                                                                                                                                                                                     | Default  |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| **Auto-Check Updates**             | Automatically check for new Guardian releases when the application starts and notify you of available updates                                                                                                   | Enabled  |
+| **Block New Devices**              | Automatically block streaming access for all newly detected devices until they are manually approved by an administrator                                                                                        | Enabled  |
+| **Strict Mode**                    | Automatically approve or reject new devices based on the default blocking policy. Existing pending devices will also be affected by this setting                                                                | Disabled |
+| **Session Refresh Interval**       | How frequently Guardian checks for active Plex sessions and enforces access rules (in seconds). Lower values provide faster response but increase server load. It have no effect on the dashboard refresh rate. | `10`     |
+| **Global Concurrent Stream Limit** | Maximum number of simultaneous streams allowed per user across all their devices (set to `0` for unlimited streams)                                                                                             | `0`      |
+| **Include Temp Access in Limit**   | When enabled, devices with temporary access are counted towards the user's concurrent stream limit                                                                                                              | Disabled |
+| **Auto Device Cleanup**            | Automatically remove devices that haven't been seen for a specified period to keep your device list clean                                                                                                       | Disabled |
+| **Cleanup Threshold (Days)**       | Number of days of inactivity before a device is automatically removed when auto cleanup is enabled                                                                                                              | `30`     |
+| **Timezone**                       | UTC offset used for time-based access restrictions and scheduling (e.g., `+00:00`, `-05:00`, `+05:30`)                                                                                                          | `+00:00` |
+
+#### User Portal Settings
+
+Configure the self-service portal that allows Plex users to view and manage their own devices.
+
+| Setting                             | Description                                                                                                                                              | Default |
+| ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| **Enable User Portal**              | Allow Plex users to log in with their Plex credentials and view their registered devices. When disabled, Plex login only works for admin-linked accounts | Enabled |
+| **Show Rules in Portal**            | Allow Plex users to see the access rules assigned to them, including network policies, concurrent stream limits, and time-based restrictions             | Enabled |
+| **Allow Notes on Rejected Devices** | Allow Plex users to submit notes or access requests for devices that have been rejected, which administrators can review                                 | Enabled |
 
 ### Customization
 
-Personalize the user interface and experience.
+Personalize the user interface and customize messages shown to users.
 
-| Setting             | Description                                        |
-| ------------------- | -------------------------------------------------- |
-| **Default Page**    | Starting page on app load (`Devices` or `Streams`) |
-| **Show Thumbnails** | Display media thumbnails in active streams         |
-| **Show Artwork**    | Display background artwork for streams             |
+| Setting                   | Description                                                                                                          | Default   |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------- | --------- |
+| **Default Page**          | The page displayed when Guardian first opens (`Devices` to show device management, or `Streams` for active sessions) | `Devices` |
+| **Show Media Thumbnails** | Display thumbnail preview images for currently streaming media in the active streams view                            | Enabled   |
+| **Show Media Artwork**    | Display background artwork and poster images for media in the streams interface                                      | Enabled   |
 
-#### Custom Messages
+#### Custom Blocking Messages
 
-Customize blocking messages for different scenarios:
+Customize the messages displayed to users when their streaming access is blocked for various reasons:
 
-| Message Type         | Description                                    |
-| -------------------- | ---------------------------------------------- |
-| **Pending Approval** | Displayed when a device awaits approval        |
-| **Device Rejected**  | Shown when a device has been rejected          |
-| **LAN Only**         | Displayed for LAN-only access restrictions     |
-| **WAN Only**         | Shown for WAN-only access restrictions         |
-| **IP Not Allowed**   | Displayed when IP is not in allowed list       |
-| **Time Restricted**  | Shown when time schedule conditions aren't met |
+| Message Type         | Description                                                                                          | Default Message                         |
+| -------------------- | ---------------------------------------------------------------------------------------------------- | --------------------------------------- |
+| **Device Pending**   | Message shown when a device is waiting for administrator approval before it can stream               | "Your device is pending approval"       |
+| **Device Rejected**  | Message shown when a device has been explicitly rejected and cannot stream                           | "Your device has been rejected"         |
+| **Time Restricted**  | Message shown when streaming is blocked because the current time falls outside allowed hours         | "Streaming is not allowed at this time" |
+| **Concurrent Limit** | Message shown when a user exceeds their maximum allowed simultaneous streams                         | "You have reached your stream limit"    |
+| **LAN Only**         | Message shown when a device can only stream from the local network but is connecting remotely        | "This device can only stream from LAN"  |
+| **WAN Only**         | Message shown when a device can only stream from outside the local network but is connecting locally | "This device can only stream from WAN"  |
+| **IP Not Allowed**   | Message shown when the device's IP address is not in the configured allowed IP list or CIDR range    | "Your IP address is not allowed"        |
 
 ### Notification Settings
 
-Configure how notifications behave.
+Configure how Guardian delivers notifications about security events and device activity.
 
-| Setting            | Description                                           |
-| ------------------ | ----------------------------------------------------- |
-| **Auto-Mark Read** | Automatically mark notifications as read when clicked |
+#### In-App Notifications
+
+| Setting                         | Description                                                                                                  | Default  |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------ | -------- |
+| **Enable In-App Notifications** | Master switch to enable or disable all in-app notifications within the Guardian interface                    | Enabled  |
+| **Notify on New Device**        | Show an in-app notification when a new device is detected attempting to stream from your Plex server         | Enabled  |
+| **Notify on Block**             | Show an in-app notification when a stream is terminated due to access rules or policy violations             | Enabled  |
+| **Notify on Location Change**   | Show an in-app notification when a device's IP address changes, which may indicate the device moved networks | Disabled |
+| **Notify on Device Note**       | Show an in-app notification when a Plex user submits a note or access request for one of their devices       | Enabled  |
+| **Auto-Mark as Read**           | Automatically mark notifications as read when you click on them, rather than requiring manual dismissal      | Enabled  |
 
 #### Email Notifications (SMTP)
 
-| Setting                  | Description                                                 |
-| ------------------------ | ----------------------------------------------------------- |
-| **Enable Email**         | Enable SMTP notification system                             |
-| **Notify on New Device** | Email alerts for newly detected devices                     |
-| **Notify on Block**      | Email alerts for blocked streams                            |
-| **SMTP Host**            | Hostname or IP of your SMTP server (e.g., `smtp.gmail.com`) |
-| **SMTP Port**            | Port number (587 for TLS, 465 for SSL, 25 for unencrypted)  |
-| **SMTP Username**        | Authentication username                                     |
-| **SMTP Password**        | Authentication password                                     |
-| **Use TLS**              | Enable TLS/STARTTLS encryption                              |
-| **From Email**           | Sender email address                                        |
-| **From Name**            | Sender display name (e.g., `Guardian Notifications`)        |
-| **To Emails**            | Recipient addresses (comma or semicolon separated)          |
+Send email alerts for important Guardian events using your SMTP server.
+
+| Setting                        | Description                                                                                                 | Default                  |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------------- | ------------------------ |
+| **Enable Email Notifications** | Master switch to enable the SMTP email notification system                                                  | Disabled                 |
+| **Notify on New Device**       | Send an email alert when a new device is detected attempting to stream from your Plex server                | Disabled                 |
+| **Notify on Block**            | Send an email alert when a stream is terminated due to access rules or policy violations                    | Disabled                 |
+| **Notify on Location Change**  | Send an email alert when a device's IP address changes, which may indicate suspicious activity              | Disabled                 |
+| **Notify on Device Note**      | Send an email alert when a Plex user submits a note or access request for one of their devices              | Disabled                 |
+| **SMTP Host**                  | Hostname or IP address of your SMTP mail server (e.g., `smtp.gmail.com`, `smtp.office365.com`)              | -                        |
+| **SMTP Port**                  | Port number for SMTP connection (common ports: `587` for TLS/STARTTLS, `465` for SSL, `25` for unencrypted) | `587`                    |
+| **SMTP Username**              | Username for authenticating with your SMTP server (often your email address)                                | -                        |
+| **SMTP Password**              | Password or app-specific password for SMTP authentication                                                   | -                        |
+| **Use TLS**                    | Enable TLS/STARTTLS encryption for secure email transmission (recommended for most providers)               | Enabled                  |
+| **From Email**                 | Email address that will appear as the sender of Guardian notifications                                      | -                        |
+| **From Name**                  | Display name that will appear as the sender (e.g., "Guardian Alerts")                                       | `Guardian Notifications` |
+| **To Emails**                  | Recipient email addresses for notifications (separate multiple addresses with commas or semicolons)         | -                        |
 
 #### Apprise Notifications
 
-Send notifications to 100+ services including Discord, Slack, Telegram, Pushover, and more.
+Send notifications to 100+ services including Discord, Slack, Telegram, Pushover, and many more using the Apprise notification library.
 
-| Setting                  | Description                                                             |
-| ------------------------ | ----------------------------------------------------------------------- |
-| **Enable Apprise**       | Enable Apprise notification system                                      |
-| **Notify on New Device** | Apprise alerts for newly detected devices                               |
-| **Notify on Block**      | Apprise alerts for blocked streams                                      |
-| **Service URLs**         | Notification service URLs (one per line, comma, or semicolon separated) |
+| Setting                       | Description                                                                                             | Default  |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------- | -------- |
+| **Enable Apprise**            | Master switch to enable the Apprise multi-service notification system                                   | Disabled |
+| **Notify on New Device**      | Send an Apprise notification when a new device is detected attempting to stream from your Plex server   | Disabled |
+| **Notify on Block**           | Send an Apprise notification when a stream is terminated due to access rules or policy violations       | Disabled |
+| **Notify on Location Change** | Send an Apprise notification when a device's IP address changes, which may indicate suspicious activity | Disabled |
+| **Notify on Device Note**     | Send an Apprise notification when a Plex user submits a note or access request for one of their devices | Disabled |
+| **Service URLs**              | Your notification service URLs in Apprise format (one per line, or separated by commas/semicolons)      | -        |
 
 > [!NOTE]
-> Each service has a specific URL format. View the [Apprise documentation](https://github.com/caronc/apprise/wiki) for service URL formats and configuration examples.
+> Each notification service has a specific URL format. View the [Apprise documentation](https://github.com/caronc/apprise/wiki) for supported services and URL configuration examples.
 
 ### Admin Tools
 
 #### Database Management
 
-Backup and restore your Guardian configuration.
+Backup and restore your Guardian configuration, devices, and settings.
 
-| Action              | Description                                                |
-| ------------------- | ---------------------------------------------------------- |
-| **Export Database** | Download JSON backup of settings, devices, and preferences |
-| **Import Database** | Restore from a previous backup (merges with existing data) |
+| Action              | Description                                                                                                             |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| **Export Database** | Download a complete JSON backup containing all settings, registered devices, user preferences, and notification history |
+| **Import Database** | Restore configuration from a previously exported backup file (merges with existing data without deleting records)       |
 
 > [!WARNING]
-> Exports contain sensitive information including your Plex authentication token, SMTP credentials or Apprise credentials. Store backups securely. Import operations create or overwrite current records and do not delete any records.
+> Database exports contain sensitive information including your Plex authentication token, SMTP credentials, and Apprise service URLs. Store backup files securely and never share them publicly.
 
 #### Administrative Tools & Dangerous Operations
 
 > [!CAUTION]
-> These operations can permanently modify or delete data. Always export your database before performing administrative operations.
+> These operations can permanently modify or delete data. Always export your database before performing any administrative operations.
 
-| Tool                      | Description                        | Impact                                                    |
-| ------------------------- | ---------------------------------- | --------------------------------------------------------- |
-| **Reset Stream Counts**   | Clear session statistics           | Preserves devices and settings                            |
-| **Clear Session History** | Delete all session history records | Cannot be undone                                          |
-| **Delete All Devices**    | Remove all device records          | Users need re-approval, deletes notifications and history |
-| **Reset Database**        | Complete database wipe             | Restores default settings, cannot be undone               |
+| Tool                      | Description                                                              | Impact                                                                                |
+| ------------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------- |
+| **Reset Stream Counts**   | Clear all session statistics and stream counters for all devices         | Device records and settings are preserved; only streaming statistics are reset        |
+| **Clear Session History** | Permanently delete all historical session records from the database      | Cannot be undone; active sessions are not affected                                    |
+| **Delete All Devices**    | Remove all registered device records from Guardian                       | All users will need to re-register; also deletes associated notifications and history |
+| **Reset Database**        | Complete factory reset that wipes all data and restores default settings | Cannot be undone; you will need to reconfigure Guardian from scratch                  |
 
 ---
 

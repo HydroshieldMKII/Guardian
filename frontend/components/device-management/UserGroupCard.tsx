@@ -20,6 +20,7 @@ import {
   Shield,
   Timer,
   Users,
+  UserMinus,
 } from "lucide-react";
 import { UserDevice, UserPreference, AppSetting } from "@/types";
 import { UserAvatar, getUserPreferenceBadge } from "./SharedComponents";
@@ -109,6 +110,11 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
     useState(false);
   const { getGlobalDefaultBlock, loading: configLoading } = useSettings();
 
+  // Count devices excluded from concurrent limit
+  const excludedFromLimitCount = group.devices.filter(
+    (device) => device.excludeFromConcurrentLimit
+  ).length;
+
   return (
     <Collapsible
       open={isExpanded}
@@ -172,6 +178,12 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
                           : `${group.user.preference.concurrentStreamLimit} Stream${group.user.preference.concurrentStreamLimit !== 1 ? "s" : ""}`}
                       </Badge>
                     )}
+                  {excludedFromLimitCount > 0 && (
+                    <Badge variant="outline" className="text-xs">
+                      <UserMinus className="w-3 h-3 mr-1" />
+                      {excludedFromLimitCount} Excluded
+                    </Badge>
+                  )}
                 </div>
               </div>
 
@@ -199,6 +211,15 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
                       {group.user.preference.concurrentStreamLimit}
                     </Badge>
                   )}
+                {excludedFromLimitCount > 0 && (
+                  <Badge
+                    variant="outline"
+                    className="text-[10px] px-1.5 py-0.5"
+                  >
+                    <UserMinus className="w-2.5 h-2.5 mr-0.5" />
+                    {excludedFromLimitCount}
+                  </Badge>
+                )}
               </div>
             </div>
           </div>

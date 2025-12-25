@@ -137,6 +137,10 @@ class ApiClient {
     return this.post<T>(`/devices/${deviceId}/mark-note-read`, {});
   }
 
+  async deleteDeviceNote<T>(deviceId: number): Promise<T> {
+    return this.delete<T>(`/devices/${deviceId}/note`);
+  }
+
   // Notification methods
   async getAllNotifications<T>(): Promise<T> {
     return this.get<T>("/notifications");

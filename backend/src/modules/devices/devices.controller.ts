@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Delete,
   Param,
   ParseIntPipe,
   Body,
@@ -223,6 +224,14 @@ export class DevicesController {
   ): Promise<{ message: string }> {
     await this.deviceTrackingService.markNoteAsRead(id);
     return { message: `Note marked as read for device ${id}` };
+  }
+
+  @Delete(':id/note')
+  async deleteNote(
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<{ message: string }> {
+    await this.deviceTrackingService.deleteNote(id);
+    return { message: `Note deleted for device ${id}` };
   }
 
   @Post('revoke/:userId/:deviceIdentifier')

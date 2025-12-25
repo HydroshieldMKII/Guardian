@@ -685,51 +685,67 @@ export default function UserPortalPage() {
                           </div>
                         </div>
 
-                        {/* Show submitted note */}
+                        {/* Show submitted note for pending/rejected devices */}
                         {device.requestSubmittedAt &&
-                          device.requestDescription && (
+                          device.requestDescription &&
+                          (device.status === "pending" ||
+                            device.status === "rejected") && (
                             <div className="px-4 sm:px-5 pb-4 sm:pb-5 pt-0">
                               <div
-                                className={`rounded-lg p-3 border ${device.requestNoteReadAt ? "bg-green-500/5 border-green-500/20" : "bg-muted/50 border-border/50"}`}
+                                className={`rounded-lg p-3 sm:p-4 border ${device.requestNoteReadAt ? "bg-green-500/5 border-green-500/20" : "bg-muted/50 border-border/50"}`}
                               >
-                                <div className="flex items-start gap-2">
-                                  <MessageSquare
-                                    className={`h-4 w-4 mt-0.5 flex-shrink-0 ${device.requestNoteReadAt ? "text-green-600 dark:text-green-400" : "text-muted-foreground"}`}
-                                  />
-                                  <div className="min-w-0 flex-1">
-                                    <div className="flex items-center justify-between mb-1">
-                                      <p className="text-xs text-muted-foreground">
-                                        Your note to admin:
-                                      </p>
-                                      {device.requestNoteReadAt ? (
-                                        <Badge
-                                          variant="outline"
-                                          className="text-xs border-green-600 dark:border-green-700 text-green-700 dark:text-green-400"
-                                        >
-                                          <CheckCircle className="h-3 w-3 mr-1" />
-                                          Read
-                                        </Badge>
-                                      ) : (
-                                        <Badge
-                                          variant="outline"
-                                          className="text-xs border-muted-foreground text-muted-foreground"
-                                        >
-                                          Not Read
-                                        </Badge>
-                                      )}
-                                    </div>
-                                    <p className="text-sm">
-                                      {device.requestDescription}
-                                    </p>
-                                    {device.requestNoteReadAt && (
-                                      <p className="text-xs text-green-600 dark:text-green-400 mt-2">
-                                        Read on{" "}
-                                        {new Date(
-                                          device.requestNoteReadAt
-                                        ).toLocaleString()}
-                                      </p>
-                                    )}
+                                {/* Header row with label and badge */}
+                                <div className="flex items-center justify-between gap-2 mb-2">
+                                  <div className="flex items-center gap-2">
+                                    <MessageSquare
+                                      className={`h-4 w-4 flex-shrink-0 ${device.requestNoteReadAt ? "text-green-600 dark:text-green-400" : "text-muted-foreground"}`}
+                                    />
+                                    <span className="text-xs font-medium text-muted-foreground">
+                                      Your note to admin
+                                    </span>
                                   </div>
+                                  {device.requestNoteReadAt ? (
+                                    <Badge
+                                      variant="outline"
+                                      className="text-xs border-green-600 dark:border-green-700 text-green-700 dark:text-green-400"
+                                    >
+                                      <CheckCircle className="h-3 w-3 mr-1" />
+                                      Read
+                                    </Badge>
+                                  ) : (
+                                    <Badge
+                                      variant="outline"
+                                      className="text-xs border-amber-500 dark:border-amber-600 text-amber-600 dark:text-amber-400"
+                                    >
+                                      <Clock className="h-3 w-3 mr-1" />
+                                      Pending Review
+                                    </Badge>
+                                  )}
+                                </div>
+
+                                {/* Note content */}
+                                <div className="bg-background/50 rounded-md p-3 mb-2">
+                                  <p className="text-sm break-words whitespace-pre-wrap">
+                                    {device.requestDescription}
+                                  </p>
+                                </div>
+
+                                {/* Footer with timestamp */}
+                                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 text-xs text-muted-foreground">
+                                  <span>
+                                    Submitted{" "}
+                                    {new Date(
+                                      device.requestSubmittedAt
+                                    ).toLocaleString()}
+                                  </span>
+                                  {device.requestNoteReadAt && (
+                                    <span className="text-green-600 dark:text-green-400">
+                                      Read on{" "}
+                                      {new Date(
+                                        device.requestNoteReadAt
+                                      ).toLocaleString()}
+                                    </span>
+                                  )}
                                 </div>
                               </div>
                             </div>
@@ -1058,7 +1074,7 @@ export default function UserPortalPage() {
             )}
           </div>
 
-          <DialogFooter className="gap-2 sm:gap-0">
+          <DialogFooter className="gap-2">
             <Button
               variant="outline"
               onClick={() => {

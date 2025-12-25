@@ -4,6 +4,19 @@ import { join } from 'path';
 
 @Injectable()
 export class EmailTemplateService {
+  /**
+   * Escapes HTML entities for email content
+   */
+  private escapeHtml(text: string): string {
+    const htmlEntities: Record<string, string> = {
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;',
+    };
+    return text.replace(/[&<>"']/g, (char) => htmlEntities[char]);
+  }
   private getLogoBase64(): string {
     try {
       const possiblePaths = [
@@ -319,18 +332,23 @@ export class EmailTemplateService {
     oldIpAddress?: string,
     note?: string,
   ): string {
+    const safeUsername = this.escapeHtml(username);
+    const safeDeviceName = deviceName ? this.escapeHtml(deviceName) : undefined;
+    const safeNote = note ? this.escapeHtml(note) : undefined;
+    const safeStopCode = stopCode ? this.escapeHtml(stopCode) : undefined;
+
     let detailsContent = `
       <div class="detail-row">
         <span class="detail-label">User</span>
-        <span class="detail-value">${username}</span>
+        <span class="detail-value">${safeUsername}</span>
       </div>
     `;
 
-    if (deviceName) {
+    if (safeDeviceName) {
       detailsContent += `
         <div class="detail-row">
           <span class="detail-label">Device</span>
-          <span class="detail-value">${deviceName}</span>
+          <span class="detail-value">${safeDeviceName}</span>
         </div>
       `;
     }
@@ -363,20 +381,20 @@ export class EmailTemplateService {
       </div>
     `;
 
-    if (stopCode) {
+    if (safeStopCode) {
       detailsContent += `
         <div class="detail-row">
           <span class="detail-label">Code</span>
-          <span class="detail-value"><span class="stop-code">${stopCode}</span></span>
+          <span class="detail-value"><span class="stop-code">${safeStopCode}</span></span>
         </div>
       `;
     }
 
-    if (note && notificationType === 'device-note') {
+    if (safeNote && notificationType === 'device-note') {
       detailsContent += `
         <div class="detail-row">
           <span class="detail-label">Note</span>
-          <span class="detail-value" style="white-space: pre-wrap;">${note}</span>
+          <span class="detail-value" style="white-space: pre-wrap;">${safeNote}</span>
         </div>
       `;
     }

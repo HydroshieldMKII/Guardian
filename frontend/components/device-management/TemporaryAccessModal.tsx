@@ -568,10 +568,28 @@ export const TemporaryAccessModal: React.FC<TemporaryAccessModalProps> = ({
                   <h4 className="font-semibold text-sm text-foreground mb-1">
                     Policy Bypass
                   </h4>
-                  <p className="text-xs text-muted-foreground">
-                    Allow access even if IP restrictions, time rules, or other
-                    user policies would normally block the device.
+                  <p className="text-xs text-muted-foreground mb-2">
+                    When enabled, the following policies will be bypassed during
+                    temporary access:
                   </p>
+                  <ul className="text-xs text-muted-foreground list-disc list-inside space-y-1 ml-1">
+                    <li>
+                      <span className="font-medium">Network Policy</span> - LAN
+                      only / WAN only restrictions
+                    </li>
+                    <li>
+                      <span className="font-medium">IP Restrictions</span> -
+                      Allowed IP addresses and CIDR ranges
+                    </li>
+                    <li>
+                      <span className="font-medium">Time Rules</span> - Scheduled
+                      viewing time restrictions
+                    </li>
+                    <li>
+                      <span className="font-medium">Device Status</span> - Pending
+                      or rejected device approval
+                    </li>
+                  </ul>
                 </div>
                 <div className="flex items-center gap-3">
                   <Switch

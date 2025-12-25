@@ -7,6 +7,7 @@ import { AppSettings } from '../../entities/app-settings.entity';
 import { UserPortalService } from './services/user-portal.service';
 import { UserPortalController } from './user-portal.controller';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { ConfigModule } from '../config/config.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
       AppSettings,
     ]),
     forwardRef(() => NotificationsModule),
+    ConfigModule,
   ],
   providers: [UserPortalService],
   controllers: [UserPortalController],

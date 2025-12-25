@@ -263,7 +263,8 @@ export class DeviceTrackingService {
     const strictMode = await this.configService.getSetting(
       'PLEX_GUARD_STRICT_MODE',
     );
-    const isStrictMode = strictMode?.value === 'true';
+
+    const isStrictMode = strictMode === true;
 
     // Check if this is a Plexamp device (they are always allowed)
     const isPlexampDevice =
@@ -408,7 +409,8 @@ export class DeviceTrackingService {
     const strictMode = await this.configService.getSetting(
       'PLEX_GUARD_STRICT_MODE',
     );
-    const isStrictMode = strictMode?.value === 'true';
+    // getSetting returns the parsed boolean value directly
+    const isStrictMode = strictMode === true;
 
     if (!isStrictMode) {
       return 0;
@@ -583,6 +585,20 @@ export class DeviceTrackingService {
       requestNoteReadAt: new Date(),
     });
     this.logger.log(`Note marked as read for device ${deviceId}`);
+  }
+
+  async deleteNote(deviceId: number): Promise<void> {
+    await this.userDeviceRepository
+      .createQueryBuilder()
+      .update()
+      .set({
+        requestDescription: () => 'NULL',
+        requestSubmittedAt: () => 'NULL',
+        requestNoteReadAt: () => 'NULL',
+      })
+      .where('id = :id', { id: deviceId })
+      .execute();
+    this.logger.log(`Note deleted for device ${deviceId}`);
   }
 
   async grantTemporaryAccess(

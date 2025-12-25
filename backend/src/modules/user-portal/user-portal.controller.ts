@@ -7,9 +7,11 @@ import {
   ParseIntPipe,
   Req,
   ForbiddenException,
+  UseGuards,
 } from '@nestjs/common';
 import type { Request } from 'express';
 import { UserPortalService } from './services/user-portal.service';
+import { AuthGuard } from '../auth/guards/auth.guard';
 
 /**
  * User Portal Controller
@@ -18,6 +20,7 @@ import { UserPortalService } from './services/user-portal.service';
  * but the data returned is scoped to the logged-in user's Plex ID
  */
 @Controller('user-portal')
+@UseGuards(AuthGuard)
 export class UserPortalController {
   constructor(private readonly userPortalService: UserPortalService) {}
 

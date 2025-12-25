@@ -58,7 +58,7 @@ export const getSettingInfo = (setting: AppSetting): SettingInfo => {
     PLEX_GUARD_STRICT_MODE: {
       label: "Strict mode",
       description:
-        "Automatically approve or reject new devices based on the default policy. No devices will remain pending.",
+        "Automatically approve or reject new devices based on the default policy. Current pending devices will also be affected.",
     },
     MSG_DEVICE_PENDING: {
       label: "Device pending message",
