@@ -137,24 +137,42 @@ export default function LoginPage() {
   useEffect(() => {
     const storedPin = sessionStorage.getItem("plexPin");
     if (storedPin) {
+      sessionStorage.removeItem("plexPin");
       try {
         const pinData: PlexPin = JSON.parse(storedPin);
         // Check if PIN hasn't expired
         if (new Date(pinData.expiresAt) > new Date()) {
           setPlexPin(pinData);
           setPlexLoading(true);
-          // Immediate check since user just returned from Plex
-          setTimeout(() => {
-            sessionStorage.removeItem("plexPin");
-          }, 100);
-        } else {
-          sessionStorage.removeItem("plexPin");
+          // Immediately check the PIN since user just returned from Plex
+          (async () => {
+            try {
+              const response = await fetch(`/api/pg/auth/plex/pin/${pinData.clientId}`);
+              if (response.ok) {
+                const data = await response.json();
+                if (data.authToken) {
+                  await loginWithPlex(data.authToken);
+                  toast({
+                    title: "Success",
+                    description: "Logged in with Plex successfully",
+                    variant: "success",
+                  });
+                  setPlexLoading(false);
+                  setPlexPin(null);
+                  return;
+                }
+              }
+            } catch (error) {
+              console.error("Immediate PIN check failed:", error);
+            }
+            // If immediate check didn't complete auth, polling will continue
+          })();
         }
       } catch {
-        sessionStorage.removeItem("plexPin");
+        // Invalid stored PIN data
       }
     }
-  }, []);
+  }, [loginWithPlex, toast]);
 
   const handlePlexLogin = async () => {
     setPlexLoading(true);
