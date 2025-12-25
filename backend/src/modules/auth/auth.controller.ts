@@ -175,6 +175,7 @@ export class AuthController {
   /**
    * Update user profile
    */
+  @AdminOnly()
   @Patch('profile')
   async updateProfile(
     @CurrentUser() user: AdminUser,
@@ -191,6 +192,7 @@ export class AuthController {
   /**
    * Update user password
    */
+  @AdminOnly()
   @Patch('password')
   async updatePassword(
     @CurrentUser() user: AdminUser & { sessionId?: string },
