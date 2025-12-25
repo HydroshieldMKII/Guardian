@@ -188,7 +188,7 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
               </div>
 
               {/* Mobile: Show preference badge */}
-              <div className="sm:hidden flex items-center gap-1.5 ml-6">
+              <div className="sm:hidden flex items-center gap-1 ml-6 flex-wrap">
                 {group.user.preference &&
                   getUserPreferenceBadge(group.user.preference.defaultBlock)}
                 {hasTimeSchedules && (
@@ -200,6 +200,15 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
                     Scheduled
                   </Badge>
                 )}
+                {hasIPPolicies && (
+                  <Badge
+                    variant="outline"
+                    className="text-[10px] px-1.5 py-0.5"
+                  >
+                    <Shield className="w-2.5 h-2.5 mr-0.5" />
+                    IP
+                  </Badge>
+                )}
                 {group.user.preference?.concurrentStreamLimit !== null &&
                   group.user.preference?.concurrentStreamLimit !==
                     undefined && (
@@ -208,7 +217,9 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
                       className="text-[10px] px-1.5 py-0.5"
                     >
                       <Users className="w-2.5 h-2.5 mr-0.5" />
-                      {group.user.preference.concurrentStreamLimit}
+                      {group.user.preference.concurrentStreamLimit === 0
+                        ? "∞"
+                        : group.user.preference.concurrentStreamLimit}
                     </Badge>
                   )}
                 {excludedFromLimitCount > 0 && (
@@ -251,53 +262,53 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
                   </div>
 
                   {/* Action Buttons */}
-                  <div className="flex flex-wrap items-center bg-muted/50 rounded-lg p-1 gap-1">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:flex md:flex-wrap md:items-center bg-muted/50 rounded-lg p-1.5 sm:p-1 gap-1">
                     {onShowTimePolicy && (
                       <button
                         onClick={() => onShowTimePolicy(group.user.userId)}
-                        className="text-xs px-3 py-2 rounded-md transition-all duration-200 flex items-center cursor-pointer text-foreground hover:bg-accent whitespace-nowrap"
+                        className="text-xs px-2 sm:px-3 py-2 rounded-md transition-all duration-200 flex items-center justify-center sm:justify-start cursor-pointer text-foreground hover:bg-accent whitespace-nowrap"
                         title="Manage time-based access policies"
                       >
-                        <Timer className="w-3 h-3 mr-2" />
-                        <span>Schedule</span>
+                        <Timer className="w-3.5 h-3.5 sm:w-3 sm:h-3 mr-1.5 sm:mr-2" />
+                        <span className="text-[11px] sm:text-xs">Schedule</span>
                       </button>
                     )}
                     {onGrantUserTempAccess && (
                       <button
                         onClick={() => onGrantUserTempAccess(group.user.userId)}
-                        className="text-xs px-3 py-2 rounded-md transition-all duration-200 flex items-center cursor-pointer text-foreground hover:bg-accent whitespace-nowrap"
+                        className="text-xs px-2 sm:px-3 py-2 rounded-md transition-all duration-200 flex items-center justify-center sm:justify-start cursor-pointer text-foreground hover:bg-accent whitespace-nowrap"
                         title="Grant temporary access to user devices"
                       >
-                        <Timer className="w-3 h-3 mr-2" />
-                        <span>Temp Access</span>
+                        <Timer className="w-3.5 h-3.5 sm:w-3 sm:h-3 mr-1.5 sm:mr-2" />
+                        <span className="text-[11px] sm:text-xs">Temp</span>
                       </button>
                     )}
                     {onUpdateUserIPPolicy && (
                       <button
                         onClick={() => setShowIPModal(true)}
-                        className="text-xs px-3 py-2 rounded-md transition-all duration-200 flex items-center cursor-pointer text-foreground hover:bg-accent whitespace-nowrap"
+                        className="text-xs px-2 sm:px-3 py-2 rounded-md transition-all duration-200 flex items-center justify-center sm:justify-start cursor-pointer text-foreground hover:bg-accent whitespace-nowrap"
                         title="Configure IP and network access policies"
                       >
-                        <Shield className="w-3 h-3 mr-2" />
-                        <span>IP Policy</span>
+                        <Shield className="w-3.5 h-3.5 sm:w-3 sm:h-3 mr-1.5 sm:mr-2" />
+                        <span className="text-[11px] sm:text-xs">IP</span>
                       </button>
                     )}
                     <button
                       onClick={() => setShowConcurrentStreamModal(true)}
-                      className="text-xs px-3 py-2 rounded-md transition-all duration-200 flex items-center cursor-pointer text-foreground hover:bg-accent whitespace-nowrap"
+                      className="text-xs px-2 sm:px-3 py-2 rounded-md transition-all duration-200 flex items-center justify-center sm:justify-start cursor-pointer text-foreground hover:bg-accent whitespace-nowrap"
                       title="Configure concurrent stream limit for this user"
                     >
-                      <Users className="w-3 h-3 mr-2" />
-                      <span>Stream Limit</span>
+                      <Users className="w-3.5 h-3.5 sm:w-3 sm:h-3 mr-1.5 sm:mr-2" />
+                      <span className="text-[11px] sm:text-xs">Limit</span>
                     </button>
                     {onShowHistory && (
                       <button
                         onClick={() => onShowHistory(group.user.userId)}
-                        className="text-xs px-3 py-2 rounded-md transition-all duration-200 flex items-center cursor-pointer text-foreground hover:bg-accent whitespace-nowrap"
+                        className="text-xs px-2 sm:px-3 py-2 rounded-md transition-all duration-200 flex items-center justify-center sm:justify-start cursor-pointer text-foreground hover:bg-accent whitespace-nowrap"
                         title="Show user history"
                       >
-                        <History className="w-3 h-3 mr-2" />
-                        <span>History</span>
+                        <History className="w-3.5 h-3.5 sm:w-3 sm:h-3 mr-1.5 sm:mr-2" />
+                        <span className="text-[11px] sm:text-xs">History</span>
                       </button>
                     )}
                     {onToggleUserVisibility && (
@@ -305,7 +316,7 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
                         onClick={() =>
                           onToggleUserVisibility(group.user.userId)
                         }
-                        className="text-xs px-3 py-2 rounded-md transition-all duration-200 flex items-center cursor-pointer text-foreground hover:bg-accent whitespace-nowrap"
+                        className="text-xs px-2 sm:px-3 py-2 rounded-md transition-all duration-200 flex items-center justify-center sm:justify-start cursor-pointer text-foreground hover:bg-accent whitespace-nowrap"
                         title={
                           group.user.preference?.hidden
                             ? "Show user"
@@ -314,13 +325,13 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
                       >
                         {group.user.preference?.hidden ? (
                           <>
-                            <Eye className="w-3 h-3 mr-2" />
-                            <span>Show</span>
+                            <Eye className="w-3.5 h-3.5 sm:w-3 sm:h-3 mr-1.5 sm:mr-2" />
+                            <span className="text-[11px] sm:text-xs">Show</span>
                           </>
                         ) : (
                           <>
-                            <EyeOff className="w-3 h-3 mr-2" />
-                            <span>Hide</span>
+                            <EyeOff className="w-3.5 h-3.5 sm:w-3 sm:h-3 mr-1.5 sm:mr-2" />
+                            <span className="text-[11px] sm:text-xs">Hide</span>
                           </>
                         )}
                       </button>

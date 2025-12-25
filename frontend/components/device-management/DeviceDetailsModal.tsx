@@ -488,14 +488,6 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
                   <span className="font-semibold text-sm">
                     Temporary Access
                   </span>
-                  {hasTemporaryAccess(device) && (
-                    <Badge
-                      variant="outline"
-                      className="ml-2 border-green-600 dark:border-green-700 text-green-700 dark:text-green-400"
-                    >
-                      Active
-                    </Badge>
-                  )}
                 </div>
                 <ChevronDown
                   className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${
@@ -575,7 +567,7 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
                         className={
                           device.temporaryAccessBypassPolicies
                             ? "border-amber-600 dark:border-amber-700 text-amber-700 dark:text-amber-400"
-                            : ""
+                            : "border-red-600 dark:border-red-700 text-red-700 dark:text-red-400"
                         }
                       >
                         {device.temporaryAccessBypassPolicies ? "Yes" : "No"}
