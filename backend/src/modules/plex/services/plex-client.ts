@@ -360,12 +360,15 @@ export class PlexClient {
       reason: reason,
     });
 
-    await this.request(`status/sessions/terminate?${params.toString()}`, {
+    const url = `status/sessions/terminate?${params.toString()}`;
+    this.logger.debug(`Terminate URL: ${url}`);
+
+    await this.request(url, {
       method: 'GET',
     });
 
     this.logger.log(
-      `Terminate session requested to Plex for ${deviceIdentifier}`,
+      `Terminate session requested to Plex for ${deviceIdentifier} with reason: ${reason}`,
     );
   }
 

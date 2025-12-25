@@ -582,12 +582,12 @@ export const TemporaryAccessModal: React.FC<TemporaryAccessModalProps> = ({
                       Allowed IP addresses and CIDR ranges
                     </li>
                     <li>
-                      <span className="font-medium">Time Rules</span> - Scheduled
-                      viewing time restrictions
+                      <span className="font-medium">Time Rules</span> -
+                      Scheduled viewing time restrictions
                     </li>
                     <li>
-                      <span className="font-medium">Device Status</span> - Pending
-                      or rejected device approval
+                      <span className="font-medium">Device Status</span> -
+                      Pending or rejected device approval
                     </li>
                   </ul>
                 </div>

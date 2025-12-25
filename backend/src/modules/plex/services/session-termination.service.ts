@@ -405,53 +405,6 @@ export class SessionTerminationService {
         }
       }
 
-      // Check device status FIRST - if device is rejected, show that message
-      // This takes priority over IP/time policy checks for clearer user feedback
-      if (device?.status === 'rejected') {
-        if (await this.deviceTrackingService.isTemporaryAccessValid(device)) {
-          return { shouldStop: false };
-        }
-
-        this.logger.warn(
-          `Device ${deviceIdentifier} for user ${userId} is explicitly rejected.`,
-        );
-        const message =
-          ((await this.configService.getSetting(
-            'MSG_DEVICE_REJECTED',
-          )) as string) ||
-          'You are not authorized to use this device. Please contact the server administrator for more information.';
-        return {
-          shouldStop: true,
-          reason: message,
-          stopCode: 'DEVICE_REJECTED',
-        };
-      }
-
-      // Check pending device status before other policies
-      if (!device || device.status === 'pending') {
-        // Check if device has valid temporary access (without bypass)
-        if (
-          device &&
-          (await this.deviceTrackingService.isTemporaryAccessValid(device))
-        ) {
-          return { shouldStop: false };
-        }
-        const shouldBlock =
-          await this.usersService.getEffectiveDefaultBlock(userId);
-        if (shouldBlock) {
-          const message =
-            ((await this.configService.getSetting(
-              'MSG_DEVICE_PENDING',
-            )) as string) ||
-            'Device pending approval. The server owner must approve this device before it can be used.';
-          return {
-            shouldStop: true,
-            reason: message,
-            stopCode: 'DEVICE_PENDING',
-          };
-        }
-      }
-
       const ipValidation = await this.validateIPAccess(session);
       if (!ipValidation.allowed) {
         this.logger.warn(
@@ -487,6 +440,50 @@ export class SessionTerminationService {
             configMessage ||
             `Streaming is not allowed at this time due to time restrictions (Policy: ${timePolicySummary})`,
           stopCode: 'TIME_RESTRICTED',
+        };
+      }
+      if (!device || device.status === 'pending') {
+        // Check if device has valid temporary access (without bypass)
+        if (
+          device &&
+          (await this.deviceTrackingService.isTemporaryAccessValid(device))
+        ) {
+          return { shouldStop: false };
+        }
+        const shouldBlock =
+          await this.usersService.getEffectiveDefaultBlock(userId);
+        if (shouldBlock) {
+          const message =
+            ((await this.configService.getSetting(
+              'MSG_DEVICE_PENDING',
+            )) as string) ||
+            'Device pending approval. The server owner must approve this device before it can be used.';
+          return {
+            shouldStop: true,
+            reason: message,
+            stopCode: 'DEVICE_PENDING',
+          };
+        }
+        return { shouldStop: false };
+      }
+
+      if (device.status === 'rejected') {
+        if (await this.deviceTrackingService.isTemporaryAccessValid(device)) {
+          return { shouldStop: false };
+        }
+
+        this.logger.warn(
+          `Device ${deviceIdentifier} for user ${userId} is explicitly rejected.`,
+        );
+        const message =
+          ((await this.configService.getSetting(
+            'MSG_DEVICE_REJECTED',
+          )) as string) ||
+          'You are not authorized to use this device. Please contact the server administrator for more information.';
+        return {
+          shouldStop: true,
+          reason: message,
+          stopCode: 'DEVICE_REJECTED',
         };
       }
 
