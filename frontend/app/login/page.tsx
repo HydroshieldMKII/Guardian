@@ -133,6 +133,29 @@ export default function LoginPage() {
     }
   }, [plexPin, plexPopup]);
 
+  // Check for stored Plex PIN on mount (mobile redirect flow)
+  useEffect(() => {
+    const storedPin = sessionStorage.getItem("plexPin");
+    if (storedPin) {
+      try {
+        const pinData: PlexPin = JSON.parse(storedPin);
+        // Check if PIN hasn't expired
+        if (new Date(pinData.expiresAt) > new Date()) {
+          setPlexPin(pinData);
+          setPlexLoading(true);
+          // Immediate check since user just returned from Plex
+          setTimeout(() => {
+            sessionStorage.removeItem("plexPin");
+          }, 100);
+        } else {
+          sessionStorage.removeItem("plexPin");
+        }
+      } catch {
+        sessionStorage.removeItem("plexPin");
+      }
+    }
+  }, []);
+
   const handlePlexLogin = async () => {
     setPlexLoading(true);
 
@@ -151,6 +174,17 @@ export default function LoginPage() {
 
       // Open Plex auth popup
       const authUrl = `${PLEX_AUTH_URL}#?clientID=${pinData.clientId}&code=${pinData.code}&context%5Bdevice%5D%5Bproduct%5D=Guardian`;
+
+      // Check if mobile device - use redirect instead of popup
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+      if (isMobile) {
+        // Store PIN info in sessionStorage so we can check it when user returns
+        sessionStorage.setItem("plexPin", JSON.stringify(pinData));
+        // Redirect to Plex auth page
+        window.location.href = authUrl;
+        return;
+      }
 
       const width = 600;
       const height = 700;
@@ -176,6 +210,10 @@ export default function LoginPage() {
             }
           }
         }, 500);
+      } else {
+        // Popup was blocked - fall back to redirect
+        sessionStorage.setItem("plexPin", JSON.stringify(pinData));
+        window.location.href = authUrl;
       }
     } catch (error) {
       toast({
