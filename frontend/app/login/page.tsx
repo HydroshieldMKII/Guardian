@@ -172,11 +172,14 @@ export default function LoginPage() {
       const pinData: PlexPin = await response.json();
       setPlexPin(pinData);
 
-      // Open Plex auth popup
-      const authUrl = `${PLEX_AUTH_URL}#?clientID=${pinData.clientId}&code=${pinData.code}&context%5Bdevice%5D%5Bproduct%5D=Guardian`;
-
       // Check if mobile device - use redirect instead of popup
       const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+      // Build auth URL with forward URL for mobile redirect flow
+      const forwardUrl = encodeURIComponent(window.location.href);
+      const authUrl = isMobile
+        ? `${PLEX_AUTH_URL}#?clientID=${pinData.clientId}&code=${pinData.code}&context%5Bdevice%5D%5Bproduct%5D=Guardian&forwardUrl=${forwardUrl}`
+        : `${PLEX_AUTH_URL}#?clientID=${pinData.clientId}&code=${pinData.code}&context%5Bdevice%5D%5Bproduct%5D=Guardian`;
 
       if (isMobile) {
         // Store PIN info in sessionStorage so we can check it when user returns
@@ -211,9 +214,10 @@ export default function LoginPage() {
           }
         }, 500);
       } else {
-        // Popup was blocked - fall back to redirect
+        // Popup was blocked - fall back to redirect with forwardUrl
+        const redirectUrl = `${PLEX_AUTH_URL}#?clientID=${pinData.clientId}&code=${pinData.code}&context%5Bdevice%5D%5Bproduct%5D=Guardian&forwardUrl=${forwardUrl}`;
         sessionStorage.setItem("plexPin", JSON.stringify(pinData));
-        window.location.href = authUrl;
+        window.location.href = redirectUrl;
       }
     } catch (error) {
       toast({
