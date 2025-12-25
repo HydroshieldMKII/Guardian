@@ -18,6 +18,12 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   Settings,
   Edit2,
   Save,
@@ -33,8 +39,9 @@ import {
   CheckCheck,
   RotateCcw,
   Trash2,
+  HelpCircle,
 } from "lucide-react";
-import { UserDevice } from "@/types";
+import { UserDevice, AppSetting } from "@/types";
 import { ClickableIP, DeviceStatus } from "./SharedComponents";
 import { useDeviceUtils } from "@/hooks/device-management/useDeviceUtils";
 import { apiClient } from "@/lib/api";
@@ -53,6 +60,7 @@ interface DeviceDetailsModalProps {
   onNewDeviceNameChange: (name: string) => void;
   onDeviceUpdate?: (device: UserDevice) => void;
   onSetPending?: (deviceId: number) => Promise<boolean>;
+  settingsData?: AppSetting[];
 }
 
 export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
@@ -68,6 +76,7 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
   onNewDeviceNameChange,
   onDeviceUpdate,
   onSetPending,
+  settingsData,
 }) => {
   const { hasTemporaryAccess, getTemporaryAccessTimeLeft } = useDeviceUtils();
   const { toast } = useToast();
@@ -90,10 +99,27 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
   const [deviceSettingsOpen, setDeviceSettingsOpen] = useState(false);
   const [userNoteOpen, setUserNoteOpen] = useState(false);
 
+  // Tooltip state for strict mode disabled button
+  const [strictModeTooltipOpen, setStrictModeTooltipOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Detect mobile on mount
+  React.useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 640);
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
   // Check if device is Plexamp
   const isPlexampDevice =
     device?.deviceProduct?.toLowerCase().includes("plexamp") ||
     device?.deviceName?.toLowerCase().includes("plexamp");
+
+  // Check if strict mode is enabled
+  const isStrictModeEnabled =
+    settingsData?.find((s) => s.key === "PLEX_GUARD_STRICT_MODE")?.value ===
+    "true";
 
   // Sync local state when device prop changes
   React.useEffect(() => {
@@ -622,7 +648,7 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
                 device.status !== "pending" &&
                 onSetPending && (
                   <div className="p-3 bg-muted/50 rounded-lg">
-                    <div className="space-y-2">
+                    <div className="flex flex-col gap-2">
                       <div className="space-y-0.5">
                         <Label className="text-sm font-medium">
                           Revert to pending status
@@ -632,20 +658,72 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
                           will need to be approved again.
                         </p>
                       </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handleSetPending}
-                        disabled={setPendingLoading}
-                        className="w-full border-amber-600 text-amber-700 hover:bg-amber-50 dark:border-amber-700 dark:text-amber-400 dark:hover:bg-amber-900/30"
-                      >
-                        {setPendingLoading ? (
-                          <RefreshCw className="w-4 h-4 animate-spin mr-2" />
-                        ) : (
-                          <RotateCcw className="w-4 h-4 mr-2" />
-                        )}
-                        Set to Pending
-                      </Button>
+                      {isStrictModeEnabled ? (
+                        <TooltipProvider delayDuration={0}>
+                          <Tooltip
+                            open={strictModeTooltipOpen}
+                            onOpenChange={(open) => {
+                              if (!isMobile) {
+                                setStrictModeTooltipOpen(open);
+                              }
+                            }}
+                          >
+                            <TooltipTrigger asChild>
+                              <button
+                                type="button"
+                                className="w-full inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium rounded-md border border-muted-foreground/50 bg-background h-8 px-3 text-muted-foreground cursor-not-allowed focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  if (isMobile) {
+                                    setStrictModeTooltipOpen((prev) => !prev);
+                                  }
+                                }}
+                                onMouseEnter={() => {
+                                  if (!isMobile) setStrictModeTooltipOpen(true);
+                                }}
+                                onMouseLeave={() => {
+                                  if (!isMobile)
+                                    setStrictModeTooltipOpen(false);
+                                }}
+                              >
+                                <HelpCircle className="w-4 h-4" />
+                                Set to Pending
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent
+                              side="top"
+                              align="center"
+                              avoidCollisions={false}
+                              onPointerDownOutside={(e) => {
+                                e.preventDefault();
+                                setStrictModeTooltipOpen(false);
+                              }}
+                            >
+                              <p className="max-w-xs">
+                                Strict mode is enabled. Devices cannot be set to
+                                pending as they will be automatically approved
+                                or rejected based on the default policy.
+                              </p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleSetPending}
+                          disabled={setPendingLoading}
+                          className="w-full border-amber-600 text-amber-700 hover:bg-amber-50 dark:border-amber-700 dark:text-amber-400 dark:hover:bg-amber-900/30"
+                        >
+                          {setPendingLoading ? (
+                            <RefreshCw className="w-4 h-4 animate-spin mr-2" />
+                          ) : (
+                            <RotateCcw className="w-4 h-4 mr-2" />
+                          )}
+                          Set to Pending
+                        </Button>
+                      )}
                     </div>
                   </div>
                 )}

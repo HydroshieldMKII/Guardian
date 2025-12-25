@@ -1461,6 +1461,7 @@ const DeviceManagement = memo(
           onRename={handleRename}
           onNewDeviceNameChange={setNewDeviceName}
           onSetPending={handleSetPending}
+          settingsData={settingsData}
         />
 
         {/* Temporary Access Modal */}

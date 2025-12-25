@@ -147,7 +147,9 @@ export default function LoginPage() {
           // Immediately check the PIN since user just returned from Plex
           (async () => {
             try {
-              const response = await fetch(`/api/pg/auth/plex/pin/${pinData.clientId}`);
+              const response = await fetch(
+                `/api/pg/auth/plex/pin/${pinData.clientId}`
+              );
               if (response.ok) {
                 const data = await response.json();
                 if (data.authToken) {
