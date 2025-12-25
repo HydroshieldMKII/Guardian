@@ -257,7 +257,7 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
         <div className="space-y-2">
           {/* Basic Information Section */}
           <Collapsible open={basicInfoOpen} onOpenChange={setBasicInfoOpen}>
-            <CollapsibleTrigger className="flex items-center justify-between w-full p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer">
+            <CollapsibleTrigger className="flex items-center justify-between w-full p-3 bg-muted/50 rounded-lg hover:bg-muted/70 transition-colors cursor-pointer">
               <span className="font-semibold text-sm">Basic Information</span>
               <ChevronDown
                 className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${
@@ -383,7 +383,7 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
 
           {/* Device Identifier Section */}
           <Collapsible open={identifierOpen} onOpenChange={setIdentifierOpen}>
-            <CollapsibleTrigger className="flex items-center justify-between w-full p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer">
+            <CollapsibleTrigger className="flex items-center justify-between w-full p-3 bg-muted/50 rounded-lg hover:bg-muted/70 transition-colors cursor-pointer">
               <span className="font-semibold text-sm">Device Identifier</span>
               <ChevronDown
                 className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${
@@ -400,7 +400,7 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
 
           {/* Activity Section */}
           <Collapsible open={activityOpen} onOpenChange={setActivityOpen}>
-            <CollapsibleTrigger className="flex items-center justify-between w-full p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer">
+            <CollapsibleTrigger className="flex items-center justify-between w-full p-3 bg-muted/50 rounded-lg hover:bg-muted/70 transition-colors cursor-pointer">
               <span className="font-semibold text-sm">Activity</span>
               <ChevronDown
                 className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${
@@ -435,7 +435,7 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
             device.requestSubmittedAt &&
             noteReadAt && (
               <Collapsible open={userNoteOpen} onOpenChange={setUserNoteOpen}>
-                <CollapsibleTrigger className="flex items-center justify-between w-full p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer">
+                <CollapsibleTrigger className="flex items-center justify-between w-full p-3 bg-muted/50 rounded-lg hover:bg-muted/70 transition-colors cursor-pointer">
                   <div className="flex items-center gap-2">
                     <span className="font-semibold text-sm">User Note</span>
                   </div>
@@ -483,7 +483,7 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
             device.temporaryAccessGrantedAt ||
             device.temporaryAccessDurationMinutes) && (
             <Collapsible open={tempAccessOpen} onOpenChange={setTempAccessOpen}>
-              <CollapsibleTrigger className="flex items-center justify-between w-full p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer">
+              <CollapsibleTrigger className="flex items-center justify-between w-full p-3 bg-muted/50 rounded-lg hover:bg-muted/70 transition-colors cursor-pointer">
                 <div className="flex items-center gap-2">
                   <span className="font-semibold text-sm">
                     Temporary Access
@@ -584,7 +584,7 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
             open={deviceSettingsOpen}
             onOpenChange={setDeviceSettingsOpen}
           >
-            <CollapsibleTrigger className="flex items-center justify-between w-full p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer">
+            <CollapsibleTrigger className="flex items-center justify-between w-full p-3 bg-muted/50 rounded-lg hover:bg-muted/70 transition-colors cursor-pointer">
               <span className="font-semibold text-sm">Device Settings</span>
               <ChevronDown
                 className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${
@@ -595,7 +595,7 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
             <CollapsibleContent className="pt-3 px-3 space-y-3">
               {/* Exclude from concurrent stream limit - Hide for PlexAmp devices since they're always excluded */}
               {!isPlexampDevice && (
-                <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                   <div className="space-y-0.5">
                     <Label
                       htmlFor="exclude-concurrent-limit"
@@ -621,7 +621,7 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
               {!isPlexampDevice &&
                 device.status !== "pending" &&
                 onSetPending && (
-                  <div className="p-3 bg-muted/30 rounded-lg">
+                  <div className="p-3 bg-muted/50 rounded-lg">
                     <div className="space-y-2">
                       <div className="space-y-0.5">
                         <Label className="text-sm font-medium">
@@ -651,7 +651,7 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
                 )}
               {/* Show message for PlexAmp devices */}
               {isPlexampDevice && (
-                <div className="p-3 bg-muted/30 rounded-lg">
+                <div className="p-3 bg-muted/50 rounded-lg">
                   <p className="text-xs text-muted-foreground">
                     PlexAmp devices are automatically excluded from all policy
                     checks including concurrent stream limits.

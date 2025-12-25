@@ -62,8 +62,11 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    // Admins accessing /portal should be allowed (they might want to see their own devices)
-    // No redirect needed for admins going to /portal
+    // Admins cannot access /portal - redirect to dashboard
+    if (isAuthenticated && userType === "admin" && isUserPortalRoute) {
+      router.push("/");
+      return;
+    }
   }, [
     isAuthenticated,
     isLoading,
@@ -90,8 +93,12 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   const plexUserAllowed =
     userType !== "plex_user" || isUserPortalRoute || isPublicRoute;
 
+  // Additional check for Admins - they cannot access portal
+  const adminAllowed =
+    userType !== "admin" || !isUserPortalRoute || isPublicRoute;
+
   // Show loading state while checking auth or redirecting
-  if (!shouldRenderContent || !plexUserAllowed) {
+  if (!shouldRenderContent || !plexUserAllowed || !adminAllowed) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <ThreeDotLoader />

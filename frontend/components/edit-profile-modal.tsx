@@ -75,6 +75,37 @@ export function EditProfileModal({
   const [plexPin, setPlexPin] = useState<PlexPin | null>(null);
   const [plexPopup, setPlexPopup] = useState<Window | null>(null);
 
+  // Fresh user data fetched when modal opens
+  const [freshUserData, setFreshUserData] = useState<{
+    plexUserId?: string;
+    plexUsername?: string;
+    plexThumb?: string;
+  } | null>(null);
+
+  // Fetch fresh user data when modal opens
+  useEffect(() => {
+    if (open && user && isAdminUser(user)) {
+      // Fetch fresh user data to get Plex account info
+      fetch("/api/pg/auth/me", { credentials: "include" })
+        .then((res) => res.ok ? res.json() : null)
+        .then((data) => {
+          if (data) {
+            setFreshUserData({
+              plexUserId: data.plexUserId,
+              plexUsername: data.plexUsername,
+              plexThumb: data.plexThumb,
+            });
+          }
+        })
+        .catch(() => {
+          // Ignore errors, fall back to user from context
+        });
+    }
+    if (!open) {
+      setFreshUserData(null);
+    }
+  }, [open, user]);
+
   // Reset form when modal opens/closes
   useEffect(() => {
     if (open && user && isAdminUser(user)) {
@@ -435,15 +466,21 @@ export function EditProfileModal({
     return "?";
   };
 
-  // Get linked Plex info for admin users
+  // Get linked Plex info for admin users - prefer freshUserData over context user
   const linkedPlex =
-    user && isAdminUser(user) && user.plexUserId
+    freshUserData?.plexUserId
       ? {
-          plexUserId: user.plexUserId,
-          plexUsername: user.plexUsername,
-          plexThumb: user.plexThumb,
+          plexUserId: freshUserData.plexUserId,
+          plexUsername: freshUserData.plexUsername,
+          plexThumb: freshUserData.plexThumb,
         }
-      : null;
+      : user && isAdminUser(user) && user.plexUserId
+        ? {
+            plexUserId: user.plexUserId,
+            plexUsername: user.plexUsername,
+            plexThumb: user.plexThumb,
+          }
+        : null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
