@@ -329,14 +329,16 @@ export function EditProfileModal({
       }
 
       const updates: Record<string, any> = {};
-      if (profileData.username !== user?.username) {
-        updates.username = profileData.username;
-      }
-      if (profileData.email !== user?.email) {
-        updates.email = profileData.email;
-      }
-      if (profileData.avatarUrl !== user?.avatarUrl) {
-        updates.avatarUrl = profileData.avatarUrl;
+      if (user && isAdminUser(user)) {
+        if (profileData.username !== user.username) {
+          updates.username = profileData.username;
+        }
+        if (profileData.email !== user.email) {
+          updates.email = profileData.email;
+        }
+        if (profileData.avatarUrl !== user.avatarUrl) {
+          updates.avatarUrl = profileData.avatarUrl;
+        }
       }
 
       await updateProfile(updates);
@@ -509,7 +511,7 @@ export function EditProfileModal({
                 <Avatar className="h-20 w-20">
                   <AvatarImage
                     src={profileData.avatarUrl}
-                    alt={user?.username}
+                    alt={user && isAdminUser(user) ? user.username : "User"}
                   />
                   <AvatarFallback className="text-lg font-semibold">
                     {getAvatarInitials()}

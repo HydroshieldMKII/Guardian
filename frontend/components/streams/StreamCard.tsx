@@ -48,7 +48,7 @@ export const StreamCard: React.FC<StreamCardProps> = ({
   // Function to open content in Plex
   const openInPlex = async (e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent card expand on mobile
-    
+
     // For music tracks, use the album's ratingKey (parentRatingKey) instead of the track's ratingKey
     let ratingKey = stream.ratingKey;
 
