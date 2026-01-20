@@ -202,7 +202,7 @@ export const TemporaryAccessModal: React.FC<TemporaryAccessModalProps> = ({
                     No devices eligible for temporary access
                   </p>
                   <p className="text-xs mt-1">
-                    Devices must be pending or rejected to grant temporary
+                    Devices must be pending (with blocked by default) or rejected to grant temporary
                     access
                   </p>
                 </CardContent>
