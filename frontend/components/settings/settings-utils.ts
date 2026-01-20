@@ -104,6 +104,14 @@ export const getSettingInfo = (setting: AppSetting): SettingInfo => {
       label: "Automatically check for updates",
       description: "Check for new Guardian versions automatically",
     },
+    CLOUDFLARE_TURNSTILE_SITE_KEY: {
+      label: "Cloudflare Turnstile site key",
+      description: "Site key for Cloudflare Turnstile captcha on login page",
+    },
+    CLOUDFLARE_TURNSTILE_SECRET_KEY: {
+      label: "Cloudflare Turnstile secret key",
+      description: "Secret key for Cloudflare Turnstile captcha verification",
+    },
     IN_APP_ENABLED: {
       label: "Enable in-app notifications",
       description: "Enable all in-app notifications in Guardian",

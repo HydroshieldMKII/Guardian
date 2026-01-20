@@ -140,6 +140,17 @@ export class ConfigService {
         type: 'boolean' as const,
       },
       {
+        key: 'CLOUDFLARE_TURNSTILE_SITE_KEY',
+        value: '',
+        type: 'string' as const,
+      },
+      {
+        key: 'CLOUDFLARE_TURNSTILE_SECRET_KEY',
+        value: '',
+        type: 'string' as const,
+        private: true,
+      },
+      {
         key: 'APP_VERSION',
         value: this.versionService.getCurrentAppVersion(),
         type: 'string' as const,

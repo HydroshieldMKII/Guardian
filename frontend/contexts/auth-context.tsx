@@ -50,7 +50,7 @@ export interface AuthContextType {
   setupRequired: boolean;
   backendError: string | null;
   plexOAuthEnabled: boolean;
-  login: (username: string, password: string) => Promise<void>;
+  login: (username: string, password: string, captchaToken?: string) => Promise<void>;
   loginWithPlex: (authToken: string) => Promise<void>;
   logout: () => Promise<void>;
   createAdmin: (
@@ -185,14 +185,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     initAuth();
   }, []);
 
-  const login = async (username: string, password: string) => {
+  const login = async (username: string, password: string, captchaToken?: string) => {
     const response = await fetch("/api/pg/auth/login", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       credentials: "include",
-      body: JSON.stringify({ username, password }),
+      body: JSON.stringify({ username, password, captchaToken }),
     });
 
     if (!response.ok) {

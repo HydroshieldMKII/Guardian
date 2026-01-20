@@ -90,6 +90,9 @@ export class AuthService {
    * Login with username/email and password
    */
   async login(dto: LoginDto): Promise<AuthResponseDto> {
+    // Validate Cloudflare Turnstile captcha if enabled
+    await this.validateCaptcha(dto.captchaToken);
+
     // Find admin by username or email
     const admin = await this.adminUserRepository.findOne({
       where: [{ username: dto.username }, { email: dto.username }],
@@ -122,6 +125,55 @@ export class AuthService {
       },
       session,
     };
+  }
+
+  /**
+   * Validate Cloudflare Turnstile captcha token
+   */
+  private async validateCaptcha(token?: string): Promise<void> {
+    // Get Cloudflare Turnstile secret key from settings
+    const secretKeySetting = await this.appSettingsRepository.findOne({
+      where: { key: 'CLOUDFLARE_TURNSTILE_SECRET_KEY' },
+    });
+
+    const secretKey = secretKeySetting?.value?.trim();
+
+    // If no secret key is configured, captcha is disabled
+    if (!secretKey) {
+      return;
+    }
+
+    // If captcha is enabled but no token provided
+    if (!token) {
+      throw new UnauthorizedException('Captcha validation required');
+    }
+
+    try {
+      const response = await fetch(
+        'https://challenges.cloudflare.com/turnstile/v0/siteverify',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            secret: secretKey,
+            response: token,
+          }),
+        },
+      );
+
+      const data = await response.json() as { success: boolean };
+
+      if (!data.success) {
+        throw new UnauthorizedException('Captcha validation failed');
+      }
+    } catch (error) {
+      if (error instanceof UnauthorizedException) {
+        throw error;
+      }
+      throw new UnauthorizedException('Failed to verify captcha');
+    }
   }
 
   /**

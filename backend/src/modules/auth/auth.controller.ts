@@ -58,6 +58,18 @@ export class AuthController {
   }
 
   /**
+   * Get Cloudflare Turnstile site key
+   */
+  @Public()
+  @Get('turnstile-key')
+  async getTurnstileKey() {
+    const siteKey = await this.configService.getSetting('CLOUDFLARE_TURNSTILE_SITE_KEY');
+    return {
+      siteKey: siteKey || '',
+    };
+  }
+
+  /**
    * Create initial admin account
    * Only accessible if no admin exists
    */

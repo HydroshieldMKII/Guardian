@@ -61,6 +61,8 @@ export function GeneralSettings({
       const orderMaps = {
         guardian: [
           "AUTO_CHECK_UPDATES", // Application updates - now at top
+          "CLOUDFLARE_TURNSTILE_SITE_KEY", // Cloudflare Turnstile
+          "CLOUDFLARE_TURNSTILE_SECRET_KEY", // Cloudflare Turnstile Secret
           "PLEX_GUARD_DEFAULT_BLOCK", // Core security
           "PLEX_GUARD_STRICT_MODE", // Strict mode (auto-approve/reject)
           "PLEXGUARD_REFRESH_INTERVAL", // Session monitoring interval
@@ -109,6 +111,8 @@ export function GeneralSettings({
             "PLEX_GUARD_STRICT_MODE",
             "PLEXGUARD_REFRESH_INTERVAL",
             "AUTO_CHECK_UPDATES",
+            "CLOUDFLARE_TURNSTILE_SITE_KEY",
+            "CLOUDFLARE_TURNSTILE_SECRET_KEY",
             "CONCURRENT_STREAM_LIMIT",
             "CONCURRENT_LIMIT_INCLUDE_TEMP_ACCESS",
             "DEVICE_CLEANUP_ENABLED",
@@ -693,6 +697,48 @@ export function GeneralSettings({
               </SelectContent>
             </Select>
           </div>
+        </div>
+      );
+    }
+
+    // Special handling for Cloudflare Turnstile keys
+    if (
+      setting.key === "CLOUDFLARE_TURNSTILE_SITE_KEY" ||
+      setting.key === "CLOUDFLARE_TURNSTILE_SECRET_KEY"
+    ) {
+      return (
+        <div key={setting.key} className="space-y-2">
+          <Label htmlFor={setting.key}>{label}</Label>
+          {description && (
+            <p className="text-sm text-muted-foreground">{description}</p>
+          )}
+          {setting.key === "CLOUDFLARE_TURNSTILE_SITE_KEY" && (
+            <p className="text-xs text-muted-foreground">
+              Get your Turnstile keys from{" "}
+              <a
+                href="https://dash.cloudflare.com/sign-up?to=/:account/turnstile"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:underline"
+              >
+                Cloudflare Turnstile
+              </a>
+            </p>
+          )}
+          <Input
+            id={setting.key}
+            type={
+              setting.key === "CLOUDFLARE_TURNSTILE_SECRET_KEY"
+                ? "password"
+                : "text"
+            }
+            value={typeof value === "string" ? value : String(value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+              handleInputChange(setting.key, e.target.value)
+            }
+            placeholder={`Enter ${label.toLowerCase()}`}
+            className="cursor-pointer font-mono"
+          />
         </div>
       );
     }

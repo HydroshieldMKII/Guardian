@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "@/contexts/auth-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,6 +37,18 @@ interface PlexPin {
   expiresAt: string;
 }
 
+// Extend window to include turnstile
+declare global {
+  interface Window {
+    turnstile?: {
+      render: (container: HTMLElement, options: any) => string;
+      reset: (widgetId: string) => void;
+      remove: (widgetId: string) => void;
+      getResponse: (widgetId: string) => string;
+    };
+  }
+}
+
 export default function LoginPage() {
   const {
     login,
@@ -58,10 +70,76 @@ export default function LoginPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showPassword, setShowPassword] = useState(false);
 
+  // Cloudflare Turnstile state
+  const [turnstileSiteKey, setTurnstileSiteKey] = useState<string>("");
+  const [turnstileWidgetId, setTurnstileWidgetId] = useState<string | null>(null);
+  const turnstileRef = useRef<HTMLDivElement>(null);
+
   // Plex OAuth state
   const [plexLoading, setPlexLoading] = useState(false);
   const [plexPin, setPlexPin] = useState<PlexPin | null>(null);
   const [plexPopup, setPlexPopup] = useState<Window | null>(null);
+
+  // Fetch Turnstile site key
+  useEffect(() => {
+    const fetchTurnstileKey = async () => {
+      try {
+        const response = await fetch("/api/pg/auth/turnstile-key");
+        if (response.ok) {
+          const data = await response.json();
+          if (data.siteKey) {
+            setTurnstileSiteKey(data.siteKey);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch Turnstile site key:", error);
+      }
+    };
+
+    fetchTurnstileKey();
+  }, []);
+
+  // Load Turnstile script and render widget
+  useEffect(() => {
+    if (!turnstileSiteKey || !turnstileRef.current) return;
+
+    const scriptId = "turnstile-script";
+    let script = document.getElementById(scriptId) as HTMLScriptElement;
+
+    if (!script) {
+      script = document.createElement("script");
+      script.id = scriptId;
+      script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js";
+      script.async = true;
+      script.defer = true;
+      document.head.appendChild(script);
+    }
+
+    const renderTurnstile = () => {
+      if (window.turnstile && turnstileRef.current && !turnstileWidgetId) {
+        const widgetId = window.turnstile.render(turnstileRef.current, {
+          sitekey: turnstileSiteKey,
+          theme: theme === "dark" ? "dark" : "light",
+        });
+        setTurnstileWidgetId(widgetId);
+      }
+    };
+
+    if (window.turnstile) {
+      // Turnstile already loaded
+      renderTurnstile();
+    } else {
+      // Wait for script to load
+      script.addEventListener("load", renderTurnstile);
+    }
+
+    return () => {
+      if (turnstileWidgetId && window.turnstile) {
+        window.turnstile.remove(turnstileWidgetId);
+        setTurnstileWidgetId(null);
+      }
+    };
+  }, [turnstileSiteKey, theme]);
 
   // Check Plex PIN status
   const checkPlexPin = useCallback(async () => {
@@ -283,7 +361,13 @@ export default function LoginPage() {
 
     setIsSubmitting(true);
     try {
-      await login(formData.username, formData.password);
+      // Get captcha token if Turnstile is enabled
+      let captchaToken: string | undefined;
+      if (turnstileWidgetId && window.turnstile) {
+        captchaToken = window.turnstile.getResponse(turnstileWidgetId);
+      }
+
+      await login(formData.username, formData.password, captchaToken);
 
       toast({
         title: "Success",
@@ -293,6 +377,11 @@ export default function LoginPage() {
 
       // AuthGuard handle it once state updates
     } catch (error) {
+      // Reset Turnstile widget on error
+      if (turnstileWidgetId && window.turnstile) {
+        window.turnstile.reset(turnstileWidgetId);
+      }
+
       toast({
         title: "Login Failed",
         description:
@@ -423,6 +512,13 @@ export default function LoginPage() {
                 </div>
               )}
             </div>
+
+            {/* Cloudflare Turnstile Captcha */}
+            {turnstileSiteKey && (
+              <div className="flex justify-center">
+                <div ref={turnstileRef}></div>
+              </div>
+            )}
 
             {/* Submit Button */}
             <Button
