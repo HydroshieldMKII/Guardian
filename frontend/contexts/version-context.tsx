@@ -120,7 +120,7 @@ export function VersionProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [setupRequired, authLoading, isAuthenticated, isAdmin]);
 
   const refreshVersionInfo = useCallback(async () => {
     setLoading(true);

@@ -434,8 +434,8 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
                 <div>
                   <h4 className="text-sm font-medium">Export Database</h4>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Download a backup copy of your Guardian database including
-                    all settings, devices, and history.
+                    Download a partial backup of your Guardian database including
+                    settings and devices preferences.
                   </p>
                 </div>
                 <Button

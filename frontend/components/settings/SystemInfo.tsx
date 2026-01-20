@@ -57,6 +57,7 @@ export function SystemInfo({ onSettingsRefresh, settings }: SystemInfoProps) {
   const [uptimeInfo, setUptimeInfo] = useState<UptimeInfo | null>(null);
   const [currentUptime, setCurrentUptime] = useState<number>(0);
   const [healthStatus, setHealthStatus] = useState<string>("checking");
+  const [latency, setLatency] = useState<number | null>(null);
 
   const { toast } = useToast();
   const { versionInfo, checkForUpdatesManually } = useVersion();
@@ -64,7 +65,10 @@ export function SystemInfo({ onSettingsRefresh, settings }: SystemInfoProps) {
   // Fetch uptime information
   const fetchUptimeInfo = async () => {
     try {
+      const startTime = performance.now();
       const data = await apiClient.getHealth<HealthResponse>();
+      const endTime = performance.now();
+      setLatency(Math.round(endTime - startTime));
       if (data.uptime) {
         setUptimeInfo(data.uptime);
         setCurrentUptime(data.uptime.seconds);
@@ -73,6 +77,7 @@ export function SystemInfo({ onSettingsRefresh, settings }: SystemInfoProps) {
     } catch (error) {
       console.error("Failed to fetch uptime info:", error);
       setHealthStatus("error");
+      setLatency(null);
     }
   };
 
@@ -179,7 +184,7 @@ export function SystemInfo({ onSettingsRefresh, settings }: SystemInfoProps) {
                 Application Version
               </span>
               <Badge variant="outline" className="font-mono">
-                v{versionInfo?.version || "1.2.3"}
+                v{versionInfo?.version || "N/A"}
               </Badge>
             </div>
           </Card>
@@ -192,7 +197,7 @@ export function SystemInfo({ onSettingsRefresh, settings }: SystemInfoProps) {
                 Database Version
               </span>
               <Badge variant="outline" className="font-mono">
-                v{versionInfo?.databaseVersion || "1.2.3"}
+                v{versionInfo?.databaseVersion || "N/A"}
               </Badge>
             </div>
           </Card>
@@ -204,33 +209,40 @@ export function SystemInfo({ onSettingsRefresh, settings }: SystemInfoProps) {
                 <Server className="h-4 w-4" />
                 System Status
               </span>
-              <Badge
-                variant="outline"
-                className={
-                  healthStatus === "checking"
-                    ? "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/50 dark:text-blue-300 dark:border-blue-700"
-                    : healthStatus === "ok" || healthStatus === "healthy"
-                      ? "bg-green-50 text-green-700 border-green-200 dark:bg-green-950/50 dark:text-green-300 dark:border-green-700"
-                      : "bg-red-50 text-red-700 border-red-200 dark:bg-red-950/50 dark:text-red-300 dark:border-red-700"
-                }
-              >
-                {healthStatus === "ok" || healthStatus === "healthy" ? (
-                  <>
-                    <CheckCircle className="h-3 w-3 mr-1" />
-                    OK
-                  </>
-                ) : healthStatus === "checking" ? (
-                  <>
-                    <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                    Checking...
-                  </>
-                ) : (
-                  <>
-                    <AlertTriangle className="h-3 w-3 mr-1" />
-                    Error
-                  </>
+              <div className="text-right">
+                <Badge
+                  variant="outline"
+                  className={
+                    healthStatus === "checking"
+                      ? "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/50 dark:text-blue-300 dark:border-blue-700"
+                      : healthStatus === "ok" || healthStatus === "healthy"
+                        ? "bg-green-50 text-green-700 border-green-200 dark:bg-green-950/50 dark:text-green-300 dark:border-green-700"
+                        : "bg-red-50 text-red-700 border-red-200 dark:bg-red-950/50 dark:text-red-300 dark:border-red-700"
+                  }
+                >
+                  {healthStatus === "ok" || healthStatus === "healthy" ? (
+                    <>
+                      <CheckCircle className="h-3 w-3 mr-1" />
+                      OK
+                    </>
+                  ) : healthStatus === "checking" ? (
+                    <>
+                      <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                      Checking...
+                    </>
+                  ) : (
+                    <>
+                      <AlertTriangle className="h-3 w-3 mr-1" />
+                      Error
+                    </>
+                  )}
+                </Badge>
+                {latency !== null && (healthStatus === "ok" || healthStatus === "healthy") && (
+                  <div className="text-xs text-muted-foreground mt-1">
+                    Latency: {latency}ms
+                  </div>
                 )}
-              </Badge>
+              </div>
             </div>
           </Card>
 
@@ -273,7 +285,7 @@ export function SystemInfo({ onSettingsRefresh, settings }: SystemInfoProps) {
         <CardHeader className="mt-4">
           <CardTitle>Update Management</CardTitle>
           <CardDescription>
-            Check for application updates and manage versions
+            Check for application updates
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

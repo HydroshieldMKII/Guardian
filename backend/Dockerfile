@@ -5,7 +5,7 @@ FROM node:20-alpine AS base
 FROM base AS deps
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci
+RUN npm install
 
 # Build the application
 FROM base AS builder
@@ -27,7 +27,7 @@ RUN pip3 install --no-cache-dir --break-system-packages apprise
 
 # Prod deps only
 COPY package*.json ./
-RUN npm ci --only=production && npm cache clean --force
+RUN npm install --only=production && npm cache clean --force
 
 # Built application
 COPY --from=builder /app/dist ./dist
