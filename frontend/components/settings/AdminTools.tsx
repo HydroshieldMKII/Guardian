@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -59,6 +59,20 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
   const [pendingImportFile, setPendingImportFile] = useState<File | null>(null);
   const [versionMismatchInfo, setVersionMismatchInfo] =
     useState<VersionMismatchInfo | null>(null);
+
+  // Check for post-reload success messages
+  useEffect(() => {
+    const resetSuccess = localStorage.getItem("guardianResetSuccess");
+    if (resetSuccess) {
+      localStorage.removeItem("guardianResetSuccess");
+      toast({
+        title: "Success",
+        description: "New settings have been successfully applied.",
+        variant: "success",
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleResetStreamCounts = async (password?: string) => {
     if (!password) {
@@ -331,12 +345,15 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
       toast({
         title: "Import successful",
         description:
-          "Database has been imported successfully. Page will reload to reflect changes.",
+          "Applying new settings...",
         variant: "success",
       });
 
       onSettingsRefresh?.();
+      
+      // Set flag for post-reload toast
       setTimeout(() => {
+        localStorage.setItem("guardianResetSuccess", "true");
         window.location.reload();
       }, 2000);
     } catch (error) {

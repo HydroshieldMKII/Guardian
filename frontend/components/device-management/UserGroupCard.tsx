@@ -245,24 +245,26 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
               onGrantUserTempAccess ||
               onShowTimePolicy) && (
               <div className="bg-gradient-to-r from-card to-card/50 border rounded-lg p-2.5 sm:p-4 shadow-sm">
-                <div className="flex flex-col gap-3 sm:gap-4">
-                  {/* Actions Label */}
-                  <div className="flex items-center space-x-3">
-                    <div className="p-2 bg-primary/10 rounded-lg hidden sm:block">
-                      <SquareUser className="w-4 h-4 text-primary" />
+                <div className="flex flex-col gap-3 sm:gap-0">
+                  {/* Header with buttons inline on desktop */}
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    {/* Actions Label */}
+                    <div className="flex items-center space-x-3">
+                      <div className="p-2 bg-primary/10 rounded-lg hidden sm:block">
+                        <SquareUser className="w-4 h-4 text-primary" />
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-sm text-foreground">
+                          User Actions
+                        </h4>
+                        <p className="text-xs text-muted-foreground">
+                          Manage user visibility, history, and access policies
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <h4 className="font-semibold text-sm text-foreground">
-                        User Actions
-                      </h4>
-                      <p className="text-xs text-muted-foreground">
-                        Manage user visibility, history, and access policies
-                      </p>
-                    </div>
-                  </div>
 
-                  {/* Action Buttons */}
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:flex md:flex-wrap md:items-center bg-muted/50 rounded-lg p-1.5 sm:p-1 gap-1">
+                    {/* Action Buttons - inline on desktop, stacked on mobile */}
+                    <div className="grid grid-cols-2 sm:flex sm:flex-wrap sm:items-center bg-muted/50 rounded-lg p-1.5 sm:p-1 gap-1 sm:ml-auto">
                     {onShowTimePolicy && (
                       <button
                         onClick={() => onShowTimePolicy(group.user.userId)}
@@ -337,36 +339,39 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
                       </button>
                     )}
                   </div>
+                  </div>
                 </div>
               </div>
             )}
 
             {/* Device Policy Card */}
             <div className="bg-gradient-to-r from-card to-card/50 border rounded-lg p-2.5 sm:p-4 shadow-sm">
-              <div className="flex flex-col gap-3 sm:gap-4">
-                {/* Policy Label */}
-                <div className="flex items-center space-x-3">
-                  <div className="p-2 bg-primary/10 rounded-lg hidden sm:block">
-                    <Settings className="w-4 h-4 text-primary" />
+              <div className="flex flex-col gap-3 sm:gap-0">
+                {/* Header with buttons inline on desktop */}
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  {/* Policy Label */}
+                  <div className="flex items-center space-x-3">
+                    <div className="p-2 bg-primary/10 rounded-lg hidden sm:block">
+                      <Settings className="w-4 h-4 text-primary" />
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-sm text-foreground">
+                        Default Device Policy
+                      </h4>
+                      <p className="text-xs text-muted-foreground">
+                        How new devices should be handled
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="font-semibold text-sm text-foreground">
-                      Default Device Policy
-                    </h4>
-                    <p className="text-xs text-muted-foreground">
-                      How pending devices should be handled
-                    </p>
-                  </div>
-                </div>
 
-                {/* Policy Toggle Buttons */}
-                <div className="flex items-center bg-muted/50 rounded-lg p-1 gap-1">
+                  {/* Policy Toggle Buttons - inline on desktop, stacked on mobile */}
+                  <div className="flex items-center bg-muted/50 rounded-lg p-1 gap-1 sm:ml-auto sm:min-w-[400px]">
                   <button
                     onClick={() =>
                       onUpdateUserPreference(group.user.userId, null)
                     }
                     disabled={updatingUserPreference === group.user.userId}
-                    className={`flex-1 text-xs px-3 py-2.5 rounded-md transition-all duration-200 flex items-center justify-center cursor-pointer ${
+                    className={`flex-1 text-xs px-3 py-2.5 rounded-md transition-all duration-200 flex items-center justify-center cursor-pointer whitespace-nowrap ${
                       !group.user.preference ||
                       group.user.preference.defaultBlock === null
                         ? "bg-gray-200 text-black shadow-sm font-medium hover:bg-gray-100"
@@ -420,6 +425,7 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
                     )}
                     Block
                   </button>
+                </div>
                 </div>
               </div>
             </div>
