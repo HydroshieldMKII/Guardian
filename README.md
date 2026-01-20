@@ -436,6 +436,28 @@ node /opt/guardian/backend/src/scripts/update-admin.js "USERNAME_HERE" "NEW_PASS
 
 Replace `USERNAME_HERE` with your admin username and `NEW_PASSWORD_HERE` with your desired password.
 
+### Disable Captcha
+
+If you are locked out due to captcha issues, you can disable Cloudflare Turnstile captcha via the command line. Running the command will immediately disable captcha by clearing the Turnstile site and secret keys.
+
+#### Docker
+
+All commands are run next to the `docker-compose.yml` file.
+
+```bash
+docker compose exec backend node src/scripts/disable-captcha.js
+```
+
+#### Proxmox (LXC)
+
+All commands are run from inside the LXC container.
+
+```bash
+node /opt/guardian/backend/src/scripts/disable-captcha.js
+```
+
+
+
 ### Common Issues
 
 **Cannot connect to Plex**

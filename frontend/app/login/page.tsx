@@ -68,6 +68,7 @@ export default function LoginPage() {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [loginError, setLoginError] = useState<string>("");
   const [showPassword, setShowPassword] = useState(false);
 
   // Cloudflare Turnstile state
@@ -346,9 +347,12 @@ export default function LoginPage() {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-    // Clear error when user starts typing
+    // Clear errors when user starts typing
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: "" }));
+    }
+    if (loginError) {
+      setLoginError("");
     }
   };
 
@@ -360,6 +364,7 @@ export default function LoginPage() {
     }
 
     setIsSubmitting(true);
+    setLoginError("");
     try {
       // Get captcha token if Turnstile is enabled
       let captchaToken: string | undefined;
@@ -369,12 +374,6 @@ export default function LoginPage() {
 
       await login(formData.username, formData.password, captchaToken);
 
-      toast({
-        title: "Success",
-        description: "Logged in successfully",
-        variant: "success",
-      });
-
       // AuthGuard handle it once state updates
     } catch (error) {
       // Reset Turnstile widget on error
@@ -382,12 +381,9 @@ export default function LoginPage() {
         window.turnstile.reset(turnstileWidgetId);
       }
 
-      toast({
-        title: "Login Failed",
-        description:
-          error instanceof Error ? error.message : "Invalid credentials",
-        variant: "destructive",
-      });
+      setLoginError(
+        error instanceof Error ? error.message : "Invalid credentials"
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -517,6 +513,16 @@ export default function LoginPage() {
             {turnstileSiteKey && (
               <div className="flex justify-center">
                 <div ref={turnstileRef}></div>
+              </div>
+            )}
+
+            {/* Login Error */}
+            {loginError && (
+              <div className="flex items-center gap-2 p-3 rounded-md bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900">
+                <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-500 flex-shrink-0" />
+                <p className="text-sm text-red-600 dark:text-red-500">
+                  {loginError}
+                </p>
               </div>
             )}
 
