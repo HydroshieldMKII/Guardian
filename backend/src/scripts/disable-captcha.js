@@ -53,7 +53,7 @@ async function disableCaptcha() {
               reject(err);
             } else {
               if (this.changes > 0) {
-                console.log(`✓ Cleared ${key}`);
+                console.log(` Cleared ${key}`);
                 updateCount++;
               } else {
                 console.log(`  ${key} not found in database`);
@@ -68,9 +68,6 @@ async function disableCaptcha() {
     db.close();
 
     console.log(`\n Captcha disabled successfully!`);
-    console.log(
-      `  Updated ${updateCount} setting(s).`,
-    );
   } catch (error) {
     console.error('\n Error:', error);
     process.exit(1);
