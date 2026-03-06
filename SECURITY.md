@@ -14,7 +14,6 @@ Older versions will **not** receive security patches.
 
 If you discover a security vulnerability, please report it responsibly.
 
-- **Email:** [security@hydroshield.dev](mailto:security@hydroshield.dev)  
 - **GitHub Security Advisories:** [Guardian Repository](https://github.com/HydroshieldMKII/Guardian/security/advisories)
 
 ### What to Expect
