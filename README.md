@@ -11,6 +11,18 @@
 
 ---
 
+> [!WARNING]
+> **Project status - Looking for a Maintainer**
+>
+> This project is feature-complete from the author's perspective. No new features will be added unless a suitable maintainer or volunteer steps up to take the lead. Security patches may be slow to arrive in the meantime.
+>
+> **Do not expose Guardian to the public internet** without proper protection. Safe options include:
+> - Running it on your local network only
+> - Accessing it through a VPN
+> - Placing it behind a reverse proxy with SSO or authentication (e.g., Authelia, Authentik, Cloudflare Access)
+>
+> If you're interested in becoming a maintainer (managing PRs, issues, and pipelines), please reach out via [Discord](https://discord.gg/xTKuHyhdS4) or the [GitHub Discussions](https://github.com/HydroshieldMKII/Guardian/discussions).
+
 ## Table of Contents
 
 - [Features](#features)
