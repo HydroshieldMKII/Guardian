@@ -225,7 +225,7 @@ export class SessionTerminationService {
    */
   private async handleConcurrentStreamLimits(
     sessions: any[],
-    sessionsData: PlexSessionsResponse,
+    _sessionsData: PlexSessionsResponse,
   ): Promise<SessionTerminationResult> {
     const stoppedSessions: string[] = [];
     const errors: string[] = [];

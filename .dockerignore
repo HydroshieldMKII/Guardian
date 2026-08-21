@@ -1,0 +1,17 @@
+**/node_modules
+**/.next
+**/dist
+**/coverage
+**/.env
+**/.env.*
+!**/.env.example
+**/npm-debug.log*
+**/yarn-debug.log*
+**/yarn-error.log*
+**/.eslintcache
+.git
+.github
+Icon
+*.md
+docker-compose*.yml
+plex-guard.db

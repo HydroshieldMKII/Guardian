@@ -156,7 +156,7 @@ export class UsersController {
       limit: preference?.concurrentStreamLimit ?? null,
       effectiveLimit,
       isUnlimited: effectiveLimit === 0,
-      isOverridden: preference?.concurrentStreamLimit !== null,
+      isOverridden: preference?.concurrentStreamLimit != null,
     };
   }
 }

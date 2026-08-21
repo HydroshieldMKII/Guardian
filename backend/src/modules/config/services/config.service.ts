@@ -3,7 +3,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AppSettings } from '../../../entities/app-settings.entity';
 import { Session } from '../../../entities/session.entity';
-import { Notification } from '../../../entities/notification.entity';
 import { PlexResponse, PlexErrorCode } from '../../../types/plex-errors';
 import { EmailService, SMTPConfig } from './email.service';
 import { EmailTemplateService } from './email-template.service';
@@ -644,7 +643,7 @@ export class ConfigService {
         this.getSetting('IGNORE_CERT_ERRORS'),
       ]);
 
-      return this.plexConnectionService.testConnection(
+      return await this.plexConnectionService.testConnection(
         ip,
         port,
         token,
@@ -693,7 +692,7 @@ export class ConfigService {
         password: smtpPassword,
         fromEmail: smtpFromEmail,
         fromName: smtpFromName,
-        useTLS: smtpUseTLS === 'true',
+        useTLS: smtpUseTLS === true || smtpUseTLS === 'true',
         toEmails: smtpToEmails
           ? smtpToEmails
               .split(/[,;\n]/)
@@ -707,7 +706,7 @@ export class ConfigService {
         currentTimeInTimezone,
       );
 
-      return this.emailService.testSMTPConnection(
+      return await this.emailService.testSMTPConnection(
         smtpConfig,
         smtpEnabled,
         timestamp,

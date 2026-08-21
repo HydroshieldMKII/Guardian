@@ -163,7 +163,7 @@ export class AuthService {
         },
       );
 
-      const data = await response.json() as { success: boolean };
+      const data = (await response.json()) as { success: boolean };
 
       if (!data.success) {
         throw new UnauthorizedException('Captcha validation failed');
@@ -196,7 +196,7 @@ export class AuthService {
     const session = await this.sessionRepository.save({
       token,
       userId,
-      userType: 'admin' as SessionUserType,
+      userType: 'admin',
       expiresAt,
       lastActivityAt: new Date(),
     });
@@ -235,7 +235,7 @@ export class AuthService {
     const session = await this.sessionRepository.save({
       token,
       userId: null, // Plex users don't have an admin user ID
-      userType: 'plex_user' as SessionUserType,
+      userType: 'plex_user',
       plexUserId: plexUserInfo.plexUserId,
       plexUsername: plexUserInfo.plexUsername,
       plexThumb: plexUserInfo.plexThumb || null,

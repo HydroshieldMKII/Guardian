@@ -1,0 +1,108 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - run: npm ci
+
+      - run: npm run lint:ci
+
+      - run: npm run test:cov
+
+      - run: npm run build
+
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage
+          path: coverage
+          retention-days: 7
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - run: npm ci
+
+      - run: npm run typecheck
+
+      - run: npm run test:cov
+
+      - run: npm run build
+
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-coverage
+          path: frontend/coverage
+          retention-days: 7
+
+  image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          load: true
+          tags: guardian:${{ github.sha }}
+          cache-from: type=gha,scope=guardian-build
+          cache-to: type=gha,scope=guardian-build,mode=max
+
+      - run: |
+          docker run --rm -d --name guardian-smoke -p 3000:3000 \
+            guardian:${{ github.sha }}
+          for attempt in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:3000 >/dev/null 2>&1; then
+              echo "web ui responded"
+              docker exec guardian-smoke wget -qO- http://127.0.0.1:3001/health
+              curl -fsS http://127.0.0.1:3000/api/pg/health >/dev/null
+              echo "api reachable through the web proxy"
+              docker rm -f guardian-smoke
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "guardian did not become healthy in time" >&2
+          docker logs guardian-smoke
+          docker rm -f guardian-smoke
+          exit 1

@@ -117,7 +117,7 @@ export class UserPortalService {
     );
 
     // Get device-specific time rules if showRules is enabled
-    let deviceTimeRulesMap = new Map<string, UserPortalTimeRule[]>();
+    const deviceTimeRulesMap = new Map<string, UserPortalTimeRule[]>();
     if (showRules) {
       const deviceTimeRules = await this.userTimeRuleRepository.find({
         where: {

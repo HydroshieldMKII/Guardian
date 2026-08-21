@@ -1,26 +1,13 @@
 services:
-
-  backend:
-    image: hydroshieldmkii/guardian-backend:${VERSION:-latest}
-    container_name: guardian-backend
-    environment:
-      NODE_ENV: production
-      DATABASE_PATH: /app/data/plex-guard.db
-    volumes:
-      - backend_data:/app/data
-    restart: unless-stopped
-
-  frontend:
-    image: hydroshieldmkii/guardian-frontend:${VERSION:-latest}
-    container_name: guardian-frontend
+  guardian:
+    image: hydroshieldmkii/guardian:latest
+    container_name: guardian
     ports:
-      - "${PLEXGUARD_FRONTEND_PORT:-3000}:3000"
-    environment:
-      NODE_ENV: production
-    depends_on:
-      - backend
+      - "3000:3000"
+    volumes:
+      - guardian_data:/app/data
     restart: unless-stopped
 
 volumes:
-  backend_data:
+  guardian_data:
     driver: local

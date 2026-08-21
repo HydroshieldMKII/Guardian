@@ -1,9 +1,4 @@
-import {
-  Injectable,
-  Logger,
-  BadRequestException,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as crypto from 'crypto';
@@ -12,7 +7,6 @@ import { AdminUser } from '../../entities/admin-user.entity';
 import { UserPreference } from '../../entities/user-preference.entity';
 
 // Plex OAuth configuration
-const PLEX_OAUTH_URL = 'https://plex.tv/api/v2';
 const PLEX_AUTH_URL = 'https://app.plex.tv/auth';
 const PLEX_CLIENT_IDENTIFIER = 'Guardian-Plex-Manager';
 const PLEX_PRODUCT = 'Guardian';
@@ -191,9 +185,11 @@ export class PlexOAuthService {
                 this.pendingPins.delete(clientId);
                 resolve(user);
               })
-              .catch((error) => {
+              .catch((error: unknown) => {
                 this.logger.error('Failed to get Plex user info:', error);
-                reject(error);
+                reject(
+                  error instanceof Error ? error : new Error(String(error)),
+                );
               });
           } catch (error) {
             this.logger.error(
@@ -295,7 +291,7 @@ export class PlexOAuthService {
    */
   async isPlexUserOnServer(
     plexUserId: string,
-    serverToken: string,
+    _serverToken: string,
   ): Promise<boolean> {
     // The UserPreference entity stores Plex user IDs synced from the server
     const userPreference = await this.userPreferenceRepository.findOne({

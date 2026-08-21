@@ -63,7 +63,9 @@ export class AuthController {
   @Public()
   @Get('turnstile-key')
   async getTurnstileKey() {
-    const siteKey = await this.configService.getSetting('CLOUDFLARE_TURNSTILE_SITE_KEY');
+    const siteKey = await this.configService.getSetting(
+      'CLOUDFLARE_TURNSTILE_SITE_KEY',
+    );
     return {
       siteKey: siteKey || '',
     };

@@ -236,7 +236,9 @@ export class ActiveSessionService {
         ...(sessionData.parentTitle && {
           parentTitle: sessionData.parentTitle,
         }),
-        ...((sessionData.year || sessionData.parentYear) && { year: sessionData.year || sessionData.parentYear }),
+        ...((sessionData.year || sessionData.parentYear) && {
+          year: sessionData.year || sessionData.parentYear,
+        }),
         ...(sessionData.duration && { duration: sessionData.duration }),
         ...(sessionData.viewOffset !== undefined && {
           viewOffset: sessionData.viewOffset,

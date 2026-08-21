@@ -317,7 +317,7 @@ export class EmailService {
         password: smtpPassword,
         fromEmail: smtpFromEmail,
         fromName: smtpFromName,
-        useTLS: smtpUseTLS === 'true',
+        useTLS: smtpUseTLS === true || smtpUseTLS === 'true',
         toEmails: smtpToEmails
           ? smtpToEmails
               .split(/[,;\n]/)

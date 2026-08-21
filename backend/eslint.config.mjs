@@ -45,4 +45,10 @@ export default tseslint.config(
       'no-useless-escape': 'error',
     },
   },
+  {
+    files: ['**/*.spec.ts'],
+    rules: {
+      '@typescript-eslint/unbound-method': 'off',
+    },
+  },
 );

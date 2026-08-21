@@ -64,13 +64,17 @@ export class IPValidationService {
     );
   }
 
+  private prefixToMask(prefix: number): number {
+    return prefix === 0 ? 0 : (0xffffffff << (32 - prefix)) >>> 0;
+  }
+
   /** Checks if an IP address is within a CIDR range */
   isIPInCIDR(ip: string, cidr: string): boolean {
     if (!this.isValidIPv4(ip) || !this.isValidCIDR(cidr)) return false;
     const [network, prefixLength] = cidr.split('/');
     const ipNum = this.ipToNumber(ip);
     const networkNum = this.ipToNumber(network);
-    const mask = (0xffffffff << (32 - parseInt(prefixLength))) >>> 0;
+    const mask = this.prefixToMask(parseInt(prefixLength));
     return (ipNum & mask) === (networkNum & mask);
   }
 

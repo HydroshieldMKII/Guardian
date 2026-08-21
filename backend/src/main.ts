@@ -37,7 +37,6 @@ async function bootstrap() {
     optionsSuccessStatus: 200,
   });
 
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
   app.use(helmet());
   app.useGlobalFilters(new GlobalExceptionFilter());
   app.useGlobalPipes(

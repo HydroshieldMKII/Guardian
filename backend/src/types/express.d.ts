@@ -1,5 +1,4 @@
 import { AdminUser } from '../entities/admin-user.entity';
-import { SessionUserType } from '../entities/session.entity';
 
 // Admin user session data
 type AdminSessionUser = AdminUser & {

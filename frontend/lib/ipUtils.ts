@@ -92,7 +92,7 @@ export const isIPInCIDR = (ip: string, cidr: string): boolean => {
   const [network, prefixLength] = cidr.split("/");
   const ipNum = ipToNumber(ip);
   const networkNum = ipToNumber(network);
-  const mask = (0xffffffff << (32 - parseInt(prefixLength))) >>> 0;
+  const mask = prefixToMask(parseInt(prefixLength));
 
   return (ipNum & mask) === (networkNum & mask);
 };
@@ -105,6 +105,9 @@ const ipToNumber = (ip: string): number => {
     ip.split(".").reduce((acc, octet) => (acc << 8) + parseInt(octet), 0) >>> 0
   );
 };
+
+const prefixToMask = (prefix: number): number =>
+  prefix === 0 ? 0 : (0xffffffff << (32 - prefix)) >>> 0;
 
 /**
  * Converts a 32-bit number back to an IP address string
@@ -135,7 +138,7 @@ export const getCIDRInfo = (
   const [network, prefixLength] = cidr.split("/");
   const prefix = parseInt(prefixLength);
   const networkNum = ipToNumber(network);
-  const mask = (0xffffffff << (32 - prefix)) >>> 0;
+  const mask = prefixToMask(prefix);
   const networkAddress = networkNum & mask;
   const broadcastAddress = networkAddress | (~mask >>> 0);
   const totalHosts = Math.pow(2, 32 - prefix);
