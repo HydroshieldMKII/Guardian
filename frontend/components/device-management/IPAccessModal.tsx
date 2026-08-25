@@ -82,7 +82,7 @@ export const IPAccessModal: React.FC<IPAccessModalProps> = ({
 
     if (!validateIP(trimmedIP)) {
       setIpError(
-        "Please enter a valid IP address or CIDR range (e.g. 192.168.1.1 or 192.168.1.0/24)"
+        "Please enter a valid IP address or CIDR range (e.g. 192.168.1.1, 192.168.1.0/24, 2001:db8::1 or 2001:db8::/32)"
       );
       return;
     }
@@ -280,7 +280,7 @@ export const IPAccessModal: React.FC<IPAccessModalProps> = ({
 
                 <div className="flex gap-2">
                   <Input
-                    placeholder="e.g. 192.168.1.100 or 192.168.1.0/24"
+                    placeholder="e.g. 192.168.1.100, 192.168.1.0/24 or 2001:db8::/32"
                     value={newIP}
                     onChange={(e) => {
                       setNewIP(e.target.value);

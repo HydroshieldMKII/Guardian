@@ -540,4 +540,100 @@ describe('IPValidationService', () => {
       expect(result.reason).toBe('custom lan message');
     });
   });
+
+  describe('regressions that must never be reintroduced', () => {
+    describe('issue #114 - IPv6 clients were rejected before any policy ran', () => {
+      it.each([
+        '2001:db8::1',
+        'fd00::1',
+        '::1',
+        'fe80::1%eth0',
+        '::ffff:192.168.1.10',
+      ])('does not terminate a %s client under a permissive policy', (ip) => {
+        expect(service.validateIPAccess(ip, policy())).toEqual({
+          allowed: true,
+        });
+      });
+    });
+
+    describe('a /0 prefix must match every address', () => {
+      it('holds for IPv4, where a 32-bit shift silently wraps to a no-op', () => {
+        expect(service.isIPInCIDR('8.8.8.8', '0.0.0.0/0')).toBe(true);
+        expect(service.isIPInAllowedList('8.8.8.8', ['0.0.0.0/0'])).toBe(true);
+        expect(
+          service.validateIPAccess(
+            '8.8.8.8',
+            policy({ ipAccessPolicy: 'restricted', allowedIPs: ['0.0.0.0/0'] }),
+          ),
+        ).toEqual({ allowed: true });
+      });
+
+      it('holds for IPv6', () => {
+        expect(service.isIPInCIDR('2001:db8::1', '::/0')).toBe(true);
+        expect(service.isIPInAllowedList('2001:db8::1', ['::/0'])).toBe(true);
+      });
+    });
+
+    describe('zero-padded octets are rejected as ambiguous', () => {
+      it.each(['010.0.0.1', '01.2.3.4', '192.168.001.1', '00.0.0.0'])(
+        'rejects %s, which another parser could read as octal',
+        (ip) => {
+          expect(service.isValidIPv4(ip)).toBe(false);
+          expect(service.isValidIP(ip)).toBe(false);
+        },
+      );
+
+      it('rejects a zero-padded CIDR range', () => {
+        expect(service.isValidCIDR('010.0.0.0/8')).toBe(false);
+      });
+
+      it('keeps a zero-padded entry out of an allow list', () => {
+        expect(service.isIPInAllowedList('10.0.0.1', ['010.0.0.1'])).toBe(
+          false,
+        );
+      });
+
+      it('rejects a zero-padded embedded quad in an IPv6 address', () => {
+        expect(service.isValidIPv6('::01.2.3.4')).toBe(false);
+      });
+
+      it('still accepts an unpadded zero octet', () => {
+        expect(service.isValidIPv4('0.0.0.0')).toBe(true);
+        expect(service.isValidIPv4('10.0.0.0')).toBe(true);
+        expect(service.isValidCIDR('0.0.0.0/0')).toBe(true);
+      });
+    });
+
+    describe('an IPv4-mapped address must not launder its classification', () => {
+      it('cannot slip a public address past a lan-only policy', () => {
+        const result = service.validateIPAccess(
+          '::ffff:8.8.8.8',
+          policy({ networkPolicy: 'lan' }),
+        );
+        expect(result.allowed).toBe(false);
+        expect(result.stopCode).toBe('IP_POLICY_LAN_ONLY');
+      });
+
+      it('still recognises a mapped private address as lan', () => {
+        expect(
+          service.validateIPAccess(
+            '::ffff:192.168.1.5',
+            policy({ networkPolicy: 'lan' }),
+          ),
+        ).toEqual({ allowed: true });
+      });
+
+      it('matches either spelling against the other in an allow list', () => {
+        expect(service.isIPInAllowedList('::ffff:8.8.8.8', ['8.8.8.8'])).toBe(
+          true,
+        );
+        expect(service.isIPInAllowedList('8.8.8.8', ['::ffff:8.8.8.8'])).toBe(
+          true,
+        );
+        expect(
+          service.isIPInAllowedList('::ffff:10.1.2.3', ['10.0.0.0/8']),
+        ).toBe(true);
+      });
+    });
+  });
 });

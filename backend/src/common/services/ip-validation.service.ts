@@ -1,6 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
 import * as net from 'net';
 
+const OCTET = '(?:25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)';
+const IPV4 = new RegExp(`^(?:${OCTET}\\.){3}${OCTET}$`);
+const IPV4_CIDR = new RegExp(
+  `^(?:${OCTET}\\.){3}${OCTET}/(?:[0-9]|[1-2][0-9]|3[0-2])$`,
+);
+
 export type NetworkType = 'lan' | 'wan' | 'unknown';
 
 export interface IPValidationResult {
@@ -25,11 +31,9 @@ export interface NetworkPolicy {
 export class IPValidationService {
   private readonly logger = new Logger(IPValidationService.name);
 
-  /** Validates if an IPv4 address is in valid format */
+  /** Validates if an IPv4 address is in valid format (a leading zero is rejected as ambiguous) */
   isValidIPv4(ip: string): boolean {
-    const ipRegex =
-      /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
-    return ipRegex.test(ip.trim());
+    return IPV4.test(ip.trim());
   }
 
   /** Validates if an IPv6 address is in valid format (zone index, e.g. "%eth0", is accepted) */
@@ -44,9 +48,7 @@ export class IPValidationService {
 
   /** Validates if a CIDR notation is in valid IPv4 format */
   isValidCIDR(cidr: string): boolean {
-    const cidrRegex =
-      /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\/(?:[0-9]|[1-2][0-9]|3[0-2])$/;
-    return cidrRegex.test(cidr.trim());
+    return IPV4_CIDR.test(cidr.trim());
   }
 
   /** Validates if a CIDR notation is in valid IPv6 format */
