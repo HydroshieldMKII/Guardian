@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { SecretInput } from "@/components/settings/SecretInput";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -24,7 +25,6 @@ import { apiClient } from "@/lib/api";
 import { AppSetting } from "@/types";
 import {
   getSettingInfo,
-  getSecretInputDisplay,
   SettingsFormData,
   ConnectionStatus,
 } from "./settings-utils";
@@ -111,22 +111,22 @@ export function SMTPSettings({
 
   const renderEmailNotificationGroup = () => {
     const smtpEnabledSetting = smtpSettings.find(
-      (s) => s.key === "SMTP_ENABLED"
+      (s) => s.key === "SMTP_ENABLED",
     );
     const notifyOnBlockSetting = smtpSettings.find(
-      (s) => s.key === "SMTP_NOTIFY_ON_BLOCK"
+      (s) => s.key === "SMTP_NOTIFY_ON_BLOCK",
     );
 
     const notifyOnNewDeviceSetting = smtpSettings.find(
-      (s) => s.key === "SMTP_NOTIFY_ON_NEW_DEVICE"
+      (s) => s.key === "SMTP_NOTIFY_ON_NEW_DEVICE",
     );
 
     const notifyOnLocationChangeSetting = smtpSettings.find(
-      (s) => s.key === "SMTP_NOTIFY_ON_LOCATION_CHANGE"
+      (s) => s.key === "SMTP_NOTIFY_ON_LOCATION_CHANGE",
     );
 
     const notifyOnDeviceNoteSetting = smtpSettings.find(
-      (s) => s.key === "SMTP_NOTIFY_ON_DEVICE_NOTE"
+      (s) => s.key === "SMTP_NOTIFY_ON_DEVICE_NOTE",
     );
 
     if (
@@ -239,7 +239,7 @@ export function SMTPSettings({
                     onCheckedChange={(checked) =>
                       handleInputChange(
                         notifyOnLocationChangeSetting.key,
-                        checked
+                        checked,
                       )
                     }
                     disabled={!isSmtpEnabled}
@@ -276,7 +276,7 @@ export function SMTPSettings({
                       onCheckedChange={(checked) =>
                         handleInputChange(
                           notifyOnDeviceNoteSetting.key,
-                          checked
+                          checked,
                         )
                       }
                       disabled={!isSmtpEnabled}
@@ -319,20 +319,16 @@ export function SMTPSettings({
       );
     }
 
-    const display = getSecretInputDisplay(
-      setting,
-      typeof value === "string" ? value : String(value),
-      `Enter ${label.toLowerCase()}`,
-    );
-
     return (
       <div key={setting.key} className="space-y-2">
         <Label htmlFor={setting.key}>{label}</Label>
         {description && (
           <p className="text-sm text-muted-foreground">{description}</p>
         )}
-        <Input
-          id={setting.key}
+        <SecretInput
+          setting={setting}
+          value={typeof value === "string" ? value : String(value)}
+          placeholder={`Enter ${label.toLowerCase()}`}
           type={
             setting.key.includes("PASSWORD")
               ? "password"
@@ -340,10 +336,7 @@ export function SMTPSettings({
                 ? "number"
                 : "text"
           }
-          value={display.value}
-          onChange={(e) => handleInputChange(setting.key, e.target.value)}
-          placeholder={display.placeholder}
-          className="cursor-pointer"
+          onChange={(next) => handleInputChange(setting.key, next)}
         />
       </div>
     );
@@ -379,7 +372,7 @@ export function SMTPSettings({
               setting.key !== "SMTP_NOTIFY_ON_NEW_DEVICE" &&
               setting.key !== "SMTP_NOTIFY_ON_BLOCK" &&
               setting.key !== "SMTP_NOTIFY_ON_LOCATION_CHANGE" &&
-              setting.key !== "SMTP_NOTIFY_ON_DEVICE_NOTE"
+              setting.key !== "SMTP_NOTIFY_ON_DEVICE_NOTE",
           )
           .map((setting) => (
             <Card key={setting.key} className="p-4 my-4">

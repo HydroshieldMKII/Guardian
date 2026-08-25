@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { SecretInput } from "@/components/settings/SecretInput";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
@@ -24,7 +25,6 @@ import { apiClient } from "@/lib/api";
 import { AppSetting } from "@/types";
 import {
   getSettingInfo,
-  getSecretInputDisplay,
   SettingsFormData,
   ConnectionStatus,
 } from "./settings-utils";
@@ -188,12 +188,6 @@ export function PlexSettings({
       );
     }
 
-    const display = getSecretInputDisplay(
-      setting,
-      typeof value === "string" ? value : String(value),
-      `Enter ${label.toLowerCase()}`,
-    );
-
     return (
       <div key={setting.key} className="space-y-2">
         <div className="flex flex-wrap items-center gap-2">
@@ -207,17 +201,16 @@ export function PlexSettings({
         {description && (
           <p className="text-sm text-muted-foreground">{description}</p>
         )}
-        <Input
-          id={setting.key}
+        <SecretInput
+          setting={setting}
+          value={typeof value === "string" ? value : String(value)}
+          placeholder={`Enter ${label.toLowerCase()}`}
           type={
             setting.key.includes("PASSWORD") || setting.key.includes("TOKEN")
               ? "password"
               : "text"
           }
-          value={display.value}
-          onChange={(e) => handleInputChange(setting.key, e.target.value)}
-          placeholder={display.placeholder}
-          className="cursor-pointer"
+          onChange={(next) => handleInputChange(setting.key, next)}
         />
       </div>
     );

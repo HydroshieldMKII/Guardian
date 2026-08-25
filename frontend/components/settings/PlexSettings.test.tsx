@@ -336,3 +336,26 @@ describe("PlexSettings", () => {
     });
   });
 });
+
+describe("PlexSettings clearing a stored token", () => {
+  const withPrivateToken = [
+    setting("PLEX_SERVER_IP", "10.0.0.5"),
+    { ...setting("PLEX_TOKEN", "secret-token"), private: true } as AppSetting,
+  ];
+
+  it("masks the stored token instead of echoing it", () => {
+    renderPanel({ settings: withPrivateToken });
+
+    expect(screen.getByPlaceholderText("•••••••• (saved)")).toHaveValue("");
+  });
+
+  it("empties the token when the clear button is pressed", async () => {
+    const { user, onFormDataChange } = renderPanel({
+      settings: withPrivateToken,
+    });
+
+    await user.click(screen.getByRole("button", { name: "Clear PLEX_TOKEN" }));
+
+    expect(onFormDataChange).toHaveBeenCalledWith({ PLEX_TOKEN: "" });
+  });
+});

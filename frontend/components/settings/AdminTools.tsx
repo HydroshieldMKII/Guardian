@@ -344,13 +344,12 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
 
       toast({
         title: "Import successful",
-        description:
-          "Applying new settings...",
+        description: "Applying new settings...",
         variant: "success",
       });
 
       onSettingsRefresh?.();
-      
+
       // Set flag for post-reload toast
       setTimeout(() => {
         localStorage.setItem("guardianResetSuccess", "true");

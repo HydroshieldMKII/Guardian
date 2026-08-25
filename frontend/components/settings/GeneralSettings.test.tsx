@@ -476,3 +476,35 @@ describe("GeneralSettings notification group", () => {
     expect(container.querySelector("#IN_APP_ENABLED")).toBeNull();
   });
 });
+
+describe("GeneralSettings clearing the Turnstile secret", () => {
+  const withPrivateSecret = [
+    setting("CLOUDFLARE_TURNSTILE_SITE_KEY", "site-key"),
+    {
+      ...setting("CLOUDFLARE_TURNSTILE_SECRET_KEY", "secret-key"),
+      private: true,
+    } as AppSetting,
+  ];
+
+  it("masks the stored secret instead of echoing it", () => {
+    renderPanel("guardian", { settings: withPrivateSecret });
+
+    expect(screen.getByPlaceholderText("•••••••• (saved)")).toHaveValue("");
+  });
+
+  it("empties the secret when the clear button is pressed", async () => {
+    const { user, onFormDataChange } = renderPanel("guardian", {
+      settings: withPrivateSecret,
+    });
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "Clear CLOUDFLARE_TURNSTILE_SECRET_KEY",
+      }),
+    );
+
+    expect(onFormDataChange).toHaveBeenCalledWith({
+      CLOUDFLARE_TURNSTILE_SECRET_KEY: "",
+    });
+  });
+});

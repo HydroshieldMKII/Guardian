@@ -1,14 +1,10 @@
 #!/bin/sh
 set -eu
 
-DATA_DIR="${DATA_DIR:-/app/data}"
-APP_USER="${APP_USER:-node}"
-
 # Adopt volume created by an earlier root-only release, then drop privileges
 if [ "$(id -u)" = "0" ]; then
-  mkdir -p "$DATA_DIR"
-  chown -R "$APP_USER:$APP_USER" "$DATA_DIR"
-  exec su-exec "$APP_USER" "$0" "$@"
+  chown -R node:node /app/data
+  exec su-exec node "$0" "$@"
 fi
 
 api_pid=""

@@ -286,3 +286,43 @@ describe("SMTPSettings", () => {
     });
   });
 });
+
+describe("SMTPSettings clearing a stored secret", () => {
+  const withPrivatePassword = [
+    ...notificationKeys.map((key) => setting(key, "false", "boolean")),
+    setting("SMTP_HOST", "mail.example.com"),
+    { ...setting("SMTP_PASSWORD", "hunter2"), private: true } as AppSetting,
+  ];
+
+  it("masks the stored password instead of echoing it", () => {
+    renderPanel({ settings: withPrivatePassword });
+
+    expect(screen.getByPlaceholderText("•••••••• (saved)")).toHaveValue("");
+  });
+
+  it("empties the password when the clear button is pressed", async () => {
+    const { user, onFormDataChange } = renderPanel({
+      settings: withPrivatePassword,
+    });
+
+    await user.click(
+      screen.getByRole("button", { name: "Clear SMTP_PASSWORD" }),
+    );
+
+    expect(onFormDataChange).toHaveBeenCalledWith({ SMTP_PASSWORD: "" });
+  });
+
+  it("drops the clear button once the password is empty", () => {
+    renderPanel({
+      settings: withPrivatePassword,
+      formData: { SMTP_PASSWORD: "" },
+    });
+
+    expect(
+      screen.queryByRole("button", { name: "Clear SMTP_PASSWORD" }),
+    ).toBeNull();
+    expect(
+      screen.getByPlaceholderText("Enter smtp password"),
+    ).toBeInTheDocument();
+  });
+});
