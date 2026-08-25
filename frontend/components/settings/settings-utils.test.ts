@@ -127,14 +127,12 @@ describe("getSecretInputDisplay", () => {
   });
 });
 
-describe("setting tips", () => {
-  it("carries the tip for a setting that has one", () => {
-    expect(getSettingInfo(setting("CUSTOM_PLEX_URL")).tip).toMatch(
-      /Leave empty to build media links/,
-    );
+describe("optional settings", () => {
+  it("marks a setting that is optional", () => {
+    expect(getSettingInfo(setting("CUSTOM_PLEX_URL")).optional).toBe(true);
   });
 
-  it("omits the tip for a setting without one", () => {
-    expect(getSettingInfo(setting("PLEX_SERVER_IP")).tip).toBeUndefined();
+  it("leaves a required setting unmarked", () => {
+    expect(getSettingInfo(setting("PLEX_SERVER_IP")).optional).toBeUndefined();
   });
 });

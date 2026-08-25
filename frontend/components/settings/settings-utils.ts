@@ -7,7 +7,7 @@ export interface SettingsFormData {
 export interface SettingInfo {
   label: string;
   description: string;
-  tip?: string;
+  optional?: boolean;
 }
 
 export interface ConnectionStatus {
@@ -40,7 +40,7 @@ export const getSecretInputDisplay = (
 export const getSettingInfo = (setting: AppSetting): SettingInfo => {
   const settingInfoMap: Record<
     string,
-    { label: string; description?: string; tip?: string }
+    { label: string; description?: string; optional?: boolean }
   > = {
     PLEX_SERVER_IP: {
       label: "Plex server IP address",
@@ -167,7 +167,7 @@ export const getSettingInfo = (setting: AppSetting): SettingInfo => {
     CUSTOM_PLEX_URL: {
       label: "Custom Plex URL",
       description: "Override the default Plex URL for media links",
-      tip: "Leave empty to build media links from the server address above. Set this when you browse Plex at a different address than Guardian uses, for example https://app.plex.tv or https://plex.example.com.",
+      optional: true,
     },
     TIMEZONE: {
       label: "Timezone",
@@ -301,8 +301,8 @@ export const getSettingInfo = (setting: AppSetting): SettingInfo => {
       .replace(/\b\w/g, (l) => l.toUpperCase());
   const description = info?.description || "";
 
-  return info?.tip
-    ? { label, description, tip: info.tip }
+  return info?.optional
+    ? { label, description, optional: true }
     : { label, description };
 };
 

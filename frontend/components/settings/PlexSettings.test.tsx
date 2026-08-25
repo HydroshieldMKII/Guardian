@@ -65,17 +65,23 @@ describe("PlexSettings", () => {
     expect(screen.queryByDisplayValue("mail.example.com")).toBeNull();
   });
 
-  describe("the optional tip", () => {
-    it("marks Custom Plex URL as optional and explains it", () => {
+  it("puts Custom Plex URL last", () => {
+    const { container } = renderPanel();
+    const ids = Array.from(container.querySelectorAll("input")).map(
+      (input) => input.id,
+    );
+
+    expect(ids[ids.length - 1]).toBe("CUSTOM_PLEX_URL");
+  });
+
+  describe("the optional marker", () => {
+    it("marks Custom Plex URL as optional", () => {
       renderPanel();
 
       expect(screen.getByText("Optional")).toBeInTheDocument();
-      expect(
-        screen.getByText(/Leave empty to build media links/),
-      ).toBeInTheDocument();
     });
 
-    it("leaves a setting with no tip unadorned", () => {
+    it("leaves a required setting unadorned", () => {
       renderPanel({ settings: [setting("PLEX_SERVER_IP", "10.0.0.5")] });
 
       expect(screen.queryByText("Optional")).toBeNull();

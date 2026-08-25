@@ -19,7 +19,6 @@ import {
   Loader2,
   Server,
   AlertTriangle,
-  Info,
 } from "lucide-react";
 import { apiClient } from "@/lib/api";
 import { AppSetting } from "@/types";
@@ -66,12 +65,12 @@ export function PlexSettings({
     )
     .sort((a, b) => {
       const order = [
-        "CUSTOM_PLEX_URL",
         "PLEX_TOKEN",
         "PLEX_SERVER_IP",
         "PLEX_SERVER_PORT",
         "USE_SSL",
         "IGNORE_CERT_ERRORS",
+        "CUSTOM_PLEX_URL",
       ];
 
       const indexA = order.indexOf(a.key);
@@ -163,7 +162,7 @@ export function PlexSettings({
   };
 
   const renderSetting = (setting: AppSetting) => {
-    const { label, description, tip } = getSettingInfo(setting);
+    const { label, description, optional } = getSettingInfo(setting);
     const value = formData[setting.key] ?? setting.value;
 
     if (setting.type === "boolean") {
@@ -199,7 +198,7 @@ export function PlexSettings({
       <div key={setting.key} className="space-y-2">
         <div className="flex flex-wrap items-center gap-2">
           <Label htmlFor={setting.key}>{label}</Label>
-          {tip && (
+          {optional && (
             <span className="rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground">
               Optional
             </span>
@@ -207,12 +206,6 @@ export function PlexSettings({
         </div>
         {description && (
           <p className="text-sm text-muted-foreground">{description}</p>
-        )}
-        {tip && (
-          <p className="flex items-start gap-1.5 text-xs text-muted-foreground">
-            <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-            <span>{tip}</span>
-          </p>
         )}
         <Input
           id={setting.key}
