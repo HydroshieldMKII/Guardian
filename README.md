@@ -77,13 +77,11 @@ Use `2` for Cloudflare in front of your own proxy, or `0` when nothing is in fro
 ## Updating
 
 > [!IMPORTANT]
-> Back up your settings first: **Settings → Admin Tools → Export Database**.
+> Back up your settings first: **Settings → Admin Tools → Export Settings**.
 
 ```bash
 docker compose pull && docker compose up -d
 ```
-
-Guardian also works with [Watchtower](https://containrrr.dev/watchtower/) for automatic updates. 
 
 ## Troubleshooting
 
