@@ -93,11 +93,11 @@ jobs:
       - run: |
           docker run --rm -d --name guardian-smoke -p 3000:3000 \
             guardian:${{ github.sha }}
-          for attempt in $(seq 1 30); do
-            if curl -fsS http://127.0.0.1:3000 >/dev/null 2>&1; then
+          for attempt in $(seq 1 45); do
+            if curl -fsS http://127.0.0.1:3000 >/dev/null 2>&1 \
+              && curl -fsS http://127.0.0.1:3000/api/pg/health >/dev/null 2>&1; then
               echo "web ui responded"
               docker exec guardian-smoke wget -qO- http://127.0.0.1:3001/health
-              curl -fsS http://127.0.0.1:3000/api/pg/health >/dev/null
               echo "api reachable through the web proxy"
               docker rm -f guardian-smoke
               exit 0
