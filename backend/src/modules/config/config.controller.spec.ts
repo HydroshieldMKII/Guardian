@@ -1,17 +1,25 @@
 import { HttpException, HttpStatus } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import type { Response } from 'express';
-import { ConfigController } from './config.controller';
-import { ConfigService } from './services/config.service';
-import { AppriseService } from './services/apprise.service';
-import { AuthService } from '../auth/auth.service';
+import { ConfigController } from '@/modules/config/config.controller';
+import { ConfigService } from '@/modules/config/services/config.service';
+import { AppriseService } from '@/modules/config/services/apprise.service';
+import { AuthService } from '@/modules/auth/auth.service';
+import { AdminUser } from '@/entities/admin-user.entity';
 
 describe('ConfigController', () => {
   let controller: ConfigController;
   let configService: Record<string, jest.Mock>;
   let authService: { validatePassword: jest.Mock };
 
-  const admin = { id: 1, username: 'admin' };
+  const admin = Object.assign(new AdminUser(), {
+    id: 'admin-1',
+    username: 'admin',
+    email: 'admin@example.com',
+    passwordHash: 'hash',
+    sessionId: 'session-1',
+    userType: 'admin' as const,
+  });
 
   beforeEach(async () => {
     configService = {
@@ -107,6 +115,13 @@ describe('ConfigController', () => {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     });
+
+    it('never reaches the database for a key this build does not declare', async () => {
+      expect(await statusOf(controller.getSetting('NOT_A_SETTING'))).toBe(
+        HttpStatus.NOT_FOUND,
+      );
+      expect(configService.getSetting).not.toHaveBeenCalled();
+    });
   });
 
   describe('updateSetting', () => {
@@ -122,6 +137,15 @@ describe('ConfigController', () => {
       expect(result.message).toBe('Setting updated successfully');
     });
 
+    it('refuses to write a key this build does not declare', async () => {
+      expect(
+        await statusOf(
+          controller.updateSetting('NOT_A_SETTING', { value: 'x' }),
+        ),
+      ).toBe(HttpStatus.NOT_FOUND);
+      expect(configService.updateSetting).not.toHaveBeenCalled();
+    });
+
     it('maps a validation failure to a 400 carrying the message', async () => {
       configService.updateSetting.mockRejectedValue(new Error('bad value'));
       await expect(
@@ -135,7 +159,7 @@ describe('ConfigController', () => {
 
   describe('updateMultipleSettings', () => {
     it('forwards the batch', async () => {
-      const settings = [{ key: 'A', value: '1' }];
+      const settings = [{ key: 'DEFAULT_PAGE' as const, value: 'streams' }];
       const result = await controller.updateMultipleSettings(settings);
 
       expect(configService.updateMultipleSettings).toHaveBeenCalledWith(
@@ -271,7 +295,10 @@ describe('ConfigController', () => {
       await expect(controller[method](dto, admin)).resolves.toEqual({
         message,
       });
-      expect(authService.validatePassword).toHaveBeenCalledWith(1, 'hunter2');
+      expect(authService.validatePassword).toHaveBeenCalledWith(
+        'admin-1',
+        'hunter2',
+      );
       expect(configService[serviceMethod]).toHaveBeenCalled();
     });
 

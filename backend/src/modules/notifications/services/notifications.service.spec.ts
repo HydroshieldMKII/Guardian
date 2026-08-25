@@ -1,13 +1,13 @@
 import { NotFoundException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Notification } from '../../../entities/notification.entity';
-import { SessionHistory } from '../../../entities/session-history.entity';
-import { UserDevice } from '../../../entities/user-device.entity';
-import { ConfigService } from '../../config/services/config.service';
-import { AppriseService } from '../../config/services/apprise.service';
-import { EmailService } from '../../config/services/email.service';
-import { NotificationsService } from './notifications.service';
+import { Notification } from '@/entities/notification.entity';
+import { SessionHistory } from '@/entities/session-history.entity';
+import { UserDevice } from '@/entities/user-device.entity';
+import { ConfigService } from '@/modules/config/services/config.service';
+import { AppriseService } from '@/modules/config/services/apprise.service';
+import { EmailService } from '@/modules/config/services/email.service';
+import { NotificationsService } from '@/modules/notifications/services/notifications.service';
 
 describe('NotificationsService', () => {
   let service: NotificationsService;
@@ -521,6 +521,28 @@ describe('NotificationsService', () => {
         expect.objectContaining({
           username: 'Unknown User',
           deviceName: 'Unknown Device',
+        }),
+      ]);
+    });
+
+    it('falls back to placeholders in a user listing too', async () => {
+      queryBuilder.getMany.mockResolvedValue([notification()]);
+
+      await expect(service.getNotificationsForUser('u1')).resolves.toEqual([
+        expect.objectContaining({
+          username: 'Unknown User',
+          deviceName: 'Unknown Device',
+        }),
+      ]);
+    });
+
+    it('resolves names through session history in a user listing', async () => {
+      queryBuilder.getMany.mockResolvedValue([joined]);
+
+      await expect(service.getNotificationsForUser('u1')).resolves.toEqual([
+        expect.objectContaining({
+          username: 'vincent',
+          deviceName: 'Living Room TV',
         }),
       ]);
     });

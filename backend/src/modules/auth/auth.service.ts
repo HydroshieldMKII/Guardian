@@ -8,17 +8,24 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, LessThan } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
-import { AdminUser } from '../../entities/admin-user.entity';
-import { Session, SessionUserType } from '../../entities/session.entity';
-import { AppSettings } from '../../entities/app-settings.entity';
-import { CreateAdminDto } from './dto/create-admin.dto';
-import { LoginDto } from './dto/login.dto';
-import { AuthResponseDto } from './dto/session.dto';
-import { UpdateProfileDto } from './dto/update-profile.dto';
-import { UpdatePasswordDto } from './dto/update-password.dto';
+import { AdminUser } from '@/entities/admin-user.entity';
+import { Session, SessionUserType } from '@/entities/session.entity';
+import { AppSettings } from '@/entities/app-settings.entity';
+import { CreateAdminDto } from '@/modules/auth/dto/create-admin.dto';
+import { LoginDto } from '@/modules/auth/dto/login.dto';
+import { AuthResponseDto } from '@/modules/auth/dto/session.dto';
+import { UpdateProfileDto } from '@/modules/auth/dto/update-profile.dto';
+import { UpdatePasswordDto } from '@/modules/auth/dto/update-password.dto';
+import { SESSION_DURATION_MS } from '@/modules/auth/session-cookie';
+import { SessionUser } from '@/modules/auth/session-user.types';
 
-// Session expiration: 7 days in ms
-const SESSION_EXPIRATION_MS = 7 * 24 * 60 * 60 * 1000;
+const ACTIVITY_REFRESH_MS = 5 * 60 * 1000;
+
+const newSessionCredentials = () => ({
+  token: crypto.randomBytes(32).toString('hex'),
+  expiresAt: new Date(Date.now() + SESSION_DURATION_MS),
+  lastActivityAt: new Date(),
+});
 
 @Injectable()
 export class AuthService {
@@ -58,12 +65,19 @@ export class AuthService {
     const passwordHash = await bcrypt.hash(dto.password, 12);
 
     try {
-      // Create admin user
-      const admin = await this.adminUserRepository.save({
-        username: dto.username,
-        email: dto.email,
-        passwordHash,
-      });
+      const admin = await this.adminUserRepository.manager.transaction(
+        async (manager) => {
+          const repository = manager.getRepository(AdminUser);
+          if ((await repository.count()) > 0) {
+            throw new BadRequestException('Admin user already exists');
+          }
+          return repository.save({
+            username: dto.username,
+            email: dto.email,
+            passwordHash,
+          });
+        },
+      );
 
       // Create session
       const session = await this.createSession(admin.id);
@@ -78,6 +92,9 @@ export class AuthService {
         session,
       };
     } catch (error) {
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
       const dbError = error as { code?: string };
       if (dbError.code === 'SQLITE_CONSTRAINT') {
         throw new BadRequestException('Username or email already exists');
@@ -186,19 +203,10 @@ export class AuthService {
     expiresAt: Date;
     createdAt: Date;
   }> {
-    // Generate secure token (32 bytes/256 bits)
-    const token = crypto.randomBytes(32).toString('hex');
-
-    // Set expiration
-    const expiresAt = new Date(Date.now() + SESSION_EXPIRATION_MS);
-
-    // Store session
     const session = await this.sessionRepository.save({
-      token,
+      ...newSessionCredentials(),
       userId,
       userType: 'admin',
-      expiresAt,
-      lastActivityAt: new Date(),
     });
 
     return {
@@ -225,22 +233,13 @@ export class AuthService {
     plexUsername: string;
     plexThumb?: string;
   }> {
-    // Generate secure token (32 bytes/256 bits)
-    const token = crypto.randomBytes(32).toString('hex');
-
-    // Set expiration
-    const expiresAt = new Date(Date.now() + SESSION_EXPIRATION_MS);
-
-    // Store session for Plex user
     const session = await this.sessionRepository.save({
-      token,
-      userId: null, // Plex users don't have an admin user ID
+      ...newSessionCredentials(),
+      userId: null,
       userType: 'plex_user',
       plexUserId: plexUserInfo.plexUserId,
       plexUsername: plexUserInfo.plexUsername,
       plexThumb: plexUserInfo.plexThumb || null,
-      expiresAt,
-      lastActivityAt: new Date(),
     });
 
     return {
@@ -256,17 +255,7 @@ export class AuthService {
   /**
    * Validate and retrieve session - supports both admin and Plex user sessions
    */
-  async validateSession(token: string): Promise<
-    | (AdminUser & { sessionId: string; userType: SessionUserType })
-    | {
-        sessionId: string;
-        userType: 'plex_user';
-        plexUserId: string;
-        plexUsername: string;
-        plexThumb?: string;
-      }
-    | null
-  > {
+  async validateSession(token: string): Promise<SessionUser | null> {
     try {
       // Find session
       const session = await this.sessionRepository.findOne({
@@ -284,9 +273,12 @@ export class AuthService {
         return null;
       }
 
-      // Update last activity
-      session.lastActivityAt = new Date();
-      await this.sessionRepository.save(session);
+      const now = new Date();
+      const lastActivity = session.lastActivityAt?.getTime() ?? 0;
+      if (now.getTime() - lastActivity > ACTIVITY_REFRESH_MS) {
+        session.lastActivityAt = now;
+        await this.sessionRepository.save(session);
+      }
 
       // Return appropriate user data based on session type
       if (session.userType === 'plex_user') {
@@ -310,7 +302,7 @@ export class AuthService {
       return {
         ...session.user,
         sessionId: session.id,
-        userType: 'admin' as SessionUserType,
+        userType: 'admin',
       };
     } catch {
       return null;
@@ -357,7 +349,7 @@ export class AuthService {
     id: string;
     username: string;
     email: string;
-    avatarUrl?: string;
+    avatarUrl?: string | null;
   }> {
     const user = await this.adminUserRepository.findOne({
       where: { id: userId },

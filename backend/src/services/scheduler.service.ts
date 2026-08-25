@@ -1,12 +1,15 @@
 import { Injectable, OnModuleInit, Inject, forwardRef } from '@nestjs/common';
 import { Cron, SchedulerRegistry } from '@nestjs/schedule';
 import { CronJob } from 'cron';
-import { PlexService } from '../modules/plex/services/plex.service';
-import { ConfigService } from '../modules/config/services/config.service';
-import { DeviceTrackingService } from '../modules/devices/services/device-tracking.service';
-import { UsersService } from '../modules/users/services/users.service';
-import { AuthService } from '../modules/auth/auth.service';
+import { PlexService } from '@/modules/plex/services/plex.service';
+import { ConfigService } from '@/modules/config/services/config.service';
+import { DeviceTrackingService } from '@/modules/devices/services/device-tracking.service';
+import { UsersService } from '@/modules/users/services/users.service';
+import { AuthService } from '@/modules/auth/auth.service';
 import { Logger } from '@nestjs/common';
+import { errorMessage } from '@/common/utils/error-types';
+import { DashboardService } from '@/modules/dashboard/dashboard.service';
+import { LiveEventsService } from '@/modules/events/live-events.service';
 
 @Injectable()
 export class SchedulerService implements OnModuleInit {
@@ -20,6 +23,8 @@ export class SchedulerService implements OnModuleInit {
     private readonly usersService: UsersService,
     private readonly authService: AuthService,
     private readonly schedulerRegistry: SchedulerRegistry,
+    private readonly dashboardService: DashboardService,
+    private readonly liveEvents: LiveEventsService,
   ) {}
 
   async onModuleInit() {
@@ -29,24 +34,21 @@ export class SchedulerService implements OnModuleInit {
     // Set up config change listener to update cron expression when interval changes
     this.configService.addConfigChangeListener(
       'PLEXGUARD_REFRESH_INTERVAL',
-      async () => {
+      () => {
         this.logger.log(
           'Refresh interval changed, updating cron expression...',
         );
-        await this.setupDynamicSessionUpdatesCron();
+        void this.setupDynamicSessionUpdatesCron();
       },
     );
 
     // Set up config change listener for strict mode - when enabled, process pending devices
-    this.configService.addConfigChangeListener(
-      'PLEX_GUARD_STRICT_MODE',
-      async () => {
-        this.logger.log(
-          'Strict mode setting changed, checking pending devices...',
-        );
-        await this.enforceStrictMode();
-      },
-    );
+    this.configService.addConfigChangeListener('PLEX_GUARD_STRICT_MODE', () => {
+      this.logger.log(
+        'Strict mode setting changed, checking pending devices...',
+      );
+      void this.enforceStrictMode();
+    });
 
     // Perform tasks on startup
     await this.handleSessionUpdates();
@@ -61,7 +63,7 @@ export class SchedulerService implements OnModuleInit {
       const refreshInterval = await this.configService.getSetting(
         'PLEXGUARD_REFRESH_INTERVAL',
       );
-      const intervalSeconds = parseInt(refreshInterval as string, 10) || 10;
+      const intervalSeconds = refreshInterval || 10;
 
       // Convert seconds to cron expression
       const cronExpression = this.secondsToCronExpression(intervalSeconds);
@@ -116,6 +118,23 @@ export class SchedulerService implements OnModuleInit {
     return '*/10 * * * * *';
   }
 
+  /**
+   * Push the freshly computed dashboard to connected clients so they stop polling.
+   * Skipped when nobody is listening, and never allowed to fail the tick.
+   */
+  private async broadcastDashboard(): Promise<void> {
+    if (!this.liveEvents.hasListeners()) {
+      return;
+    }
+
+    try {
+      const dashboard = await this.dashboardService.getDashboardData();
+      this.liveEvents.broadcastDashboard(dashboard);
+    } catch (error) {
+      this.logger.error('Failed to broadcast dashboard update:', error);
+    }
+  }
+
   private async handleSessionUpdates() {
     try {
       // Check if Plex is properly configured before attempting to update sessions
@@ -133,9 +152,16 @@ export class SchedulerService implements OnModuleInit {
       await this.plexService.updateActiveSessions();
     } catch (error) {
       // Only log errors that are not configuration-related
-      if (!error.message.includes('Missing required Plex configuration')) {
+      if (
+        !errorMessage(error).includes('Missing required Plex configuration')
+      ) {
         this.logger.error('Error during scheduled session update:', error);
       }
+    } finally {
+      // Clients stop polling once connected, so every tick must publish -
+      // including the ticks where Plex was unreachable or unconfigured,
+      // since the payload carries the connection status they need to see.
+      await this.broadcastDashboard();
     }
   }
 
@@ -146,9 +172,8 @@ export class SchedulerService implements OnModuleInit {
         this.configService.getSetting('DEVICE_CLEANUP_INTERVAL_DAYS'),
       ]);
 
-      // getSetting returns actual boolean for boolean type settings, not string
       const isEnabled = cleanupEnabled === true;
-      const intervalDays = parseInt(cleanupIntervalDays as string, 10);
+      const intervalDays = cleanupIntervalDays ?? 0;
 
       if (!isEnabled) {
         this.logger.debug(`Skipping device cleanup - feature is disabled`);

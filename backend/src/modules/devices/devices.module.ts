@@ -1,14 +1,14 @@
 import { Module, forwardRef } from '@nestjs/common';
-import { DevicesController } from './devices.controller';
-import { DeviceTrackingService } from './services/device-tracking.service';
+import { DevicesController } from '@/modules/devices/devices.controller';
+import { DeviceTrackingService } from '@/modules/devices/services/device-tracking.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { UserDevice } from '../../entities/user-device.entity';
-import { SessionHistory } from '../../entities/session-history.entity';
-import { UsersModule } from '../users/users.module';
-import { PlexModule } from '../plex/plex.module';
-import { SessionsModule } from '../sessions/sessions.module';
-import { ConfigModule } from '../config/config.module';
-import { NotificationsModule } from '../notifications/notifications.module';
+import { UserDevice } from '@/entities/user-device.entity';
+import { SessionHistory } from '@/entities/session-history.entity';
+import { UsersModule } from '@/modules/users/users.module';
+import { PlexModule } from '@/modules/plex/plex.module';
+import { SessionsModule } from '@/modules/sessions/sessions.module';
+import { ConfigModule } from '@/modules/config/config.module';
+import { NotificationsModule } from '@/modules/notifications/notifications.module';
 
 @Module({
   imports: [

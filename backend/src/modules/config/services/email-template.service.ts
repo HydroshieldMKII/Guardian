@@ -43,7 +43,10 @@ export class EmailTemplateService {
       // If not found, fall back to empty string (text fallback will be used)
       throw new Error('Logo file not found in any expected location');
     } catch (error) {
-      console.warn('Logo file not found, using text fallback:', error.message);
+      console.warn(
+        'Logo file not found, using text fallback:',
+        error instanceof Error ? error.message : String(error),
+      );
       return '';
     }
   }
@@ -285,6 +288,15 @@ export class EmailTemplateService {
     </html>`;
   }
 
+  private ipDetailRow(label: string, address: string): string {
+    return `
+      <div class="detail-row">
+        <span class="detail-label">${label}</span>
+        <span class="detail-value"><a href="https://ipinfo.io/${address}" target="_blank" rel="noopener noreferrer" style="color: #4488ff; text-decoration: underline;">${address}</a></span>
+      </div>
+    `;
+  }
+
   generateSMTPTestEmail(recipientEmails: string[], timestamp: string): string {
     const detailsContent = `
       <div class="detail-row">
@@ -293,7 +305,9 @@ export class EmailTemplateService {
       </div>
       <div class="detail-row">
         <span class="detail-label">Recipients</span>
-        <span class="detail-value">${recipientEmails.join(', ')}</span>
+        <span class="detail-value">${recipientEmails
+          .map((email) => this.escapeHtml(email))
+          .join(', ')}</span>
       </div>
       <div class="detail-row">
         <span class="detail-label">Test Type</span>
@@ -336,6 +350,11 @@ export class EmailTemplateService {
     const safeDeviceName = deviceName ? this.escapeHtml(deviceName) : undefined;
     const safeNote = note ? this.escapeHtml(note) : undefined;
     const safeStopCode = stopCode ? this.escapeHtml(stopCode) : undefined;
+    const safeMessage = this.escapeHtml(mainMessage);
+    const safeIpAddress = ipAddress ? encodeURIComponent(ipAddress) : undefined;
+    const safeOldIpAddress = oldIpAddress
+      ? encodeURIComponent(oldIpAddress)
+      : undefined;
 
     let detailsContent = `
       <div class="detail-row">
@@ -354,24 +373,13 @@ export class EmailTemplateService {
     }
 
     // Special handling for location change - show both old and new IP
-    if (oldIpAddress && ipAddress) {
+    if (safeOldIpAddress && safeIpAddress) {
       detailsContent += `
-        <div class="detail-row">
-          <span class="detail-label">Old IP</span>
-          <span class="detail-value"><a href="https://ipinfo.io/${oldIpAddress}" target="_blank" rel="noopener noreferrer" style="color: #4488ff; text-decoration: underline;">${oldIpAddress}</a></span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">New IP</span>
-          <span class="detail-value"><a href="https://ipinfo.io/${ipAddress}" target="_blank" rel="noopener noreferrer" style="color: #4488ff; text-decoration: underline;">${ipAddress}</a></span>
-        </div>
+        ${this.ipDetailRow('Old IP', safeOldIpAddress)}
+        ${this.ipDetailRow('New IP', safeIpAddress)}
       `;
-    } else if (ipAddress) {
-      detailsContent += `
-        <div class="detail-row">
-          <span class="detail-label">IP Address</span>
-          <span class="detail-value"><a href="https://ipinfo.io/${ipAddress}" target="_blank" rel="noopener noreferrer" style="color: #4488ff; text-decoration: underline;">${ipAddress}</a></span>
-        </div>
-      `;
+    } else if (safeIpAddress) {
+      detailsContent += this.ipDetailRow('IP Address', safeIpAddress);
     }
 
     detailsContent += `
@@ -402,7 +410,7 @@ export class EmailTemplateService {
     return this.generateBaseEmailHtml(
       statusColor,
       statusLabel,
-      mainMessage,
+      safeMessage,
       'Event Details',
       detailsContent,
       'Notification System',

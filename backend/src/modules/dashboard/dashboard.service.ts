@@ -1,9 +1,14 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ActiveSessionService } from '../sessions/services/active-session.service';
-import { DeviceTrackingService } from '../devices/services/device-tracking.service';
-import { ConfigService } from '../config/services/config.service';
-import { UsersService } from '../users/services/users.service';
-import { PlexService } from '../plex/services/plex.service';
+import { ActiveSessionService } from '@/modules/sessions/services/active-session.service';
+import { DeviceTrackingService } from '@/modules/devices/services/device-tracking.service';
+import { ConfigService } from '@/modules/config/services/config.service';
+import { UsersService } from '@/modules/users/services/users.service';
+import { PlexService } from '@/modules/plex/services/plex.service';
+import { asHttpError } from '@/common/utils/error-types';
+import { AppSettings } from '@/entities/app-settings.entity';
+import { UserDevice } from '@/entities/user-device.entity';
+import { UserPreference } from '@/entities/user-preference.entity';
+import { EnrichedPlexSessionsResponse } from '@/types/plex.types';
 
 export interface DashboardData {
   plexStatus: {
@@ -11,15 +16,15 @@ export interface DashboardData {
     hasValidCredentials: boolean;
     connectionStatus: string;
   };
-  settings: any[];
-  sessions: any;
+  settings: AppSettings[];
+  sessions: EnrichedPlexSessionsResponse;
   devices: {
-    all: any[];
-    pending: any[];
-    approved: any[];
-    processed: any[];
+    all: UserDevice[];
+    pending: UserDevice[];
+    approved: UserDevice[];
+    processed: UserDevice[];
   };
-  users: any[];
+  users: UserPreference[];
 
   stats: {
     activeStreams: number;
@@ -84,7 +89,7 @@ export class DashboardService {
       ]);
 
       // Helper function to identify PlexAmp devices
-      const isPlexAmpDevice = (device: any) => {
+      const isPlexAmpDevice = (device: UserDevice) => {
         return (
           device.deviceProduct?.toLowerCase().includes('plexamp') ||
           device.deviceName?.toLowerCase().includes('plexamp')
@@ -120,7 +125,7 @@ export class DashboardService {
     } catch (error) {
       this.logger.error(
         'Failed to fetch dashboard data',
-        error?.stack || error,
+        asHttpError(error).stack || error,
       );
       throw error;
     }

@@ -13,7 +13,7 @@ Guardian is a security and management platform for Plex Media Server. It monitor
 > [!WARNING]
 > **Looking for a maintainer.** This project is feature-complete from the author's perspective. No new features are planned unless someone steps up to take the lead, and security patches may be slow. Interested? Reach out on [Discord](https://discord.gg/xTKuHyhdS4) or in [Discussions](https://github.com/HydroshieldMKII/Guardian/discussions).
 >
-> **Do not expose Guardian directly to the internet.** Run it on your LAN, behind a VPN, or behind a reverse proxy with SSO.
+> **In the mean time, do not expose Guardian directly to the internet.** Run it on your LAN, behind a VPN, or behind a reverse proxy with SSO.
 
 ## Screenshots
 
@@ -52,14 +52,6 @@ cd Guardian
 docker compose -f docker-compose.dev.yml up -d --build
 ```
 
-### Proxmox
-
-```bash
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/guardian.sh)"
-```
-
-Follow the prompts, then open `http://[CONTAINER-IP]:3000`. See the [community script docs](https://community-scripts.github.io/ProxmoxVE/scripts?id=guardian) for options.
-
 ### Unraid
 
 Under **Docker → Compose**, create a stack from `docker-compose.example.yml`, adjust the volume and port if needed, and deploy.
@@ -73,24 +65,7 @@ Under **Docker → Compose**, create a stack from `docker-compose.example.yml`, 
 docker compose pull && docker compose up -d
 ```
 
-Guardian also works with [Watchtower](https://containrrr.dev/watchtower/) for automatic updates. On Proxmox, run `update` inside the LXC.
-
-### Migrating from the split images
-
-Releases up to v1.3.4 shipped separate `guardian-backend` and `guardian-frontend` images. From v1.3.5 there is a single `hydroshieldmkii/guardian` image. Replace the two services in your `docker-compose.yml` with the one in [`docker-compose.example.yml`](docker-compose.example.yml), pointing the volume at your existing data:
-
-```yaml
-services:
-  guardian:
-    image: hydroshieldmkii/guardian:latest
-    ports:
-      - "3000:3000"
-    volumes:
-      - guardian_data:/app/data
-    restart: unless-stopped
-```
-
-Keep your existing volume name so your database carries over.
+Guardian also works with [Watchtower](https://containrrr.dev/watchtower/) for automatic updates. 
 
 ## Troubleshooting
 
@@ -107,13 +82,9 @@ docker compose exec guardian node backend/src/scripts/update-admin.js "USERNAME"
 docker compose exec guardian node backend/src/scripts/disable-captcha.js
 ```
 
-On Proxmox, run the same scripts from `/opt/guardian/backend/src/scripts/`.
-
 **Cannot connect to Plex** — confirm the server is reachable, the token is valid, and no firewall is in the way.
 
 **Notifications not arriving** — use the test buttons in Settings, then check credentials and your spam folder.
-
-**Logs** — `docker compose logs -f guardian`, or `journalctl -u guardian -f` on Proxmox.
 
 Still stuck? Ask on [Discord](https://discord.gg/xTKuHyhdS4) or open an [issue](https://github.com/HydroshieldMKII/Guardian/issues).
 
@@ -130,8 +101,6 @@ Before opening a pull request:
 cd backend  && npm run lint:ci && npm run test:cov && npm run build
 cd frontend && npm run typecheck && npm run test:cov && npm run build
 ```
-
-CI runs the same checks plus a container build on every pull request to `main`. Releases publish the multi-arch image to Docker Hub.
 
 ## Contributing
 

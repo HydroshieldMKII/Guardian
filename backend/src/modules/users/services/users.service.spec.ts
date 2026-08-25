@@ -1,11 +1,11 @@
 import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { UserPreference } from '../../../entities/user-preference.entity';
-import { UserDevice } from '../../../entities/user-device.entity';
-import { ConfigService } from '../../config/services/config.service';
-import { PlexClient } from '../../plex/services/plex-client';
-import { UsersService } from './users.service';
+import { UserPreference } from '@/entities/user-preference.entity';
+import { UserDevice } from '@/entities/user-device.entity';
+import { ConfigService } from '@/modules/config/services/config.service';
+import { PlexClient } from '@/modules/plex/services/plex-client';
+import { UsersService } from '@/modules/users/services/users.service';
 
 const preference = (overrides: Partial<UserPreference> = {}): UserPreference =>
   Object.assign(new UserPreference(), {
@@ -220,6 +220,33 @@ describe('UsersService', () => {
       expect(result.networkPolicy).toBe('wan');
     });
 
+    it.each([
+      ['networkPolicy', { ipAccessPolicy: 'all' as const, allowedIPs: [] }],
+      ['ipAccessPolicy', { networkPolicy: 'lan' as const, allowedIPs: [] }],
+      [
+        'allowedIPs',
+        { networkPolicy: 'lan' as const, ipAccessPolicy: 'all' as const },
+      ],
+    ])('leaves %s alone when the update omits it', async (field, updates) => {
+      const stored = preference({
+        networkPolicy: 'wan',
+        ipAccessPolicy: 'restricted',
+        allowedIPs: ['1.2.3.4'],
+      });
+      preferenceRepository.findOne.mockResolvedValue(stored);
+
+      const result = await service.updateUserIPPolicy('u1', updates);
+      const before = {
+        networkPolicy: 'wan',
+        ipAccessPolicy: 'restricted',
+        allowedIPs: ['1.2.3.4'],
+      } as Record<string, unknown>;
+
+      expect((result as unknown as Record<string, unknown>)[field]).toEqual(
+        before[field],
+      );
+    });
+
     it('throws when the user has no preference row', async () => {
       preferenceRepository.findOne.mockResolvedValue(null);
       await expect(service.updateUserIPPolicy('u1', {})).rejects.toThrow(
@@ -280,6 +307,13 @@ describe('UsersService', () => {
 
       await expect(service.getEffectiveDefaultBlock('u1')).resolves.toBe(false);
     });
+
+    it('blocks nothing when the global setting was never written', async () => {
+      preferenceRepository.findOne.mockResolvedValue(null);
+      configService.getSetting.mockResolvedValue(null);
+
+      await expect(service.getEffectiveDefaultBlock('u1')).resolves.toBe(false);
+    });
   });
 
   describe('syncUsersFromPlexTV', () => {
@@ -319,6 +353,37 @@ describe('UsersService', () => {
       );
     });
 
+    it('reads a user that only carries a friendly name', async () => {
+      plexClient.getPlexUsers.mockResolvedValue(
+        '<User id="3" friendlyName="carol"/>',
+      );
+
+      const result = await service.syncUsersFromPlexTV();
+      expect(result.created).toBe(1);
+      expect(preferenceRepository.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({ username: 'carol' }),
+        expect.anything(),
+      );
+    });
+
+    it('reads a user element carrying no attributes at all', async () => {
+      plexClient.getPlexUsers.mockResolvedValue('<User/>');
+
+      await expect(service.syncUsersFromPlexTV()).resolves.toMatchObject({
+        errors: 1,
+      });
+    });
+
+    it('reads a user that only carries a title', async () => {
+      plexClient.getPlexUsers.mockResolvedValue('<User id="4" title="dave"/>');
+
+      await service.syncUsersFromPlexTV();
+      expect(preferenceRepository.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({ username: 'dave' }),
+        expect.anything(),
+      );
+    });
+
     it('reports an error when the XML holds no users', async () => {
       plexClient.getPlexUsers.mockResolvedValue('<MediaContainer/>');
       await expect(service.syncUsersFromPlexTV()).resolves.toEqual({
@@ -326,24 +391,6 @@ describe('UsersService', () => {
         created: 0,
         errors: 1,
       });
-    });
-
-    it('accepts an object response with a users array', async () => {
-      plexClient.getPlexUsers.mockResolvedValue({
-        users: [{ id: '1', username: 'alice' }],
-      });
-
-      const result = await service.syncUsersFromPlexTV();
-      expect(result.created).toBe(1);
-    });
-
-    it('accepts an object response with a single user', async () => {
-      plexClient.getPlexUsers.mockResolvedValue({
-        users: { id: '1', username: 'alice' },
-      });
-
-      const result = await service.syncUsersFromPlexTV();
-      expect(result.created).toBe(1);
     });
 
     it('counts a changed username as an update', async () => {

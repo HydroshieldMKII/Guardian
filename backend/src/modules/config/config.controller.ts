@@ -5,6 +5,7 @@ import {
   Body,
   Param,
   Post,
+  ForbiddenException,
   HttpException,
   HttpStatus,
   Res,
@@ -13,12 +14,23 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import type { Response } from 'express';
-import { ConfigService, ConfigSettingDto } from './services/config.service';
-import { AppriseService } from './services/apprise.service';
-import { AuthService } from '../auth/auth.service';
-import { ConfirmPasswordDto } from '../auth/dto/confirm-password.dto';
-import { CurrentUser } from '../auth/decorators/current-user.decorator';
-import { AdminOnly } from '../auth/decorators/admin-only.decorator';
+import {
+  ConfigService,
+  ConfigSettingDto,
+} from '@/modules/config/services/config.service';
+import { AppriseService } from '@/modules/config/services/apprise.service';
+import { isSettingKey } from '@/modules/config/settings.catalog';
+import { AuthService } from '@/modules/auth/auth.service';
+import { ConfirmPasswordDto } from '@/modules/auth/dto/confirm-password.dto';
+import { CurrentUser } from '@/modules/auth/decorators/current-user.decorator';
+import { AdminOnly } from '@/modules/auth/decorators/admin-only.decorator';
+import type { AdminSessionUser } from '@/modules/auth/session-user.types';
+import type { ImportPayload } from '@/modules/config/services/database.service';
+import { errorMessage } from '@/common/utils/error-types';
+
+interface UploadedDatabaseFile {
+  buffer: Buffer;
+}
 
 @Controller('config')
 @AdminOnly()
@@ -56,6 +68,10 @@ export class ConfigController {
   @Get(':key')
   async getSetting(@Param('key') key: string) {
     try {
+      if (!isSettingKey(key)) {
+        throw new HttpException('Setting not found', HttpStatus.NOT_FOUND);
+      }
+
       const value = await this.configService.getSetting(key);
       if (value === null) {
         throw new HttpException('Setting not found', HttpStatus.NOT_FOUND);
@@ -71,13 +87,21 @@ export class ConfigController {
   }
 
   @Put(':key')
-  async updateSetting(@Param('key') key: string, @Body() body: { value: any }) {
+  async updateSetting(
+    @Param('key') key: string,
+    @Body() body: { value: unknown },
+  ) {
     try {
+      if (!isSettingKey(key)) {
+        throw new HttpException('Setting not found', HttpStatus.NOT_FOUND);
+      }
+
       const updated = await this.configService.updateSetting(key, body.value);
       return { message: 'Setting updated successfully', setting: updated };
     } catch (error) {
+      if (error instanceof HttpException) throw error;
       throw new HttpException(
-        error.message || 'Failed to update setting',
+        errorMessage(error) || 'Failed to update setting',
         HttpStatus.BAD_REQUEST,
       );
     }
@@ -93,7 +117,7 @@ export class ConfigController {
       };
     } catch (error) {
       throw new HttpException(
-        error.message || 'Failed to update settings',
+        errorMessage(error) || 'Failed to update settings',
         HttpStatus.BAD_REQUEST,
       );
     }
@@ -174,17 +198,17 @@ export class ConfigController {
 
   @Post('database/import')
   @UseInterceptors(FileInterceptor('file'))
-  async importDatabase(@UploadedFile() file: any) {
+  async importDatabase(@UploadedFile() file: UploadedDatabaseFile | undefined) {
     try {
       if (!file) {
         throw new HttpException('No file provided', HttpStatus.BAD_REQUEST);
       }
 
       const fileContent = file.buffer.toString('utf8');
-      let importData;
+      let importData: ImportPayload;
 
       try {
-        importData = JSON.parse(fileContent);
+        importData = JSON.parse(fileContent) as ImportPayload;
       } catch {
         throw new HttpException('Invalid JSON file', HttpStatus.BAD_REQUEST);
       }
@@ -197,7 +221,7 @@ export class ConfigController {
     } catch (error) {
       if (error instanceof HttpException) throw error;
       throw new HttpException(
-        error.message || 'Failed to import database',
+        errorMessage(error) || 'Failed to import database',
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
@@ -206,7 +230,7 @@ export class ConfigController {
   @Post('scripts/reset-database')
   async resetDatabase(
     @Body() dto: ConfirmPasswordDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AdminSessionUser,
   ) {
     try {
       const isPasswordValid = await this.authService.validatePassword(
@@ -214,20 +238,17 @@ export class ConfigController {
         dto.password,
       );
       if (!isPasswordValid) {
-        throw new HttpException('Invalid password', HttpStatus.FORBIDDEN);
+        throw new ForbiddenException('Invalid password');
       }
 
       await this.configService.resetDatabase();
       return { message: 'Database reset successfully' };
     } catch (error) {
-      if (
-        error instanceof HttpException &&
-        error.getStatus() === HttpStatus.FORBIDDEN
-      ) {
+      if (error instanceof ForbiddenException) {
         throw error;
       }
       throw new HttpException(
-        error.message || 'Failed to reset database',
+        errorMessage(error) || 'Failed to reset database',
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
@@ -236,7 +257,7 @@ export class ConfigController {
   @Post('scripts/reset-stream-counts')
   async resetStreamCounts(
     @Body() dto: ConfirmPasswordDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AdminSessionUser,
   ) {
     try {
       const isPasswordValid = await this.authService.validatePassword(
@@ -244,20 +265,17 @@ export class ConfigController {
         dto.password,
       );
       if (!isPasswordValid) {
-        throw new HttpException('Invalid password', HttpStatus.FORBIDDEN);
+        throw new ForbiddenException('Invalid password');
       }
 
       await this.configService.resetStreamCounts();
       return { message: 'Stream counts reset successfully' };
     } catch (error) {
-      if (
-        error instanceof HttpException &&
-        error.getStatus() === HttpStatus.FORBIDDEN
-      ) {
+      if (error instanceof ForbiddenException) {
         throw error;
       }
       throw new HttpException(
-        error.message || 'Failed to reset stream counts',
+        errorMessage(error) || 'Failed to reset stream counts',
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
@@ -266,7 +284,7 @@ export class ConfigController {
   @Post('scripts/delete-all-devices')
   async deleteAllDevices(
     @Body() dto: ConfirmPasswordDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AdminSessionUser,
   ) {
     try {
       const isPasswordValid = await this.authService.validatePassword(
@@ -274,20 +292,17 @@ export class ConfigController {
         dto.password,
       );
       if (!isPasswordValid) {
-        throw new HttpException('Invalid password', HttpStatus.FORBIDDEN);
+        throw new ForbiddenException('Invalid password');
       }
 
       await this.configService.deleteAllDevices();
       return { message: 'All devices deleted successfully' };
     } catch (error) {
-      if (
-        error instanceof HttpException &&
-        error.getStatus() === HttpStatus.FORBIDDEN
-      ) {
+      if (error instanceof ForbiddenException) {
         throw error;
       }
       throw new HttpException(
-        error.message || 'Failed to delete all devices',
+        errorMessage(error) || 'Failed to delete all devices',
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
@@ -296,7 +311,7 @@ export class ConfigController {
   @Post('scripts/clear-session-history')
   async clearSessionHistory(
     @Body() dto: ConfirmPasswordDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AdminSessionUser,
   ) {
     try {
       const isPasswordValid = await this.authService.validatePassword(
@@ -304,20 +319,17 @@ export class ConfigController {
         dto.password,
       );
       if (!isPasswordValid) {
-        throw new HttpException('Invalid password', HttpStatus.FORBIDDEN);
+        throw new ForbiddenException('Invalid password');
       }
 
       await this.configService.clearAllSessionHistory();
       return { message: 'Session history cleared successfully' };
     } catch (error) {
-      if (
-        error instanceof HttpException &&
-        error.getStatus() === HttpStatus.FORBIDDEN
-      ) {
+      if (error instanceof ForbiddenException) {
         throw error;
       }
       throw new HttpException(
-        error.message || 'Failed to clear session history',
+        errorMessage(error) || 'Failed to clear session history',
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }

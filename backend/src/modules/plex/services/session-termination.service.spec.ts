@@ -1,17 +1,17 @@
 import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { UserDevice } from '../../../entities/user-device.entity';
-import { SessionHistory } from '../../../entities/session-history.entity';
-import { UserPreference } from '../../../entities/user-preference.entity';
-import { PlexSessionsResponse } from '../../../types/plex.types';
-import { IPValidationService } from '../../../common/services/ip-validation.service';
-import { UsersService } from '../../users/services/users.service';
-import { TimePolicyService } from '../../users/services/time-policy.service';
-import { ConcurrentStreamService } from '../../users/services/concurrent-stream.service';
-import { ConfigService } from '../../config/services/config.service';
-import { DeviceTrackingService } from '../../devices/services/device-tracking.service';
-import { PlexClient } from './plex-client';
-import { SessionTerminationService } from './session-termination.service';
+import { UserDevice } from '@/entities/user-device.entity';
+import { SessionHistory } from '@/entities/session-history.entity';
+import { UserPreference } from '@/entities/user-preference.entity';
+import { PlexSessionsResponse } from '@/types/plex.types';
+import { IPValidationService } from '@/common/services/ip-validation.service';
+import { UsersService } from '@/modules/users/services/users.service';
+import { TimePolicyService } from '@/modules/users/services/time-policy.service';
+import { ConcurrentStreamService } from '@/modules/users/services/concurrent-stream.service';
+import { ConfigService } from '@/modules/config/services/config.service';
+import { DeviceTrackingService } from '@/modules/devices/services/device-tracking.service';
+import { PlexClient } from '@/modules/plex/services/plex-client';
+import { SessionTerminationService } from '@/modules/plex/services/session-termination.service';
 
 interface SessionOverrides {
   id?: string;
@@ -497,6 +497,46 @@ describe('SessionTerminationService', () => {
       expect(result.stoppedSessions).toEqual([]);
     });
 
+    it('substitutes placeholders for an unnamed session it terminates', async () => {
+      concurrentStreamService.getEffectiveLimit.mockResolvedValue(1);
+      const events: Record<string, unknown>[] = [];
+      service.onStreamBlocked((event) =>
+        events.push(event as unknown as Record<string, unknown>),
+      );
+
+      const bare = (id: string) => ({
+        sessionKey: `sk-${id}`,
+        Session: { id: `session-${id}` },
+        User: { id: 'u1' },
+        Player: { machineIdentifier: undefined },
+      });
+
+      await service.stopUnapprovedSessions({
+        MediaContainer: { size: 2, Metadata: [bare('1'), bare('2')] },
+      });
+
+      expect(events[0]).toMatchObject({
+        username: 'Unknown',
+        deviceIdentifier: 'unknown',
+      });
+    });
+
+    it('skips a session Plex gave no id for when trimming', async () => {
+      concurrentStreamService.getEffectiveLimit.mockResolvedValue(1);
+
+      const result = await service.stopUnapprovedSessions({
+        MediaContainer: {
+          size: 2,
+          Metadata: [
+            { sessionKey: 'sk-1', Session: {}, User: { id: 'u1' }, Player: {} },
+            { sessionKey: 'sk-2', Session: {}, User: { id: 'u1' }, Player: {} },
+          ],
+        },
+      });
+
+      expect(result.stoppedSessions).toEqual([]);
+    });
+
     it('terminates the newest stream when over the limit', async () => {
       concurrentStreamService.getEffectiveLimit.mockResolvedValue(1);
       historyRepo.findOne.mockImplementation(
@@ -628,6 +668,145 @@ describe('SessionTerminationService', () => {
       );
 
       expect(result.stoppedSessions).toHaveLength(1);
+    });
+  });
+
+  describe('sparse session data', () => {
+    const sparse = (overrides: Record<string, unknown>) => ({
+      sessionKey: 'sk-1',
+      Session: { id: 'session-1' },
+      User: { id: 'u1', title: 'vincent' },
+      Player: { machineIdentifier: 'dev-1', address: '10.0.0.5' },
+      ...overrides,
+    });
+
+    const blocked = () =>
+      deviceRepo.findOne.mockResolvedValue(
+        approvedDevice({ status: 'pending' }),
+      );
+
+    const stop = (metadata: Record<string, unknown>[]) =>
+      service.stopUnapprovedSessions({
+        MediaContainer: { size: metadata.length, Metadata: metadata },
+      });
+
+    it('falls back to the account uuid when there is no user id', async () => {
+      preferenceRepo.findOne.mockResolvedValue(null);
+
+      await stop([sparse({ User: { uuid: 'uuid-1', title: 'vincent' } })]);
+
+      expect(preferenceRepo.findOne).toHaveBeenCalledWith({
+        where: { userId: 'uuid-1' },
+      });
+    });
+
+    it('allows a session that carries no user at all', async () => {
+      deviceRepo.findOne.mockResolvedValue(approvedDevice());
+
+      const result = await stop([sparse({ User: undefined })]);
+      expect(result.stoppedSessions).toEqual([]);
+    });
+
+    it('substitutes placeholders when blocking an unnamed session', async () => {
+      blocked();
+      const events: Record<string, unknown>[] = [];
+      service.onStreamBlocked((event) =>
+        events.push(event as unknown as Record<string, unknown>),
+      );
+
+      await stop([
+        sparse({
+          User: { id: 'u1' },
+          Player: { machineIdentifier: 'dev-1', address: '10.0.0.5' },
+        }),
+      ]);
+
+      expect(plexClient.terminateSession).toHaveBeenCalled();
+      expect(events[0]).toMatchObject({ userId: 'u1' });
+    });
+
+    it('leaves a session with no device identifier alone', async () => {
+      blocked();
+
+      const result = await stop([sparse({ Player: { address: '10.0.0.5' } })]);
+      expect(result.stoppedSessions).toEqual([]);
+    });
+
+    it('names the session key in an error it could not attribute', async () => {
+      blocked();
+      plexClient.terminateSession.mockRejectedValue(new Error('plex down'));
+
+      const result = await stop([sparse({})]);
+      expect(result.errors[0]).toContain('sk-1');
+    });
+
+    it('falls back to the session id when there is no session key', async () => {
+      blocked();
+      plexClient.terminateSession.mockRejectedValue(new Error('plex down'));
+
+      const result = await stop([sparse({ sessionKey: undefined })]);
+      expect(result.errors[0]).toContain('session-1');
+    });
+
+    it('cannot terminate a session Plex gave no id for', async () => {
+      blocked();
+
+      const result = await stop([sparse({ Session: { id: undefined } })]);
+
+      expect(result.stoppedSessions).toEqual([]);
+      expect(plexClient.terminateSession).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('message fallbacks', () => {
+    it('uses a built-in message when the pending text is unset', async () => {
+      deviceRepo.findOne.mockResolvedValue(
+        approvedDevice({ status: 'pending' }),
+      );
+      configService.getSetting.mockResolvedValue(null);
+
+      await service.stopUnapprovedSessions(payload(session()));
+
+      expect(plexClient.terminateSession).toHaveBeenCalledWith(
+        'session-1',
+        'Device pending approval. The server owner must approve this device before it can be used.',
+      );
+    });
+
+    it('uses built-in messages when the IP texts are unset', async () => {
+      configService.getSetting.mockResolvedValue(null);
+      preferenceRepo.findOne.mockResolvedValue({
+        userId: 'u1',
+        networkPolicy: 'lan',
+        ipAccessPolicy: 'all',
+        allowedIPs: [],
+      });
+      deviceRepo.findOne.mockResolvedValue(approvedDevice());
+
+      await service.stopUnapprovedSessions(payload(session()));
+
+      expect(ipValidationService.validateIPAccess).toHaveBeenCalledWith(
+        '10.0.0.5',
+        expect.anything(),
+        {
+          lanOnly: 'Only LAN access is allowed',
+          wanOnly: 'Only WAN access is allowed',
+          notAllowed: 'Your current IP address is not in the allowed list',
+        },
+      );
+    });
+
+    it('defaults the network policy when the preference leaves it unset', async () => {
+      preferenceRepo.findOne.mockResolvedValue({ userId: 'u1' });
+      deviceRepo.findOne.mockResolvedValue(approvedDevice());
+
+      await service.stopUnapprovedSessions(payload(session()));
+
+      expect(ipValidationService.validateIPAccess).toHaveBeenCalledWith(
+        '10.0.0.5',
+        { networkPolicy: 'both', ipAccessPolicy: 'all', allowedIPs: [] },
+        expect.anything(),
+      );
     });
   });
 

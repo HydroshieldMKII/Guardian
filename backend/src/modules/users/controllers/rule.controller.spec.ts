@@ -1,7 +1,7 @@
 import { HttpStatus } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
-import { RuleController } from './rule.controller';
-import { TimeRuleService } from '../services/time-rule.service';
+import { RuleController } from '@/modules/users/controllers/rule.controller';
+import { TimeRuleService } from '@/modules/users/services/time-rule.service';
 
 describe('RuleController', () => {
   let controller: RuleController;

@@ -1,6 +1,6 @@
 import { Controller, Get, Patch, Delete, Param } from '@nestjs/common';
-import { NotificationsService } from './services/notifications.service';
-import { AdminOnly } from '../auth/decorators/admin-only.decorator';
+import { NotificationsService } from '@/modules/notifications/services/notifications.service';
+import { AdminOnly } from '@/modules/auth/decorators/admin-only.decorator';
 
 @Controller('notifications')
 @AdminOnly()

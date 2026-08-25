@@ -1,10 +1,10 @@
 import { Test } from '@nestjs/testing';
-import { ActiveSessionService } from '../sessions/services/active-session.service';
-import { DeviceTrackingService } from '../devices/services/device-tracking.service';
-import { ConfigService } from '../config/services/config.service';
-import { UsersService } from '../users/services/users.service';
-import { PlexService } from '../plex/services/plex.service';
-import { DashboardService } from './dashboard.service';
+import { ActiveSessionService } from '@/modules/sessions/services/active-session.service';
+import { DeviceTrackingService } from '@/modules/devices/services/device-tracking.service';
+import { ConfigService } from '@/modules/config/services/config.service';
+import { UsersService } from '@/modules/users/services/users.service';
+import { PlexService } from '@/modules/plex/services/plex.service';
+import { DashboardService } from '@/modules/dashboard/dashboard.service';
 
 const configuredStatus = {
   configured: true,
@@ -176,6 +176,13 @@ describe('DashboardService', () => {
         new Error('no config'),
       );
       await expect(service.getDashboardData()).rejects.toThrow('no config');
+    });
+
+    it('logs a failure that carries no stack', async () => {
+      const bare = { message: 'no stack here' };
+      deviceTrackingService.getAllDevices.mockRejectedValue(bare);
+
+      await expect(service.getDashboardData()).rejects.toBe(bare);
     });
   });
 });

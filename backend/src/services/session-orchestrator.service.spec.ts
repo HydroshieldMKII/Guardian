@@ -1,14 +1,14 @@
 import { Test } from '@nestjs/testing';
-import { PlexSessionsResponse } from '../types/plex.types';
-import { ActiveSessionService } from '../modules/sessions/services/active-session.service';
-import { DeviceTrackingService } from '../modules/devices/services/device-tracking.service';
-import { SessionTerminationService } from '../modules/plex/services/session-termination.service';
-import { SessionOrchestratorService } from './session-orchestrator.service';
+import { PlexSessionsResponse } from '@/types/plex.types';
+import { ActiveSessionService } from '@/modules/sessions/services/active-session.service';
+import { DeviceTrackingService } from '@/modules/devices/services/device-tracking.service';
+import { SessionTerminationService } from '@/modules/plex/services/session-termination.service';
+import { SessionOrchestratorService } from '@/services/session-orchestrator.service';
 
 describe('SessionOrchestratorService', () => {
   let service: SessionOrchestratorService;
-  let activeSessionService: { updateActiveSessions: jest.Mock };
-  let deviceTrackingService: { processSessionsForDeviceTracking: jest.Mock };
+  let activeSessionService: Record<string, jest.Mock>;
+  let deviceTrackingService: Record<string, jest.Mock>;
   let sessionTerminationService: { stopUnapprovedSessions: jest.Mock };
   let order: string[];
 
@@ -23,11 +23,15 @@ describe('SessionOrchestratorService', () => {
       processSessionsForDeviceTracking: jest.fn(async () => {
         order.push('track');
       }),
+      getAllDevices: jest.fn().mockResolvedValue([{ id: 1 }]),
     };
     activeSessionService = {
       updateActiveSessions: jest.fn(async () => {
         order.push('history');
       }),
+      getActiveSessionsFormatted: jest
+        .fn()
+        .mockResolvedValue({ MediaContainer: { size: 0 } }),
     };
     sessionTerminationService = {
       stopUnapprovedSessions: jest.fn(async () => {

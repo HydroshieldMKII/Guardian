@@ -5,9 +5,11 @@ const fetchMock = jest.fn<Promise<Response>, [string, RequestInit?]>();
 
 const params = (...path: string[]) => ({ params: Promise.resolve({ path }) });
 
+type NextRequestInit = NonNullable<ConstructorParameters<typeof NextRequest>[1]>;
+
 const request = (
   url: string,
-  init: RequestInit & { method: string } = { method: "GET" },
+  init: NextRequestInit & { method: string } = { method: "GET" },
 ) => new NextRequest(new URL(url), init);
 
 const upstreamCall = () => fetchMock.mock.calls[0];

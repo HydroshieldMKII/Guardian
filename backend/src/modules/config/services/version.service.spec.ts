@@ -1,5 +1,5 @@
 import { Test } from '@nestjs/testing';
-import { VersionService } from './version.service';
+import { VersionService } from '@/modules/config/services/version.service';
 
 describe('VersionService', () => {
   let service: VersionService;

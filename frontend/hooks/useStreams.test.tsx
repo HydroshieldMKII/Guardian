@@ -110,6 +110,28 @@ describe("useStreamsData", () => {
     expect(result.current.error).toBeNull();
   });
 
+  it("ignores a second fetch while one is already running", async () => {
+    let release: (value: Response) => void = () => {};
+    fetchMock.mockImplementation(
+      () =>
+        new Promise<Response>((resolve) => {
+          release = resolve;
+        }),
+    );
+
+    const { result } = renderHook(() => useStreamsData());
+
+    await act(async () => {
+      void result.current.fetchStreamsData();
+    });
+    await act(async () => {
+      void result.current.fetchStreamsData();
+      release(jsonResponse(payload(stream())));
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
   it("accepts streams pushed in from a parent", () => {
     const { result } = renderHook(() => useStreamsData());
 
@@ -131,6 +153,21 @@ describe("useStreamsData", () => {
     });
 
     expect(result.current.streams).toHaveLength(1);
+  });
+
+  it("empties the list when a push carries no metadata", () => {
+    const { result } = renderHook(() => useStreamsData());
+
+    act(() => {
+      result.current.updateStreamsFromProps(payload(stream()));
+    });
+    act(() => {
+      result.current.updateStreamsFromProps({
+        MediaContainer: { size: 0 },
+      } as StreamsResponse);
+    });
+
+    expect(result.current.streams).toEqual([]);
   });
 
   it("clears the error when a parent pushes fresh data", async () => {
@@ -309,6 +346,21 @@ describe("useStreamActions", () => {
         description: "Failed to revoke device access.",
       }),
     );
+  });
+
+  it("substitutes placeholders for a stream with no titles", async () => {
+    const { result } = renderHook(() => useStreamActions());
+
+    await act(async () => {
+      await result.current.revokeDeviceAuthorization(
+        stream({
+          User: { id: "u1" },
+          Player: { machineIdentifier: "dev-1" },
+        } as Partial<PlexSession>),
+      );
+    });
+
+    expect(fetchMock).toHaveBeenCalled();
   });
 
   it("reports a network failure", async () => {

@@ -10,10 +10,11 @@ import {
   HttpException,
   HttpStatus,
 } from '@nestjs/common';
-import { DeviceTrackingService } from './services/device-tracking.service';
-import { UserDevice } from '../../entities/user-device.entity';
-import { PlexClient } from '../plex/services/plex-client';
-import { AdminOnly } from '../auth/decorators/admin-only.decorator';
+import { DeviceTrackingService } from '@/modules/devices/services/device-tracking.service';
+import { UserDevice } from '@/entities/user-device.entity';
+import { PlexClient } from '@/modules/plex/services/plex-client';
+import { AdminOnly } from '@/modules/auth/decorators/admin-only.decorator';
+import { errorMessage } from '@/common/utils/error-types';
 
 @Controller('devices')
 @AdminOnly()
@@ -114,15 +115,13 @@ export class DevicesController {
             `Successfully granted temporary access to device ${deviceId}`,
           );
         } catch (error) {
-          const errorMessage =
-            error instanceof Error ? error.message : 'Unknown error';
           results.push({
             deviceId,
             success: false,
-            error: errorMessage,
+            error: errorMessage(error),
           });
           this.logger.error(
-            `Failed to grant temporary access to device ${deviceId}: ${errorMessage}`,
+            `Failed to grant temporary access to device ${deviceId}: ${errorMessage(error)}`,
           );
         }
       }
@@ -135,7 +134,7 @@ export class DevicesController {
         results,
       };
     } catch (error) {
-      this.logger.error(`Batch temporary access error: ${error.message}`);
+      this.logger.error(`Batch temporary access error: ${errorMessage(error)}`);
       throw error;
     }
   }
@@ -264,17 +263,17 @@ export class DevicesController {
         );
       } catch (error) {
         // Check if it's a 404 error (session already ended or not found)
-        if (error.message && error.message.includes('404')) {
+        if (errorMessage(error) && errorMessage(error).includes('404')) {
           this.logger.warn(
             `Session ${sessionKeyToTerminate} was already terminated or not found (404) - treating as success`,
           );
         } else {
           this.logger.error(
-            `Failed to terminate session ${sessionKeyToTerminate} for device ${deviceIdentifier}: ${error.message}`,
+            `Failed to terminate session ${sessionKeyToTerminate} for device ${deviceIdentifier}: ${errorMessage(error)}`,
           );
           // Only throw error for non-404 errors
           throw new HttpException(
-            `Failed to revoke device access: ${error.message}`,
+            `Failed to revoke device access: ${errorMessage(error)}`,
             HttpStatus.BAD_REQUEST,
           );
         }

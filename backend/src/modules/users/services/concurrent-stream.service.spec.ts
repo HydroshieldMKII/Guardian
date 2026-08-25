@@ -1,12 +1,12 @@
 import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { UserDevice } from '../../../entities/user-device.entity';
-import { UserPreference } from '../../../entities/user-preference.entity';
-import { ConfigService } from '../../config/services/config.service';
-import { DeviceTrackingService } from '../../devices/services/device-tracking.service';
-import { PlexSession, PlexSessionsResponse } from '../../../types/plex.types';
-import { ConcurrentStreamService } from './concurrent-stream.service';
+import { UserDevice } from '@/entities/user-device.entity';
+import { UserPreference } from '@/entities/user-preference.entity';
+import { ConfigService } from '@/modules/config/services/config.service';
+import { DeviceTrackingService } from '@/modules/devices/services/device-tracking.service';
+import { PlexSession, PlexSessionsResponse } from '@/types/plex.types';
+import { ConcurrentStreamService } from '@/modules/users/services/concurrent-stream.service';
 
 const device = (overrides: Partial<UserDevice> = {}): UserDevice =>
   Object.assign(new UserDevice(), {

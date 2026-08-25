@@ -1,4 +1,8 @@
-import { isDatabaseError, isHttpError, isPlexError } from './error-types';
+import {
+  isDatabaseError,
+  isHttpError,
+  isPlexError,
+} from '@/common/utils/error-types';
 
 describe('error-types guards', () => {
   const withProps = (props: Record<string, unknown>) =>

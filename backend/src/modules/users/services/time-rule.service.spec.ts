@@ -1,8 +1,8 @@
 import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
-import { UserTimeRule } from '../../../entities/user-time-rule.entity';
-import { TimeRuleService } from './time-rule.service';
+import { UserTimeRule } from '@/entities/user-time-rule.entity';
+import { TimeRuleService } from '@/modules/users/services/time-rule.service';
 
 const rule = (overrides: Partial<UserTimeRule> = {}): UserTimeRule =>
   Object.assign(new UserTimeRule(), {

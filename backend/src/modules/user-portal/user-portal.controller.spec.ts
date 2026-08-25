@@ -1,10 +1,10 @@
 import { ForbiddenException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import type { Request } from 'express';
-import { AdminUser } from '../../entities/admin-user.entity';
-import { UserPortalController } from './user-portal.controller';
-import { UserPortalService } from './services/user-portal.service';
-import { AuthGuard } from '../auth/guards/auth.guard';
+import { AdminUser } from '@/entities/admin-user.entity';
+import { UserPortalController } from '@/modules/user-portal/user-portal.controller';
+import { UserPortalService } from '@/modules/user-portal/services/user-portal.service';
+import { AuthGuard } from '@/modules/auth/guards/auth.guard';
 
 describe('UserPortalController', () => {
   let controller: UserPortalController;

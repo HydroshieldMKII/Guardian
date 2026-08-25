@@ -1,11 +1,12 @@
 import { BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import type { Request, Response } from 'express';
-import { AdminUser } from '../../entities/admin-user.entity';
-import { AuthController } from './auth.controller';
-import { AuthService } from './auth.service';
-import { PlexOAuthService } from './plex-oauth.service';
-import { ConfigService } from '../config/services/config.service';
+import { AdminUser } from '@/entities/admin-user.entity';
+import { AdminSessionUser } from '@/modules/auth/session-user.types';
+import { AuthController } from '@/modules/auth/auth.controller';
+import { AuthService } from '@/modules/auth/auth.service';
+import { PlexOAuthService } from '@/modules/auth/plex-oauth.service';
+import { ConfigService } from '@/modules/config/services/config.service';
 
 describe('AuthController', () => {
   let controller: AuthController;
@@ -13,12 +14,20 @@ describe('AuthController', () => {
   let plexOAuthService: Record<string, jest.Mock>;
   let configService: { getSetting: jest.Mock };
 
-  const adminUser: AdminUser = Object.assign(new AdminUser(), {
-    id: 'admin-1',
-    username: 'vincent',
-    email: 'v@example.com',
-    passwordHash: 'hash',
-  });
+  const adminSession = (
+    overrides: Partial<AdminSessionUser> = {},
+  ): AdminSessionUser =>
+    Object.assign(new AdminUser(), {
+      id: 'admin-1',
+      username: 'vincent',
+      email: 'v@example.com',
+      passwordHash: 'hash',
+      sessionId: 'session-1',
+      userType: 'admin' as const,
+      ...overrides,
+    });
+
+  const adminUser = adminSession();
 
   const session = {
     token: 'session-token',
@@ -35,10 +44,20 @@ describe('AuthController', () => {
     return { res: stub as Response, cookie, clearCookie };
   };
 
-  const requestWithCookies = (cookies: Record<string, string>) => {
-    const stub: Pick<Request, 'cookies'> = { cookies };
+  const requestStub = (
+    overrides: Partial<Pick<Request, 'cookies' | 'secure' | 'headers'>> = {},
+  ) => {
+    const stub: Pick<Request, 'cookies' | 'secure' | 'headers'> = {
+      cookies: {},
+      secure: false,
+      headers: {},
+      ...overrides,
+    };
     return stub as Request;
   };
+
+  const requestWithCookies = (cookies: Record<string, string>) =>
+    requestStub({ cookies });
 
   beforeEach(async () => {
     authService = {
@@ -145,7 +164,7 @@ describe('AuthController', () => {
 
     it('sets an httpOnly session cookie', async () => {
       const { res, cookie } = responseStub();
-      await controller.createAdmin(dto, res);
+      await controller.createAdmin(dto, requestStub(), res);
 
       expect(cookie).toHaveBeenCalledWith(
         'session_token',
@@ -160,26 +179,34 @@ describe('AuthController', () => {
 
     it('never returns the raw token in the body', async () => {
       const { res } = responseStub();
-      const result = await controller.createAdmin(dto, res);
+      const result = await controller.createAdmin(dto, requestStub(), res);
 
       expect(result.session).toEqual({ expiresAt: session.expiresAt });
       expect(JSON.stringify(result)).not.toContain('session-token');
     });
 
-    it('refuses when an admin already exists', async () => {
-      authService.hasAdminUsers.mockResolvedValue(true);
+    it('propagates the service refusing a second admin', async () => {
+      authService.createAdmin.mockRejectedValue(
+        new BadRequestException('Admin user already exists'),
+      );
       await expect(
-        controller.createAdmin(dto, responseStub().res),
+        controller.createAdmin(dto, requestStub(), responseStub().res),
       ).rejects.toThrow('Admin user already exists');
     });
 
-    it('refuses mismatched passwords', async () => {
-      await expect(
-        controller.createAdmin(
-          { ...dto, confirmPassword: 'typo' },
-          responseStub().res,
-        ),
-      ).rejects.toThrow('Passwords do not match');
+    it('marks the cookie secure behind an https proxy', async () => {
+      const { res, cookie } = responseStub();
+      await controller.createAdmin(
+        dto,
+        requestStub({ headers: { 'x-forwarded-proto': 'https' } }),
+        res,
+      );
+
+      expect(cookie).toHaveBeenCalledWith(
+        'session_token',
+        'session-token',
+        expect.objectContaining({ secure: true }),
+      );
     });
   });
 
@@ -188,6 +215,7 @@ describe('AuthController', () => {
       const { res, cookie } = responseStub();
       const result = await controller.login(
         { username: 'vincent', password: 'hunter2hunter2' },
+        requestStub(),
         res,
       );
 
@@ -206,6 +234,7 @@ describe('AuthController', () => {
       await expect(
         controller.login(
           { username: 'vincent', password: 'wrong' },
+          requestStub(),
           responseStub().res,
         ),
       ).rejects.toThrow(UnauthorizedException);
@@ -240,10 +269,7 @@ describe('AuthController', () => {
   describe('getCurrentUser', () => {
     it('returns the admin profile', () => {
       const result = controller.getCurrentUser(
-        Object.assign(new AdminUser(), {
-          ...adminUser,
-          plexUsername: 'guest',
-        }),
+        adminSession({ plexUsername: 'guest' }),
       );
 
       expect(result).toMatchObject({
@@ -255,6 +281,7 @@ describe('AuthController', () => {
 
     it('returns only the Plex identity for a portal user', () => {
       const result = controller.getCurrentUser({
+        sessionId: 'session-2',
         userType: 'plex_user',
         plexUserId: '9',
         plexUsername: 'guest',
@@ -269,7 +296,7 @@ describe('AuthController', () => {
     });
 
     it('refuses an unauthenticated request', () => {
-      expect(() => controller.getCurrentUser(null)).toThrow(
+      expect(() => controller.getCurrentUser(undefined)).toThrow(
         BadRequestException,
       );
     });
@@ -284,7 +311,7 @@ describe('AuthController', () => {
     });
 
     it('refuses an unauthenticated request', async () => {
-      await expect(controller.updateProfile(null, {})).rejects.toThrow(
+      await expect(controller.updateProfile(undefined, {})).rejects.toThrow(
         'Not authenticated',
       );
     });
@@ -298,10 +325,7 @@ describe('AuthController', () => {
     };
 
     it('passes the current session id so it survives a session purge', async () => {
-      await controller.updatePassword(
-        Object.assign(new AdminUser(), adminUser, { sessionId: 'session-1' }),
-        dto,
-      );
+      await controller.updatePassword(adminSession(), dto);
 
       expect(authService.updatePassword).toHaveBeenCalledWith(
         'admin-1',
@@ -311,7 +335,7 @@ describe('AuthController', () => {
     });
 
     it('refuses an unauthenticated request', async () => {
-      await expect(controller.updatePassword(null, dto)).rejects.toThrow(
+      await expect(controller.updatePassword(undefined, dto)).rejects.toThrow(
         'Not authenticated',
       );
     });
@@ -409,7 +433,11 @@ describe('AuthController', () => {
   describe('plexLogin', () => {
     it('requires an auth token', async () => {
       await expect(
-        controller.plexLogin({ authToken: '' }, responseStub().res),
+        controller.plexLogin(
+          { authToken: '' },
+          requestStub(),
+          responseStub().res,
+        ),
       ).rejects.toThrow('Auth token is required');
     });
 
@@ -417,7 +445,11 @@ describe('AuthController', () => {
       authService.findAdminByPlexUserId.mockResolvedValue({ id: 'admin-1' });
       const { res, cookie } = responseStub();
 
-      const result = await controller.plexLogin({ authToken: 'tok' }, res);
+      const result = await controller.plexLogin(
+        { authToken: 'tok' },
+        requestStub(),
+        res,
+      );
 
       expect(authService.findAdminByPlexUserId).toHaveBeenCalledWith('9');
       expect(result.userType).toBe('admin');
@@ -430,7 +462,11 @@ describe('AuthController', () => {
 
     it('issues a scoped portal session for a server user', async () => {
       const { res, cookie } = responseStub();
-      const result = await controller.plexLogin({ authToken: 'tok' }, res);
+      const result = await controller.plexLogin(
+        { authToken: 'tok' },
+        requestStub(),
+        res,
+      );
 
       expect(result.userType).toBe('plex_user');
       expect(result.user).toEqual({
@@ -448,7 +484,11 @@ describe('AuthController', () => {
     it('refuses a Plex user with no access to the server', async () => {
       plexOAuthService.isPlexUserOnServer.mockResolvedValue(false);
       await expect(
-        controller.plexLogin({ authToken: 'tok' }, responseStub().res),
+        controller.plexLogin(
+          { authToken: 'tok' },
+          requestStub(),
+          responseStub().res,
+        ),
       ).rejects.toThrow(
         'Your Plex account does not have access to this server.',
       );
@@ -457,7 +497,11 @@ describe('AuthController', () => {
     it('refuses a non-admin when the portal is disabled', async () => {
       configService.getSetting.mockResolvedValue(false);
       await expect(
-        controller.plexLogin({ authToken: 'tok' }, responseStub().res),
+        controller.plexLogin(
+          { authToken: 'tok' },
+          requestStub(),
+          responseStub().res,
+        ),
       ).rejects.toThrow('The user portal is currently disabled.');
     });
 
@@ -467,6 +511,7 @@ describe('AuthController', () => {
 
       const result = await controller.plexLogin(
         { authToken: 'tok' },
+        requestStub(),
         responseStub().res,
       );
       expect(result.userType).toBe('admin');
@@ -477,14 +522,22 @@ describe('AuthController', () => {
         new Error('invalid token'),
       );
       await expect(
-        controller.plexLogin({ authToken: 'tok' }, responseStub().res),
+        controller.plexLogin(
+          { authToken: 'tok' },
+          requestStub(),
+          responseStub().res,
+        ),
       ).rejects.toThrow('invalid token');
     });
 
     it('falls back to a generic message for a non-Error rejection', async () => {
       plexOAuthService.getPlexUserFromToken.mockRejectedValue('boom');
       await expect(
-        controller.plexLogin({ authToken: 'tok' }, responseStub().res),
+        controller.plexLogin(
+          { authToken: 'tok' },
+          requestStub(),
+          responseStub().res,
+        ),
       ).rejects.toThrow('Failed to complete Plex login');
     });
   });

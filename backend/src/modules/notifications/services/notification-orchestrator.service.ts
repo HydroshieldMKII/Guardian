@@ -1,35 +1,35 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Notification } from '../../../entities/notification.entity';
-import { SessionHistory } from '../../../entities/session-history.entity';
-import { UserDevice } from '../../../entities/user-device.entity';
-import { NotificationsService } from './notifications.service';
+import { Notification } from '@/entities/notification.entity';
+import { SessionHistory } from '@/entities/session-history.entity';
+import { UserDevice } from '@/entities/user-device.entity';
+import { NotificationsService } from '@/modules/notifications/services/notifications.service';
 
 export interface NewDeviceNotificationData {
   userId: string;
-  username: string;
-  deviceName: string;
-  ipAddress: string;
-  sessionKey?: string;
+  username: string | null;
+  deviceName: string | null;
+  ipAddress: string | null;
+  sessionKey?: string | null;
 }
 
 export interface StreamBlockedNotificationData {
   userId: string;
-  username: string;
+  username: string | null;
   deviceIdentifier: string;
-  stopCode?: string;
-  sessionKey?: string;
-  ipAddress?: string;
+  stopCode?: string | null;
+  sessionKey?: string | null;
+  ipAddress?: string | null;
 }
 
 export interface DeviceLocationChangeNotificationData {
   userId: string;
-  username: string;
-  deviceName: string;
-  oldIpAddress: string;
-  newIpAddress: string;
-  sessionKey?: string;
+  username: string | null;
+  deviceName: string | null;
+  oldIpAddress: string | null;
+  newIpAddress: string | null;
+  sessionKey?: string | null;
 }
 
 /**
@@ -61,9 +61,9 @@ export class NotificationOrchestratorService {
     try {
       return await this.notificationsService.createNewDeviceNotification(
         data.userId,
-        data.username,
-        data.deviceName,
-        data.ipAddress,
+        data.username ?? 'Unknown User',
+        data.deviceName ?? 'Unknown Device',
+        data.ipAddress ?? 'Unknown IP',
         undefined, // Will be linked later by linkOrphanedNotifications
       );
     } catch (error) {
@@ -87,11 +87,11 @@ export class NotificationOrchestratorService {
       }
       return await this.notificationsService.createStreamBlockedNotification(
         data.userId,
-        data.username,
+        data.username ?? 'Unknown User',
         data.deviceIdentifier,
-        data.stopCode,
+        data.stopCode ?? undefined,
         sessionHistoryId,
-        data.ipAddress,
+        data.ipAddress ?? undefined,
       );
     } catch (error) {
       this.logger.error('Error creating stream blocked notification', error);
@@ -111,10 +111,10 @@ export class NotificationOrchestratorService {
 
       return await this.notificationsService.createLocationChangeNotification(
         data.userId,
-        data.username,
-        data.deviceName,
-        data.oldIpAddress,
-        data.newIpAddress,
+        data.username ?? 'Unknown User',
+        data.deviceName ?? 'Unknown Device',
+        data.oldIpAddress ?? 'Unknown IP',
+        data.newIpAddress ?? 'Unknown IP',
         sessionHistoryId,
       );
     } catch (error) {

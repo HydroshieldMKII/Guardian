@@ -1,4 +1,4 @@
-import { UserTimeRule } from './user-time-rule.entity';
+import { UserTimeRule } from '@/entities/user-time-rule.entity';
 
 const rule = (overrides: Partial<UserTimeRule> = {}): UserTimeRule =>
   Object.assign(new UserTimeRule(), {

@@ -5,7 +5,7 @@ import {
   HttpStatus,
   Logger,
 } from '@nestjs/common';
-import { GlobalExceptionFilter } from './global-exception.filter';
+import { GlobalExceptionFilter } from '@/filters/global-exception.filter';
 
 describe('GlobalExceptionFilter', () => {
   let filter: GlobalExceptionFilter;

@@ -11,9 +11,9 @@ export class VersionService {
     return CURRENT_APP_VERSION;
   }
 
-  compareVersions(version1: string, version2: string): number {
-    const parseVersion = (version: string): number[] => {
-      return version.split('.').map((v) => parseInt(v) || 0);
+  compareVersions(version1: string | null, version2: string | null): number {
+    const parseVersion = (version: string | null): number[] => {
+      return (version ?? '').split('.').map((v) => parseInt(v) || 0);
     };
 
     const v1Parts = parseVersion(version1);
@@ -32,7 +32,7 @@ export class VersionService {
   }
 
   async updateAppVersionIfNewer(
-    currentDbVersion: string,
+    currentDbVersion: string | null,
     updateVersionCallback: (newVersion: string) => Promise<void>,
   ): Promise<void> {
     try {

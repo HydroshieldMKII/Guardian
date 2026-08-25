@@ -1,8 +1,8 @@
 import { HttpException, HttpStatus } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
-import { DevicesController } from './devices.controller';
-import { DeviceTrackingService } from './services/device-tracking.service';
-import { PlexClient } from '../plex/services/plex-client';
+import { DevicesController } from '@/modules/devices/devices.controller';
+import { DeviceTrackingService } from '@/modules/devices/services/device-tracking.service';
+import { PlexClient } from '@/modules/plex/services/plex-client';
 
 describe('DevicesController', () => {
   let controller: DevicesController;
@@ -185,7 +185,7 @@ describe('DevicesController', () => {
       });
     });
 
-    it('labels a non-Error rejection as an unknown error', async () => {
+    it('reports a non-Error rejection verbatim', async () => {
       deviceTracking.grantTemporaryAccess.mockRejectedValue('just a string');
 
       const result = await controller.grantBatchTemporaryAccess({
@@ -193,7 +193,7 @@ describe('DevicesController', () => {
         durationMinutes: 15,
       });
 
-      expect(result.results[0].error).toBe('Unknown error');
+      expect(result.results[0].error).toBe('just a string');
     });
 
     it.each([

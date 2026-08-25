@@ -1,24 +1,11 @@
-import {
-  IsString,
-  MinLength,
-  Matches,
-  IsOptional,
-  IsBoolean,
-} from 'class-validator';
+import { IsBoolean, IsOptional, IsString } from 'class-validator';
+import { StrongPassword } from '@/modules/auth/dto/strong-password.decorator';
 
 export class UpdatePasswordDto {
   @IsString()
   currentPassword: string;
 
-  @IsString()
-  @MinLength(12)
-  @Matches(
-    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};:'",./<>?\\|~])[A-Za-z\d!@#$%^&*()_+\-=[\]{};:'",./<>?\\|~]{12,128}$/,
-    {
-      message:
-        'Password must contain uppercase, lowercase, number, and special character. Minimum length is 12 characters.',
-    },
-  )
+  @StrongPassword()
   newPassword: string;
 
   @IsString()

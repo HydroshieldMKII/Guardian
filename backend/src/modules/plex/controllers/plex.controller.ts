@@ -1,8 +1,8 @@
 import { Controller, Get, Param, Res, Query, Logger } from '@nestjs/common';
 import type { Response } from 'express';
-import { PlexClient } from '../services/plex-client';
-import { PlexService } from '../services/plex.service';
-import { AdminOnly } from '../../auth/decorators/admin-only.decorator';
+import { PlexClient } from '@/modules/plex/services/plex-client';
+import { PlexService } from '@/modules/plex/services/plex.service';
+import { AdminOnly } from '@/modules/auth/decorators/admin-only.decorator';
 
 @Controller('plex')
 @AdminOnly()

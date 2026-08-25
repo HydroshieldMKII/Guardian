@@ -1,16 +1,25 @@
 import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { In } from 'typeorm';
-import { UserDevice } from '../../../entities/user-device.entity';
-import { SessionHistory } from '../../../entities/session-history.entity';
-import { UsersService } from '../../users/services/users.service';
-import { ConfigService } from '../../config/services/config.service';
-import { PlexSession, PlexSessionsResponse } from '../../../types/plex.types';
-import { DeviceTrackingService } from './device-tracking.service';
+import { UserDevice } from '@/entities/user-device.entity';
+import { SessionHistory } from '@/entities/session-history.entity';
+import { UsersService } from '@/modules/users/services/users.service';
+import { ConfigService } from '@/modules/config/services/config.service';
+import { PlexSession, PlexSessionsResponse } from '@/types/plex.types';
+import { DeviceTrackingService } from '@/modules/devices/services/device-tracking.service';
 
 describe('DeviceTrackingService', () => {
   let service: DeviceTrackingService;
-  let deviceRepo: Record<string, jest.Mock>;
+  let deviceRepo: {
+    find: jest.Mock;
+    findOne: jest.Mock;
+    create: jest.Mock;
+    save: jest.Mock;
+    update: jest.Mock;
+    delete: jest.Mock;
+    createQueryBuilder: jest.Mock;
+    manager: { transaction: jest.Mock };
+  };
   let historyRepo: Record<string, jest.Mock>;
   let usersService: Record<string, jest.Mock>;
   let configService: Record<string, jest.Mock>;
@@ -400,6 +409,29 @@ describe('DeviceTrackingService', () => {
       expect(savedDevice().sessionCount).toBe(4);
     });
 
+    it('fills in the platform and product when the row has neither', async () => {
+      deviceRepo.findOne.mockResolvedValue(
+        device({ devicePlatform: null, deviceProduct: null }),
+      );
+
+      await service.processSessionsForDeviceTracking(
+        sessionsResponse(
+          session({
+            Player: {
+              machineIdentifier: 'dev-1',
+              platform: 'iOS',
+              product: 'Plex for iOS',
+            },
+          }),
+        ),
+      );
+
+      expect(savedDevice()).toMatchObject({
+        devicePlatform: 'iOS',
+        deviceProduct: 'Plex for iOS',
+      });
+    });
+
     it('fills in details that were missing, without overwriting known ones', async () => {
       deviceRepo.findOne.mockResolvedValue(
         device({
@@ -626,6 +658,18 @@ describe('DeviceTrackingService', () => {
       expect(savedDevice().status).toBe('approved');
     });
 
+    it('still applies the policy to a device with no name', async () => {
+      configService.getSetting.mockResolvedValue(true);
+      deviceRepo.find.mockResolvedValue([
+        device({ deviceName: null, username: null }),
+      ]);
+
+      await expect(service.enforceStrictModeOnPendingDevices()).resolves.toBe(
+        1,
+      );
+      expect(savedDevice().status).toBe('rejected');
+    });
+
     it('always approves Plexamp devices', async () => {
       configService.getSetting.mockResolvedValue(true);
       deviceRepo.find.mockResolvedValue([device({ deviceProduct: 'Plexamp' })]);
@@ -685,6 +729,13 @@ describe('DeviceTrackingService', () => {
       });
     });
 
+    it('includes a device back in the concurrent limit', async () => {
+      await service.updateExcludeFromConcurrentLimit(7, false);
+      expect(deviceRepo.update).toHaveBeenCalledWith(7, {
+        excludeFromConcurrentLimit: false,
+      });
+    });
+
     it('marks a request note as read', async () => {
       await service.markNoteAsRead(7);
       expect(deviceRepo.update).toHaveBeenCalledWith(
@@ -696,14 +747,72 @@ describe('DeviceTrackingService', () => {
     it('clears every note column when deleting a note', async () => {
       await service.deleteNote(7);
 
-      const [columns] = deviceQueryBuilder.set.mock.calls[0];
+      const [columns] = deviceQueryBuilder.set.mock.calls[0] as [
+        Record<string, () => string>,
+      ];
       expect(Object.keys(columns)).toEqual([
         'requestDescription',
         'requestSubmittedAt',
         'requestNoteReadAt',
       ]);
+      expect(Object.values(columns).map((toSql) => toSql())).toEqual([
+        'NULL',
+        'NULL',
+        'NULL',
+      ]);
       expect(deviceQueryBuilder.where).toHaveBeenCalledWith('id = :id', {
         id: 7,
+      });
+    });
+  });
+
+  describe('placeholders in log and event text', () => {
+    it('falls back to the stored username on a location change', async () => {
+      deviceRepo.findOne.mockResolvedValue(
+        device({ ipAddress: '10.0.0.1', username: 'stored-name' }),
+      );
+      const events: Record<string, unknown>[] = [];
+      service.onDeviceLocationChanged((event) =>
+        events.push(event as unknown as Record<string, unknown>),
+      );
+
+      await service.processSessionsForDeviceTracking(
+        sessionsResponse(
+          session({
+            User: { id: 'u1' },
+            Player: { machineIdentifier: 'dev-1', address: '1.2.3.4' },
+          }),
+        ),
+      );
+
+      expect(events[0]).toMatchObject({ username: 'stored-name' });
+    });
+
+    it('falls back to placeholders when neither side has a name', async () => {
+      deviceRepo.findOne.mockResolvedValue(
+        device({
+          ipAddress: '10.0.0.1',
+          username: null,
+          deviceName: null,
+        }),
+      );
+      const events: Record<string, unknown>[] = [];
+      service.onDeviceLocationChanged((event) =>
+        events.push(event as unknown as Record<string, unknown>),
+      );
+
+      await service.processSessionsForDeviceTracking(
+        sessionsResponse(
+          session({
+            User: { id: 'u1' },
+            Player: { machineIdentifier: 'dev-1', address: '1.2.3.4' },
+          }),
+        ),
+      );
+
+      expect(events[0]).toMatchObject({
+        username: 'Unknown',
+        deviceName: 'Unknown Device',
       });
     });
   });
@@ -763,9 +872,18 @@ describe('DeviceTrackingService', () => {
     it('nulls every temporary access column when revoking', async () => {
       await service.revokeTemporaryAccess(7);
 
-      const [columns] = deviceQueryBuilder.set.mock.calls[0];
+      const [columns] = deviceQueryBuilder.set.mock.calls[0] as [
+        {
+          temporaryAccessUntil: () => string;
+          temporaryAccessGrantedAt: () => string;
+          temporaryAccessDurationMinutes: () => string;
+          temporaryAccessBypassPolicies: boolean;
+        },
+      ];
       expect(columns.temporaryAccessBypassPolicies).toBe(false);
-      expect(Object.keys(columns)).toContain('temporaryAccessUntil');
+      expect(columns.temporaryAccessUntil()).toBe('NULL');
+      expect(columns.temporaryAccessGrantedAt()).toBe('NULL');
+      expect(columns.temporaryAccessDurationMinutes()).toBe('NULL');
     });
 
     it('accepts access that has not expired', async () => {
@@ -828,6 +946,15 @@ describe('DeviceTrackingService', () => {
         'session_key = :sessionKey',
         { sessionKey: 'sk-1' },
       );
+
+      const [deviceColumns] = deviceQueryBuilder.set.mock.calls[0] as [
+        { currentSessionKey: () => string },
+      ];
+      const [historyColumns] = historyQueryBuilder.set.mock.calls[0] as [
+        { endedAt: () => string },
+      ];
+      expect(deviceColumns.currentSessionKey()).toBe('NULL');
+      expect(historyColumns.endedAt()).toBe('CURRENT_TIMESTAMP');
     });
 
     it('lets the same session key be counted again afterwards', async () => {
@@ -887,8 +1014,24 @@ describe('DeviceTrackingService', () => {
       });
     });
 
+    it('names a device by its identifier when it has no name', async () => {
+      deviceRepo.find.mockResolvedValue([
+        device({
+          id: 1,
+          deviceName: null,
+          username: null,
+          lastSeen: new Date('2026-01-01T00:00:00Z'),
+        }),
+      ]);
+
+      const result = await service.cleanupInactiveDevices(30);
+      expect(result.deletedCount).toBe(1);
+    });
+
     it('skips a device with no last-seen date', async () => {
-      deviceRepo.find.mockResolvedValue([device({ id: 1, lastSeen: null })]);
+      deviceRepo.find.mockResolvedValue([
+        device({ id: 1, lastSeen: undefined }),
+      ]);
 
       const result = await service.cleanupInactiveDevices(30);
       expect(result.deletedCount).toBe(0);

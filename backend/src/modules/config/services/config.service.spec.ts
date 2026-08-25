@@ -1,16 +1,16 @@
 import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { AppSettings } from '../../../entities/app-settings.entity';
-import { Session } from '../../../entities/session.entity';
-import { PlexErrorCode } from '../../../types/plex-errors';
-import { ConfigService } from './config.service';
-import { EmailService } from './email.service';
-import { EmailTemplateService } from './email-template.service';
-import { PlexConnectionService } from './plex-connection.service';
-import { TimezoneService } from './timezone.service';
-import { DatabaseService } from './database.service';
-import { VersionService } from './version.service';
-import { AppriseService } from './apprise.service';
+import { AppSettings } from '@/entities/app-settings.entity';
+import { Session } from '@/entities/session.entity';
+import { PlexErrorCode } from '@/types/plex-errors';
+import { ConfigService } from '@/modules/config/services/config.service';
+import { EmailService } from '@/modules/config/services/email.service';
+import { EmailTemplateService } from '@/modules/config/services/email-template.service';
+import { PlexConnectionService } from '@/modules/config/services/plex-connection.service';
+import { TimezoneService } from '@/modules/config/services/timezone.service';
+import { DatabaseService } from '@/modules/config/services/database.service';
+import { VersionService } from '@/modules/config/services/version.service';
+import { AppriseService } from '@/modules/config/services/apprise.service';
 
 const flush = () => new Promise((resolve) => setImmediate(resolve));
 
@@ -19,7 +19,11 @@ describe('ConfigService', () => {
   let store: Map<string, AppSettings>;
   let settingsRepo: Record<string, jest.Mock>;
   let sessionRepo: { delete: jest.Mock };
-  let emailService: { testSMTPConnection: jest.Mock };
+  let emailService: {
+    testSMTPConnection: jest.Mock;
+    loadSmtpSettings: jest.Mock;
+    toSmtpConfig: jest.Mock;
+  };
   let plexConnectionService: { testConnection: jest.Mock };
   let timezoneService: Record<string, jest.Mock>;
   let databaseService: Record<string, jest.Mock>;
@@ -87,6 +91,27 @@ describe('ConfigService', () => {
       testSMTPConnection: jest
         .fn()
         .mockResolvedValue({ success: true, message: 'sent' }),
+      loadSmtpSettings: jest.fn().mockResolvedValue({
+        SMTP_ENABLED: false,
+        SMTP_HOST: 'smtp.example.com',
+        SMTP_PORT: 465,
+        SMTP_USER: 'guardian',
+        SMTP_PASSWORD: 'secret',
+        SMTP_FROM_EMAIL: 'from@example.com',
+        SMTP_FROM_NAME: 'Guardian',
+        SMTP_USE_TLS: true,
+        SMTP_TO_EMAILS: '',
+      }),
+      toSmtpConfig: jest.fn().mockReturnValue({
+        host: 'smtp.example.com',
+        port: 465,
+        user: 'guardian',
+        password: 'secret',
+        fromEmail: 'from@example.com',
+        fromName: 'Guardian',
+        useTLS: true,
+        toEmails: [],
+      }),
     };
 
     plexConnectionService = {
@@ -193,20 +218,28 @@ describe('ConfigService', () => {
       await expect(service.getSetting('DEFAULT_PAGE')).resolves.toBe('devices');
     });
 
-    it('parses a json setting', async () => {
-      store.set('EXTRA', row('EXTRA', '{"a":1}', 'json'));
+    it('parses a row stored as json', async () => {
+      store.set('CUSTOM_PLEX_URL', row('CUSTOM_PLEX_URL', '{"a":1}', 'json'));
       const fresh = await build();
-      await expect(fresh.getSetting('EXTRA')).resolves.toEqual({ a: 1 });
+      await expect(fresh.getSetting('CUSTOM_PLEX_URL')).resolves.toEqual({
+        a: 1,
+      });
     });
 
     it('falls back to the raw string when json will not parse', async () => {
-      store.set('EXTRA', row('EXTRA', 'not json', 'json'));
+      store.set('CUSTOM_PLEX_URL', row('CUSTOM_PLEX_URL', 'not json', 'json'));
       const fresh = await build();
-      await expect(fresh.getSetting('EXTRA')).resolves.toBe('not json');
+      await expect(fresh.getSetting('CUSTOM_PLEX_URL')).resolves.toBe(
+        'not json',
+      );
     });
 
-    it('returns null for a key that does not exist', async () => {
-      await expect(service.getSetting('NOPE')).resolves.toBeNull();
+    it('returns null for a declared key with no stored row', async () => {
+      settingsRepo.find.mockResolvedValueOnce([]);
+      const fresh = await build();
+
+      settingsRepo.findOne.mockResolvedValueOnce(null);
+      await expect(fresh.getSetting('CUSTOM_PLEX_URL')).resolves.toBeNull();
     });
 
     it('serves repeat reads from the cache', async () => {
@@ -214,6 +247,72 @@ describe('ConfigService', () => {
       await service.getSetting('DEFAULT_PAGE');
       await service.getSetting('DEFAULT_PAGE');
       expect(settingsRepo.findOne).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('rows the database returns oddly', () => {
+    it('ignores a stored key this build no longer declares', async () => {
+      settingsRepo.find.mockResolvedValueOnce([
+        row('DEFAULT_PAGE', 'devices'),
+        row('RETIRED_SETTING', 'x'),
+      ]);
+      const fresh = await build();
+
+      settingsRepo.findOne.mockResolvedValueOnce(null);
+      await expect(fresh.getSetting('DEFAULT_PAGE')).resolves.toBe('devices');
+    });
+
+    it.each<[string, string | number | boolean]>([
+      ['string', ''],
+      ['boolean', false],
+      ['number', Number.NaN],
+    ])('reads a null %s column as %p', async (type, expected) => {
+      const nulled = row('CUSTOM_PLEX_URL', '', type);
+      nulled.value = null;
+      settingsRepo.find.mockResolvedValueOnce([nulled]);
+      const fresh = await build();
+
+      const value = await fresh.getSetting('CUSTOM_PLEX_URL');
+      if (typeof expected === 'number') {
+        expect(Number.isNaN(value as unknown as number)).toBe(true);
+      } else {
+        expect(value).toBe(expected);
+      }
+    });
+
+    it('reads a null json column as null', async () => {
+      const nulled = row('CUSTOM_PLEX_URL', '', 'json');
+      nulled.value = null;
+      settingsRepo.find.mockResolvedValueOnce([nulled]);
+      const fresh = await build();
+
+      await expect(fresh.getSetting('CUSTOM_PLEX_URL')).resolves.toBeNull();
+    });
+  });
+
+  describe('config change listeners', () => {
+    it('does nothing when removing a listener that was never added', () => {
+      const listener = jest.fn();
+      service.addConfigChangeListener('TIMEZONE', listener);
+
+      expect(() =>
+        service.removeConfigChangeListener('TIMEZONE', jest.fn()),
+      ).not.toThrow();
+    });
+
+    it('does nothing when removing from a key with no listeners', () => {
+      expect(() =>
+        service.removeConfigChangeListener('DEFAULT_PAGE', jest.fn()),
+      ).not.toThrow();
+    });
+
+    it('removes a listener that was added', async () => {
+      const listener = jest.fn();
+      service.addConfigChangeListener('TIMEZONE', listener);
+      service.removeConfigChangeListener('TIMEZONE', listener);
+
+      await service.updateSetting('TIMEZONE', '+02:00');
+      expect(listener).not.toHaveBeenCalled();
     });
   });
 
@@ -255,7 +354,7 @@ describe('ConfigService', () => {
       ['SMTP_FROM_EMAIL', 'not-an-email', 'valid email address'],
       ['SMTP_TO_EMAILS', 'ok@example.com, bad', 'Invalid email address: bad'],
       ['DEFAULT_PAGE', 'settings', 'devices" or "streams'],
-    ])('rejects %s = %p', async (key, value, message) => {
+    ] as const)('rejects %s = %p', async (key, value, message) => {
       await expect(service.updateSetting(key, value)).rejects.toThrow(message);
     });
 
@@ -267,14 +366,16 @@ describe('ConfigService', () => {
       ['SMTP_TO_EMAILS', 'a@example.com; b@example.com\nc@example.com'],
       ['SMTP_TO_EMAILS', ''],
       ['DEFAULT_PAGE', 'streams'],
-    ])('accepts %s = %p', async (key, value) => {
+    ] as const)('accepts %s = %p', async (key, value) => {
       await expect(service.updateSetting(key, value)).resolves.toBeDefined();
     });
 
-    it('refuses to create a setting that was never declared', async () => {
-      await expect(service.updateSetting('MADE_UP', 'x')).rejects.toThrow(
-        'Setting MADE_UP not found',
-      );
+    it('refuses to write a declared setting with no stored row', async () => {
+      store.delete('CUSTOM_PLEX_URL');
+      settingsRepo.findOne.mockResolvedValueOnce(null);
+      await expect(
+        service.updateSetting('CUSTOM_PLEX_URL', 'x'),
+      ).rejects.toThrow('Setting CUSTOM_PLEX_URL not found');
     });
   });
 
@@ -292,13 +393,15 @@ describe('ConfigService', () => {
     });
 
     it('serialises an object value as json', async () => {
-      store.set('EXTRA', row('EXTRA', '{}', 'json'));
+      store.set('CUSTOM_PLEX_URL', row('CUSTOM_PLEX_URL', '{}', 'json'));
       const fresh = await build();
 
-      await fresh.updateSetting('EXTRA', { a: 1 });
+      await fresh.updateSetting('CUSTOM_PLEX_URL', { a: 1 });
 
-      expect(store.get('EXTRA')?.value).toBe('{"a":1}');
-      await expect(fresh.getSetting('EXTRA')).resolves.toEqual({ a: 1 });
+      expect(store.get('CUSTOM_PLEX_URL')?.value).toBe('{"a":1}');
+      await expect(fresh.getSetting('CUSTOM_PLEX_URL')).resolves.toEqual({
+        a: 1,
+      });
     });
 
     it('bumps the updated timestamp', async () => {
@@ -470,66 +573,43 @@ describe('ConfigService', () => {
   });
 
   describe('testSMTPConnection', () => {
-    it('builds the SMTP config from the stored settings', async () => {
-      await service.updateMultipleSettings([
-        { key: 'SMTP_HOST', value: 'smtp.example.com' },
-        { key: 'SMTP_PORT', value: '465' },
-        { key: 'SMTP_USER', value: 'guardian' },
-        { key: 'SMTP_FROM_EMAIL', value: 'from@example.com' },
-      ]);
+    it('hands the loaded settings to the email service', async () => {
+      await service.testSMTPConnection();
 
+      expect(emailService.loadSmtpSettings).toHaveBeenCalled();
+      expect(emailService.toSmtpConfig).toHaveBeenCalledWith(
+        await emailService.loadSmtpSettings.mock.results[0].value,
+      );
+    });
+
+    it('forwards the config, the enabled flag and a timestamp', async () => {
       await service.testSMTPConnection();
 
       expect(emailService.testSMTPConnection).toHaveBeenCalledWith(
-        expect.objectContaining({
-          host: 'smtp.example.com',
-          port: 465,
-          user: 'guardian',
-          fromEmail: 'from@example.com',
-        }),
+        expect.objectContaining({ host: 'smtp.example.com', port: 465 }),
         false,
         '2026-08-21 12:00:00',
       );
     });
 
-    it('honours the boolean TLS setting', async () => {
-      await service.testSMTPConnection();
-
-      expect(emailService.testSMTPConnection).toHaveBeenCalledWith(
-        expect.objectContaining({ useTLS: true }),
-        expect.anything(),
-        expect.anything(),
-      );
-    });
-
-    it('splits the recipient list on commas, semicolons and newlines', async () => {
-      await service.updateSetting(
-        'SMTP_TO_EMAILS',
-        'a@example.com, b@example.com;c@example.com\nd@example.com',
-      );
+    it('passes the enabled flag through as stored', async () => {
+      emailService.loadSmtpSettings.mockResolvedValue({
+        SMTP_ENABLED: true,
+        SMTP_HOST: 'smtp.example.com',
+        SMTP_PORT: 465,
+        SMTP_USER: '',
+        SMTP_PASSWORD: '',
+        SMTP_FROM_EMAIL: '',
+        SMTP_FROM_NAME: '',
+        SMTP_USE_TLS: true,
+        SMTP_TO_EMAILS: '',
+      });
 
       await service.testSMTPConnection();
 
       expect(emailService.testSMTPConnection).toHaveBeenCalledWith(
-        expect.objectContaining({
-          toEmails: [
-            'a@example.com',
-            'b@example.com',
-            'c@example.com',
-            'd@example.com',
-          ],
-        }),
         expect.anything(),
-        expect.anything(),
-      );
-    });
-
-    it('sends an empty recipient list when none are configured', async () => {
-      await service.testSMTPConnection();
-
-      expect(emailService.testSMTPConnection).toHaveBeenCalledWith(
-        expect.objectContaining({ toEmails: [] }),
-        expect.anything(),
+        true,
         expect.anything(),
       );
     });
@@ -541,6 +621,45 @@ describe('ConfigService', () => {
         success: false,
         message: 'Unexpected error: no route',
       });
+    });
+  });
+
+  describe('settings that were never written', () => {
+    it('dials Plex with empty strings rather than nulls', async () => {
+      settingsRepo.find.mockResolvedValueOnce([]);
+      const fresh = await build();
+      settingsRepo.findOne.mockResolvedValue(null);
+
+      await fresh.testPlexConnection();
+
+      expect(plexConnectionService.testConnection).toHaveBeenCalledWith(
+        '',
+        '',
+        '',
+        false,
+        false,
+      );
+    });
+
+    it('exports with an empty version rather than a null', async () => {
+      settingsRepo.find.mockResolvedValueOnce([]);
+      const fresh = await build();
+      settingsRepo.findOne.mockResolvedValue(null);
+
+      await fresh.exportDatabase();
+
+      expect(databaseService.exportDatabase).toHaveBeenCalledWith('');
+    });
+
+    it('reports the build version when none is stored', async () => {
+      settingsRepo.find.mockResolvedValueOnce([]);
+      const fresh = await build();
+      settingsRepo.findOne.mockResolvedValue(null);
+      versionService.getCurrentAppVersion.mockReturnValue('9.9.9');
+
+      await fresh.getVersionInfo();
+
+      expect(versionService.getVersionInfo).toHaveBeenCalledWith('9.9.9');
     });
   });
 
@@ -626,7 +745,9 @@ describe('ConfigService', () => {
     it('imports and reloads the cache', async () => {
       settingsRepo.find.mockClear();
 
-      await expect(service.importDatabase({ settings: [] })).resolves.toEqual({
+      await expect(
+        service.importDatabase({ data: { settings: [] } }),
+      ).resolves.toEqual({
         imported: 5,
         skipped: 1,
       });
@@ -634,7 +755,7 @@ describe('ConfigService', () => {
     });
 
     it('hands the importer the running version and a comparator', async () => {
-      await service.importDatabase({ settings: [] });
+      await service.importDatabase({ data: { settings: [] } });
 
       const [, version, compare] = databaseService.importDatabase.mock.calls[0];
       expect(version).toBe('1.3.5');

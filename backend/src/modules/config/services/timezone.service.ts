@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { errorMessage } from '@/common/utils/error-types';
 
 @Injectable()
 export class TimezoneService {
@@ -30,7 +31,7 @@ export class TimezoneService {
       return localTime;
     } catch (error) {
       this.logger.warn(
-        `Invalid timezone offset ${timezoneOffset}, falling back to UTC: ${error.message}`,
+        `Invalid timezone offset ${timezoneOffset}, falling back to UTC: ${errorMessage(error)}`,
       );
       return new Date();
     }

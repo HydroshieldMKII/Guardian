@@ -1,5 +1,5 @@
 import { Test } from '@nestjs/testing';
-import { TimezoneService } from './timezone.service';
+import { TimezoneService } from '@/modules/config/services/timezone.service';
 
 describe('TimezoneService', () => {
   let service: TimezoneService;

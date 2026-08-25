@@ -6,7 +6,7 @@
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
-    "build": "nest build",
+    "build": "nest build && tsc-alias -p tsconfig.build.json",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",
@@ -18,7 +18,8 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "lint:ci": "eslint \"{src,apps,libs,test}/**/*.ts\" --no-fix"
+    "lint:ci": "eslint \"{src,apps,libs,test}/**/*.ts\" --no-fix",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
     "@nestjs/common": "^11.2.1",
@@ -72,6 +73,7 @@
     "ts-jest": "^29.4.12",
     "ts-loader": "^9.6.2",
     "ts-node": "^10.9.2",
+    "tsc-alias": "^1.9.2",
     "tsconfig-paths": "^4.2.0",
     "typescript": "^5.7.3",
     "typescript-eslint": "^8.67.0"
@@ -84,6 +86,9 @@
     ],
     "rootDir": "src",
     "testRegex": ".*\\.spec\\.ts$",
+    "moduleNameMapper": {
+      "^@/(.*)$": "<rootDir>/$1"
+    },
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"
     },
@@ -105,10 +110,10 @@
     ],
     "coverageThreshold": {
       "global": {
-        "statements": 78,
-        "branches": 72,
-        "functions": 73,
-        "lines": 77
+        "statements": 98,
+        "branches": 90,
+        "functions": 98,
+        "lines": 98
       }
     },
     "testEnvironment": "node",

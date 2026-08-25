@@ -9,7 +9,7 @@ export class AppSettings {
   key: string;
 
   @Column({ type: 'text', nullable: true })
-  value: string;
+  value: string | null;
 
   @Column({ default: 'string' })
   type: 'string' | 'number' | 'boolean' | 'json';

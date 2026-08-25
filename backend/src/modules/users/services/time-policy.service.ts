@@ -1,8 +1,8 @@
 import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { UserTimeRule } from '../../../entities/user-time-rule.entity';
-import { ConfigService } from '../../config/services/config.service';
+import { UserTimeRule } from '@/entities/user-time-rule.entity';
+import { ConfigService } from '@/modules/config/services/config.service';
 
 export interface CreateTimePolicyDto {
   userId: string;

@@ -1,11 +1,19 @@
 import { Injectable, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { UserPreference } from '../../../entities/user-preference.entity';
-import { UserDevice } from '../../../entities/user-device.entity';
-import { ConfigService } from '../../config/services/config.service';
-import { PlexClient } from '../../plex/services/plex-client';
+import { UserPreference } from '@/entities/user-preference.entity';
+import { UserDevice } from '@/entities/user-device.entity';
+import { ConfigService } from '@/modules/config/services/config.service';
+import { PlexClient } from '@/modules/plex/services/plex-client';
 import { Logger } from '@nestjs/common';
+
+interface PlexTvUser {
+  id?: string;
+  username?: string;
+  title?: string;
+  friendlyName?: string;
+  thumb?: string;
+}
 
 @Injectable()
 export class UsersService {
@@ -80,9 +88,9 @@ export class UsersService {
 
   // Create user if not exists
   async updateUserFromSessionData(
-    userId: string,
-    username?: string,
-    _avatarUrl?: string,
+    userId: string | null,
+    username?: string | null,
+    _avatarUrl?: string | null,
   ): Promise<void> {
     if (!userId) return;
 
@@ -227,12 +235,12 @@ export class UsersService {
     const defaultBlock = await this.configService.getSetting(
       'PLEX_GUARD_DEFAULT_BLOCK',
     );
-    return defaultBlock;
+    return defaultBlock ?? false;
   }
 
-  private parseUsersFromXML(xmlString: string): any[] {
+  private parseUsersFromXML(xmlString: string): PlexTvUser[] {
     try {
-      const users: any[] = [];
+      const users: PlexTvUser[] = [];
       const userMatches = xmlString.match(/<User[^>]*>/g);
 
       if (!userMatches) {
@@ -241,7 +249,7 @@ export class UsersService {
       }
 
       for (const userMatch of userMatches) {
-        const user: any = {};
+        const user: PlexTvUser = {};
 
         // Extract attributes from the User element
         const idMatch = userMatch.match(/id="([^"]*)"/);
@@ -287,18 +295,10 @@ export class UsersService {
         return { updated: 0, created: 0, errors: 1 };
       }
 
-      // Parse XML response
-      let users: any[] = [];
-      if (typeof response === 'string') {
-        this.logger.debug('Parsing XML response from Plex.tv');
-        users = this.parseUsersFromXML(response);
-      } else if (response.users) {
-        users = Array.isArray(response.users)
-          ? response.users
-          : [response.users];
-      }
+      this.logger.debug('Parsing XML response from Plex.tv');
+      const users = this.parseUsersFromXML(response);
 
-      if (!users || users.length === 0) {
+      if (users.length === 0) {
         this.logger.warn('No users found in Plex.tv API response');
         return { updated: 0, created: 0, errors: 1 };
       }
@@ -307,15 +307,15 @@ export class UsersService {
       // Process each user
       for (const user of users) {
         try {
-          const userId = String(user.id);
-          const username = user.username || user.title || user.friendlyName;
-          const avatarUrl = user.thumb;
-
-          if (!userId) {
+          if (!user.id) {
             this.logger.warn('Skipping user with no ID', user);
             errors++;
             continue;
           }
+
+          const userId = String(user.id);
+          const username = user.username || user.title || user.friendlyName;
+          const avatarUrl = user.thumb;
 
           // Check if user exists to track creates vs updates
           const existingUser = await this.userPreferenceRepository.findOne({
@@ -323,18 +323,15 @@ export class UsersService {
           });
 
           // Prepare user data for upsert
-          const userData = {
+          const userData: Partial<UserPreference> = {
             userId,
             username,
             avatarUrl,
             // Only set defaultBlock for new users, preserve existing preference
-            ...(existingUser ? {} : { defaultBlock: null }),
+            ...(existingUser
+              ? { id: existingUser.id }
+              : { defaultBlock: null }),
           };
-
-          // Include id for existing users to avoid the TypeORM error
-          if (existingUser) {
-            userData['id'] = existingUser.id;
-          }
 
           // Upsert user preference
           await this.userPreferenceRepository.upsert(userData, {

@@ -1,7 +1,7 @@
 import { Test } from '@nestjs/testing';
-import { UsersController } from './users.controller';
-import { UsersService } from './services/users.service';
-import { ConcurrentStreamService } from './services/concurrent-stream.service';
+import { UsersController } from '@/modules/users/users.controller';
+import { UsersService } from '@/modules/users/services/users.service';
+import { ConcurrentStreamService } from '@/modules/users/services/concurrent-stream.service';
 
 describe('UsersController', () => {
   let controller: UsersController;

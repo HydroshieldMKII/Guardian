@@ -1,9 +1,13 @@
 import { ExecutionContext } from '@nestjs/common';
 import { ROUTE_ARGS_METADATA } from '@nestjs/common/constants';
 import { Request } from 'express';
-import { ADMIN_ONLY_KEY, AdminOnly } from './admin-only.decorator';
-import { PUBLIC_KEY, Public } from './public.decorator';
-import { CurrentUser } from './current-user.decorator';
+import {
+  ADMIN_ONLY_KEY,
+  AdminOnly,
+} from '@/modules/auth/decorators/admin-only.decorator';
+import { PUBLIC_KEY, Public } from '@/modules/auth/decorators/public.decorator';
+import { CurrentUser } from '@/modules/auth/decorators/current-user.decorator';
+import { PlexUserSession } from '@/modules/auth/session-user.types';
 
 describe('Public', () => {
   it('stamps the public flag onto a handler', () => {
@@ -70,13 +74,20 @@ describe('CurrentUser', () => {
     return Object.values(metadata)[0].factory;
   };
 
-  const contextFor = (request: Partial<Request>) =>
-    ({
-      switchToHttp: () => ({ getRequest: () => request }),
-    }) as ExecutionContext;
+  const contextFor = (request: Partial<Request>) => {
+    const stub: Pick<ExecutionContext, 'switchToHttp'> = {
+      switchToHttp: () => ({ getRequest: () => request }) as never,
+    };
+    return stub as ExecutionContext;
+  };
 
   it('returns the user attached to the request', () => {
-    const user = { userType: 'admin' };
+    const user: PlexUserSession = {
+      sessionId: 'session-1',
+      userType: 'plex_user',
+      plexUserId: '9',
+      plexUsername: 'guest',
+    };
     expect(extractFactory()(undefined, contextFor({ user }))).toBe(user);
   });
 

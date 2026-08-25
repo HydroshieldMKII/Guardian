@@ -2,9 +2,9 @@ import { EventEmitter } from 'events';
 import { BadRequestException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { AdminUser } from '../../entities/admin-user.entity';
-import { UserPreference } from '../../entities/user-preference.entity';
-import { PlexOAuthService } from './plex-oauth.service';
+import { AdminUser } from '@/entities/admin-user.entity';
+import { UserPreference } from '@/entities/user-preference.entity';
+import { PlexOAuthService } from '@/modules/auth/plex-oauth.service';
 
 const mockHttpsRequest = jest.fn();
 
@@ -429,13 +429,6 @@ describe('PlexOAuthService', () => {
 
     it('reports Plex OAuth as disabled when no link exists', async () => {
       await expect(service.hasPlexOAuthEnabled()).resolves.toBe(false);
-    });
-
-    it('looks an admin up by their linked Plex id', async () => {
-      await service.isPlexAccountLinkedToAdmin('9');
-      expect(adminRepo.findOne).toHaveBeenCalledWith({
-        where: { plexUserId: '9' },
-      });
     });
   });
 

@@ -27,24 +27,22 @@ interface UpdateInfo {
   releaseNotes?: string;
 }
 
+type UpdateCheckResult = {
+  hasUpdate: boolean;
+  latestVersion?: string;
+  currentVersion?: string;
+  updateUrl?: string;
+  releaseNotes?: string;
+};
+
 interface VersionContextType {
   versionInfo: VersionInfo | null;
   updateInfo: UpdateInfo | null;
   loading: boolean;
   error: string | null;
   refreshVersionInfo: () => Promise<void>;
-  checkForUpdatesIfEnabled: () => Promise<{
-    hasUpdate: boolean;
-    latestVersion?: string;
-    currentVersion?: string;
-    updateUrl?: string;
-  } | null>;
-  checkForUpdatesManually: () => Promise<{
-    hasUpdate: boolean;
-    latestVersion?: string;
-    currentVersion?: string;
-    updateUrl?: string;
-  } | null>;
+  checkForUpdatesIfEnabled: () => Promise<UpdateCheckResult | null>;
+  checkForUpdatesManually: () => Promise<UpdateCheckResult | null>;
   clearUpdateInfo: () => void;
 }
 

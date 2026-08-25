@@ -1,10 +1,5 @@
-import {
-  IsEmail,
-  IsString,
-  MinLength,
-  Matches,
-  ValidateIf,
-} from 'class-validator';
+import { IsEmail, IsString, MinLength, ValidateIf } from 'class-validator';
+import { StrongPassword } from '@/modules/auth/dto/strong-password.decorator';
 
 export class CreateAdminDto {
   @IsString()
@@ -18,15 +13,7 @@ export class CreateAdminDto {
   @IsEmail()
   email?: string;
 
-  @IsString()
-  @MinLength(12)
-  @Matches(
-    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};:'",./<>?\\|~])[A-Za-z\d!@#$%^&*()_+\-=[\]{};:'",./<>?\\|~]{12,128}$/,
-    {
-      message:
-        'Password must contain uppercase, lowercase, number, and special character. Minimum length is 12 characters.',
-    },
-  )
+  @StrongPassword()
   password: string;
 
   @IsString()

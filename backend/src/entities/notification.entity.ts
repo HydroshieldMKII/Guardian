@@ -8,7 +8,7 @@ import {
   JoinColumn,
   Index,
 } from 'typeorm';
-import { SessionHistory } from './session-history.entity';
+import { SessionHistory } from '@/entities/session-history.entity';
 
 @Entity('notifications')
 @Index(['userId', 'createdAt'])
@@ -20,8 +20,8 @@ export class Notification {
   @Column({ name: 'user_id' })
   userId: string;
 
-  @Column({ name: 'session_history_id', nullable: true })
-  sessionHistoryId?: number;
+  @Column({ type: 'int', name: 'session_history_id', nullable: true })
+  sessionHistoryId?: number | null;
 
   @ManyToOne(() => SessionHistory, {
     eager: false,
@@ -29,7 +29,7 @@ export class Notification {
     onDelete: 'SET NULL',
   })
   @JoinColumn({ name: 'session_history_id' })
-  sessionHistory?: SessionHistory;
+  sessionHistory?: SessionHistory | null;
 
   @Column({ name: 'text', type: 'text' })
   text: string;

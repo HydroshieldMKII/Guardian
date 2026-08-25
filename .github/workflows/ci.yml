@@ -32,6 +32,8 @@ jobs:
 
       - run: npm run lint:ci
 
+      - run: npm run typecheck
+
       - run: npm run test:cov
 
       - run: npm run build
@@ -40,7 +42,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: backend-coverage
-          path: coverage
+          path: backend/coverage
           retention-days: 7
 
   frontend:

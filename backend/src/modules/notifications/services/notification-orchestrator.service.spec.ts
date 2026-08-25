@@ -1,10 +1,10 @@
 import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { SessionHistory } from '../../../entities/session-history.entity';
-import { UserDevice } from '../../../entities/user-device.entity';
-import { NotificationsService } from './notifications.service';
-import { NotificationOrchestratorService } from './notification-orchestrator.service';
+import { SessionHistory } from '@/entities/session-history.entity';
+import { UserDevice } from '@/entities/user-device.entity';
+import { NotificationsService } from '@/modules/notifications/services/notifications.service';
+import { NotificationOrchestratorService } from '@/modules/notifications/services/notification-orchestrator.service';
 
 const history = (overrides: Partial<SessionHistory> = {}): SessionHistory =>
   Object.assign(new SessionHistory(), {
@@ -75,6 +75,25 @@ describe('NotificationOrchestratorService', () => {
 
     it('returns the created notification', async () => {
       await expect(service.notifyNewDevice(data)).resolves.toEqual({ id: 1 });
+    });
+
+    it('substitutes placeholders for details Plex never reported', async () => {
+      await service.notifyNewDevice({
+        userId: 'u1',
+        username: null,
+        deviceName: null,
+        ipAddress: null,
+      });
+
+      expect(
+        notificationsService.createNewDeviceNotification,
+      ).toHaveBeenCalledWith(
+        'u1',
+        'Unknown User',
+        'Unknown Device',
+        'Unknown IP',
+        undefined,
+      );
     });
 
     it('rethrows a downstream failure', async () => {
@@ -194,6 +213,48 @@ describe('NotificationOrchestratorService', () => {
         new Error('boom'),
       );
       await expect(service.notifyStreamBlocked(data)).rejects.toThrow('boom');
+    });
+  });
+
+  describe('placeholder substitution', () => {
+    it('substitutes placeholders on a blocked stream', async () => {
+      await service.notifyStreamBlocked({
+        userId: 'u1',
+        username: null,
+        deviceIdentifier: 'dev-1',
+      });
+
+      expect(
+        notificationsService.createStreamBlockedNotification,
+      ).toHaveBeenCalledWith(
+        'u1',
+        'Unknown User',
+        'dev-1',
+        undefined,
+        undefined,
+        undefined,
+      );
+    });
+
+    it('substitutes placeholders on a location change', async () => {
+      await service.notifyLocationChange({
+        userId: 'u1',
+        username: null,
+        deviceName: null,
+        oldIpAddress: null,
+        newIpAddress: null,
+      });
+
+      expect(
+        notificationsService.createLocationChangeNotification,
+      ).toHaveBeenCalledWith(
+        'u1',
+        'Unknown User',
+        'Unknown Device',
+        'Unknown IP',
+        'Unknown IP',
+        undefined,
+      );
     });
   });
 

@@ -1,15 +1,16 @@
 import {
   ExecutionContext,
   ForbiddenException,
+  Type,
   UnauthorizedException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Request } from 'express';
-import { AuthService } from '../auth.service';
-import { ConfigService } from '../../config/services/config.service';
-import { PUBLIC_KEY } from '../decorators/public.decorator';
-import { ADMIN_ONLY_KEY } from '../decorators/admin-only.decorator';
-import { AuthGuard } from './auth.guard';
+import { AuthService } from '@/modules/auth/auth.service';
+import { ConfigService } from '@/modules/config/services/config.service';
+import { PUBLIC_KEY } from '@/modules/auth/decorators/public.decorator';
+import { ADMIN_ONLY_KEY } from '@/modules/auth/decorators/admin-only.decorator';
+import { AuthGuard } from '@/modules/auth/guards/auth.guard';
 
 const adminUser = { userType: 'admin', sessionId: 's1', username: 'admin' };
 const plexUser = {
@@ -26,12 +27,18 @@ describe('AuthGuard', () => {
   let reflector: { get: jest.Mock };
   let request: Partial<Request>;
 
-  const context = () =>
-    ({
-      switchToHttp: () => ({ getRequest: () => request }),
+  class RouteController {}
+
+  const context = () => {
+    const stub: Pick<ExecutionContext, 'switchToHttp' | 'getHandler'> & {
+      getClass: () => Type<RouteController>;
+    } = {
+      switchToHttp: () => ({ getRequest: () => request }) as never,
       getHandler: () => () => undefined,
-      getClass: () => class {},
-    }) as ExecutionContext;
+      getClass: () => RouteController,
+    };
+    return stub as ExecutionContext;
+  };
 
   const setMetadata = (key: string, value: boolean) => {
     reflector.get.mockImplementation((metadataKey: string) =>

@@ -6,10 +6,10 @@ import {
 import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
-import { AdminUser } from '../../entities/admin-user.entity';
-import { Session } from '../../entities/session.entity';
-import { AppSettings } from '../../entities/app-settings.entity';
-import { AuthService } from './auth.service';
+import { AdminUser } from '@/entities/admin-user.entity';
+import { Session } from '@/entities/session.entity';
+import { AppSettings } from '@/entities/app-settings.entity';
+import { AuthService } from '@/modules/auth/auth.service';
 
 jest.mock('bcrypt');
 
@@ -18,7 +18,12 @@ const compare = jest.mocked(bcrypt.compare);
 
 describe('AuthService', () => {
   let service: AuthService;
-  let adminRepo: Record<string, jest.Mock>;
+  let adminRepo: {
+    count: jest.Mock;
+    save: jest.Mock;
+    findOne: jest.Mock;
+    manager: { transaction: jest.Mock };
+  };
   let sessionRepo: Record<string, jest.Mock>;
   let settingsRepo: { findOne: jest.Mock };
   let deleteQueryBuilder: Record<string, jest.Mock>;
@@ -65,6 +70,12 @@ describe('AuthService', () => {
         ...entity,
       })),
       findOne: jest.fn().mockResolvedValue({ ...admin }),
+      manager: {
+        transaction: jest.fn(
+          async (run: (manager: { getRepository: () => unknown }) => unknown) =>
+            run({ getRepository: () => adminRepo }),
+        ),
+      },
     };
 
     sessionRepo = {
@@ -132,6 +143,15 @@ describe('AuthService', () => {
       await expect(service.createAdmin(dto)).rejects.toThrow(
         BadRequestException,
       );
+    });
+
+    it('re-checks for an existing admin inside the transaction', async () => {
+      adminRepo.count.mockResolvedValueOnce(0).mockResolvedValueOnce(1);
+
+      await expect(service.createAdmin(dto)).rejects.toThrow(
+        'Admin user already exists',
+      );
+      expect(adminRepo.save).not.toHaveBeenCalled();
     });
 
     it('refuses mismatched passwords', async () => {
@@ -298,6 +318,28 @@ describe('AuthService', () => {
 
       const saved = sessionRepo.save.mock.calls[0][0];
       expect(saved.lastActivityAt.getTime()).toBeGreaterThanOrEqual(before);
+    });
+
+    it('leaves lastActivityAt alone on a burst of requests', async () => {
+      sessionRepo.findOne.mockResolvedValue({
+        ...storedSession,
+        lastActivityAt: new Date(),
+      });
+      sessionRepo.save.mockClear();
+
+      await service.validateSession('token-1');
+      expect(sessionRepo.save).not.toHaveBeenCalled();
+    });
+
+    it('refreshes a session that has never recorded activity', async () => {
+      sessionRepo.findOne.mockResolvedValue({
+        ...storedSession,
+        lastActivityAt: null,
+      });
+      sessionRepo.save.mockClear();
+
+      await service.validateSession('token-1');
+      expect(sessionRepo.save).toHaveBeenCalled();
     });
 
     it('returns null for an unknown token', async () => {

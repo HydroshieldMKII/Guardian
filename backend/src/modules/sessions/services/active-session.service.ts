@@ -1,12 +1,16 @@
 import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { SessionHistory } from '../../../entities/session-history.entity';
-import { UserDevice } from '../../../entities/user-device.entity';
-import { UserPreference } from '../../../entities/user-preference.entity';
-import { DeviceTrackingService } from '../../devices/services/device-tracking.service';
-import { PlexClient } from '../../plex/services/plex-client';
-import { NotificationOrchestratorService } from '../../notifications/services/notification-orchestrator.service';
+import { SessionHistory } from '@/entities/session-history.entity';
+import { UserDevice } from '@/entities/user-device.entity';
+import { UserPreference } from '@/entities/user-preference.entity';
+import { DeviceTrackingService } from '@/modules/devices/services/device-tracking.service';
+import { PlexClient } from '@/modules/plex/services/plex-client';
+import { NotificationOrchestratorService } from '@/modules/notifications/services/notification-orchestrator.service';
+import {
+  EnrichedPlexSessionsResponse,
+  PlexSessionsResponse,
+} from '@/types/plex.types';
 
 interface PlexSessionData {
   sessionKey: string;
@@ -68,7 +72,9 @@ export class ActiveSessionService {
   ) {}
 
   // Update active sessions in the database based on the latest sessions data from Plex
-  async updateActiveSessions(sessionsData: any): Promise<void> {
+  async updateActiveSessions(
+    sessionsData: PlexSessionsResponse | null | undefined,
+  ): Promise<void> {
     try {
       const sessions = this.extractSessionsFromData(sessionsData);
 
@@ -290,7 +296,7 @@ export class ActiveSessionService {
     }
   }
 
-  async getActiveSessionsFormatted(): Promise<any> {
+  async getActiveSessionsFormatted(): Promise<EnrichedPlexSessionsResponse> {
     try {
       const sessions = await this.getActiveSessions();
       const serverIdentifier = await this.plexClient.getServerIdentity();
@@ -355,7 +361,7 @@ export class ActiveSessionService {
           Metadata: transformedSessions,
         },
       };
-    } catch (error: any) {
+    } catch (error) {
       this.logger.error('Error getting active sessions formatted', error);
       throw error;
     }

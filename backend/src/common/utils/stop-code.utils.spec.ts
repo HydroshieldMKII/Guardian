@@ -1,4 +1,4 @@
-import { StopCodeUtils } from './stop-code.utils';
+import { StopCodeUtils } from '@/common/utils/stop-code.utils';
 
 describe('StopCodeUtils', () => {
   describe('getStopCodeDescription', () => {

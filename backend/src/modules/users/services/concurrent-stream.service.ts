@@ -1,15 +1,15 @@
 import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { UserDevice } from '../../../entities/user-device.entity';
-import { UserPreference } from '../../../entities/user-preference.entity';
-import { ConfigService } from '../../config/services/config.service';
-import { DeviceTrackingService } from '../../devices/services/device-tracking.service';
+import { UserDevice } from '@/entities/user-device.entity';
+import { UserPreference } from '@/entities/user-preference.entity';
+import { ConfigService } from '@/modules/config/services/config.service';
+import { DeviceTrackingService } from '@/modules/devices/services/device-tracking.service';
 import {
   PlexSessionsResponse,
   PlexSession,
   isPlexampSession,
-} from '../../../types/plex.types';
+} from '@/types/plex.types';
 
 /**
  * Concurrent Stream Service

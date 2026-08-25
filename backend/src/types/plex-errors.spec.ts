@@ -3,7 +3,7 @@ import {
   PlexErrorCode,
   createPlexError,
   createPlexSuccess,
-} from './plex-errors';
+} from '@/types/plex-errors';
 
 describe('createPlexError', () => {
   it('marks the response as unsuccessful', () => {

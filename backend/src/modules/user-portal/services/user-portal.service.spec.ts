@@ -1,12 +1,12 @@
 import { ForbiddenException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { UserDevice } from '../../../entities/user-device.entity';
-import { UserTimeRule } from '../../../entities/user-time-rule.entity';
-import { UserPreference } from '../../../entities/user-preference.entity';
-import { AppSettings } from '../../../entities/app-settings.entity';
-import { NotificationsService } from '../../notifications/services/notifications.service';
-import { UserPortalService } from './user-portal.service';
+import { UserDevice } from '@/entities/user-device.entity';
+import { UserTimeRule } from '@/entities/user-time-rule.entity';
+import { UserPreference } from '@/entities/user-preference.entity';
+import { AppSettings } from '@/entities/app-settings.entity';
+import { NotificationsService } from '@/modules/notifications/services/notifications.service';
+import { UserPortalService } from '@/modules/user-portal/services/user-portal.service';
 
 describe('UserPortalService', () => {
   let service: UserPortalService;
@@ -135,7 +135,7 @@ describe('UserPortalService', () => {
         requestDescription: undefined,
         requestSubmittedAt: undefined,
         requestNoteReadAt: undefined,
-        hasTemporaryAccess: null,
+        hasTemporaryAccess: false,
         temporaryAccessUntil: undefined,
         temporaryAccessBypassPolicies: undefined,
         excludeFromConcurrentLimit: false,

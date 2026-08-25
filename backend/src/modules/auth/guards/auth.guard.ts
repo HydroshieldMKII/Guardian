@@ -7,10 +7,11 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Request } from 'express';
-import { AuthService } from '../auth.service';
-import { ConfigService } from '../../config/services/config.service';
-import { PUBLIC_KEY } from '../decorators/public.decorator';
-import { ADMIN_ONLY_KEY } from '../decorators/admin-only.decorator';
+import { AuthService } from '@/modules/auth/auth.service';
+import { ConfigService } from '@/modules/config/services/config.service';
+import { PUBLIC_KEY } from '@/modules/auth/decorators/public.decorator';
+import { ADMIN_ONLY_KEY } from '@/modules/auth/decorators/admin-only.decorator';
+import { extractSessionToken } from '@/modules/auth/session-cookie';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
@@ -37,7 +38,7 @@ export class AuthGuard implements CanActivate {
       return true;
     }
 
-    const token = this.extractToken(req);
+    const token = extractSessionToken(req);
 
     if (!token) {
       throw new UnauthorizedException('No session token provided');
@@ -73,18 +74,5 @@ export class AuthGuard implements CanActivate {
 
     req.user = user;
     return true;
-  }
-
-  /**
-   * Extract token from cookies
-   */
-  private extractToken(req: Request): string | null {
-    // Try cookie
-    const cookies = req.cookies as Record<string, string> | undefined;
-    if (cookies?.session_token) {
-      return cookies.session_token;
-    }
-
-    return null;
   }
 }

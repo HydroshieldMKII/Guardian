@@ -16,11 +16,11 @@ export class UserPreference {
   @Column({ name: 'user_id', unique: true })
   userId: string;
 
-  @Column({ name: 'username', nullable: true })
-  username: string;
+  @Column({ type: 'varchar', name: 'username', nullable: true })
+  username: string | null;
 
-  @Column({ name: 'avatar_url', nullable: true })
-  avatarUrl: string;
+  @Column({ type: 'varchar', name: 'avatar_url', nullable: true })
+  avatarUrl: string | null;
 
   @Column({ name: 'default_block', type: 'boolean', nullable: true })
   defaultBlock: boolean | null; // true, false, or null for global default

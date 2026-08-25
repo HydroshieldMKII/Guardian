@@ -1,6 +1,6 @@
 import { Controller, Get } from '@nestjs/common';
-import { DashboardService } from './dashboard.service';
-import { AdminOnly } from '../auth/decorators/admin-only.decorator';
+import { DashboardService } from '@/modules/dashboard/dashboard.service';
+import { AdminOnly } from '@/modules/auth/decorators/admin-only.decorator';
 
 @Controller('dashboard')
 @AdminOnly()

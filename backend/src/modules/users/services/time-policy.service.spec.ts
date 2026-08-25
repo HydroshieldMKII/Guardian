@@ -2,9 +2,9 @@ import { Test } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { UserTimeRule } from '../../../entities/user-time-rule.entity';
-import { ConfigService } from '../../config/services/config.service';
-import { TimePolicyService } from './time-policy.service';
+import { UserTimeRule } from '@/entities/user-time-rule.entity';
+import { ConfigService } from '@/modules/config/services/config.service';
+import { TimePolicyService } from '@/modules/users/services/time-policy.service';
 
 const rule = (overrides: Partial<UserTimeRule> = {}): UserTimeRule =>
   Object.assign(new UserTimeRule(), {

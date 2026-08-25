@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { IPValidationService } from './services/ip-validation.service';
+import { IPValidationService } from '@/common/services/ip-validation.service';
 
 @Module({
   providers: [IPValidationService],

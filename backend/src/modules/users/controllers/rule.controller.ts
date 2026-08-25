@@ -12,14 +12,15 @@ import {
   HttpStatus,
   Logger,
 } from '@nestjs/common';
-import { TimeRuleService } from '../services/time-rule.service';
+import { TimeRuleService } from '@/modules/users/services/time-rule.service';
 import type {
   CreateTimeRuleDto,
   UpdateTimeRuleDto,
   CreatePresetDto,
-} from '../services/time-rule.service';
-import { UserTimeRule } from '../../../entities/user-time-rule.entity';
-import { AdminOnly } from '../../auth/decorators/admin-only.decorator';
+} from '@/modules/users/services/time-rule.service';
+import { UserTimeRule } from '@/entities/user-time-rule.entity';
+import { AdminOnly } from '@/modules/auth/decorators/admin-only.decorator';
+import { asHttpError, errorMessage } from '@/common/utils/error-types';
 
 export interface BatchTimeRulesDto {
   userIds: string[];
@@ -47,7 +48,7 @@ export class RuleController {
       } catch (error) {
         this.logger.error(
           `Error fetching time rules for user ${userId}`,
-          error?.stack || error,
+          asHttpError(error).stack || error,
         );
         result[userId] = []; // Return empty on error
       }
@@ -135,11 +136,11 @@ export class RuleController {
       });
     } catch (error) {
       this.logger.error(
-        `Controller error creating preset: ${error.message}`,
-        error?.stack,
+        `Controller error creating preset: ${errorMessage(error)}`,
+        asHttpError(error).stack,
       );
       throw new HttpException(
-        error.message || 'Failed to create preset',
+        errorMessage(error) || 'Failed to create preset',
         HttpStatus.BAD_REQUEST,
       );
     }

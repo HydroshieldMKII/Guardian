@@ -1,5 +1,8 @@
 import { Test } from '@nestjs/testing';
-import { IPValidationService, NetworkPolicy } from './ip-validation.service';
+import {
+  IPValidationService,
+  NetworkPolicy,
+} from '@/common/services/ip-validation.service';
 
 describe('IPValidationService', () => {
   let service: IPValidationService;

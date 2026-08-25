@@ -1,4 +1,4 @@
-import { PlexSession, isPlexampSession } from './plex.types';
+import { PlexSession, isPlexampSession } from '@/types/plex.types';
 
 const session = (product?: string): PlexSession => ({
   Player: { machineIdentifier: 'device-a', product },

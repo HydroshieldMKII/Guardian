@@ -1,8 +1,8 @@
 import { Controller, Get, Param, Query, Delete } from '@nestjs/common';
-import { ActiveSessionService } from './services/active-session.service';
-import { PlexSessionsResponse } from '../../types/plex.types';
-import { SessionHistory } from '../../entities/session-history.entity';
-import { AdminOnly } from '../auth/decorators/admin-only.decorator';
+import { ActiveSessionService } from '@/modules/sessions/services/active-session.service';
+import { PlexSessionsResponse } from '@/types/plex.types';
+import { SessionHistory } from '@/entities/session-history.entity';
+import { AdminOnly } from '@/modules/auth/decorators/admin-only.decorator';
 
 @Controller('sessions')
 @AdminOnly()

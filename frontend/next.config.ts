@@ -1,5 +1,5 @@
 import type { NextConfig } from "next";
-import { getBackendUrl } from "./lib/config";
+import { BACKEND_URL } from "./lib/config";
 
 const nextConfig: NextConfig = {
   output: "standalone",
@@ -9,7 +9,7 @@ const nextConfig: NextConfig = {
       beforeFiles: [
         {
           source: "/api/pg/:path*",
-          destination: `${getBackendUrl()}/:path*`,
+          destination: `${BACKEND_URL}/:path*`,
         },
       ],
     };

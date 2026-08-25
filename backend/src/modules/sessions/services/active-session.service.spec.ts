@@ -1,12 +1,12 @@
 import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { SessionHistory } from '../../../entities/session-history.entity';
-import { UserDevice } from '../../../entities/user-device.entity';
-import { UserPreference } from '../../../entities/user-preference.entity';
-import { DeviceTrackingService } from '../../devices/services/device-tracking.service';
-import { PlexClient } from '../../plex/services/plex-client';
-import { NotificationOrchestratorService } from '../../notifications/services/notification-orchestrator.service';
-import { ActiveSessionService } from './active-session.service';
+import { SessionHistory } from '@/entities/session-history.entity';
+import { UserDevice } from '@/entities/user-device.entity';
+import { UserPreference } from '@/entities/user-preference.entity';
+import { DeviceTrackingService } from '@/modules/devices/services/device-tracking.service';
+import { PlexClient } from '@/modules/plex/services/plex-client';
+import { NotificationOrchestratorService } from '@/modules/notifications/services/notification-orchestrator.service';
+import { ActiveSessionService } from '@/modules/sessions/services/active-session.service';
 
 describe('ActiveSessionService', () => {
   let service: ActiveSessionService;
@@ -162,6 +162,51 @@ describe('ActiveSessionService', () => {
       });
     });
 
+    it('carries the episode titles and rating keys of a TV session', async () => {
+      await service.updateActiveSessions(
+        payload(
+          plexSession({
+            type: 'episode',
+            grandparentTitle: 'The Expanse',
+            parentTitle: 'Season 1',
+            parentRatingKey: '99',
+          }),
+        ),
+      );
+
+      expect(savedSession()).toMatchObject({
+        grandparentTitle: 'The Expanse',
+        parentTitle: 'Season 1',
+        parentRatingKey: '99',
+      });
+    });
+
+    it('omits every column Plex reported nothing for', async () => {
+      await service.updateActiveSessions(
+        payload({
+          sessionKey: 'sk-1',
+          User: { id: 'u1', title: 'vincent' },
+          Player: { machineIdentifier: 'dev-1' },
+        }),
+      );
+
+      const saved = savedSession() as Record<string, unknown>;
+      for (const column of [
+        'contentTitle',
+        'contentType',
+        'grandparentTitle',
+        'parentTitle',
+        'art',
+        'ratingKey',
+        'parentRatingKey',
+        'deviceAddress',
+        'playerState',
+        'product',
+      ]) {
+        expect(saved).not.toHaveProperty(column);
+      }
+    });
+
     it('links any orphaned notifications to a brand new session', async () => {
       await service.updateActiveSessions(payload(plexSession()));
       expect(orchestrator.linkOrphanedNotifications).toHaveBeenCalledWith(
@@ -283,6 +328,20 @@ describe('ActiveSessionService', () => {
     });
   });
 
+  describe('Plexamp detection', () => {
+    it('treats a session with no product as not Plexamp', async () => {
+      await service.updateActiveSessions(
+        payload({
+          sessionKey: 'sk-1',
+          User: { id: 'u1', title: 'vincent' },
+          Player: { machineIdentifier: 'dev-1' },
+        }),
+      );
+
+      expect(savedSession()).toBeDefined();
+    });
+  });
+
   describe('Plexamp track changes', () => {
     const plexampSession = (ratingKey: string) =>
       plexSession({
@@ -361,8 +420,8 @@ describe('ActiveSessionService', () => {
 
       const result = await service.getActiveSessionsFormatted();
 
-      expect(result.MediaContainer.size).toBe(1);
-      expect(result.MediaContainer.Metadata[0]).toMatchObject({
+      expect(result.MediaContainer?.size).toBe(1);
+      expect(result.MediaContainer?.Metadata?.[0]).toMatchObject({
         sessionKey: 'sk-1',
         User: { id: 'u1', title: 'vincent' },
         Player: {
@@ -379,7 +438,7 @@ describe('ActiveSessionService', () => {
       listReturning(historyRow());
 
       const result = await service.getActiveSessionsFormatted();
-      expect(result.MediaContainer.Metadata[0].Media).toEqual([
+      expect(result.MediaContainer?.Metadata?.[0].Media).toEqual([
         {
           videoResolution: '1080',
           bitrate: 8000,
@@ -400,14 +459,14 @@ describe('ActiveSessionService', () => {
       );
 
       const result = await service.getActiveSessionsFormatted();
-      expect(result.MediaContainer.Metadata[0].Media).toEqual([]);
+      expect(result.MediaContainer?.Metadata?.[0].Media).toEqual([]);
     });
 
     it('substitutes placeholders for a session with no device or preference', async () => {
       listReturning(historyRow({ userDevice: null, userPreference: null }));
 
       const result = await service.getActiveSessionsFormatted();
-      expect(result.MediaContainer.Metadata[0]).toMatchObject({
+      expect(result.MediaContainer?.Metadata?.[0]).toMatchObject({
         User: { title: 'Unknown User' },
         Player: {
           machineIdentifier: 'Unknown',
@@ -429,7 +488,7 @@ describe('ActiveSessionService', () => {
       );
 
       const result = await service.getActiveSessionsFormatted();
-      expect(result.MediaContainer.Metadata[0].Player.title).toBe(
+      expect(result.MediaContainer?.Metadata?.[0].Player?.title).toBe(
         'Plex for Android',
       );
     });

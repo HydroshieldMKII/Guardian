@@ -123,6 +123,28 @@ describe("fetchAllTimeRules", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it("leaves an already cached user alone when the batch fails", async () => {
+    fetchMock.mockImplementation(async () => ok({ u1: [rule({ id: 9 })] }));
+    const { result } = setup();
+    await act(async () => {
+      await result.current.fetchAllTimeRules(["u1"]);
+    });
+
+    fetchMock.mockImplementation(async () => {
+      throw new Error("offline");
+    });
+    await act(async () => {
+      await result.current.fetchAllTimeRules(["u1", "u2"]);
+    });
+
+    fetchMock.mockClear();
+    let rules: UserTimeRule[] | undefined;
+    await act(async () => {
+      rules = await result.current.getAllTimeRules("u1");
+    });
+    expect(rules?.map((r) => r.id)).toEqual([9]);
+  });
+
   it("caches empty lists on a network failure", async () => {
     fetchMock.mockRejectedValue(new Error("offline"));
     const { result } = setup();
@@ -406,6 +428,61 @@ describe("updateTimeRule", () => {
   });
 });
 
+describe("updateTimeRule error handling", () => {
+  it("falls back to a generic message when the error body names none", async () => {
+    fetchMock.mockImplementation(
+      async () =>
+        new Response(JSON.stringify({}), {
+          status: 500,
+          headers: { "Content-Type": "application/json" },
+        }),
+    );
+    const { result } = setup();
+
+    await expect(
+      act(async () => {
+        await result.current.updateTimeRule("u1", 1, { endTime: "23:00" });
+      }),
+    ).rejects.toThrow("Failed to update time rule");
+  });
+
+  it("reports an unreadable error body as an unknown error", async () => {
+    fetchMock.mockImplementation(
+      async () => new Response("not json", { status: 500 }),
+    );
+    const { result } = setup();
+
+    await expect(
+      act(async () => {
+        await result.current.updateTimeRule("u1", 1, { endTime: "23:00" });
+      }),
+    ).rejects.toThrow("Unknown error");
+  });
+
+  it("leaves the other cached rules untouched", async () => {
+    fetchMock.mockImplementation(async () =>
+      ok({ u1: [rule({ id: 1 }), rule({ id: 2, ruleName: "Homework" })] }),
+    );
+    const { result } = setup();
+    await act(async () => {
+      await result.current.fetchAllTimeRules(["u1"]);
+    });
+
+    fetchMock.mockImplementation(async () =>
+      ok(rule({ id: 1, ruleName: "Renamed" })),
+    );
+    await act(async () => {
+      await result.current.updateTimeRule("u1", 1, { ruleName: "Renamed" });
+    });
+
+    let rules: UserTimeRule[] | undefined;
+    await act(async () => {
+      rules = await result.current.getAllTimeRules("u1");
+    });
+    expect(rules?.find((r) => r.id === 2)?.ruleName).toBe("Homework");
+  });
+});
+
 describe("deleteTimeRule", () => {
   it("deletes the rule and drops it from the cache", async () => {
     fetchMock.mockImplementation(async () =>
@@ -493,6 +570,36 @@ describe("createPreset", () => {
       }),
     ).rejects.toThrow("preset conflicts");
   });
+
+  it("falls back to a generic message when the error body names none", async () => {
+    fetchMock.mockImplementation(
+      async () =>
+        new Response(JSON.stringify({}), {
+          status: 500,
+          headers: { "Content-Type": "application/json" },
+        }),
+    );
+    const { result } = setup();
+
+    await expect(
+      act(async () => {
+        await result.current.createPreset("u1", "weekdays-only");
+      }),
+    ).rejects.toThrow("Failed to create preset");
+  });
+
+  it("reports an unreadable error body as an unknown error", async () => {
+    fetchMock.mockImplementation(
+      async () => new Response("not json", { status: 500 }),
+    );
+    const { result } = setup();
+
+    await expect(
+      act(async () => {
+        await result.current.createPreset("u1", "weekdays-only");
+      }),
+    ).rejects.toThrow("Unknown error");
+  });
 });
 
 describe("toggleTimeRule", () => {
@@ -528,6 +635,42 @@ describe("toggleTimeRule", () => {
         await result.current.toggleTimeRule("u1", 1);
       }),
     ).rejects.toThrow("Failed to toggle time rule");
+  });
+
+  it("leaves the other cached rules untouched", async () => {
+    fetchMock.mockImplementation(async () =>
+      ok({ u1: [rule({ id: 1 }), rule({ id: 2, ruleName: "Homework" })] }),
+    );
+    const { result } = setup();
+    await act(async () => {
+      await result.current.fetchAllTimeRules(["u1"]);
+    });
+
+    fetchMock.mockImplementation(async () =>
+      ok(rule({ id: 1, enabled: false })),
+    );
+    await act(async () => {
+      await result.current.toggleTimeRule("u1", 1);
+    });
+
+    let rules: UserTimeRule[] | undefined;
+    await act(async () => {
+      rules = await result.current.getAllTimeRules("u1");
+    });
+    expect(rules?.find((r) => r.id === 2)?.ruleName).toBe("Homework");
+  });
+
+  it("toggles a rule for a user it has never cached", async () => {
+    fetchMock.mockImplementation(async () =>
+      ok(rule({ id: 1, enabled: false })),
+    );
+    const { result } = setup();
+
+    await act(async () => {
+      await result.current.toggleTimeRule("u-fresh", 1);
+    });
+
+    expect(lastCall()[0]).toBe("/api/pg/users/u-fresh/rules/1/toggle");
   });
 });
 

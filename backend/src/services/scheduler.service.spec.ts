@@ -1,11 +1,13 @@
 import { SchedulerRegistry } from '@nestjs/schedule';
 import { Test } from '@nestjs/testing';
-import { PlexService } from '../modules/plex/services/plex.service';
-import { ConfigService } from '../modules/config/services/config.service';
-import { DeviceTrackingService } from '../modules/devices/services/device-tracking.service';
-import { UsersService } from '../modules/users/services/users.service';
-import { AuthService } from '../modules/auth/auth.service';
-import { SchedulerService } from './scheduler.service';
+import { PlexService } from '@/modules/plex/services/plex.service';
+import { ConfigService } from '@/modules/config/services/config.service';
+import { DeviceTrackingService } from '@/modules/devices/services/device-tracking.service';
+import { UsersService } from '@/modules/users/services/users.service';
+import { AuthService } from '@/modules/auth/auth.service';
+import { SchedulerService } from '@/services/scheduler.service';
+import { DashboardService } from '@/modules/dashboard/dashboard.service';
+import { LiveEventsService } from '@/modules/events/live-events.service';
 
 const mockCronJob = {
   start: jest.fn(),
@@ -33,6 +35,8 @@ describe('SchedulerService', () => {
   let usersService: { syncUsersFromPlexTV: jest.Mock };
   let authService: { cleanupExpiredSessions: jest.Mock };
   let schedulerRegistry: Record<string, jest.Mock>;
+  let dashboardService: { getDashboardData: jest.Mock };
+  let liveEvents: { hasListeners: jest.Mock; broadcastDashboard: jest.Mock };
   let listeners: Map<string, Array<() => Promise<void>>>;
 
   const settings = new Map<string, unknown>();
@@ -49,7 +53,7 @@ describe('SchedulerService', () => {
     settings.set('PLEX_SERVER_IP', '10.0.0.5');
     settings.set('PLEX_SERVER_PORT', '32400');
     settings.set('PLEX_TOKEN', 'plex-token');
-    settings.set('PLEXGUARD_REFRESH_INTERVAL', '10');
+    settings.set('PLEXGUARD_REFRESH_INTERVAL', 10);
     listeners = new Map();
 
     plexService = {
@@ -83,6 +87,14 @@ describe('SchedulerService', () => {
 
     authService = { cleanupExpiredSessions: jest.fn().mockResolvedValue(3) };
 
+    dashboardService = {
+      getDashboardData: jest.fn().mockResolvedValue({ stats: { total: 1 } }),
+    };
+    liveEvents = {
+      hasListeners: jest.fn().mockReturnValue(true),
+      broadcastDashboard: jest.fn(),
+    };
+
     schedulerRegistry = {
       addCronJob: jest.fn(),
       deleteCronJob: jest.fn(),
@@ -97,6 +109,8 @@ describe('SchedulerService', () => {
         { provide: UsersService, useValue: usersService },
         { provide: AuthService, useValue: authService },
         { provide: SchedulerRegistry, useValue: schedulerRegistry },
+        { provide: DashboardService, useValue: dashboardService },
+        { provide: LiveEventsService, useValue: liveEvents },
       ],
     }).compile();
 
@@ -134,7 +148,7 @@ describe('SchedulerService', () => {
     it('rebuilds the cron job when the refresh interval changes', async () => {
       await service.onModuleInit();
       schedulerRegistry.addCronJob.mockClear();
-      settings.set('PLEXGUARD_REFRESH_INTERVAL', '30');
+      settings.set('PLEXGUARD_REFRESH_INTERVAL', 30);
 
       await listeners.get('PLEXGUARD_REFRESH_INTERVAL')![0]();
 
@@ -166,12 +180,12 @@ describe('SchedulerService', () => {
 
   describe('cron expressions', () => {
     it.each([
-      ['10', '*/10 * * * * *'],
-      ['45', '*/45 * * * * *'],
-      ['60', '0 */1 * * * *'],
-      ['300', '0 */5 * * * *'],
-      ['3600', '0 0 */1 * * *'],
-      ['7200', '0 0 */2 * * *'],
+      [10, '*/10 * * * * *'],
+      [45, '*/45 * * * * *'],
+      [60, '0 */1 * * * *'],
+      [300, '0 */5 * * * *'],
+      [3600, '0 0 */1 * * *'],
+      [7200, '0 0 */2 * * *'],
     ])('turns a %ss interval into %s', async (interval, expression) => {
       settings.set('PLEXGUARD_REFRESH_INTERVAL', interval);
       await service.onModuleInit();
@@ -180,14 +194,14 @@ describe('SchedulerService', () => {
     });
 
     it('falls back to ten seconds for an interval it cannot express', async () => {
-      settings.set('PLEXGUARD_REFRESH_INTERVAL', '5400');
+      settings.set('PLEXGUARD_REFRESH_INTERVAL', 5400);
       await service.onModuleInit();
 
       expect(registeredJob().cronTime).toBe('*/10 * * * * *');
     });
 
-    it('falls back to ten seconds when the interval is unset', async () => {
-      settings.set('PLEXGUARD_REFRESH_INTERVAL', 'not-a-number');
+    it('falls back to ten seconds when the interval is unreadable', async () => {
+      settings.set('PLEXGUARD_REFRESH_INTERVAL', Number.NaN);
       await service.onModuleInit();
 
       expect(registeredJob().cronTime).toBe('*/10 * * * * *');
@@ -248,7 +262,7 @@ describe('SchedulerService', () => {
 
     it('cleans up using the configured interval', async () => {
       settings.set('DEVICE_CLEANUP_ENABLED', true);
-      settings.set('DEVICE_CLEANUP_INTERVAL_DAYS', '45');
+      settings.set('DEVICE_CLEANUP_INTERVAL_DAYS', 45);
 
       await service.onModuleInit();
 
@@ -266,7 +280,7 @@ describe('SchedulerService', () => {
 
     it('runs the nightly cleanup when enabled', async () => {
       settings.set('DEVICE_CLEANUP_ENABLED', true);
-      settings.set('DEVICE_CLEANUP_INTERVAL_DAYS', '30');
+      settings.set('DEVICE_CLEANUP_INTERVAL_DAYS', 30);
 
       await service.handleDeviceCleanup();
 
@@ -277,7 +291,7 @@ describe('SchedulerService', () => {
 
     it('swallows a cleanup failure', async () => {
       settings.set('DEVICE_CLEANUP_ENABLED', true);
-      settings.set('DEVICE_CLEANUP_INTERVAL_DAYS', '30');
+      settings.set('DEVICE_CLEANUP_INTERVAL_DAYS', 30);
       deviceTrackingService.cleanupInactiveDevices.mockRejectedValue(
         new Error('locked'),
       );
@@ -341,6 +355,69 @@ describe('SchedulerService', () => {
         3,
       );
       await expect(service.onModuleInit()).resolves.toBeUndefined();
+    });
+  });
+
+  describe('live dashboard broadcast', () => {
+    const runSessionUpdate = async () => {
+      settings.set('PLEX_SERVER_IP', '10.0.0.5');
+      settings.set('PLEX_SERVER_PORT', '32400');
+      settings.set('PLEX_TOKEN', 'plex-token');
+      await service.onModuleInit();
+      await registeredJob().onTick();
+    };
+
+    it('pushes the fresh dashboard after updating sessions', async () => {
+      await runSessionUpdate();
+
+      expect(plexService.updateActiveSessions).toHaveBeenCalled();
+      expect(liveEvents.broadcastDashboard).toHaveBeenCalledWith({
+        stats: { total: 1 },
+      });
+    });
+
+    it('broadcasts only after the sessions have been updated', async () => {
+      await runSessionUpdate();
+
+      expect(
+        plexService.updateActiveSessions.mock.invocationCallOrder[0],
+      ).toBeLessThan(liveEvents.broadcastDashboard.mock.invocationCallOrder[0]);
+    });
+
+    it('does no work when nobody is connected', async () => {
+      liveEvents.hasListeners.mockReturnValue(false);
+
+      await runSessionUpdate();
+
+      expect(dashboardService.getDashboardData).not.toHaveBeenCalled();
+      expect(liveEvents.broadcastDashboard).not.toHaveBeenCalled();
+    });
+
+    it('still publishes while Plex is unconfigured, so clients see why', async () => {
+      settings.delete('PLEX_TOKEN');
+
+      await service.onModuleInit();
+      await registeredJob().onTick();
+
+      expect(plexService.updateActiveSessions).not.toHaveBeenCalled();
+      expect(liveEvents.broadcastDashboard).toHaveBeenCalled();
+    });
+
+    it('still publishes when Plex is unreachable', async () => {
+      plexService.updateActiveSessions.mockRejectedValue(
+        new Error('unreachable'),
+      );
+
+      await runSessionUpdate();
+
+      expect(liveEvents.broadcastDashboard).toHaveBeenCalled();
+    });
+
+    it('survives a failure assembling the dashboard', async () => {
+      dashboardService.getDashboardData.mockRejectedValue(new Error('db down'));
+
+      await expect(runSessionUpdate()).resolves.toBeUndefined();
+      expect(liveEvents.broadcastDashboard).not.toHaveBeenCalled();
     });
   });
 });
