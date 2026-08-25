@@ -271,7 +271,9 @@ describe('NotificationsService', () => {
 
     it('falls back to a generic message with no stop code', async () => {
       const result = await blocked();
-      expect(result?.text).toBe('Stream blocked for testuser on Unknown Device');
+      expect(result?.text).toBe(
+        'Stream blocked for testuser on Unknown Device',
+      );
     });
 
     it('uses the stored device name when there is one', async () => {
