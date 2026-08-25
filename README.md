@@ -23,13 +23,13 @@ Guardian is a security and management platform for Plex Media Server. It monitor
 
 ## Features
 
-**Access control** — automatic session termination for unapproved devices, global and per-user rules, IP restrictions by LAN/WAN/CIDR over both IPv4 and IPv6, time-limited temporary access, and per-user schedules.
+**Access control**: automatic session termination for unapproved devices, global and per-user rules, IP restrictions by LAN/WAN/CIDR over both IPv4 and IPv6, time-limited temporary access, and per-user schedules.
 
-**Monitoring** — live Plex and Plexamp session tracking, detailed device fingerprints, stream quality and progress, and searchable session history.
+**Monitoring**: live Plex and Plexamp session tracking, detailed device fingerprints, stream quality and progress, and searchable session history.
 
-**Notifications** — SMTP email and Apprise (100+ services) alerts for new devices, blocks, location changes, and user notes.
+**Notifications**: SMTP email and Apprise (100+ services) alerts for new devices, blocks, location changes, and user notes.
 
-**Management** — concurrent stream limits, automatic cleanup of inactive devices, settings export/import, and a self-service portal where Plex users can view their own devices.
+**Management**: concurrent stream limits, automatic cleanup of inactive devices, settings export/import, and a self-service portal where Plex users can view their own devices.
 
 ## Installation
 
@@ -38,11 +38,10 @@ Guardian is a security and management platform for Plex Media Server. It monitor
 ```bash
 mkdir -p guardian && cd guardian
 curl -o docker-compose.yml https://raw.githubusercontent.com/HydroshieldMKII/Guardian/main/docker-compose.example.yml
-curl -o .env https://raw.githubusercontent.com/HydroshieldMKII/Guardian/main/.env.example
 docker compose up -d
 ```
 
-Guardian is then available at `http://localhost:3000`. You will need a [Plex authentication token](https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/) to complete setup.
+Webui is then available at `http://localhost:3000` by default.
 
 To build from source instead:
 
@@ -57,6 +56,10 @@ docker compose -f docker-compose.dev.yml up -d --build
 Under **Docker -> Compose**, create a stack from `docker-compose.example.yml`, adjust the volume and port if needed, and deploy.
 
 ## Configuration
+
+### Plex token
+
+You will need a [Plex authentication token](https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/) to complete setup.
 
 ### Running behind a reverse proxy
 

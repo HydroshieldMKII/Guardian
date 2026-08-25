@@ -1,23 +1,23 @@
-FROM node:20-alpine AS backend-build
+FROM node:22-alpine AS backend-build
 WORKDIR /app/backend
 COPY backend/package*.json ./
 RUN npm ci
 COPY backend/ ./
 RUN npm run build
 
-FROM node:20-alpine AS backend-deps
+FROM node:22-alpine AS backend-deps
 WORKDIR /app/backend
 COPY backend/package*.json ./
 RUN npm ci --omit=dev && npm cache clean --force
 
-FROM node:20-alpine AS frontend-build
+FROM node:22-alpine AS frontend-build
 WORKDIR /app/frontend
 COPY frontend/package*.json ./
 RUN npm ci
 COPY frontend/ ./
 RUN npm run build
 
-FROM node:20-alpine AS runner
+FROM node:22-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production \
