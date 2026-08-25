@@ -265,5 +265,5 @@ export type SettingValue = SettingValues[SettingKey];
 export const SETTING_KEYS = Object.keys(SETTINGS_CATALOG) as SettingKey[];
 
 export function isSettingKey(key: string): key is SettingKey {
-  return key in SETTINGS_CATALOG;
+  return Object.hasOwn(SETTINGS_CATALOG, key);
 }

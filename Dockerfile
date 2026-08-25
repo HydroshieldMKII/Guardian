@@ -23,7 +23,7 @@ WORKDIR /app
 ENV NODE_ENV=production \
     DATABASE_PATH=/app/data/plex-guard.db
 
-RUN apk add --no-cache wget python3 py3-pip tini \
+RUN apk add --no-cache wget python3 py3-pip tini su-exec \
     && pip3 install --no-cache-dir --break-system-packages apprise
 
 COPY --from=backend-deps /app/backend/node_modules ./backend/node_modules
@@ -37,7 +37,9 @@ COPY --from=frontend-build /app/frontend/.next/static ./frontend/.next/static
 COPY --from=frontend-build /app/frontend/public ./frontend/public
 
 COPY docker-entrypoint.sh /usr/local/bin/guardian-entrypoint
-RUN chmod +x /usr/local/bin/guardian-entrypoint
+RUN chmod +x /usr/local/bin/guardian-entrypoint \
+    && mkdir -p /app/data \
+    && chown -R node:node /app
 
 VOLUME ["/app/data"]
 EXPOSE 3000
