@@ -69,7 +69,7 @@ services:
       - TRUST_PROXY_HOPS=1
 ```
 
-Use `2` for Cloudflare in front of your own proxy, or `0` when nothing is in front. A wrong value will breaks IP policies and rate limiting.
+Use `2` for Cloudflare in front of your own proxy, or `0` when nothing is in front. A wrong value will break IP policies and rate limiting.
 
 ## Updating
 

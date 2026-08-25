@@ -30,7 +30,7 @@ describe('AuthService', () => {
 
   const admin = {
     id: 'admin-1',
-    username: 'vincent',
+    username: 'testuser',
     email: 'v@example.com',
     avatarUrl: undefined,
     passwordHash: 'stored-hash',
@@ -116,7 +116,7 @@ describe('AuthService', () => {
 
   describe('createAdmin', () => {
     const dto = {
-      username: 'vincent',
+      username: 'testuser',
       email: 'v@example.com',
       password: 'hunter2hunter2',
       confirmPassword: 'hunter2hunter2',
@@ -129,7 +129,7 @@ describe('AuthService', () => {
       expect(adminRepo.save).toHaveBeenCalledWith(
         expect.objectContaining({ passwordHash: 'new-hash' }),
       );
-      expect(result.user.username).toBe('vincent');
+      expect(result.user.username).toBe('testuser');
       expect(result.session.token).toHaveLength(64);
     });
 
@@ -176,12 +176,12 @@ describe('AuthService', () => {
   });
 
   describe('login', () => {
-    const dto = { username: 'vincent', password: 'hunter2hunter2' };
+    const dto = { username: 'testuser', password: 'hunter2hunter2' };
 
     it('matches on either username or email', async () => {
       await service.login(dto);
       expect(adminRepo.findOne).toHaveBeenCalledWith({
-        where: [{ username: 'vincent' }, { email: 'vincent' }],
+        where: [{ username: 'testuser' }, { email: 'testuser' }],
       });
     });
 
@@ -627,7 +627,7 @@ describe('AuthService', () => {
 
     it('issues an admin session for a linked account', async () => {
       const result = await service.createAdminSessionByPlex('admin-1');
-      expect(result.user.username).toBe('vincent');
+      expect(result.user.username).toBe('testuser');
       expect(result.session.token).toHaveLength(64);
     });
 
@@ -641,7 +641,7 @@ describe('AuthService', () => {
 
   it('expires new sessions seven days out', async () => {
     const result = await service.login({
-      username: 'vincent',
+      username: 'testuser',
       password: 'hunter2hunter2',
     });
 

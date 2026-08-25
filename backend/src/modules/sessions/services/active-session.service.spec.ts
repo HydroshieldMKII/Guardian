@@ -48,7 +48,7 @@ describe('ActiveSessionService', () => {
 
   const plexSession = (overrides: Record<string, unknown> = {}) => ({
     sessionKey: 'sk-1',
-    User: { id: 'u1', title: 'vincent' },
+    User: { id: 'u1', title: 'testuser' },
     Player: {
       machineIdentifier: 'dev-1',
       product: 'Plex for Android',
@@ -185,7 +185,7 @@ describe('ActiveSessionService', () => {
       await service.updateActiveSessions(
         payload({
           sessionKey: 'sk-1',
-          User: { id: 'u1', title: 'vincent' },
+          User: { id: 'u1', title: 'testuser' },
           Player: { machineIdentifier: 'dev-1' },
         }),
       );
@@ -262,7 +262,7 @@ describe('ActiveSessionService', () => {
 
       expect(preferenceRepo.create).toHaveBeenCalledWith({
         userId: 'u1',
-        username: 'vincent',
+        username: 'testuser',
         defaultBlock: null,
         hidden: false,
       });
@@ -333,7 +333,7 @@ describe('ActiveSessionService', () => {
       await service.updateActiveSessions(
         payload({
           sessionKey: 'sk-1',
-          User: { id: 'u1', title: 'vincent' },
+          User: { id: 'u1', title: 'testuser' },
           Player: { machineIdentifier: 'dev-1' },
         }),
       );
@@ -396,7 +396,7 @@ describe('ActiveSessionService', () => {
         container: 'mkv',
         bandwidth: 12000,
         sessionLocation: 'lan',
-        userPreference: { username: 'vincent' },
+        userPreference: { username: 'testuser' },
         userDevice: {
           deviceIdentifier: 'dev-1',
           devicePlatform: 'Android',
@@ -423,7 +423,7 @@ describe('ActiveSessionService', () => {
       expect(result.MediaContainer?.size).toBe(1);
       expect(result.MediaContainer?.Metadata?.[0]).toMatchObject({
         sessionKey: 'sk-1',
-        User: { id: 'u1', title: 'vincent' },
+        User: { id: 'u1', title: 'testuser' },
         Player: {
           machineIdentifier: 'dev-1',
           title: 'Living Room TV',

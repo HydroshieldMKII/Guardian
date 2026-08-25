@@ -6,7 +6,7 @@ const mockAuthState = {
   setupRequired: false,
   isLoading: false,
   isAuthenticated: true,
-  user: { id: "admin-1", username: "vincent" } as Record<string, unknown> | null,
+  user: { id: "admin-1", username: "testuser" } as Record<string, unknown> | null,
 };
 
 jest.mock("./auth-context", () => ({
@@ -52,7 +52,7 @@ beforeEach(() => {
   mockAuthState.setupRequired = false;
   mockAuthState.isLoading = false;
   mockAuthState.isAuthenticated = true;
-  mockAuthState.user = { id: "admin-1", username: "vincent" };
+  mockAuthState.user = { id: "admin-1", username: "testuser" };
 
   for (const key of Object.keys(routes)) delete routes[key];
   routes["/api/pg/config/version"] = () =>

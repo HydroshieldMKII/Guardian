@@ -20,7 +20,7 @@ const jsonResponse = (body: unknown, init: ResponseInit = {}) =>
 const stream = (overrides: Partial<PlexSession> = {}): PlexSession =>
   ({
     sessionKey: "sk-1",
-    User: { id: "u1", title: "vincent" },
+    User: { id: "u1", title: "testuser" },
     Player: { machineIdentifier: "dev-1", title: "Living Room TV" },
     ...overrides,
   }) as PlexSession;
@@ -228,7 +228,7 @@ describe("useStreamActions", () => {
     await act(async () => {
       await result.current.revokeDeviceAuthorization(
         stream({
-          User: { id: "u/1", title: "vincent" },
+          User: { id: "u/1", title: "testuser" },
           Player: { machineIdentifier: "dev 1", title: "TV" },
         } as Partial<PlexSession>),
       );

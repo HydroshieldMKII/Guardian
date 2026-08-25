@@ -274,19 +274,19 @@ describe('AppriseService', () => {
       [
         'APPRISE_NOTIFY_ON_NEW_DEVICE',
         () =>
-          service.sendNewDeviceNotification('vincent', 'Shield', '10.0.0.1'),
+          service.sendNewDeviceNotification('testuser', 'Shield', '10.0.0.1'),
         'new devices',
       ],
       [
         'APPRISE_NOTIFY_ON_BLOCK',
-        () => service.sendBlockedNotification('vincent', 'Shield'),
+        () => service.sendBlockedNotification('testuser', 'Shield'),
         'blocked streams',
       ],
       [
         'APPRISE_NOTIFY_ON_LOCATION_CHANGE',
         () =>
           service.sendLocationChangeNotification(
-            'vincent',
+            'testuser',
             'Shield',
             '10.0.0.1',
             '1.2.3.4',
@@ -295,7 +295,7 @@ describe('AppriseService', () => {
       ],
       [
         'APPRISE_NOTIFY_ON_DEVICE_NOTE',
-        () => service.sendDeviceNoteNotification('vincent', 'Shield', 'note'),
+        () => service.sendDeviceNoteNotification('testuser', 'Shield', 'note'),
         'device notes',
       ],
     ] as const)('stays quiet while %s is off', async (key, run, label) => {
@@ -317,10 +317,10 @@ describe('AppriseService', () => {
 
     it('describes a newly detected device', async () => {
       const body = await bodyOf(() =>
-        service.sendNewDeviceNotification('vincent', 'Shield', '10.0.0.1'),
+        service.sendNewDeviceNotification('testuser', 'Shield', '10.0.0.1'),
       );
 
-      expect(body).toContain('vincent');
+      expect(body).toContain('testuser');
       expect(body).toContain('Shield');
       expect(body).toContain('10.0.0.1');
       expect(body).toContain('Pending Approval');
@@ -328,7 +328,7 @@ describe('AppriseService', () => {
 
     it('substitutes placeholders for a block with no IP or stop code', async () => {
       const body = await bodyOf(() =>
-        service.sendBlockedNotification('vincent', 'Shield'),
+        service.sendBlockedNotification('testuser', 'Shield'),
       );
 
       expect(body).toContain('Unknown IP Address');
@@ -338,7 +338,7 @@ describe('AppriseService', () => {
     it('carries both addresses on a location change', async () => {
       const body = await bodyOf(() =>
         service.sendLocationChangeNotification(
-          'vincent',
+          'testuser',
           'Shield',
           '10.0.0.1',
           '1.2.3.4',
@@ -352,7 +352,7 @@ describe('AppriseService', () => {
     it('carries the note text', async () => {
       const body = await bodyOf(() =>
         service.sendDeviceNoteNotification(
-          'vincent',
+          'testuser',
           'Shield',
           'please approve',
         ),

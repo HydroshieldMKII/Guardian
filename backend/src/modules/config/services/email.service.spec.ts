@@ -342,7 +342,7 @@ describe('EmailService', () => {
     const notice = {
       type: 'info' as const,
       text: 'hello',
-      username: 'vincent',
+      username: 'testuser',
     };
 
     it('does nothing while SMTP is disabled', async () => {
@@ -390,7 +390,7 @@ describe('EmailService', () => {
       await expect(
         subjectFor(() =>
           service.sendBlockedEmail(
-            'vincent',
+            'testuser',
             'Living Room TV',
             'DEVICE_PENDING',
           ),
@@ -401,7 +401,7 @@ describe('EmailService', () => {
     it('labels a new device', async () => {
       await expect(
         subjectFor(() =>
-          service.sendNewDeviceEmail('new device', 'vincent', 'Shield'),
+          service.sendNewDeviceEmail('new device', 'testuser', 'Shield'),
         ),
       ).resolves.toBe('Guardian Alert: New Device Detected - Shield');
     });
@@ -410,7 +410,7 @@ describe('EmailService', () => {
       await expect(
         subjectFor(() =>
           service.sendLocationChangeEmail(
-            'vincent',
+            'testuser',
             'Shield',
             '10.0.0.1',
             '1.2.3.4',
@@ -422,7 +422,7 @@ describe('EmailService', () => {
     it('describes an unrecognised stop code rather than dropping it', async () => {
       const sendEmail = jest.spyOn(service, 'sendEmail').mockResolvedValue();
 
-      await service.sendBlockedEmail('vincent', 'Shield', 'MYSTERY');
+      await service.sendBlockedEmail('testuser', 'Shield', 'MYSTERY');
 
       expect(sendEmail).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -435,7 +435,7 @@ describe('EmailService', () => {
     it('labels a device note', async () => {
       await expect(
         subjectFor(() =>
-          service.sendDeviceNoteEmail('vincent', 'Shield', 'please approve'),
+          service.sendDeviceNoteEmail('testuser', 'Shield', 'please approve'),
         ),
       ).resolves.toBe('Guardian Alert: Device Note Received - Shield');
     });
@@ -448,7 +448,7 @@ describe('EmailService', () => {
       await service.sendEmail({
         type,
         text: 'x',
-        username: 'vincent',
+        username: 'testuser',
         deviceName: 'Shield',
       });
 
@@ -462,7 +462,7 @@ describe('EmailService', () => {
       await service.sendEmail({
         type: 'block',
         text: 'x',
-        username: 'vincent',
+        username: 'testuser',
       });
 
       const [, , , mainMessage] =
@@ -474,14 +474,14 @@ describe('EmailService', () => {
 
     it('omits the device from the subject when there is none', async () => {
       await expect(
-        subjectFor(() => service.sendNewDeviceEmail('new device', 'vincent')),
+        subjectFor(() => service.sendNewDeviceEmail('new device', 'testuser')),
       ).resolves.toBe('Guardian Alert: New Device Detected');
     });
   });
 
   describe('notification bodies', () => {
     it('describes the stop code behind a block', async () => {
-      await service.sendBlockedEmail('vincent', 'Shield', 'DEVICE_PENDING');
+      await service.sendBlockedEmail('testuser', 'Shield', 'DEVICE_PENDING');
 
       const [, , , mainMessage] =
         templateService.generateNotificationEmail.mock.calls[0];
@@ -491,7 +491,7 @@ describe('EmailService', () => {
 
     it('carries the old and new address on a location change', async () => {
       await service.sendLocationChangeEmail(
-        'vincent',
+        'testuser',
         'Shield',
         '10.0.0.1',
         '1.2.3.4',
@@ -503,7 +503,7 @@ describe('EmailService', () => {
     });
 
     it('carries the note text through', async () => {
-      await service.sendDeviceNoteEmail('vincent', 'Shield', 'please approve');
+      await service.sendDeviceNoteEmail('testuser', 'Shield', 'please approve');
 
       expect(templateService.generateNotificationEmail.mock.calls[0]).toContain(
         'please approve',
@@ -516,7 +516,7 @@ describe('EmailService', () => {
       });
 
       await expect(
-        service.sendNewDeviceEmail('new device', 'vincent', 'Shield'),
+        service.sendNewDeviceEmail('new device', 'testuser', 'Shield'),
       ).resolves.toBeUndefined();
     });
   });

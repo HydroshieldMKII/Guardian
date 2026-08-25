@@ -30,7 +30,7 @@ describe('EmailTemplateService', () => {
       statusColor: '#4488ff',
       statusLabel: 'NOTIFICATION',
       mainMessage: 'Something happened',
-      username: 'vincent',
+      username: 'testuser',
       ...overrides,
     };
 
@@ -180,7 +180,7 @@ describe('EmailTemplateService', () => {
 
   describe('detail rows', () => {
     it('always names the user', () => {
-      expect(notification()).toContain('vincent');
+      expect(notification()).toContain('testuser');
     });
 
     it('omits the device row when there is no device', () => {

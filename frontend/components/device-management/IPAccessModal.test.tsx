@@ -47,7 +47,7 @@ const renderModal = (
       onClose={onClose}
       user={{
         userId: "u-1",
-        username: "vincent",
+        username: "testuser",
         preference: overrides.preference ?? preference(),
       }}
       userDevices={overrides.userDevices ?? []}
@@ -85,7 +85,7 @@ describe("IPAccessModal", () => {
 
   it("names the user it is configuring", () => {
     renderModal();
-    expect(screen.getByText("vincent")).toBeInTheDocument();
+    expect(screen.getByText("testuser")).toBeInTheDocument();
   });
 
   it("falls back to the user id when there is no username", () => {
@@ -120,7 +120,7 @@ describe("IPAccessModal", () => {
       <IPAccessModal
         isOpen
         onClose={jest.fn()}
-        user={{ userId: "u-1", username: "vincent" }}
+        user={{ userId: "u-1", username: "testuser" }}
         userDevices={[]}
         onSave={jest.fn()}
       />,
@@ -440,7 +440,7 @@ describe("IPAccessModal", () => {
         onClose={jest.fn()}
         user={{
           userId: "u-1",
-          username: "vincent",
+          username: "testuser",
           preference: preference({
             ipAccessPolicy: "restricted",
             allowedIPs,

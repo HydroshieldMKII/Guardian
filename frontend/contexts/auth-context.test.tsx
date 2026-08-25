@@ -28,7 +28,7 @@ const json = (body: unknown, init: ResponseInit = {}) =>
 
 const adminUser = {
   id: "admin-1",
-  username: "vincent",
+  username: "testuser",
   email: "v@example.com",
 };
 
@@ -209,7 +209,7 @@ describe("login", () => {
     routes["/api/pg/auth/login"] = () => json({ user: adminUser });
 
     await act(async () => {
-      await result.current.login("vincent", "hunter2");
+      await result.current.login("testuser", "hunter2");
     });
 
     expect(result.current.userType).toBe("admin");
@@ -221,14 +221,14 @@ describe("login", () => {
     routes["/api/pg/auth/login"] = () => json({ user: adminUser });
 
     await act(async () => {
-      await result.current.login("vincent", "hunter2", "captcha-token");
+      await result.current.login("testuser", "hunter2", "captcha-token");
     });
 
     const call = fetchMock.mock.calls.find(
       ([url]) => route(url) === "/api/pg/auth/login",
     );
     expect(JSON.parse(call![1]!.body as string)).toEqual({
-      username: "vincent",
+      username: "testuser",
       password: "hunter2",
       captchaToken: "captcha-token",
     });
@@ -242,7 +242,7 @@ describe("login", () => {
 
     await expect(
       act(async () => {
-        await result.current.login("vincent", "wrong");
+        await result.current.login("testuser", "wrong");
       }),
     ).rejects.toThrow("Invalid credentials");
     expect(result.current.isAuthenticated).toBe(false);
@@ -254,7 +254,7 @@ describe("login", () => {
 
     await expect(
       act(async () => {
-        await result.current.login("vincent", "wrong");
+        await result.current.login("testuser", "wrong");
       }),
     ).rejects.toThrow("Login failed");
   });
@@ -332,7 +332,7 @@ describe("createAdmin", () => {
 
     await act(async () => {
       await result.current.createAdmin(
-        "vincent",
+        "testuser",
         "v@example.com",
         "hunter2hunter2",
         "hunter2hunter2",
@@ -351,7 +351,7 @@ describe("createAdmin", () => {
 
     await expect(
       act(async () => {
-        await result.current.createAdmin("vincent", "v@example.com", "a", "b");
+        await result.current.createAdmin("testuser", "v@example.com", "a", "b");
       }),
     ).rejects.toThrow("Passwords do not match");
     expect(result.current.setupRequired).toBe(true);
@@ -364,7 +364,7 @@ describe("createAdmin", () => {
 
     await expect(
       act(async () => {
-        await result.current.createAdmin("vincent", "v@example.com", "a", "a");
+        await result.current.createAdmin("testuser", "v@example.com", "a", "a");
       }),
     ).rejects.toThrow("Failed to create admin");
   });

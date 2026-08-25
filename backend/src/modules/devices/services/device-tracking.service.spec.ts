@@ -34,7 +34,7 @@ describe('DeviceTrackingService', () => {
     Object.assign(new UserDevice(), {
       id: 1,
       userId: 'u1',
-      username: 'vincent',
+      username: 'testuser',
       deviceIdentifier: 'dev-1',
       deviceName: 'Living Room TV',
       devicePlatform: 'Android',
@@ -53,7 +53,7 @@ describe('DeviceTrackingService', () => {
 
   const session = (overrides: Partial<PlexSession> = {}): PlexSession => ({
     sessionKey: 'sk-1',
-    User: { id: 'u1', title: 'vincent', thumb: 'avatar.png' },
+    User: { id: 'u1', title: 'testuser', thumb: 'avatar.png' },
     Player: {
       machineIdentifier: 'dev-1',
       device: 'Living Room TV',
@@ -175,7 +175,7 @@ describe('DeviceTrackingService', () => {
 
       expect(usersService.updateUserFromSessionData).toHaveBeenCalledWith(
         'u1',
-        'vincent',
+        'testuser',
         'avatar.png',
       );
     });
@@ -194,13 +194,13 @@ describe('DeviceTrackingService', () => {
     it('falls back to the user uuid when no id is present', async () => {
       await service.processSessionsForDeviceTracking(
         sessionsResponse(
-          session({ User: { uuid: 'uuid-1', title: 'vincent' } }),
+          session({ User: { uuid: 'uuid-1', title: 'testuser' } }),
         ),
       );
 
       expect(usersService.updateUserFromSessionData).toHaveBeenCalledWith(
         'uuid-1',
-        'vincent',
+        'testuser',
         undefined,
       );
     });
@@ -288,7 +288,7 @@ describe('DeviceTrackingService', () => {
 
       expect(listener).toHaveBeenCalledWith({
         userId: 'u1',
-        username: 'vincent',
+        username: 'testuser',
         deviceName: 'Living Room TV',
         deviceIdentifier: 'dev-1',
         ipAddress: '10.0.0.5',
@@ -460,7 +460,7 @@ describe('DeviceTrackingService', () => {
         deviceName: 'Bedroom TV',
         devicePlatform: 'Android',
         deviceProduct: 'Plex for iOS',
-        username: 'vincent',
+        username: 'testuser',
       });
     });
 

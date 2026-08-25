@@ -41,7 +41,7 @@ describe('SessionTerminationService', () => {
     id = 'session-1',
     sessionKey = 'sk-1',
     userId = 'u1',
-    username = 'vincent',
+    username = 'testuser',
     machineIdentifier = 'dev-1',
     product = 'Plex for Android',
     address = '10.0.0.5',
@@ -171,7 +171,7 @@ describe('SessionTerminationService', () => {
 
       expect(listener).toHaveBeenCalledWith({
         userId: 'u1',
-        username: 'vincent',
+        username: 'testuser',
         deviceIdentifier: 'dev-1',
         stopCode: 'DEVICE_REJECTED',
         sessionKey: 'sk-1',
@@ -675,7 +675,7 @@ describe('SessionTerminationService', () => {
     const sparse = (overrides: Record<string, unknown>) => ({
       sessionKey: 'sk-1',
       Session: { id: 'session-1' },
-      User: { id: 'u1', title: 'vincent' },
+      User: { id: 'u1', title: 'testuser' },
       Player: { machineIdentifier: 'dev-1', address: '10.0.0.5' },
       ...overrides,
     });
@@ -693,7 +693,7 @@ describe('SessionTerminationService', () => {
     it('falls back to the account uuid when there is no user id', async () => {
       preferenceRepo.findOne.mockResolvedValue(null);
 
-      await stop([sparse({ User: { uuid: 'uuid-1', title: 'vincent' } })]);
+      await stop([sparse({ User: { uuid: 'uuid-1', title: 'testuser' } })]);
 
       expect(preferenceRepo.findOne).toHaveBeenCalledWith({
         where: { userId: 'uuid-1' },

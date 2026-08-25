@@ -312,7 +312,7 @@ describe('DatabaseService', () => {
       preferenceRepo.findOne.mockResolvedValue({
         userId: 'u1',
         defaultBlock: false,
-        username: 'vincent',
+        username: 'testuser',
       });
 
       await importPreferences([{ userId: 'u1', defaultBlock: true }]);
@@ -325,13 +325,13 @@ describe('DatabaseService', () => {
     it('keeps the stored username when the import omits one', async () => {
       preferenceRepo.findOne.mockResolvedValue({
         userId: 'u1',
-        username: 'vincent',
+        username: 'testuser',
       });
 
       await importPreferences([{ userId: 'u1', defaultBlock: null }]);
 
       expect(preferenceRepo.save).toHaveBeenCalledWith(
-        expect.objectContaining({ username: 'vincent' }),
+        expect.objectContaining({ username: 'testuser' }),
       );
     });
 

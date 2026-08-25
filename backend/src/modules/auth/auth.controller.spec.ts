@@ -19,7 +19,7 @@ describe('AuthController', () => {
   ): AdminSessionUser =>
     Object.assign(new AdminUser(), {
       id: 'admin-1',
-      username: 'vincent',
+      username: 'testuser',
       email: 'v@example.com',
       passwordHash: 'hash',
       sessionId: 'session-1',
@@ -156,7 +156,7 @@ describe('AuthController', () => {
 
   describe('createAdmin', () => {
     const dto = {
-      username: 'vincent',
+      username: 'testuser',
       email: 'v@example.com',
       password: 'hunter2hunter2',
       confirmPassword: 'hunter2hunter2',
@@ -214,7 +214,7 @@ describe('AuthController', () => {
     it('sets the session cookie and returns the user', async () => {
       const { res, cookie } = responseStub();
       const result = await controller.login(
-        { username: 'vincent', password: 'hunter2hunter2' },
+        { username: 'testuser', password: 'hunter2hunter2' },
         requestStub(),
         res,
       );
@@ -233,7 +233,7 @@ describe('AuthController', () => {
       );
       await expect(
         controller.login(
-          { username: 'vincent', password: 'wrong' },
+          { username: 'testuser', password: 'wrong' },
           requestStub(),
           responseStub().res,
         ),
@@ -274,7 +274,7 @@ describe('AuthController', () => {
 
       expect(result).toMatchObject({
         id: 'admin-1',
-        username: 'vincent',
+        username: 'testuser',
         plexUsername: 'guest',
       });
     });

@@ -25,7 +25,7 @@ describe('UserPortalController', () => {
   const adminWithPlex = requestFor(
     Object.assign(new AdminUser(), {
       id: 'admin-1',
-      username: 'vincent',
+      username: 'testuser',
       sessionId: 'session-1',
       userType: 'admin' as const,
       plexUserId: 'plex-9',
@@ -35,7 +35,7 @@ describe('UserPortalController', () => {
   const adminWithoutPlex = requestFor(
     Object.assign(new AdminUser(), {
       id: 'admin-1',
-      username: 'vincent',
+      username: 'testuser',
       sessionId: 'session-1',
       userType: 'admin' as const,
     }),

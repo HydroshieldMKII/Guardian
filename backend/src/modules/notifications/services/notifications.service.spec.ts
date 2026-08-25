@@ -25,7 +25,7 @@ describe('NotificationsService', () => {
     Object.assign(new Notification(), {
       id: 1,
       userId: 'u1',
-      text: 'New device detected for vincent',
+      text: 'New device detected for testuser',
       type: 'info',
       read: false,
       createdAt: new Date('2026-08-01T00:00:00Z'),
@@ -143,7 +143,7 @@ describe('NotificationsService', () => {
     const notify = () =>
       service.createNewDeviceNotification(
         'u1',
-        'vincent',
+        'testuser',
         'Living Room TV',
         '10.0.0.5',
         9,
@@ -169,7 +169,7 @@ describe('NotificationsService', () => {
         userId: 'u1',
         type: 'info',
         sessionHistoryId: 9,
-        text: 'New device detected for vincent on Living Room TV - 10.0.0.5',
+        text: 'New device detected for testuser on Living Room TV - 10.0.0.5',
       });
     });
 
@@ -179,7 +179,7 @@ describe('NotificationsService', () => {
 
       const result = await service.createNewDeviceNotification(
         'u1',
-        'vincent',
+        'testuser',
         'A'.repeat(45),
         '10.0.0.5',
       );
@@ -195,7 +195,7 @@ describe('NotificationsService', () => {
 
       expect(emailService.sendNewDeviceEmail).toHaveBeenCalledWith(
         expect.stringContaining('New device detected'),
-        'vincent',
+        'testuser',
         'Living Room TV',
         '10.0.0.5',
       );
@@ -218,7 +218,7 @@ describe('NotificationsService', () => {
       await notify();
 
       expect(appriseService.sendNewDeviceNotification).toHaveBeenCalledWith(
-        'vincent',
+        'testuser',
         'Living Room TV',
         '10.0.0.5',
       );
@@ -244,7 +244,7 @@ describe('NotificationsService', () => {
     const blocked = (stopCode?: string) =>
       service.createStreamBlockedNotification(
         'u1',
-        'vincent',
+        'testuser',
         'dev-1',
         stopCode,
         9,
@@ -271,7 +271,7 @@ describe('NotificationsService', () => {
 
     it('falls back to a generic message with no stop code', async () => {
       const result = await blocked();
-      expect(result?.text).toBe('Stream blocked for vincent on Unknown Device');
+      expect(result?.text).toBe('Stream blocked for testuser on Unknown Device');
     });
 
     it('uses the stored device name when there is one', async () => {
@@ -304,7 +304,7 @@ describe('NotificationsService', () => {
       await blocked('DEVICE_PENDING');
 
       expect(emailService.sendBlockedEmail).toHaveBeenCalledWith(
-        'vincent',
+        'testuser',
         'Unknown Device',
         'DEVICE_PENDING',
         '10.0.0.5',
@@ -318,7 +318,7 @@ describe('NotificationsService', () => {
       await blocked();
 
       expect(emailService.sendBlockedEmail).toHaveBeenCalledWith(
-        'vincent',
+        'testuser',
         'Unknown Device',
         'N/A',
         '10.0.0.5',
@@ -332,7 +332,7 @@ describe('NotificationsService', () => {
       await blocked('DEVICE_PENDING');
 
       expect(appriseService.sendBlockedNotification).toHaveBeenCalledWith(
-        'vincent',
+        'testuser',
         'Unknown Device',
         '10.0.0.5',
         'DEVICE_PENDING',
@@ -362,7 +362,7 @@ describe('NotificationsService', () => {
     const moved = () =>
       service.createLocationChangeNotification(
         'u1',
-        'vincent',
+        'testuser',
         'Living Room TV',
         '10.0.0.5',
         '203.0.113.9',
@@ -375,7 +375,7 @@ describe('NotificationsService', () => {
 
       const result = await moved();
       expect(result?.text).toBe(
-        'Device location changed for vincent on Living Room TV - 10.0.0.5 → 203.0.113.9',
+        'Device location changed for testuser on Living Room TV - 10.0.0.5 → 203.0.113.9',
       );
     });
 
@@ -390,7 +390,7 @@ describe('NotificationsService', () => {
       await moved();
 
       expect(emailService.sendLocationChangeEmail).toHaveBeenCalledWith(
-        'vincent',
+        'testuser',
         'Living Room TV',
         '10.0.0.5',
         '203.0.113.9',
@@ -425,7 +425,7 @@ describe('NotificationsService', () => {
     const noted = (note = 'Please approve my tablet') =>
       service.createDeviceNoteNotification(
         'u1',
-        'vincent',
+        'testuser',
         'Living Room TV',
         note,
       );
@@ -436,7 +436,7 @@ describe('NotificationsService', () => {
 
       const result = await noted();
       expect(result?.text).toBe(
-        'vincent left a note on Living Room TV: "Please approve my tablet"',
+        'testuser left a note on Living Room TV: "Please approve my tablet"',
       );
     });
 
@@ -467,7 +467,7 @@ describe('NotificationsService', () => {
       await noted('a long note');
 
       expect(emailService.sendDeviceNoteEmail).toHaveBeenCalledWith(
-        'vincent',
+        'testuser',
         'Living Room TV',
         'a long note',
       );
@@ -498,7 +498,7 @@ describe('NotificationsService', () => {
   describe('listing notifications', () => {
     const joined = notification({
       sessionHistory: {
-        userPreference: { username: 'vincent' },
+        userPreference: { username: 'testuser' },
         userDevice: { deviceName: 'Living Room TV' },
       },
     } as Partial<Notification>);
@@ -508,7 +508,7 @@ describe('NotificationsService', () => {
 
       await expect(service.getAllNotifications()).resolves.toEqual([
         expect.objectContaining({
-          username: 'vincent',
+          username: 'testuser',
           deviceName: 'Living Room TV',
         }),
       ]);
@@ -541,7 +541,7 @@ describe('NotificationsService', () => {
 
       await expect(service.getNotificationsForUser('u1')).resolves.toEqual([
         expect.objectContaining({
-          username: 'vincent',
+          username: 'testuser',
           deviceName: 'Living Room TV',
         }),
       ]);
@@ -638,8 +638,8 @@ describe('NotificationsService', () => {
     it('links the recent new-device notification', async () => {
       historyRepo.findOne.mockResolvedValue(history);
       queryBuilder.getMany.mockResolvedValue([
-        notification({ id: 3, text: 'Stream blocked for vincent' }),
-        notification({ id: 4, text: 'New device detected for vincent' }),
+        notification({ id: 3, text: 'Stream blocked for testuser' }),
+        notification({ id: 4, text: 'New device detected for testuser' }),
       ]);
 
       await service.linkNotificationToSessionHistory('sk-1');
@@ -652,8 +652,8 @@ describe('NotificationsService', () => {
     it('links at most one notification', async () => {
       historyRepo.findOne.mockResolvedValue(history);
       queryBuilder.getMany.mockResolvedValue([
-        notification({ id: 4, text: 'New device detected for vincent' }),
-        notification({ id: 5, text: 'New device detected for vincent' }),
+        notification({ id: 4, text: 'New device detected for testuser' }),
+        notification({ id: 5, text: 'New device detected for testuser' }),
       ]);
 
       await service.linkNotificationToSessionHistory('sk-1');
@@ -673,7 +673,7 @@ describe('NotificationsService', () => {
     it('leaves unrelated notifications alone', async () => {
       historyRepo.findOne.mockResolvedValue(history);
       queryBuilder.getMany.mockResolvedValue([
-        notification({ id: 3, text: 'Stream blocked for vincent' }),
+        notification({ id: 3, text: 'Stream blocked for testuser' }),
       ]);
 
       await service.linkNotificationToSessionHistory('sk-1');

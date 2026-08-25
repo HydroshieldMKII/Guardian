@@ -23,7 +23,7 @@ const strongPassword = 'Hunter2Hunter2!';
 
 describe('CreateAdminDto', () => {
   const valid = {
-    username: 'vincent',
+    username: 'testuser',
     email: 'v@example.com',
     password: strongPassword,
     confirmPassword: strongPassword,
@@ -60,7 +60,7 @@ describe('CreateAdminDto', () => {
 describe('StrongPassword', () => {
   const passwordErrors = (password: unknown) =>
     errorsFor(CreateAdminDto, {
-      username: 'vincent',
+      username: 'testuser',
       password,
       confirmPassword: 'x',
     });
@@ -166,14 +166,14 @@ describe('UpdatePasswordDto', () => {
 describe('LoginDto', () => {
   it('accepts a username and password', () => {
     expect(
-      errorsFor(LoginDto, { username: 'vincent', password: 'anything' }),
+      errorsFor(LoginDto, { username: 'testuser', password: 'anything' }),
     ).toEqual([]);
   });
 
   it('accepts an optional captcha token', () => {
     expect(
       errorsFor(LoginDto, {
-        username: 'vincent',
+        username: 'testuser',
         password: 'x',
         captchaToken: 'token',
       }),
@@ -182,14 +182,14 @@ describe('LoginDto', () => {
 
   it('places no strength rule on the supplied password', () => {
     expect(
-      errorsFor(LoginDto, { username: 'vincent', password: 'weak' }),
+      errorsFor(LoginDto, { username: 'testuser', password: 'weak' }),
     ).toEqual([]);
   });
 
   it.each(['username', 'password'])('requires a %s', (field) => {
     expect(
       propertiesFor(LoginDto, {
-        username: 'vincent',
+        username: 'testuser',
         password: 'x',
         [field]: 1,
       }),
