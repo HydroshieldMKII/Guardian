@@ -19,7 +19,11 @@ import {
 } from "@/components/ui/select";
 import { Shield, User, BellRing } from "lucide-react";
 import { AppSetting } from "@/types";
-import { getSettingInfo, SettingsFormData } from "./settings-utils";
+import {
+  getSettingInfo,
+  getSecretInputDisplay,
+  SettingsFormData,
+} from "./settings-utils";
 
 // Helper function to get current time in a specific timezone offset
 const getCurrentTimeInOffset = (offsetString: string): string => {
@@ -706,6 +710,12 @@ export function GeneralSettings({
       setting.key === "CLOUDFLARE_TURNSTILE_SITE_KEY" ||
       setting.key === "CLOUDFLARE_TURNSTILE_SECRET_KEY"
     ) {
+      const display = getSecretInputDisplay(
+        setting,
+        typeof value === "string" ? value : String(value),
+        `Enter ${label.toLowerCase()}`,
+      );
+
       return (
         <div key={setting.key} className="space-y-2">
           <Label htmlFor={setting.key}>{label}</Label>
@@ -732,11 +742,11 @@ export function GeneralSettings({
                 ? "password"
                 : "text"
             }
-            value={typeof value === "string" ? value : String(value)}
+            value={display.value}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
               handleInputChange(setting.key, e.target.value)
             }
-            placeholder={`Enter ${label.toLowerCase()}`}
+            placeholder={display.placeholder}
             className="cursor-pointer font-mono"
           />
         </div>

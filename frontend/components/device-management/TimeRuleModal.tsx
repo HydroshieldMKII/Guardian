@@ -113,7 +113,7 @@ export function TimeRuleModal({
   const [deletingAllRules, setDeletingAllRules] = useState(false);
   const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
   const [showPresetConfirm, setShowPresetConfirm] = useState<string | null>(
-    null
+    null,
   );
   const [newRule, setNewRule] = useState<NewRuleForm>({
     deviceIdentifier: deviceIdentifier || undefined,
@@ -184,7 +184,7 @@ export function TimeRuleModal({
   // Check if two time rules overlap
   const doTimeRulesOverlap = (
     rule1: { startTime: string; endTime: string },
-    rule2: { startTime: string; endTime: string }
+    rule2: { startTime: string; endTime: string },
   ): boolean => {
     const start1 = timeToMinutes(rule1.startTime);
     const end1 = timeToMinutes(rule1.endTime);
@@ -198,13 +198,13 @@ export function TimeRuleModal({
   // Validate if a rule would overlap with existing rules
   const validateRuleOverlap = (
     newRule: { dayOfWeek: number; startTime: string; endTime: string },
-    excludeRuleId?: number
+    excludeRuleId?: number,
   ): { isValid: boolean; conflictingRule?: UserTimeRule } => {
     const conflictingRule = rules.find(
       (rule) =>
         rule.id !== excludeRuleId &&
         rule.dayOfWeek === newRule.dayOfWeek &&
-        doTimeRulesOverlap(newRule, rule)
+        doTimeRulesOverlap(newRule, rule),
     );
 
     return {
@@ -219,7 +219,7 @@ export function TimeRuleModal({
         ...rule,
         isEditing: rule.id === ruleId,
         tempData: rule.id === ruleId ? { ...rule } : undefined,
-      }))
+      })),
     );
   };
 
@@ -229,7 +229,7 @@ export function TimeRuleModal({
         ...rule,
         isEditing: false,
         tempData: undefined,
-      }))
+      })),
     );
   };
 
@@ -243,7 +243,7 @@ export function TimeRuleModal({
           };
         }
         return rule;
-      })
+      }),
     );
   };
 
@@ -258,7 +258,7 @@ export function TimeRuleModal({
         startTime: rule.tempData.startTime || rule.startTime,
         endTime: rule.tempData.endTime || rule.endTime,
       },
-      ruleId
+      ruleId,
     );
 
     if (!validation.isValid && validation.conflictingRule) {
@@ -366,7 +366,7 @@ export function TimeRuleModal({
       const createdRule = await createTimeRule(userId, createDto);
 
       setRules((prev) =>
-        sortRules([...prev, { ...createdRule, isEditing: false }])
+        sortRules([...prev, { ...createdRule, isEditing: false }]),
       );
 
       // Reset new rule form
@@ -443,7 +443,7 @@ export function TimeRuleModal({
       const createdRules = await createPreset(
         userId,
         presetType as "weekdays-only" | "weekends-only",
-        deviceIdentifier
+        deviceIdentifier,
       );
 
       const editingRules = createdRules.map((rule) => ({
@@ -677,7 +677,7 @@ export function TimeRuleModal({
                 {loadingRules ? (
                   <div className="text-center py-4">Loading rules...</div>
                 ) : rules.length === 0 ? (
-                  <div className="text-center py-8">
+                  <div className="py-8">
                     <div className="text-muted-foreground">
                       <p className="text-sm">No blocking rules configured.</p>
                       <p className="text-xs mt-1">
@@ -853,8 +853,8 @@ export function TimeRuleModal({
                                         prev.map((r) =>
                                           r.id === rule.id
                                             ? { ...r, enabled: checked }
-                                            : r
-                                        )
+                                            : r,
+                                        ),
                                       );
                                     } catch (error: any) {
                                       toast({

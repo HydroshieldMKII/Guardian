@@ -65,6 +65,23 @@ describe("PlexSettings", () => {
     expect(screen.queryByDisplayValue("mail.example.com")).toBeNull();
   });
 
+  describe("the optional tip", () => {
+    it("marks Custom Plex URL as optional and explains it", () => {
+      renderPanel();
+
+      expect(screen.getByText("Optional")).toBeInTheDocument();
+      expect(
+        screen.getByText(/Leave empty to build media links/),
+      ).toBeInTheDocument();
+    });
+
+    it("leaves a setting with no tip unadorned", () => {
+      renderPanel({ settings: [setting("PLEX_SERVER_IP", "10.0.0.5")] });
+
+      expect(screen.queryByText("Optional")).toBeNull();
+    });
+  });
+
   it("sorts unrecognised Plex settings to the end", () => {
     const { container } = renderPanel({
       settings: [

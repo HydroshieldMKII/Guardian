@@ -2,6 +2,7 @@ import { Test } from '@nestjs/testing';
 import type { Response } from 'express';
 import {
   LIVE_EVENT_DASHBOARD,
+  LIVE_EVENT_NOTIFICATIONS,
   LiveEventsService,
 } from '@/modules/events/live-events.service';
 
@@ -144,6 +145,24 @@ describe('LiveEventsService', () => {
 
       const body = dataFrames(c)[0].split('data: ')[1];
       expect(body.split('\n')).toHaveLength(3);
+    });
+  });
+
+  describe('broadcastNotifications', () => {
+    it('writes a notifications event frame carrying the json payload', () => {
+      const c = client();
+      service.register(c.res);
+
+      service.broadcastNotifications([{ id: 1, read: false }]);
+
+      expect(dataFrames(c)).toEqual([
+        `event: ${LIVE_EVENT_NOTIFICATIONS}\ndata: [{"id":1,"read":false}]\n\n`,
+      ]);
+    });
+
+    it('does nothing when nobody is listening', () => {
+      expect(() => service.broadcastNotifications([])).not.toThrow();
+      expect(service.hasListeners()).toBe(false);
     });
   });
 

@@ -328,6 +328,14 @@ describe('ConfigService', () => {
       expect(token).toMatchObject({ value: '••••••••', private: true });
     });
 
+    it('leaves an unset private setting empty so the client knows nothing is saved', async () => {
+      store.set('PLEX_TOKEN', row('PLEX_TOKEN', '', 'string', true));
+      const settings = await service.getPublicSettings();
+
+      const token = settings.find((setting) => setting.key === 'PLEX_TOKEN');
+      expect(token).toMatchObject({ value: '', private: true });
+    });
+
     it('leaves a public setting readable', async () => {
       const settings = await service.getPublicSettings();
       const page = settings.find((setting) => setting.key === 'DEFAULT_PAGE');

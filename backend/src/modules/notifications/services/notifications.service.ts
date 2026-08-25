@@ -7,6 +7,7 @@ import { UserDevice } from '@/entities/user-device.entity';
 import { ConfigService } from '@/modules/config/services/config.service';
 import { AppriseService } from '@/modules/config/services/apprise.service';
 import { EmailService } from '@/modules/config/services/email.service';
+import { LiveEventsService } from '@/modules/events/live-events.service';
 import { Logger } from '@nestjs/common';
 
 export interface CreateNotificationDto {
@@ -43,7 +44,20 @@ export class NotificationsService {
     private configService: ConfigService,
     private appriseService: AppriseService,
     private emailService: EmailService,
+    private liveEvents: LiveEventsService,
   ) {}
+
+  private async publishNotifications(): Promise<void> {
+    if (!this.liveEvents.hasListeners()) {
+      return;
+    }
+
+    try {
+      this.liveEvents.broadcastNotifications(await this.getAllNotifications());
+    } catch (error) {
+      this.logger.error('Failed to broadcast notification update:', error);
+    }
+  }
 
   /**
    * Truncates a device name if it exceeds the maximum length
@@ -69,7 +83,9 @@ export class NotificationsService {
       read: false,
     });
 
-    return await this.notificationRepository.save(notification);
+    const saved = await this.notificationRepository.save(notification);
+    await this.publishNotifications();
+    return saved;
   }
 
   async createNewDeviceNotification(
@@ -509,7 +525,9 @@ export class NotificationsService {
     }
 
     notification.read = true;
-    return await this.notificationRepository.save(notification);
+    const saved = await this.notificationRepository.save(notification);
+    await this.publishNotifications();
+    return saved;
   }
 
   async deleteNotification(notificationId: number): Promise<void> {
@@ -520,6 +538,8 @@ export class NotificationsService {
         `Notification with ID ${notificationId} not found`,
       );
     }
+
+    await this.publishNotifications();
   }
 
   async getUnreadCountForUser(userId: string): Promise<number> {
@@ -530,10 +550,12 @@ export class NotificationsService {
 
   async markAllAsRead(): Promise<void> {
     await this.notificationRepository.update({ read: false }, { read: true });
+    await this.publishNotifications();
   }
 
   async clearAll(): Promise<void> {
     await this.notificationRepository.clear();
+    await this.publishNotifications();
   }
 
   async linkNotificationToSessionHistory(sessionKey: string): Promise<void> {
@@ -582,6 +604,7 @@ export class NotificationsService {
           this.logger.log(
             `Linked notification ${notification.id} to session history ${sessionHistory.id} for session key ${sessionKey}`,
           );
+          await this.publishNotifications();
           break; // Only link the first matching notification
         }
       }

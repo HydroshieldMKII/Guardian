@@ -52,7 +52,7 @@ export function DatabaseManagement({
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `guardian-database-export-${new Date().toISOString().split("T")[0]}.json`;
+      a.download = `guardian-settings-export-${new Date().toISOString().split("T")[0]}.json`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -60,14 +60,14 @@ export function DatabaseManagement({
 
       toast({
         title: "Export successful",
-        description: "Database has been exported successfully",
+        description: "Settings have been exported successfully",
         variant: "success",
       });
     } catch (error) {
       console.error("Export error:", error);
       toast({
         title: "Export failed",
-        description: "Failed to export database",
+        description: "Failed to export settings",
         variant: "destructive",
       });
     } finally {
@@ -148,7 +148,7 @@ export function DatabaseManagement({
       toast({
         title: "Import failed",
         description:
-          error instanceof Error ? error.message : "Failed to import database",
+          error instanceof Error ? error.message : "Failed to import settings",
         variant: "destructive",
       });
     } finally {
@@ -190,9 +190,9 @@ export function DatabaseManagement({
     <>
       <Card>
         <CardHeader className="mt-4 mb-4">
-          <CardTitle>Database Management</CardTitle>
+          <CardTitle>Settings Management</CardTitle>
           <CardDescription>
-            Export and import Guardian database settings and configuration
+            Export and import Guardian settings and data
           </CardDescription>
           {versionInfo && (
             <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
@@ -227,7 +227,7 @@ export function DatabaseManagement({
               ) : (
                 <>
                   <Download className="mr-2 h-4 w-4" />
-                  Export Database
+                  Export Settings
                 </>
               )}
             </Button>
@@ -253,7 +253,7 @@ export function DatabaseManagement({
                 ) : (
                   <>
                     <Upload className="mr-2 h-4 w-4" />
-                    Import Database
+                    Import Settings
                   </>
                 )}
               </Button>
@@ -262,9 +262,9 @@ export function DatabaseManagement({
 
           <div className="p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-md mb-4">
             <p className="text-sm text-blue-800 dark:text-blue-200">
-              <strong>Note:</strong> Database export/import includes all
-              settings, user devices, and preferences. Importing will merge data
-              with existing data and will overwrite existing if they are already
+              <strong>Note:</strong> The export/import includes all settings,
+              user devices, and preferences. Importing will merge data with
+              existing data and will overwrite existing if they are already
               present. No data will be deleted during import.
             </p>
           </div>

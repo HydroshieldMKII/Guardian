@@ -24,6 +24,7 @@ import { apiClient } from "@/lib/api";
 import { AppSetting } from "@/types";
 import {
   getSettingInfo,
+  getSecretInputDisplay,
   SettingsFormData,
   ConnectionStatus,
 } from "./settings-utils";
@@ -318,6 +319,12 @@ export function SMTPSettings({
       );
     }
 
+    const display = getSecretInputDisplay(
+      setting,
+      typeof value === "string" ? value : String(value),
+      `Enter ${label.toLowerCase()}`,
+    );
+
     return (
       <div key={setting.key} className="space-y-2">
         <Label htmlFor={setting.key}>{label}</Label>
@@ -333,9 +340,9 @@ export function SMTPSettings({
                 ? "number"
                 : "text"
           }
-          value={typeof value === "string" ? value : String(value)}
+          value={display.value}
           onChange={(e) => handleInputChange(setting.key, e.target.value)}
-          placeholder={`Enter ${label.toLowerCase()}`}
+          placeholder={display.placeholder}
           className="cursor-pointer"
         />
       </div>

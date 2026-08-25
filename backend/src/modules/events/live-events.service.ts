@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import type { Response } from 'express';
 
 export const LIVE_EVENT_DASHBOARD = 'dashboard';
+export const LIVE_EVENT_NOTIFICATIONS = 'notifications';
 const HEARTBEAT_MS = 25000;
 
 /**
@@ -34,6 +35,10 @@ export class LiveEventsService {
 
   broadcastDashboard(payload: unknown): void {
     this.publish(LIVE_EVENT_DASHBOARD, payload);
+  }
+
+  broadcastNotifications(payload: unknown): void {
+    this.publish(LIVE_EVENT_NOTIFICATIONS, payload);
   }
 
   hasListeners(): boolean {

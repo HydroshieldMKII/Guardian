@@ -177,7 +177,7 @@ export class ConfigService {
       type: setting.type,
       private: setting.private,
       updatedAt: setting.updatedAt,
-      value: setting.private ? '••••••••' : setting.value,
+      value: setting.private && setting.value ? '••••••••' : setting.value,
     }));
   }
 

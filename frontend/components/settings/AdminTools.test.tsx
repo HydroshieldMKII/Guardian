@@ -391,7 +391,7 @@ describe("AdminTools import", () => {
 
     await waitFor(() =>
       expect(toast).toHaveBeenCalledWith(
-        expect.objectContaining({ description: "Failed to import database" }),
+        expect.objectContaining({ description: "Failed to import settings" }),
       ),
     );
   });

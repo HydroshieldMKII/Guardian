@@ -143,24 +143,22 @@ describe("ErrorHandler", () => {
   });
 
   describe("the connection status panel", () => {
-    it("marks a configured server with a tick", () => {
-      const { container } = render(
+    it("shows the raw connection status", () => {
+      render(
         <ErrorHandler
           plexStatus={status({ connectionStatus: "PLEX_SERVER_ERROR: 500" })}
         />,
       );
 
-      expect(
-        container.querySelector(".lucide-circle-check-big"),
-      ).not.toBeNull();
+      expect(screen.getByText("PLEX_SERVER_ERROR: 500")).toBeInTheDocument();
     });
 
-    it("marks an unconfigured server as offline", () => {
+    it("renders without any decorative icons", () => {
       const { container } = render(
         <ErrorHandler plexStatus={status({ configured: false })} />,
       );
 
-      expect(container.querySelector(".lucide-wifi-off")).not.toBeNull();
+      expect(container.querySelector("svg")).toBeNull();
     });
   });
 });

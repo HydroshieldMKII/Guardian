@@ -1,8 +1,10 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import {
   DASHBOARD_EVENT,
+  NOTIFICATIONS_EVENT,
   LIVE_URL,
   useLiveDashboard,
+  useLiveEvent,
 } from "./useLiveDashboard";
 
 class FakeEventSource {
@@ -183,6 +185,28 @@ describe("updates", () => {
     expect(first).not.toHaveBeenCalled();
     expect(second).toHaveBeenCalled();
     expect(FakeEventSource.instances).toHaveLength(1);
+  });
+});
+
+describe("event names", () => {
+  it("delivers only the subscribed event to the caller", () => {
+    const onUpdate = jest.fn();
+    renderHook(() => useLiveEvent(NOTIFICATIONS_EVENT, onUpdate));
+
+    latest().emit(DASHBOARD_EVENT, JSON.stringify({ stats: {} }));
+    latest().emit(NOTIFICATIONS_EVENT, JSON.stringify([{ id: 1 }]));
+
+    expect(onUpdate).toHaveBeenCalledTimes(1);
+    expect(onUpdate).toHaveBeenCalledWith([{ id: 1 }]);
+  });
+
+  it("keeps the dashboard hook on the dashboard event", () => {
+    const onUpdate = jest.fn();
+    renderHook(() => useLiveDashboard(onUpdate));
+
+    latest().emit(NOTIFICATIONS_EVENT, JSON.stringify([{ id: 1 }]));
+
+    expect(onUpdate).not.toHaveBeenCalled();
   });
 });
 

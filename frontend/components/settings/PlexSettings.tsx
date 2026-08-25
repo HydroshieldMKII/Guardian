@@ -19,11 +19,13 @@ import {
   Loader2,
   Server,
   AlertTriangle,
+  Info,
 } from "lucide-react";
 import { apiClient } from "@/lib/api";
 import { AppSetting } from "@/types";
 import {
   getSettingInfo,
+  getSecretInputDisplay,
   SettingsFormData,
   ConnectionStatus,
 } from "./settings-utils";
@@ -60,7 +62,7 @@ export function PlexSettings({
           setting.key !== "PLEX_GUARD_DEFAULT_BLOCK") ||
         setting.key === "USE_SSL" ||
         setting.key === "IGNORE_CERT_ERRORS" ||
-        setting.key === "CUSTOM_PLEX_URL"
+        setting.key === "CUSTOM_PLEX_URL",
     )
     .sort((a, b) => {
       const order = [
@@ -109,7 +111,7 @@ export function PlexSettings({
   const renderSSLSettingsGroup = () => {
     const useSslSetting = plexSettings.find((s) => s.key === "USE_SSL");
     const ignoreCertErrorsSetting = plexSettings.find(
-      (s) => s.key === "IGNORE_CERT_ERRORS"
+      (s) => s.key === "IGNORE_CERT_ERRORS",
     );
 
     if (!useSslSetting || !ignoreCertErrorsSetting) return null;
@@ -161,7 +163,7 @@ export function PlexSettings({
   };
 
   const renderSetting = (setting: AppSetting) => {
-    const { label, description } = getSettingInfo(setting);
+    const { label, description, tip } = getSettingInfo(setting);
     const value = formData[setting.key] ?? setting.value;
 
     if (setting.type === "boolean") {
@@ -187,11 +189,30 @@ export function PlexSettings({
       );
     }
 
+    const display = getSecretInputDisplay(
+      setting,
+      typeof value === "string" ? value : String(value),
+      `Enter ${label.toLowerCase()}`,
+    );
+
     return (
       <div key={setting.key} className="space-y-2">
-        <Label htmlFor={setting.key}>{label}</Label>
+        <div className="flex flex-wrap items-center gap-2">
+          <Label htmlFor={setting.key}>{label}</Label>
+          {tip && (
+            <span className="rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground">
+              Optional
+            </span>
+          )}
+        </div>
         {description && (
           <p className="text-sm text-muted-foreground">{description}</p>
+        )}
+        {tip && (
+          <p className="flex items-start gap-1.5 text-xs text-muted-foreground">
+            <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+            <span>{tip}</span>
+          </p>
         )}
         <Input
           id={setting.key}
@@ -200,9 +221,9 @@ export function PlexSettings({
               ? "password"
               : "text"
           }
-          value={typeof value === "string" ? value : String(value)}
+          value={display.value}
           onChange={(e) => handleInputChange(setting.key, e.target.value)}
-          placeholder={`Enter ${label.toLowerCase()}`}
+          placeholder={display.placeholder}
           className="cursor-pointer"
         />
       </div>
@@ -222,7 +243,7 @@ export function PlexSettings({
         {plexSettings
           .filter(
             (setting) =>
-              setting.key !== "USE_SSL" && setting.key !== "IGNORE_CERT_ERRORS"
+              setting.key !== "USE_SSL" && setting.key !== "IGNORE_CERT_ERRORS",
           )
           .map((setting) => (
             <Card key={setting.key} className="p-4 my-4">

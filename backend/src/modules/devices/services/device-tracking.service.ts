@@ -316,7 +316,7 @@ export class DeviceTrackingService {
       : `Status: pending, App default action: ${defaultBlock ? 'Block' : 'Allow'}`;
 
     this.logger.warn(
-      `🚨 NEW DEVICE DETECTED! User: ${deviceInfo.username || deviceInfo.userId}, IP: ${deviceInfo.ipAddress || 'Unknown IP'}, Device: ${deviceInfo.deviceName || deviceInfo.deviceIdentifier}, Platform: ${deviceInfo.devicePlatform || 'Unknown'}, ${statusMessage}`,
+      `NEW DEVICE DETECTED! User: ${deviceInfo.username || deviceInfo.userId}, IP: ${deviceInfo.ipAddress || 'Unknown IP'}, Device: ${deviceInfo.deviceName || deviceInfo.deviceIdentifier}, Platform: ${deviceInfo.devicePlatform || 'Unknown'}, ${statusMessage}`,
     );
 
     this.emitNewDeviceEvent({

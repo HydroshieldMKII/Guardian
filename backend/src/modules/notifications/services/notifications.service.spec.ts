@@ -7,6 +7,7 @@ import { UserDevice } from '@/entities/user-device.entity';
 import { ConfigService } from '@/modules/config/services/config.service';
 import { AppriseService } from '@/modules/config/services/apprise.service';
 import { EmailService } from '@/modules/config/services/email.service';
+import { LiveEventsService } from '@/modules/events/live-events.service';
 import { NotificationsService } from '@/modules/notifications/services/notifications.service';
 
 describe('NotificationsService', () => {
@@ -17,6 +18,10 @@ describe('NotificationsService', () => {
   let configService: { getSetting: jest.Mock };
   let appriseService: Record<string, jest.Mock>;
   let emailService: Record<string, jest.Mock>;
+  let liveEvents: {
+    hasListeners: jest.Mock;
+    broadcastNotifications: jest.Mock;
+  };
   let queryBuilder: Record<string, jest.Mock>;
 
   const enabled = new Set<string>();
@@ -91,6 +96,11 @@ describe('NotificationsService', () => {
       sendDeviceNoteEmail: jest.fn().mockResolvedValue(undefined),
     };
 
+    liveEvents = {
+      hasListeners: jest.fn().mockReturnValue(false),
+      broadcastNotifications: jest.fn(),
+    };
+
     const module = await Test.createTestingModule({
       providers: [
         NotificationsService,
@@ -106,6 +116,7 @@ describe('NotificationsService', () => {
         { provide: ConfigService, useValue: configService },
         { provide: AppriseService, useValue: appriseService },
         { provide: EmailService, useValue: emailService },
+        { provide: LiveEventsService, useValue: liveEvents },
       ],
     }).compile();
 
@@ -687,6 +698,45 @@ describe('NotificationsService', () => {
       await expect(
         service.linkNotificationToSessionHistory('sk-1'),
       ).resolves.toBeUndefined();
+    });
+  });
+
+  describe('live broadcasting', () => {
+    it('does not broadcast while nobody is listening', async () => {
+      await service.createNotification({ userId: 'u1', text: 'hello' });
+      expect(liveEvents.broadcastNotifications).not.toHaveBeenCalled();
+    });
+
+    it('broadcasts the refreshed list after a notification is created', async () => {
+      liveEvents.hasListeners.mockReturnValue(true);
+      queryBuilder.getMany.mockResolvedValue([notification()]);
+
+      await service.createNotification({ userId: 'u1', text: 'hello' });
+
+      expect(liveEvents.broadcastNotifications).toHaveBeenCalledWith([
+        expect.objectContaining({ id: 1, userId: 'u1' }),
+      ]);
+    });
+
+    it.each([
+      ['markAllAsRead', () => service.markAllAsRead()],
+      ['clearAll', () => service.clearAll()],
+      ['deleteNotification', () => service.deleteNotification(1)],
+      ['markAsRead', () => service.markAsRead(1, true)],
+    ])('broadcasts after %s', async (_name, run) => {
+      liveEvents.hasListeners.mockReturnValue(true);
+      await run();
+      expect(liveEvents.broadcastNotifications).toHaveBeenCalledTimes(1);
+    });
+
+    it('survives a broadcast failure', async () => {
+      liveEvents.hasListeners.mockReturnValue(true);
+      queryBuilder.getMany.mockRejectedValue(new Error('db down'));
+
+      await expect(
+        service.createNotification({ userId: 'u1', text: 'hello' }),
+      ).resolves.toBeDefined();
+      expect(liveEvents.broadcastNotifications).not.toHaveBeenCalled();
     });
   });
 });

@@ -1,5 +1,9 @@
 import { AppSetting } from "@/types";
-import { getSettingInfo, settingsSections } from "./settings-utils";
+import {
+  getSettingInfo,
+  getSecretInputDisplay,
+  settingsSections,
+} from "./settings-utils";
 
 const setting = (key: string): AppSetting => ({ key }) as AppSetting;
 
@@ -67,5 +71,70 @@ describe("settingsSections", () => {
   it("uses unique ids", () => {
     const ids = settingsSections.map((s) => s.id);
     expect(new Set(ids).size).toBe(ids.length);
+  });
+});
+
+describe("getSecretInputDisplay", () => {
+  const secret = (value: string): AppSetting =>
+    ({ key: "PLEX_TOKEN", value, private: true }) as AppSetting;
+
+  it("hides an untouched masked secret behind a placeholder", () => {
+    expect(
+      getSecretInputDisplay(secret("••••••••"), "••••••••", "Enter plex token"),
+    ).toEqual({
+      value: "",
+      placeholder: "•••••••• (saved)",
+    });
+  });
+
+  it("shows the replacement once the user types one", () => {
+    expect(
+      getSecretInputDisplay(
+        secret("••••••••"),
+        "new-token",
+        "Enter plex token",
+      ),
+    ).toEqual({
+      value: "new-token",
+      placeholder: "Enter plex token",
+    });
+  });
+
+  it("keeps an unset secret as a normal empty field", () => {
+    expect(getSecretInputDisplay(secret(""), "", "Enter plex token")).toEqual({
+      value: "",
+      placeholder: "Enter plex token",
+    });
+  });
+
+  it("leaves a public setting untouched", () => {
+    const publicSetting = {
+      key: "PLEX_SERVER_IP",
+      value: "10.0.0.2",
+      private: false,
+    } as AppSetting;
+
+    expect(
+      getSecretInputDisplay(
+        publicSetting,
+        "10.0.0.2",
+        "Enter plex server ip address",
+      ),
+    ).toEqual({
+      value: "10.0.0.2",
+      placeholder: "Enter plex server ip address",
+    });
+  });
+});
+
+describe("setting tips", () => {
+  it("carries the tip for a setting that has one", () => {
+    expect(getSettingInfo(setting("CUSTOM_PLEX_URL")).tip).toMatch(
+      /Leave empty to build media links/,
+    );
+  });
+
+  it("omits the tip for a setting without one", () => {
+    expect(getSettingInfo(setting("PLEX_SERVER_IP")).tip).toBeUndefined();
   });
 });

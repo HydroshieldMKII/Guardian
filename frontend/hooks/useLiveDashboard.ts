@@ -4,23 +4,25 @@ import { useEffect, useRef, useState } from "react";
 
 export const LIVE_URL = "/api/pg/live";
 export const DASHBOARD_EVENT = "dashboard";
+export const NOTIFICATIONS_EVENT = "notifications";
 
-export interface LiveDashboard<T> {
+export interface LiveSubscription<T> {
   connected: boolean;
   lastUpdate: T | null;
 }
 
 /**
- * Subscribes to server-pushed dashboard updates over Server-Sent Events.
+ * Subscribes to one named server-pushed event over Server-Sent Events.
  *
  * Callers keep polling while `connected` is false, so a dropped stream
  * degrades to the previous behaviour rather than a frozen page. EventSource
  * reconnects on its own, which flips `connected` back without extra work.
  */
-export function useLiveDashboard<T>(
+export function useLiveEvent<T>(
+  eventName: string,
   onUpdate: (payload: T) => void,
   enabled = true,
-): LiveDashboard<T> {
+): LiveSubscription<T> {
   const [connected, setConnected] = useState(false);
   const [lastUpdate, setLastUpdate] = useState<T | null>(null);
   const handlerRef = useRef(onUpdate);
@@ -42,7 +44,7 @@ export function useLiveDashboard<T>(
 
     source.onopen = () => setConnected(true);
     source.onerror = () => setConnected(false);
-    source.addEventListener(DASHBOARD_EVENT, (event) => {
+    source.addEventListener(eventName, (event) => {
       let payload: T;
       try {
         payload = JSON.parse((event as MessageEvent<string>).data) as T;
@@ -59,7 +61,14 @@ export function useLiveDashboard<T>(
       source.close();
       setConnected(false);
     };
-  }, [enabled]);
+  }, [enabled, eventName]);
 
   return { connected, lastUpdate };
+}
+
+export function useLiveDashboard<T>(
+  onUpdate: (payload: T) => void,
+  enabled = true,
+): LiveSubscription<T> {
+  return useLiveEvent(DASHBOARD_EVENT, onUpdate, enabled);
 }
