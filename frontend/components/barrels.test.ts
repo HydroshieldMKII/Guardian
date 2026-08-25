@@ -15,11 +15,12 @@ describe("barrel exports", () => {
     "ConcurrentStreamModal",
     "ClickableIP",
     "UserAvatar",
-    "getDeviceIcon",
     "DeviceStatus",
     "getUserPreferenceBadge",
   ])("device management re-exports %s", (name) => {
-    expect(deviceManagement[name as keyof typeof deviceManagement]).toBeDefined();
+    expect(
+      deviceManagement[name as keyof typeof deviceManagement],
+    ).toBeDefined();
   });
 
   it.each([

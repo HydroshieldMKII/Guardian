@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, Edit, Save, X, Plus, ChevronDown } from "lucide-react";
+import { Trash2, Edit, Save, X, ChevronDown } from "lucide-react";
 import { UserTimeRule, CreateTimeRuleDto } from "@/types";
 import { useTimeRules } from "@/hooks/device-management/useTimeRules";
 import { useToast } from "@/hooks/use-toast";
@@ -639,10 +639,7 @@ export function TimeRuleModal({
                           Creating...
                         </>
                       ) : (
-                        <>
-                          <Plus className="w-4 h-4" />
-                          Create Blocking Rule
-                        </>
+                        <>Create Blocking Rule</>
                       )}
                     </Button>
                   </CardContent>
@@ -666,9 +663,7 @@ export function TimeRuleModal({
                   >
                     {deletingAllRules ? (
                       <div className="w-3 h-3 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
-                    ) : (
-                      <Trash2 className="w-3 h-3 text-red-600 dark:text-red-400" />
-                    )}
+                    ) : null}
                     {deletingAllRules ? "Deleting..." : "Delete All"}
                   </Button>
                 )}

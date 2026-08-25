@@ -2,19 +2,6 @@ import React, { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
-  CheckCircle,
-  XCircle,
-  AlertTriangle,
-  Settings,
-  Timer,
-  Smartphone,
-  Tv,
-  Laptop,
-  Monitor,
-  ExternalLink,
-  HelpCircle,
-} from "lucide-react";
-import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
@@ -38,7 +25,7 @@ export const ClickableIP = ({
     window.open(
       `https://ipinfo.io/${ipAddress}`,
       "_blank",
-      "noopener,noreferrer"
+      "noopener,noreferrer",
     );
   };
 
@@ -49,7 +36,6 @@ export const ClickableIP = ({
       title={`Look up ${ipAddress} on ipinfo.io`}
     >
       <span className="truncate">{ipAddress}</span>
-      <ExternalLink className="w-3 h-3 flex-shrink-0 opacity-70" />
     </button>
   );
 };
@@ -84,34 +70,6 @@ export const UserAvatar = ({
 };
 
 // Device icon component
-export const getDeviceIcon = (
-  platform: string | null | undefined,
-  product: string | null | undefined
-) => {
-  const p = platform?.toLowerCase() || product?.toLowerCase() || "";
-
-  if (
-    p.includes("android") ||
-    p.includes("iphone") ||
-    p.includes("ios") ||
-    p.includes("mobile")
-  ) {
-    return <Smartphone className="w-4 h-4" />;
-  }
-  if (
-    p.includes("tv") ||
-    p.includes("roku") ||
-    p.includes("apple tv") ||
-    p.includes("chromecast")
-  ) {
-    return <Tv className="w-4 h-4" />;
-  }
-  if (p.includes("windows") || p.includes("mac") || p.includes("linux")) {
-    return <Laptop className="w-4 h-4" />;
-  }
-  return <Monitor className="w-4 h-4" />;
-};
-
 // Not Manageable badge component with controlled tooltip for mobile support
 const NotManageableBadge = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -157,7 +115,6 @@ const NotManageableBadge = () => {
               variant="secondary"
               className="bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 border-purple-300 dark:border-purple-700 cursor-help"
             >
-              <HelpCircle className="w-3 h-3 mr-1" />
               Not Manageable
             </Badge>
           </button>
@@ -206,7 +163,6 @@ export const DeviceStatus = ({
           variant="default"
           className="bg-blue-600 dark:bg-blue-700 text-white"
         >
-          <Timer className="w-3 h-3 mr-1" />
           {compact ? "Temporary Access" : `Temporary Access (${timeLeft} left)`}
         </Badge>
       </div>
@@ -225,7 +181,6 @@ export const DeviceStatus = ({
           variant="default"
           className="bg-green-600 dark:bg-green-700 text-white"
         >
-          <CheckCircle className="w-3 h-3 mr-1" />
           Approved
         </Badge>
       );
@@ -235,7 +190,6 @@ export const DeviceStatus = ({
           variant="destructive"
           className="bg-red-600 dark:bg-red-700 text-white"
         >
-          <XCircle className="w-3 h-3 mr-1" />
           Rejected
         </Badge>
       );
@@ -246,7 +200,6 @@ export const DeviceStatus = ({
           variant="secondary"
           className="bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 border-yellow-300 dark:border-yellow-700"
         >
-          <AlertTriangle className="w-3 h-3 mr-1" />
           Pending
         </Badge>
       );
@@ -256,12 +209,7 @@ export const DeviceStatus = ({
 // User preference badge component
 export const getUserPreferenceBadge = (defaultBlock: boolean | null) => {
   if (defaultBlock === null) {
-    return (
-      <Badge variant="secondary">
-        <Settings className="w-3 h-3 mr-1" />
-        Global Default
-      </Badge>
-    );
+    return <Badge variant="secondary">Global Default</Badge>;
   }
   if (defaultBlock) {
     return (
@@ -269,7 +217,6 @@ export const getUserPreferenceBadge = (defaultBlock: boolean | null) => {
         variant="destructive"
         className="bg-red-600 dark:bg-red-700 text-white"
       >
-        <XCircle className="w-3 h-3 mr-1" />
         Block by Default
       </Badge>
     );
@@ -279,7 +226,6 @@ export const getUserPreferenceBadge = (defaultBlock: boolean | null) => {
       variant="default"
       className="bg-green-600 dark:bg-green-700 text-white"
     >
-      <CheckCircle className="w-3 h-3 mr-1" />
       Allow by Default
     </Badge>
   );

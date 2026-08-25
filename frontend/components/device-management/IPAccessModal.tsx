@@ -10,24 +10,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import {
-  Globe,
-  Wifi,
-  Router,
-  Shield,
-  Plus,
-  X,
-  AlertCircle,
-  CheckCircle,
-} from "lucide-react";
+import { Plus, X, CheckCircle } from "lucide-react";
 import { UserPreference, UserDevice } from "@/types";
 import { isValidIPOrCIDR, getNetworkType } from "@/lib/ipUtils";
-
-const NETWORK_ICONS = {
-  both: Globe,
-  lan: Wifi,
-  wan: Router,
-} as const;
 
 const NETWORK_DESCRIPTIONS = {
   both: "Allow streaming from both local network and internet",
@@ -139,7 +124,6 @@ export const IPAccessModal: React.FC<IPAccessModalProps> = ({
       <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Shield className="w-5 h-5 text-primary" />
             IP & Network Access Policies
           </DialogTitle>
           <DialogDescription>
@@ -156,7 +140,6 @@ export const IPAccessModal: React.FC<IPAccessModalProps> = ({
           <div className="space-y-4">
             <div className="space-y-1">
               <div className="flex items-center gap-2">
-                {/* <Network className="w-4 h-4 text-primary" /> */}
                 <h3 className="font-semibold text-sm">Network Policy</h3>
               </div>
               <p className="text-xs text-muted-foreground">
@@ -167,7 +150,6 @@ export const IPAccessModal: React.FC<IPAccessModalProps> = ({
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {(["both", "lan", "wan"] as const).map((type) => {
-                const NetworkIcon = NETWORK_ICONS[type];
                 return (
                   <button
                     key={type}
@@ -179,7 +161,6 @@ export const IPAccessModal: React.FC<IPAccessModalProps> = ({
                     }`}
                   >
                     <div className="flex items-center gap-2 mb-2">
-                      <NetworkIcon className="w-4 h-4" />
                       <span className="font-medium text-sm capitalize">
                         {type === "both"
                           ? "Both (LAN + WAN)"
@@ -202,7 +183,6 @@ export const IPAccessModal: React.FC<IPAccessModalProps> = ({
           <div className="space-y-4">
             <div className="space-y-1">
               <div className="flex items-center gap-2">
-                {/* <Globe className="w-4 h-4 text-primary" /> */}
                 <h3 className="font-semibold text-sm">IP Access Policy</h3>
               </div>
               <p className="text-xs text-muted-foreground">
@@ -252,7 +232,6 @@ export const IPAccessModal: React.FC<IPAccessModalProps> = ({
                       onClick={handleAutoFillCurrentIPs}
                       className="text-xs"
                     >
-                      <Plus className="w-3 h-3 mr-1" />
                       Add Current Device IPs
                     </Button>
                   )}
@@ -276,7 +255,6 @@ export const IPAccessModal: React.FC<IPAccessModalProps> = ({
 
                 {ipError && (
                   <div className="flex items-center gap-2 text-red-600 text-xs">
-                    <AlertCircle className="w-3 h-3" />
                     {ipError}
                   </div>
                 )}
@@ -309,7 +287,6 @@ export const IPAccessModal: React.FC<IPAccessModalProps> = ({
 
                 {ipAccessPolicy === "restricted" && allowedIPs.length === 0 && (
                   <div className="flex items-center gap-2 py-4 px-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
-                    <AlertCircle className="w-4 h-4 text-yellow-600 dark:text-yellow-400 flex-shrink-0" />
                     <div className="text-left text-yellow-800 dark:text-yellow-200 text-xs">
                       <strong>Warning:</strong> No IP addresses configured. Add
                       at least one IP address to restrict access, otherwise all

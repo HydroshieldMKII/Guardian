@@ -24,21 +24,11 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import {
-  Settings,
   Edit2,
   Save,
   X,
   RefreshCw,
-  Clock,
-  Users,
   ChevronDown,
-  Monitor,
-  Fingerprint,
-  Activity,
-  MessageSquare,
-  CheckCheck,
-  RotateCcw,
-  Trash2,
   HelpCircle,
 } from "lucide-react";
 import { UserDevice, AppSetting } from "@/types";
@@ -242,7 +232,6 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
       <DialogContent className="w-full sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center text-base sm:text-lg text-foreground text-left">
-            <Settings className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
             Device Details
           </DialogTitle>
           <DialogDescription className="text-sm text-muted-foreground text-left">
@@ -464,9 +453,7 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
                     >
                       {deletingNote ? (
                         <RefreshCw className="w-4 h-4 animate-spin mr-2" />
-                      ) : (
-                        <Trash2 className="w-4 h-4 mr-2" />
-                      )}
+                      ) : null}
                       Delete Note
                     </Button>
                   </div>
@@ -688,9 +675,7 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
                         >
                           {setPendingLoading ? (
                             <RefreshCw className="w-4 h-4 animate-spin mr-2" />
-                          ) : (
-                            <RotateCcw className="w-4 h-4 mr-2" />
-                          )}
+                          ) : null}
                           Set to Pending
                         </Button>
                       )}

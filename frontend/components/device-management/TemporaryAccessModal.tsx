@@ -15,16 +15,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Timer,
-  RefreshCw,
-  ChevronDown,
-  Monitor,
-  CheckCircle,
-  Calendar as CalendarIcon,
-} from "lucide-react";
+import { Check, ChevronDown, RefreshCw } from "lucide-react";
 import { UserDevice } from "@/types";
-import { getDeviceIcon } from "./SharedComponents";
 import { useDeviceUtils } from "@/hooks/device-management/useDeviceUtils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -48,7 +40,7 @@ interface TemporaryAccessModalProps {
   onGrantAccess: (
     deviceIds: number[],
     durationMinutes: number,
-    bypassPolicies?: boolean
+    bypassPolicies?: boolean,
   ) => void;
   actionLoading: number | null;
   shouldShowGrantTempAccess: (device: UserDevice) => boolean;
@@ -70,7 +62,7 @@ export const TemporaryAccessModal: React.FC<TemporaryAccessModalProps> = ({
   >("hours");
   const [bypassPolicies, setBypassPolicies] = useState<boolean>(false);
   const [inputMode, setInputMode] = useState<"duration" | "calendar">(
-    "duration"
+    "duration",
   );
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const { convertToMinutes, isValidDuration, hasTemporaryAccess } =
@@ -104,7 +96,7 @@ export const TemporaryAccessModal: React.FC<TemporaryAccessModalProps> = ({
 
   // Get eligible devices for temporary access
   const eligibleDevices = userDevices.filter((device) =>
-    shouldShowGrantTempAccess(device)
+    shouldShowGrantTempAccess(device),
   );
 
   // Reset when modal opens/closes
@@ -144,7 +136,7 @@ export const TemporaryAccessModal: React.FC<TemporaryAccessModalProps> = ({
     if (inputMode === "calendar" && selectedDate) {
       // Calculate minutes from now until selected date
       totalMinutes = Math.ceil(
-        (selectedDate.getTime() - Date.now()) / (60 * 1000)
+        (selectedDate.getTime() - Date.now()) / (60 * 1000),
       );
     } else {
       totalMinutes = convertToMinutes(durationValue, durationUnit);
@@ -160,7 +152,6 @@ export const TemporaryAccessModal: React.FC<TemporaryAccessModalProps> = ({
       <DialogContent className="sm:w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-base sm:text-lg text-foreground">
-            <Timer className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
             Temporary Access
           </DialogTitle>
           <DialogDescription className="text-sm text-muted-foreground">
@@ -177,7 +168,6 @@ export const TemporaryAccessModal: React.FC<TemporaryAccessModalProps> = ({
           <div>
             <div className="flex items-center justify-between mb-3">
               <h4 className="font-semibold text-sm text-foreground flex items-center">
-                <Monitor className="w-4 h-4 mr-2" />
                 Select Devices ({selectedDeviceIds.length} selected)
               </h4>
               {eligibleDevices.length > 0 && (
@@ -197,13 +187,12 @@ export const TemporaryAccessModal: React.FC<TemporaryAccessModalProps> = ({
             {eligibleDevices.length === 0 ? (
               <Card>
                 <CardContent className="p-4 text-center text-muted-foreground">
-                  <Monitor className="w-8 h-8 mx-auto mb-2 opacity-50" />
                   <p className="text-sm">
                     No devices eligible for temporary access
                   </p>
                   <p className="text-xs mt-1">
-                    Devices must be pending (with blocked by default) or rejected to grant temporary
-                    access
+                    Devices must be pending (with blocked by default) or
+                    rejected to grant temporary access
                   </p>
                 </CardContent>
               </Card>
@@ -230,14 +219,10 @@ export const TemporaryAccessModal: React.FC<TemporaryAccessModalProps> = ({
                             }`}
                           >
                             {selectedDeviceIds.includes(device.id) && (
-                              <CheckCircle className="w-3 h-3 text-white" />
+                              <Check className="w-3 h-3 text-white" />
                             )}
                           </div>
                         </div>
-                        {getDeviceIcon(
-                          device.devicePlatform,
-                          device.deviceProduct
-                        )}
                         <div className="min-w-0 flex-1">
                           <div className="text-sm font-medium text-foreground truncate">
                             {device.deviceName || device.deviceIdentifier}
@@ -264,7 +249,6 @@ export const TemporaryAccessModal: React.FC<TemporaryAccessModalProps> = ({
             <div>
               <div className="flex items-center justify-between mb-3">
                 <h4 className="font-semibold text-sm text-foreground flex items-center">
-                  <Timer className="w-4 h-4 mr-2" />
                   Access Duration
                 </h4>
                 <div className="flex gap-2">
@@ -274,7 +258,6 @@ export const TemporaryAccessModal: React.FC<TemporaryAccessModalProps> = ({
                     onClick={() => setInputMode("duration")}
                     className="text-xs"
                   >
-                    <Timer className="w-3 h-3 mr-1" />
                     Duration
                   </Button>
                   <Button
@@ -283,7 +266,6 @@ export const TemporaryAccessModal: React.FC<TemporaryAccessModalProps> = ({
                     onClick={() => setInputMode("calendar")}
                     className="text-xs"
                   >
-                    <CalendarIcon className="w-3 h-3 mr-1" />
                     Calendar
                   </Button>
                 </div>
@@ -424,10 +406,9 @@ export const TemporaryAccessModal: React.FC<TemporaryAccessModalProps> = ({
                           variant="outline"
                           className={cn(
                             "w-full justify-start text-left font-normal",
-                            !selectedDate && "text-muted-foreground"
+                            !selectedDate && "text-muted-foreground",
                           )}
                         >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
                           {selectedDate ? (
                             selectedDate.toLocaleString(undefined, {
                               weekday: "short",
@@ -475,7 +456,7 @@ export const TemporaryAccessModal: React.FC<TemporaryAccessModalProps> = ({
                                   const hours = parseInt(e.target.value) || 0;
                                   const newDate = new Date(selectedDate);
                                   newDate.setHours(
-                                    Math.min(23, Math.max(0, hours))
+                                    Math.min(23, Math.max(0, hours)),
                                   );
                                   setSelectedDate(newDate);
                                 }}
@@ -492,7 +473,7 @@ export const TemporaryAccessModal: React.FC<TemporaryAccessModalProps> = ({
                                   const minutes = parseInt(e.target.value) || 0;
                                   const newDate = new Date(selectedDate);
                                   newDate.setMinutes(
-                                    Math.min(59, Math.max(0, minutes))
+                                    Math.min(59, Math.max(0, minutes)),
                                   );
                                   setSelectedDate(newDate);
                                 }}
@@ -634,10 +615,7 @@ export const TemporaryAccessModal: React.FC<TemporaryAccessModalProps> = ({
                 Granting Access...
               </>
             ) : (
-              <>
-                <Timer className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
-                Grant Access
-              </>
+              <>Grant Access</>
             )}
           </Button>
         </DialogFooter>

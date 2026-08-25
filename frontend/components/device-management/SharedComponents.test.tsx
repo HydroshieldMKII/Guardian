@@ -5,7 +5,6 @@ import {
   ClickableIP,
   DeviceStatus,
   UserAvatar,
-  getDeviceIcon,
   getUserPreferenceBadge,
 } from "@/components/device-management/SharedComponents";
 
@@ -83,30 +82,6 @@ describe("UserAvatar", () => {
       <UserAvatar userId="u-1" username="testuser" avatarUrl="/a.png" />,
     );
     expect(container.querySelector("span")).toBeInTheDocument();
-  });
-});
-
-describe("getDeviceIcon", () => {
-  it.each([
-    ["Android", undefined, "lucide-smartphone"],
-    ["iPhone", undefined, "lucide-smartphone"],
-    ["iOS", undefined, "lucide-smartphone"],
-    ["Mobile", undefined, "lucide-smartphone"],
-    ["Apple TV", undefined, "lucide-tv"],
-    ["Roku", undefined, "lucide-tv"],
-    ["Chromecast", undefined, "lucide-tv"],
-    ["Windows", undefined, "lucide-laptop"],
-    ["Mac", undefined, "lucide-laptop"],
-    ["Linux", undefined, "lucide-laptop"],
-    ["Something", undefined, "lucide-monitor"],
-    [null, "Plex for Roku", "lucide-tv"],
-    [null, null, "lucide-monitor"],
-    [undefined, undefined, "lucide-monitor"],
-  ])("maps platform %p / product %p", (platform, product, expected) => {
-    const { container } = render(<div>{getDeviceIcon(platform, product)}</div>);
-    expect(container.querySelector("svg")?.getAttribute("class")).toContain(
-      expected,
-    );
   });
 });
 

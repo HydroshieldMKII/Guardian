@@ -395,3 +395,80 @@ describe("DeviceCard user note", () => {
     expect(screen.queryByText("Please let me in")).toBeNull();
   });
 });
+
+describe("DeviceCard action ordering", () => {
+  const labelsIn = (root: HTMLElement) =>
+    Array.from(root.querySelectorAll("button"))
+      .map((b) => b.textContent?.trim())
+      .filter((text): text is string =>
+        ["Approve", "Reject", "View Details", "Delete"].includes(text ?? ""),
+      );
+
+  const mobileActions = (container: HTMLElement) =>
+    container.querySelector(".sm\\:hidden") as HTMLElement;
+
+  it("puts the decision above the details on a pending device", () => {
+    const { container } = renderCard({ status: "pending" });
+
+    expect(labelsIn(mobileActions(container))).toEqual([
+      "Approve",
+      "Reject",
+      "View Details",
+      "Delete",
+    ]);
+  });
+
+  it("keeps the same order on the desktop layout", () => {
+    const { container } = renderCard({ status: "pending" });
+    const desktop = container.querySelector(".hidden.sm\\:flex") as HTMLElement;
+
+    expect(labelsIn(desktop)).toEqual([
+      "Approve",
+      "Reject",
+      "View Details",
+      "Delete",
+    ]);
+  });
+
+  it("still offers details on an approved device", () => {
+    const { container } = renderCard({ status: "approved" });
+
+    expect(labelsIn(mobileActions(container))).toEqual([
+      "Reject",
+      "Delete",
+      "View Details",
+    ]);
+  });
+
+  it("still offers details on a rejected device", () => {
+    const { container } = renderCard({ status: "rejected" });
+
+    expect(labelsIn(mobileActions(container))).toEqual([
+      "Approve",
+      "Delete",
+      "View Details",
+    ]);
+  });
+
+  it("still offers details on a pending PlexAmp device, which has no decision row", () => {
+    const { container } = renderCard({
+      status: "pending",
+      deviceProduct: "Plexamp",
+    });
+
+    expect(labelsIn(mobileActions(container))).toEqual([
+      "Delete",
+      "View Details",
+    ]);
+  });
+
+  it("opens the details modal from its new position", async () => {
+    const { user, handlers } = renderCard({ status: "pending" });
+
+    await user.click(
+      screen.getAllByRole("button", { name: /View Details/ })[0],
+    );
+
+    expect(handlers.onShowDetails).toHaveBeenCalled();
+  });
+});

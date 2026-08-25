@@ -8,9 +8,8 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, XCircle, Trash2, RefreshCw } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import { UserDevice } from "@/types";
-import { getDeviceIcon } from "./SharedComponents";
 
 type ConfirmAction = "approve" | "reject" | "delete" | "toggle";
 type ResolvedAction = "approve" | "reject" | "delete";
@@ -28,12 +27,6 @@ interface ConfirmationModalProps {
   onConfirm: () => void;
   onCancel: () => void;
 }
-
-const ACTION_ICONS = {
-  approve: CheckCircle,
-  reject: XCircle,
-  delete: Trash2,
-} as const;
 
 const ACTION_LABELS = {
   approve: "Approve Device",
@@ -87,7 +80,6 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
 
   const { device, action } = confirmAction;
   const resolved = resolveAction(action, device);
-  const ActionIcon = ACTION_ICONS[resolved];
   const buttonProps = buttonStyleFor(action, resolved);
   const isRunning = actionLoading !== null;
 
@@ -96,11 +88,6 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
       <DialogContent className="sm:max-w-lg overflow-x-hidden">
         <DialogHeader className="overflow-hidden">
           <DialogTitle className="flex items-center gap-2 text-base sm:text-lg text-foreground">
-            <ActionIcon
-              className={`w-4 h-4 sm:w-5 sm:h-5 ${
-                resolved === "approve" ? "text-green-500" : "text-red-600"
-              }`}
-            />
             {confirmAction.title}
           </DialogTitle>
           <DialogDescription className="text-sm text-muted-foreground pt-1.5">
@@ -110,7 +97,6 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
 
         <div className="my-4 p-3 sm:p-4 bg-muted rounded-lg overflow-hidden">
           <div className="flex items-center gap-3 mb-2">
-            {getDeviceIcon(device.devicePlatform, device.deviceProduct)}
             <div className="min-w-0 flex-1 overflow-hidden">
               <div className="text-sm font-medium text-foreground truncate">
                 {device.deviceName || device.deviceIdentifier}
@@ -147,10 +133,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
                 Processing...
               </>
             ) : (
-              <>
-                <ActionIcon className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
-                {ACTION_LABELS[resolved]}
-              </>
+              ACTION_LABELS[resolved]
             )}
           </Button>
         </DialogFooter>
