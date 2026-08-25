@@ -23,7 +23,7 @@ Guardian is a security and management platform for Plex Media Server. It monitor
 
 ## Features
 
-**Access control** — automatic session termination for unapproved devices, global and per-user rules, IP restrictions by LAN/WAN/CIDR, time-limited temporary access, and per-user schedules.
+**Access control** — automatic session termination for unapproved devices, global and per-user rules, IP restrictions by LAN/WAN/CIDR over both IPv4 and IPv6, time-limited temporary access, and per-user schedules.
 
 **Monitoring** — live Plex and Plexamp session tracking, detailed device fingerprints, stream quality and progress, and searchable session history.
 
@@ -54,7 +54,22 @@ docker compose -f docker-compose.dev.yml up -d --build
 
 ### Unraid
 
-Under **Docker → Compose**, create a stack from `docker-compose.example.yml`, adjust the volume and port if needed, and deploy.
+Under **Docker -> Compose**, create a stack from `docker-compose.example.yml`, adjust the volume and port if needed, and deploy.
+
+## Configuration
+
+### Running behind a reverse proxy
+
+`TRUST_PROXY_HOPS` sets how many proxies sit in front of Guardian. Defaults to `1`.
+
+```yaml
+services:
+  guardian:
+    environment:
+      - TRUST_PROXY_HOPS=1
+```
+
+Use `2` for Cloudflare in front of your own proxy, or `0` when nothing is in front. A wrong value will breaks IP policies and rate limiting.
 
 ## Updating
 

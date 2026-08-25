@@ -19,14 +19,21 @@ import {
   X,
   AlertCircle,
   CheckCircle,
-  Network,
 } from "lucide-react";
 import { UserPreference, UserDevice } from "@/types";
-import {
-  isValidIPOrCIDR,
-  getNetworkType,
-  formatIPForDisplay,
-} from "@/lib/ipUtils";
+import { isValidIPOrCIDR, getNetworkType } from "@/lib/ipUtils";
+
+const NETWORK_ICONS = {
+  both: Globe,
+  lan: Wifi,
+  wan: Router,
+} as const;
+
+const NETWORK_DESCRIPTIONS = {
+  both: "Allow streaming from both local network and internet",
+  lan: "Only allow streaming from local network (same subnet)",
+  wan: "Only allow streaming from internet (remote access)",
+} as const;
 
 interface IPAccessModalProps {
   isOpen: boolean;
@@ -48,10 +55,10 @@ export const IPAccessModal: React.FC<IPAccessModalProps> = ({
   onSave,
 }) => {
   const [networkPolicy, setNetworkPolicy] = useState<"both" | "lan" | "wan">(
-    "both"
+    "both",
   );
   const [ipAccessPolicy, setIpAccessPolicy] = useState<"all" | "restricted">(
-    "all"
+    "all",
   );
   const [allowedIPs, setAllowedIPs] = useState<string[]>([]);
   const [newIP, setNewIP] = useState("");
@@ -71,6 +78,11 @@ export const IPAccessModal: React.FC<IPAccessModalProps> = ({
     }
   }, [isOpen, isInitialized, user.preference]);
 
+  const devicesWithIP = userDevices.filter(
+    (device): device is UserDevice & { ipAddress: string } =>
+      Boolean(device.ipAddress),
+  );
+
   // IP validation function using utility
   const validateIP = (ip: string): boolean => {
     return isValidIPOrCIDR(ip);
@@ -82,7 +94,7 @@ export const IPAccessModal: React.FC<IPAccessModalProps> = ({
 
     if (!validateIP(trimmedIP)) {
       setIpError(
-        "Please enter a valid IP address or CIDR range (e.g. 192.168.1.1, 192.168.1.0/24, 2001:db8::1 or 2001:db8::/32)"
+        "Please enter a valid IP address or CIDR range (e.g. 192.168.1.1, 192.168.1.0/24, 2001:db8::1 or 2001:db8::/32)",
       );
       return;
     }
@@ -102,9 +114,8 @@ export const IPAccessModal: React.FC<IPAccessModalProps> = ({
   };
 
   const handleAutoFillCurrentIPs = () => {
-    const currentIPs = userDevices
-      .filter((device) => device.ipAddress)
-      .map((device) => device.ipAddress!)
+    const currentIPs = devicesWithIP
+      .map((device) => device.ipAddress)
       .filter((ip, index, self) => self.indexOf(ip) === index); // Remove duplicates
 
     const newIPs = currentIPs.filter((ip) => !allowedIPs.includes(ip));
@@ -114,14 +125,6 @@ export const IPAccessModal: React.FC<IPAccessModalProps> = ({
   };
 
   const handleSave = () => {
-    // Validate that IP restrictions have at least one IP address
-    if (ipAccessPolicy === "restricted" && allowedIPs.length === 0) {
-      setIpError(
-        "Please add at least one IP address when restricting access by IP"
-      );
-      return;
-    }
-
     const updates: Partial<UserPreference> = {
       networkPolicy,
       ipAccessPolicy,
@@ -129,32 +132,6 @@ export const IPAccessModal: React.FC<IPAccessModalProps> = ({
     };
 
     onSave(user.userId, updates);
-  };
-
-  const getNetworkIcon = (type: string) => {
-    switch (type) {
-      case "both":
-        return <Globe className="w-4 h-4" />;
-      case "lan":
-        return <Wifi className="w-4 h-4" />;
-      case "wan":
-        return <Router className="w-4 h-4" />;
-      default:
-        return <Network className="w-4 h-4" />;
-    }
-  };
-
-  const getNetworkDescription = (type: string) => {
-    switch (type) {
-      case "both":
-        return "Allow streaming from both local network and internet";
-      case "lan":
-        return "Only allow streaming from local network (same subnet)";
-      case "wan":
-        return "Only allow streaming from internet (remote access)";
-      default:
-        return "";
-    }
   };
 
   return (
@@ -189,32 +166,35 @@ export const IPAccessModal: React.FC<IPAccessModalProps> = ({
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {(["both", "lan", "wan"] as const).map((type) => (
-                <button
-                  key={type}
-                  onClick={() => setNetworkPolicy(type)}
-                  className={`p-3 rounded-lg border transition-all duration-200 text-left cursor-pointer ${
-                    networkPolicy === type
-                      ? "border-primary bg-primary/5 shadow-sm"
-                      : "border-border hover:border-primary/50 hover:bg-muted/50"
-                  }`}
-                >
-                  <div className="flex items-center gap-2 mb-2">
-                    {getNetworkIcon(type)}
-                    <span className="font-medium text-sm capitalize">
-                      {type === "both"
-                        ? "Both (LAN + WAN)"
-                        : type.toUpperCase()}
-                    </span>
-                    {networkPolicy === type && (
-                      <CheckCircle className="w-4 h-4 text-primary ml-auto" />
-                    )}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    {getNetworkDescription(type)}
-                  </p>
-                </button>
-              ))}
+              {(["both", "lan", "wan"] as const).map((type) => {
+                const NetworkIcon = NETWORK_ICONS[type];
+                return (
+                  <button
+                    key={type}
+                    onClick={() => setNetworkPolicy(type)}
+                    className={`p-3 rounded-lg border transition-all duration-200 text-left cursor-pointer ${
+                      networkPolicy === type
+                        ? "border-primary bg-primary/5 shadow-sm"
+                        : "border-border hover:border-primary/50 hover:bg-muted/50"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <NetworkIcon className="w-4 h-4" />
+                      <span className="font-medium text-sm capitalize">
+                        {type === "both"
+                          ? "Both (LAN + WAN)"
+                          : type.toUpperCase()}
+                      </span>
+                      {networkPolicy === type && (
+                        <CheckCircle className="w-4 h-4 text-primary ml-auto" />
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {NETWORK_DESCRIPTIONS[type]}
+                    </p>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -348,25 +328,21 @@ export const IPAccessModal: React.FC<IPAccessModalProps> = ({
                 Current Device IPs for {user.username || user.userId}:
               </Label>
               <div className="flex flex-wrap gap-1">
-                {userDevices
-                  .filter((device) => device.ipAddress)
-                  .map((device, index) => {
-                    const networkType = device.ipAddress
-                      ? getNetworkType(device.ipAddress)
-                      : "unknown";
-                    return (
-                      <Badge
-                        key={index}
-                        variant="outline"
-                        className="text-xs bg-blue-100 dark:bg-blue-800/50"
-                      >
-                        <span className="truncate max-w-[120px]">
-                          {device.deviceName || device.deviceIdentifier}
-                        </span>
-                        : {device.ipAddress} ({networkType.toUpperCase()})
-                      </Badge>
-                    );
-                  })}
+                {devicesWithIP.map((device, index) => {
+                  const networkType = getNetworkType(device.ipAddress);
+                  return (
+                    <Badge
+                      key={index}
+                      variant="outline"
+                      className="text-xs bg-blue-100 dark:bg-blue-800/50"
+                    >
+                      <span className="truncate max-w-[120px]">
+                        {device.deviceName || device.deviceIdentifier}
+                      </span>
+                      : {device.ipAddress} ({networkType.toUpperCase()})
+                    </Badge>
+                  );
+                })}
               </div>
             </div>
           )}

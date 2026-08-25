@@ -6,6 +6,8 @@ services:
       - "3000:3000"
     volumes:
       - guardian_data:/app/data
+    environment:
+      - TRUST_PROXY_HOPS=1
     restart: unless-stopped
 
 volumes:
