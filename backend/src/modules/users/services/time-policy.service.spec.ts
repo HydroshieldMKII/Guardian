@@ -5,6 +5,7 @@ import { Repository } from 'typeorm';
 import { UserTimeRule } from '@/entities/user-time-rule.entity';
 import { ConfigService } from '@/modules/config/services/config.service';
 import { TimePolicyService } from '@/modules/users/services/time-policy.service';
+import { arrayContaining } from '@/test-matchers';
 
 const rule = (overrides: Partial<UserTimeRule> = {}): UserTimeRule =>
   Object.assign(new UserTimeRule(), {
@@ -222,7 +223,7 @@ describe('TimePolicyService', () => {
       await service.isTimeScheduleAllowed('u1', 'device-a');
       expect(repository.find).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: expect.arrayContaining([
+          where: arrayContaining([
             { userId: 'u1', deviceIdentifier: 'device-a' },
           ]),
         }),

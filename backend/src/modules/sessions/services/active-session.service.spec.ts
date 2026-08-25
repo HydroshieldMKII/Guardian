@@ -7,6 +7,7 @@ import { DeviceTrackingService } from '@/modules/devices/services/device-trackin
 import { PlexClient } from '@/modules/plex/services/plex-client';
 import { NotificationOrchestratorService } from '@/modules/notifications/services/notification-orchestrator.service';
 import { ActiveSessionService } from '@/modules/sessions/services/active-session.service';
+import { callArgs } from '@/test-matchers';
 
 describe('ActiveSessionService', () => {
   let service: ActiveSessionService;
@@ -80,7 +81,8 @@ describe('ActiveSessionService', () => {
     MediaContainer: { size: sessions.length, Metadata: sessions },
   });
 
-  const savedSession = (call = 0) => historyRepo.create.mock.calls[call][0];
+  const savedSession = (call = 0) =>
+    callArgs<[Record<string, unknown>]>(historyRepo.create, call)[0];
 
   beforeEach(async () => {
     builders = [];
@@ -190,7 +192,7 @@ describe('ActiveSessionService', () => {
         }),
       );
 
-      const saved = savedSession() as Record<string, unknown>;
+      const saved = savedSession();
       for (const column of [
         'contentTitle',
         'contentType',

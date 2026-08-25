@@ -8,6 +8,7 @@ import { AuthService } from '@/modules/auth/auth.service';
 import { SchedulerService } from '@/services/scheduler.service';
 import { DashboardService } from '@/modules/dashboard/dashboard.service';
 import { LiveEventsService } from '@/modules/events/live-events.service';
+import { callArgs } from '@/test-matchers';
 
 const mockCronJob = {
   start: jest.fn(),
@@ -42,10 +43,9 @@ describe('SchedulerService', () => {
   const settings = new Map<string, unknown>();
 
   const registeredJob = () =>
-    schedulerRegistry.addCronJob.mock.calls[0][1] as {
-      cronTime: string;
-      onTick: () => Promise<void>;
-    };
+    callArgs<[string, { cronTime: string; onTick: () => Promise<void> }]>(
+      schedulerRegistry.addCronJob,
+    )[1];
 
   beforeEach(async () => {
     jest.clearAllMocks();

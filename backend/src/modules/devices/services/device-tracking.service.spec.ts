@@ -7,6 +7,13 @@ import { UsersService } from '@/modules/users/services/users.service';
 import { ConfigService } from '@/modules/config/services/config.service';
 import { PlexSession, PlexSessionsResponse } from '@/types/plex.types';
 import { DeviceTrackingService } from '@/modules/devices/services/device-tracking.service';
+import { anyDate, callArgs } from '@/test-matchers';
+
+interface TemporaryAccessPatch {
+  temporaryAccessDurationMinutes: number;
+  temporaryAccessBypassPolicies: boolean;
+  temporaryAccessUntil: Date;
+}
 
 describe('DeviceTrackingService', () => {
   let service: DeviceTrackingService;
@@ -148,7 +155,7 @@ describe('DeviceTrackingService', () => {
   });
 
   const savedDevice = (call = 0): UserDevice =>
-    deviceRepo.save.mock.calls[call][0];
+    callArgs<[UserDevice]>(deviceRepo.save, call)[0];
 
   describe('processSessionsForDeviceTracking', () => {
     it('does nothing when there are no sessions', async () => {
@@ -740,7 +747,7 @@ describe('DeviceTrackingService', () => {
       await service.markNoteAsRead(7);
       expect(deviceRepo.update).toHaveBeenCalledWith(
         7,
-        expect.objectContaining({ requestNoteReadAt: expect.any(Date) }),
+        expect.objectContaining({ requestNoteReadAt: anyDate() }),
       );
     });
 
@@ -843,7 +850,9 @@ describe('DeviceTrackingService', () => {
       const before = Date.now();
       await service.grantTemporaryAccess(7, 30, true);
 
-      const [id, patch] = deviceRepo.update.mock.calls[0];
+      const [id, patch] = callArgs<[number, TemporaryAccessPatch]>(
+        deviceRepo.update,
+      );
       expect(id).toBe(7);
       expect(patch.temporaryAccessDurationMinutes).toBe(30);
       expect(patch.temporaryAccessBypassPolicies).toBe(true);
@@ -855,7 +864,8 @@ describe('DeviceTrackingService', () => {
     it('defaults to not bypassing policies', async () => {
       await service.grantTemporaryAccess(7, 30);
       expect(
-        deviceRepo.update.mock.calls[0][1].temporaryAccessBypassPolicies,
+        callArgs<[number, TemporaryAccessPatch]>(deviceRepo.update)[1]
+          .temporaryAccessBypassPolicies,
       ).toBe(false);
     });
 

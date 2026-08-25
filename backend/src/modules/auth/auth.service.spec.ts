@@ -5,16 +5,21 @@ import {
 } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import * as bcrypt from 'bcrypt';
 import { AdminUser } from '@/entities/admin-user.entity';
 import { Session } from '@/entities/session.entity';
 import { AppSettings } from '@/entities/app-settings.entity';
 import { AuthService } from '@/modules/auth/auth.service';
 
-jest.mock('bcrypt');
+const mockHash = jest.fn<Promise<string>, [string, number]>();
+const mockCompare = jest.fn<Promise<boolean>, [string, string]>();
 
-const hash = jest.mocked(bcrypt.hash);
-const compare = jest.mocked(bcrypt.compare);
+jest.mock('bcrypt', () => ({
+  hash: (data: string, rounds: number) => mockHash(data, rounds),
+  compare: (data: string, encrypted: string) => mockCompare(data, encrypted),
+}));
+
+const hash = mockHash;
+const compare = mockCompare;
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -52,8 +57,8 @@ describe('AuthService', () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
-    hash.mockImplementation(async () => 'new-hash');
-    compare.mockImplementation(async () => true);
+    hash.mockResolvedValue('new-hash');
+    compare.mockResolvedValue(true);
 
     deleteQueryBuilder = {
       delete: jest.fn(),
@@ -65,10 +70,12 @@ describe('AuthService', () => {
 
     adminRepo = {
       count: jest.fn().mockResolvedValue(0),
-      save: jest.fn().mockImplementation(async (entity) => ({
-        id: 'admin-1',
-        ...entity,
-      })),
+      save: jest.fn().mockImplementation((entity: Record<string, unknown>) =>
+        Promise.resolve({
+          id: 'admin-1',
+          ...entity,
+        }),
+      ),
       findOne: jest.fn().mockResolvedValue({ ...admin }),
       manager: {
         transaction: jest.fn(
@@ -79,10 +86,11 @@ describe('AuthService', () => {
     };
 
     sessionRepo = {
-      save: jest.fn().mockImplementation(async (entity) => ({
-        ...storedSession,
-        ...entity,
-      })),
+      save: jest
+        .fn()
+        .mockImplementation((entity: Record<string, unknown>) =>
+          Promise.resolve({ ...storedSession, ...entity }),
+        ),
       findOne: jest.fn().mockResolvedValue({ ...storedSession }),
       remove: jest.fn().mockResolvedValue(undefined),
       delete: jest.fn().mockResolvedValue({ affected: 3 }),
@@ -196,7 +204,7 @@ describe('AuthService', () => {
       await expect(service.login(dto)).rejects.toThrow('Invalid credentials');
 
       adminRepo.findOne.mockResolvedValue({ ...admin });
-      compare.mockImplementation(async () => false);
+      compare.mockResolvedValue(false);
       await expect(service.login(dto)).rejects.toThrow('Invalid credentials');
     });
 
@@ -222,7 +230,10 @@ describe('AuthService', () => {
       it('verifies the token against Cloudflare with the trimmed secret', async () => {
         await service.login({ ...dto, captchaToken: 'captcha-token' });
 
-        const [url, init] = fetchMock.mock.calls[0];
+        const [url, init] = fetchMock.mock.calls[0] as [
+          string,
+          { body: string },
+        ];
         expect(url).toBe(
           'https://challenges.cloudflare.com/turnstile/v0/siteverify',
         );
@@ -316,7 +327,9 @@ describe('AuthService', () => {
       const before = Date.now();
       await service.validateSession('token-1');
 
-      const saved = sessionRepo.save.mock.calls[0][0];
+      const [saved] = sessionRepo.save.mock.calls[0] as [
+        { lastActivityAt: Date },
+      ];
       expect(saved.lastActivityAt.getTime()).toBeGreaterThanOrEqual(before);
     });
 
@@ -556,7 +569,7 @@ describe('AuthService', () => {
     });
 
     it('rejects a wrong current password', async () => {
-      compare.mockImplementation(async () => false);
+      compare.mockResolvedValue(false);
       await expect(service.updatePassword('admin-1', dto)).rejects.toThrow(
         'Current password is incorrect',
       );
@@ -603,7 +616,7 @@ describe('AuthService', () => {
     });
 
     it('rejects the wrong password', async () => {
-      compare.mockImplementation(async () => false);
+      compare.mockResolvedValue(false);
       await expect(service.validatePassword('admin-1', 'wrong')).resolves.toBe(
         false,
       );

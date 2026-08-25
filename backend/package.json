@@ -100,7 +100,8 @@
       "!**/*.module.ts",
       "!migrations/**",
       "!scripts/**",
-      "!test-setup.ts"
+      "!test-setup.ts",
+      "!test-matchers.ts"
     ],
     "coverageDirectory": "../coverage",
     "coverageReporters": [

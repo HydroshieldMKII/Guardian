@@ -1,7 +1,7 @@
 import { Test } from '@nestjs/testing';
 import { EmailTemplateService } from './email-template.service';
 
-const mockReadFileSync = jest.fn();
+const mockReadFileSync = jest.fn<unknown, unknown[]>();
 
 jest.mock('fs', () => ({
   readFileSync: (...args: unknown[]) => mockReadFileSync(...args),

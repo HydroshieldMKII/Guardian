@@ -220,9 +220,9 @@ describe('ConfigController', () => {
       const { res, setHeader } = responseStub();
       await controller.exportDatabase(res);
 
-      const disposition = setHeader.mock.calls.find(
+      const disposition = (setHeader.mock.calls as [string, string][]).find(
         ([header]) => header === 'Content-Disposition',
-      )?.[1] as string;
+      )?.[1];
 
       expect(disposition).toMatch(
         /^attachment; filename="guardian-backup-[\dTZ-]+\.json"$/,

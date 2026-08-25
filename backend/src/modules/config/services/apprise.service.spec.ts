@@ -3,8 +3,9 @@ import { EventEmitter } from 'events';
 import { AppriseService } from './apprise.service';
 import { ConfigService } from './config.service';
 import { SettingValues } from '@/modules/config/settings.catalog';
+import { containing } from '@/test-matchers';
 
-const mockSpawn = jest.fn();
+const mockSpawn = jest.fn<unknown, unknown[]>();
 
 jest.mock('child_process', () => ({
   spawn: (...args: unknown[]) => mockSpawn(...args),
@@ -122,9 +123,7 @@ describe('AppriseService', () => {
 
       await expect(service.getAppriseConfig()).resolves.toEqual({
         success: false,
-        message: expect.stringContaining(
-          'Invalid service URLs found: not-a-url',
-        ),
+        message: containing('Invalid service URLs found: not-a-url'),
       });
     });
 
@@ -195,9 +194,7 @@ describe('AppriseService', () => {
         failWith('Unsupported URL: bogus://thing'),
       ).resolves.toMatchObject({
         success: false,
-        message: expect.stringContaining(
-          'Invalid service URL: "bogus://thing"',
-        ),
+        message: containing('Invalid service URL: "bogus://thing"'),
       });
     });
 
@@ -205,15 +202,13 @@ describe('AppriseService', () => {
       await expect(
         failWith('You must specify at least one server URL'),
       ).resolves.toMatchObject({
-        message: expect.stringContaining('No valid service URLs found'),
+        message: containing('No valid service URLs found'),
       });
     });
 
     it('explains an HTTP failure', async () => {
       await expect(failWith('ERROR - HTTP Error 502')).resolves.toMatchObject({
-        message: expect.stringContaining(
-          'Failed to connect to notification service',
-        ),
+        message: containing('Failed to connect to notification service'),
       });
     });
 
@@ -221,7 +216,7 @@ describe('AppriseService', () => {
       'explains a %s response',
       async (stderr) => {
         await expect(failWith(stderr)).resolves.toMatchObject({
-          message: expect.stringContaining('Permission denied when sending'),
+          message: containing('Permission denied when sending'),
         });
       },
     );
@@ -241,7 +236,7 @@ describe('AppriseService', () => {
           stdout: 'Unsupported URL: xyz://a',
         }),
       ).resolves.toMatchObject({
-        message: expect.stringContaining('xyz://a'),
+        message: containing('xyz://a'),
       });
     });
 
@@ -263,7 +258,7 @@ describe('AppriseService', () => {
 
       await expect(pending).resolves.toMatchObject({
         success: false,
-        message: expect.stringContaining('timed out'),
+        message: containing('timed out'),
       });
       expect(child.kill).toHaveBeenCalled();
     });

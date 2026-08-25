@@ -6,6 +6,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { GlobalExceptionFilter } from '@/filters/global-exception.filter';
+import { callArgs } from '@/test-matchers';
 
 describe('GlobalExceptionFilter', () => {
   let filter: GlobalExceptionFilter;
@@ -33,7 +34,7 @@ describe('GlobalExceptionFilter', () => {
   });
 
   const captured = (): Record<string, unknown> =>
-    json.mock.calls[0][0] as Record<string, unknown>;
+    callArgs<[Record<string, unknown>]>(json)[0];
 
   it('preserves the status of an HttpException', () => {
     filter.catch(new HttpException('Nope', HttpStatus.FORBIDDEN), host);

@@ -1,10 +1,14 @@
 import { Test } from '@nestjs/testing';
+import { containing } from '@/test-matchers';
 import { EmailService, SMTPConfig, SmtpSettings } from './email.service';
 import { EmailTemplateService } from './email-template.service';
 import { ConfigService } from './config.service';
 import { TimezoneService } from './timezone.service';
 
-const mockCreateTransport = jest.fn();
+const mockCreateTransport = jest.fn<
+  { verify: jest.Mock; sendMail: jest.Mock },
+  unknown[]
+>();
 
 jest.mock('nodemailer', () => ({
   createTransport: (...args: unknown[]) => mockCreateTransport(...args),
@@ -30,7 +34,7 @@ type MailOptions = {
 describe('EmailService', () => {
   let service: EmailService;
   let verify: jest.Mock;
-  let sendMail: jest.Mock;
+  let sendMail: jest.Mock<Promise<unknown>, [MailOptions]>;
   let templateService: Record<string, jest.Mock>;
   let configService: Record<string, jest.Mock>;
   let timezoneService: { formatTimestamp: jest.Mock };
@@ -63,14 +67,16 @@ describe('EmailService', () => {
   const transportOptions = () =>
     mockCreateTransport.mock.calls[0][0] as TransportOptions;
 
-  const sentMail = () => sendMail.mock.calls[0][0] as MailOptions;
+  const sentMail = () => sendMail.mock.calls[0][0];
 
   beforeEach(async () => {
     jest.clearAllMocks();
     stored = workingSettings();
 
     verify = jest.fn().mockResolvedValue(true);
-    sendMail = jest.fn().mockResolvedValue({ messageId: 'abc' });
+    sendMail = jest
+      .fn<Promise<unknown>, [MailOptions]>()
+      .mockResolvedValue({ messageId: 'abc' });
     mockCreateTransport.mockReturnValue({ verify, sendMail });
 
     templateService = {
@@ -206,7 +212,7 @@ describe('EmailService', () => {
     ] as const)('refuses without a %s', async (_field, overrides) => {
       await expect(test(overrides)).resolves.toMatchObject({
         success: false,
-        message: expect.stringContaining('Missing required SMTP configuration'),
+        message: containing('Missing required SMTP configuration'),
       });
     });
 
@@ -230,7 +236,7 @@ describe('EmailService', () => {
 
     it('refuses with no recipients', async () => {
       await expect(test({ toEmails: [] })).resolves.toMatchObject({
-        message: expect.stringContaining('No recipient email addresses'),
+        message: containing('No recipient email addresses'),
       });
     });
 
@@ -294,9 +300,7 @@ describe('EmailService', () => {
       await expect(
         test({ toEmails: ['a@example.com', 'b@example.com'] }),
       ).resolves.toMatchObject({
-        message: expect.stringContaining(
-          '2 recipients (a@example.com, b@example.com)',
-        ),
+        message: containing('2 recipients (a@example.com, b@example.com)'),
       });
     });
 
@@ -453,8 +457,8 @@ describe('EmailService', () => {
       });
 
       expect(sentMail().subject).toBe(subject);
-      const [, , statusLabel] =
-        templateService.generateNotificationEmail.mock.calls[0];
+      const [, , statusLabel] = templateService.generateNotificationEmail.mock
+        .calls[0] as [unknown, unknown, string];
       expect(statusLabel).toBe(label);
     });
 
@@ -465,8 +469,8 @@ describe('EmailService', () => {
         username: 'testuser',
       });
 
-      const [, , , mainMessage] =
-        templateService.generateNotificationEmail.mock.calls[0];
+      const [, , , mainMessage] = templateService.generateNotificationEmail.mock
+        .calls[0] as [unknown, unknown, unknown, string];
       expect(mainMessage).toBe(
         'A streaming session has been blocked on your Plex server',
       );
@@ -483,8 +487,8 @@ describe('EmailService', () => {
     it('describes the stop code behind a block', async () => {
       await service.sendBlockedEmail('testuser', 'Shield', 'DEVICE_PENDING');
 
-      const [, , , mainMessage] =
-        templateService.generateNotificationEmail.mock.calls[0];
+      const [, , , mainMessage] = templateService.generateNotificationEmail.mock
+        .calls[0] as [unknown, unknown, unknown, string];
       expect(typeof mainMessage).toBe('string');
       expect(mainMessage).not.toBe('');
     });
@@ -497,7 +501,8 @@ describe('EmailService', () => {
         '1.2.3.4',
       );
 
-      const call = templateService.generateNotificationEmail.mock.calls[0];
+      const call = templateService.generateNotificationEmail.mock
+        .calls[0] as unknown[];
       expect(call).toContain('1.2.3.4');
       expect(call).toContain('10.0.0.1');
     });

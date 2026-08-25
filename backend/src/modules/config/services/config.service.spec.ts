@@ -11,6 +11,7 @@ import { TimezoneService } from '@/modules/config/services/timezone.service';
 import { DatabaseService } from '@/modules/config/services/database.service';
 import { VersionService } from '@/modules/config/services/version.service';
 import { AppriseService } from '@/modules/config/services/apprise.service';
+import { callArgs } from '@/test-matchers';
 
 const flush = () => new Promise((resolve) => setImmediate(resolve));
 
@@ -765,7 +766,9 @@ describe('ConfigService', () => {
     it('hands the importer the running version and a comparator', async () => {
       await service.importDatabase({ data: { settings: [] } });
 
-      const [, version, compare] = databaseService.importDatabase.mock.calls[0];
+      const [, version, compare] = callArgs<[unknown, string, unknown]>(
+        databaseService.importDatabase,
+      );
       expect(version).toBe('1.3.5');
       expect(typeof compare).toBe('function');
     });

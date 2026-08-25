@@ -7,6 +7,7 @@ import { UserPreference } from '@/entities/user-preference.entity';
 import { AppSettings } from '@/entities/app-settings.entity';
 import { NotificationsService } from '@/modules/notifications/services/notifications.service';
 import { UserPortalService } from '@/modules/user-portal/services/user-portal.service';
+import { anyDate, anyValue } from '@/test-matchers';
 
 describe('UserPortalService', () => {
   let service: UserPortalService;
@@ -366,7 +367,7 @@ describe('UserPortalService', () => {
 
       expect(deviceRepo.update).toHaveBeenCalledWith(1, {
         requestDescription: 'my new tablet',
-        requestSubmittedAt: expect.any(Date),
+        requestSubmittedAt: anyDate(),
       });
     });
 
@@ -375,7 +376,7 @@ describe('UserPortalService', () => {
 
       expect(deviceRepo.update).toHaveBeenCalledWith(1, {
         requestDescription: '',
-        requestSubmittedAt: expect.any(Date),
+        requestSubmittedAt: anyDate(),
       });
       expect(
         notificationsService.createDeviceNoteNotification,
@@ -402,12 +403,7 @@ describe('UserPortalService', () => {
 
       expect(
         notificationsService.createDeviceNoteNotification,
-      ).toHaveBeenCalledWith(
-        'plex-9',
-        'Unknown User',
-        expect.anything(),
-        'note',
-      );
+      ).toHaveBeenCalledWith('plex-9', 'Unknown User', anyValue(), 'note');
     });
 
     it('still records the note when the notification fails', async () => {

@@ -5,7 +5,7 @@ import {
   trustProxyHops,
 } from '@/common/security/rate-limit';
 
-const mockRateLimit = jest.fn();
+const mockRateLimit = jest.fn<unknown, [unknown]>();
 
 jest.mock('express-rate-limit', () => ({
   __esModule: true,

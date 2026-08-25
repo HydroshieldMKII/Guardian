@@ -8,9 +8,10 @@ import { SessionHistory } from '@/entities/session-history.entity';
 import { UserDevice } from '@/entities/user-device.entity';
 import { SettingValues } from '@/modules/config/settings.catalog';
 import { PlexErrorCode } from '@/types/plex-errors';
+import { callArgs } from '@/test-matchers';
 
-const mockHttpRequest = jest.fn();
-const mockHttpsRequest = jest.fn();
+const mockHttpRequest = jest.fn<unknown, unknown[]>();
+const mockHttpsRequest = jest.fn<unknown, unknown[]>();
 
 jest.mock('http', () => ({
   request: (...args: unknown[]) => mockHttpRequest(...args),
@@ -44,7 +45,7 @@ describe('PlexClient', () => {
   const flush = () => new Promise((resolve) => setImmediate(resolve));
 
   const optionsOf = (mock: jest.Mock): RequestOptions =>
-    mock.mock.calls[0][0] as RequestOptions;
+    callArgs<[RequestOptions]>(mock)[0];
 
   const reply = async (
     mock: jest.Mock,
@@ -53,7 +54,8 @@ describe('PlexClient', () => {
     statusMessage = 'OK',
   ) => {
     await flush();
-    const listener = mock.mock.calls[0][1] as (res: IncomingMessage) => void;
+    const listener =
+      callArgs<[unknown, (res: IncomingMessage) => void]>(mock)[1];
     const res = new FakeResponse(status, statusMessage);
     listener(res as unknown as IncomingMessage);
     if (body) res.emit('data', body);
@@ -81,7 +83,7 @@ describe('PlexClient', () => {
         setTimeout: request.setTimeout,
         write: request.write,
         end: request.end,
-        on: request.on.bind(request),
+        on: request.on.bind(request) as ClientRequest['on'],
       };
       return stub as ClientRequest;
     };
@@ -299,7 +301,7 @@ describe('PlexClient', () => {
       await reply(mockHttpRequest, 200, '{}');
       await pending;
 
-      expect(request.setTimeout.mock.calls[0][0]).toBe(15000);
+      expect(callArgs<[number]>(request.setTimeout)[0]).toBe(15000);
     });
   });
 

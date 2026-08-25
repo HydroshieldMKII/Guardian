@@ -6,10 +6,19 @@ import { AdminUser } from '@/entities/admin-user.entity';
 import { UserPreference } from '@/entities/user-preference.entity';
 import { PlexOAuthService } from '@/modules/auth/plex-oauth.service';
 
-const mockHttpsRequest = jest.fn();
+interface RequestOptions {
+  path: string;
+  method: string;
+  headers: Record<string, string>;
+}
+
+type ResponseListener = (res: EventEmitter & { statusCode: number }) => void;
+
+const mockHttpsRequest = jest.fn<unknown, [RequestOptions, ResponseListener]>();
 
 jest.mock('https', () => ({
-  request: (...args: unknown[]) => mockHttpsRequest(...args),
+  request: (options: RequestOptions, callback: ResponseListener) =>
+    mockHttpsRequest(options, callback),
 }));
 
 interface PlexReply {
@@ -20,7 +29,7 @@ interface PlexReply {
 }
 
 interface SentRequest {
-  options: { path: string; method: string; headers: Record<string, string> };
+  options: RequestOptions;
   body: string;
 }
 

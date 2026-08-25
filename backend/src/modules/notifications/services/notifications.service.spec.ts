@@ -9,6 +9,7 @@ import { AppriseService } from '@/modules/config/services/apprise.service';
 import { EmailService } from '@/modules/config/services/email.service';
 import { LiveEventsService } from '@/modules/events/live-events.service';
 import { NotificationsService } from '@/modules/notifications/services/notifications.service';
+import { callResult } from '@/test-matchers';
 
 describe('NotificationsService', () => {
   let service: NotificationsService;
@@ -39,7 +40,7 @@ describe('NotificationsService', () => {
     });
 
   const createdNotification = (): Notification =>
-    notificationRepo.create.mock.results[0].value;
+    callResult<Notification>(notificationRepo.create);
 
   beforeEach(async () => {
     enabled.clear();

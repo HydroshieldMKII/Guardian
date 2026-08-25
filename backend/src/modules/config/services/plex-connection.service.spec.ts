@@ -3,9 +3,10 @@ import { EventEmitter } from 'events';
 import type { ClientRequest, IncomingMessage, RequestOptions } from 'http';
 import { PlexConnectionService } from './plex-connection.service';
 import { PlexErrorCode } from '@/types/plex-errors';
+import { callArgs } from '@/test-matchers';
 
-const mockHttpRequest = jest.fn();
-const mockHttpsRequest = jest.fn();
+const mockHttpRequest = jest.fn<unknown, unknown[]>();
+const mockHttpsRequest = jest.fn<unknown, unknown[]>();
 
 jest.mock('http', () => ({
   request: (...args: unknown[]) => mockHttpRequest(...args),
@@ -31,10 +32,10 @@ describe('PlexConnectionService', () => {
     service.testConnection('10.0.0.5', '32400', 'plex-token', false, false);
 
   const optionsOf = (mock: jest.Mock): RequestOptions =>
-    mock.mock.calls[0][0] as RequestOptions;
+    callArgs<[RequestOptions]>(mock)[0];
 
   const respondWith = (res: Partial<IncomingMessage>) => {
-    const listener = mockHttpRequest.mock.calls[0][1] as ResponseListener;
+    const listener = callArgs<[unknown, ResponseListener]>(mockHttpRequest)[1];
     listener(res as IncomingMessage);
   };
 
@@ -48,7 +49,7 @@ describe('PlexConnectionService', () => {
           destroy: request.destroy,
           setTimeout: request.setTimeout,
           end: request.end,
-          on: request.on.bind(request),
+          on: request.on.bind(request) as ClientRequest['on'],
         };
       return stub as ClientRequest;
     };

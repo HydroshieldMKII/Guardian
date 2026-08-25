@@ -8,6 +8,7 @@ import { ConfigService } from '@/modules/config/services/config.service';
 import { SessionOrchestratorService } from '@/services/session-orchestrator.service';
 import { SettingValues } from '@/modules/config/settings.catalog';
 import { PlexSessionsResponse } from '@/types/plex.types';
+import { anyValue } from '@/test-matchers';
 
 describe('PlexService', () => {
   let service: PlexService;
@@ -302,7 +303,7 @@ describe('PlexService', () => {
       expect(
         sessionOrchestratorService.orchestrateSessionUpdate,
       ).toHaveBeenCalledWith(
-        expect.objectContaining({ MediaContainer: expect.anything() }),
+        expect.objectContaining({ MediaContainer: anyValue() }),
       );
     });
 
