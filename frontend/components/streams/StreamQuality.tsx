@@ -22,7 +22,6 @@ export const StreamQuality: React.FC<StreamQualityProps> = ({
   // For music tracks, only show if we have bitrate
   const isMusic = session.type === "track";
   if (isMusic) {
-    console.log(quality.bitrate);
     if (quality.bitrate === "Unknown") {
       return null;
     }

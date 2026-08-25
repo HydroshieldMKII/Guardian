@@ -240,8 +240,6 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
       !loading &&
       sessionsListRef.current
     ) {
-      console.log("Scrolling to session ID:", scrollToSessionId);
-
       // Check if session exists in data first
       const sessionExistsInData = sessions.some(
         (s) => s.id === scrollToSessionId
@@ -256,8 +254,6 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
           `[data-session-id="${scrollToSessionId}"]`
         );
         if (sessionElement) {
-          console.log("Found session element, scrolling and highlighting");
-
           // Scroll to element
           sessionElement.scrollIntoView({
             behavior: "smooth",

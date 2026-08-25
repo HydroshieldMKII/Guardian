@@ -17,7 +17,7 @@ import {
   MessageSquare,
   CheckCheck,
 } from "lucide-react";
-import { UserDevice, AppSetting } from "@/types";
+import { UserDevice } from "@/types";
 import { getDeviceIcon, ClickableIP } from "./SharedComponents";
 import { useDeviceUtils } from "@/hooks/device-management/useDeviceUtils";
 import { apiClient } from "@/lib/api";
@@ -25,46 +25,32 @@ import { useToast } from "@/hooks/use-toast";
 
 interface DeviceCardProps {
   device: UserDevice;
-  settingsData?: AppSetting[];
   actionLoading: number | null;
-  editingDevice: number | null;
-  newDeviceName: string;
-  onEdit: (device: UserDevice) => void;
-  onCancelEdit: () => void;
-  onRename: (deviceId: number, newName: string) => void;
   onApprove: (device: UserDevice) => void;
   onReject: (device: UserDevice) => void;
   onDelete: (device: UserDevice) => void;
   onToggleApproval: (device: UserDevice) => void;
   onRevokeTempAccess: (deviceId: number) => void;
   onShowDetails: (device: UserDevice) => void;
-  onNewDeviceNameChange: (name: string) => void;
   onDeviceUpdate?: (device: UserDevice) => void;
 }
 
 export const DeviceCard: React.FC<DeviceCardProps> = ({
   device,
-  settingsData,
   actionLoading,
-  editingDevice,
-  newDeviceName,
-  onEdit,
-  onCancelEdit,
-  onRename,
   onApprove,
   onReject,
   onDelete,
   onToggleApproval,
   onRevokeTempAccess,
   onShowDetails,
-  onNewDeviceNameChange,
   onDeviceUpdate,
 }) => {
   const { hasTemporaryAccess, getTemporaryAccessTimeLeft } = useDeviceUtils();
   const { toast } = useToast();
   const [markingAsRead, setMarkingAsRead] = useState(false);
   const [noteReadAt, setNoteReadAt] = useState<string | undefined>(
-    device.requestNoteReadAt
+    device.requestNoteReadAt,
   );
 
   // Sync noteReadAt when device prop changes

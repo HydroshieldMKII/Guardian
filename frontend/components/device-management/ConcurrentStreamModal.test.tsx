@@ -66,11 +66,7 @@ const renderModal = async (
 describe("ConcurrentStreamModal", () => {
   it("stays closed and fetches nothing", () => {
     render(
-      <ConcurrentStreamModal
-        isOpen={false}
-        onClose={jest.fn()}
-        userId="u-1"
-      />,
+      <ConcurrentStreamModal isOpen={false} onClose={jest.fn()} userId="u-1" />,
     );
 
     expect(screen.queryByText("Concurrent Stream Limit")).toBeNull();
@@ -95,9 +91,7 @@ describe("ConcurrentStreamModal", () => {
       }),
     );
 
-    render(
-      <ConcurrentStreamModal isOpen onClose={jest.fn()} userId="u-1" />,
-    );
+    render(<ConcurrentStreamModal isOpen onClose={jest.fn()} userId="u-1" />);
     expect(screen.queryByText("Use global default")).toBeNull();
 
     await act(async () => {
@@ -131,9 +125,7 @@ describe("ConcurrentStreamModal", () => {
 
       expect(screen.getByRole("switch")).toBeChecked();
       expect(screen.getByLabelText(/Custom limit/)).toBeDisabled();
-      expect(
-        screen.getByText("3 concurrent streams"),
-      ).toBeInTheDocument();
+      expect(screen.getByText("3 concurrent streams")).toBeInTheDocument();
     });
 
     it("uses the stored override when the user has one", async () => {
@@ -260,9 +252,7 @@ describe("ConcurrentStreamModal", () => {
 
     it("works without an onUpdate callback", async () => {
       const user = userEvent.setup();
-      render(
-        <ConcurrentStreamModal isOpen onClose={jest.fn()} userId="u-1" />,
-      );
+      render(<ConcurrentStreamModal isOpen onClose={jest.fn()} userId="u-1" />);
       await screen.findByText("Use global default");
 
       await user.click(screen.getByRole("button", { name: "Save" }));

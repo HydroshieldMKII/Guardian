@@ -102,7 +102,7 @@ export function DatabaseManagement({
         }
 
         // No version mismatch, proceed with import
-        performImport(importData, file);
+        performImport(file);
       } catch (error) {
         console.error("Import error:", error);
         toast({
@@ -118,36 +118,24 @@ export function DatabaseManagement({
     event.target.value = "";
   };
 
-  const performImport = async (importData: any, originalFile?: File) => {
+  const performImport = async (file: File) => {
     try {
       setImportingDatabase(true);
 
-      // Create FormData and append the file
       const formData = new FormData();
-
-      if (originalFile) {
-        // Use the original file if provided
-        formData.append("file", originalFile);
-      } else {
-        // Create a blob from the importData if no original file
-        const blob = new Blob([JSON.stringify(importData)], {
-          type: "application/json",
-        });
-        formData.append("file", blob, "database-import.json");
-      }
+      formData.append("file", file);
 
       const result = await apiClient.importDatabase(formData);
 
       // Handle nested result structure from backend
-      const importResult = (result as any).imported || result;
+      const nested = (result as { imported?: unknown }).imported;
+      const importResult =
+        typeof nested === "object" && nested !== null ? nested : result;
+      const counts = importResult as { imported?: unknown; skipped?: unknown };
       const imported =
-        typeof importResult.imported === "number"
-          ? importResult.imported
-          : "unknown";
+        typeof counts.imported === "number" ? counts.imported : "unknown";
       const skipped =
-        typeof importResult.skipped === "number"
-          ? importResult.skipped
-          : "unknown";
+        typeof counts.skipped === "number" ? counts.skipped : "unknown";
 
       toast({
         title: "Import successful",
@@ -177,7 +165,7 @@ export function DatabaseManagement({
         try {
           const content = e.target?.result as string;
           const importData = JSON.parse(content);
-          performImport(importData, pendingImportFile);
+          performImport(pendingImportFile);
         } catch (error) {
           console.error("Import error:", error);
           toast({

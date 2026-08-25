@@ -89,7 +89,6 @@ export const useStreamActions = () => {
 
         if (response.ok) {
           const result = await response.json();
-          console.log(result.message);
 
           toast({
             title: "Access Revoked",

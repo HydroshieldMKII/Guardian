@@ -45,11 +45,10 @@ const DAYS_OF_WEEK = [
 const FocusInput: React.FC<{
   value: string;
   onChange: (value: string) => void;
-  onBlur?: () => void;
   type?: string;
   placeholder?: string;
   className?: string;
-}> = ({ value, onChange, onBlur, type = "text", placeholder, className }) => {
+}> = ({ value, onChange, type = "text", placeholder, className }) => {
   const [localValue, setLocalValue] = useState(value);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -66,19 +65,12 @@ const FocusInput: React.FC<{
     onChange(newValue);
   };
 
-  const handleBlur = () => {
-    if (onBlur) {
-      onBlur();
-    }
-  };
-
   return (
     <Input
       ref={inputRef}
       type={type}
       value={localValue}
       onChange={handleChange}
-      onBlur={handleBlur}
       placeholder={placeholder}
       className={className}
     />
@@ -443,13 +435,11 @@ export function TimeRuleModal({
 
   const confirmCreatePreset = async (presetType: string) => {
     if (creatingPreset) {
-      console.log("Already creating preset, ignoring duplicate request");
       return;
     }
 
     setCreatingPreset(presetType);
     try {
-      console.log(`Creating ${presetType} preset for user:`, userId);
       const createdRules = await createPreset(
         userId,
         presetType as "weekdays-only" | "weekends-only",
