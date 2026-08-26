@@ -13,9 +13,9 @@
 Guardian is a security and management platform for Plex Media Server. It monitors streaming activity, enforces granular access controls, and ensures only authorized devices can reach your library.
 
 > [!WARNING]
-> **Looking for a maintainer.** This project is feature-complete from the author's perspective. No new features are planned unless someone steps up to take the lead, and security patches may be slow. Interested? Reach out on [Discord](https://discord.gg/xTKuHyhdS4) or in [Discussions](https://github.com/HydroshieldMKII/Guardian/discussions).
+> **Looking for a maintainer.** Interested? Reach out on [Discord](https://discord.gg/xTKuHyhdS4) or in [Discussions](https://github.com/HydroshieldMKII/Guardian/discussions).
 >
-> **In the mean time, do not expose Guardian directly to the internet.** Run it on your LAN, behind a VPN, or behind a reverse proxy with SSO.
+> **In the mean time, it is not recommended to expose Guardian directly to the internet.** Run it on your LAN, behind a VPN, or behind a reverse proxy with SSO.
 
 ## Screenshots
 
