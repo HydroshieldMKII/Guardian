@@ -74,8 +74,8 @@ jobs:
         uses: codecov/codecov-action@v7
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          working-directory: backend
-          files: coverage/lcov.info
+          root_dir: ${{ github.workspace }}
+          files: ${{ github.workspace }}/backend/coverage/lcov.info
           flags: backend
           name: backend
           disable_search: true
@@ -116,8 +116,8 @@ jobs:
         uses: codecov/codecov-action@v7
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          working-directory: frontend
-          files: coverage/lcov.info
+          root_dir: ${{ github.workspace }}
+          files: ${{ github.workspace }}/frontend/coverage/lcov.info
           flags: frontend
           name: frontend
           disable_search: true
