@@ -103,7 +103,7 @@ describe("DeviceCard identity", () => {
     expect(screen.getAllByText("Roku").length).toBeGreaterThan(0);
     expect(screen.getAllByText("192.168.1.10").length).toBeGreaterThan(0);
     expect(screen.getByText("Streams")).toBeInTheDocument();
-    expect(screen.getByText("7")).toBeInTheDocument();
+    expect(screen.getByText(/7 streams/)).toBeInTheDocument();
   });
 
   it("falls back for a nameless device and unknown platform", () => {
@@ -142,6 +142,94 @@ describe("DeviceCard identity", () => {
     renderCard();
     expect(screen.getByText("Product")).toBeInTheDocument();
     expect(screen.getByText("Plex for Roku")).toBeInTheDocument();
+  });
+});
+
+describe("DeviceCard dense row", () => {
+  it("keeps every fact on one line instead of a labelled grid", () => {
+    const { container } = renderCard();
+
+    const facts = container.querySelectorAll("dl");
+
+    expect(facts).toHaveLength(1);
+    expect(facts[0].textContent).toContain("Plex for Roku");
+    expect(facts[0].textContent).toContain("Roku");
+    expect(facts[0].textContent).toContain("192.168.1.10");
+    expect(facts[0].textContent).toContain("7 streams");
+    expect(facts[0].textContent).toContain("Last seen");
+  });
+
+  it("keeps the field names for screen readers only", () => {
+    const { container } = renderCard();
+
+    const labels = Array.from(container.querySelectorAll("dt"));
+
+    expect(labels.map((label) => label.textContent)).toEqual([
+      "Product",
+      "Platform",
+      "IP Address",
+      "Streams",
+      "Last Seen",
+    ]);
+    for (const label of labels) {
+      expect(label.className).toContain("sr-only");
+    }
+  });
+
+  it.each([
+    [1, "1 stream"],
+    [2, "2 streams"],
+    [0, "0 streams"],
+  ])("counts %p session(s) in words", (sessionCount, expected) => {
+    renderCard({ sessionCount });
+    expect(screen.getByText(expected)).toBeInTheDocument();
+  });
+
+  it("counts no sessions when the server omits the field", () => {
+    renderCard({ sessionCount: undefined });
+    expect(screen.getByText("0 streams")).toBeInTheDocument();
+  });
+
+  it("sits the status pill beside the name rather than across from it", () => {
+    renderCard({ status: "pending" });
+
+    const name = screen.getByRole("heading", { name: "Living Room TV" });
+    const pill = screen.getByText("Pending");
+
+    expect(name.parentElement).toContainElement(pill);
+  });
+
+  it("keeps the pills smaller than the name they annotate", () => {
+    hasTemporaryAccess.mockReturnValue(true);
+    renderCard({ status: "pending", temporaryAccessBypassPolicies: true });
+
+    for (const label of ["Pending", "2h", "Bypass"]) {
+      expect(screen.getByText(label).className).toContain("text-[10px]");
+    }
+    expect(
+      screen.getByRole("heading", { name: "Living Room TV" }).className,
+    ).toContain("text-sm");
+  });
+
+  it("folds the temporary access pills into the name row", () => {
+    hasTemporaryAccess.mockReturnValue(true);
+    renderCard({ temporaryAccessBypassPolicies: true });
+
+    const name = screen.getByRole("heading", { name: "Living Room TV" });
+
+    expect(name.parentElement).toContainElement(screen.getByText("2h"));
+    expect(name.parentElement).toContainElement(screen.getByText("Bypass"));
+  });
+
+  it("keeps the note below the row rather than inside it", () => {
+    const { container } = renderCard({
+      requestDescription: "Please let me in",
+      requestSubmittedAt: "2026-01-05T00:00:00Z",
+    });
+
+    const row = container.querySelector("dl")?.closest("div.lg\\:flex-row");
+
+    expect(row).not.toContainElement(screen.getByText("Please let me in"));
   });
 });
 
@@ -318,6 +406,26 @@ describe("DeviceCard actions", () => {
     expect(screen.getByRole("button", { name: /Actions/ })).not.toBeDisabled();
   });
 
+  it("shows an overflow glyph, not the expander chevron the group header uses", () => {
+    renderCard({ status: "pending" });
+
+    const trigger = screen.getByRole("button", { name: /Actions/ });
+
+    expect(
+      trigger.querySelector("svg.lucide-ellipsis-vertical"),
+    ).not.toBeNull();
+    expect(trigger.querySelector("svg.lucide-chevron-down")).toBeNull();
+  });
+
+  it("hides the trigger label on wide screens but keeps its name", () => {
+    renderCard({ status: "pending" });
+
+    const trigger = screen.getByRole("button", { name: /Actions/ });
+
+    expect(trigger.className).toContain("lg:size-8");
+    expect(screen.getByText("Actions").className).toContain("lg:sr-only");
+  });
+
   it("gives the trigger a taller mobile target", () => {
     renderCard({ status: "pending" });
 
@@ -329,7 +437,7 @@ describe("DeviceCard actions", () => {
   it("sits the trigger alongside the device details rather than below them", () => {
     const { container } = renderCard({ status: "pending" });
 
-    const row = container.querySelector("dl")?.parentElement;
+    const row = container.querySelector("dl")?.closest("div.lg\\:flex-row");
 
     expect(row).not.toBeNull();
     expect(row).toContainElement(

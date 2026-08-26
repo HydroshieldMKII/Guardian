@@ -223,6 +223,29 @@ describe("Panel", () => {
   });
 });
 
+describe("StatusPill sizing", () => {
+  it("defaults to the roomier size", () => {
+    const { container } = render(<StatusPill>Ready</StatusPill>);
+    expect(container.firstElementChild?.className).toContain("text-[11px]");
+  });
+
+  it("shrinks for dense rows", () => {
+    const { container } = render(<StatusPill size="sm">Ready</StatusPill>);
+
+    expect(container.firstElementChild?.className).toContain("text-[10px]");
+    expect(container.firstElementChild?.className).not.toContain("text-[11px]");
+  });
+
+  it("keeps the dot at either size", () => {
+    const { container } = render(
+      <StatusPill size="sm" dot>
+        Ready
+      </StatusPill>,
+    );
+    expect(container.querySelector("span[aria-hidden]")).not.toBeNull();
+  });
+});
+
 describe("toneButton", () => {
   it("defaults to the outline variant", () => {
     expect(toneButton("danger")).toBe(toneButton("danger", "outline"));

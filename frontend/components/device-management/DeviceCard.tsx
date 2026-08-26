@@ -10,8 +10,8 @@ import {
 import {
   Ban,
   Check,
-  ChevronDown,
   Info,
+  MoreVertical,
   RefreshCw,
   ShieldOff,
   Trash2,
@@ -19,10 +19,6 @@ import {
 } from "lucide-react";
 import {
   EntityCard,
-  EntityHeader,
-  Meta,
-  MetaGrid,
-  PillRow,
   StatusPill,
   toneMenuItem,
   type Tone,
@@ -69,6 +65,19 @@ interface DeviceAction {
   tone: Tone;
   onSelect: () => void;
 }
+
+const Fact = ({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) => (
+  <div className="after:mx-2 after:text-muted-foreground/40 after:content-['·'] last:after:content-none">
+    <dt className="sr-only">{label}</dt>
+    <dd className="inline">{children}</dd>
+  </div>
+);
 
 export const DeviceCard: React.FC<DeviceCardProps> = ({
   device,
@@ -130,6 +139,8 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
     Boolean(device.requestDescription) &&
     Boolean(device.requestSubmittedAt) &&
     !noteReadAt;
+
+  const streams = device.sessionCount ?? 0;
 
   const spinner = <RefreshCw className="size-4 animate-spin" />;
 
@@ -209,40 +220,78 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
       tone={tone}
       data-device-identifier={device.deviceIdentifier}
     >
-      <div className="space-y-5 p-4 pl-5 sm:space-y-6 sm:p-6 sm:pl-7">
-        <EntityHeader
-          title={device.deviceName || "Unknown"}
-          subtitle={`Last seen ${new Date(device.lastSeen).toLocaleDateString()}`}
-          status={
-            <StatusPill tone={tone}>
-              {plexAmp
-                ? "Plex Amp"
-                : (STATUS_LABEL[device.status] ?? device.status)}
-            </StatusPill>
-          }
-        />
-
-        {(temporary ||
-          (device.status === "approved" &&
-            device.excludeFromConcurrentLimit)) && (
-          <PillRow>
-            {temporary && (
-              <StatusPill tone="info">
-                {getTemporaryAccessTimeLeft(device)}
+      <div className="space-y-3 p-3 pl-4 sm:p-4 sm:pl-5">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:gap-4">
+          <div className="min-w-0 flex-1 space-y-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h4 className="min-w-0 truncate text-sm font-semibold leading-tight text-foreground">
+                {device.deviceName || "Unknown"}
+              </h4>
+              <StatusPill tone={tone} size="sm">
+                {plexAmp
+                  ? "Plex Amp"
+                  : (STATUS_LABEL[device.status] ?? device.status)}
               </StatusPill>
-            )}
-            {temporary && device.temporaryAccessBypassPolicies && (
-              <StatusPill tone="warning">Bypass</StatusPill>
-            )}
-            {device.status === "approved" &&
-              device.excludeFromConcurrentLimit && (
-                <StatusPill tone="neutral">No Limit</StatusPill>
+              {temporary && (
+                <StatusPill tone="info" size="sm">
+                  {getTemporaryAccessTimeLeft(device)}
+                </StatusPill>
               )}
-          </PillRow>
-        )}
+              {temporary && device.temporaryAccessBypassPolicies && (
+                <StatusPill tone="warning" size="sm">
+                  Bypass
+                </StatusPill>
+              )}
+              {device.status === "approved" &&
+                device.excludeFromConcurrentLimit && (
+                  <StatusPill tone="neutral" size="sm">
+                    No Limit
+                  </StatusPill>
+                )}
+            </div>
+
+            <dl className="flex flex-wrap items-center gap-y-1 text-xs text-muted-foreground">
+              <Fact label="Product">{device.deviceProduct || "Unknown"}</Fact>
+              <Fact label="Platform">{device.devicePlatform || "Unknown"}</Fact>
+              <Fact label="IP Address">
+                <ClickableIP ipAddress={device.ipAddress} />
+              </Fact>
+              <Fact label="Streams">
+                {streams} {streams === 1 ? "stream" : "streams"}
+              </Fact>
+              <Fact label="Last Seen">
+                Last seen {new Date(device.lastSeen).toLocaleDateString()}
+              </Fact>
+            </dl>
+          </div>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={busy}
+                className="h-10 w-full rounded-md lg:size-8 lg:px-0"
+              >
+                <span className="lg:sr-only">Actions</span>
+                {busy ? spinner : <MoreVertical />}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-52">
+              {actions.map(menuItem)}
+              <DropdownMenuSeparator />
+              {menuItem({
+                label: "Delete",
+                icon: Trash2,
+                tone: "danger",
+                onSelect: () => onDelete(device),
+              })}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
 
         {showsNote && (
-          <div className="rounded-lg border border-amber-500/25 bg-amber-500/10 p-3 sm:p-4">
+          <div className="rounded-lg border border-amber-500/25 bg-amber-500/10 p-3">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="text-[11px] font-medium uppercase tracking-wide text-amber-700 dark:text-amber-300">
@@ -264,40 +313,6 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
             </div>
           </div>
         )}
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between lg:gap-6">
-          <MetaGrid className="min-w-0 flex-1">
-            <Meta label="Product">{device.deviceProduct || "Unknown"}</Meta>
-            <Meta label="Platform">{device.devicePlatform || "Unknown"}</Meta>
-            <Meta label="IP Address">
-              <ClickableIP ipAddress={device.ipAddress} />
-            </Meta>
-            <Meta label="Streams">{device.sessionCount ?? 0}</Meta>
-          </MetaGrid>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={busy}
-                className="h-10 w-full rounded-md lg:h-8 lg:w-auto"
-              >
-                Actions
-                {busy ? spinner : <ChevronDown />}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-52">
-              {actions.map(menuItem)}
-              <DropdownMenuSeparator />
-              {menuItem({
-                label: "Delete",
-                icon: Trash2,
-                tone: "danger",
-                onSelect: () => onDelete(device),
-              })}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
       </div>
     </EntityCard>
   );

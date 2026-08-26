@@ -162,13 +162,20 @@ export function EntityHeader({
   );
 }
 
+const PILL_SIZE = {
+  default: "gap-1.5 px-2.5 py-0.5 text-[11px] leading-5 sm:text-xs",
+  sm: "gap-1 px-2 py-0.5 text-[10px] leading-4",
+};
+
 export function StatusPill({
   tone = "neutral",
+  size = "default",
   dot = false,
   className,
   children,
 }: {
   tone?: Tone;
+  size?: keyof typeof PILL_SIZE;
   dot?: boolean;
   className?: string;
   children: React.ReactNode;
@@ -176,8 +183,8 @@ export function StatusPill({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-0.5",
-        "text-[11px] font-medium leading-5 sm:text-xs",
+        "inline-flex items-center whitespace-nowrap rounded-full border font-medium",
+        PILL_SIZE[size],
         TONE_PILL[tone],
         className,
       )}
