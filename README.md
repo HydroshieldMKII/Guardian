@@ -2,6 +2,8 @@
 
 [![CI](https://github.com/HydroshieldMKII/Guardian/actions/workflows/ci.yml/badge.svg)](https://github.com/HydroshieldMKII/Guardian/actions/workflows/ci.yml)
 [![CD](https://github.com/HydroshieldMKII/Guardian/actions/workflows/cd.yml/badge.svg)](https://github.com/HydroshieldMKII/Guardian/actions/workflows/cd.yml)
+[![Frontend coverage](https://codecov.io/gh/HydroshieldMKII/Guardian/branch/main/graph/badge.svg?flag=frontend)](https://codecov.io/gh/HydroshieldMKII/Guardian?flags[0]=frontend)
+[![Backend coverage](https://codecov.io/gh/HydroshieldMKII/Guardian/branch/main/graph/badge.svg?flag=backend)](https://codecov.io/gh/HydroshieldMKII/Guardian?flags[0]=backend)
 [![Docker Pulls](https://img.shields.io/docker/pulls/hydroshieldmkii/guardian.svg)](https://hub.docker.com/r/hydroshieldmkii/guardian)
 [![Stars](https://img.shields.io/github/stars/HydroshieldMKII/Guardian.svg?style=flat)](https://github.com/HydroshieldMKII/Guardian/stargazers)
 [![Discord](https://img.shields.io/discord/1415505445883215955?logo=discord&label=Discord)](https://discord.gg/xTKuHyhdS4)
@@ -107,15 +109,15 @@ Still stuck? Ask on [Discord](https://discord.gg/xTKuHyhdS4) or open an [issue](
 ## Development
 
 ```bash
-cd backend  && npm ci && npm run start:dev
-cd frontend && npm ci && npm run dev
+cd backend  && npm ci && npm run start:dev   # in one terminal
+cd frontend && npm ci && npm run dev         # in another
 ```
 
 Before opening a pull request:
 
 ```bash
-cd backend  && npm run lint:ci && npm run test:cov && npm run build
-cd frontend && npm run typecheck && npm run test:cov && npm run build
+(cd backend  && npm run lint:ci && npm run typecheck && npm run test:cov && npm run build)
+(cd frontend && npm run typecheck && npm run test:cov && npm run build)
 ```
 
 ## Contributing
