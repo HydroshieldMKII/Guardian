@@ -13,9 +13,40 @@ concurrency:
 
 permissions:
   contents: read
+  pull-requests: read
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+      image: ${{ steps.filter.outputs.image }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - id: filter
+        uses: dorny/paths-filter@v4
+        with:
+          filters: |
+            workflow: &workflow
+              - '.github/workflows/ci.yml'
+            backend: &backend
+              - *workflow
+              - 'backend/**'
+            frontend: &frontend
+              - *workflow
+              - 'frontend/**'
+            image:
+              - *backend
+              - *frontend
+              - 'Dockerfile'
+              - '.dockerignore'
+              - 'docker-entrypoint.sh'
+
   backend:
+    needs: changes
+    if: needs.changes.outputs.backend == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -40,7 +71,7 @@ jobs:
       - run: npm run build
 
       - if: always()
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v7
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           working-directory: backend
@@ -58,6 +89,8 @@ jobs:
           retention-days: 7
 
   frontend:
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -80,7 +113,7 @@ jobs:
       - run: npm run build
 
       - if: always()
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v7
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           working-directory: frontend
@@ -98,6 +131,8 @@ jobs:
           retention-days: 7
 
   image:
+    needs: changes
+    if: needs.changes.outputs.image == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -131,3 +166,11 @@ jobs:
           docker logs guardian-smoke
           docker rm -f guardian-smoke
           exit 1
+
+  ci:
+    if: always()
+    needs: [changes, backend, frontend, image]
+    runs-on: ubuntu-latest
+    steps:
+      - if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: exit 1
