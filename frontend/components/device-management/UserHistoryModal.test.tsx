@@ -112,19 +112,20 @@ describe("UserHistoryModal loading", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("sorts newest first", async () => {
+  it("asks for the first page of the newest sessions", async () => {
+    await renderModal();
+
+    const url = fetchMock.mock.calls[0][0] as string;
+    expect(url).toContain("limit=25");
+    expect(url).toContain("offset=0");
+    expect(url).toContain("includeActive=true");
+  });
+
+  it("keeps the order the server returned", async () => {
     fetchMock.mockImplementation(() =>
       ok([
-        session({
-          id: 1,
-          contentTitle: "Older",
-          startedAt: "2026-01-01T00:00:00Z",
-        }),
-        session({
-          id: 2,
-          contentTitle: "Newer",
-          startedAt: "2026-02-01T00:00:00Z",
-        }),
+        session({ id: 2, contentTitle: "Newer" }),
+        session({ id: 1, contentTitle: "Older" }),
       ]),
     );
     await renderModal();
@@ -145,7 +146,10 @@ describe("UserHistoryModal loading", () => {
     await renderModal();
 
     expect(screen.getByText("No streaming history found")).toBeInTheDocument();
-    expect(consoleError).toHaveBeenCalledWith("Failed to fetch user history");
+    expect(consoleError).toHaveBeenCalledWith(
+      "Error fetching user history:",
+      expect.any(Error),
+    );
   });
 
   it("empties the list on a thrown request", async () => {
@@ -166,15 +170,49 @@ describe("UserHistoryModal loading", () => {
     expect(screen.getByText("No streaming history found")).toBeInTheDocument();
   });
 
-  it("refreshes on demand", async () => {
+  it("refreshes in the background without blanking the list", async () => {
     const { user } = await renderModal();
 
-    await user.click(
-      document.querySelector("button .lucide-refresh-cw")
-        ?.parentElement as HTMLElement,
-    );
+    await user.click(screen.getByRole("button", { name: /Refresh/ }));
 
+    expect(screen.queryByText("Loading history...")).toBeNull();
+    expect(screen.getAllByText("Arrival").length).toBeGreaterThan(0);
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+  });
+
+  it("keeps a background refresh quiet when it fails", async () => {
+    const { user } = await renderModal();
+    fetchMock.mockRejectedValue(new Error("offline"));
+
+    await user.click(screen.getByRole("button", { name: /Refresh/ }));
+
+    await waitFor(() =>
+      expect(consoleError).toHaveBeenCalledWith(
+        "Error refreshing user history:",
+        expect.any(Error),
+      ),
+    );
+    expect(screen.getAllByText("Arrival").length).toBeGreaterThan(0);
+  });
+
+  it("closes from the footer", async () => {
+    const { user, onClose } = await renderModal();
+
+    await user.click(screen.getByRole("button", { name: "Close" }));
+
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it("shows the active badge without a leading dot", async () => {
+    fetchMock.mockImplementation(() => ok([session({ endedAt: null })]));
+    await renderModal();
+
+    const pill = screen
+      .getAllByText("Active")
+      .find((node) => node.className.includes("rounded-full"));
+
+    expect(pill).toBeDefined();
+    expect(pill?.querySelectorAll("span[aria-hidden]")).toHaveLength(0);
   });
 
   it("polls while a session is still active", async () => {
@@ -362,47 +400,24 @@ describe("UserHistoryModal formatting", () => {
 });
 
 describe("UserHistoryModal filtering", () => {
-  beforeEach(() => {
-    fetchMock.mockImplementation(() =>
-      ok([
-        session({ id: 1, contentTitle: "Arrival", terminated: false }),
-        session({
-          id: 2,
-          contentTitle: "Severance",
-          terminated: true,
-          deviceAddress: "10.0.0.9",
-          userDevice: {
-            deviceName: "Bedroom",
-            deviceIdentifier: "device-2",
-          },
-        }),
-      ]),
-    );
-  });
+  const lastUrl = () =>
+    fetchMock.mock.calls[fetchMock.mock.calls.length - 1][0] as string;
 
-  it.each([
-    ["Severance", "2"],
-    ["Bedroom", "2"],
-    ["10.0.0.9", "2"],
-    ["Arrival", "1"],
-  ])("matches %p", async (term, expectedId) => {
+  it("asks the server for the search term once typing settles", async () => {
     const { user } = await renderModal();
 
     await user.type(
       screen.getByPlaceholderText(/Search by title, device, or IP/),
-      term,
+      "Severance",
     );
 
-    const rows = document.querySelectorAll("[data-session-id]");
-    expect(
-      Array.from(rows).every(
-        (r) => r.getAttribute("data-session-id") === expectedId,
-      ),
-    ).toBe(true);
+    await waitFor(() => expect(lastUrl()).toContain("search=Severance"));
+    expect(lastUrl()).toContain("offset=0");
   });
 
   it("says when nothing matches", async () => {
     const { user } = await renderModal();
+    fetchMock.mockImplementation(() => ok([]));
 
     await user.type(
       screen.getByPlaceholderText(/Search by title, device, or IP/),
@@ -410,19 +425,161 @@ describe("UserHistoryModal filtering", () => {
     );
 
     expect(
-      screen.getByText("No sessions found matching your filters"),
+      await screen.findByText("No sessions found matching your filters"),
     ).toBeInTheDocument();
   });
 
-  it("filters to terminated sessions only", async () => {
+  it("asks the server for terminated sessions only", async () => {
     const { user } = await renderModal();
 
     await user.click(screen.getByRole("switch"));
 
-    const rows = document.querySelectorAll("[data-session-id]");
+    await waitFor(() => expect(lastUrl()).toContain("terminatedOnly=true"));
+  });
+
+  it("leaves the filters out of the request by default", async () => {
+    await renderModal();
+
+    expect(lastUrl()).not.toContain("search=");
+    expect(lastUrl()).not.toContain("terminatedOnly=");
+  });
+});
+
+describe("UserHistoryModal paging", () => {
+  const fullPage = () =>
+    Array.from({ length: 25 }, (_, index) =>
+      session({ id: index + 1, contentTitle: `Session ${index + 1}` }),
+    );
+
+  it("offers to load older sessions when a full page comes back", async () => {
+    fetchMock.mockImplementation(() => ok(fullPage()));
+    await renderModal();
+
     expect(
-      Array.from(rows).every((r) => r.getAttribute("data-session-id") === "2"),
-    ).toBe(true);
+      screen.getByRole("button", { name: "Load older sessions" }),
+    ).toBeInTheDocument();
+  });
+
+  it("stops offering more once a short page comes back", async () => {
+    await renderModal();
+
+    expect(
+      screen.queryByRole("button", { name: "Load older sessions" }),
+    ).toBeNull();
+  });
+
+  it("appends the next page from the loaded offset", async () => {
+    fetchMock.mockImplementationOnce(() => ok(fullPage()));
+    fetchMock.mockImplementationOnce(() =>
+      ok([session({ id: 99, contentTitle: "Much Older" })]),
+    );
+    const { user } = await renderModal();
+
+    await user.click(
+      screen.getByRole("button", { name: "Load older sessions" }),
+    );
+
+    expect(await screen.findByText("Much Older")).toBeInTheDocument();
+    expect(fetchMock.mock.calls[1][0]).toContain("offset=25");
+    expect(document.querySelectorAll("[data-session-id]")).toHaveLength(26);
+    expect(
+      screen.queryByRole("button", { name: "Load older sessions" }),
+    ).toBeNull();
+  });
+
+  it("ignores rows the next page repeats", async () => {
+    fetchMock.mockImplementationOnce(() => ok(fullPage()));
+    fetchMock.mockImplementationOnce(() => ok([session({ id: 1 })]));
+    const { user } = await renderModal();
+
+    await user.click(
+      screen.getByRole("button", { name: "Load older sessions" }),
+    );
+
+    await waitFor(() =>
+      expect(document.querySelectorAll("[data-session-id]")).toHaveLength(25),
+    );
+  });
+
+  it("stops offering more when the next page fails", async () => {
+    fetchMock.mockImplementationOnce(() => ok(fullPage()));
+    fetchMock.mockImplementationOnce(() =>
+      Promise.reject(new Error("offline")),
+    );
+    const { user } = await renderModal();
+
+    await user.click(
+      screen.getByRole("button", { name: "Load older sessions" }),
+    );
+
+    await waitFor(() =>
+      expect(consoleError).toHaveBeenCalledWith(
+        "Error loading more user history:",
+        expect.any(Error),
+      ),
+    );
+    expect(
+      screen.queryByRole("button", { name: "Load older sessions" }),
+    ).toBeNull();
+  });
+
+  it("loads the next page when the trigger scrolls into view", async () => {
+    class TestIntersectionObserver implements IntersectionObserver {
+      static callbacks: IntersectionObserverCallback[] = [];
+      readonly root = null;
+      readonly rootMargin = "";
+      readonly thresholds: ReadonlyArray<number> = [];
+      constructor(callback: IntersectionObserverCallback) {
+        TestIntersectionObserver.callbacks.push(callback);
+      }
+      observe(): void {}
+      unobserve(): void {}
+      disconnect(): void {}
+      takeRecords(): IntersectionObserverEntry[] {
+        return [];
+      }
+    }
+    const original = global.IntersectionObserver;
+    global.IntersectionObserver = TestIntersectionObserver;
+
+    fetchMock.mockImplementationOnce(() => ok(fullPage()));
+    fetchMock.mockImplementationOnce(() =>
+      ok([session({ id: 99, contentTitle: "Much Older" })]),
+    );
+    await renderModal();
+
+    const observer = new TestIntersectionObserver(() => {});
+    const callback =
+      TestIntersectionObserver.callbacks[
+        TestIntersectionObserver.callbacks.length - 2
+      ];
+    await act(async () => {
+      callback(
+        [{ isIntersecting: true } as IntersectionObserverEntry],
+        observer,
+      );
+    });
+
+    expect(await screen.findByText("Much Older")).toBeInTheDocument();
+    global.IntersectionObserver = original;
+  });
+
+  it("refreshes every page it has already loaded", async () => {
+    fetchMock.mockImplementationOnce(() => ok(fullPage()));
+    fetchMock.mockImplementationOnce(() =>
+      ok([session({ id: 99, contentTitle: "Much Older" })]),
+    );
+    const { user } = await renderModal();
+    await user.click(
+      screen.getByRole("button", { name: "Load older sessions" }),
+    );
+    await screen.findByText("Much Older");
+
+    await user.click(screen.getByRole("button", { name: /Refresh/ }));
+
+    await waitFor(() =>
+      expect(fetchMock.mock.calls[2][0]).toContain("limit=26"),
+    );
   });
 });
 
@@ -566,6 +723,57 @@ describe("UserHistoryModal deep link", () => {
     expect(scrollIntoView).not.toHaveBeenCalled();
   });
 
+  it("pages further back looking for a session it has not loaded", async () => {
+    fetchMock.mockImplementation(() =>
+      ok(
+        Array.from({ length: 25 }, (_, index) =>
+          session({ id: index + 1, contentTitle: `Session ${index + 1}` }),
+        ),
+      ),
+    );
+
+    await renderModal({ scrollToSessionId: 999 });
+
+    await waitFor(() => expect(fetchMock.mock.calls.length).toBeGreaterThan(1));
+    expect(fetchMock.mock.calls[1][0]).toContain("offset=25");
+  });
+
+  it("clears the highlight it added", async () => {
+    jest.useFakeTimers();
+    Element.prototype.scrollIntoView = jest.fn();
+    render(
+      <UserHistoryModal
+        userId="u-1"
+        isOpen
+        onClose={jest.fn()}
+        scrollToSessionId={1}
+      />,
+    );
+    await act(async () => {});
+
+    const card = document.querySelector('[data-session-id="1"]') as HTMLElement;
+    expect(card.className).toContain("ring-2");
+
+    await act(async () => {
+      jest.advanceTimersByTime(2000);
+    });
+    expect(card.className).not.toContain("ring-2");
+  });
+
+  it("scrolls once, not on every background refresh", async () => {
+    const scrollIntoView = jest.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+    fetchMock.mockImplementation(() => ok([session({ endedAt: null })]));
+
+    const { user } = await renderModal({ scrollToSessionId: 1 });
+    await waitFor(() => expect(scrollIntoView).toHaveBeenCalledTimes(1));
+
+    await user.click(screen.getByRole("button", { name: /Refresh/ }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+
+    expect(scrollIntoView).toHaveBeenCalledTimes(1);
+  });
+
   it("does nothing without a target", async () => {
     const scrollIntoView = jest.fn();
     Element.prototype.scrollIntoView = scrollIntoView;
@@ -577,64 +785,44 @@ describe("UserHistoryModal deep link", () => {
 });
 
 describe("UserHistoryModal duration reporting", () => {
-  const overnight = (extra: Record<string, unknown> = {}) =>
-    session({
-      contentTitle: "Keep Your Eyes Peeled",
-      startedAt: "2026-08-26T01:56:00.000Z",
-      endedAt: "2026-08-26T12:26:00.000Z",
-      ...extra,
+  const renderOne = async (overrides: Record<string, unknown>) => {
+    fetchMock.mockImplementation(() => ok([session(overrides)]));
+    return renderModal();
+  };
+
+  it("reports how long the session ran, not the playback position", async () => {
+    await renderOne({
+      startedAt: "2026-08-26T01:44:00.000Z",
+      endedAt: "2026-08-26T01:45:09.000Z",
+      duration: 1_446_000,
+      viewOffset: 1_446_000,
     });
 
-  it("reports playback position rather than how long the session stayed open", async () => {
-    fetchMock.mockImplementation(() =>
-      ok([overnight({ duration: 227_000, viewOffset: 227_000 })]),
-    );
-    await renderModal();
-
-    expect(await screen.findAllByText("3m 47s")).not.toHaveLength(0);
-    expect(screen.queryByText(/10h/)).toBeNull();
+    expect(await screen.findAllByText("1m 9s")).not.toHaveLength(0);
+    expect(screen.queryByText("24m 6s")).toBeNull();
   });
 
-  it("caps at the track length when only the media duration is known", async () => {
-    fetchMock.mockImplementation(() => ok([overnight({ duration: 227_000 })]));
-    await renderModal();
-
-    expect(await screen.findAllByText("3m 47s")).not.toHaveLength(0);
-  });
-
-  it("reports a partial listen from the playback position", async () => {
-    fetchMock.mockImplementation(() =>
-      ok([overnight({ duration: 227_000, viewOffset: 30_000 })]),
-    );
-    await renderModal();
-
-    expect(await screen.findAllByText("30s")).not.toHaveLength(0);
-  });
-
-  it("falls back to elapsed time when Plex reported neither", async () => {
-    fetchMock.mockImplementation(() =>
-      ok([
-        session({
-          startedAt: "2026-08-26T12:26:00.000Z",
-          endedAt: "2026-08-26T12:36:20.000Z",
-        }),
-      ]),
-    );
-    await renderModal();
+  it("ignores a playback position left over from a resumed stream", async () => {
+    await renderOne({
+      startedAt: "2026-08-26T12:26:00.000Z",
+      endedAt: "2026-08-26T12:36:20.000Z",
+      viewOffset: 30_000,
+    });
 
     expect(await screen.findAllByText("10m 20s")).not.toHaveLength(0);
   });
 
   it("keeps Unknown for an end that precedes the start", async () => {
-    fetchMock.mockImplementation(() =>
-      ok([
-        session({
-          startedAt: "2026-08-26T12:26:00.000Z",
-          endedAt: "2026-08-26T01:00:00.000Z",
-        }),
-      ]),
-    );
-    await renderModal();
+    await renderOne({
+      startedAt: "2026-08-26T12:26:00.000Z",
+      endedAt: "2026-08-26T01:00:00.000Z",
+    });
+
+    expect(await screen.findAllByText("Unknown")).not.toHaveLength(0);
+  });
+
+  it("keeps Unknown for an unparseable timestamp", async () => {
+    await renderOne({ startedAt: "not a date", endedAt: null });
 
     expect(await screen.findAllByText("Unknown")).not.toHaveLength(0);
   });

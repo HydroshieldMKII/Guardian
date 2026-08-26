@@ -81,6 +81,16 @@ describe("EditProfileModal", () => {
     expect(screen.getByLabelText(/Email/)).toHaveValue("test@example.com");
   });
 
+  it("marks the email optional with a badge on the label row", async () => {
+    await renderModal();
+
+    const badge = screen.getByText("Optional");
+    const label = screen.getByText("Email");
+
+    expect(badge.className).toContain("rounded-full");
+    expect(label.parentElement).toContainElement(badge);
+  });
+
   it("copes with an admin who has no email or avatar recorded", async () => {
     user = { username: "testuser", email: undefined, avatarUrl: undefined };
     await renderModal();

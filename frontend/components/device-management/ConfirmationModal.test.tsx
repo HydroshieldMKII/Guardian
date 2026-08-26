@@ -59,9 +59,22 @@ describe("ConfirmationModal", () => {
     expect(screen.getByText("approve description")).toBeInTheDocument();
     expect(screen.getByText("Living Room TV")).toBeInTheDocument();
     expect(screen.getByText("testuser")).toBeInTheDocument();
+    expect(screen.getByText("Roku")).toBeInTheDocument();
+    expect(screen.getByText("Plex for Roku")).toBeInTheDocument();
+  });
+
+  it("carries the detail the description no longer repeats", () => {
+    renderModal(action("approve", { ipAddress: "192.168.1.10" }));
+
+    expect(screen.getByText("192.168.1.10")).toBeInTheDocument();
     expect(
-      screen.getByText(/Platform: Roku.*Product: Plex for Roku/),
+      screen.getByText(new Date("2026-01-01T00:00:00Z").toLocaleString()),
     ).toBeInTheDocument();
+  });
+
+  it("says so when the device has never been seen", () => {
+    renderModal(action("approve", { lastSeen: "" }));
+    expect(screen.getByText("Never")).toBeInTheDocument();
   });
 
   it("falls back to identifiers when name and username are missing", () => {
@@ -76,9 +89,7 @@ describe("ConfirmationModal", () => {
 
     expect(screen.getByText("device-1")).toBeInTheDocument();
     expect(screen.getByText("u-1")).toBeInTheDocument();
-    expect(
-      screen.getByText(/Platform: Unknown.*Product: Unknown/),
-    ).toBeInTheDocument();
+    expect(screen.getAllByText("Unknown")).toHaveLength(3);
   });
 
   describe("wording per action", () => {
@@ -123,39 +134,39 @@ describe("ConfirmationModal", () => {
   });
 
   describe("button styling", () => {
-    it("uses solid green to approve", () => {
+    it("uses the solid positive tone to approve", () => {
       renderModal(action("approve"));
       expect(
         screen.getByRole("button", { name: "Approve Device" }).className,
-      ).toContain("bg-green-500");
+      ).toContain("bg-emerald-600");
     });
 
-    it("uses solid red to reject", () => {
+    it("uses the solid danger tone to reject", () => {
       renderModal(action("reject"));
       expect(
         screen.getByRole("button", { name: "Reject Device" }).className,
-      ).toContain("bg-red-600");
+      ).toContain("bg-rose-600");
     });
 
     it("uses an outline for the irreversible delete", () => {
       renderModal(action("delete"));
       expect(
         screen.getByRole("button", { name: "Delete Device" }).className,
-      ).toContain("border-red-600");
+      ).toContain("border-rose-500/40");
     });
 
     it("uses an outline when a toggle turns into a rejection", () => {
       renderModal(action("toggle", { status: "approved" }));
       expect(
         screen.getByRole("button", { name: "Reject Device" }).className,
-      ).toContain("border-red-600");
+      ).toContain("border-rose-500/40");
     });
 
-    it("uses solid green when a toggle turns into an approval", () => {
+    it("uses the solid positive tone when a toggle turns into an approval", () => {
       renderModal(action("toggle", { status: "rejected" }));
       expect(
         screen.getByRole("button", { name: "Approve Device" }).className,
-      ).toContain("bg-green-500");
+      ).toContain("bg-emerald-600");
     });
   });
 

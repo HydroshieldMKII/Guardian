@@ -26,7 +26,6 @@ describe("barrel exports", () => {
   it.each([
     "PlexSettings",
     "SMTPSettings",
-    "DatabaseManagement",
     "GeneralSettings",
     "AdminTools",
     "getSettingInfo",

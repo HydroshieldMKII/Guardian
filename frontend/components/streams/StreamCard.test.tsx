@@ -99,6 +99,13 @@ describe("StreamCard content", () => {
     expect(screen.getByText("progress")).toBeInTheDocument();
   });
 
+  it("shows the streaming badge without a leading dot", () => {
+    renderCard();
+    expect(
+      screen.getByText("Streaming").querySelectorAll("span[aria-hidden]"),
+    ).toHaveLength(0);
+  });
+
   it("falls back for an unknown user and device", () => {
     renderCard({ User: undefined, Player: undefined });
 

@@ -133,8 +133,8 @@ describe("IPAccessModal", () => {
   describe("network policy", () => {
     it.each([
       ["Both (LAN + WAN)", "both"],
-      ["LAN", "lan"],
-      ["WAN", "wan"],
+      ["LAN only", "lan"],
+      ["WAN only", "wan"],
     ])("saves %s", async (label, expected) => {
       const { user, onSave } = renderModal();
 
@@ -175,7 +175,7 @@ describe("IPAccessModal", () => {
 
     it("appears once access is restricted", async () => {
       const { user } = renderModal();
-      await user.click(screen.getByText("restricted"));
+      await user.click(screen.getByText("Restricted list"));
       expect(
         screen.getByPlaceholderText(/e\.g\. 192\.168\.1\.100/),
       ).toBeInTheDocument();
@@ -361,13 +361,13 @@ describe("IPAccessModal", () => {
         />,
       );
       expect(
-        screen.getByText(/Current Device IPs for u-42/),
+        screen.getByText(/Current device IPs for u-42/),
       ).toBeInTheDocument();
     });
 
     it("is omitted entirely when the user has no devices", () => {
       renderModal();
-      expect(screen.queryByText(/Current Device IPs for/)).toBeNull();
+      expect(screen.queryByText(/Current device IPs for/)).toBeNull();
     });
   });
 
@@ -380,7 +380,7 @@ describe("IPAccessModal", () => {
         }),
       });
 
-      await user.click(screen.getByText("all"));
+      await user.click(screen.getByText("Any IP address"));
       await user.click(screen.getByRole("button", { name: "Save Policies" }));
 
       expect(onSave).toHaveBeenCalledWith("u-1", {

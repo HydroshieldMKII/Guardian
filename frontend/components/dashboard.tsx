@@ -9,12 +9,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { StatTile } from "@/components/ui/entity";
 import { Button } from "@/components/ui/button";
 import { Users, AlertTriangle, CheckCircle } from "lucide-react";
 import StreamsList from "./streams-list";
 import { DeviceManagement } from "./device-management";
+import { DashboardTabs } from "./dashboard-tabs";
 import { PlexErrorHandler, ErrorHandler } from "./error-handler";
 import { ThreeDotLoader } from "./three-dot-loader";
 
@@ -234,6 +234,15 @@ export function Dashboard() {
     );
   }
 
+  const tabs = (
+    <DashboardTabs
+      activeTab={activeTab}
+      onTabChange={setActiveTab}
+      pendingDevices={stats.pendingDevices}
+      activeStreams={stats.activeStreams}
+    />
+  );
+
   return (
     <div className="min-h-[calc(100vh-3.5rem)] sm:min-h-[calc(100vh-4rem)]">
       <div className="w-full max-w-[1400px] mx-auto px-2 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
@@ -267,50 +276,11 @@ export function Dashboard() {
           </div>
         </div>
 
-        {/* Tab Navigation */}
-        <div className="mb-4 sm:mb-6 lg:mb-8">
-          <div className="flex w-full lg:w-fit space-x-1 bg-muted p-1 sm:p-1.5 rounded-lg">
-            <Button
-              variant={activeTab === "devices" ? "default" : "ghost"}
-              onClick={() => setActiveTab("devices")}
-              className="flex-1 lg:flex-none px-2 sm:px-4 lg:px-8 py-2 sm:py-2.5 text-xs sm:text-sm font-medium relative min-w-0"
-            >
-              <span className="truncate hidden sm:inline">
-                Device Management
-              </span>
-              <span className="truncate sm:hidden">Devices</span>
-              {stats.pendingDevices > 0 && (
-                <Badge
-                  variant="destructive"
-                  className="ml-1 sm:ml-2 min-w-4 sm:min-w-5 h-4 sm:h-5 text-[10px] sm:text-xs bg-red-600 dark:bg-red-700 text-white flex-shrink-0"
-                >
-                  {stats.pendingDevices}
-                </Badge>
-              )}
-            </Button>
-            <Button
-              variant={activeTab === "streams" ? "default" : "ghost"}
-              onClick={() => setActiveTab("streams")}
-              className="flex-1 lg:flex-none px-2 sm:px-4 lg:px-8 py-2 sm:py-2.5 text-xs sm:text-sm font-medium relative min-w-0"
-            >
-              <span className="truncate hidden sm:inline">Active Streams</span>
-              <span className="truncate sm:hidden">Streams</span>
-              {stats.activeStreams > 0 && (
-                <Badge
-                  variant="default"
-                  className="ml-1 sm:ml-2 min-w-4 sm:min-w-5 h-4 sm:h-5 text-[10px] sm:text-xs bg-blue-600 dark:bg-blue-700 text-white flex-shrink-0"
-                >
-                  {stats.activeStreams}
-                </Badge>
-              )}
-            </Button>
-          </div>
-        </div>
-
         {/* Tab Content */}
         <div className="w-full">
           {activeTab === "streams" ? (
             <StreamsList
+              tabs={tabs}
               sessionsData={dashboardData?.sessions}
               onRefresh={() => refreshDashboard(true)}
               autoRefresh={autoRefresh}
@@ -320,6 +290,7 @@ export function Dashboard() {
             />
           ) : (
             <DeviceManagement
+              tabs={tabs}
               devicesData={dashboardData?.devices}
               usersData={dashboardData?.users}
               settingsData={dashboardData?.settings}

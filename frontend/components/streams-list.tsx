@@ -1,13 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import React, { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
 
@@ -19,6 +13,7 @@ import { useStreamsData, useStreamActions } from "../hooks/useStreams";
 import { RemoveAccessModal, StreamCard, getContentTitle } from "./streams";
 
 interface StreamsListProps {
+  tabs?: React.ReactNode;
   sessionsData?: StreamsResponse;
   onRefresh?: () => void;
   autoRefresh?: boolean;
@@ -28,6 +23,7 @@ interface StreamsListProps {
 }
 
 export default function StreamsList({
+  tabs,
   sessionsData,
   onRefresh = () => {},
   autoRefresh = false,
@@ -104,16 +100,9 @@ export default function StreamsList({
 
   return (
     <Card {...swipeHandlers}>
-      <CardHeader>
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <CardTitle className="flex items-center text-lg sm:text-xl mt-4">
-              Active Streams
-            </CardTitle>
-            <CardDescription className="mt-1 text-sm">
-              Real-time view of all active Plex streams
-            </CardDescription>
-          </div>
+      <CardHeader className="py-4">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0 flex-1">{tabs}</div>
           <div className="flex items-center gap-2">
             <Button
               variant="outline"

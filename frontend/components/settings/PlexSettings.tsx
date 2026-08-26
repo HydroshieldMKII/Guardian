@@ -1,35 +1,12 @@
 "use client";
 
-import { useState } from "react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { SecretInput } from "@/components/settings/SecretInput";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { useToast } from "@/hooks/use-toast";
-import {
-  CheckCircle,
-  XCircle,
-  Loader2,
-  Server,
-  AlertTriangle,
-} from "lucide-react";
+import { Banner, SettingControl, SettingsCard, isTruthy } from "./settings-ui";
+import { Loader2 } from "lucide-react";
 import { apiClient } from "@/lib/api";
 import { AppSetting } from "@/types";
-import {
-  getSettingInfo,
-  SettingsFormData,
-  ConnectionStatus,
-} from "./settings-utils";
-
-import { useEffect } from "react";
+import { SettingsFormData, ConnectionStatus } from "./settings-utils";
 
 interface PlexSettingsProps {
   settings: AppSetting[];
@@ -107,164 +84,28 @@ export function PlexSettings({
     }
   };
 
-  const renderSSLSettingsGroup = () => {
-    const useSslSetting = plexSettings.find((s) => s.key === "USE_SSL");
-    const ignoreCertErrorsSetting = plexSettings.find(
-      (s) => s.key === "IGNORE_CERT_ERRORS",
-    );
-
-    if (!useSslSetting || !ignoreCertErrorsSetting) return null;
-
-    const isSslEnabled =
-      formData["USE_SSL"] === true || formData["USE_SSL"] === "true";
-
-    return (
-      <Card className="p-4 my-4">
-        <div className="space-y-4">
-          {/* Parent setting: USE_SSL */}
-          {renderSetting(useSslSetting)}
-
-          {/* Child setting: IGNORE_CERT_ERRORS */}
-          <div className={`ml-6 ${!isSslEnabled ? "opacity-50" : ""}`}>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label
-                    htmlFor={ignoreCertErrorsSetting.key}
-                    className={!isSslEnabled ? "text-muted-foreground" : ""}
-                  >
-                    {getSettingInfo(ignoreCertErrorsSetting).label}
-                  </Label>
-                  <p className="text-sm text-muted-foreground">
-                    {getSettingInfo(ignoreCertErrorsSetting).description}
-                  </p>
-                </div>
-                <Switch
-                  id={ignoreCertErrorsSetting.key}
-                  checked={
-                    (formData[ignoreCertErrorsSetting.key] ??
-                      ignoreCertErrorsSetting.value) === "true" ||
-                    (formData[ignoreCertErrorsSetting.key] ??
-                      ignoreCertErrorsSetting.value) === true
-                  }
-                  onCheckedChange={(checked) =>
-                    handleInputChange(ignoreCertErrorsSetting.key, checked)
-                  }
-                  disabled={!isSslEnabled}
-                  className="cursor-pointer"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      </Card>
-    );
-  };
-
-  const renderSetting = (setting: AppSetting) => {
-    const { label, description, optional } = getSettingInfo(setting);
-    const value = formData[setting.key] ?? setting.value;
-
-    if (setting.type === "boolean") {
-      return (
-        <div key={setting.key} className="space-y-2">
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label htmlFor={setting.key}>{label}</Label>
-              {description && (
-                <p className="text-sm text-muted-foreground">{description}</p>
-              )}
-            </div>
-            <Switch
-              id={setting.key}
-              checked={value === "true" || value === true}
-              onCheckedChange={(checked) =>
-                handleInputChange(setting.key, checked)
-              }
-              className="cursor-pointer"
-            />
-          </div>
-        </div>
-      );
-    }
-
-    return (
-      <div key={setting.key} className="space-y-2">
-        <div className="flex flex-wrap items-center gap-2">
-          <Label htmlFor={setting.key}>{label}</Label>
-          {optional && (
-            <span className="rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground">
-              Optional
-            </span>
-          )}
-        </div>
-        {description && (
-          <p className="text-sm text-muted-foreground">{description}</p>
-        )}
-        <SecretInput
-          setting={setting}
-          value={typeof value === "string" ? value : String(value)}
-          placeholder={`Enter ${label.toLowerCase()}`}
-          type={
-            setting.key.includes("PASSWORD") || setting.key.includes("TOKEN")
-              ? "password"
-              : "text"
-          }
-          onChange={(next) => handleInputChange(setting.key, next)}
-        />
-      </div>
-    );
-  };
+  const useSslSetting = plexSettings.find((s) => s.key === "USE_SSL");
+  const ignoreCertErrorsSetting = plexSettings.find(
+    (s) => s.key === "IGNORE_CERT_ERRORS",
+  );
+  const isSslEnabled = isTruthy(formData["USE_SSL"]);
 
   return (
-    <Card>
-      <CardHeader className="mt-4">
-        <CardTitle>Plex Integration</CardTitle>
-        <CardDescription>
-          Configure your Plex Media Server connection and related settings
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Other Plex settings */}
-        {plexSettings
-          .filter(
-            (setting) =>
-              setting.key !== "USE_SSL" && setting.key !== "IGNORE_CERT_ERRORS",
-          )
-          .map((setting) => (
-            <Card key={setting.key} className="p-4 my-4">
-              {renderSetting(setting)}
-            </Card>
-          ))}
-
-        {/* SSL settings group */}
-        {renderSSLSettingsGroup()}
-
-        <div className="pb-4">
+    <SettingsCard
+      title="Plex Integration"
+      description="Configure your Plex Media Server connection and related settings."
+      footer={
+        <div className="space-y-3">
           {hasUnsavedChanges && (
-            <div className="mb-3 p-3 rounded-md flex items-center gap-2 bg-orange-50 text-orange-700 border border-orange-200 dark:bg-orange-950/20 dark:text-orange-300 dark:border-orange-800">
-              <AlertTriangle className="h-4 w-4" />
-              <span className="text-sm">
-                Save your changes before testing the connection
-              </span>
-            </div>
+            <Banner tone="warning">
+              Save your changes before testing the connection
+            </Banner>
           )}
 
           {connectionStatus && !hasUnsavedChanges && (
-            <div
-              className={`mb-3 p-3 rounded-md flex items-center gap-2 ${
-                connectionStatus.success
-                  ? "bg-green-50 text-green-700 border border-green-200 dark:bg-green-950/20 dark:text-green-300 dark:border-green-800"
-                  : "bg-red-50 text-red-700 border border-red-200 dark:bg-red-950/20 dark:text-red-300 dark:border-red-800"
-              }`}
-            >
-              {connectionStatus.success ? (
-                <CheckCircle className="h-4 w-4" />
-              ) : (
-                <XCircle className="h-4 w-4" />
-              )}
-              <span className="text-sm">{connectionStatus.message}</span>
-            </div>
+            <Banner tone={connectionStatus.success ? "positive" : "danger"}>
+              {connectionStatus.message}
+            </Banner>
           )}
 
           <Button
@@ -272,20 +113,44 @@ export function PlexSettings({
             disabled={testingConnection || hasUnsavedChanges}
             className="w-full"
           >
-            {testingConnection ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Testing Connection...
-              </>
-            ) : (
-              <>
-                <Server className="mr-2 h-4 w-4" />
-                Test Plex Connection
-              </>
-            )}
+            {testingConnection && <Loader2 className="size-4 animate-spin" />}
+            {testingConnection
+              ? "Testing Connection..."
+              : "Test Plex Connection"}
           </Button>
         </div>
-      </CardContent>
-    </Card>
+      }
+    >
+      {plexSettings
+        .filter(
+          (setting) =>
+            setting.key !== "USE_SSL" && setting.key !== "IGNORE_CERT_ERRORS",
+        )
+        .map((setting) => (
+          <SettingControl
+            key={setting.key}
+            setting={setting}
+            formData={formData}
+            onChange={handleInputChange}
+          />
+        ))}
+
+      {useSslSetting && ignoreCertErrorsSetting && (
+        <div className="space-y-3">
+          <SettingControl
+            setting={useSslSetting}
+            formData={formData}
+            onChange={handleInputChange}
+          />
+          <SettingControl
+            setting={ignoreCertErrorsSetting}
+            formData={formData}
+            onChange={handleInputChange}
+            disabled={!isSslEnabled}
+            className="ml-6"
+          />
+        </div>
+      )}
+    </SettingsCard>
   );
 }

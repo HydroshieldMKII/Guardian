@@ -90,19 +90,18 @@ describe("AppriseSettings", () => {
     expect(screen.getAllByRole("switch")).toHaveLength(1);
   });
 
-  it("links to the Apprise documentation", async () => {
-    const open = jest.spyOn(window, "open").mockImplementation(() => null);
-    const { user } = renderPanel();
+  it("links to the Apprise documentation", () => {
+    renderPanel();
 
-    await user.click(
-      screen.getByRole("button", { name: /View Apprise Documentation/ }),
-    );
+    const link = screen.getByRole("link", {
+      name: /View Apprise Documentation/,
+    });
 
-    expect(open).toHaveBeenCalledWith(
+    expect(link).toHaveAttribute(
+      "href",
       "https://github.com/caronc/apprise/wiki",
-      "_blank",
     );
-    open.mockRestore();
+    expect(link).toHaveAttribute("target", "_blank");
   });
 
   describe("the enable switch", () => {

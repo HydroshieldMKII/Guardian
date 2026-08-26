@@ -55,7 +55,6 @@ describe("settingsSections", () => {
       "customization",
       "notifications",
       "plex",
-      "database",
       "admin",
     ]);
   });

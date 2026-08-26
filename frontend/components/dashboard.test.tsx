@@ -7,6 +7,7 @@ import {
   waitFor,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import React from "react";
 import type { UnifiedDashboardData } from "@/types";
 import { Dashboard } from "@/components/dashboard";
 
@@ -57,17 +58,20 @@ jest.mock("@/hooks/useLiveDashboard", () => ({
 jest.mock("@/components/streams-list", () => ({
   __esModule: true,
   default: ({
+    tabs,
     onAutoRefreshChange,
     onRefresh,
     onNavigateToDevice,
     onNavigateToUser,
   }: {
+    tabs: React.ReactNode;
     onAutoRefreshChange: (value: boolean) => void;
     onRefresh: () => void;
     onNavigateToDevice: (userId: string, deviceIdentifier: string) => void;
     onNavigateToUser: (userId: string) => void;
   }) => (
     <div>
+      {tabs}
       <span>streams-list</span>
       <button onClick={() => onAutoRefreshChange(false)}>pause streams</button>
       <button onClick={onRefresh}>refresh streams</button>
@@ -81,17 +85,20 @@ jest.mock("@/components/streams-list", () => ({
 
 jest.mock("@/components/device-management", () => ({
   DeviceManagement: ({
+    tabs,
     onAutoRefreshChange,
     onRefresh,
     navigationTarget,
     onNavigationComplete,
   }: {
+    tabs: React.ReactNode;
     onAutoRefreshChange: (value: boolean) => void;
     onRefresh: () => void;
     navigationTarget: { userId: string; deviceIdentifier: string } | null;
     onNavigationComplete: () => void;
   }) => (
     <div>
+      {tabs}
       <span>device-management</span>
       <span>{`target:${navigationTarget?.deviceIdentifier ?? "none"}`}</span>
       <button onClick={() => onAutoRefreshChange(false)}>pause devices</button>

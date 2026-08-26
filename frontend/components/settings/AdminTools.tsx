@@ -1,16 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { toneButton } from "@/components/ui/entity";
+import { ActionRow, SettingsCard } from "./settings-ui";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, AlertTriangle } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { apiClient } from "@/lib/api";
 import { ConfirmationModal } from "@/components/ui/confirmation-modal";
 import { PasswordConfirmationModal } from "@/components/ui/password-confirmation-modal";
@@ -382,195 +377,142 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
     setVersionMismatchInfo(null);
   };
 
+  const spinner = <Loader2 className="size-4 animate-spin" />;
+
   return (
     <>
-      <Card>
-        <CardHeader className="mt-4">
-          <CardTitle>Administrative Tools</CardTitle>
-          <CardDescription>
-            Dangerous operations for database management. Use with caution.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <Card className="p-4 my-4">
-            <div className="space-y-4">
-              <div>
-                <h4 className="text-sm font-medium">Reset Stream Counts</h4>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Reset session counts for all devices. This will not delete
-                  devices.
-                </p>
-              </div>
-              <Button
-                onClick={() => setShowResetStreamCountsModal(true)}
-                disabled={resettingStreamCounts}
-                size="sm"
-                variant="outline"
-              >
-                {resettingStreamCounts ? (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                ) : null}
-                {resettingStreamCounts ? "Resetting..." : "Reset Stream Counts"}
-              </Button>
-            </div>
-          </Card>
+      <SettingsCard
+        title="Administrative Tools"
+        description="Maintenance operations for the Guardian database."
+      >
+        <ActionRow
+          title="Reset Stream Counts"
+          description="Reset session counts for all devices. This will not delete devices."
+          action={
+            <Button
+              onClick={() => setShowResetStreamCountsModal(true)}
+              disabled={resettingStreamCounts}
+              size="sm"
+              variant="outline"
+              className="w-full sm:w-auto"
+            >
+              {resettingStreamCounts && spinner}
+              {resettingStreamCounts ? "Resetting..." : "Reset Stream Counts"}
+            </Button>
+          }
+        />
 
-          <Card className="p-4 my-4">
-            <div className="space-y-4">
-              <div>
-                <h4 className="text-sm font-medium">
-                  Clear All Session History
-                </h4>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Permanently remove all session history from the database.
-                </p>
-              </div>
-              <Button
-                onClick={() => setShowClearSessionHistoryModal(true)}
-                disabled={clearingSessionHistory}
-                size="sm"
-                variant="outline"
-              >
-                {clearingSessionHistory ? (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                ) : null}
-                {clearingSessionHistory
-                  ? "Clearing..."
-                  : "Clear Session History"}
-              </Button>
-            </div>
-          </Card>
+        <ActionRow
+          title="Clear All Session History"
+          description="Permanently remove all session history from the database."
+          action={
+            <Button
+              onClick={() => setShowClearSessionHistoryModal(true)}
+              disabled={clearingSessionHistory}
+              size="sm"
+              variant="outline"
+              className="w-full sm:w-auto"
+            >
+              {clearingSessionHistory && spinner}
+              {clearingSessionHistory ? "Clearing..." : "Clear Session History"}
+            </Button>
+          }
+        />
+      </SettingsCard>
 
-          {/* Database Management Section */}
-          <div className="border-t pt-4 mt-6">
-            <h3 className="text-lg font-medium mb-4">Settings Management</h3>
+      <SettingsCard
+        title="Settings Management"
+        description="Export and restore Guardian settings, user preferences and policies."
+      >
+        <ActionRow
+          title="Export Settings"
+          description="Download a partial backup of your Guardian data including settings, users preferences and users policies."
+          action={
+            <Button
+              onClick={exportDatabase}
+              disabled={exportingDatabase}
+              size="sm"
+              variant="outline"
+              className="w-full sm:w-auto"
+            >
+              {exportingDatabase && spinner}
+              {exportingDatabase ? "Exporting..." : "Export Settings"}
+            </Button>
+          }
+        />
 
-            <Card className="p-4 my-4">
-              <div className="space-y-4">
-                <div>
-                  <h4 className="text-sm font-medium">Export Settings</h4>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Download a partial backup of your Guardian data including
-                    settings, users preferences and users policies.
-                  </p>
-                </div>
+        <ActionRow
+          title="Import Settings"
+          description="Restore Guardian settings from a previously exported backup file."
+          action={
+            <>
+              <input
+                type="file"
+                accept=".json"
+                onChange={handleFileUpload}
+                disabled={importingDatabase}
+                className="hidden"
+                id="database-import"
+              />
+              <label htmlFor="database-import" className="cursor-pointer">
                 <Button
-                  onClick={exportDatabase}
-                  disabled={exportingDatabase}
+                  asChild
+                  disabled={importingDatabase}
                   size="sm"
                   variant="outline"
+                  className="w-full sm:w-auto"
                 >
-                  {exportingDatabase ? (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  ) : null}
-                  {exportingDatabase ? "Exporting..." : "Export Settings"}
+                  <span>
+                    {importingDatabase && spinner}
+                    {importingDatabase ? "Importing..." : "Import Settings"}
+                  </span>
                 </Button>
-              </div>
-            </Card>
+              </label>
+            </>
+          }
+        />
+      </SettingsCard>
 
-            <Card className="p-4 my-4">
-              <div className="space-y-4">
-                <div>
-                  <h4 className="text-sm font-medium">Import Settings</h4>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Restore Guardian settings from a previously exported backup
-                    file.
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="file"
-                    accept=".json"
-                    onChange={handleFileUpload}
-                    disabled={importingDatabase}
-                    className="hidden"
-                    id="database-import"
-                  />
-                  <label htmlFor="database-import" className="cursor-pointer">
-                    <Button
-                      asChild
-                      disabled={importingDatabase}
-                      size="sm"
-                      variant="outline"
-                    >
-                      <span>
-                        {importingDatabase ? (
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        ) : null}
-                        {importingDatabase ? "Importing..." : "Import Settings"}
-                      </span>
-                    </Button>
-                  </label>
-                </div>
-              </div>
-            </Card>
-          </div>
+      <SettingsCard
+        title="Dangerous Operations"
+        description="These actions are irreversible. Export your settings first."
+      >
+        <ActionRow
+          tone="danger"
+          title="Delete All Devices Data"
+          description="Permanently remove all device, sessions history and notifications from the database. This action cannot be undone."
+          action={
+            <Button
+              onClick={() => setShowDeleteAllDevicesModal(true)}
+              disabled={deletingAllDevices}
+              size="sm"
+              variant="outline"
+              className={`w-full sm:w-auto ${toneButton("danger")}`}
+            >
+              {deletingAllDevices && spinner}
+              {deletingAllDevices ? "Deleting..." : "Delete All Devices"}
+            </Button>
+          }
+        />
 
-          {/* Dangerous Operations Section */}
-          <div className="border-t pt-4 mt-6">
-            <h3 className="text-lg font-medium mb-4 text-red-600 dark:text-red-400">
-              Dangerous Operations
-            </h3>
-
-            <Card className="p-4 my-4 border-red-200 dark:border-red-800">
-              <div className="space-y-4">
-                <div>
-                  <h4 className="text-sm font-medium flex items-center">
-                    <AlertTriangle className="w-4 h-4 mr-2 text-red-500" />
-                    Delete All Devices Data
-                  </h4>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Permanently remove all device, sessions history and
-                    notifications from the database. This action cannot be
-                    undone.
-                  </p>
-                </div>
-                <Button
-                  onClick={() => setShowDeleteAllDevicesModal(true)}
-                  disabled={deletingAllDevices}
-                  size="sm"
-                  variant="outline"
-                  className="border-red-200 text-red-700 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900/20"
-                >
-                  {deletingAllDevices ? (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  ) : null}
-                  {deletingAllDevices ? "Deleting..." : "Delete All Devices"}
-                </Button>
-              </div>
-            </Card>
-
-            <Card className="p-4 my-4 border-red-200 dark:border-red-800">
-              <div className="space-y-4">
-                <div>
-                  <h4 className="text-sm font-medium flex items-center">
-                    <AlertTriangle className="w-4 h-4 mr-2 text-red-500" />
-                    Factory Reset
-                  </h4>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    <strong>DANGER:</strong> This will permanently delete ALL
-                    data including settings, devices, user preferences, sessions
-                    history and notifications. Default settings will be
-                    restored.
-                  </p>
-                </div>
-                <Button
-                  onClick={() => setShowResetDatabaseModal(true)}
-                  disabled={resettingDatabase}
-                  size="sm"
-                  variant="outline"
-                  className="border-red-200 text-red-700 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900/20"
-                >
-                  {resettingDatabase ? (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  ) : null}
-                  {resettingDatabase ? "Resetting..." : "Factory Reset"}
-                </Button>
-              </div>
-            </Card>
-          </div>
-        </CardContent>
-      </Card>
+        <ActionRow
+          tone="danger"
+          title="Factory Reset"
+          description="DANGER: This will permanently delete ALL data including settings, devices, user preferences, sessions history and notifications. Default settings will be restored."
+          action={
+            <Button
+              onClick={() => setShowResetDatabaseModal(true)}
+              disabled={resettingDatabase}
+              size="sm"
+              variant="outline"
+              className={`w-full sm:w-auto ${toneButton("danger")}`}
+            >
+              {resettingDatabase && spinner}
+              {resettingDatabase ? "Resetting..." : "Factory Reset"}
+            </Button>
+          }
+        />
+      </SettingsCard>
 
       <ConfirmationModal
         isOpen={showResetStreamCountsModal}

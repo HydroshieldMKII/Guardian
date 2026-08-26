@@ -9,7 +9,11 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PlexStatus } from "@/types";
-import { PlexErrorCode, ERROR_DISPLAY_CONFIG } from "@/types/plex-errors";
+import {
+  PlexErrorCode,
+  ERROR_DISPLAY_CONFIG,
+  ErrorDisplayConfig,
+} from "@/types/plex-errors";
 
 interface ErrorHandlerProps {
   plexStatus?: PlexStatus | null;
@@ -24,6 +28,11 @@ export function ErrorHandler({
   onShowSettings,
   onRetry,
 }: ErrorHandlerProps) {
+  const withDetail = (config: ErrorDisplayConfig, detail: string) =>
+    detail
+      ? { ...config, description: `${config.description} (${detail})` }
+      : { ...config };
+
   // Determine the appropriate display configuration based on the error
   const getErrorInfo = () => {
     // Check for backend errors FIRST
@@ -87,16 +96,22 @@ export function ErrorHandler({
 
     // If we found an error code, use the configured display
     if (errorCode && ERROR_DISPLAY_CONFIG[errorCode]) {
-      return { ...ERROR_DISPLAY_CONFIG[errorCode] };
+      return withDetail(
+        ERROR_DISPLAY_CONFIG[errorCode],
+        status.slice(status.indexOf(":") + 1).trim(),
+      );
     }
 
     // Fallback for unknown errors
-    return {
-      title: "Oops! Something Went Wrong",
-      description:
-        "Something went wrong with Guardian. Please check your setup and try again.",
-      showChecklist: false,
-    };
+    return withDetail(
+      {
+        title: "Oops! Something Went Wrong",
+        description:
+          "Something went wrong with Guardian. Please check your setup and try again.",
+        showChecklist: false,
+      },
+      status,
+    );
   };
 
   const errorInfo = getErrorInfo();
@@ -115,15 +130,6 @@ export function ErrorHandler({
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="bg-primary/10 dark:bg-primary/20 border border-primary/20 rounded-lg p-4">
-                <h3 className="text-sm font-medium text-primary">
-                  Connection Status
-                </h3>
-                <p className="text-sm text-primary/80">
-                  {plexStatus?.connectionStatus || "Not configured"}
-                </p>
-              </div>
-
               {errorInfo.showChecklist && (
                 <div className="space-y-4">
                   <h4 className="text-sm font-medium text-foreground">

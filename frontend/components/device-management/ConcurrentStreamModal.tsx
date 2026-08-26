@@ -1,18 +1,21 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
+import {
+  Field,
+  Meta,
+  MetaGrid,
+  Panel,
+  ToggleRow,
+} from "@/components/ui/entity";
+import {
+  Modal,
+  ModalBody,
+  ModalFooter,
+  ModalHeader,
+} from "@/components/ui/modal";
 import { Loader2 } from "lucide-react";
 import { UserPreference } from "@/types";
 import { apiClient } from "@/lib/api";
@@ -116,62 +119,62 @@ export const ConcurrentStreamModal: React.FC<ConcurrentStreamModalProps> = ({
     ? globalLimitValue
     : Number(customLimit);
 
-  return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="text-lg font-semibold leading-tight tracking-tight text-foreground">
-            Concurrent Stream Limit
-          </DialogTitle>
-          <DialogDescription>
-            Set the maximum number of simultaneous streams for{" "}
-            <span className="font-semibold">{username || userId}</span>
-          </DialogDescription>
-        </DialogHeader>
+  const streamCount = (limit: number) =>
+    limit === 0
+      ? "Unlimited"
+      : `${limit} concurrent stream${limit === 1 ? "" : "s"}`;
 
+  return (
+    <Modal open={isOpen} onOpenChange={onClose} size="md">
+      <ModalHeader
+        title="Concurrent Stream Limit"
+        description={
+          <>
+            Set the maximum number of simultaneous streams for{" "}
+            <span className="font-medium text-foreground">
+              {username || userId}
+            </span>
+            .
+          </>
+        }
+      />
+
+      <ModalBody>
         {fetching ? (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+          <div className="flex items-center justify-center py-10">
+            <Loader2 className="size-6 animate-spin text-muted-foreground" />
           </div>
         ) : (
-          <div className="space-y-4 py-4">
-            {/* Global limit info */}
-            <div className="flex items-start gap-2 p-3 bg-muted/50 rounded-lg">
-              <div className="text-sm">
-                <p className="text-muted-foreground">
-                  Global limit:{" "}
-                  <span className="font-medium text-foreground">
-                    {globalLimitValue === 0 ? "Unlimited" : globalLimitValue}
-                  </span>
-                </p>
-              </div>
-            </div>
+          <>
+            <Panel>
+              <MetaGrid className="sm:grid-cols-2">
+                <Meta label="Global limit">
+                  {globalLimitValue === 0 ? "Unlimited" : globalLimitValue}
+                </Meta>
+                <Meta label="Effective limit">
+                  {streamCount(effectiveLimit)}
+                </Meta>
+              </MetaGrid>
+            </Panel>
 
-            {/* Use global default toggle */}
-            <div className="flex items-center justify-between p-3 border rounded-lg">
-              <div className="space-y-0.5">
-                <Label htmlFor="use-global" className="text-sm font-medium">
-                  Use global default
-                </Label>
-                <p className="text-xs text-muted-foreground">
-                  Apply the global concurrent stream limit to this user
-                </p>
-              </div>
-              <Switch
-                id="use-global"
-                checked={useGlobalDefault}
-                onCheckedChange={setUseGlobalDefault}
-                className="cursor-pointer"
-              />
-            </div>
+            <ToggleRow
+              id="use-global"
+              label="Use global default"
+              hint="Apply the global concurrent stream limit to this user."
+              checked={useGlobalDefault}
+              onCheckedChange={setUseGlobalDefault}
+            />
 
-            {/* Custom limit input */}
-            <div
-              className={`space-y-2 transition-opacity duration-200 ${useGlobalDefault ? "opacity-50" : ""}`}
+            <Field
+              label="Custom limit for this user"
+              htmlFor="custom-limit"
+              hint="Set to 0 for unlimited streams, or enter a specific limit."
+              className={
+                useGlobalDefault
+                  ? "opacity-50 transition-opacity duration-200"
+                  : "transition-opacity duration-200"
+              }
             >
-              <Label htmlFor="custom-limit" className="text-sm font-medium">
-                Custom limit for this user
-              </Label>
               <Input
                 id="custom-limit"
                 type="number"
@@ -180,37 +183,21 @@ export const ConcurrentStreamModal: React.FC<ConcurrentStreamModalProps> = ({
                 onChange={(e) => setCustomLimit(e.target.value)}
                 disabled={useGlobalDefault}
                 placeholder="0 = unlimited"
-                className="cursor-pointer"
               />
-              <p className="text-xs text-muted-foreground">
-                Set to 0 for unlimited streams, or enter a specific limit
-              </p>
-            </div>
-
-            {/* Effective limit display */}
-            <div className="p-3 bg-primary/5 border border-primary/20 rounded-lg">
-              <p className="text-sm">
-                <span className="text-muted-foreground">Effective limit: </span>
-                <span className="font-semibold">
-                  {effectiveLimit === 0
-                    ? "Unlimited"
-                    : `${effectiveLimit} concurrent stream${effectiveLimit !== 1 ? "s" : ""}`}
-                </span>
-              </p>
-            </div>
-          </div>
+            </Field>
+          </>
         )}
+      </ModalBody>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={loading}>
-            Cancel
-          </Button>
-          <Button onClick={handleSave} disabled={loading}>
-            {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-            Save
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      <ModalFooter>
+        <Button variant="outline" onClick={onClose} disabled={loading}>
+          Cancel
+        </Button>
+        <Button onClick={handleSave} disabled={loading}>
+          {loading && <Loader2 className="size-4 animate-spin" />}
+          Save
+        </Button>
+      </ModalFooter>
+    </Modal>
   );
 };

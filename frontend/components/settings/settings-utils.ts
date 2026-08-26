@@ -75,7 +75,7 @@ export const getSettingInfo = (setting: AppSetting): SettingInfo => {
     PLEX_GUARD_STRICT_MODE: {
       label: "Strict mode",
       description:
-        "Automatically approve or reject new devices based on the default policy. Current pending devices will also be affected.",
+        "Automatically approve or reject new devices based on user default policy. Current pending devices will be converted.",
     },
     MSG_DEVICE_PENDING: {
       label: "Device pending message",
@@ -265,7 +265,7 @@ export const getSettingInfo = (setting: AppSetting): SettingInfo => {
         "Maximum number of simultaneous streams per user (0 = unlimited)",
     },
     CONCURRENT_LIMIT_INCLUDE_TEMP_ACCESS: {
-      label: "Include temp access in stream limit",
+      label: "Include temporary access in stream limit",
       description:
         "Count devices with temporary access towards the concurrent stream limit",
     },
@@ -330,12 +330,6 @@ export const settingsSections = [
     title: "Plex Integration",
     description: "Configure Plex server connection and settings",
     icon: "Server",
-  },
-  {
-    id: "database",
-    title: "Settings Management",
-    description: "Export and import settings and data",
-    icon: "Database",
   },
   {
     id: "admin",

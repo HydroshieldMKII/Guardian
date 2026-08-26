@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useAuth } from "@/contexts/auth-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Field, StatusPill } from "@/components/ui/entity";
 import {
   Card,
   CardContent,
@@ -394,16 +395,11 @@ export default function SetupPage() {
             </div>
 
             {/* Email */}
-            <div className="space-y-2">
-              <label
-                htmlFor="email"
-                className="text-sm font-semibold text-foreground"
-              >
-                Email{" "}
-                <span className="text-xs font-normal text-muted-foreground">
-                  (optional)
-                </span>
-              </label>
+            <Field
+              label="Email"
+              htmlFor="email"
+              action={<StatusPill tone="neutral">Optional</StatusPill>}
+            >
               <div className="relative">
                 <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -423,7 +419,7 @@ export default function SetupPage() {
                   {errors.email}
                 </div>
               )}
-            </div>
+            </Field>
 
             {/* Submit Button */}
             <Button

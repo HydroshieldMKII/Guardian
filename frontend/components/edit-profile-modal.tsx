@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Field, StatusPill } from "@/components/ui/entity";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Upload, Loader2, X, AlertCircle, Link2, Unlink } from "lucide-react";
@@ -569,13 +570,11 @@ export function EditProfileModal({
               </div>
 
               {/* Email */}
-              <div className="space-y-2">
-                <Label htmlFor="email">
-                  Email{" "}
-                  <span className="text-xs font-normal text-muted-foreground">
-                    (optional)
-                  </span>
-                </Label>
+              <Field
+                label="Email"
+                htmlFor="email"
+                action={<StatusPill tone="neutral">Optional</StatusPill>}
+              >
                 <Input
                   id="email"
                   type="email"
@@ -591,7 +590,7 @@ export function EditProfileModal({
                       : ""
                   }
                 />
-              </div>
+              </Field>
               {showProfileError && (
                 <div className="flex items-center gap-1 text-xs text-red-500">
                   <AlertCircle className="h-3 w-3" />
@@ -810,6 +809,16 @@ export function EditProfileModal({
                 </>
               )}
             </div>
+
+            <DialogFooter className="gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+              >
+                Close
+              </Button>
+            </DialogFooter>
           </TabsContent>
         </Tabs>
       </DialogContent>

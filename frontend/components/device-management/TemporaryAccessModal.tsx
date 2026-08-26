@@ -1,12 +1,4 @@
 import React, { useState, useEffect } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -15,12 +7,24 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Check, ChevronDown, RefreshCw } from "lucide-react";
+import { ChevronDown, RefreshCw } from "lucide-react";
 import { UserDevice } from "@/types";
 import { useDeviceUtils } from "@/hooks/device-management/useDeviceUtils";
-import { Card, CardContent } from "@/components/ui/card";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
+import {
+  EmptyState,
+  Field,
+  Panel,
+  Section,
+  SegmentedControl,
+  SelectRow,
+  ToggleRow,
+} from "@/components/ui/entity";
+import {
+  Modal,
+  ModalBody,
+  ModalFooter,
+  ModalHeader,
+} from "@/components/ui/modal";
 import { Calendar } from "@/components/ui/calendar";
 import {
   Popover,
@@ -28,6 +32,32 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+
+const DURATION_UNITS = ["minutes", "hours", "days", "weeks"] as const;
+
+const QUICK_DURATIONS = [
+  { label: "1h", value: 1, unit: "hours" as const },
+  { label: "3h", value: 3, unit: "hours" as const },
+  { label: "6h", value: 6, unit: "hours" as const },
+  { label: "1d", value: 1, unit: "days" as const },
+  { label: "1w", value: 1, unit: "weeks" as const },
+];
+
+const BYPASSED_POLICIES = [
+  { name: "Network Policy", detail: "LAN only / WAN only restrictions" },
+  { name: "IP Restrictions", detail: "Allowed IP addresses and CIDR ranges" },
+  { name: "Time Rules", detail: "Scheduled viewing time restrictions" },
+  { name: "Device Status", detail: "Pending or rejected device approval" },
+];
+
+const EXPIRY_FORMAT: Intl.DateTimeFormatOptions = {
+  weekday: "short",
+  year: "numeric",
+  month: "short",
+  day: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+};
 
 interface TemporaryAccessModalProps {
   user: {
@@ -147,479 +177,324 @@ export const TemporaryAccessModal: React.FC<TemporaryAccessModalProps> = ({
 
   if (!user) return null;
 
+  const allSelected =
+    eligibleDevices.length > 0 &&
+    selectedDeviceIds.length === eligibleDevices.length;
+  const expiry = getExpiryDate();
+  const durationTooLarge =
+    inputMode === "duration" &&
+    durationValue > 0 &&
+    isValidDuration(durationValue, durationUnit) &&
+    !isExpiryDateValid;
+
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="text-lg font-semibold leading-tight tracking-tight text-foreground">
-            Temporary Access
-          </DialogTitle>
-          <DialogDescription className="text-sm text-muted-foreground">
+    <Modal open={isOpen} onOpenChange={onClose} size="lg">
+      <ModalHeader
+        title="Temporary Access"
+        description={
+          <>
             Grant temporary streaming access to{" "}
-            <span className="font-semibold text-foreground">
+            <span className="font-medium text-foreground">
               {user.username || user.userId}
             </span>
-            's devices.
-          </DialogDescription>
-        </DialogHeader>
+            &apos;s devices.
+          </>
+        }
+      />
 
-        <div className="space-y-6">
-          {/* Device Selection */}
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <h4 className="font-semibold text-sm text-foreground flex items-center">
-                Select Devices ({selectedDeviceIds.length} selected)
-              </h4>
-              {eligibleDevices.length > 0 && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleSelectAll}
-                  className="text-xs"
-                >
-                  {selectedDeviceIds.length === eligibleDevices.length
-                    ? "Deselect All"
-                    : "Select All"}
-                </Button>
-              )}
-            </div>
-
-            {eligibleDevices.length === 0 ? (
-              <Card>
-                <CardContent className="p-4 text-center text-muted-foreground">
-                  <p className="text-sm">
-                    No devices eligible for temporary access
-                  </p>
-                  <p className="text-xs mt-1">
-                    Devices must be pending (with blocked by default) or
-                    rejected to grant temporary access
-                  </p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="space-y-2 max-h-64 overflow-y-auto border rounded-lg p-2">
-                {eligibleDevices.map((device) => (
-                  <Card
-                    key={device.id}
-                    className={`cursor-pointer transition-all border ${
-                      selectedDeviceIds.includes(device.id)
-                        ? "border-blue-500 bg-blue-50 dark:bg-blue-950/20 shadow-sm"
-                        : "border-border hover:bg-muted/50 hover:border-muted-foreground/20"
-                    }`}
-                    onClick={() => handleDeviceToggle(device.id)}
-                  >
-                    <CardContent className="p-3">
-                      <div className="flex items-center gap-3">
-                        <div className="flex-shrink-0">
-                          <div
-                            className={`w-5 h-5 border-2 rounded flex items-center justify-center ${
-                              selectedDeviceIds.includes(device.id)
-                                ? "border-blue-500 bg-blue-500"
-                                : "border-muted-foreground/40"
-                            }`}
-                          >
-                            {selectedDeviceIds.includes(device.id) && (
-                              <Check className="w-3 h-3 text-white" />
-                            )}
-                          </div>
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="text-sm font-medium text-foreground truncate">
-                            {device.deviceName || device.deviceIdentifier}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            {device.devicePlatform} • {device.status}
-                            {hasTemporaryAccess(device) && (
-                              <span className="ml-2 text-blue-600 font-medium">
-                                Has temporary access
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Duration Settings - Only show when devices are selected */}
-          {selectedDeviceIds.length > 0 && (
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <h4 className="font-semibold text-sm text-foreground flex items-center">
-                  Access Duration
-                </h4>
-                <div className="flex gap-2">
-                  <Button
-                    variant={inputMode === "duration" ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setInputMode("duration")}
-                    className="text-xs"
-                  >
-                    Duration
-                  </Button>
-                  <Button
-                    variant={inputMode === "calendar" ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setInputMode("calendar")}
-                    className="text-xs"
-                  >
-                    Calendar
-                  </Button>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                {inputMode === "duration" ? (
-                  <>
-                    <div className="flex gap-2 items-end">
-                      <div className="flex-1">
-                        <label className="text-xs text-muted-foreground">
-                          Duration
-                        </label>
-                        <Input
-                          type="number"
-                          value={durationValue}
-                          onChange={(e) =>
-                            setDurationValue(Number(e.target.value))
-                          }
-                          min="1"
-                          max="999"
-                          className="text-sm"
-                          placeholder="Enter duration"
-                        />
-                      </div>
-                      <div className="w-24">
-                        <label className="text-xs text-muted-foreground">
-                          Unit
-                        </label>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="outline"
-                              className="w-full justify-between text-sm"
-                            >
-                              {durationUnit}
-                              <ChevronDown className="w-3 h-3" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              onClick={() => setDurationUnit("minutes")}
-                            >
-                              minutes
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => setDurationUnit("hours")}
-                            >
-                              hours
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => setDurationUnit("days")}
-                            >
-                              days
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => setDurationUnit("weeks")}
-                            >
-                              weeks
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </div>
-
-                    {/* Quick Duration Buttons */}
-                    <div>
-                      <label className="text-xs text-muted-foreground mb-2 block">
-                        Quick Select
-                      </label>
-                      <div className="flex flex-wrap gap-1">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setDurationValue(1);
-                            setDurationUnit("hours");
-                          }}
-                          className="text-xs"
-                        >
-                          1h
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setDurationValue(3);
-                            setDurationUnit("hours");
-                          }}
-                          className="text-xs"
-                        >
-                          3h
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setDurationValue(6);
-                            setDurationUnit("hours");
-                          }}
-                          className="text-xs"
-                        >
-                          6h
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setDurationValue(1);
-                            setDurationUnit("days");
-                          }}
-                          className="text-xs"
-                        >
-                          1d
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setDurationValue(1);
-                            setDurationUnit("weeks");
-                          }}
-                          className="text-xs"
-                        >
-                          1w
-                        </Button>
-                      </div>
-                    </div>
-                  </>
-                ) : (
-                  <div>
-                    <label className="text-xs text-muted-foreground mb-2 block">
-                      Select Expiry Date & Time
-                    </label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className={cn(
-                            "w-full justify-start text-left font-normal",
-                            !selectedDate && "text-muted-foreground",
-                          )}
-                        >
-                          {selectedDate ? (
-                            selectedDate.toLocaleString(undefined, {
-                              weekday: "short",
-                              year: "numeric",
-                              month: "short",
-                              day: "numeric",
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })
-                          ) : (
-                            <span>Pick a date and time</span>
-                          )}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={selectedDate}
-                          onSelect={(date) => {
-                            if (date) {
-                              // Set time to current time + 1 hour by default
-                              const now = new Date();
-                              date.setHours(now.getHours() + 1);
-                              date.setMinutes(now.getMinutes());
-                              setSelectedDate(date);
-                            } else {
-                              setSelectedDate(undefined);
-                            }
-                          }}
-                          disabled={(date) => date < new Date()}
-                          autoFocus
-                        />
-                        {selectedDate && (
-                          <div className="p-3 border-t">
-                            <label className="text-xs text-muted-foreground mb-2 block">
-                              Time
-                            </label>
-                            <div className="flex gap-2">
-                              <Input
-                                type="number"
-                                min="0"
-                                max="23"
-                                value={selectedDate.getHours()}
-                                onChange={(e) => {
-                                  const hours = parseInt(e.target.value) || 0;
-                                  const newDate = new Date(selectedDate);
-                                  newDate.setHours(
-                                    Math.min(23, Math.max(0, hours)),
-                                  );
-                                  setSelectedDate(newDate);
-                                }}
-                                className="w-16 text-center"
-                                placeholder="HH"
-                              />
-                              <span className="self-center">:</span>
-                              <Input
-                                type="number"
-                                min="0"
-                                max="59"
-                                value={selectedDate.getMinutes()}
-                                onChange={(e) => {
-                                  const minutes = parseInt(e.target.value) || 0;
-                                  const newDate = new Date(selectedDate);
-                                  newDate.setMinutes(
-                                    Math.min(59, Math.max(0, minutes)),
-                                  );
-                                  setSelectedDate(newDate);
-                                }}
-                                className="w-16 text-center"
-                                placeholder="MM"
-                              />
-                            </div>
-                          </div>
-                        )}
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-                )}
-
-                <div className="mt-3">
-                  {inputMode === "duration" && durationValue <= 0 && (
-                    <p className="text-xs text-red-600">
-                      Please enter a valid duration
-                    </p>
-                  )}
-
-                  {inputMode === "calendar" &&
-                    selectedDate &&
-                    selectedDate.getTime() <= Date.now() && (
-                      <p className="text-xs text-red-600">
-                        Selected date must be in the future
-                      </p>
-                    )}
-
-                  {/* Expiry Preview */}
-                  {((inputMode === "duration" &&
-                    durationValue > 0 &&
-                    isValidDuration(durationValue, durationUnit)) ||
-                    (inputMode === "calendar" && selectedDate)) && (
+      <ModalBody className="space-y-8">
+        <Section
+          title={`Select Devices (${selectedDeviceIds.length} selected)`}
+          action={
+            eligibleDevices.length > 0 ? (
+              <Button variant="outline" size="sm" onClick={handleSelectAll}>
+                {allSelected ? "Deselect All" : "Select All"}
+              </Button>
+            ) : undefined
+          }
+        >
+          {eligibleDevices.length === 0 ? (
+            <EmptyState
+              title="No devices eligible for temporary access"
+              description="Devices must be pending (with blocked by default) or rejected to grant temporary access."
+            />
+          ) : (
+            <div className="max-h-64 space-y-2 overflow-y-auto pr-1">
+              {eligibleDevices.map((device) => (
+                <SelectRow
+                  key={device.id}
+                  selected={selectedDeviceIds.includes(device.id)}
+                  onToggle={() => handleDeviceToggle(device.id)}
+                  title={device.deviceName || device.deviceIdentifier}
+                  subtitle={
                     <>
-                      {isExpiryDateValid ? (
-                        <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 rounded-lg p-3">
-                          <p className="text-xs text-muted-foreground mb-1">
-                            Access will expire at:
-                          </p>
-                          <p className="text-sm font-medium text-foreground">
-                            {getExpiryDate()!.toLocaleString(undefined, {
-                              weekday: "short",
-                              year: "numeric",
-                              month: "short",
-                              day: "numeric",
-                              hour: "2-digit",
-                              minute: "2-digit",
-                              second: "2-digit",
-                              timeZoneName: "short",
-                            })}
-                          </p>
-                        </div>
-                      ) : (
-                        <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900 rounded-lg p-3">
-                          <p className="text-xs text-red-600">
-                            Duration is too large. Please enter a smaller value.
-                          </p>
-                        </div>
+                      {device.devicePlatform} · {device.status}
+                      {hasTemporaryAccess(device) && (
+                        <span className="ml-2 font-medium text-sky-600 dark:text-sky-400">
+                          Has temporary access
+                        </span>
                       )}
                     </>
-                  )}
-                </div>
-              </div>
+                  }
+                />
+              ))}
             </div>
           )}
+        </Section>
 
-          {/* Policy Bypass Option */}
-          {selectedDeviceIds.length > 0 && (
-            <div className="border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/20 rounded-lg p-4">
-              <div className="space-y-3">
-                <div>
-                  <h4 className="font-semibold text-sm text-foreground mb-1">
-                    Policy Bypass
-                  </h4>
-                  <p className="text-xs text-muted-foreground mb-2">
-                    When enabled, the following policies will be bypassed during
-                    temporary access:
-                  </p>
-                  <ul className="text-xs text-muted-foreground list-disc list-inside space-y-1 ml-1">
-                    <li>
-                      <span className="font-medium">Network Policy</span> - LAN
-                      only / WAN only restrictions
-                    </li>
-                    <li>
-                      <span className="font-medium">IP Restrictions</span> -
-                      Allowed IP addresses and CIDR ranges
-                    </li>
-                    <li>
-                      <span className="font-medium">Time Rules</span> -
-                      Scheduled viewing time restrictions
-                    </li>
-                    <li>
-                      <span className="font-medium">Device Status</span> -
-                      Pending or rejected device approval
-                    </li>
-                  </ul>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Switch
-                    id="bypass-policies"
-                    checked={bypassPolicies}
-                    onCheckedChange={setBypassPolicies}
-                  />
-                  <Label
-                    htmlFor="bypass-policies"
-                    className="text-sm font-medium cursor-pointer"
-                  >
-                    Bypass all user policies during temporary access
-                  </Label>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        <DialogFooter className="flex-col sm:flex-row gap-2">
-          <Button
-            variant="outline"
-            onClick={onClose}
-            disabled={actionLoading !== null}
-            className="w-full sm:w-auto"
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleGrantAccess}
-            disabled={
-              actionLoading !== null ||
-              selectedDeviceIds.length === 0 ||
-              !isValidDuration(durationValue, durationUnit) ||
-              !isExpiryDateValid
+        {selectedDeviceIds.length > 0 && (
+          <Section
+            title="Access Duration"
+            action={
+              <SegmentedControl
+                value={inputMode}
+                onChange={setInputMode}
+                options={[
+                  { value: "duration", label: "Duration" },
+                  { value: "calendar", label: "Calendar" },
+                ]}
+              />
             }
-            className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white"
           >
-            {actionLoading ? (
-              <>
-                <RefreshCw className="w-3 h-3 sm:w-4 sm:h-4 mr-2 animate-spin" />
-                Granting Access...
-              </>
+            {inputMode === "duration" ? (
+              <div className="space-y-4">
+                <div className="flex items-end gap-2">
+                  <Field
+                    label="Duration"
+                    htmlFor="duration-value"
+                    className="flex-1"
+                  >
+                    <Input
+                      id="duration-value"
+                      type="number"
+                      value={durationValue}
+                      onChange={(e) => setDurationValue(Number(e.target.value))}
+                      min="1"
+                      max="999"
+                      placeholder="Enter duration"
+                    />
+                  </Field>
+                  <Field label="Unit" className="w-28">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className="w-full justify-between font-normal"
+                        >
+                          {durationUnit}
+                          <ChevronDown className="size-3" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        {DURATION_UNITS.map((unit) => (
+                          <DropdownMenuItem
+                            key={unit}
+                            onClick={() => setDurationUnit(unit)}
+                          >
+                            {unit}
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </Field>
+                </div>
+
+                <Field label="Quick Select">
+                  <div className="flex flex-wrap gap-2">
+                    {QUICK_DURATIONS.map((quick) => (
+                      <Button
+                        key={quick.label}
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setDurationValue(quick.value);
+                          setDurationUnit(quick.unit);
+                        }}
+                      >
+                        {quick.label}
+                      </Button>
+                    ))}
+                  </div>
+                </Field>
+              </div>
             ) : (
-              <>Grant Access</>
+              <Field label="Select Expiry Date & Time">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !selectedDate && "text-muted-foreground",
+                      )}
+                    >
+                      {selectedDate ? (
+                        selectedDate.toLocaleString(undefined, EXPIRY_FORMAT)
+                      ) : (
+                        <span>Pick a date and time</span>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={selectedDate}
+                      onSelect={(date) => {
+                        if (date) {
+                          const now = new Date();
+                          date.setHours(now.getHours() + 1);
+                          date.setMinutes(now.getMinutes());
+                          setSelectedDate(date);
+                        } else {
+                          setSelectedDate(undefined);
+                        }
+                      }}
+                      disabled={(date) => date < new Date()}
+                      autoFocus
+                    />
+                    {selectedDate && (
+                      <div className="border-t p-3">
+                        <p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground/80">
+                          Time
+                        </p>
+                        <div className="flex gap-2">
+                          <Input
+                            type="number"
+                            min="0"
+                            max="23"
+                            value={selectedDate.getHours()}
+                            onChange={(e) => {
+                              const hours = parseInt(e.target.value) || 0;
+                              const newDate = new Date(selectedDate);
+                              newDate.setHours(
+                                Math.min(23, Math.max(0, hours)),
+                              );
+                              setSelectedDate(newDate);
+                            }}
+                            className="w-16 text-center"
+                            placeholder="HH"
+                          />
+                          <span className="self-center text-muted-foreground">
+                            :
+                          </span>
+                          <Input
+                            type="number"
+                            min="0"
+                            max="59"
+                            value={selectedDate.getMinutes()}
+                            onChange={(e) => {
+                              const minutes = parseInt(e.target.value) || 0;
+                              const newDate = new Date(selectedDate);
+                              newDate.setMinutes(
+                                Math.min(59, Math.max(0, minutes)),
+                              );
+                              setSelectedDate(newDate);
+                            }}
+                            className="w-16 text-center"
+                            placeholder="MM"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </PopoverContent>
+                </Popover>
+              </Field>
             )}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+
+            {inputMode === "duration" && durationValue <= 0 && (
+              <p className="text-xs text-rose-600 dark:text-rose-400">
+                Please enter a valid duration
+              </p>
+            )}
+
+            {inputMode === "calendar" &&
+              selectedDate &&
+              selectedDate.getTime() <= Date.now() && (
+                <p className="text-xs text-rose-600 dark:text-rose-400">
+                  Selected date must be in the future
+                </p>
+              )}
+
+            {durationTooLarge && (
+              <Panel tone="danger">
+                <p className="text-xs text-rose-600 dark:text-rose-400">
+                  Duration is too large. Please enter a smaller value.
+                </p>
+              </Panel>
+            )}
+
+            {expiry && (
+              <Panel tone="info">
+                <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground/80">
+                  Access will expire at:
+                </p>
+                <p className="mt-1 text-sm font-medium text-foreground">
+                  {expiry.toLocaleString(undefined, {
+                    ...EXPIRY_FORMAT,
+                    second: "2-digit",
+                    timeZoneName: "short",
+                  })}
+                </p>
+              </Panel>
+            )}
+          </Section>
+        )}
+
+        {selectedDeviceIds.length > 0 && (
+          <Section title="Policy Bypass">
+            <Panel tone="warning" className="space-y-4">
+              <p className="text-xs leading-relaxed text-muted-foreground">
+                When enabled, the following policies will be bypassed during
+                temporary access:
+              </p>
+              <ul className="space-y-1.5 text-xs text-muted-foreground">
+                {BYPASSED_POLICIES.map((policy) => (
+                  <li key={policy.name}>
+                    <span className="font-medium text-foreground">
+                      {policy.name}
+                    </span>{" "}
+                    — {policy.detail}
+                  </li>
+                ))}
+              </ul>
+              <ToggleRow
+                id="bypass-policies"
+                label="Bypass all user policies during temporary access"
+                checked={bypassPolicies}
+                onCheckedChange={setBypassPolicies}
+              />
+            </Panel>
+          </Section>
+        )}
+      </ModalBody>
+
+      <ModalFooter>
+        <Button
+          variant="outline"
+          onClick={onClose}
+          disabled={actionLoading !== null}
+        >
+          Cancel
+        </Button>
+        <Button
+          onClick={handleGrantAccess}
+          disabled={
+            actionLoading !== null ||
+            selectedDeviceIds.length === 0 ||
+            !isValidDuration(durationValue, durationUnit) ||
+            !isExpiryDateValid
+          }
+        >
+          {actionLoading ? (
+            <>
+              <RefreshCw className="size-4 animate-spin" />
+              Granting Access...
+            </>
+          ) : (
+            "Grant Access"
+          )}
+        </Button>
+      </ModalFooter>
+    </Modal>
   );
 };

@@ -76,16 +76,28 @@ describe("Dialog", () => {
     await waitFor(() => expect(screen.queryByText("Heading")).toBeNull());
   });
 
-  it("can hide its own close button", async () => {
+  it("leaves closing to the dialog's own controls", async () => {
     render(
       <Dialog open>
-        <DialogContent showCloseButton={false}>
+        <DialogContent>
           <DialogTitle>No close</DialogTitle>
         </DialogContent>
       </Dialog>,
     );
 
     expect(screen.queryByRole("button", { name: "Close" })).toBeNull();
+  });
+
+  it("can still opt into a built-in close button", async () => {
+    render(
+      <Dialog open>
+        <DialogContent showCloseButton>
+          <DialogTitle>With close</DialogTitle>
+        </DialogContent>
+      </Dialog>,
+    );
+
+    expect(screen.getByRole("button", { name: "Close" })).toBeInTheDocument();
   });
 
   it("renders a standalone overlay in a portal", () => {

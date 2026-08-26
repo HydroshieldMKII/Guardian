@@ -1,13 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, memo, useMemo } from "react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -117,6 +111,7 @@ const UserGroupSkeleton = () => (
 );
 
 interface DeviceManagementProps {
+  tabs?: React.ReactNode;
   devicesData?: {
     all: UserDevice[];
     pending: UserDevice[];
@@ -142,8 +137,26 @@ interface ConfirmActionData {
   description: string;
 }
 
+const CONFIRM_COPY = {
+  approve: {
+    title: "Approve Device",
+    description: "This device will be able to stream from your Plex server.",
+  },
+  reject: {
+    title: "Reject Device",
+    description:
+      "This device will be blocked from streaming from your Plex server.",
+  },
+  delete: {
+    title: "Delete Device",
+    description:
+      "This record will be removed for good. The device will have to be approved again the next time it connects.",
+  },
+};
+
 const DeviceManagement = memo(
   ({
+    tabs,
     devicesData,
     usersData,
     settingsData,
@@ -1150,41 +1163,22 @@ const DeviceManagement = memo(
 
     // Confirmation dialog handlers
     const showApproveConfirmation = (device: UserDevice) => {
-      setConfirmAction({
-        device,
-        action: "approve",
-        title: "Approve Device",
-        description: `Are you sure you want to approve this device? "${device.deviceName || device.deviceIdentifier}" will be able to access your Plex server.`,
-      });
+      setConfirmAction({ device, action: "approve", ...CONFIRM_COPY.approve });
     };
 
     const showRejectConfirmation = (device: UserDevice) => {
-      setConfirmAction({
-        device,
-        action: "reject",
-        title: "Reject Device",
-        description: `Are you sure you want to reject this device? "${device.deviceName || device.deviceIdentifier}" will be blocked from accessing your Plex server.`,
-      });
+      setConfirmAction({ device, action: "reject", ...CONFIRM_COPY.reject });
     };
 
     const showDeleteConfirmation = (device: UserDevice) => {
-      setConfirmAction({
-        device,
-        action: "delete",
-        title: "Delete Device",
-        description: `Are you sure you want to permanently delete this device record? This action cannot be undone. The device "${device.deviceName || device.deviceIdentifier}" will need to be re-approved if it tries to connect again.`,
-      });
+      setConfirmAction({ device, action: "delete", ...CONFIRM_COPY.delete });
     };
 
     const showToggleConfirmation = (device: UserDevice) => {
-      const isCurrentlyApproved = device.status === "approved";
       setConfirmAction({
         device,
         action: "toggle",
-        title: isCurrentlyApproved ? "Reject Device" : "Approve Device",
-        description: isCurrentlyApproved
-          ? `Are you sure you want to reject "${device.deviceName || device.deviceIdentifier}"? This will block access to your Plex server.`
-          : `Are you sure you want to approve "${device.deviceName || device.deviceIdentifier}"? This will grant access to your Plex server.`,
+        ...CONFIRM_COPY[device.status === "approved" ? "reject" : "approve"],
       });
     };
 
@@ -1210,16 +1204,9 @@ const DeviceManagement = memo(
     return (
       <>
         <Card>
-          <CardHeader>
+          <CardHeader className="py-4">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div className="flex-1 min-w-0">
-                <CardTitle className="flex items-center text-lg sm:text-xl mt-4">
-                  User & Device Management
-                </CardTitle>
-                <CardDescription className="mt-1 flex items-center">
-                  Manage all users and their devices
-                </CardDescription>
-              </div>
+              <div className="flex-1 min-w-0">{tabs}</div>
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-2">
                 <div className="flex items-center gap-2">
                   <Button
@@ -1520,6 +1507,15 @@ const DeviceManagement = memo(
                 ))
               )}
             </div>
+
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setHiddenUsersModalOpen(false)}
+              >
+                Close
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
 

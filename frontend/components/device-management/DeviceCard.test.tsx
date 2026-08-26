@@ -57,22 +57,27 @@ const renderCard = (
     />,
   );
 
-  return { ...view, handlers, user: userEvent.setup() };
+  return {
+    ...view,
+    handlers,
+    user: userEvent.setup({ pointerEventsCheck: 0 }),
+  };
 };
 
-const clickAll = async (
-  user: ReturnType<typeof userEvent.setup>,
-  name: RegExp | string,
-) => {
-  for (const button of screen.getAllByRole("button", { name })) {
-    await user.click(button);
-  }
+type User = ReturnType<typeof userEvent.setup>;
+
+const openMenu = async (user: User) => {
+  await user.click(screen.getByRole("button", { name: /Actions/ }));
+  return screen.findAllByRole("menuitem");
 };
 
-const clickFirst = async (
-  user: ReturnType<typeof userEvent.setup>,
-  name: RegExp | string,
-) => user.click(screen.getAllByRole("button", { name })[0]);
+const choose = async (user: User, name: string) => {
+  await openMenu(user);
+  await user.click(await screen.findByRole("menuitem", { name }));
+};
+
+const menuLabels = async (user: User) =>
+  (await openMenu(user)).map((item) => item.textContent?.trim());
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -128,9 +133,15 @@ describe("DeviceCard identity", () => {
     expect(screen.getAllByText("Plex Amp").length).toBeGreaterThan(0);
   });
 
-  it("shows the product and platform as the subtitle", () => {
+  it("shows when the device was last seen as the subtitle", () => {
     renderCard();
-    expect(screen.getByText("Plex for Roku · Roku")).toBeInTheDocument();
+    expect(screen.getByText(/^Last seen /)).toBeInTheDocument();
+  });
+
+  it("shows the product in the meta grid rather than repeating it", () => {
+    renderCard();
+    expect(screen.getByText("Product")).toBeInTheDocument();
+    expect(screen.getByText("Plex for Roku")).toBeInTheDocument();
   });
 });
 
@@ -161,23 +172,45 @@ describe("DeviceCard badges", () => {
     renderCard({ status: "pending", excludeFromConcurrentLimit: true });
     expect(screen.queryByText("No Limit")).toBeNull();
   });
+
+  it.each(["pending", "approved", "rejected"] as const)(
+    "shows the %s status without a leading dot",
+    (status) => {
+      renderCard({ status });
+
+      const pill = screen.getByText(
+        status.charAt(0).toUpperCase() + status.slice(1),
+      );
+
+      expect(pill.querySelectorAll("span[aria-hidden]")).toHaveLength(0);
+    },
+  );
 });
 
-describe("DeviceCard actions by status", () => {
+describe("DeviceCard actions", () => {
+  it("collapses every action behind one trigger", () => {
+    renderCard({ status: "pending" });
+
+    expect(screen.getByRole("button", { name: /Actions/ })).toBeInTheDocument();
+    for (const label of ["Approve", "Reject", "View Details", "Delete"]) {
+      expect(screen.queryByRole("button", { name: label })).toBeNull();
+    }
+  });
+
   it("offers approve and reject while pending", async () => {
     const { user, handlers } = renderCard({ status: "pending" });
 
-    await clickAll(user, /Approve/);
-    await clickAll(user, /Reject/);
-
+    await choose(user, "Approve");
     expect(handlers.onApprove).toHaveBeenCalled();
+
+    await choose(user, "Reject");
     expect(handlers.onReject).toHaveBeenCalled();
   });
 
   it("offers approval again for a rejected device", async () => {
     const { user, handlers } = renderCard({ status: "rejected" });
 
-    await clickAll(user, /Approve/);
+    await choose(user, "Approve");
 
     expect(handlers.onToggleApproval).toHaveBeenCalled();
   });
@@ -185,17 +218,9 @@ describe("DeviceCard actions by status", () => {
   it("offers rejection for an approved device", async () => {
     const { user, handlers } = renderCard({ status: "approved" });
 
-    await clickAll(user, /Reject/);
+    await choose(user, "Reject");
 
     expect(handlers.onToggleApproval).toHaveBeenCalled();
-  });
-
-  it("always offers delete", async () => {
-    const { user, handlers } = renderCard();
-
-    await clickAll(user, /Delete/);
-
-    expect(handlers.onDelete).toHaveBeenCalled();
   });
 
   it.each(["pending", "approved", "rejected"] as const)(
@@ -203,11 +228,19 @@ describe("DeviceCard actions by status", () => {
     async (status) => {
       const { user, handlers } = renderCard({ status });
 
-      await clickAll(user, /Delete/);
+      await choose(user, "Delete");
 
       expect(handlers.onDelete).toHaveBeenCalled();
     },
   );
+
+  it("opens the details", async () => {
+    const { user, handlers } = renderCard();
+
+    await choose(user, "View Details");
+
+    expect(handlers.onShowDetails).toHaveBeenCalled();
+  });
 
   it.each(["pending", "rejected"] as const)(
     "revokes temporary access for a %s device",
@@ -215,83 +248,93 @@ describe("DeviceCard actions by status", () => {
       hasTemporaryAccess.mockReturnValue(true);
       const { user, handlers } = renderCard({ status });
 
-      await clickAll(user, /Revoke/i);
+      await choose(user, "Revoke Temp Access");
 
       expect(handlers.onRevokeTempAccess).toHaveBeenCalledWith(1);
     },
   );
 
-  it("offers only delete for a PlexAmp device", async () => {
+  it("omits the revoke entry without temporary access", async () => {
+    const { user } = renderCard({ status: "pending" });
+
+    expect(await menuLabels(user)).not.toContain("Revoke Temp Access");
+  });
+
+  it("offers only delete and details for a PlexAmp device", async () => {
     const { user, handlers } = renderCard({ deviceProduct: "Plexamp" });
 
-    expect(screen.queryByRole("button", { name: /Approve/ })).toBeNull();
-    expect(screen.queryByRole("button", { name: /Reject/ })).toBeNull();
+    expect(await menuLabels(user)).toEqual(["View Details", "Delete"]);
 
-    await clickAll(user, /Delete/);
+    await user.click(screen.getByRole("menuitem", { name: "Delete" }));
     expect(handlers.onDelete).toHaveBeenCalled();
   });
 
-  it("opens the details", async () => {
-    const { user, handlers } = renderCard();
+  it("separates the destructive entry from the rest", async () => {
+    const { user } = renderCard({ status: "pending" });
+    await openMenu(user);
 
-    await clickAll(user, /View Details/);
+    const remove = screen.getByRole("menuitem", { name: "Delete" });
+    const separator = remove.previousElementSibling;
 
-    expect(handlers.onShowDetails).toHaveBeenCalled();
+    expect(separator?.getAttribute("role")).toBe("separator");
   });
 
-  it("revokes temporary access", async () => {
-    hasTemporaryAccess.mockReturnValue(true);
-    const { user, handlers } = renderCard();
+  it("tones the approve entry apart from the destructive ones", async () => {
+    const { user } = renderCard({ status: "pending" });
+    await openMenu(user);
 
-    await clickAll(user, /Revoke/i);
-
-    expect(handlers.onRevokeTempAccess).toHaveBeenCalledWith(1);
-  });
-
-  it("disables every action while one is running", () => {
-    const { container } = renderCard({}, { actionLoading: 1 });
-    const buttons = Array.from(container.querySelectorAll("button"));
-    const busy = buttons.filter((b) => b.querySelector(".animate-spin"));
-
-    expect(busy.length).toBeGreaterThan(0);
-    for (const button of busy) {
-      expect(button).toBeDisabled();
+    expect(
+      screen.getByRole("menuitem", { name: "Approve" }).className,
+    ).toContain("text-emerald-700");
+    for (const label of ["Reject", "Delete"]) {
+      expect(screen.getByRole("menuitem", { name: label }).className).toContain(
+        "text-rose-600",
+      );
     }
   });
 
-  it.each([
-    ["pending", false],
-    ["pending", true],
-    ["approved", false],
-    ["rejected", false],
-    ["rejected", true],
-  ] as const)(
-    "spins every control for a busy %s device (temp access: %p)",
-    (status, temp) => {
-      hasTemporaryAccess.mockReturnValue(temp);
-      const { container } = renderCard({ status }, { actionLoading: 1 });
-      const spinners = container.querySelectorAll("button .animate-spin");
+  it("leaves the details entry untinted", async () => {
+    const { user } = renderCard({ status: "pending" });
+    await openMenu(user);
 
-      expect(spinners.length).toBeGreaterThan(0);
-    },
-  );
+    const details = screen.getByRole("menuitem", { name: "View Details" });
 
-  it("spins the delete control for a busy PlexAmp device", () => {
-    const { container } = renderCard(
-      { deviceProduct: "Plexamp" },
-      { actionLoading: 1 },
-    );
-    expect(
-      container.querySelectorAll("button .animate-spin").length,
-    ).toBeGreaterThan(0);
+    expect(details.className).not.toContain("text-rose");
+    expect(details.className).not.toContain("text-emerald");
   });
 
-  it("leaves actions enabled while another device is busy", () => {
+  it("disables the trigger and spins it while an action runs", () => {
+    renderCard({}, { actionLoading: 1 });
+
+    const trigger = screen.getByRole("button", { name: /Actions/ });
+
+    expect(trigger).toBeDisabled();
+    expect(trigger.querySelector(".animate-spin")).not.toBeNull();
+  });
+
+  it("leaves the trigger enabled while another device is busy", () => {
     renderCard({}, { actionLoading: 99 });
 
-    expect(
-      screen.getAllByRole("button", { name: /Delete/ })[0],
-    ).not.toBeDisabled();
+    expect(screen.getByRole("button", { name: /Actions/ })).not.toBeDisabled();
+  });
+
+  it("gives the trigger a taller mobile target", () => {
+    renderCard({ status: "pending" });
+
+    expect(screen.getByRole("button", { name: /Actions/ }).className).toContain(
+      "h-10",
+    );
+  });
+
+  it("sits the trigger alongside the device details rather than below them", () => {
+    const { container } = renderCard({ status: "pending" });
+
+    const row = container.querySelector("dl")?.parentElement;
+
+    expect(row).not.toBeNull();
+    expect(row).toContainElement(
+      screen.getByRole("button", { name: /Actions/ }),
+    );
   });
 });
 
@@ -320,7 +363,7 @@ describe("DeviceCard user note", () => {
     const onDeviceUpdate = jest.fn();
     const { user } = renderCard(withNote, { onDeviceUpdate });
 
-    await clickAll(user, /Mark Read/);
+    await user.click(screen.getByRole("button", { name: "Mark Read" }));
 
     await waitFor(() => expect(markDeviceNoteAsRead).toHaveBeenCalledWith(1));
     expect(toast).toHaveBeenCalledWith(
@@ -337,7 +380,7 @@ describe("DeviceCard user note", () => {
   it("works without an update callback", async () => {
     const { user } = renderCard(withNote);
 
-    await clickAll(user, /Mark Read/);
+    await user.click(screen.getByRole("button", { name: "Mark Read" }));
 
     await waitFor(() => expect(markDeviceNoteAsRead).toHaveBeenCalled());
   });
@@ -346,7 +389,7 @@ describe("DeviceCard user note", () => {
     markDeviceNoteAsRead.mockRejectedValue(new Error("server said no"));
     const { user } = renderCard(withNote);
 
-    await clickAll(user, /Mark Read/);
+    await user.click(screen.getByRole("button", { name: "Mark Read" }));
 
     await waitFor(() =>
       expect(toast).toHaveBeenCalledWith(
@@ -363,7 +406,7 @@ describe("DeviceCard user note", () => {
     markDeviceNoteAsRead.mockRejectedValue("boom");
     const { user } = renderCard(withNote);
 
-    await clickAll(user, /Mark Read/);
+    await user.click(screen.getByRole("button", { name: "Mark Read" }));
 
     await waitFor(() =>
       expect(toast).toHaveBeenCalledWith(
@@ -399,65 +442,38 @@ describe("DeviceCard user note", () => {
 });
 
 describe("DeviceCard action ordering", () => {
-  const actionLabels = (container: HTMLElement) =>
-    Array.from(container.querySelectorAll("button"))
-      .map((b) => b.textContent?.trim())
-      .filter((text): text is string =>
-        ["Approve", "Reject", "View Details", "Delete"].includes(text ?? ""),
-      );
+  it.each([
+    ["pending", ["Approve", "Reject", "View Details", "Delete"]],
+    ["rejected", ["Approve", "View Details", "Delete"]],
+    ["approved", ["Reject", "View Details", "Delete"]],
+  ] as const)(
+    "puts the decision first on a %s device",
+    async (status, order) => {
+      const { user } = renderCard({ status });
 
-  it("puts the decision above the details on a pending device", () => {
-    const { container } = renderCard({ status: "pending" });
+      expect(await menuLabels(user)).toEqual(order);
+    },
+  );
 
-    expect(actionLabels(container)).toEqual([
+  it("keeps delete last so it is never the accidental click", async () => {
+    hasTemporaryAccess.mockReturnValue(true);
+    const { user } = renderCard({ status: "pending" });
+
+    const labels = await menuLabels(user);
+
+    expect(labels).toEqual([
       "Approve",
       "Reject",
       "View Details",
+      "Revoke Temp Access",
       "Delete",
     ]);
   });
 
-  it("offers re-approval and details on a rejected device", () => {
-    const { container } = renderCard({ status: "rejected" });
-
-    expect(actionLabels(container)).toEqual([
-      "Approve",
-      "Delete",
-      "View Details",
-    ]);
-  });
-
-  it("offers rejection and details on an approved device", () => {
-    const { container } = renderCard({ status: "approved" });
-
-    expect(actionLabels(container)).toEqual([
-      "Reject",
-      "Delete",
-      "View Details",
-    ]);
-  });
-
-  it("offers only delete and details on a PlexAmp device", () => {
-    const { container } = renderCard({
-      status: "pending",
-      deviceProduct: "Plexamp",
-    });
-
-    expect(actionLabels(container)).toEqual(["Delete", "View Details"]);
-  });
-
-  it("renders each action once rather than in mobile and desktop copies", () => {
-    const { container } = renderCard({ status: "pending" });
-    const labels = actionLabels(container);
+  it("renders each entry once rather than in mobile and desktop copies", async () => {
+    const { user } = renderCard({ status: "pending" });
+    const labels = await menuLabels(user);
 
     expect(labels).toEqual([...new Set(labels)]);
-  });
-
-  it("opens the details modal from its new position", async () => {
-    const { user, handlers } = renderCard({ status: "pending" });
-
-    await user.click(screen.getByRole("button", { name: "View Details" }));
-
-    expect(handlers.onShowDetails).toHaveBeenCalled();
   });
 });

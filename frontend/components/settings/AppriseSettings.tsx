@@ -1,27 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  CheckCircle,
-  XCircle,
-  Loader2,
-  Bell,
-  SendHorizontal,
-  AlertTriangle,
-  ExternalLink,
-  Info,
-} from "lucide-react";
+import { Field } from "@/components/ui/entity";
+import { Banner, SettingControl, SettingsCard, isTruthy } from "./settings-ui";
+import { Loader2 } from "lucide-react";
 import { apiClient } from "@/lib/api";
 import { AppSetting } from "@/types";
 import {
@@ -103,323 +87,137 @@ export function AppriseSettings({
     }
   };
 
-  const getStatusIcon = () => {
-    if (testingConnection) {
-      return <Loader2 className="h-4 w-4 animate-spin text-blue-500" />;
-    }
-    if (connectionStatus?.success === true) {
-      return <CheckCircle className="h-4 w-4 text-green-500" />;
-    }
-    if (connectionStatus?.success === false) {
-      return <XCircle className="h-4 w-4 text-red-500" />;
-    }
-    return null;
-  };
+  const CHILD_KEYS = [
+    "APPRISE_NOTIFY_ON_NEW_DEVICE",
+    "APPRISE_NOTIFY_ON_BLOCK",
+    "APPRISE_NOTIFY_ON_LOCATION_CHANGE",
+    "APPRISE_NOTIFY_ON_DEVICE_NOTE",
+  ];
 
-  const isAppriseEnabled = formData["APPRISE_ENABLED"] === "true";
+  const isAppriseEnabled = isTruthy(formData["APPRISE_ENABLED"]);
+
+  const enabledSetting = appriseSettings.find(
+    (s) => s.key === "APPRISE_ENABLED",
+  );
+  const childSettings = CHILD_KEYS.map((key) =>
+    appriseSettings.find((s) => s.key === key),
+  ).filter((setting): setting is AppSetting => Boolean(setting));
+  const urlsSetting = appriseSettings.find((s) => s.key === "APPRISE_URLS");
+
+  const toggle = (key: string, checked: string | boolean) =>
+    handleInputChange(key, String(checked));
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <div className="mt-4">
-            <CardTitle>Apprise Notifications</CardTitle>
-          </div>
-          <CardDescription>
-            Configure Apprise for sending notifications to various services like
-            Discord, Slack, Telegram, and more.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          {/* Apprise Documentation Link */}
-          <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mt-4">
-            <div className="flex items-start gap-3">
-              <Info className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
-              <div className="flex-1">
-                <h4 className="font-medium text-blue-900 dark:text-blue-100 text-sm">
-                  About Apprise
-                </h4>
-                <p className="text-blue-700 dark:text-blue-300 text-sm mt-1">
-                  Apprise allows you to send notifications to 100+ services
-                  including Discord, Slack, Telegram, Pushover, and more. Each
-                  service URL follows a specific format.{" "}
-                  <button
-                    type="button"
-                    className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 underline underline-offset-2 inline-flex items-center gap-1 cursor-pointer"
-                    onClick={() =>
-                      window.open(
-                        "https://github.com/caronc/apprise/wiki",
-                        "_blank",
-                      )
-                    }
-                  >
-                    View Apprise Documentation
-                    <ExternalLink className="h-3 w-3" />
-                  </button>{" "}
-                  to get your service URLs.
-                </p>
-              </div>
-            </div>
+    <SettingsCard
+      title="Apprise Notifications"
+      description="Configure Apprise for sending notifications to various services like Discord, Slack, Telegram, and more."
+      footer={
+        <div className="space-y-3">
+          <div className="space-y-1">
+            <p className="text-sm font-medium text-foreground">
+              Test Apprise Connection
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Send a test notification to verify your configuration
+            </p>
           </div>
 
-          {/* Settings Form */}
-          <Card className="p-4 my-4">
-            <div className="space-y-4">
-              {appriseSettings.map((setting) => {
-                const settingInfo = getSettingInfo(setting);
-                const currentValue = formData[setting.key] ?? setting.value;
-
-                if (setting.key === "APPRISE_ENABLED") {
-                  return (
-                    <div
-                      key={setting.key}
-                      className="flex items-center justify-between"
-                    >
-                      <div className="space-y-0.5">
-                        <Label className="text-base font-medium">
-                          {settingInfo.label}
-                        </Label>
-                        <div className="text-sm text-muted-foreground">
-                          {settingInfo.description}
-                        </div>
-                      </div>
-                      <Switch
-                        checked={currentValue === "true"}
-                        onCheckedChange={(checked) =>
-                          handleInputChange(setting.key, checked.toString())
-                        }
-                      />
-                    </div>
-                  );
-                }
-
-                if (setting.key === "APPRISE_NOTIFY_ON_NEW_DEVICE") {
-                  return (
-                    <div
-                      key={setting.key}
-                      className="flex items-center justify-between ml-6 pl-4 border-l-2 border-muted"
-                    >
-                      <div className="space-y-0.5">
-                        <Label className="text-base font-medium">
-                          {settingInfo.label}
-                        </Label>
-                        <div className="text-sm text-muted-foreground">
-                          {settingInfo.description}
-                        </div>
-                      </div>
-                      <Switch
-                        checked={currentValue === "true"}
-                        onCheckedChange={(checked) =>
-                          handleInputChange(setting.key, checked.toString())
-                        }
-                        disabled={!isAppriseEnabled}
-                      />
-                    </div>
-                  );
-                }
-
-                if (setting.key === "APPRISE_NOTIFY_ON_BLOCK") {
-                  return (
-                    <div
-                      key={setting.key}
-                      className="flex items-center justify-between ml-6 pl-4 border-l-2 border-muted"
-                    >
-                      <div className="space-y-0.5">
-                        <Label className="text-base font-medium">
-                          {settingInfo.label}
-                        </Label>
-                        <div className="text-sm text-muted-foreground">
-                          {settingInfo.description}
-                        </div>
-                      </div>
-                      <Switch
-                        checked={currentValue === "true"}
-                        onCheckedChange={(checked) =>
-                          handleInputChange(setting.key, checked.toString())
-                        }
-                        disabled={!isAppriseEnabled}
-                      />
-                    </div>
-                  );
-                }
-
-                if (setting.key === "APPRISE_NOTIFY_ON_LOCATION_CHANGE") {
-                  return (
-                    <div
-                      key={setting.key}
-                      className="flex items-center justify-between ml-6 pl-4 border-l-2 border-muted"
-                    >
-                      <div className="space-y-0.5">
-                        <Label className="text-base font-medium">
-                          {settingInfo.label}
-                        </Label>
-                        <div className="text-sm text-muted-foreground">
-                          {settingInfo.description}
-                        </div>
-                      </div>
-                      <Switch
-                        checked={currentValue === "true"}
-                        onCheckedChange={(checked) =>
-                          handleInputChange(setting.key, checked.toString())
-                        }
-                        disabled={!isAppriseEnabled}
-                      />
-                    </div>
-                  );
-                }
-
-                if (setting.key === "APPRISE_NOTIFY_ON_DEVICE_NOTE") {
-                  return (
-                    <div
-                      key={setting.key}
-                      className="flex items-center justify-between ml-6 pl-4 border-l-2 border-muted"
-                    >
-                      <div className="space-y-0.5">
-                        <Label className="text-base font-medium">
-                          {settingInfo.label}
-                        </Label>
-                        <div className="text-sm text-muted-foreground">
-                          {settingInfo.description}
-                        </div>
-                      </div>
-                      <Switch
-                        checked={currentValue === "true"}
-                        onCheckedChange={(checked) =>
-                          handleInputChange(setting.key, checked.toString())
-                        }
-                        disabled={!isAppriseEnabled}
-                      />
-                    </div>
-                  );
-                }
-
-                if (setting.key === "APPRISE_URLS") {
-                  return (
-                    <div key={setting.key} className="space-y-3">
-                      <Label
-                        htmlFor={setting.key}
-                        className="text-base font-medium"
-                      >
-                        {settingInfo.label}
-                      </Label>
-                      <div className="text-sm text-muted-foreground">
-                        {settingInfo.description}
-                      </div>
-                      <Textarea
-                        id={setting.key}
-                        placeholder="discord://webhook_id/webhook_token
-telegram://bot_token/chat_id
-slack://token_a/token_b/token_c"
-                        value={currentValue as string}
-                        onChange={(e) =>
-                          handleInputChange(setting.key, e.target.value)
-                        }
-                        disabled={!isAppriseEnabled}
-                        className="min-h-[120px] font-mono text-sm mb-2"
-                      />
-                    </div>
-                  );
-                }
-
-                return null;
-              })}
-            </div>
-          </Card>
-
-          {/* Test Connection */}
-          {isAppriseEnabled && (
-            <div className="pt-4 border-t">
-              <div className="space-y-3">
-                <div>
-                  <h4 className="font-medium">Test Apprise Connection</h4>
-                  <p className="text-sm text-muted-foreground">
-                    Send a test notification to verify your configuration
-                  </p>
-                </div>
-
-                {/* Banners above button */}
-                {hasUnsavedChanges && (
-                  <div className="p-3 rounded-md flex items-center gap-2 bg-orange-50 text-orange-700 border border-orange-200 dark:bg-orange-950/20 dark:text-orange-300 dark:border-orange-800">
-                    <AlertTriangle className="h-4 w-4" />
-                    <span className="text-sm">
-                      Save your changes before testing apprise connection.
-                    </span>
-                  </div>
-                )}
-
-                {connectionStatus && !hasUnsavedChanges && (
-                  <div
-                    className={`p-3 rounded-md flex items-center gap-2 ${
-                      connectionStatus.success
-                        ? "bg-green-50 text-green-700 border border-green-200 dark:bg-green-950/20 dark:text-green-300 dark:border-green-800"
-                        : "bg-red-50 text-red-700 border border-red-200 dark:bg-red-950/20 dark:text-red-300 dark:border-red-800"
-                    }`}
-                  >
-                    {getStatusIcon()}
-                    <span className="text-sm">{connectionStatus.message}</span>
-                  </div>
-                )}
-
-                <Button
-                  onClick={testAppriseConnection}
-                  disabled={testingConnection || hasUnsavedChanges}
-                  className="w-full mb-4"
-                  variant="outline"
-                >
-                  {testingConnection ? (
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  ) : (
-                    <SendHorizontal className="h-4 w-4 mr-2" />
-                  )}
-                  {testingConnection
-                    ? "Testing..."
-                    : "Send a test notification"}
-                </Button>
-              </div>
-            </div>
+          {hasUnsavedChanges && (
+            <Banner tone="warning">
+              Save your changes before testing apprise connection.
+            </Banner>
           )}
 
-          {/* Test Connection - Disabled State */}
-          {!isAppriseEnabled && (
-            <div className="pt-4 border-t">
-              <div className="space-y-3">
-                <div>
-                  <h4 className="font-medium">Test Apprise Connection</h4>
-                  <p className="text-sm text-muted-foreground">
-                    Send a test notification to verify your configuration
-                  </p>
-                </div>
+          {isAppriseEnabled && connectionStatus && !hasUnsavedChanges && (
+            <Banner tone={connectionStatus.success ? "positive" : "danger"}>
+              {connectionStatus.message}
+            </Banner>
+          )}
 
-                {/* Banners above button */}
-                {hasUnsavedChanges && (
-                  <div className="p-3 rounded-md flex items-center gap-2 bg-orange-50 text-orange-700 border border-orange-200 dark:bg-orange-950/20 dark:text-orange-300 dark:border-orange-800">
-                    <AlertTriangle className="h-4 w-4" />
-                    <span className="text-sm">
-                      Save your changes before testing apprise connection.
-                    </span>
-                  </div>
-                )}
+          <Button
+            onClick={testAppriseConnection}
+            disabled={
+              !isAppriseEnabled || testingConnection || hasUnsavedChanges
+            }
+            variant="outline"
+            className="w-full"
+          >
+            {testingConnection && <Loader2 className="size-4 animate-spin" />}
+            {testingConnection
+              ? "Testing..."
+              : isAppriseEnabled
+                ? "Send a test notification"
+                : "Send Test"}
+          </Button>
 
-                <Button
-                  onClick={testAppriseConnection}
-                  disabled={true}
-                  className="w-full mb-2"
-                  variant="outline"
-                >
-                  <SendHorizontal className="h-4 w-4 mr-2" />
-                  Send Test
-                </Button>
+          {!isAppriseEnabled && !hasUnsavedChanges && (
+            <p className="text-center text-xs text-muted-foreground">
+              Enable apprise to test the connection.
+            </p>
+          )}
+        </div>
+      }
+    >
+      <Banner tone="info">
+        Apprise allows you to send notifications to 100+ services including
+        Discord, Slack, Telegram, Pushover, and more. Each service URL follows a
+        specific format.{" "}
+        <a
+          href="https://github.com/caronc/apprise/wiki"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline underline-offset-2"
+        >
+          View Apprise Documentation
+        </a>{" "}
+        to get your service URLs.
+      </Banner>
 
-                {!hasUnsavedChanges && (
-                  <p className="text-xs text-muted-foreground mb-2 text-center">
-                    Enable apprise to test the connection.
-                  </p>
-                )}
-              </div>
+      {enabledSetting && (
+        <div className="space-y-3">
+          <SettingControl
+            setting={enabledSetting}
+            formData={formData}
+            onChange={toggle}
+          />
+          {childSettings.length > 0 && (
+            <div
+              className={`space-y-3 border-l-2 pl-4 transition-opacity duration-200 sm:ml-2 ${
+                isAppriseEnabled ? "" : "opacity-50"
+              }`}
+            >
+              {childSettings.map((setting) => (
+                <SettingControl
+                  key={setting.key}
+                  setting={setting}
+                  formData={formData}
+                  onChange={toggle}
+                  disabled={!isAppriseEnabled}
+                />
+              ))}
             </div>
           )}
-        </CardContent>
-      </Card>
-    </div>
+        </div>
+      )}
+
+      {urlsSetting && (
+        <Field
+          label={getSettingInfo(urlsSetting).label}
+          htmlFor={urlsSetting.key}
+          hint={getSettingInfo(urlsSetting).description}
+        >
+          <Textarea
+            id={urlsSetting.key}
+            placeholder={
+              "discord://webhook_id/webhook_token\ntelegram://bot_token/chat_id\nslack://token_a/token_b/token_c"
+            }
+            value={String(formData[urlsSetting.key] ?? urlsSetting.value)}
+            onChange={(e) => handleInputChange(urlsSetting.key, e.target.value)}
+            disabled={!isAppriseEnabled}
+            className="min-h-[120px] font-mono text-sm"
+          />
+        </Field>
+      )}
+    </SettingsCard>
   );
 }

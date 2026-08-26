@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { TimeRuleModal } from "@/components/device-management/TimeRuleModal";
 
@@ -148,7 +148,7 @@ describe("TimeRuleModal loading", () => {
     await renderModal();
 
     const names = Array.from(
-      document.querySelectorAll("span.font-medium.truncate"),
+      document.querySelectorAll("p.truncate.font-semibold"),
     ).map((el) => el.textContent);
     expect(names.indexOf("Monday early")).toBeLessThan(
       names.indexOf("Monday late"),
@@ -359,11 +359,8 @@ describe("TimeRuleModal editing a rule", () => {
     getTimeRules.mockResolvedValue([rule()]);
   });
 
-  const startEditing = async (user: ReturnType<typeof userEvent.setup>) => {
-    const buttons = screen.getAllByRole("button");
-    const edit = buttons.find((b) => b.querySelector(".lucide-square-pen"));
-    await user.click(edit as HTMLElement);
-  };
+  const startEditing = async (user: ReturnType<typeof userEvent.setup>) =>
+    user.click(screen.getAllByRole("button", { name: "Edit" })[0]);
 
   it("opens an editor", async () => {
     const { user } = await renderModal();
@@ -380,10 +377,7 @@ describe("TimeRuleModal editing a rule", () => {
     await startEditing(user);
 
     await user.type(screen.getByPlaceholderText("Rule name"), "!");
-    const save = screen
-      .getAllByRole("button")
-      .find((b) => b.querySelector(".lucide-save"));
-    await user.click(save as HTMLElement);
+    await user.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() =>
       expect(updateTimeRule).toHaveBeenCalledWith(
@@ -410,10 +404,7 @@ describe("TimeRuleModal editing a rule", () => {
     await user.type(times[0], "07:15");
     await user.tab();
 
-    const save = screen
-      .getAllByRole("button")
-      .find((b) => b.querySelector(".lucide-save"));
-    await user.click(save as HTMLElement);
+    await user.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() =>
       expect(updateTimeRule).toHaveBeenCalledWith(
@@ -441,10 +432,7 @@ describe("TimeRuleModal editing a rule", () => {
     const { user } = await renderModal();
     await startEditing(user);
 
-    const cancel = screen
-      .getAllByRole("button")
-      .find((b) => b.querySelector(".lucide-x"));
-    await user.click(cancel as HTMLElement);
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
 
     expect(screen.queryByPlaceholderText("Rule name")).toBeNull();
     expect(updateTimeRule).not.toHaveBeenCalled();
@@ -464,10 +452,7 @@ describe("TimeRuleModal editing a rule", () => {
     const { user } = await renderModal();
     await startEditing(user);
 
-    const save = screen
-      .getAllByRole("button")
-      .find((b) => b.querySelector(".lucide-save"));
-    await user.click(save as HTMLElement);
+    await user.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() =>
       expect(toast).toHaveBeenCalledWith(
@@ -482,10 +467,7 @@ describe("TimeRuleModal editing a rule", () => {
     const { user } = await renderModal();
     await startEditing(user);
 
-    const save = screen
-      .getAllByRole("button")
-      .find((b) => b.querySelector(".lucide-save"));
-    await user.click(save as HTMLElement);
+    await user.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() =>
       expect(toast).toHaveBeenCalledWith(
@@ -499,10 +481,7 @@ describe("TimeRuleModal editing a rule", () => {
     const { user } = await renderModal();
     await startEditing(user);
 
-    const save = screen
-      .getAllByRole("button")
-      .find((b) => b.querySelector(".lucide-save"));
-    await user.click(save as HTMLElement);
+    await user.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() =>
       expect(toast).toHaveBeenCalledWith(
@@ -531,12 +510,7 @@ describe("TimeRuleModal deleting", () => {
 
   it("deletes a single rule", async () => {
     const { user } = await renderModal();
-    const trashButtons = screen
-      .getAllByRole("button")
-      .filter((b) => b.querySelector(".lucide-trash-2"));
-    const trash = trashButtons[trashButtons.length - 1];
-
-    await user.click(trash as HTMLElement);
+    await user.click(screen.getByRole("button", { name: "Delete" }));
 
     await waitFor(() => expect(deleteTimeRule).toHaveBeenCalledWith("u-1", 1));
     expect(toast).toHaveBeenCalledWith(
@@ -547,12 +521,7 @@ describe("TimeRuleModal deleting", () => {
   it("reports a delete failure", async () => {
     deleteTimeRule.mockRejectedValue(new Error("server said no"));
     const { user } = await renderModal();
-    const trashButtons = screen
-      .getAllByRole("button")
-      .filter((b) => b.querySelector(".lucide-trash-2"));
-    const trash = trashButtons[trashButtons.length - 1];
-
-    await user.click(trash as HTMLElement);
+    await user.click(screen.getByRole("button", { name: "Delete" }));
 
     await waitFor(() =>
       expect(toast).toHaveBeenCalledWith(
@@ -564,11 +533,7 @@ describe("TimeRuleModal deleting", () => {
   it("falls back to a generic delete failure message", async () => {
     deleteTimeRule.mockRejectedValue({});
     const { user } = await renderModal();
-    const trashButtons = screen
-      .getAllByRole("button")
-      .filter((b) => b.querySelector(".lucide-trash-2"));
-
-    await user.click(trashButtons[trashButtons.length - 1]);
+    await user.click(screen.getByRole("button", { name: "Delete" }));
 
     await waitFor(() =>
       expect(toast).toHaveBeenCalledWith(
@@ -692,15 +657,9 @@ describe("TimeRuleModal presets", () => {
       }),
     ]);
     const { user } = await renderModal();
-    const buttons = screen.getAllByRole("button");
-    await user.click(
-      buttons.find((b) => b.querySelector(".lucide-square-pen")) as HTMLElement,
-    );
+    await user.click(screen.getAllByRole("button", { name: "Edit" })[0]);
 
-    const save = screen
-      .getAllByRole("button")
-      .find((b) => b.querySelector(".lucide-save"));
-    await user.click(save as HTMLElement);
+    await user.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() =>
       expect(toast).toHaveBeenCalledWith(
@@ -742,12 +701,11 @@ describe("TimeRuleModal with several rules", () => {
     user: ReturnType<typeof userEvent.setup>,
     name: string,
   ) => {
-    const card = screen.getByText(name).closest("div[class]") as HTMLElement;
-    const buttons = Array.from(
-      card.querySelectorAll<HTMLElement>("button"),
-    ).concat(screen.getAllByRole("button"));
-    const edit = buttons.find((b) => b.querySelector(".lucide-square-pen"));
-    await user.click(edit as HTMLElement);
+    const card = screen
+      .getByText(name)
+      .closest("div.rounded-lg") as HTMLElement;
+    const edit = within(card).getByRole("button", { name: "Edit" });
+    await user.click(edit);
   };
 
   beforeEach(() => {
@@ -769,10 +727,7 @@ describe("TimeRuleModal with several rules", () => {
 
     await editRuleNamed(user, "School hours");
     await user.type(screen.getByPlaceholderText("Rule name"), "!");
-    const save = screen
-      .getAllByRole("button")
-      .find((b) => b.querySelector(".lucide-save"));
-    await user.click(save as HTMLElement);
+    await user.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() =>
       expect(updateTimeRule).toHaveBeenCalledWith(
@@ -788,10 +743,7 @@ describe("TimeRuleModal with several rules", () => {
     const { user } = await renderModal();
 
     await editRuleNamed(user, "School hours");
-    const save = screen
-      .getAllByRole("button")
-      .find((b) => b.querySelector(".lucide-save"));
-    await user.click(save as HTMLElement);
+    await user.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() =>
       expect(updateTimeRule).toHaveBeenCalledWith("u-1", 1, {

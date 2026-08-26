@@ -1,18 +1,26 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card } from "@/components/ui/card";
-import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Monitor, RefreshCw, Radio, Trash2 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import {
+  ActionBar,
+  EmptyState,
+  EntityCard,
+  EntityHeader,
+  Meta,
+  MetaGrid,
+  StatusPill,
+  type Tone,
+} from "@/components/ui/entity";
+import {
+  Modal,
+  ModalBody,
+  ModalFooter,
+  ModalHeader,
+} from "@/components/ui/modal";
+import { RefreshCw } from "lucide-react";
 import { config } from "@/lib/config";
 import { ClickableIP } from "./SharedComponents";
 import { ConfirmationModal } from "@/components/ui/confirmation-modal";
@@ -61,6 +69,11 @@ interface UserHistoryModalProps {
   scrollToSessionId?: number | null;
 }
 
+const PAGE_SIZE = 25;
+const SEARCH_DEBOUNCE_MS = 300;
+const DEEP_LINK_MAX_PAGES = 4;
+const HIGHLIGHT = ["ring-2", "ring-primary", "ring-offset-2"];
+
 export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
   userId,
   username,
@@ -71,71 +84,161 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
 }) => {
   const router = useRouter();
   const [sessions, setSessions] = useState<SessionHistoryEntry[]>([]);
+  const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [activeSearch, setActiveSearch] = useState("");
   const [showTerminatedOnly, setShowTerminatedOnly] = useState(false);
   const [sessionToDelete, setSessionToDelete] =
     useState<SessionHistoryEntry | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
-  const sessionsListRef = React.useRef<HTMLDivElement>(null);
+  const sessionsListRef = useRef<HTMLDivElement>(null);
+  const loadMoreRef = useRef<HTMLButtonElement>(null);
+  const loadedCountRef = useRef(0);
+  const scrolledToRef = useRef<number | null>(null);
+  const deepLinkRef = useRef({ id: null as number | null, pages: 0 });
   const { toast } = useToast();
 
-  const fetchUserHistory = useCallback(
-    async (showLoadingIndicator = true) => {
+  useEffect(() => {
+    loadedCountRef.current = sessions.length;
+  }, [sessions]);
+
+  useEffect(() => {
+    const timeout = setTimeout(
+      () => setActiveSearch(searchTerm.trim()),
+      SEARCH_DEBOUNCE_MS,
+    );
+    return () => clearTimeout(timeout);
+  }, [searchTerm]);
+
+  const fetchPage = useCallback(
+    async (offset: number, limit: number) => {
+      const params = new URLSearchParams({
+        limit: String(limit),
+        offset: String(offset),
+        includeActive: "true",
+      });
+      if (activeSearch) {
+        params.set("search", activeSearch);
+      }
+      if (showTerminatedOnly) {
+        params.set("terminatedOnly", "true");
+      }
+
+      const response = await fetch(
+        `${config.api.baseUrl}/sessions/history/${userId}?${params.toString()}`,
+      );
+      if (!response.ok) {
+        throw new Error("Failed to fetch user history");
+      }
+      const data = await response.json();
+      return (Array.isArray(data) ? data : []) as SessionHistoryEntry[];
+    },
+    [userId, activeSearch, showTerminatedOnly],
+  );
+
+  const loadFirstPage = useCallback(async () => {
+    if (!userId) return;
+
+    setLoading(true);
+    try {
+      const page = await fetchPage(0, PAGE_SIZE);
+      setSessions(page);
+      setHasMore(page.length === PAGE_SIZE);
+    } catch (error) {
+      console.error("Error fetching user history:", error);
+      setSessions([]);
+      setHasMore(false);
+    } finally {
+      setLoading(false);
+    }
+  }, [userId, fetchPage]);
+
+  const refreshLoaded = useCallback(
+    async (showIndicator: boolean) => {
       if (!userId) return;
 
-      if (showLoadingIndicator) {
-        setLoading(true);
+      if (showIndicator) {
+        setRefreshing(true);
       }
       try {
-        const response = await fetch(
-          `${config.api.baseUrl}/sessions/history/${userId}?limit=100&includeActive=true`,
-        );
-        if (response.ok) {
-          const data = await response.json();
-          // Sort by most recent first (startedAt descending)
-          const sortedData = (data || []).sort(
-            (a: SessionHistoryEntry, b: SessionHistoryEntry) =>
-              new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime(),
-          );
-          setSessions(sortedData);
-        } else {
-          console.error("Failed to fetch user history");
-          setSessions([]);
-        }
+        const limit = Math.max(loadedCountRef.current, PAGE_SIZE);
+        const page = await fetchPage(0, limit);
+        setSessions(page);
+        setHasMore(page.length === limit);
       } catch (error) {
-        console.error("Error fetching user history:", error);
-        setSessions([]);
+        console.error("Error refreshing user history:", error);
       } finally {
-        if (showLoadingIndicator) {
-          setLoading(false);
+        if (showIndicator) {
+          setRefreshing(false);
         }
       }
     },
-    [userId],
+    [userId, fetchPage],
   );
 
-  // Initial fetch when modal opens
+  const loadMore = useCallback(async () => {
+    if (!userId) return;
+
+    setLoadingMore(true);
+    try {
+      const page = await fetchPage(loadedCountRef.current, PAGE_SIZE);
+      setSessions((prev) => {
+        const known = new Set(prev.map((session) => session.id));
+        return [...prev, ...page.filter((session) => !known.has(session.id))];
+      });
+      setHasMore(page.length === PAGE_SIZE);
+    } catch (error) {
+      console.error("Error loading more user history:", error);
+      setHasMore(false);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [userId, fetchPage]);
+
   useEffect(() => {
     if (isOpen && userId) {
-      fetchUserHistory(true);
+      loadFirstPage();
     }
-  }, [isOpen, userId, fetchUserHistory]);
+  }, [isOpen, userId, loadFirstPage]);
 
-  // Poll for updates when there are active sessions
+  useEffect(() => {
+    if (isOpen) return;
+
+    setSearchTerm("");
+    setActiveSearch("");
+    setShowTerminatedOnly(false);
+    scrolledToRef.current = null;
+  }, [isOpen]);
+
   useEffect(() => {
     if (!isOpen) return;
 
     const hasActiveSessions = sessions.some((session) => !session.endedAt);
     if (!hasActiveSessions) return;
 
-    // Poll every 10 seconds when there are active sessions
-    const intervalId = setInterval(() => {
-      fetchUserHistory(false); // Don't show loading indicator for background refreshes
-    }, 10000);
-
+    const intervalId = setInterval(() => refreshLoaded(false), 10000);
     return () => clearInterval(intervalId);
-  }, [isOpen, sessions, fetchUserHistory]);
+  }, [isOpen, sessions, refreshLoaded]);
+
+  useEffect(() => {
+    const trigger = loadMoreRef.current;
+    if (!trigger || typeof IntersectionObserver === "undefined") return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          loadMore();
+        }
+      },
+      { root: sessionsListRef.current },
+    );
+    observer.observe(trigger);
+
+    return () => observer.disconnect();
+  }, [loadMore, hasMore, loadingMore]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -151,7 +254,6 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
 
   const formatTitle = (session: SessionHistoryEntry) => {
     if (session.contentType === "episode" && session.grandparentTitle) {
-      // For TV episodes: "Series - Season X: Episode Title"
       let result = session.grandparentTitle;
       if (session.parentTitle && session.contentTitle) {
         result += ` - ${session.parentTitle}: ${session.contentTitle}`;
@@ -163,12 +265,10 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
       return result;
     }
 
-    // For movies or other content
     return session.contentTitle || "Unknown Title";
   };
 
   const formatSubtitle = (session: SessionHistoryEntry) => {
-    // For music tracks: show "Artist • Year" or just "Artist"
     if (session.contentType === "track" && session.grandparentTitle) {
       if (session.year) {
         return `${session.grandparentTitle} • ${session.year}`;
@@ -176,7 +276,6 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
       return session.grandparentTitle;
     }
 
-    // For other content types, show year only
     return session.year ? String(session.year) : null;
   };
 
@@ -192,149 +291,73 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
     const product = session.product || session.userDevice?.deviceProduct;
     if (!product) return "Unknown";
 
-    // Check if it's Plex Amp based on product name
     if (product.toLowerCase() === "plexamp") {
       return "Plex Amp";
     }
 
-    // Default to Plex for most cases
     return "Plex";
   };
 
-  // Filter sessions based on search term and terminated filter
-  const filteredSessions = React.useMemo(() => {
-    return sessions.filter((session) => {
-      // Apply search filter
-      const matchesSearch =
-        formatTitle(session).toLowerCase().includes(searchTerm.toLowerCase()) ||
-        getDeviceDisplayName(session)
-          .toLowerCase()
-          .includes(searchTerm.toLowerCase()) ||
-        (session.deviceAddress || "")
-          .toLowerCase()
-          .includes(searchTerm.toLowerCase());
-
-      // Apply terminated filter
-      const matchesTerminated = showTerminatedOnly
-        ? session.terminated === true
-        : true;
-
-      return matchesSearch && matchesTerminated;
-    });
-  }, [sessions, searchTerm, showTerminatedOnly]);
-
-  // Scroll to specific session after sessions are loaded
   useEffect(() => {
-    if (
-      scrollToSessionId &&
-      sessions.length > 0 &&
-      !loading &&
-      sessionsListRef.current
-    ) {
-      // Check if session exists in data first
-      const sessionExistsInData = sessions.some(
-        (s) => s.id === scrollToSessionId,
-      );
-      if (!sessionExistsInData) {
-        return; // Session doesn't exist, nothing to scroll to
-      }
+    if (!scrollToSessionId || loading || !sessionsListRef.current) return;
+    if (scrolledToRef.current === scrollToSessionId) return;
 
-      // Function to scroll to and highlight the session
-      const scrollToSession = () => {
-        const sessionElement = sessionsListRef.current?.querySelector(
-          `[data-session-id="${scrollToSessionId}"]`,
-        );
-        if (sessionElement) {
-          // Scroll to element
-          sessionElement.scrollIntoView({
-            behavior: "smooth",
-            block: "center",
-            inline: "nearest",
-          });
-
-          // Add highlight
-          requestAnimationFrame(() => {
-            sessionElement.classList.add(
-              "border-2",
-              "border-blue-400",
-              "shadow-lg",
-            );
-            setTimeout(() => {
-              sessionElement.classList.remove(
-                "border-2",
-                "border-blue-400",
-                "shadow-lg",
-              );
-            }, 2000);
-          });
-          return true;
-        }
-        return false;
-      };
-
-      // Try to find and scroll to the session immediately
-      if (scrollToSession()) {
-        return; // Found it, we're done
-      }
-
-      // If not found immediately, wait for DOM to update
-      const observer = new MutationObserver(() => {
-        if (scrollToSession()) {
-          observer.disconnect();
-        }
-      });
-
-      observer.observe(sessionsListRef.current, {
-        childList: true,
-        subtree: true,
-      });
-
-      // Cleanup after 3 seconds
-      const cleanup = setTimeout(() => {
-        observer.disconnect();
-      }, 3000);
-
-      return () => {
-        observer.disconnect();
-        clearTimeout(cleanup);
-      };
+    if (deepLinkRef.current.id !== scrollToSessionId) {
+      deepLinkRef.current = { id: scrollToSessionId, pages: 0 };
     }
-  }, [scrollToSessionId, sessions, loading]);
 
-  const playbackMs = (session: SessionHistoryEntry) => {
-    const startTime = new Date(session.startedAt).getTime();
+    const sessionExistsInData = sessions.some(
+      (session) => session.id === scrollToSessionId,
+    );
+    if (!sessionExistsInData) {
+      if (
+        hasMore &&
+        !loadingMore &&
+        deepLinkRef.current.pages < DEEP_LINK_MAX_PAGES
+      ) {
+        deepLinkRef.current.pages += 1;
+        loadMore();
+      }
+      return;
+    }
+
+    const sessionElement = sessionsListRef.current.querySelector(
+      `[data-session-id="${scrollToSessionId}"]`,
+    );
+    if (!sessionElement) return;
+
+    scrolledToRef.current = scrollToSessionId;
+    sessionElement.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+      inline: "nearest",
+    });
+    sessionElement.classList.add(...HIGHLIGHT);
+
+    const timeout = setTimeout(
+      () => sessionElement.classList.remove(...HIGHLIGHT),
+      2000,
+    );
+    return () => clearTimeout(timeout);
+  }, [scrollToSessionId, sessions, loading, hasMore, loadingMore, loadMore]);
+
+  const formatDuration = (session: SessionHistoryEntry) => {
     const endTime = session.endedAt
       ? new Date(session.endedAt).getTime()
       : Date.now();
-    const elapsed = endTime - startTime;
+    const elapsed = endTime - new Date(session.startedAt).getTime();
 
-    if (elapsed < 0) return null;
+    if (!Number.isFinite(elapsed) || elapsed < 0) return "Unknown";
 
-    if (typeof session.viewOffset === "number" && session.viewOffset > 0) {
-      return session.viewOffset;
-    }
-    if (typeof session.duration === "number" && session.duration > 0) {
-      return Math.min(elapsed, session.duration);
-    }
-    return elapsed;
-  };
-
-  const formatDuration = (session: SessionHistoryEntry) => {
-    const durationMs = playbackMs(session);
-
-    if (durationMs === null) return "Unknown";
-
-    const seconds = Math.floor(durationMs / 1000);
+    const seconds = Math.floor(elapsed / 1000);
     const minutes = Math.floor(seconds / 60);
     const hours = Math.floor(minutes / 60);
 
     if (hours > 0) {
-      const remainingMinutes = minutes % 60;
-      const remainingSeconds = seconds % 60;
-      return `${hours}h ${remainingMinutes}m ${remainingSeconds}s`;
-    } else if (minutes > 0) {
-      const remainingSeconds = seconds % 60;
-      return `${minutes}m ${remainingSeconds}s`;
+      return `${hours}h ${minutes % 60}m ${seconds % 60}s`;
+    }
+    if (minutes > 0) {
+      return `${minutes}m ${seconds % 60}s`;
     }
     return `${seconds}s`;
   };
@@ -343,11 +366,8 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
     onClose();
 
     if (onNavigateToDevice && userId && session.userDevice?.deviceIdentifier) {
-      // Use prop-based navigation when available (dashboard context)
       onNavigateToDevice(userId, session.userDevice.deviceIdentifier);
     } else if (userId && session.userDevice?.deviceIdentifier) {
-      // Use router navigation when no prop available (global context)
-      // Navigate to dashboard with both userId and deviceIdentifier as query parameters
       router.push(
         `/?userId=${encodeURIComponent(userId)}&deviceId=${encodeURIComponent(session.userDevice.deviceIdentifier)}`,
       );
@@ -371,7 +391,6 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
       );
 
       if (response.ok) {
-        // Remove the session from the local state
         setSessions((prev) => prev.filter((s) => s.id !== sessionToDelete.id));
         setSessionToDelete(null);
         toast({
@@ -401,44 +420,46 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
     setSessionToDelete(null);
   };
 
-  return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent
-        className="sm:!max-w-[95vw] sm:!w-[95vw] max-h-[90vh] h-[90vh] overflow-hidden flex flex-col"
-        onOpenAutoFocus={(e) => e.preventDefault()}
-      >
-        <DialogHeader>
-          <DialogTitle className="text-lg font-semibold leading-tight tracking-tight text-foreground">
-            Streaming History
-          </DialogTitle>
-          <DialogDescription>
-            View and manage streaming session history for{" "}
-            <span className="font-semibold text-foreground">
-              {username || userId}
-            </span>
-            .
-          </DialogDescription>
-        </DialogHeader>
+  const sessionTone = (session: SessionHistoryEntry): Tone => {
+    if (!session.endedAt) return "positive";
+    return session.terminated ? "danger" : "neutral";
+  };
 
-        <div className="flex flex-col gap-4 flex-1 overflow-hidden">
-          {/* Search, Filter and Refresh */}
-          <div className="flex flex-col sm:flex-row gap-3 px-1 pt-1">
+  const filtered = Boolean(activeSearch || showTerminatedOnly);
+
+  return (
+    <>
+      <Modal open={isOpen} onOpenChange={onClose} size="xl">
+        <ModalHeader
+          title="Streaming History"
+          description={
+            <>
+              View and manage streaming session history for{" "}
+              <span className="font-medium text-foreground">
+                {username || userId}
+              </span>
+              .
+            </>
+          }
+        >
+          <div className="flex flex-col gap-3 pt-3 sm:flex-row sm:items-center">
             <Input
               placeholder="Search by title, device, or IP address..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="flex-1"
             />
-            <div className="flex items-center gap-3">
-              <div className="flex items-center space-x-2">
+            <div className="flex items-center justify-between gap-3 sm:justify-start">
+              <div className="flex items-center gap-2">
                 <Switch
                   id="terminated-filter"
                   checked={showTerminatedOnly}
                   onCheckedChange={setShowTerminatedOnly}
+                  className="cursor-pointer"
                 />
                 <Label
                   htmlFor="terminated-filter"
-                  className="text-sm whitespace-nowrap"
+                  className="whitespace-nowrap text-sm text-muted-foreground"
                 >
                   Terminated only
                 </Label>
@@ -446,368 +467,140 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => fetchUserHistory(true)}
-                disabled={loading}
-                className="flex-shrink-0"
+                onClick={() => refreshLoaded(true)}
+                disabled={loading || refreshing}
+                title="Refresh"
               >
-                <RefreshCw
-                  className={`w-4 h-4 ${loading ? "animate-spin" : ""}`}
-                />
+                <RefreshCw className={refreshing ? "animate-spin" : ""} />
+                Refresh
               </Button>
             </div>
           </div>
+        </ModalHeader>
 
-          {/* Sessions List */}
-          <div
-            ref={sessionsListRef}
-            className="flex-1 overflow-auto border rounded-md"
-          >
-            {loading ? (
-              <div className="flex items-center justify-center h-32">
-                <RefreshCw className="w-6 h-6 animate-spin" />
-                <span className="ml-2">Loading history...</span>
-              </div>
-            ) : filteredSessions.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-32 text-muted-foreground text-center">
-                <p className="text-center">
-                  {searchTerm || showTerminatedOnly
-                    ? "No sessions found matching your filters"
-                    : "No streaming history found"}
-                </p>
-              </div>
-            ) : (
-              <>
-                {/* Desktop Table View */}
-                <div className="hidden md:block divide-y">
-                  {/* Header */}
-                  <div
-                    className="grid gap-2 p-3 bg-muted text-sm font-medium sticky top-0 z-10"
-                    style={{
-                      gridTemplateColumns:
-                        "2fr 1.2fr 0.8fr 0.8fr 1.2fr 1.4fr 1.4fr 0.8fr 0.8fr",
-                    }}
-                  >
-                    <div>Content</div>
-                    <div>Device</div>
-                    <div>Platform</div>
-                    <div>Product</div>
-                    <div>IP Address</div>
-                    <div>Started</div>
-                    <div>Ended</div>
-                    <div>Duration</div>
-                    <div>Actions</div>
-                  </div>{" "}
-                  {/* Desktop Session Rows */}
-                  {filteredSessions.map((session) => (
-                    <div
-                      key={session.id}
-                      data-session-id={session.id}
-                      className={`grid gap-2 p-3 transition-colors ${
-                        !session.endedAt
-                          ? "bg-green-50/20 hover:bg-green-50/30 border-l-4 border-l-green-500"
-                          : session.terminated
-                            ? "bg-red-50/20 hover:bg-red-50/30 border-l-4 border-l-red-500"
-                            : "hover:bg-muted/30"
-                      }`}
-                      style={{
-                        gridTemplateColumns:
-                          "2fr 1.2fr 0.8fr 0.8fr 1.2fr 1.4fr 1.4fr 0.8fr 0.8fr",
-                      }}
-                    >
-                      {/* Content Title */}
-                      <div className="overflow-hidden">
-                        <div
-                          className="font-medium truncate"
-                          title={formatTitle(session)}
-                        >
-                          {formatTitle(session)}
-                        </div>
-                        {formatSubtitle(session) && (
-                          <div
-                            className="text-xs text-muted-foreground truncate"
-                            title={formatSubtitle(session) || undefined}
-                          >
-                            {formatSubtitle(session)}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Device */}
-                      <div className="overflow-hidden">
-                        <div
-                          className="text-sm truncate"
-                          title={getDeviceDisplayName(session)}
-                        >
-                          {getDeviceDisplayName(session)}
-                        </div>
-                      </div>
-
-                      {/* Platform */}
-                      <div className="overflow-hidden">
-                        {session.userDevice?.devicePlatform && (
-                          <div
-                            className="text-xs text-muted-foreground capitalize truncate"
-                            title={session.userDevice.devicePlatform}
-                          >
-                            {session.userDevice.devicePlatform}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Product */}
-                      <div className="overflow-hidden">
-                        <div
-                          className="text-xs text-muted-foreground truncate"
-                          title={formatProduct(session)}
-                        >
-                          {formatProduct(session)}
-                        </div>
-                      </div>
-
-                      {/* IP Address */}
-                      <div className="overflow-hidden">
-                        <div className="text-sm font-mono">
-                          <ClickableIP ipAddress={session.deviceAddress} />
-                        </div>
-                      </div>
-
-                      {/* Started */}
-                      <div className="overflow-hidden">
-                        <div className="text-sm">
-                          {formatDate(session.startedAt)}
-                        </div>
-                      </div>
-
-                      {/* Ended */}
-                      <div className="overflow-hidden">
-                        <div className="flex items-center gap-1 text-sm">
-                          {session.endedAt ? (
-                            <>
-                              <span>{formatDate(session.endedAt)}</span>
-                            </>
-                          ) : (
-                            <>
-                              <Radio className="w-3 h-3 text-green-500 animate-pulse flex-shrink-0" />
-                              <span className="text-green-700 font-medium">
-                                Active
-                              </span>
-                            </>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Duration */}
-                      <div className="overflow-hidden">
-                        <div className="text-sm font-mono">
-                          {formatDuration(session)}
-                        </div>
-                      </div>
-
-                      {/* Actions */}
-                      <div className="flex justify-start gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeviceClick(session)}
-                          className="h-8 w-8 p-0"
-                          title="See Device"
-                        >
-                          <Monitor className="w-4 h-4" />
-                        </Button>
-                        {/* Only show delete button for completed sessions */}
-                        {session.endedAt && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDeleteClick(session)}
-                            className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                            title="Delete Session"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Mobile Card View */}
-                <div className="md:hidden space-y-3">
-                  {filteredSessions.map((session) => (
-                    <Card
-                      key={session.id}
-                      data-session-id={session.id}
-                      className={`p-4 transition-colors rounded-none ${
-                        !session.endedAt
-                          ? "bg-green-50/20 hover:bg-green-50/30 border-l-4 border-l-green-500"
-                          : session.terminated
-                            ? "bg-red-50/20 hover:bg-red-50/30 border-l-4 border-l-red-500"
-                            : "hover:bg-muted/30"
-                      }`}
-                    >
-                      {/* Title and Active Status */}
-                      <div className="flex items-start justify-between mb-4">
-                        <div className="flex-1 min-w-0">
-                          <div
-                            className="font-medium text-sm truncate"
-                            title={formatTitle(session)}
-                          >
-                            {formatTitle(session)}
-                          </div>
-                          {formatSubtitle(session) && (
-                            <div
-                              className="text-xs text-muted-foreground/70 mt-0.5 truncate"
-                              title={formatSubtitle(session) || undefined}
-                            >
-                              {formatSubtitle(session)}
-                            </div>
-                          )}
-                        </div>
-                        {!session.endedAt ? (
-                          <div className="flex items-center gap-1 ml-2 flex-shrink-0">
-                            <Radio className="w-3 h-3 text-green-500 animate-pulse" />
-                            <span className="text-xs text-green-700 font-medium">
-                              Active
-                            </span>
-                          </div>
-                        ) : (
-                          session.terminated && (
-                            <div className="flex items-center gap-1 ml-2 flex-shrink-0">
-                              <span className="text-xs text-red-700 font-medium">
-                                Terminated
-                              </span>
-                            </div>
-                          )
-                        )}
-                      </div>
-
-                      {/* Device and Platform */}
-                      <div className="space-y-2 mb-3">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs text-muted-foreground">
-                            Device:
-                          </span>
-                          <span
-                            className="text-sm truncate text-right max-w-[60%]"
-                            title={getDeviceDisplayName(session)}
-                          >
-                            {getDeviceDisplayName(session)}
-                          </span>
-                        </div>
-                        {session.userDevice?.devicePlatform && (
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs text-muted-foreground">
-                              Platform:
-                            </span>
-                            <span className="text-sm capitalize">
-                              {session.userDevice.devicePlatform}
-                            </span>
-                          </div>
-                        )}
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs text-muted-foreground">
-                            Product:
-                          </span>
-                          <span className="text-sm">
-                            {formatProduct(session)}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Timing Information */}
-                      <div className="space-y-2 mb-3">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs text-muted-foreground">
-                            Started:
-                          </span>
-                          <span className="text-sm break-words text-right max-w-[60%]">
-                            {formatDate(session.startedAt)}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs text-muted-foreground">
-                            Ended:
-                          </span>
-                          <div className="text-sm break-words text-right max-w-[60%]">
-                            {session.endedAt ? (
-                              <div className="flex items-center gap-1 justify-end">
-                                <span>{formatDate(session.endedAt)}</span>
-                              </div>
-                            ) : (
-                              "Active Now"
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs text-muted-foreground">
-                            Duration:
-                          </span>
-                          <span className="text-sm font-mono">
-                            {formatDuration(session)}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* IP Address */}
-                      <div className="flex items-center justify-between mb-3">
-                        <span className="text-xs text-muted-foreground">
-                          IP Address:
-                        </span>
-                        <div className="text-sm font-mono">
-                          <ClickableIP ipAddress={session.deviceAddress} />
-                        </div>
-                      </div>
-
-                      {/* Actions */}
-                      <div className="flex justify-end gap-2 pt-2 border-t">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeviceClick(session)}
-                          className="h-8 px-3 text-xs"
-                          title="See Device"
-                        >
-                          Find Device
-                        </Button>
-                        {/* Only show delete button for completed sessions */}
-                        {session.endedAt && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDeleteClick(session)}
-                            className="h-8 px-3 text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
-                            title="Delete Session"
-                          >
-                            Delete
-                          </Button>
-                        )}
-                      </div>
-                    </Card>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
-
-          {/* Footer Info */}
-          {!loading && filteredSessions.length > 0 && (
-            <div className="text-sm text-muted-foreground text-center">
-              Showing {filteredSessions.length} session
-              {filteredSessions.length !== 1 ? "s" : ""}
-              {(searchTerm || showTerminatedOnly) && (
-                <span>
-                  {" "}
-                  matching filters
-                  {searchTerm && ` "${searchTerm}"`}
-                  {showTerminatedOnly && " (terminated only)"}
-                </span>
-              )}
+        <ModalBody className="space-y-3" ref={sessionsListRef}>
+          {loading ? (
+            <div className="flex items-center justify-center gap-2 py-12 text-sm text-muted-foreground">
+              <RefreshCw className="size-5 animate-spin" />
+              <span>Loading history...</span>
             </div>
-          )}
-        </div>
-      </DialogContent>
+          ) : sessions.length === 0 ? (
+            <EmptyState
+              title={
+                filtered
+                  ? "No sessions found matching your filters"
+                  : "No streaming history found"
+              }
+            />
+          ) : (
+            <>
+              {sessions.map((session) => (
+                <EntityCard
+                  key={session.id}
+                  data-session-id={session.id}
+                  tone={sessionTone(session)}
+                >
+                  <div className="space-y-4 p-4 pl-5">
+                    <EntityHeader
+                      title={formatTitle(session)}
+                      subtitle={formatSubtitle(session) || undefined}
+                      status={
+                        !session.endedAt ? (
+                          <StatusPill tone="positive">Active</StatusPill>
+                        ) : session.terminated ? (
+                          <StatusPill tone="danger">Terminated</StatusPill>
+                        ) : (
+                          <StatusPill tone="neutral">Ended</StatusPill>
+                        )
+                      }
+                    />
 
-      {/* Delete Confirmation Modal */}
+                    <MetaGrid className="sm:grid-cols-3 lg:grid-cols-4">
+                      <Meta label="Device">
+                        {getDeviceDisplayName(session)}
+                      </Meta>
+                      <Meta label="Platform" className="capitalize">
+                        {session.userDevice?.devicePlatform || "Unknown"}
+                      </Meta>
+                      <Meta label="Product">{formatProduct(session)}</Meta>
+                      <Meta label="IP Address">
+                        <ClickableIP ipAddress={session.deviceAddress} />
+                      </Meta>
+                      <Meta label="Started">
+                        {formatDate(session.startedAt)}
+                      </Meta>
+                      <Meta label="Ended">
+                        {session.endedAt
+                          ? formatDate(session.endedAt)
+                          : "Active"}
+                      </Meta>
+                      <Meta label="Duration" className="tabular-nums">
+                        {formatDuration(session)}
+                      </Meta>
+                    </MetaGrid>
+
+                    <ActionBar>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDeviceClick(session)}
+                        title="See Device"
+                        className="h-10 flex-1 sm:h-8 sm:flex-none"
+                      >
+                        See Device
+                      </Button>
+                      {session.endedAt && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDeleteClick(session)}
+                          title="Delete Session"
+                          className="h-10 flex-1 border-rose-500/40 text-rose-600 hover:bg-rose-500/10 dark:text-rose-400 sm:ml-auto sm:h-8 sm:flex-none"
+                        >
+                          Delete
+                        </Button>
+                      )}
+                    </ActionBar>
+                  </div>
+                </EntityCard>
+              ))}
+
+              {hasMore && (
+                <Button
+                  ref={loadMoreRef}
+                  variant="outline"
+                  onClick={loadMore}
+                  disabled={loadingMore}
+                  className="w-full"
+                >
+                  {loadingMore ? (
+                    <>
+                      <RefreshCw className="size-4 animate-spin" />
+                      Loading more...
+                    </>
+                  ) : (
+                    "Load older sessions"
+                  )}
+                </Button>
+              )}
+            </>
+          )}
+        </ModalBody>
+
+        <ModalFooter className="sm:justify-between">
+          <p className="text-xs text-muted-foreground">
+            {loading
+              ? ""
+              : `Showing ${sessions.length} session${
+                  sessions.length === 1 ? "" : "s"
+                }${filtered ? " matching your filters" : ""}`}
+          </p>
+          <Button variant="outline" onClick={onClose}>
+            Close
+          </Button>
+        </ModalFooter>
+      </Modal>
+
       <ConfirmationModal
         isOpen={!!sessionToDelete}
         onClose={cancelDelete}
@@ -817,7 +610,8 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
         confirmText="Delete"
         cancelText="Cancel"
         variant="destructive"
+        loading={deleteLoading}
       />
-    </Dialog>
+    </>
   );
 };

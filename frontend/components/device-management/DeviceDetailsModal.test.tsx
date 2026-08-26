@@ -184,18 +184,14 @@ describe("DeviceDetailsModal", () => {
       await user.type(input, "!");
       expect(handlers.onNewDeviceNameChange).toHaveBeenCalled();
 
-      const buttons = screen.getAllByRole("button");
-      await user.click(buttons.find((b) => !b.textContent) as HTMLElement);
+      await user.click(screen.getByRole("button", { name: "Save" }));
       expect(handlers.onRename).toHaveBeenCalledWith(1, "Bedroom TV");
     });
 
     it("refuses to save an empty name", () => {
       renderModal({}, { editingDevice: 1, newDeviceName: "   " });
 
-      const saveButton = screen
-        .getAllByRole("button")
-        .find((b) => b.querySelector(".lucide-save"));
-      expect(saveButton).toBeDisabled();
+      expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
     });
 
     it("locks both buttons while renaming", () => {
@@ -219,10 +215,7 @@ describe("DeviceDetailsModal", () => {
         { editingDevice: 1, newDeviceName: "Bedroom" },
       );
 
-      const cancel = screen
-        .getAllByRole("button")
-        .find((b) => b.querySelector(".lucide-x"));
-      await user.click(cancel as HTMLElement);
+      await user.click(screen.getByRole("button", { name: "Cancel" }));
 
       expect(handlers.onCancelEdit).toHaveBeenCalled();
     });
@@ -364,7 +357,7 @@ describe("DeviceDetailsModal", () => {
       const { user } = renderModal(withNote);
       await openSection(user, "User Note");
 
-      expect(screen.getByText(/Read:/)).toBeInTheDocument();
+      expect(screen.getByText("Read")).toBeInTheDocument();
     });
   });
 

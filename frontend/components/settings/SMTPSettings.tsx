@@ -1,35 +1,12 @@
 "use client";
 
-import { useState } from "react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { SecretInput } from "@/components/settings/SecretInput";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import {
-  CheckCircle,
-  XCircle,
-  Loader2,
-  AlertTriangle,
-  Mail,
-  SendHorizontal,
-} from "lucide-react";
+import { Loader2 } from "lucide-react";
+import { Banner, SettingControl, SettingsCard, isTruthy } from "./settings-ui";
 import { apiClient } from "@/lib/api";
 import { AppSetting } from "@/types";
-import {
-  getSettingInfo,
-  SettingsFormData,
-  ConnectionStatus,
-} from "./settings-utils";
-
-import { useEffect } from "react";
+import { SettingsFormData, ConnectionStatus } from "./settings-utils";
 
 interface SMTPSettingsProps {
   settings: AppSetting[];
@@ -109,353 +86,101 @@ export function SMTPSettings({
     }
   };
 
-  const renderEmailNotificationGroup = () => {
-    const smtpEnabledSetting = smtpSettings.find(
-      (s) => s.key === "SMTP_ENABLED",
-    );
-    const notifyOnBlockSetting = smtpSettings.find(
-      (s) => s.key === "SMTP_NOTIFY_ON_BLOCK",
-    );
+  const NOTIFY_KEYS = [
+    "SMTP_NOTIFY_ON_NEW_DEVICE",
+    "SMTP_NOTIFY_ON_BLOCK",
+    "SMTP_NOTIFY_ON_LOCATION_CHANGE",
+    "SMTP_NOTIFY_ON_DEVICE_NOTE",
+  ];
 
-    const notifyOnNewDeviceSetting = smtpSettings.find(
-      (s) => s.key === "SMTP_NOTIFY_ON_NEW_DEVICE",
-    );
-
-    const notifyOnLocationChangeSetting = smtpSettings.find(
-      (s) => s.key === "SMTP_NOTIFY_ON_LOCATION_CHANGE",
-    );
-
-    const notifyOnDeviceNoteSetting = smtpSettings.find(
-      (s) => s.key === "SMTP_NOTIFY_ON_DEVICE_NOTE",
-    );
-
-    if (
-      !smtpEnabledSetting ||
-      !notifyOnBlockSetting ||
-      !notifyOnNewDeviceSetting ||
-      !notifyOnLocationChangeSetting
-    )
-      return null;
-
-    const isSmtpEnabled =
-      formData["SMTP_ENABLED"] === true || formData["SMTP_ENABLED"] === "true";
-
-    return (
-      <Card className="p-4 my-4">
-        <div className="space-y-4">
-          {/* Parent setting: SMTP_ENABLED */}
-          {renderSetting(smtpEnabledSetting)}
-
-          {/* Child settings: SMTP_NOTIFY_ON_BLOCK & SMTP_NOTIFY_ON_NEW_DEVICE */}
-          <div className={`ml-6 ${!isSmtpEnabled ? "opacity-50" : ""}`}>
-            {/* Notify on new devices */}
-            <div className="pl-4 border-l-2 border-muted space-y-2 mb-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label
-                    htmlFor={notifyOnNewDeviceSetting.key}
-                    className={!isSmtpEnabled ? "text-muted-foreground" : ""}
-                  >
-                    {getSettingInfo(notifyOnNewDeviceSetting).label}
-                  </Label>
-                  <p className="text-sm text-muted-foreground">
-                    {getSettingInfo(notifyOnNewDeviceSetting).description}
-                  </p>
-                </div>
-                <Switch
-                  id={notifyOnNewDeviceSetting.key}
-                  checked={
-                    (formData[notifyOnNewDeviceSetting.key] ??
-                      notifyOnNewDeviceSetting.value) === "true" ||
-                    (formData[notifyOnNewDeviceSetting.key] ??
-                      notifyOnNewDeviceSetting.value) === true
-                  }
-                  onCheckedChange={(checked) =>
-                    handleInputChange(notifyOnNewDeviceSetting.key, checked)
-                  }
-                  disabled={!isSmtpEnabled}
-                  className="cursor-pointer"
-                />
-              </div>
-            </div>
-
-            <div className="pl-4 border-l-2 border-muted space-y-3">
-              {/* Notify on block */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label
-                      htmlFor={notifyOnBlockSetting.key}
-                      className={!isSmtpEnabled ? "text-muted-foreground" : ""}
-                    >
-                      {getSettingInfo(notifyOnBlockSetting).label}
-                    </Label>
-                    <p className="text-sm text-muted-foreground">
-                      {getSettingInfo(notifyOnBlockSetting).description}
-                    </p>
-                  </div>
-                  <Switch
-                    id={notifyOnBlockSetting.key}
-                    checked={
-                      (formData[notifyOnBlockSetting.key] ??
-                        notifyOnBlockSetting.value) === "true" ||
-                      (formData[notifyOnBlockSetting.key] ??
-                        notifyOnBlockSetting.value) === true
-                    }
-                    onCheckedChange={(checked) =>
-                      handleInputChange(notifyOnBlockSetting.key, checked)
-                    }
-                    disabled={!isSmtpEnabled}
-                    className="cursor-pointer"
-                  />
-                </div>
-              </div>
-
-              {/* Notify on location change */}
-              <div className="space-y-2 mt-4">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label
-                      htmlFor={notifyOnLocationChangeSetting.key}
-                      className={!isSmtpEnabled ? "text-muted-foreground" : ""}
-                    >
-                      {getSettingInfo(notifyOnLocationChangeSetting).label}
-                    </Label>
-                    <p className="text-sm text-muted-foreground">
-                      {
-                        getSettingInfo(notifyOnLocationChangeSetting)
-                          .description
-                      }
-                    </p>
-                  </div>
-                  <Switch
-                    id={notifyOnLocationChangeSetting.key}
-                    checked={
-                      (formData[notifyOnLocationChangeSetting.key] ??
-                        notifyOnLocationChangeSetting.value) === "true" ||
-                      (formData[notifyOnLocationChangeSetting.key] ??
-                        notifyOnLocationChangeSetting.value) === true
-                    }
-                    onCheckedChange={(checked) =>
-                      handleInputChange(
-                        notifyOnLocationChangeSetting.key,
-                        checked,
-                      )
-                    }
-                    disabled={!isSmtpEnabled}
-                    className="cursor-pointer"
-                  />
-                </div>
-              </div>
-
-              {/* Notify on device note */}
-              {notifyOnDeviceNoteSetting && (
-                <div className="space-y-2 mt-4">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label
-                        htmlFor={notifyOnDeviceNoteSetting.key}
-                        className={
-                          !isSmtpEnabled ? "text-muted-foreground" : ""
-                        }
-                      >
-                        {getSettingInfo(notifyOnDeviceNoteSetting).label}
-                      </Label>
-                      <p className="text-sm text-muted-foreground">
-                        {getSettingInfo(notifyOnDeviceNoteSetting).description}
-                      </p>
-                    </div>
-                    <Switch
-                      id={notifyOnDeviceNoteSetting.key}
-                      checked={
-                        (formData[notifyOnDeviceNoteSetting.key] ??
-                          notifyOnDeviceNoteSetting.value) === "true" ||
-                        (formData[notifyOnDeviceNoteSetting.key] ??
-                          notifyOnDeviceNoteSetting.value) === true
-                      }
-                      onCheckedChange={(checked) =>
-                        handleInputChange(
-                          notifyOnDeviceNoteSetting.key,
-                          checked,
-                        )
-                      }
-                      disabled={!isSmtpEnabled}
-                      className="cursor-pointer"
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </Card>
-    );
-  };
-
-  const renderSetting = (setting: AppSetting) => {
-    const { label, description } = getSettingInfo(setting);
-    const value = formData[setting.key] ?? setting.value;
-
-    if (setting.type === "boolean") {
-      return (
-        <div key={setting.key} className="space-y-2">
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label htmlFor={setting.key}>{label}</Label>
-              {description && (
-                <p className="text-sm text-muted-foreground">{description}</p>
-              )}
-            </div>
-            <Switch
-              id={setting.key}
-              checked={value === "true" || value === true}
-              onCheckedChange={(checked) =>
-                handleInputChange(setting.key, checked)
-              }
-              className="cursor-pointer"
-            />
-          </div>
-        </div>
-      );
-    }
-
-    return (
-      <div key={setting.key} className="space-y-2">
-        <Label htmlFor={setting.key}>{label}</Label>
-        {description && (
-          <p className="text-sm text-muted-foreground">{description}</p>
-        )}
-        <SecretInput
-          setting={setting}
-          value={typeof value === "string" ? value : String(value)}
-          placeholder={`Enter ${label.toLowerCase()}`}
-          type={
-            setting.key.includes("PASSWORD")
-              ? "password"
-              : setting.key === "SMTP_PORT"
-                ? "number"
-                : "text"
-          }
-          onChange={(next) => handleInputChange(setting.key, next)}
-        />
-      </div>
-    );
-  };
-
-  const isSmtpEnabled = (() => {
-    const formValue = formData["SMTP_ENABLED"];
-    if (formValue !== undefined) {
-      return formValue === true || formValue === "true";
-    }
-
-    const smtpSetting = settings.find((s) => s.key === "SMTP_ENABLED");
-    return smtpSetting?.value === "true";
-  })();
+  const smtpEnabledSetting = smtpSettings.find((s) => s.key === "SMTP_ENABLED");
+  const notifySettings = NOTIFY_KEYS.map((key) =>
+    smtpSettings.find((s) => s.key === key),
+  ).filter((setting): setting is AppSetting => Boolean(setting));
+  const isSmtpEnabled = isTruthy(
+    formData["SMTP_ENABLED"] ?? smtpEnabledSetting?.value,
+  );
 
   return (
-    <Card>
-      <CardHeader className="mt-4">
-        <CardTitle>Email Notifications (SMTP)</CardTitle>
-        <CardDescription>
-          Configure email notifications for Guardian events and alerts
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Email notification group - parent and child relationship */}
-        {renderEmailNotificationGroup()}
+    <SettingsCard
+      title="Email Notifications (SMTP)"
+      description="Configure email notifications for Guardian events and alerts."
+      footer={
+        <div className="space-y-3">
+          {hasUnsavedChanges && (
+            <Banner tone="warning">
+              Save your changes before testing SMTP connection
+            </Banner>
+          )}
 
-        {/* Other SMTP settings */}
-        {smtpSettings
-          .filter(
-            (setting) =>
-              setting.key !== "SMTP_ENABLED" &&
-              setting.key !== "SMTP_NOTIFY_ON_NEW_DEVICE" &&
-              setting.key !== "SMTP_NOTIFY_ON_BLOCK" &&
-              setting.key !== "SMTP_NOTIFY_ON_LOCATION_CHANGE" &&
-              setting.key !== "SMTP_NOTIFY_ON_DEVICE_NOTE",
-          )
-          .map((setting) => (
-            <Card key={setting.key} className="p-4 my-4">
-              {renderSetting(setting)}
-            </Card>
-          ))}
+          {isSmtpEnabled && connectionStatus && !hasUnsavedChanges && (
+            <Banner tone={connectionStatus.success ? "positive" : "danger"}>
+              {connectionStatus.message}
+            </Banner>
+          )}
 
-        {isSmtpEnabled && (
-          <div className="pb-4">
-            {hasUnsavedChanges && (
-              <div className="mb-3 p-3 rounded-md flex items-center gap-2 bg-orange-50 text-orange-700 border border-orange-200 dark:bg-orange-950/20 dark:text-orange-300 dark:border-orange-800">
-                <AlertTriangle className="h-4 w-4" />
-                <span className="text-sm">
-                  Save your changes before testing SMTP connection
-                </span>
-              </div>
-            )}
+          <Button
+            onClick={testSMTPConnection}
+            disabled={!isSmtpEnabled || testingConnection || hasUnsavedChanges}
+            className="w-full"
+          >
+            {testingConnection && <Loader2 className="size-4 animate-spin" />}
+            {testingConnection
+              ? "Sending test email..."
+              : isSmtpEnabled
+                ? "Send test email"
+                : "Test SMTP Connection"}
+          </Button>
 
-            {connectionStatus && !hasUnsavedChanges && (
-              <div
-                className={`mb-3 p-3 rounded-md flex items-center gap-2 ${
-                  connectionStatus.success
-                    ? "bg-green-50 text-green-700 border border-green-200 dark:bg-green-950/20 dark:text-green-300 dark:border-green-800"
-                    : "bg-red-50 text-red-700 border border-red-200 dark:bg-red-950/20 dark:text-red-300 dark:border-red-800"
-                }`}
-              >
-                {connectionStatus.success ? (
-                  <CheckCircle className="h-4 w-4" />
-                ) : (
-                  <XCircle className="h-4 w-4" />
-                )}
-                <span className="text-sm">{connectionStatus.message}</span>
-              </div>
-            )}
-
-            <Button
-              onClick={testSMTPConnection}
-              disabled={testingConnection || hasUnsavedChanges}
-              className="w-full"
+          {!isSmtpEnabled && !hasUnsavedChanges && (
+            <p className="text-center text-xs text-muted-foreground">
+              Enable emails to test the connection.
+            </p>
+          )}
+        </div>
+      }
+    >
+      {smtpEnabledSetting && (
+        <div className="space-y-3">
+          <SettingControl
+            setting={smtpEnabledSetting}
+            formData={formData}
+            onChange={handleInputChange}
+          />
+          {notifySettings.length > 0 && (
+            <div
+              className={`space-y-3 border-l-2 pl-4 transition-opacity duration-200 sm:ml-2 ${
+                isSmtpEnabled ? "" : "opacity-50"
+              }`}
             >
-              {testingConnection ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Sending test email...
-                </>
-              ) : (
-                <>
-                  <SendHorizontal className="mr-2 h-4 w-4" />
-                  Send test email
-                </>
-              )}
-            </Button>
-          </div>
-        )}
+              {notifySettings.map((setting) => (
+                <SettingControl
+                  key={setting.key}
+                  setting={setting}
+                  formData={formData}
+                  onChange={handleInputChange}
+                  disabled={!isSmtpEnabled}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
-        {!isSmtpEnabled && (
-          <div className="pb-4">
-            {hasUnsavedChanges && (
-              <div className="mb-3 p-3 rounded-md flex items-center gap-2 bg-orange-50 text-orange-700 border border-orange-200 dark:bg-orange-950/20 dark:text-orange-300 dark:border-orange-800">
-                <AlertTriangle className="h-4 w-4" />
-                <span className="text-sm">
-                  Save your changes before testing SMTP connection
-                </span>
-              </div>
-            )}
-
-            <Button
-              onClick={testSMTPConnection}
-              disabled={true}
-              className="w-full"
-            >
-              <Mail className="mr-2 h-4 w-4" />
-              Test SMTP Connection
-            </Button>
-
-            {!hasUnsavedChanges && (
-              <p className="text-xs text-muted-foreground mt-2 text-center">
-                Enable emails to test the connection.
-              </p>
-            )}
-          </div>
-        )}
-      </CardContent>
-    </Card>
+      {smtpSettings
+        .filter(
+          (setting) =>
+            setting.key !== "SMTP_ENABLED" &&
+            !NOTIFY_KEYS.includes(setting.key),
+        )
+        .map((setting) => (
+          <SettingControl
+            key={setting.key}
+            setting={setting}
+            formData={formData}
+            onChange={handleInputChange}
+          />
+        ))}
+    </SettingsCard>
   );
 }

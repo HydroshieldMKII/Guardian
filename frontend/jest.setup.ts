@@ -6,6 +6,18 @@ class ResizeObserverStub implements ResizeObserver {
   disconnect(): void {}
 }
 
+class IntersectionObserverStub implements IntersectionObserver {
+  readonly root = null;
+  readonly rootMargin = "";
+  readonly thresholds: ReadonlyArray<number> = [];
+  observe(): void {}
+  unobserve(): void {}
+  disconnect(): void {}
+  takeRecords(): IntersectionObserverEntry[] {
+    return [];
+  }
+}
+
 const createMediaQueryList = (query: string): MediaQueryList => ({
   matches: false,
   media: query,
@@ -23,6 +35,10 @@ if (!globalThis.matchMedia) {
 
 if (!globalThis.ResizeObserver) {
   globalThis.ResizeObserver = ResizeObserverStub;
+}
+
+if (!globalThis.IntersectionObserver) {
+  globalThis.IntersectionObserver = IntersectionObserverStub;
 }
 
 if (!Element.prototype.scrollIntoView) {

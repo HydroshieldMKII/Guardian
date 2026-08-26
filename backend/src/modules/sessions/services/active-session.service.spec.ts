@@ -25,6 +25,7 @@ describe('ActiveSessionService', () => {
       where: jest.fn(),
       andWhere: jest.fn(),
       orderBy: jest.fn(),
+      skip: jest.fn(),
       take: jest.fn(),
       update: jest.fn(),
       set: jest.fn(),
@@ -37,6 +38,7 @@ describe('ActiveSessionService', () => {
       'where',
       'andWhere',
       'orderBy',
+      'skip',
       'take',
       'update',
       'set',
@@ -523,11 +525,54 @@ describe('ActiveSessionService', () => {
     });
 
     it('includes running sessions when asked', async () => {
-      await service.getUserSessionHistory('u1', 10, true);
+      await service.getUserSessionHistory('u1', {
+        limit: 10,
+        includeActive: true,
+      });
 
       const builder = builders[0];
       expect(builder.andWhere).not.toHaveBeenCalled();
       expect(builder.take).toHaveBeenCalledWith(10);
+    });
+
+    it('pages from the requested offset', async () => {
+      await service.getUserSessionHistory('u1', { limit: 25, offset: 50 });
+
+      const builder = builders[0];
+      expect(builder.skip).toHaveBeenCalledWith(50);
+      expect(builder.take).toHaveBeenCalledWith(25);
+    });
+
+    it('starts at the first page by default', async () => {
+      await service.getUserSessionHistory('u1');
+      expect(builders[0].skip).toHaveBeenCalledWith(0);
+    });
+
+    it('narrows to terminated sessions when asked', async () => {
+      await service.getUserSessionHistory('u1', { terminatedOnly: true });
+
+      expect(builders[0].andWhere).toHaveBeenCalledWith(
+        'session.terminated = :terminated',
+        { terminated: true },
+      );
+    });
+
+    it('matches the search term against titles, addresses and devices', async () => {
+      await service.getUserSessionHistory('u1', { search: '  Ennemie ' });
+
+      expect(builders[0].andWhere).toHaveBeenCalledWith(
+        expect.stringContaining('LOWER(session.contentTitle) LIKE :term'),
+        { term: '%ennemie%' },
+      );
+    });
+
+    it('ignores a blank search term', async () => {
+      await service.getUserSessionHistory('u1', {
+        includeActive: true,
+        search: '   ',
+      });
+
+      expect(builders[0].andWhere).not.toHaveBeenCalled();
     });
 
     it('propagates a query failure', async () => {

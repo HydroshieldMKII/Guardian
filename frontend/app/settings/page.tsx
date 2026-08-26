@@ -4,37 +4,16 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { EmptyState, StatusPill } from "@/components/ui/entity";
+import { Modal, ModalFooter, ModalHeader } from "@/components/ui/modal";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Loader2,
-  Save,
-  X,
-  Settings as SettingsIcon,
-  Database,
-  Mail,
-  Server,
-  Palette,
-  Bell,
-  Wrench,
-  CheckCircle,
-  ArrowLeft,
-  AlertTriangle,
-} from "lucide-react";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useSettings } from "@/contexts/settings-context";
 import { useVersion } from "@/contexts/version-context";
@@ -44,7 +23,6 @@ import { apiClient } from "@/lib/api";
 import { PlexSettings } from "@/components/settings/PlexSettings";
 import { SMTPSettings } from "@/components/settings/SMTPSettings";
 import { AppriseSettings } from "@/components/settings/AppriseSettings";
-import { DatabaseManagement } from "@/components/settings/DatabaseManagement";
 import { GeneralSettings } from "@/components/settings/GeneralSettings";
 import { AdminTools } from "@/components/settings/AdminTools";
 import { SystemInfo } from "@/components/settings/SystemInfo";
@@ -168,7 +146,7 @@ export default function SettingsPage() {
         changedSettings.map((setting) => ({
           key: setting.key,
           value: setting.value,
-        }))
+        })),
       );
 
       toast({
@@ -312,7 +290,7 @@ export default function SettingsPage() {
         changedSettings.map((setting) => ({
           key: setting.key,
           value: setting.value,
-        }))
+        })),
       );
 
       toast({
@@ -335,27 +313,6 @@ export default function SettingsPage() {
     }
   };
 
-  const getTabIcon = (tabId: string) => {
-    switch (tabId) {
-      case "plex":
-        return Server;
-      case "smtp":
-        return Mail;
-      case "system":
-        return Database;
-      case "guardian":
-        return SettingsIcon;
-      case "customization":
-        return Palette;
-      case "notifications":
-        return Bell;
-      case "admin":
-        return Wrench;
-      default:
-        return SettingsIcon;
-    }
-  };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -366,14 +323,12 @@ export default function SettingsPage() {
 
   if (!settings || settings.length === 0) {
     return (
-      <Card className="mx-auto max-w-2xl gap-6 mt-20">
-        <CardHeader>
-          <CardTitle>Settings Unavailable</CardTitle>
-          <CardDescription>
-            Unable to load application settings. Please try refreshing the page.
-          </CardDescription>
-        </CardHeader>
-      </Card>
+      <div className="container mx-auto max-w-2xl px-4 py-20">
+        <EmptyState
+          title="Settings Unavailable"
+          description="Unable to load application settings. Please try refreshing the page."
+        />
+      </div>
     );
   }
 
@@ -416,105 +371,81 @@ export default function SettingsPage() {
     },
   ];
 
+  const activeTabMeta = tabs.find((tab) => tab.id === activeTab) ?? tabs[0];
+
   return (
-    <div className="container mx-auto py-6 px-4 max-w-6xl">
-      {/* Back Button */}
-      <div className="mb-6">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleBackClick}
-          className="text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Dashboard
-        </Button>
-      </div>
-
-      {/* Header Section */}
-      <div className="mb-8">
-        <div className="flex flex-col gap-4 mb-4">
-          <div className="space-y-2">
-            <div className="flex items-center gap-3">
-              <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
-              {versionInfo && (
-                <Badge variant="outline" className="text-xs font-medium">
-                  v{versionInfo.version}
-                </Badge>
-              )}
-            </div>
-            <p className="text-muted-foreground text-base">
-              Configure Guardian application settings and preferences
-            </p>
-          </div>
+    <div
+      className={`container mx-auto max-w-6xl px-4 py-6 ${
+        hasUnsavedChanges ? "pb-32" : ""
+      }`}
+    >
+      <header className="mb-8 space-y-2">
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+            Settings
+          </h1>
+          {versionInfo && (
+            <button
+              type="button"
+              onClick={() => setActiveTab("system")}
+              title="View system information"
+              className="cursor-pointer rounded-full transition-opacity hover:opacity-80"
+            >
+              <StatusPill tone="neutral">v{versionInfo.version}</StatusPill>
+            </button>
+          )}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleBackClick}
+            className="ml-auto shrink-0 text-muted-foreground hover:text-foreground"
+          >
+            Back to Dashboard
+          </Button>
         </div>
-
-        {/* Unsaved Changes Warning */}
-        {hasUnsavedChanges && (
-          <div className="bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800 rounded-lg p-4 flex flex-col sm:flex-row sm:items-center gap-3">
-            <div className="flex items-center gap-3 flex-1">
-              <div className="h-2 w-2 bg-orange-500 rounded-full animate-pulse shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-orange-800 dark:text-orange-200">
-                  You have unsaved changes
-                </p>
-                <p className="text-xs text-orange-600 dark:text-orange-300 mt-1">
-                  Don't forget to save your changes to apply them.
-                </p>
-              </div>
-            </div>
-            <div className="flex gap-2 shrink-0 ml-auto">
-              <Button
-                onClick={handleCancel}
-                disabled={isSaving}
-                size="sm"
-                variant="outline"
-                className="border-orange-300 text-orange-700 hover:bg-orange-50 dark:border-orange-700 dark:text-orange-300 dark:hover:bg-orange-900/20"
-              >
-                <X className="h-3 w-3 mr-1" />
-                Cancel
-              </Button>
-              <Button
-                onClick={handleSave}
-                disabled={isSaving}
-                size="sm"
-                className="bg-orange-600 hover:bg-orange-700 text-white"
-              >
-                {isSaving ? (
-                  <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                ) : (
-                  <Save className="h-3 w-3 mr-1" />
-                )}
-                Save Now
-              </Button>
-            </div>
-          </div>
-        )}
-      </div>
+        <p className="text-sm text-muted-foreground">
+          Configure Guardian application settings and preferences
+        </p>
+      </header>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-1 h-auto p-1 mb-4 justify-items-stretch">
-          {tabs.map((tab) => {
-            const IconComponent = getTabIcon(tab.id);
-            return (
-              <TabsTrigger
-                key={tab.id}
-                value={tab.id}
-                className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 text-xs sm:text-sm h-auto min-h-[2.5rem] justify-self-start w-full cursor-pointer"
-              >
-                <IconComponent className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
-                <span className="text-[10px] sm:text-sm leading-tight text-center">
-                  {tab.label}
-                </span>
-              </TabsTrigger>
-            );
-          })}
+        <Select value={activeTab} onValueChange={setActiveTab}>
+          <SelectTrigger
+            aria-label="Settings section"
+            className="w-full cursor-pointer sm:hidden"
+          >
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {tabs.map((tab) => (
+              <SelectItem key={tab.id} value={tab.id}>
+                {tab.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <TabsList className="hidden h-auto w-full gap-1 rounded-lg bg-muted/60 p-1 sm:inline-flex">
+          {tabs.map((tab) => (
+            <TabsTrigger
+              key={tab.id}
+              value={tab.id}
+              className="flex-1 cursor-pointer whitespace-nowrap rounded-md px-3 py-2 text-sm font-medium transition-colors duration-200"
+            >
+              {tab.label}
+            </TabsTrigger>
+          ))}
         </TabsList>
 
-        <div className="space-y-6 mt-6">
+        {activeTabMeta && (
+          <p className="mt-4 text-sm text-muted-foreground">
+            {activeTabMeta.description}
+          </p>
+        )}
+
+        <div className="mt-6">
           {tabs.map((tab) => (
             <TabsContent key={tab.id} value={tab.id} className="space-y-6">
-              {/* Render the appropriate component for each tab */}
               {tab.id === "plex" && (
                 <PlexSettings
                   settings={settings}
@@ -533,14 +464,11 @@ export default function SettingsPage() {
                 />
               )}
 
-              {tab.id === "database" && (
-                <DatabaseManagement onSettingsRefresh={refreshSettings} />
-              )}
-
               {tab.id === "system" && (
                 <SystemInfo
-                  onSettingsRefresh={refreshSettings}
-                  settings={settings || []}
+                  settings={settings}
+                  formData={formData}
+                  onFormDataChange={handleFormDataChange}
                 />
               )}
 
@@ -578,52 +506,69 @@ export default function SettingsPage() {
         </div>
       </Tabs>
 
-      {/* Unsaved Changes Warning Modal */}
-      <Dialog
+      {hasUnsavedChanges && (
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+          <div className="container mx-auto flex max-w-6xl flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3">
+              <span
+                aria-hidden
+                className="size-2 shrink-0 animate-pulse rounded-full bg-amber-500"
+              />
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-foreground">
+                  You have unsaved changes
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Save them to apply the new configuration.
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                onClick={handleCancel}
+                disabled={isSaving}
+                size="sm"
+                variant="outline"
+                className="flex-1 sm:flex-none"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSave}
+                disabled={isSaving}
+                size="sm"
+                className="flex-1 sm:flex-none"
+              >
+                {isSaving && <Loader2 className="size-4 animate-spin" />}
+                Save Now
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <Modal
         open={showUnsavedWarning}
         onOpenChange={(open) => !open && setShowUnsavedWarning(false)}
+        size="md"
       >
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-orange-500" />
-              Unsaved Changes
-            </DialogTitle>
-            <DialogDescription>
-              You have unsaved changes that will be lost if you leave this page.
-              What would you like to do?
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-            <Button
-              variant="outline"
-              onClick={handleCancelLeave}
-              className="order-1 sm:order-1"
-            >
-              Stay on Page
-            </Button>
-            <Button
-              onClick={handleSaveAndLeave}
-              disabled={isSaving}
-              className="order-2 sm:order-2"
-            >
-              {isSaving ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              ) : (
-                <Save className="h-4 w-4 mr-2" />
-              )}
-              Save & Leave
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleConfirmLeave}
-              className="order-3 sm:order-3"
-            >
-              Discard Changes
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        <ModalHeader
+          title="Unsaved Changes"
+          description="You have unsaved changes that will be lost if you leave this page. What would you like to do?"
+        />
+        <ModalFooter>
+          <Button variant="outline" onClick={handleCancelLeave}>
+            Stay on Page
+          </Button>
+          <Button variant="destructive" onClick={handleConfirmLeave}>
+            Discard Changes
+          </Button>
+          <Button onClick={handleSaveAndLeave} disabled={isSaving}>
+            {isSaving && <Loader2 className="size-4 animate-spin" />}
+            Save & Leave
+          </Button>
+        </ModalFooter>
+      </Modal>
     </div>
   );
 }

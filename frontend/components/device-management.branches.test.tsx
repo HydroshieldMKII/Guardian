@@ -206,11 +206,16 @@ jest.mock("@/components/device-management/ConfirmationModal", () => ({
     confirmAction,
     onConfirm,
   }: {
-    confirmAction: { action: string; description: string } | null;
+    confirmAction: {
+      action: string;
+      title: string;
+      description: string;
+    } | null;
     onConfirm: () => void;
   }) =>
     confirmAction ? (
       <div>
+        <span>{`titled:${confirmAction.title}`}</span>
         <span>{`described:${confirmAction.description}`}</span>
         <button onClick={() => onConfirm()}>do it</button>
       </div>
@@ -772,22 +777,36 @@ describe("device renaming", () => {
 
 describe("confirmation wording", () => {
   it.each([
-    ["approve u-1", "approve this device"],
-    ["reject u-1", "reject this device"],
-    ["delete u-1", "permanently delete this device record"],
-    ["switch u-1", "approve"],
+    ["approve u-1", "Approve Device", "able to stream"],
+    ["reject u-1", "Reject Device", "blocked from streaming"],
+    ["delete u-1", "Delete Device", "removed for good"],
+    ["switch u-1", "Approve Device", "able to stream"],
   ])(
-    "names an unnamed device by its identifier in the %s dialog",
-    async (button, phrase) => {
+    "titles the %s dialog and states the consequence",
+    async (button, title, phrase) => {
       const { user } = await renderPanel({
         devices: [device({ deviceName: undefined })],
       });
 
       await user.click(screen.getByRole("button", { name: button }));
 
-      const described = screen.getByText(/^described:/).textContent ?? "";
-      expect(described).toContain("device-1");
-      expect(described).toContain(phrase);
+      expect(screen.getByText(`titled:${title}`)).toBeInTheDocument();
+      expect(screen.getByText(/^described:/).textContent).toContain(phrase);
+    },
+  );
+
+  it.each(["approve u-1", "reject u-1", "delete u-1", "switch u-1"])(
+    "leaves the device out of the %s description, the dialog shows it",
+    async (button) => {
+      const { user } = await renderPanel({
+        devices: [device({ deviceName: undefined })],
+      });
+
+      await user.click(screen.getByRole("button", { name: button }));
+
+      expect(screen.getByText(/^described:/).textContent).not.toContain(
+        "device-1",
+      );
     },
   );
 
@@ -798,8 +817,9 @@ describe("confirmation wording", () => {
 
     await user.click(screen.getByRole("button", { name: "switch u-1" }));
 
+    expect(screen.getByText("titled:Reject Device")).toBeInTheDocument();
     expect(screen.getByText(/^described:/).textContent).toContain(
-      'reject "device-1"',
+      "blocked from streaming",
     );
   });
 });

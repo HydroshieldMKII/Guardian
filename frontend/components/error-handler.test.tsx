@@ -104,7 +104,11 @@ describe("ErrorHandler", () => {
 
   it("treats a missing status as unconfigured", () => {
     render(<ErrorHandler />);
-    expect(screen.getByText("Not configured")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        ERROR_DISPLAY_CONFIG[PlexErrorCode.NOT_CONFIGURED].title,
+      ),
+    ).toBeInTheDocument();
   });
 
   describe("mapping backend error codes", () => {
@@ -138,19 +142,48 @@ describe("ErrorHandler", () => {
       expect(
         screen.getByText("Oops! Something Went Wrong"),
       ).toBeInTheDocument();
-      expect(screen.getByText("who knows")).toBeInTheDocument();
+      expect(screen.getByText(/who knows/)).toBeInTheDocument();
     });
-  });
 
-  describe("the connection status panel", () => {
-    it("shows the raw connection status", () => {
+    it("folds the backend detail into the description", () => {
       render(
         <ErrorHandler
           plexStatus={status({ connectionStatus: "PLEX_SERVER_ERROR: 500" })}
         />,
       );
 
-      expect(screen.getByText("PLEX_SERVER_ERROR: 500")).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          `${ERROR_DISPLAY_CONFIG[PlexErrorCode.SERVER_ERROR].description} (500)`,
+        ),
+      ).toBeInTheDocument();
+    });
+
+    it("keeps the description alone when the code carries no detail", () => {
+      render(
+        <ErrorHandler
+          plexStatus={status({ connectionStatus: "PLEX_SERVER_ERROR:" })}
+        />,
+      );
+
+      expect(
+        screen.getByText(
+          ERROR_DISPLAY_CONFIG[PlexErrorCode.SERVER_ERROR].description,
+        ),
+      ).toBeInTheDocument();
+    });
+  });
+
+  describe("the error card body", () => {
+    it("repeats no status banner beneath the description", () => {
+      render(
+        <ErrorHandler
+          plexStatus={status({ connectionStatus: "PLEX_SERVER_ERROR: 500" })}
+        />,
+      );
+
+      expect(screen.queryByText("Connection Status")).toBeNull();
+      expect(screen.queryByText("PLEX_SERVER_ERROR: 500")).toBeNull();
     });
 
     it("renders without any decorative icons", () => {

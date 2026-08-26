@@ -92,8 +92,8 @@ export const StreamCard: React.FC<StreamCardProps> = ({
   return (
     <EntityCard
       key={stream.sessionKey || index}
-      tone="info"
-      className={overArt ? "border-transparent text-white" : ""}
+      rail={false}
+      className={overArt ? "bg-clip-padding text-white" : ""}
       style={
         overArt
           ? {
@@ -111,7 +111,7 @@ export const StreamCard: React.FC<StreamCardProps> = ({
         />
       )}
 
-      <div className="relative z-10 space-y-5 p-4 pl-5 sm:space-y-6 sm:p-6 sm:pl-7">
+      <div className="relative z-10 space-y-5 p-4 sm:space-y-6 sm:p-6">
         <div className="flex gap-4">
           {thumbnailUrl && (
             <div className="hidden shrink-0 sm:block">
@@ -153,7 +153,6 @@ export const StreamCard: React.FC<StreamCardProps> = ({
               status={
                 <StatusPill
                   tone="info"
-                  dot
                   className={
                     overArt ? "border-white/25 bg-white/10 text-white" : ""
                   }
@@ -178,7 +177,7 @@ export const StreamCard: React.FC<StreamCardProps> = ({
             }
             disabled={!canSeeUser}
             title="See User"
-            className={`flex-1 sm:flex-none ${secondary}`}
+            className={`h-10 flex-1 rounded-md sm:h-8 sm:flex-none ${secondary}`}
           >
             See User
           </Button>
@@ -195,7 +194,7 @@ export const StreamCard: React.FC<StreamCardProps> = ({
             }
             disabled={!canSeeDevice}
             title="See Device"
-            className={`flex-1 sm:flex-none ${secondary}`}
+            className={`h-10 flex-1 rounded-md sm:h-8 sm:flex-none ${secondary}`}
           >
             See Device
           </Button>
@@ -203,7 +202,7 @@ export const StreamCard: React.FC<StreamCardProps> = ({
             variant="outline"
             size="sm"
             onClick={onToggleExpand}
-            className={`flex-1 sm:flex-none ${secondary}`}
+            className={`h-10 flex-1 rounded-md sm:h-8 sm:flex-none ${secondary}`}
           >
             {isExpanded ? "Hide Details" : "View Details"}
           </Button>
@@ -214,7 +213,7 @@ export const StreamCard: React.FC<StreamCardProps> = ({
               onClick={() => canRevoke && onRemoveAccess()}
               disabled={!canRevoke}
               title={isRevoking ? "Removing access..." : "Remove access"}
-              className={`flex-1 border-rose-500/40 text-rose-600 hover:bg-rose-500/10 dark:text-rose-400 sm:ml-auto sm:flex-none ${
+              className={`h-10 flex-1 rounded-md border-rose-500/40 text-rose-600 hover:bg-rose-500/10 dark:text-rose-400 sm:ml-auto sm:h-8 sm:flex-none ${
                 overArt
                   ? "border-rose-300/40 text-rose-200 hover:bg-rose-500/25"
                   : ""

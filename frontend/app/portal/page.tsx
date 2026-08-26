@@ -16,6 +16,7 @@ import {
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import { Field, StatusPill } from "@/components/ui/entity";
 import {
   Dialog,
   DialogContent,
@@ -999,9 +1000,13 @@ export default function UserPortalPage() {
               </p>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Note (optional)</label>
+            <Field
+              label="Note"
+              htmlFor="request-note"
+              action={<StatusPill tone="neutral">Optional</StatusPill>}
+            >
               <Textarea
+                id="request-note"
                 placeholder="e.g., This is my living room TV..."
                 value={requestDescription}
                 onChange={(e) => setRequestDescription(e.target.value)}
@@ -1011,7 +1016,7 @@ export default function UserPortalPage() {
               <p className="text-xs text-muted-foreground text-right">
                 {requestDescription.length}/500
               </p>
-            </div>
+            </Field>
           </div>
 
           <DialogFooter>

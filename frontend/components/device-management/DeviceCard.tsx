@@ -1,14 +1,30 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { RefreshCw } from "lucide-react";
 import {
-  ActionBar,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Ban,
+  Check,
+  ChevronDown,
+  Info,
+  RefreshCw,
+  ShieldOff,
+  Trash2,
+  type LucideIcon,
+} from "lucide-react";
+import {
   EntityCard,
   EntityHeader,
   Meta,
   MetaGrid,
   PillRow,
   StatusPill,
+  toneMenuItem,
   type Tone,
 } from "@/components/ui/entity";
 import { UserDevice } from "@/types";
@@ -46,6 +62,13 @@ const STATUS_LABEL: Record<string, string> = {
   rejected: "Rejected",
   pending: "Pending",
 };
+
+interface DeviceAction {
+  label: string;
+  icon: LucideIcon;
+  tone: Tone;
+  onSelect: () => void;
+}
 
 export const DeviceCard: React.FC<DeviceCardProps> = ({
   device,
@@ -110,64 +133,74 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
 
   const spinner = <RefreshCw className="size-4 animate-spin" />;
 
-  const action = (
-    label: string,
-    onClick: () => void,
-    variant: "primary" | "danger" | "quiet" | "outline",
-  ) => (
-    <Button
-      variant={variant === "primary" ? "default" : "outline"}
-      size="sm"
-      onClick={onClick}
-      disabled={busy}
-      className={
-        variant === "primary"
-          ? "flex-1 bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-500 sm:flex-none"
-          : variant === "danger"
-            ? "flex-1 border-rose-500/40 text-rose-600 hover:bg-rose-500/10 dark:text-rose-400 sm:flex-none"
-            : "flex-1 sm:flex-none"
-      }
+  const decisions: DeviceAction[] = plexAmp
+    ? []
+    : device.status === "pending"
+      ? [
+          {
+            label: "Approve",
+            icon: Check,
+            tone: "positive",
+            onSelect: () => onApprove(device),
+          },
+          {
+            label: "Reject",
+            icon: Ban,
+            tone: "danger",
+            onSelect: () => onReject(device),
+          },
+        ]
+      : device.status === "rejected"
+        ? [
+            {
+              label: "Approve",
+              icon: Check,
+              tone: "positive",
+              onSelect: () => onToggleApproval(device),
+            },
+          ]
+        : [
+            {
+              label: "Reject",
+              icon: Ban,
+              tone: "danger",
+              onSelect: () => onToggleApproval(device),
+            },
+          ];
+
+  const actions: DeviceAction[] = [
+    ...decisions,
+    {
+      label: "View Details",
+      icon: Info,
+      tone: "neutral",
+      onSelect: () => onShowDetails(device),
+    },
+  ];
+
+  if (temporary && !plexAmp && device.status !== "approved") {
+    actions.push({
+      label: "Revoke Temp Access",
+      icon: ShieldOff,
+      tone: "warning",
+      onSelect: () => onRevokeTempAccess(device.id),
+    });
+  }
+
+  const menuItem = ({
+    label,
+    icon: Icon,
+    tone: itemTone,
+    onSelect,
+  }: DeviceAction) => (
+    <DropdownMenuItem
+      key={label}
+      onSelect={onSelect}
+      className={toneMenuItem(itemTone)}
     >
-      {busy ? spinner : label}
-    </Button>
-  );
-
-  const detailsButton = action(
-    "View Details",
-    () => onShowDetails(device),
-    "outline",
-  );
-  const deleteButton = action("Delete", () => onDelete(device), "danger");
-  const revokeButton = temporary
-    ? action("Revoke Temp Access", () => onRevokeTempAccess(device.id), "quiet")
-    : null;
-
-  const actions = plexAmp ? (
-    <>
-      {deleteButton}
-      {detailsButton}
-    </>
-  ) : device.status === "pending" ? (
-    <>
-      {action("Approve", () => onApprove(device), "primary")}
-      {action("Reject", () => onReject(device), "danger")}
-      {detailsButton}
-      {deleteButton}
-      {revokeButton}
-    </>
-  ) : device.status === "rejected" ? (
-    <>
-      {action("Approve", () => onToggleApproval(device), "primary")}
-      {deleteButton}
-      {detailsButton}
-      {revokeButton}
-    </>
-  ) : (
-    <>
-      {action("Reject", () => onToggleApproval(device), "danger")}
-      {deleteButton}
-      {detailsButton}
-    </>
+      <Icon />
+      {label}
+    </DropdownMenuItem>
   );
 
   return (
@@ -179,13 +212,9 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
       <div className="space-y-5 p-4 pl-5 sm:space-y-6 sm:p-6 sm:pl-7">
         <EntityHeader
           title={device.deviceName || "Unknown"}
-          subtitle={
-            [device.deviceProduct, device.devicePlatform]
-              .filter(Boolean)
-              .join(" · ") || undefined
-          }
+          subtitle={`Last seen ${new Date(device.lastSeen).toLocaleDateString()}`}
           status={
-            <StatusPill tone={tone} dot>
+            <StatusPill tone={tone}>
               {plexAmp
                 ? "Plex Amp"
                 : (STATUS_LABEL[device.status] ?? device.status)}
@@ -212,17 +241,6 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
           </PillRow>
         )}
 
-        <MetaGrid>
-          <Meta label="Platform">{device.devicePlatform || "Unknown"}</Meta>
-          <Meta label="IP Address">
-            <ClickableIP ipAddress={device.ipAddress} />
-          </Meta>
-          <Meta label="Streams">{device.sessionCount ?? 0}</Meta>
-          <Meta label="Last Seen">
-            {new Date(device.lastSeen).toLocaleDateString()}
-          </Meta>
-        </MetaGrid>
-
         {showsNote && (
           <div className="rounded-lg border border-amber-500/25 bg-amber-500/10 p-3 sm:p-4">
             <div className="flex items-start justify-between gap-3">
@@ -246,8 +264,40 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
             </div>
           </div>
         )}
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between lg:gap-6">
+          <MetaGrid className="min-w-0 flex-1">
+            <Meta label="Product">{device.deviceProduct || "Unknown"}</Meta>
+            <Meta label="Platform">{device.devicePlatform || "Unknown"}</Meta>
+            <Meta label="IP Address">
+              <ClickableIP ipAddress={device.ipAddress} />
+            </Meta>
+            <Meta label="Streams">{device.sessionCount ?? 0}</Meta>
+          </MetaGrid>
 
-        <ActionBar>{actions}</ActionBar>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={busy}
+                className="h-10 w-full rounded-md lg:h-8 lg:w-auto"
+              >
+                Actions
+                {busy ? spinner : <ChevronDown />}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-52">
+              {actions.map(menuItem)}
+              <DropdownMenuSeparator />
+              {menuItem({
+                label: "Delete",
+                icon: Trash2,
+                tone: "danger",
+                onSelect: () => onDelete(device),
+              })}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
     </EntityCard>
   );

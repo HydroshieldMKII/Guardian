@@ -69,12 +69,33 @@ beforeEach(() => jest.clearAllMocks());
 
 describe("GeneralSettings sections", () => {
   it.each([
-    ["guardian", "Guardian Configuration"],
-    ["customization", "Customization"],
-    ["notifications", "Notification Settings"],
-  ])("titles the %s section", (sectionId, title) => {
+    [
+      "guardian",
+      [
+        "Access Control",
+        "Monitoring & Maintenance",
+        "User Portal",
+        "Login Security",
+      ],
+    ],
+    ["customization", ["Interface", "User-Facing Messages"]],
+    ["notifications", ["In-App Notifications"]],
+  ])("groups the %s settings into cards", (sectionId, titles) => {
     renderPanel(sectionId);
-    expect(screen.getByText(title)).toBeInTheDocument();
+    for (const title of titles) {
+      expect(screen.getByText(title)).toBeInTheDocument();
+    }
+  });
+
+  it("drops a card whose settings are all missing", () => {
+    renderPanel("guardian", {
+      settings: guardianSettings.filter(
+        (s) => !s.key.startsWith("CLOUDFLARE_"),
+      ),
+    });
+
+    expect(screen.queryByText("Login Security")).toBeNull();
+    expect(screen.getByText("Access Control")).toBeInTheDocument();
   });
 
   it("renders nothing for an unknown section", () => {
@@ -190,6 +211,15 @@ describe("GeneralSettings inputs", () => {
       expect(
         screen.getByRole("button", { name: "Streams" }).className,
       ).toContain("bg-background");
+    });
+
+    it("sits on the same row as its label", () => {
+      renderPanel("customization");
+
+      const label = screen.getByText("Default dashboard page");
+      const control = screen.getByRole("button", { name: "Devices" });
+
+      expect(label.parentElement).toContainElement(control);
     });
   });
 
@@ -372,7 +402,7 @@ describe("GeneralSettings user portal group", () => {
     });
 
     expect(container.querySelector("#USER_PORTAL_ENABLED")).toBeNull();
-    expect(screen.getByText("Guardian Configuration")).toBeInTheDocument();
+    expect(screen.getByText("Access Control")).toBeInTheDocument();
   });
 
   it("stringifies a numeric timezone value", () => {
