@@ -10,7 +10,7 @@
 
 ![Guardian Banner](https://github.com/user-attachments/assets/ff8b9bbc-f5d4-451a-bdc1-cb2354023c8b)
 
-Guardian is a security and management platform for Plex Media Server. It monitors streaming activity, enforces granular access controls, and ensures only authorized devices can reach your library.
+Guardian is a management platform for Plex Media Server. It monitors streaming activity, enforces granular access controls, and ensures only authorized devices can reach your library.
 
 > [!WARNING]
 > **Looking for a maintainer.** Interested? Reach out on [Discord](https://discord.gg/xTKuHyhdS4) or in [Discussions](https://github.com/HydroshieldMKII/Guardian/discussions).
