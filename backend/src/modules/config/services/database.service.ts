@@ -1,11 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { AppSettings } from '../../../entities/app-settings.entity';
-import { UserDevice } from '../../../entities/user-device.entity';
-import { UserPreference } from '../../../entities/user-preference.entity';
-import { SessionHistory } from '../../../entities/session-history.entity';
-import { Notification } from '../../../entities/notification.entity';
+import { AppSettings } from '@/entities/app-settings.entity';
+import { UserDevice } from '@/entities/user-device.entity';
+import { UserPreference } from '@/entities/user-preference.entity';
+import { SessionHistory } from '@/entities/session-history.entity';
+import { Notification } from '@/entities/notification.entity';
 
 export interface ExportData {
   exportedAt: string;
@@ -21,6 +21,22 @@ export interface ImportResult {
   imported: number;
   skipped: number;
 }
+
+interface ImportedSetting {
+  key: string;
+  value: string;
+}
+
+export interface ImportPayload {
+  data?: {
+    settings?: ImportedSetting[];
+    userDevices?: Partial<UserDevice>[];
+    userPreferences?: Partial<UserPreference>[];
+  };
+}
+
+const describeError = (error: unknown): string =>
+  error instanceof Error ? error.message : String(error);
 
 @Injectable()
 export class DatabaseService {
@@ -63,14 +79,14 @@ export class DatabaseService {
   }
 
   async importDatabase(
-    importData: any,
+    importData: ImportPayload | null | undefined,
     currentAppVersion: string,
     compareVersions: (v1: string, v2: string) => number,
   ): Promise<ImportResult> {
     try {
       this.logger.log('Starting database import...');
 
-      if (!importData || !importData.data) {
+      if (!importData?.data) {
         throw new Error('Invalid import data format');
       }
 
@@ -118,12 +134,12 @@ export class DatabaseService {
       return { imported, skipped };
     } catch (error) {
       this.logger.error('Error importing database:', error);
-      throw new Error(`Failed to import database: ${error.message}`);
+      throw new Error(`Failed to import database: ${describeError(error)}`);
     }
   }
 
   private async importSettings(
-    settings: any[],
+    settings: ImportedSetting[],
     currentAppVersion: string,
     compareVersions: (v1: string, v2: string) => number,
   ): Promise<ImportResult> {
@@ -161,6 +177,7 @@ export class DatabaseService {
           imported++;
         } else {
           this.logger.warn(`Skipping unknown setting ${setting.key}`);
+          skipped++;
         }
       } catch (error) {
         this.logger.warn(`Failed to import setting ${setting.key}:`, error);
@@ -171,7 +188,9 @@ export class DatabaseService {
     return { imported, skipped };
   }
 
-  private async importUserDevices(devices: any[]): Promise<ImportResult> {
+  private async importUserDevices(
+    devices: Partial<UserDevice>[],
+  ): Promise<ImportResult> {
     let imported = 0;
     let skipped = 0;
 
@@ -219,7 +238,7 @@ export class DatabaseService {
   }
 
   private async importUserPreferences(
-    preferences: any[],
+    preferences: Partial<UserPreference>[],
   ): Promise<ImportResult> {
     let imported = 0;
     let skipped = 0;
@@ -245,7 +264,7 @@ export class DatabaseService {
           this.logger.debug(`Created new preference for user: ${pref.userId}`);
         } else {
           // Update existing preference
-          existing.defaultBlock = pref.defaultBlock;
+          existing.defaultBlock = pref.defaultBlock ?? null;
           existing.username = pref.username || existing.username;
           await prefRepo.save(existing);
           imported++;
@@ -304,7 +323,7 @@ export class DatabaseService {
       );
     } catch (error) {
       this.logger.error('Failed to reset database:', error);
-      throw new Error(`Database reset failed: ${error.message}`);
+      throw new Error(`Database reset failed: ${describeError(error)}`);
     }
   }
 
@@ -327,7 +346,7 @@ export class DatabaseService {
       );
     } catch (error) {
       this.logger.error('Failed to reset stream counts:', error);
-      throw new Error(`Stream count reset failed: ${error.message}`);
+      throw new Error(`Stream count reset failed: ${describeError(error)}`);
     }
   }
 
@@ -359,7 +378,7 @@ export class DatabaseService {
       );
     } catch (error) {
       this.logger.error('Failed to delete all devices:', error);
-      throw new Error(`Device deletion failed: ${error.message}`);
+      throw new Error(`Device deletion failed: ${describeError(error)}`);
     }
   }
 
@@ -385,7 +404,9 @@ export class DatabaseService {
       );
     } catch (error) {
       this.logger.error('Failed to clear session history:', error);
-      throw new Error(`Session history clearing failed: ${error.message}`);
+      throw new Error(
+        `Session history clearing failed: ${describeError(error)}`,
+      );
     }
   }
 }

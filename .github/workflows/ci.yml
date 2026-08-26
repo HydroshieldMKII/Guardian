@@ -1,0 +1,176 @@
+name: CI
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+      image: ${{ steps.filter.outputs.image }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - id: filter
+        uses: dorny/paths-filter@v4
+        with:
+          filters: |
+            workflow: &workflow
+              - '.github/workflows/ci.yml'
+            backend: &backend
+              - *workflow
+              - 'backend/**'
+            frontend: &frontend
+              - *workflow
+              - 'frontend/**'
+            image:
+              - *backend
+              - *frontend
+              - 'Dockerfile'
+              - '.dockerignore'
+              - 'docker-entrypoint.sh'
+
+  backend:
+    needs: changes
+    if: needs.changes.outputs.backend == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - run: npm ci
+
+      - run: npm run lint:ci
+
+      - run: npm run typecheck
+
+      - run: npm run test:cov
+
+      - run: npm run build
+
+      - if: always()
+        uses: codecov/codecov-action@v7
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          working-directory: backend
+          files: coverage/lcov.info
+          flags: backend
+          name: backend
+          disable_search: true
+          fail_ci_if_error: false
+
+      - if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: backend-coverage
+          path: backend/coverage
+          retention-days: 7
+
+  frontend:
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - run: npm ci
+
+      - run: npm run typecheck
+
+      - run: npm run test:cov
+
+      - run: npm run build
+
+      - if: always()
+        uses: codecov/codecov-action@v7
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          working-directory: frontend
+          files: coverage/lcov.info
+          flags: frontend
+          name: frontend
+          disable_search: true
+          fail_ci_if_error: false
+
+      - if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: frontend-coverage
+          path: frontend/coverage
+          retention-days: 7
+
+  image:
+    needs: changes
+    if: needs.changes.outputs.image == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: docker/setup-buildx-action@v4
+
+      - uses: docker/build-push-action@v7
+        with:
+          context: .
+          push: false
+          load: true
+          tags: guardian:${{ github.sha }}
+          cache-from: type=gha,scope=guardian-build
+          cache-to: type=gha,scope=guardian-build,mode=max
+
+      - run: |
+          docker run --rm -d --name guardian-smoke -p 3000:3000 \
+            guardian:${{ github.sha }}
+          for attempt in $(seq 1 45); do
+            if curl -fsS http://127.0.0.1:3000 >/dev/null 2>&1 \
+              && curl -fsS http://127.0.0.1:3000/api/pg/health >/dev/null 2>&1; then
+              echo "web ui responded"
+              docker exec guardian-smoke wget -qO- http://127.0.0.1:3001/health
+              echo "api reachable through the web proxy"
+              docker rm -f guardian-smoke
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "guardian did not become healthy in time" >&2
+          docker logs guardian-smoke
+          docker rm -f guardian-smoke
+          exit 1
+
+  ci:
+    if: always()
+    needs: [changes, backend, frontend, image]
+    runs-on: ubuntu-latest
+    steps:
+      - if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: exit 1

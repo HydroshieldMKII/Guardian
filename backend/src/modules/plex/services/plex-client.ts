@@ -1,19 +1,37 @@
 import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import * as http from 'http';
 import * as https from 'https';
-import { ConfigService } from '../../config/services/config.service';
+import { ConfigService } from '@/modules/config/services/config.service';
 import {
   PlexErrorCode,
   PlexResponse,
   createPlexError,
   createPlexSuccess,
-} from '../../../types/plex-errors';
+} from '@/types/plex-errors';
 
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { SessionHistory } from '../../../entities/session-history.entity';
+import { SessionHistory } from '@/entities/session-history.entity';
 
-import { UserDevice } from '../../../entities/user-device.entity';
+import { UserDevice } from '@/entities/user-device.entity';
+import { PlexSessionsResponse } from '@/types/plex.types';
+
+export interface PlexHttpResponse<T = unknown> {
+  ok: boolean;
+  status: number;
+  json: () => T;
+  text: () => string;
+}
+
+export class PlexHttpError extends Error {
+  constructor(
+    message: string,
+    readonly statusCode?: number,
+  ) {
+    super(message);
+    this.name = 'PlexHttpError';
+  }
+}
 
 @Injectable()
 export class PlexClient {
@@ -38,11 +56,11 @@ export class PlexClient {
     ]);
 
     return {
-      ip: ip as string,
-      port: port as string,
-      token: token as string,
-      useSSL: useSSL as boolean,
-      ignoreCertErrors: ignoreCertErrors as boolean,
+      ip: ip ?? '',
+      port: port ?? '',
+      token: token ?? '',
+      useSSL: useSSL ?? false,
+      ignoreCertErrors: ignoreCertErrors ?? false,
     };
   }
 
@@ -63,13 +81,13 @@ export class PlexClient {
       body?: string;
       headers?: Record<string, string>;
     } = {},
-  ): Promise<any> {
+  ): Promise<PlexHttpResponse> {
     await this.validateConfiguration();
     const { ip, port, token, useSSL, ignoreCertErrors } =
       await this.getConfig();
     const baseUrl = `${useSSL ? 'https' : 'http'}://${ip}:${port}`;
 
-    return new Promise((resolve, reject) => {
+    return new Promise<PlexHttpResponse>((resolve, reject) => {
       const cleanEndpoint = endpoint.startsWith('/')
         ? endpoint.slice(1)
         : endpoint;
@@ -109,7 +127,7 @@ export class PlexClient {
         res.on('end', () => {
           if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
             try {
-              const jsonData = data ? JSON.parse(data) : {};
+              const jsonData: unknown = data ? JSON.parse(data) : {};
               resolve({
                 ok: true,
                 status: res.statusCode,
@@ -234,7 +252,9 @@ export class PlexClient {
   async getServerIdentity(): Promise<string | null> {
     try {
       const response = await this.request('/');
-      const data = await response.json();
+      const data = response.json() as {
+        MediaContainer?: { machineIdentifier?: string };
+      };
       return data?.MediaContainer?.machineIdentifier || null;
     } catch (error) {
       this.logger.error('Error getting server identity:', error);
@@ -242,9 +262,9 @@ export class PlexClient {
     }
   }
 
-  async getSessions(): Promise<any> {
+  async getSessions(): Promise<PlexSessionsResponse> {
     const response = await this.request('status/sessions');
-    return response.json();
+    return response.json() as PlexSessionsResponse;
   }
 
   private async externalRequest(
@@ -254,8 +274,8 @@ export class PlexClient {
       body?: string;
       headers?: Record<string, string>;
     } = {},
-  ): Promise<any> {
-    return new Promise((resolve, reject) => {
+  ): Promise<PlexHttpResponse> {
+    return new Promise<PlexHttpResponse>((resolve, reject) => {
       const urlObj = new URL(url);
 
       const requestOptions = {
@@ -280,7 +300,7 @@ export class PlexClient {
         res.on('end', () => {
           if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
             try {
-              const jsonData = data ? JSON.parse(data) : {};
+              const jsonData: unknown = data ? JSON.parse(data) : {};
               resolve({
                 ok: true,
                 status: res.statusCode,
@@ -296,11 +316,12 @@ export class PlexClient {
               });
             }
           } else {
-            const error = new Error(
-              `HTTP ${res.statusCode}: ${res.statusMessage} - ${data}`,
+            reject(
+              new PlexHttpError(
+                `HTTP ${res.statusCode}: ${res.statusMessage} - ${data}`,
+                res.statusCode,
+              ),
             );
-            (error as any).statusCode = res.statusCode;
-            reject(error);
           }
         });
       });
@@ -323,7 +344,7 @@ export class PlexClient {
     });
   }
 
-  async getPlexUsers(): Promise<any> {
+  async getPlexUsers(): Promise<string> {
     try {
       const { token } = await this.getConfig();
 
@@ -386,7 +407,8 @@ export class PlexClient {
           `HTTP ${response.status}`,
         );
       }
-    } catch (error) {
+    } catch (caught) {
+      const error = caught as NodeJS.ErrnoException;
       this.logger.error('Connection test failed:', error);
 
       // Handle specific SSL/TLS errors
@@ -398,7 +420,7 @@ export class PlexClient {
         );
       }
 
-      if (error.code && error.code.startsWith('ERR_TLS_')) {
+      if (error.code?.startsWith('ERR_TLS_')) {
         return createPlexError(
           PlexErrorCode.SSL_ERROR,
           'SSL/TLS connection error',
@@ -419,7 +441,7 @@ export class PlexClient {
       if (
         error.code === 'ECONNRESET' ||
         error.code === 'ETIMEDOUT' ||
-        error.message.includes('timeout') ||
+        error.message?.includes('timeout') ||
         error.message === 'Request timeout'
       ) {
         return createPlexError(
@@ -431,8 +453,8 @@ export class PlexClient {
 
       // Handle authentication errors
       if (
-        error.message.includes('401') ||
-        error.message.includes('Unauthorized')
+        error.message?.includes('401') ||
+        error.message?.includes('Unauthorized')
       ) {
         return createPlexError(
           PlexErrorCode.AUTH_FAILED,

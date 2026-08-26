@@ -1,8 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { PlexSessionsResponse } from '../types/plex.types';
-import { ActiveSessionService } from '../modules/sessions/services/active-session.service';
-import { DeviceTrackingService } from '../modules/devices/services/device-tracking.service';
-import { SessionTerminationService } from '../modules/plex/services/session-termination.service';
+import { PlexSessionsResponse } from '@/types/plex.types';
+import { ActiveSessionService } from '@/modules/sessions/services/active-session.service';
+import { DeviceTrackingService } from '@/modules/devices/services/device-tracking.service';
+import { SessionTerminationService } from '@/modules/plex/services/session-termination.service';
 
 /**
  * Session Orchestrator Service

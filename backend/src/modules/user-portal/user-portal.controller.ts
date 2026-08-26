@@ -10,8 +10,8 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import type { Request } from 'express';
-import { UserPortalService } from './services/user-portal.service';
-import { AuthGuard } from '../auth/guards/auth.guard';
+import { UserPortalService } from '@/modules/user-portal/services/user-portal.service';
+import { AuthGuard } from '@/modules/auth/guards/auth.guard';
 
 /**
  * User Portal Controller
@@ -96,9 +96,8 @@ export class UserPortalController {
 
     // For admin sessions, they must have a linked Plex account
     if (user.userType === 'admin') {
-      const adminUser = user as any;
-      if (adminUser.plexUserId) {
-        return adminUser.plexUserId;
+      if (user.plexUserId) {
+        return user.plexUserId;
       }
       throw new ForbiddenException(
         'Admin account not linked to Plex. Link your Plex account in profile settings to view your devices.',

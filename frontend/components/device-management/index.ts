@@ -10,7 +10,6 @@ export { ConcurrentStreamModal } from "./ConcurrentStreamModal";
 export {
   ClickableIP,
   UserAvatar,
-  getDeviceIcon,
   DeviceStatus,
   getUserPreferenceBadge,
 } from "./SharedComponents";

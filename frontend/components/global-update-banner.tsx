@@ -1,29 +1,15 @@
 "use client";
 
-import { Download, NotepadText, RefreshCw, X } from "lucide-react";
+import { Download, NotepadText, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useCallback } from "react";
 import { useVersion } from "@/contexts/version-context";
 import { ReleaseNotesModal } from "@/components/ui/release-notes-modal";
 
 export function GlobalUpdateBanner() {
-  const { updateInfo, checkForUpdatesManually, clearUpdateInfo } = useVersion();
+  const { updateInfo, clearUpdateInfo } = useVersion();
   const [dismissed, setDismissed] = useState(false);
-  const [checking, setChecking] = useState(false);
   const [showReleaseNotes, setShowReleaseNotes] = useState(false);
-
-  const handleCheckAgain = useCallback(async () => {
-    if (checking) return; // Prevent multiple simultaneous checks
-
-    setChecking(true);
-    try {
-      await checkForUpdatesManually();
-    } catch (error) {
-      console.error("Error checking for updates:", error);
-    } finally {
-      setChecking(false);
-    }
-  }, [checking, checkForUpdatesManually]);
 
   const handleDismiss = useCallback(() => {
     setDismissed(true);
@@ -55,20 +41,6 @@ export function GlobalUpdateBanner() {
             </div>
 
             <div className="flex items-center gap-2 sm:ml-4 self-start sm:self-center">
-              {/* <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleCheckAgain}
-                disabled={checking}
-                className="text-white bg-blue-700 hover:bg-blue-700 text-xs px-2 py-1 h-auto"
-              >
-                {checking ? (
-                  <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
-                ) : (
-                  <RefreshCw className="h-3 w-3 mr-1" />
-                )}
-                Check Again
-              </Button> */}
               <Button
                 size="sm"
                 onClick={() => setShowReleaseNotes(true)}

@@ -12,18 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import {
-  Clock,
-  Monitor,
-  MapPin,
-  Calendar,
-  Play,
-  Eye,
-  X,
-  RefreshCw,
-  Radio,
-  Trash2,
-} from "lucide-react";
+import { Monitor, RefreshCw, Radio, Trash2 } from "lucide-react";
 import { config } from "@/lib/config";
 import { ClickableIP } from "./SharedComponents";
 import { ConfirmationModal } from "@/components/ui/confirmation-modal";
@@ -98,14 +87,14 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
       }
       try {
         const response = await fetch(
-          `${config.api.baseUrl}/sessions/history/${userId}?limit=100&includeActive=true`
+          `${config.api.baseUrl}/sessions/history/${userId}?limit=100&includeActive=true`,
         );
         if (response.ok) {
           const data = await response.json();
           // Sort by most recent first (startedAt descending)
           const sortedData = (data || []).sort(
             (a: SessionHistoryEntry, b: SessionHistoryEntry) =>
-              new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime()
+              new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime(),
           );
           setSessions(sortedData);
         } else {
@@ -121,7 +110,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
         }
       }
     },
-    [userId]
+    [userId],
   );
 
   // Initial fetch when modal opens
@@ -240,11 +229,9 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
       !loading &&
       sessionsListRef.current
     ) {
-      console.log("Scrolling to session ID:", scrollToSessionId);
-
       // Check if session exists in data first
       const sessionExistsInData = sessions.some(
-        (s) => s.id === scrollToSessionId
+        (s) => s.id === scrollToSessionId,
       );
       if (!sessionExistsInData) {
         return; // Session doesn't exist, nothing to scroll to
@@ -253,11 +240,9 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
       // Function to scroll to and highlight the session
       const scrollToSession = () => {
         const sessionElement = sessionsListRef.current?.querySelector(
-          `[data-session-id="${scrollToSessionId}"]`
+          `[data-session-id="${scrollToSessionId}"]`,
         );
         if (sessionElement) {
-          console.log("Found session element, scrolling and highlighting");
-
           // Scroll to element
           sessionElement.scrollIntoView({
             behavior: "smooth",
@@ -270,13 +255,13 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
             sessionElement.classList.add(
               "border-2",
               "border-blue-400",
-              "shadow-lg"
+              "shadow-lg",
             );
             setTimeout(() => {
               sessionElement.classList.remove(
                 "border-2",
                 "border-blue-400",
-                "shadow-lg"
+                "shadow-lg",
               );
             }, 2000);
           });
@@ -350,7 +335,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
       // Use router navigation when no prop available (global context)
       // Navigate to dashboard with both userId and deviceIdentifier as query parameters
       router.push(
-        `/?userId=${encodeURIComponent(userId)}&deviceId=${encodeURIComponent(session.userDevice.deviceIdentifier)}`
+        `/?userId=${encodeURIComponent(userId)}&deviceId=${encodeURIComponent(session.userDevice.deviceIdentifier)}`,
       );
     }
   };
@@ -368,7 +353,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
         `${config.api.baseUrl}/sessions/history/${sessionToDelete.id}`,
         {
           method: "DELETE",
-        }
+        },
       );
 
       if (response.ok) {
@@ -410,7 +395,6 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
       >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Clock className="w-5 h-5" />
             Streaming History
           </DialogTitle>
           <DialogDescription>
@@ -471,7 +455,6 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
               </div>
             ) : filteredSessions.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-32 text-muted-foreground text-center">
-                <Clock className="w-8 h-8 mb-2" />
                 <p className="text-center">
                   {searchTerm || showTerminatedOnly
                     ? "No sessions found matching your filters"
@@ -676,7 +659,6 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
                         ) : (
                           session.terminated && (
                             <div className="flex items-center gap-1 ml-2 flex-shrink-0">
-                              <X className="w-3 h-3 text-red-500" />
                               <span className="text-xs text-red-700 font-medium">
                                 Terminated
                               </span>
@@ -771,7 +753,6 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
                           className="h-8 px-3 text-xs"
                           title="Scroll to Device"
                         >
-                          <Monitor className="w-3 h-3 mr-1" />
                           Find Device
                         </Button>
                         {/* Only show delete button for completed sessions */}
@@ -783,7 +764,6 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
                             className="h-8 px-3 text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
                             title="Delete Session"
                           >
-                            <Trash2 className="w-3 h-3 mr-1" />
                             Delete
                           </Button>
                         )}

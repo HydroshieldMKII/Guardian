@@ -1,9 +1,9 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { SessionHistory } from '../../../entities/session-history.entity';
-import { UserDevice } from '../../../entities/user-device.entity';
-import { ActiveSessionService } from './active-session.service';
-import { DeviceTrackingModule } from '../../devices/services/device-tracking.module';
+import { SessionHistory } from '@/entities/session-history.entity';
+import { UserDevice } from '@/entities/user-device.entity';
+import { ActiveSessionService } from '@/modules/sessions/services/active-session.service';
+import { DeviceTrackingModule } from '@/modules/devices/services/device-tracking.module';
 
 @Module({
   imports: [

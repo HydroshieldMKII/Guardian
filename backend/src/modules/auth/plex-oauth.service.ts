@@ -1,22 +1,22 @@
-import {
-  Injectable,
-  Logger,
-  BadRequestException,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as crypto from 'crypto';
 import * as https from 'https';
-import { AdminUser } from '../../entities/admin-user.entity';
-import { UserPreference } from '../../entities/user-preference.entity';
+import { AdminUser } from '@/entities/admin-user.entity';
+import { UserPreference } from '@/entities/user-preference.entity';
 
 // Plex OAuth configuration
-const PLEX_OAUTH_URL = 'https://plex.tv/api/v2';
 const PLEX_AUTH_URL = 'https://app.plex.tv/auth';
 const PLEX_CLIENT_IDENTIFIER = 'Guardian-Plex-Manager';
 const PLEX_PRODUCT = 'Guardian';
 const PLEX_VERSION = '1.0.0';
+const PLEX_REQUEST_TIMEOUT_MS = 10000;
+
+interface PlexHttpResponse {
+  statusCode: number;
+  body: string;
+}
 
 export interface PlexAuthPin {
   id: number;
@@ -66,76 +66,44 @@ export class PlexOAuthService {
   async createPlexPin(
     clientId: string,
   ): Promise<{ pin: PlexAuthPin; authUrl: string }> {
-    return new Promise((resolve, reject) => {
-      const postData = new URLSearchParams({
-        strong: 'true',
-        'X-Plex-Product': PLEX_PRODUCT,
-        'X-Plex-Client-Identifier': clientId,
-        'X-Plex-Version': PLEX_VERSION,
-        'X-Plex-Platform': 'Web',
-        'X-Plex-Device': 'Browser',
-      }).toString();
+    const postData = new URLSearchParams({
+      strong: 'true',
+      'X-Plex-Product': PLEX_PRODUCT,
+      'X-Plex-Client-Identifier': clientId,
+      'X-Plex-Version': PLEX_VERSION,
+      'X-Plex-Platform': 'Web',
+      'X-Plex-Device': 'Browser',
+    }).toString();
 
-      const options = {
-        hostname: 'plex.tv',
-        port: 443,
-        path: '/api/v2/pins',
-        method: 'POST',
-        headers: {
-          Accept: 'application/json',
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'Content-Length': Buffer.byteLength(postData),
-        },
-      };
-
-      const req = https.request(options, (res) => {
-        let data = '';
-        res.on('data', (chunk) => (data += chunk));
-        res.on('end', () => {
-          try {
-            if (res.statusCode !== 201 && res.statusCode !== 200) {
-              this.logger.error(`Plex API error: ${res.statusCode} - ${data}`);
-              return reject(new Error('Failed to create Plex PIN'));
-            }
-
-            const response = JSON.parse(data);
-            const pin: PlexAuthPin = {
-              id: response.id,
-              code: response.code,
-              clientIdentifier: clientId,
-              expiresAt: new Date(response.expiresAt),
-            };
-
-            // Store the pending pin
-            this.pendingPins.set(clientId, {
-              pin,
-              createdAt: Date.now(),
-            });
-
-            // Generate the auth URL
-            const authUrl = `${PLEX_AUTH_URL}#?clientID=${encodeURIComponent(clientId)}&code=${encodeURIComponent(pin.code)}&context%5Bdevice%5D%5Bproduct%5D=${encodeURIComponent(PLEX_PRODUCT)}`;
-
-            resolve({ pin, authUrl });
-          } catch (error) {
-            this.logger.error('Failed to parse Plex PIN response:', error);
-            reject(new Error('Failed to parse Plex response'));
-          }
-        });
-      });
-
-      req.on('error', (error) => {
-        this.logger.error('Plex PIN request error:', error);
-        reject(new Error('Failed to connect to Plex'));
-      });
-
-      req.setTimeout(10000, () => {
-        req.destroy();
-        reject(new Error('Plex request timeout'));
-      });
-
-      req.write(postData);
-      req.end();
+    const { statusCode, body } = await this.plexRequest({
+      method: 'POST',
+      path: '/api/v2/pins',
+      clientId,
+      body: postData,
     });
+
+    if (statusCode !== 201 && statusCode !== 200) {
+      this.logger.error(`Plex API error: ${statusCode} - ${body}`);
+      throw new Error('Failed to create Plex PIN');
+    }
+
+    const pin = this.parsePlexResponse(
+      body,
+      'Failed to parse Plex PIN response:',
+      'Failed to parse Plex response',
+      (response: { id: number; code: string; expiresAt: string }) => ({
+        id: response.id,
+        code: response.code,
+        clientIdentifier: clientId,
+        expiresAt: new Date(response.expiresAt),
+      }),
+    );
+
+    this.pendingPins.set(clientId, { pin, createdAt: Date.now() });
+
+    const authUrl = `${PLEX_AUTH_URL}#?clientID=${encodeURIComponent(clientId)}&code=${encodeURIComponent(pin.code)}&context%5Bdevice%5D%5Bproduct%5D=${encodeURIComponent(PLEX_PRODUCT)}`;
+
+    return { pin, authUrl };
   }
 
   /**
@@ -149,74 +117,49 @@ export class PlexOAuthService {
 
     const { pin } = pending;
 
-    // Check if PIN has expired
     if (new Date() > pin.expiresAt) {
       this.pendingPins.delete(clientId);
       throw new BadRequestException('Authentication PIN has expired');
     }
 
-    return new Promise((resolve, reject) => {
-      const options = {
-        hostname: 'plex.tv',
-        port: 443,
-        path: `/api/v2/pins/${pin.id}`,
+    let response: PlexHttpResponse;
+    try {
+      response = await this.plexRequest({
         method: 'GET',
-        headers: {
-          Accept: 'application/json',
-          'X-Plex-Client-Identifier': clientId,
-        },
-      };
-
-      const req = https.request(options, (res) => {
-        let data = '';
-        res.on('data', (chunk) => (data += chunk));
-        res.on('end', () => {
-          try {
-            if (res.statusCode !== 200) {
-              this.logger.error(`Plex PIN check error: ${res.statusCode}`);
-              return resolve(null);
-            }
-
-            const response = JSON.parse(data);
-
-            // If authToken is null, user hasn't authenticated yet
-            if (!response.authToken) {
-              return resolve(null);
-            }
-
-            // User authenticated! Get their info
-            this.getPlexUserInfo(response.authToken, clientId)
-              .then((user) => {
-                // Clean up the pending pin
-                this.pendingPins.delete(clientId);
-                resolve(user);
-              })
-              .catch((error) => {
-                this.logger.error('Failed to get Plex user info:', error);
-                reject(error);
-              });
-          } catch (error) {
-            this.logger.error(
-              'Failed to parse Plex PIN check response:',
-              error,
-            );
-            resolve(null);
-          }
-        });
+        path: `/api/v2/pins/${pin.id}`,
+        clientId,
       });
+    } catch (error) {
+      this.logger.error('Plex PIN check request error:', error);
+      return null;
+    }
 
-      req.on('error', (error) => {
-        this.logger.error('Plex PIN check request error:', error);
-        resolve(null);
-      });
+    if (response.statusCode !== 200) {
+      this.logger.error(`Plex PIN check error: ${response.statusCode}`);
+      return null;
+    }
 
-      req.setTimeout(10000, () => {
-        req.destroy();
-        resolve(null);
-      });
+    let authToken: string | undefined;
+    try {
+      authToken = (JSON.parse(response.body) as { authToken?: string })
+        .authToken;
+    } catch (error) {
+      this.logger.error('Failed to parse Plex PIN check response:', error);
+      return null;
+    }
 
-      req.end();
-    });
+    if (!authToken) {
+      return null;
+    }
+
+    try {
+      const user = await this.getPlexUserInfo(authToken, clientId);
+      this.pendingPins.delete(clientId);
+      return user;
+    } catch (error) {
+      this.logger.error('Failed to get Plex user info:', error);
+      throw error instanceof Error ? error : new Error(String(error));
+    }
   }
 
   /**
@@ -235,56 +178,99 @@ export class PlexOAuthService {
     authToken: string,
     clientId: string,
   ): Promise<PlexUser> {
+    const { statusCode, body } = await this.plexRequest({
+      method: 'GET',
+      path: '/api/v2/user',
+      clientId,
+      authToken,
+    });
+
+    if (statusCode !== 200) {
+      this.logger.error(`Plex user info error: ${statusCode}`);
+      throw new Error('Failed to get Plex user info');
+    }
+
+    return this.parsePlexResponse(
+      body,
+      'Failed to parse Plex user info:',
+      'Failed to parse Plex user info',
+      (response: Omit<PlexUser, 'authToken'>) => ({
+        id: response.id,
+        uuid: response.uuid,
+        username: response.username,
+        email: response.email,
+        thumb: response.thumb,
+        authToken,
+      }),
+    );
+  }
+
+  private parsePlexResponse<TRaw, TResult>(
+    body: string,
+    logMessage: string,
+    errorMessage: string,
+    map: (raw: TRaw) => TResult,
+  ): TResult {
+    try {
+      return map(JSON.parse(body) as TRaw);
+    } catch (error) {
+      this.logger.error(logMessage, error);
+      throw new Error(errorMessage);
+    }
+  }
+
+  private plexRequest(options: {
+    method: 'GET' | 'POST';
+    path: string;
+    clientId: string;
+    authToken?: string;
+    body?: string;
+  }): Promise<PlexHttpResponse> {
     return new Promise((resolve, reject) => {
-      const options = {
-        hostname: 'plex.tv',
-        port: 443,
-        path: '/api/v2/user',
-        method: 'GET',
-        headers: {
-          Accept: 'application/json',
-          'X-Plex-Token': authToken,
-          'X-Plex-Client-Identifier': clientId,
-        },
+      const headers: Record<string, string | number> = {
+        Accept: 'application/json',
+        'X-Plex-Client-Identifier': options.clientId,
       };
 
-      const req = https.request(options, (res) => {
-        let data = '';
-        res.on('data', (chunk) => (data += chunk));
-        res.on('end', () => {
-          try {
-            if (res.statusCode !== 200) {
-              this.logger.error(`Plex user info error: ${res.statusCode}`);
-              return reject(new Error('Failed to get Plex user info'));
-            }
+      if (options.authToken) {
+        headers['X-Plex-Token'] = options.authToken;
+      }
 
-            const response = JSON.parse(data);
-            const user: PlexUser = {
-              id: response.id,
-              uuid: response.uuid,
-              username: response.username,
-              email: response.email,
-              thumb: response.thumb,
-              authToken: authToken,
-            };
+      if (options.body !== undefined) {
+        headers['Content-Type'] = 'application/x-www-form-urlencoded';
+        headers['Content-Length'] = Buffer.byteLength(options.body);
+      }
 
-            resolve(user);
-          } catch (error) {
-            this.logger.error('Failed to parse Plex user info:', error);
-            reject(new Error('Failed to parse Plex user info'));
-          }
-        });
-      });
+      const req = https.request(
+        {
+          hostname: 'plex.tv',
+          port: 443,
+          path: options.path,
+          method: options.method,
+          headers,
+        },
+        (res) => {
+          let data = '';
+          res.on('data', (chunk) => (data += chunk));
+          res.on('end', () =>
+            resolve({ statusCode: res.statusCode ?? 0, body: data }),
+          );
+        },
+      );
 
       req.on('error', (error) => {
-        this.logger.error('Plex user info request error:', error);
+        this.logger.error('Plex request error:', error);
         reject(new Error('Failed to connect to Plex'));
       });
 
-      req.setTimeout(10000, () => {
+      req.setTimeout(PLEX_REQUEST_TIMEOUT_MS, () => {
         req.destroy();
         reject(new Error('Plex request timeout'));
       });
+
+      if (options.body !== undefined) {
+        req.write(options.body);
+      }
 
       req.end();
     });
@@ -295,7 +281,7 @@ export class PlexOAuthService {
    */
   async isPlexUserOnServer(
     plexUserId: string,
-    serverToken: string,
+    _serverToken: string,
   ): Promise<boolean> {
     // The UserPreference entity stores Plex user IDs synced from the server
     const userPreference = await this.userPreferenceRepository.findOne({
@@ -324,17 +310,6 @@ export class PlexOAuthService {
       .createQueryBuilder('admin')
       .where('admin.plexUserId IS NOT NULL')
       .getOne();
-  }
-
-  /**
-   * Check if a Plex account is linked to an admin
-   */
-  async isPlexAccountLinkedToAdmin(
-    plexUserId: string,
-  ): Promise<AdminUser | null> {
-    return this.adminUserRepository.findOne({
-      where: { plexUserId: plexUserId },
-    });
   }
 
   /**
@@ -386,10 +361,10 @@ export class PlexOAuthService {
       .createQueryBuilder()
       .update(AdminUser)
       .set({
-        plexUserId: null as any,
-        plexUsername: null as any,
-        plexEmail: null as any,
-        plexThumb: null as any,
+        plexUserId: null,
+        plexUsername: null,
+        plexEmail: null,
+        plexThumb: null,
       })
       .where('id = :id', { id: adminId })
       .execute();
@@ -406,12 +381,7 @@ export class PlexOAuthService {
    * Check if any admin has Plex OAuth enabled (has linked account)
    */
   async hasPlexOAuthEnabled(): Promise<boolean> {
-    const adminWithPlex = await this.adminUserRepository
-      .createQueryBuilder('admin')
-      .where('admin.plexUserId IS NOT NULL')
-      .getOne();
-
-    return adminWithPlex !== null;
+    return (await this.getAdminWithPlexLinked()) !== null;
   }
 
   /**

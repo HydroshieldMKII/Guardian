@@ -269,7 +269,7 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `guardian-database-export-${new Date().toISOString().split("T")[0]}.json`;
+      a.download = `guardian-settings-export-${new Date().toISOString().split("T")[0]}.json`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -277,14 +277,14 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
 
       toast({
         title: "Export successful",
-        description: "Database has been exported successfully",
+        description: "Settings have been exported successfully",
         variant: "success",
       });
     } catch (error) {
       console.error("Export error:", error);
       toast({
         title: "Export failed",
-        description: "Failed to export database",
+        description: "Failed to export settings",
         variant: "destructive",
       });
     } finally {
@@ -344,13 +344,12 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
 
       toast({
         title: "Import successful",
-        description:
-          "Applying new settings...",
+        description: "Applying new settings...",
         variant: "success",
       });
 
       onSettingsRefresh?.();
-      
+
       // Set flag for post-reload toast
       setTimeout(() => {
         localStorage.setItem("guardianResetSuccess", "true");
@@ -361,7 +360,7 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
       toast({
         title: "Import failed",
         description:
-          error instanceof Error ? error.message : "Failed to import database",
+          error instanceof Error ? error.message : "Failed to import settings",
         variant: "destructive",
       });
     } finally {
@@ -444,14 +443,14 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
 
           {/* Database Management Section */}
           <div className="border-t pt-4 mt-6">
-            <h3 className="text-lg font-medium mb-4">Database Management</h3>
+            <h3 className="text-lg font-medium mb-4">Settings Management</h3>
 
             <Card className="p-4 my-4">
               <div className="space-y-4">
                 <div>
-                  <h4 className="text-sm font-medium">Export Database</h4>
+                  <h4 className="text-sm font-medium">Export Settings</h4>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Download a partial backup of your Guardian database including
+                    Download a partial backup of your Guardian data including
                     settings, users preferences and users policies.
                   </p>
                 </div>
@@ -464,7 +463,7 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
                   {exportingDatabase ? (
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                   ) : null}
-                  {exportingDatabase ? "Exporting..." : "Export Database"}
+                  {exportingDatabase ? "Exporting..." : "Export Settings"}
                 </Button>
               </div>
             </Card>
@@ -472,9 +471,9 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
             <Card className="p-4 my-4">
               <div className="space-y-4">
                 <div>
-                  <h4 className="text-sm font-medium">Import Database</h4>
+                  <h4 className="text-sm font-medium">Import Settings</h4>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Restore Guardian database from a previously exported backup
+                    Restore Guardian settings from a previously exported backup
                     file.
                   </p>
                 </div>
@@ -498,7 +497,7 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
                         {importingDatabase ? (
                           <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                         ) : null}
-                        {importingDatabase ? "Importing..." : "Import Database"}
+                        {importingDatabase ? "Importing..." : "Import Settings"}
                       </span>
                     </Button>
                   </label>

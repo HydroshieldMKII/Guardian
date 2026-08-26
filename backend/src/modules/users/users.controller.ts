@@ -7,10 +7,10 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
-import { UsersService } from './services/users.service';
-import { ConcurrentStreamService } from './services/concurrent-stream.service';
-import { UserPreference } from '../../entities/user-preference.entity';
-import { AdminOnly } from '../auth/decorators/admin-only.decorator';
+import { UsersService } from '@/modules/users/services/users.service';
+import { ConcurrentStreamService } from '@/modules/users/services/concurrent-stream.service';
+import { UserPreference } from '@/entities/user-preference.entity';
+import { AdminOnly } from '@/modules/auth/decorators/admin-only.decorator';
 
 interface UpdateUserPreferenceDto {
   defaultBlock: boolean | null;
@@ -35,7 +35,7 @@ export class UsersController {
   ) {}
 
   @Get()
-  async getAllUsers(): Promise<any[]> {
+  async getAllUsers(): Promise<UserPreference[]> {
     return await this.usersService.getAllUsers();
   }
 
@@ -156,7 +156,7 @@ export class UsersController {
       limit: preference?.concurrentStreamLimit ?? null,
       effectiveLimit,
       isUnlimited: effectiveLimit === 0,
-      isOverridden: preference?.concurrentStreamLimit !== null,
+      isOverridden: preference?.concurrentStreamLimit != null,
     };
   }
 }

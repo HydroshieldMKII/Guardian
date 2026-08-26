@@ -1,6 +1,7 @@
 import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { spawn } from 'child_process';
-import { ConfigService } from './config.service';
+import { ConfigService } from '@/modules/config/services/config.service';
+import { errorMessage } from '@/common/utils/error-types';
 
 export interface AppriseConfig {
   enabled: boolean;
@@ -54,7 +55,7 @@ export class AppriseService {
       this.logger.error('Error sending Apprise notification:', error);
       return {
         success: false,
-        message: `Apprise notification error: ${error.message}`,
+        message: `Apprise notification error: ${errorMessage(error)}`,
       };
     }
   }
@@ -196,7 +197,6 @@ export class AppriseService {
 
     // Handle case where Apprise is disabled
     if (appriseEnabled !== true) {
-      console.log(appriseEnabled);
       this.logger.warn('Apprise is disabled');
       return { success: false, message: 'Apprise is disabled' };
     }
@@ -240,7 +240,7 @@ export class AppriseService {
     }
 
     const config: AppriseConfig = {
-      enabled: appriseEnabled === 'true',
+      enabled: appriseEnabled,
       urls: validUrls,
     };
 
@@ -287,7 +287,7 @@ export class AppriseService {
     } catch (error) {
       return {
         success: false,
-        message: `Test notification error: ${error.message}`,
+        message: `Test notification error: ${errorMessage(error)}`,
       };
     }
   }
@@ -319,12 +319,12 @@ export class AppriseService {
       let stdout = '';
       let stderr = '';
 
-      appriseProcess.stdout?.on('data', (data) => {
-        stdout += data.toString();
+      appriseProcess.stdout?.on('data', (chunk: Buffer | string) => {
+        stdout += chunk.toString();
       });
 
-      appriseProcess.stderr?.on('data', (data) => {
-        stderr += data.toString();
+      appriseProcess.stderr?.on('data', (chunk: Buffer | string) => {
+        stderr += chunk.toString();
       });
 
       appriseProcess.on('close', (code) => {
@@ -381,7 +381,7 @@ export class AppriseService {
         this.logger.error('Apprise process error:', error);
         resolve({
           success: false,
-          message: `Failed to spawn apprise process: ${error.message}`,
+          message: `Failed to spawn apprise process: ${errorMessage(error)}`,
         });
       });
 

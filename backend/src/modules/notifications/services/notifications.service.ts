@@ -1,12 +1,13 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Notification } from '../../../entities/notification.entity';
-import { SessionHistory } from '../../../entities/session-history.entity';
-import { UserDevice } from '../../../entities/user-device.entity';
-import { ConfigService } from '../../config/services/config.service';
-import { AppriseService } from '../../config/services/apprise.service';
-import { EmailService } from '../../config/services/email.service';
+import { Notification } from '@/entities/notification.entity';
+import { SessionHistory } from '@/entities/session-history.entity';
+import { UserDevice } from '@/entities/user-device.entity';
+import { ConfigService } from '@/modules/config/services/config.service';
+import { AppriseService } from '@/modules/config/services/apprise.service';
+import { EmailService } from '@/modules/config/services/email.service';
+import { LiveEventsService } from '@/modules/events/live-events.service';
 import { Logger } from '@nestjs/common';
 
 export interface CreateNotificationDto {
@@ -20,12 +21,12 @@ export interface NotificationResponseDto {
   id: number;
   userId: string;
   username: string;
-  deviceName?: string;
+  deviceName?: string | null;
   text: string;
   type: string;
   read: boolean;
   createdAt: Date;
-  sessionHistoryId?: number;
+  sessionHistoryId?: number | null;
 }
 
 @Injectable()
@@ -43,12 +44,28 @@ export class NotificationsService {
     private configService: ConfigService,
     private appriseService: AppriseService,
     private emailService: EmailService,
+    private liveEvents: LiveEventsService,
   ) {}
+
+  private async publishNotifications(): Promise<void> {
+    if (!this.liveEvents.hasListeners()) {
+      return;
+    }
+
+    try {
+      this.liveEvents.broadcastNotifications(await this.getAllNotifications());
+    } catch (error) {
+      this.logger.error('Failed to broadcast notification update:', error);
+    }
+  }
 
   /**
    * Truncates a device name if it exceeds the maximum length
    */
-  private truncateDeviceName(name: string): string {
+  private truncateDeviceName(name: string | null | undefined): string {
+    if (!name) {
+      return 'Unknown Device';
+    }
     if (name.length > this.maxDeviceNameLength) {
       return name.substring(0, this.maxDeviceNameLength) + '...';
     }
@@ -66,7 +83,9 @@ export class NotificationsService {
       read: false,
     });
 
-    return await this.notificationRepository.save(notification);
+    const saved = await this.notificationRepository.save(notification);
+    await this.publishNotifications();
+    return saved;
   }
 
   async createNewDeviceNotification(
@@ -361,10 +380,11 @@ export class NotificationsService {
   async createDeviceNoteNotification(
     userId: string,
     username: string,
-    deviceName: string,
+    deviceName: string | null,
     note: string,
   ): Promise<Notification | null> {
-    const truncatedDeviceName = this.truncateDeviceName(deviceName);
+    const resolvedDeviceName = deviceName ?? 'Unknown Device';
+    const truncatedDeviceName = this.truncateDeviceName(resolvedDeviceName);
     const truncatedNote =
       note.length > 100 ? note.substring(0, 100) + '...' : note;
     const text = `${username} left a note on ${truncatedDeviceName}: "${truncatedNote}"`;
@@ -394,7 +414,11 @@ export class NotificationsService {
       ]);
 
       if (smtpEnabled && smtpNotifyOnDeviceNote) {
-        await this.emailService.sendDeviceNoteEmail(username, deviceName, note);
+        await this.emailService.sendDeviceNoteEmail(
+          username,
+          resolvedDeviceName,
+          note,
+        );
       } else {
         this.logger.log('SMTP email notification for device note is disabled.');
       }
@@ -412,7 +436,7 @@ export class NotificationsService {
       if (appriseEnabled && appriseNotifyOnDeviceNote) {
         await this.appriseService.sendDeviceNoteNotification(
           username,
-          deviceName,
+          resolvedDeviceName,
           note,
         );
       } else {
@@ -501,7 +525,9 @@ export class NotificationsService {
     }
 
     notification.read = true;
-    return await this.notificationRepository.save(notification);
+    const saved = await this.notificationRepository.save(notification);
+    await this.publishNotifications();
+    return saved;
   }
 
   async deleteNotification(notificationId: number): Promise<void> {
@@ -512,6 +538,8 @@ export class NotificationsService {
         `Notification with ID ${notificationId} not found`,
       );
     }
+
+    await this.publishNotifications();
   }
 
   async getUnreadCountForUser(userId: string): Promise<number> {
@@ -522,10 +550,12 @@ export class NotificationsService {
 
   async markAllAsRead(): Promise<void> {
     await this.notificationRepository.update({ read: false }, { read: true });
+    await this.publishNotifications();
   }
 
   async clearAll(): Promise<void> {
     await this.notificationRepository.clear();
+    await this.publishNotifications();
   }
 
   async linkNotificationToSessionHistory(sessionKey: string): Promise<void> {
@@ -574,6 +604,7 @@ export class NotificationsService {
           this.logger.log(
             `Linked notification ${notification.id} to session history ${sessionHistory.id} for session key ${sessionKey}`,
           );
+          await this.publishNotifications();
           break; // Only link the first matching notification
         }
       }

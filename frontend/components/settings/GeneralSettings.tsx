@@ -8,6 +8,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { SecretInput } from "@/components/settings/SecretInput";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -121,7 +122,7 @@ export function GeneralSettings({
             "USER_PORTAL_ENABLED",
             "USER_PORTAL_SHOW_RULES",
             "USER_PORTAL_ALLOW_REJECTED_REQUESTS",
-          ].includes(setting.key)
+          ].includes(setting.key),
         );
         break;
       case "customization":
@@ -131,7 +132,7 @@ export function GeneralSettings({
               "DEFAULT_PAGE",
               "ENABLE_MEDIA_THUMBNAILS",
               "ENABLE_MEDIA_ARTWORK",
-            ].includes(setting.key) || setting.key.startsWith("MSG_")
+            ].includes(setting.key) || setting.key.startsWith("MSG_"),
         );
         break;
       case "notifications":
@@ -143,7 +144,7 @@ export function GeneralSettings({
             "IN_APP_NOTIFY_ON_BLOCK",
             "IN_APP_NOTIFY_ON_LOCATION_CHANGE",
             "IN_APP_NOTIFY_ON_DEVICE_NOTE",
-          ].includes(setting.key)
+          ].includes(setting.key),
         );
         break;
       default:
@@ -153,7 +154,7 @@ export function GeneralSettings({
     // Sort the filtered settings according to the defined order
     return filteredSettings.sort(
       (a, b) =>
-        getSettingOrder(section, a.key) - getSettingOrder(section, b.key)
+        getSettingOrder(section, a.key) - getSettingOrder(section, b.key),
     );
   };
 
@@ -189,10 +190,10 @@ export function GeneralSettings({
 
   const renderDeviceCleanupGroup = (settings: AppSetting[]) => {
     const cleanupEnabledSetting = settings.find(
-      (s) => s.key === "DEVICE_CLEANUP_ENABLED"
+      (s) => s.key === "DEVICE_CLEANUP_ENABLED",
     );
     const cleanupIntervalSetting = settings.find(
-      (s) => s.key === "DEVICE_CLEANUP_INTERVAL_DAYS"
+      (s) => s.key === "DEVICE_CLEANUP_INTERVAL_DAYS",
     );
 
     if (!cleanupEnabledSetting || !cleanupIntervalSetting) return null;
@@ -269,10 +270,10 @@ export function GeneralSettings({
 
   const renderConcurrentStreamGroup = (settings: AppSetting[]) => {
     const concurrentLimitSetting = settings.find(
-      (s) => s.key === "CONCURRENT_STREAM_LIMIT"
+      (s) => s.key === "CONCURRENT_STREAM_LIMIT",
     );
     const includeTempAccessSetting = settings.find(
-      (s) => s.key === "CONCURRENT_LIMIT_INCLUDE_TEMP_ACCESS"
+      (s) => s.key === "CONCURRENT_LIMIT_INCLUDE_TEMP_ACCESS",
     );
 
     if (!concurrentLimitSetting) return null;
@@ -362,22 +363,22 @@ export function GeneralSettings({
 
   const renderNotificationGroup = (settings: AppSetting[]) => {
     const inAppEnabledSetting = settings.find(
-      (s) => s.key === "IN_APP_ENABLED"
+      (s) => s.key === "IN_APP_ENABLED",
     );
     const notifyOnNewDeviceSetting = settings.find(
-      (s) => s.key === "IN_APP_NOTIFY_ON_NEW_DEVICE"
+      (s) => s.key === "IN_APP_NOTIFY_ON_NEW_DEVICE",
     );
     const notifyOnBlockSetting = settings.find(
-      (s) => s.key === "IN_APP_NOTIFY_ON_BLOCK"
+      (s) => s.key === "IN_APP_NOTIFY_ON_BLOCK",
     );
     const notifyOnLocationChangeSetting = settings.find(
-      (s) => s.key === "IN_APP_NOTIFY_ON_LOCATION_CHANGE"
+      (s) => s.key === "IN_APP_NOTIFY_ON_LOCATION_CHANGE",
     );
     const notifyOnDeviceNoteSetting = settings.find(
-      (s) => s.key === "IN_APP_NOTIFY_ON_DEVICE_NOTE"
+      (s) => s.key === "IN_APP_NOTIFY_ON_DEVICE_NOTE",
     );
     const autoMarkReadSetting = settings.find(
-      (s) => s.key === "AUTO_MARK_NOTIFICATION_READ"
+      (s) => s.key === "AUTO_MARK_NOTIFICATION_READ",
     );
 
     if (
@@ -469,13 +470,13 @@ export function GeneralSettings({
 
   const renderUserPortalGroup = (settings: AppSetting[]) => {
     const portalEnabledSetting = settings.find(
-      (s) => s.key === "USER_PORTAL_ENABLED"
+      (s) => s.key === "USER_PORTAL_ENABLED",
     );
     const showRulesSetting = settings.find(
-      (s) => s.key === "USER_PORTAL_SHOW_RULES"
+      (s) => s.key === "USER_PORTAL_SHOW_RULES",
     );
     const allowRejectedSetting = settings.find(
-      (s) => s.key === "USER_PORTAL_ALLOW_REJECTED_REQUESTS"
+      (s) => s.key === "USER_PORTAL_ALLOW_REJECTED_REQUESTS",
     );
 
     if (!portalEnabledSetting && !showRulesSetting && !allowRejectedSetting)
@@ -725,19 +726,16 @@ export function GeneralSettings({
               </a>
             </p>
           )}
-          <Input
-            id={setting.key}
+          <SecretInput
+            setting={setting}
+            value={typeof value === "string" ? value : String(value)}
+            placeholder={`Enter ${label.toLowerCase()}`}
             type={
               setting.key === "CLOUDFLARE_TURNSTILE_SECRET_KEY"
                 ? "password"
                 : "text"
             }
-            value={typeof value === "string" ? value : String(value)}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-              handleInputChange(setting.key, e.target.value)
-            }
-            placeholder={`Enter ${label.toLowerCase()}`}
-            className="cursor-pointer font-mono"
+            onChange={(next) => handleInputChange(setting.key, next)}
           />
         </div>
       );

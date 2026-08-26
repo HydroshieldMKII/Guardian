@@ -7,11 +7,11 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { UserDevice } from '../../../entities/user-device.entity';
-import { UserTimeRule } from '../../../entities/user-time-rule.entity';
-import { UserPreference } from '../../../entities/user-preference.entity';
-import { AppSettings } from '../../../entities/app-settings.entity';
-import { NotificationsService } from '../../notifications/services/notifications.service';
+import { UserDevice } from '@/entities/user-device.entity';
+import { UserTimeRule } from '@/entities/user-time-rule.entity';
+import { UserPreference } from '@/entities/user-preference.entity';
+import { AppSettings } from '@/entities/app-settings.entity';
+import { NotificationsService } from '@/modules/notifications/services/notifications.service';
 
 export interface UserPortalDevice {
   id: number;
@@ -22,12 +22,12 @@ export interface UserPortalDevice {
   status: 'pending' | 'approved' | 'rejected';
   firstSeen: Date;
   lastSeen: Date;
-  requestDescription?: string;
-  requestSubmittedAt?: Date;
-  requestNoteReadAt?: Date;
+  requestDescription?: string | null;
+  requestSubmittedAt?: Date | null;
+  requestNoteReadAt?: Date | null;
   hasTemporaryAccess: boolean;
-  temporaryAccessUntil?: Date;
-  temporaryAccessBypassPolicies?: boolean;
+  temporaryAccessUntil?: Date | null;
+  temporaryAccessBypassPolicies?: boolean | null;
   excludeFromConcurrentLimit: boolean;
   // Device-specific rules
   rules?: {
@@ -117,7 +117,7 @@ export class UserPortalService {
     );
 
     // Get device-specific time rules if showRules is enabled
-    let deviceTimeRulesMap = new Map<string, UserPortalTimeRule[]>();
+    const deviceTimeRulesMap = new Map<string, UserPortalTimeRule[]>();
     if (showRules) {
       const deviceTimeRules = await this.userTimeRuleRepository.find({
         where: {
@@ -150,6 +150,9 @@ export class UserPortalService {
       // Plexamp devices are always effectively approved (they bypass all checks)
       const isPlexamp = device.deviceProduct?.toLowerCase().includes('plexamp');
       const effectiveStatus = isPlexamp ? 'approved' : device.status;
+      const hasTemporaryAccess = Boolean(
+        device.temporaryAccessUntil && device.temporaryAccessUntil > now,
+      );
 
       return {
         id: device.id,
@@ -163,16 +166,13 @@ export class UserPortalService {
         requestDescription: device.requestDescription || undefined,
         requestSubmittedAt: device.requestSubmittedAt || undefined,
         requestNoteReadAt: device.requestNoteReadAt || undefined,
-        hasTemporaryAccess:
-          device.temporaryAccessUntil && device.temporaryAccessUntil > now,
-        temporaryAccessUntil:
-          device.temporaryAccessUntil && device.temporaryAccessUntil > now
-            ? device.temporaryAccessUntil
-            : undefined,
-        temporaryAccessBypassPolicies:
-          device.temporaryAccessUntil && device.temporaryAccessUntil > now
-            ? device.temporaryAccessBypassPolicies
-            : undefined,
+        hasTemporaryAccess,
+        temporaryAccessUntil: hasTemporaryAccess
+          ? device.temporaryAccessUntil
+          : undefined,
+        temporaryAccessBypassPolicies: hasTemporaryAccess
+          ? device.temporaryAccessBypassPolicies
+          : undefined,
         excludeFromConcurrentLimit: device.excludeFromConcurrentLimit,
         rules:
           showRules && deviceRules && deviceRules.length > 0
@@ -227,7 +227,7 @@ export class UserPortalService {
       const globalLimit = await this.appSettingsRepository.findOne({
         where: { key: 'CONCURRENT_STREAM_LIMIT' },
       });
-      const parsed = globalLimit ? parseInt(globalLimit.value, 10) : 0;
+      const parsed = globalLimit?.value ? parseInt(globalLimit.value, 10) : 0;
       effectiveConcurrentStreamLimit = isNaN(parsed) ? 0 : parsed;
     }
 

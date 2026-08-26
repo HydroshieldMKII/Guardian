@@ -1,0 +1,32 @@
+coverage:
+  status:
+    project:
+      backend:
+        flags: [backend]
+        target: auto
+        threshold: 1%
+      frontend:
+        flags: [frontend]
+        target: auto
+        threshold: 1%
+    patch:
+      default:
+        target: 90%
+        threshold: 0%
+
+flags:
+  backend:
+    paths:
+      - backend/
+    carryforward: true
+  frontend:
+    paths:
+      - frontend/
+    carryforward: true
+
+comment:
+  layout: "condensed_header, diff, flags, files"
+  require_changes: true
+
+github_checks:
+  annotations: true

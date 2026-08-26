@@ -1,44 +1,46 @@
 export interface PlexSession {
-  sessionKey?: string;
+  sessionKey?: string | null;
   User?: {
-    id?: string;
-    uuid?: string;
-    title?: string;
-    thumb?: string;
+    id?: string | null;
+    uuid?: string | null;
+    title?: string | null;
+    thumb?: string | null;
   };
   Player?: {
-    machineIdentifier?: string;
-    platform?: string;
-    platformVersion?: string;
-    product?: string;
-    title?: string;
-    version?: string;
-    device?: string;
-    userAgent?: string;
-    address?: string;
+    machineIdentifier?: string | null;
+    platform?: string | null;
+    platformVersion?: string | null;
+    product?: string | null;
+    title?: string | null;
+    version?: string | null;
+    device?: string | null;
+    userAgent?: string | null;
+    address?: string | null;
     state?: 'playing' | 'paused' | 'buffering';
   };
   Session?: {
-    id?: string;
-    bandwidth?: number;
+    id?: string | null;
+    bandwidth?: number | null;
     location?: 'lan' | 'wan';
   };
   Media?: Array<{
-    videoResolution?: string;
-    bitrate?: number;
-    container?: string;
-    videoCodec?: string;
-    audioCodec?: string;
+    videoResolution?: string | null;
+    bitrate?: number | null;
+    container?: string | null;
+    videoCodec?: string | null;
+    audioCodec?: string | null;
   }>;
-  title?: string;
-  grandparentTitle?: string;
-  parentTitle?: string;
-  year?: number;
-  duration?: number;
-  viewOffset?: number;
-  type?: string;
-  thumb?: string;
-  art?: string;
+  title?: string | null;
+  grandparentTitle?: string | null;
+  parentTitle?: string | null;
+  year?: number | null;
+  duration?: number | null;
+  viewOffset?: number | null;
+  type?: string | null;
+  thumb?: string | null;
+  art?: string | null;
+  ratingKey?: string | null;
+  parentRatingKey?: string | null;
 }
 
 /**
@@ -55,6 +57,20 @@ export function isPlexampSession(
   return sessionOrProduct.Player?.product === 'Plexamp';
 }
 
+export interface EnrichedPlexSession extends Omit<PlexSession, 'Session'> {
+  Session?: NonNullable<PlexSession['Session']> & { sessionCount?: number };
+  thumbnailUrl?: string;
+  artUrl?: string;
+  serverMachineIdentifier?: string | null;
+}
+
+export interface EnrichedPlexSessionsResponse {
+  MediaContainer?: {
+    size?: number;
+    Metadata?: EnrichedPlexSession[];
+  };
+}
+
 export interface PlexSessionsResponse {
   MediaContainer?: {
     size?: number;
@@ -65,14 +81,14 @@ export interface PlexSessionsResponse {
 export interface DeviceInfo {
   userId: string;
   deviceIdentifier: string;
-  sessionKey?: string;
-  deviceName?: string;
-  devicePlatform?: string;
-  deviceProduct?: string;
-  deviceVersion?: string;
-  ipAddress?: string;
-  username?: string;
-  avatarUrl?: string;
+  sessionKey?: string | null;
+  deviceName?: string | null;
+  devicePlatform?: string | null;
+  deviceProduct?: string | null;
+  deviceVersion?: string | null;
+  ipAddress?: string | null;
+  username?: string | null;
+  avatarUrl?: string | null;
 }
 
 export interface SessionTerminationResult {
@@ -80,7 +96,7 @@ export interface SessionTerminationResult {
   errors: string[];
 }
 
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   message?: string;
   data?: T;
   success: boolean;

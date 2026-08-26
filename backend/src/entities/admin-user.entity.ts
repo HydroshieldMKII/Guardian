@@ -25,20 +25,20 @@ export class AdminUser {
   passwordHash: string;
 
   @Column({ type: 'varchar', length: 255, nullable: true })
-  avatarUrl: string;
+  avatarUrl: string | null;
 
   // Plex account linking
   @Column({ type: 'varchar', length: 255, nullable: true })
-  plexUserId: string;
+  plexUserId: string | null;
 
   @Column({ type: 'varchar', length: 255, nullable: true })
-  plexUsername: string;
+  plexUsername: string | null;
 
   @Column({ type: 'varchar', length: 255, nullable: true })
-  plexEmail: string;
+  plexEmail: string | null;
 
   @Column({ type: 'varchar', length: 512, nullable: true })
-  plexThumb: string;
+  plexThumb: string | null;
 
   @CreateDateColumn()
   createdAt: Date;

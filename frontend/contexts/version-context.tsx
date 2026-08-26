@@ -27,24 +27,22 @@ interface UpdateInfo {
   releaseNotes?: string;
 }
 
+type UpdateCheckResult = {
+  hasUpdate: boolean;
+  latestVersion?: string;
+  currentVersion?: string;
+  updateUrl?: string;
+  releaseNotes?: string;
+};
+
 interface VersionContextType {
   versionInfo: VersionInfo | null;
   updateInfo: UpdateInfo | null;
   loading: boolean;
   error: string | null;
   refreshVersionInfo: () => Promise<void>;
-  checkForUpdatesIfEnabled: () => Promise<{
-    hasUpdate: boolean;
-    latestVersion?: string;
-    currentVersion?: string;
-    updateUrl?: string;
-  } | null>;
-  checkForUpdatesManually: () => Promise<{
-    hasUpdate: boolean;
-    latestVersion?: string;
-    currentVersion?: string;
-    updateUrl?: string;
-  } | null>;
+  checkForUpdatesIfEnabled: () => Promise<UpdateCheckResult | null>;
+  checkForUpdatesManually: () => Promise<UpdateCheckResult | null>;
   clearUpdateInfo: () => void;
 }
 
@@ -135,7 +133,6 @@ export function VersionProvider({ children }: { children: React.ReactNode }) {
     // Rate limiting: Check if we've checked recently
     const now = Date.now();
     if (now - lastUpdateCheckRef.current < UPDATE_CHECK_COOLDOWN) {
-      console.log("Version check: Rate limited, returning cached result");
       // Return cached result if available
       if (updateCheckCacheRef.current) {
         const cached = updateCheckCacheRef.current;
@@ -155,7 +152,6 @@ export function VersionProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
-      console.log("Version check: Checking if auto-updates are enabled...");
       // First check if AUTO_CHECK_UPDATES is enabled
       const settingsResponse = await fetch(`${config.api.baseUrl}/config`);
       if (!settingsResponse.ok) {
@@ -172,13 +168,9 @@ export function VersionProvider({ children }: { children: React.ReactNode }) {
       const shouldAutoCheck = autoCheckSetting?.value === "true";
 
       if (!shouldAutoCheck) {
-        console.log("Version check: Auto-check disabled in settings");
         return null; // Auto check is disabled
       }
 
-      console.log(
-        "Version check: Auto-check enabled, fetching latest release informations..."
-      );
       // Update last check time
       lastUpdateCheckRef.current = now;
 
@@ -198,9 +190,6 @@ export function VersionProvider({ children }: { children: React.ReactNode }) {
       const latestVersion = release.tag_name.replace(/^v/, ""); // Remove 'v' prefix if present
       const currentVersion = versionInfo.version;
 
-      console.log(
-        `Version check: Current: ${currentVersion}, Latest: ${latestVersion}`
-      );
 
       // Compare versions
       const hasUpdate = isVersionNewer(latestVersion, currentVersion);
@@ -218,7 +207,6 @@ export function VersionProvider({ children }: { children: React.ReactNode }) {
 
       // Update global state when auto-checking
       if (hasUpdate) {
-        console.log("Version check: Update available! Setting global state...");
         setUpdateInfo({
           hasUpdate: true,
           latestVersion,
@@ -227,7 +215,6 @@ export function VersionProvider({ children }: { children: React.ReactNode }) {
           releaseNotes: release.body || "",
         });
       } else {
-        console.log("Version check: No update available");
       }
 
       return result;

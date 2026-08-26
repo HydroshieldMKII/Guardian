@@ -24,21 +24,11 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import {
-  Settings,
   Edit2,
   Save,
   X,
   RefreshCw,
-  Clock,
-  Users,
   ChevronDown,
-  Monitor,
-  Fingerprint,
-  Activity,
-  MessageSquare,
-  CheckCheck,
-  RotateCcw,
-  Trash2,
   HelpCircle,
 } from "lucide-react";
 import { UserDevice, AppSetting } from "@/types";
@@ -81,14 +71,13 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
   const { hasTemporaryAccess, getTemporaryAccessTimeLeft } = useDeviceUtils();
   const { toast } = useToast();
   const [excludeLoading, setExcludeLoading] = useState(false);
-  const [markingAsRead, setMarkingAsRead] = useState(false);
   const [deletingNote, setDeletingNote] = useState(false);
   const [setPendingLoading, setSetPendingLoading] = useState(false);
   const [excludeFromConcurrentLimit, setExcludeFromConcurrentLimit] = useState(
-    device?.excludeFromConcurrentLimit ?? false
+    device?.excludeFromConcurrentLimit ?? false,
   );
   const [noteReadAt, setNoteReadAt] = useState<string | undefined>(
-    device?.requestNoteReadAt
+    device?.requestNoteReadAt,
   );
 
   // Collapsible section states
@@ -135,35 +124,6 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
 
   if (!device) return null;
 
-  const handleMarkNoteAsRead = async () => {
-    setMarkingAsRead(true);
-    try {
-      await apiClient.markDeviceNoteAsRead(device.id);
-      const now = new Date().toISOString();
-      setNoteReadAt(now);
-      toast({
-        title: "Note marked as read",
-        description: "The user will be notified that their note has been read.",
-        variant: "success",
-      });
-      // Update parent state if callback provided
-      if (onDeviceUpdate) {
-        onDeviceUpdate({ ...device, requestNoteReadAt: now });
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description:
-          error instanceof Error
-            ? error.message
-            : "Failed to mark note as read",
-        variant: "destructive",
-      });
-    } finally {
-      setMarkingAsRead(false);
-    }
-  };
-
   const handleDeleteNote = async () => {
     setDeletingNote(true);
     try {
@@ -200,7 +160,7 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
     try {
       await apiClient.updateDeviceExcludeFromConcurrentLimit(
         device.id,
-        exclude
+        exclude,
       );
       // Update local state immediately
       setExcludeFromConcurrentLimit(exclude);
@@ -272,7 +232,6 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
       <DialogContent className="w-full sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center text-base sm:text-lg text-foreground text-left">
-            <Settings className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
             Device Details
           </DialogTitle>
           <DialogDescription className="text-sm text-muted-foreground text-left">
@@ -494,9 +453,7 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
                     >
                       {deletingNote ? (
                         <RefreshCw className="w-4 h-4 animate-spin mr-2" />
-                      ) : (
-                        <Trash2 className="w-4 h-4 mr-2" />
-                      )}
+                      ) : null}
                       Delete Note
                     </Button>
                   </div>
@@ -544,7 +501,7 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
                           } else {
                             const days = Math.floor(minutes / 1440);
                             const remainingHours = Math.floor(
-                              (minutes % 1440) / 60
+                              (minutes % 1440) / 60,
                             );
                             let result = `${days} day${days !== 1 ? "s" : ""}`;
                             if (remainingHours > 0) {
@@ -564,7 +521,7 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
                       </h4>
                       <p className="text-xs sm:text-sm text-foreground">
                         {new Date(
-                          device.temporaryAccessGrantedAt
+                          device.temporaryAccessGrantedAt,
                         ).toLocaleString()}
                       </p>
                     </div>
@@ -718,9 +675,7 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
                         >
                           {setPendingLoading ? (
                             <RefreshCw className="w-4 h-4 animate-spin mr-2" />
-                          ) : (
-                            <RotateCcw className="w-4 h-4 mr-2" />
-                          )}
+                          ) : null}
                           Set to Pending
                         </Button>
                       )}

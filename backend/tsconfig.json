@@ -1,5 +1,9 @@
 {
   "compilerOptions": {
+    "baseUrl": "./",
+    "paths": {
+      "@/*": ["src/*"]
+    },
     "module": "nodenext",
     "moduleResolution": "nodenext",
     "resolvePackageJsonExports": true,
@@ -18,7 +22,8 @@
     "lib": ["ES2023"],
     "strictNullChecks": true,
     "forceConsistentCasingInFileNames": true,
-    "noImplicitAny": false,
+    "noImplicitAny": true,
+    "useUnknownInCatchVariables": true,
     "strictBindCallApply": false,
     "noFallthroughCasesInSwitch": false
   }

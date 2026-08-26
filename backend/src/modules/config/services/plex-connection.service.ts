@@ -6,7 +6,7 @@ import {
   PlexResponse,
   createPlexError,
   createPlexSuccess,
-} from '../../../types/plex-errors';
+} from '@/types/plex-errors';
 
 @Injectable()
 export class PlexConnectionService {
@@ -31,8 +31,9 @@ export class PlexConnectionService {
       const testUrl = `${protocol}://${ip}:${port}/?X-Plex-Token=${token}`;
       const httpModule = protocol === 'https' ? https : http;
 
-      return new Promise((resolve) => {
-        const urlObj = new URL(testUrl);
+      const urlObj = new URL(testUrl);
+
+      return new Promise<PlexResponse>((resolve) => {
         const options = {
           hostname: urlObj.hostname,
           port: urlObj.port,
@@ -42,7 +43,7 @@ export class PlexConnectionService {
           rejectUnauthorized: !ignoreCertErrors,
         };
 
-        const req = httpModule.request(options, (res: any) => {
+        const req = httpModule.request(options, (res) => {
           if (res.statusCode === 200) {
             resolve(createPlexSuccess('Successfully connected to Plex server'));
           } else if (res.statusCode === 401) {
@@ -64,7 +65,7 @@ export class PlexConnectionService {
           }
         });
 
-        req.on('error', (error: any) => {
+        req.on('error', (error) => {
           resolve(this.handleConnectionError(error));
         });
 
@@ -81,25 +82,29 @@ export class PlexConnectionService {
 
         req.setTimeout(10000);
         req.end();
-      });
+      }).catch((error: unknown) => this.unexpectedError(error));
     } catch (error) {
-      this.logger.error('Error testing Plex connection:', error);
-      return createPlexError(
-        PlexErrorCode.UNKNOWN_ERROR,
-        'Unexpected error testing Plex connection',
-        error.message,
-      );
+      return this.unexpectedError(error);
     }
   }
 
-  private handleConnectionError(error: any): PlexResponse {
+  private unexpectedError(error: unknown): PlexResponse {
+    this.logger.error('Error testing Plex connection:', error);
+    return createPlexError(
+      PlexErrorCode.UNKNOWN_ERROR,
+      'Unexpected error testing Plex connection',
+      error instanceof Error ? error.message : String(error),
+    );
+  }
+
+  private handleConnectionError(error: NodeJS.ErrnoException): PlexResponse {
     if (error.code === 'ERR_TLS_CERT_ALTNAME_INVALID') {
       return createPlexError(
         PlexErrorCode.CERT_ERROR,
         'SSL certificate error: Hostname/IP does not match certificate',
         'Enable "Ignore SSL certificate errors" or use HTTP instead',
       );
-    } else if (error.code && error.code.startsWith('ERR_TLS_')) {
+    } else if (error.code?.startsWith('ERR_TLS_')) {
       return createPlexError(
         PlexErrorCode.SSL_ERROR,
         'SSL/TLS connection error',
@@ -114,7 +119,7 @@ export class PlexConnectionService {
     } else if (
       error.code === 'ECONNRESET' ||
       error.code === 'ETIMEDOUT' ||
-      error.message.includes('timeout')
+      error.message?.includes('timeout')
     ) {
       return createPlexError(
         PlexErrorCode.CONNECTION_TIMEOUT,

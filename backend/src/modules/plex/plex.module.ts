@@ -1,19 +1,19 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { PlexService } from './services/plex.service';
-import { PlexClient } from './services/plex-client';
-import { SessionTerminationService } from './services/session-termination.service';
-import { UserDevice } from '../../entities/user-device.entity';
-import { SessionHistory } from '../../entities/session-history.entity';
-import { UserPreference } from '../../entities/user-preference.entity';
-import { DevicesModule } from '../devices/devices.module';
-import { SessionsModule } from '../sessions/sessions.module';
-import { UsersModule } from '../users/users.module';
-import { ConfigModule } from '../config/config.module';
-import { NotificationsModule } from '../notifications/notifications.module';
-import { CommonModule } from '../../common/common.module';
-import { ServicesModule } from '../../services/services.module';
-import { PlexController } from './controllers/plex.controller';
+import { PlexService } from '@/modules/plex/services/plex.service';
+import { PlexClient } from '@/modules/plex/services/plex-client';
+import { SessionTerminationService } from '@/modules/plex/services/session-termination.service';
+import { UserDevice } from '@/entities/user-device.entity';
+import { SessionHistory } from '@/entities/session-history.entity';
+import { UserPreference } from '@/entities/user-preference.entity';
+import { DevicesModule } from '@/modules/devices/devices.module';
+import { SessionsModule } from '@/modules/sessions/sessions.module';
+import { UsersModule } from '@/modules/users/users.module';
+import { ConfigModule } from '@/modules/config/config.module';
+import { NotificationsModule } from '@/modules/notifications/notifications.module';
+import { CommonModule } from '@/common/common.module';
+import { ServicesModule } from '@/services/services.module';
+import { PlexController } from '@/modules/plex/controllers/plex.controller';
 
 @Module({
   imports: [

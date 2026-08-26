@@ -34,6 +34,7 @@ import { apiClient } from "@/lib/api";
 import { config } from "@/lib/config";
 import { useVersion } from "@/contexts/version-context";
 import { useAuth } from "@/contexts/auth-context";
+import { useLiveDashboard } from "@/hooks/useLiveDashboard";
 
 export function Dashboard() {
   const router = useRouter();
@@ -185,15 +186,32 @@ export function Dashboard() {
     }
   }, [versionInfo?.version, checkForUpdatesIfEnabled]);
 
+  const applyLiveDashboard = useCallback(
+    (payload: UnifiedDashboardData) => {
+      setDashboardData(payload);
+      setPlexStatus(payload.plexStatus);
+      setStats(payload.stats);
+      setLoading(false);
+    },
+    []
+  );
+
+  const { connected: liveConnected } = useLiveDashboard<UnifiedDashboardData>(
+    applyLiveDashboard,
+    autoRefresh && !setupRequired
+  );
+
+  // Poll only while the live connection is unavailable
   useEffect(() => {
     if (!autoRefresh) return; // Don't set up interval in manual mode
+    if (liveConnected) return; // Updates arrive over the socket instead
 
     const interval = setInterval(
       () => refreshDashboard(true),
       config.app.refreshInterval
     );
     return () => clearInterval(interval);
-  }, [autoRefresh, refreshDashboard]);
+  }, [autoRefresh, liveConnected, refreshDashboard]);
 
   // Show error if backend is unavailable
   if (backendError) {

@@ -12,30 +12,26 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
-import { AuthService } from './auth.service';
-import { PlexOAuthService } from './plex-oauth.service';
-import { ConfigService } from '../config/services/config.service';
-import { CreateAdminDto } from './dto/create-admin.dto';
-import { LoginDto } from './dto/login.dto';
-import { UpdateProfileDto } from './dto/update-profile.dto';
-import { UpdatePasswordDto } from './dto/update-password.dto';
-import { CurrentUser } from './decorators/current-user.decorator';
-import { Public } from './decorators/public.decorator';
-import { AdminOnly } from './decorators/admin-only.decorator';
-import { AdminUser } from '../../entities/admin-user.entity';
-
-// 7 days
-const COOKIE_MAX_AGE = 7 * 24 * 60 * 60 * 1000;
-
-const getCookieOptions = () => {
-  return {
-    httpOnly: true,
-    secure: false,
-    sameSite: 'lax' as 'strict' | 'lax' | 'none',
-    maxAge: COOKIE_MAX_AGE,
-    path: '/',
-  };
-};
+import { AuthService } from '@/modules/auth/auth.service';
+import { PlexOAuthService } from '@/modules/auth/plex-oauth.service';
+import { ConfigService } from '@/modules/config/services/config.service';
+import { CreateAdminDto } from '@/modules/auth/dto/create-admin.dto';
+import { LoginDto } from '@/modules/auth/dto/login.dto';
+import { UpdateProfileDto } from '@/modules/auth/dto/update-profile.dto';
+import { UpdatePasswordDto } from '@/modules/auth/dto/update-password.dto';
+import { CurrentUser } from '@/modules/auth/decorators/current-user.decorator';
+import { Public } from '@/modules/auth/decorators/public.decorator';
+import { AdminOnly } from '@/modules/auth/decorators/admin-only.decorator';
+import { AdminUser } from '@/entities/admin-user.entity';
+import {
+  AdminSessionUser,
+  SessionUser,
+} from '@/modules/auth/session-user.types';
+import {
+  SESSION_COOKIE_NAME,
+  extractSessionToken,
+  sessionCookieOptions,
+} from '@/modules/auth/session-cookie';
 
 @Controller('auth')
 export class AuthController {
@@ -63,7 +59,9 @@ export class AuthController {
   @Public()
   @Get('turnstile-key')
   async getTurnstileKey() {
-    const siteKey = await this.configService.getSetting('CLOUDFLARE_TURNSTILE_SITE_KEY');
+    const siteKey = await this.configService.getSetting(
+      'CLOUDFLARE_TURNSTILE_SITE_KEY',
+    );
     return {
       siteKey: siteKey || '',
     };
@@ -77,23 +75,16 @@ export class AuthController {
   @Post('create-admin')
   async createAdmin(
     @Body() dto: CreateAdminDto,
+    @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
-    // Validate no admin exists
-    const adminExists = await this.authService.hasAdminUsers();
-    if (adminExists) {
-      throw new BadRequestException('Admin user already exists');
-    }
-
-    // Validate passwords match
-    if (dto.password !== dto.confirmPassword) {
-      throw new BadRequestException('Passwords do not match');
-    }
-
     const result = await this.authService.createAdmin(dto);
 
-    // Set session cookie
-    res.cookie('session_token', result.session.token, getCookieOptions());
+    res.cookie(
+      SESSION_COOKIE_NAME,
+      result.session.token,
+      sessionCookieOptions(req),
+    );
 
     return {
       user: result.user,
@@ -110,12 +101,16 @@ export class AuthController {
   @Post('login')
   async login(
     @Body() dto: LoginDto,
+    @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
     const result = await this.authService.login(dto);
 
-    // Set session cookie
-    res.cookie('session_token', result.session.token, getCookieOptions());
+    res.cookie(
+      SESSION_COOKIE_NAME,
+      result.session.token,
+      sessionCookieOptions(req),
+    );
 
     return {
       user: result.user,
@@ -130,14 +125,13 @@ export class AuthController {
    */
   @Post('logout')
   async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
-    const token = this.extractToken(req);
+    const token = extractSessionToken(req);
 
     if (token) {
       await this.authService.logout(token);
     }
 
-    // Clear cookie
-    res.clearCookie('session_token', getCookieOptions());
+    res.clearCookie(SESSION_COOKIE_NAME, sessionCookieOptions(req));
 
     return { success: true };
   }
@@ -146,23 +140,12 @@ export class AuthController {
    * Get current user
    */
   @Get('me')
-  getCurrentUser(
-    @CurrentUser()
-    user:
-      | AdminUser
-      | {
-          userType: 'plex_user';
-          plexUserId: string;
-          plexUsername: string;
-          plexThumb?: string;
-        },
-  ) {
+  getCurrentUser(@CurrentUser() user: SessionUser | undefined) {
     if (!user) {
       throw new BadRequestException('Not authenticated');
     }
 
-    // Check if this is a Plex user session
-    if ('userType' in user && user.userType === 'plex_user') {
+    if (user.userType === 'plex_user') {
       return {
         plexUserId: user.plexUserId,
         plexUsername: user.plexUsername,
@@ -170,17 +153,15 @@ export class AuthController {
       };
     }
 
-    // Admin user
-    const adminUser = user as AdminUser;
     return {
-      id: adminUser.id,
-      username: adminUser.username,
-      email: adminUser.email,
-      avatarUrl: adminUser.avatarUrl,
-      plexUserId: adminUser.plexUserId,
-      plexUsername: adminUser.plexUsername,
-      plexEmail: adminUser.plexEmail,
-      plexThumb: adminUser.plexThumb,
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      avatarUrl: user.avatarUrl,
+      plexUserId: user.plexUserId,
+      plexUsername: user.plexUsername,
+      plexEmail: user.plexEmail,
+      plexThumb: user.plexThumb,
     };
   }
 
@@ -190,7 +171,7 @@ export class AuthController {
   @AdminOnly()
   @Patch('profile')
   async updateProfile(
-    @CurrentUser() user: AdminUser,
+    @CurrentUser() user: AdminSessionUser | undefined,
     @Body() dto: UpdateProfileDto,
   ) {
     if (!user) {
@@ -207,7 +188,7 @@ export class AuthController {
   @AdminOnly()
   @Patch('password')
   async updatePassword(
-    @CurrentUser() user: AdminUser & { sessionId?: string },
+    @CurrentUser() user: AdminSessionUser | undefined,
     @Body() dto: UpdatePasswordDto,
   ) {
     if (!user) {
@@ -218,16 +199,13 @@ export class AuthController {
     return { success: true };
   }
 
-  /**
-   * Helper to extract token from cookies or headers
-   */
-  private extractToken(req: Request): string | null {
-    // Try cookie first (preferred, httpOnly)
-    if (req.cookies && req.cookies.session_token) {
-      return req.cookies.session_token;
+  private rethrowAsBadRequest(error: unknown, fallback: string): never {
+    if (error instanceof UnauthorizedException) {
+      throw error;
     }
-
-    return null;
+    throw new BadRequestException(
+      error instanceof Error ? error.message : fallback,
+    );
   }
 
   // ==========================================
@@ -272,9 +250,7 @@ export class AuthController {
         expiresAt: pinData.pin.expiresAt.toISOString(),
       };
     } catch (error) {
-      throw new BadRequestException(
-        error instanceof Error ? error.message : 'Failed to create Plex PIN',
-      );
+      this.rethrowAsBadRequest(error, 'Failed to create Plex PIN');
     }
   }
 
@@ -295,9 +271,7 @@ export class AuthController {
       }
       return { authenticated: false };
     } catch (error) {
-      throw new BadRequestException(
-        error instanceof Error ? error.message : 'Failed to check Plex PIN',
-      );
+      this.rethrowAsBadRequest(error, 'Failed to check Plex PIN');
     }
   }
 
@@ -309,6 +283,7 @@ export class AuthController {
   @Post('plex/login')
   async plexLogin(
     @Body() body: { authToken: string },
+    @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
     if (!body.authToken) {
@@ -332,7 +307,11 @@ export class AuthController {
           admin.id,
         );
 
-        res.cookie('session_token', result.session.token, getCookieOptions());
+        res.cookie(
+          SESSION_COOKIE_NAME,
+          result.session.token,
+          sessionCookieOptions(req),
+        );
 
         return {
           userType: 'admin',
@@ -372,7 +351,11 @@ export class AuthController {
         plexThumb: plexUser.thumb,
       });
 
-      res.cookie('session_token', plexSession.token, getCookieOptions());
+      res.cookie(
+        SESSION_COOKIE_NAME,
+        plexSession.token,
+        sessionCookieOptions(req),
+      );
 
       return {
         userType: 'plex_user',
@@ -386,14 +369,7 @@ export class AuthController {
         },
       };
     } catch (error) {
-      if (error instanceof UnauthorizedException) {
-        throw error;
-      }
-      throw new BadRequestException(
-        error instanceof Error
-          ? error.message
-          : 'Failed to complete Plex login',
-      );
+      this.rethrowAsBadRequest(error, 'Failed to complete Plex login');
     }
   }
 
@@ -427,9 +403,7 @@ export class AuthController {
         plexThumb: result.plexThumb,
       };
     } catch (error) {
-      throw new BadRequestException(
-        error instanceof Error ? error.message : 'Failed to link Plex account',
-      );
+      this.rethrowAsBadRequest(error, 'Failed to link Plex account');
     }
   }
 
@@ -443,11 +417,7 @@ export class AuthController {
       await this.plexOAuthService.unlinkPlexAccountFromAdmin(user.id);
       return { success: true };
     } catch (error) {
-      throw new BadRequestException(
-        error instanceof Error
-          ? error.message
-          : 'Failed to unlink Plex account',
-      );
+      this.rethrowAsBadRequest(error, 'Failed to unlink Plex account');
     }
   }
 

@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { SecretInput } from "@/components/settings/SecretInput";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
@@ -60,16 +61,16 @@ export function PlexSettings({
           setting.key !== "PLEX_GUARD_DEFAULT_BLOCK") ||
         setting.key === "USE_SSL" ||
         setting.key === "IGNORE_CERT_ERRORS" ||
-        setting.key === "CUSTOM_PLEX_URL"
+        setting.key === "CUSTOM_PLEX_URL",
     )
     .sort((a, b) => {
       const order = [
-        "CUSTOM_PLEX_URL",
         "PLEX_TOKEN",
         "PLEX_SERVER_IP",
         "PLEX_SERVER_PORT",
         "USE_SSL",
         "IGNORE_CERT_ERRORS",
+        "CUSTOM_PLEX_URL",
       ];
 
       const indexA = order.indexOf(a.key);
@@ -109,7 +110,7 @@ export function PlexSettings({
   const renderSSLSettingsGroup = () => {
     const useSslSetting = plexSettings.find((s) => s.key === "USE_SSL");
     const ignoreCertErrorsSetting = plexSettings.find(
-      (s) => s.key === "IGNORE_CERT_ERRORS"
+      (s) => s.key === "IGNORE_CERT_ERRORS",
     );
 
     if (!useSslSetting || !ignoreCertErrorsSetting) return null;
@@ -161,7 +162,7 @@ export function PlexSettings({
   };
 
   const renderSetting = (setting: AppSetting) => {
-    const { label, description } = getSettingInfo(setting);
+    const { label, description, optional } = getSettingInfo(setting);
     const value = formData[setting.key] ?? setting.value;
 
     if (setting.type === "boolean") {
@@ -189,21 +190,27 @@ export function PlexSettings({
 
     return (
       <div key={setting.key} className="space-y-2">
-        <Label htmlFor={setting.key}>{label}</Label>
+        <div className="flex flex-wrap items-center gap-2">
+          <Label htmlFor={setting.key}>{label}</Label>
+          {optional && (
+            <span className="rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground">
+              Optional
+            </span>
+          )}
+        </div>
         {description && (
           <p className="text-sm text-muted-foreground">{description}</p>
         )}
-        <Input
-          id={setting.key}
+        <SecretInput
+          setting={setting}
+          value={typeof value === "string" ? value : String(value)}
+          placeholder={`Enter ${label.toLowerCase()}`}
           type={
             setting.key.includes("PASSWORD") || setting.key.includes("TOKEN")
               ? "password"
               : "text"
           }
-          value={typeof value === "string" ? value : String(value)}
-          onChange={(e) => handleInputChange(setting.key, e.target.value)}
-          placeholder={`Enter ${label.toLowerCase()}`}
-          className="cursor-pointer"
+          onChange={(next) => handleInputChange(setting.key, next)}
         />
       </div>
     );
@@ -222,7 +229,7 @@ export function PlexSettings({
         {plexSettings
           .filter(
             (setting) =>
-              setting.key !== "USE_SSL" && setting.key !== "IGNORE_CERT_ERRORS"
+              setting.key !== "USE_SSL" && setting.key !== "IGNORE_CERT_ERRORS",
           )
           .map((setting) => (
             <Card key={setting.key} className="p-4 my-4">

@@ -26,7 +26,6 @@ export const useTimeRules = () => {
       );
 
       if (uncachedUserIds.length === 0) {
-        console.log("All time rules already cached");
         return;
       }
 

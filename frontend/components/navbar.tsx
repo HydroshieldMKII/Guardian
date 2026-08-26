@@ -107,6 +107,12 @@ export function Navbar() {
           router.push(pendingNavigation);
         }
         setPendingNavigation(null);
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to save changes",
+          variant: "destructive",
+        });
       } finally {
         setIsSaving(false);
       }

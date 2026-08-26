@@ -1,29 +1,31 @@
 import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { UserDevice } from '../../../entities/user-device.entity';
-import { SessionHistory } from '../../../entities/session-history.entity';
-import { UserPreference } from '../../../entities/user-preference.entity';
-import { PlexClient } from './plex-client';
-import { UsersService } from '../../users/services/users.service';
-import { TimePolicyService } from '../../users/services/time-policy.service';
-import { ConcurrentStreamService } from '../../users/services/concurrent-stream.service';
-import { ConfigService } from '../../config/services/config.service';
-import { DeviceTrackingService } from '../../devices/services/device-tracking.service';
+import { UserDevice } from '@/entities/user-device.entity';
+import { SessionHistory } from '@/entities/session-history.entity';
+import { UserPreference } from '@/entities/user-preference.entity';
+import { PlexClient } from '@/modules/plex/services/plex-client';
+import { UsersService } from '@/modules/users/services/users.service';
+import { TimePolicyService } from '@/modules/users/services/time-policy.service';
+import { ConcurrentStreamService } from '@/modules/users/services/concurrent-stream.service';
+import { ConfigService } from '@/modules/config/services/config.service';
+import { DeviceTrackingService } from '@/modules/devices/services/device-tracking.service';
 import {
+  PlexSession,
   PlexSessionsResponse,
   SessionTerminationResult,
   isPlexampSession,
-} from '../../../types/plex.types';
-import { IPValidationService } from '../../../common/services/ip-validation.service';
+} from '@/types/plex.types';
+import { IPValidationService } from '@/common/services/ip-validation.service';
+import { errorMessage } from '@/common/utils/error-types';
 
 export interface StreamBlockedEvent {
   userId: string;
   username: string;
   deviceIdentifier: string;
-  stopCode?: string;
-  sessionKey?: string;
-  ipAddress?: string;
+  stopCode?: string | null;
+  sessionKey?: string | null;
+  ipAddress?: string | null;
 }
 
 /**
@@ -76,7 +78,7 @@ export class SessionTerminationService {
 
   /** Validates IP access for a session based on user preferences */
   private async validateIPAccess(
-    session: any,
+    session: PlexSession,
   ): Promise<{ allowed: boolean; reason?: string; stopCode?: string }> {
     try {
       const userId = session.User?.id || session.User?.uuid;
@@ -114,10 +116,10 @@ export class SessionTerminationService {
           allowedIPs: userPreference.allowedIPs || [],
         },
         {
-          lanOnly: (msgLanOnly as string) || 'Only LAN access is allowed',
-          wanOnly: (msgWanOnly as string) || 'Only WAN access is allowed',
+          lanOnly: msgLanOnly || 'Only LAN access is allowed',
+          wanOnly: msgWanOnly || 'Only WAN access is allowed',
           notAllowed:
-            (msgNotAllowed as string) ||
+            msgNotAllowed ||
             'Your current IP address is not in the allowed list',
         },
       );
@@ -203,7 +205,7 @@ export class SessionTerminationService {
           const sessionKeyForError =
             session.sessionKey || session.Session?.id || 'unknown';
           errors.push(
-            `Error processing session ${sessionKeyForError}: ${error.message}`,
+            `Error processing session ${sessionKeyForError}: ${errorMessage(error)}`,
           );
           this.logger.error(
             `Error processing session ${sessionKeyForError}`,
@@ -224,14 +226,14 @@ export class SessionTerminationService {
    * Only terminates the youngest (most recently started) sessions when over limit.
    */
   private async handleConcurrentStreamLimits(
-    sessions: any[],
-    sessionsData: PlexSessionsResponse,
+    sessions: PlexSession[],
+    _sessionsData: PlexSessionsResponse,
   ): Promise<SessionTerminationResult> {
     const stoppedSessions: string[] = [];
     const errors: string[] = [];
 
     // Group sessions by user
-    const sessionsByUser = new Map<string, any[]>();
+    const sessionsByUser = new Map<string, PlexSession[]>();
     for (const session of sessions) {
       const userId = session.User?.id || session.User?.uuid;
       if (!userId) continue;
@@ -279,7 +281,7 @@ export class SessionTerminationService {
           'MSG_CONCURRENT_LIMIT',
         );
         const reason =
-          (message as string) ||
+          message ||
           'You have reached your concurrent stream limit. Please stop another stream before starting a new one.';
 
         // Terminate the newest sessions (they're at the front after sorting)
@@ -315,14 +317,14 @@ export class SessionTerminationService {
             });
           } catch (error) {
             errors.push(
-              `Error terminating session ${sessionId}: ${error.message}`,
+              `Error terminating session ${sessionId}: ${errorMessage(error)}`,
             );
             this.logger.error(`Error terminating session ${sessionId}`, error);
           }
         }
       } catch (error) {
         errors.push(
-          `Error checking concurrent limits for user ${userId}: ${error.message}`,
+          `Error checking concurrent limits for user ${userId}: ${errorMessage(error)}`,
         );
         this.logger.error(
           `Error checking concurrent limits for user ${userId}`,
@@ -339,9 +341,9 @@ export class SessionTerminationService {
    * Uses sessionKey to look up when each session started.
    */
   private async getSessionStartTimes(
-    sessions: any[],
-  ): Promise<Array<{ session: any; startTime: number }>> {
-    const results: Array<{ session: any; startTime: number }> = [];
+    sessions: PlexSession[],
+  ): Promise<Array<{ session: PlexSession; startTime: number }>> {
+    const results: Array<{ session: PlexSession; startTime: number }> = [];
 
     for (const session of sessions) {
       const sessionKey = session.sessionKey;
@@ -367,7 +369,7 @@ export class SessionTerminationService {
   }
 
   private async shouldStopSession(
-    session: any,
+    session: PlexSession,
   ): Promise<{ shouldStop: boolean; reason?: string; stopCode?: string }> {
     try {
       const userId = session.User?.id || session.User?.uuid;
@@ -430,9 +432,9 @@ export class SessionTerminationService {
         );
 
         // Get the configured message or use a detailed default
-        const configMessage = (await this.configService.getSetting(
+        const configMessage = await this.configService.getSetting(
           'MSG_TIME_RESTRICTED',
-        )) as string;
+        );
 
         return {
           shouldStop: true,
@@ -454,9 +456,7 @@ export class SessionTerminationService {
           await this.usersService.getEffectiveDefaultBlock(userId);
         if (shouldBlock) {
           const message =
-            ((await this.configService.getSetting(
-              'MSG_DEVICE_PENDING',
-            )) as string) ||
+            (await this.configService.getSetting('MSG_DEVICE_PENDING')) ||
             'Device pending approval. The server owner must approve this device before it can be used.';
           return {
             shouldStop: true,
@@ -476,9 +476,7 @@ export class SessionTerminationService {
           `Device ${deviceIdentifier} for user ${userId} is explicitly rejected.`,
         );
         const message =
-          ((await this.configService.getSetting(
-            'MSG_DEVICE_REJECTED',
-          )) as string) ||
+          (await this.configService.getSetting('MSG_DEVICE_REJECTED')) ||
           'You are not authorized to use this device. Please contact the server administrator for more information.';
         return {
           shouldStop: true,
@@ -498,9 +496,7 @@ export class SessionTerminationService {
     try {
       if (!reason) {
         reason =
-          ((await this.configService.getSetting(
-            'MSG_DEVICE_PENDING',
-          )) as string) ||
+          (await this.configService.getSetting('MSG_DEVICE_PENDING')) ||
           'This device must be approved by the server owner. Please contact the server administrator for more information.';
       }
 

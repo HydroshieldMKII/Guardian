@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNotificationContext } from "@/contexts/notification-context";
 import { useSettings } from "@/contexts/settings-context";
 import { useAuth, isAdminUser } from "@/contexts/auth-context";
 import { UserHistoryModal } from "@/components/device-management/UserHistoryModal";
+import { useLiveEvent, NOTIFICATIONS_EVENT } from "@/hooks/useLiveDashboard";
 import { apiClient } from "@/lib/api";
 import { Notification } from "@/types";
 
@@ -30,25 +31,36 @@ export function GlobalNotificationHandler() {
   const [notificationScrollToSessionId, setNotificationScrollToSessionId] =
     useState<number | null>(null);
 
-  // Independent notification fetching (admin only)
+  const canFetch = Boolean(!setupRequired && isAuthenticated && isAdmin);
+
+  const applyNotifications = useCallback(
+    (notificationData: Notification[]) => {
+      setNotifications({
+        data: notificationData,
+        unreadCount: notificationData.filter((n) => !n.read).length,
+      });
+    },
+    [setNotifications],
+  );
+
+  // Server-pushed notification updates (admin only)
+  const { connected: liveConnected } = useLiveEvent<Notification[]>(
+    NOTIFICATIONS_EVENT,
+    applyNotifications,
+    canFetch,
+  );
+
+  // Poll only while the live connection is unavailable
   useEffect(() => {
-    // Skip fetching during setup, if not authenticated, or if not admin
-    if (setupRequired || !isAuthenticated || !isAdmin) {
+    if (!canFetch || liveConnected) {
       return;
     }
 
     const fetchNotifications = async () => {
       try {
-        const notificationData = await apiClient.getAllNotifications<any[]>();
-
-        // Format to match what the context expects
-        const unreadCount = notificationData.filter((n) => !n.read).length;
-        const formattedData = {
-          data: notificationData,
-          unreadCount: unreadCount,
-        };
-
-        setNotifications(formattedData);
+        applyNotifications(
+          await apiClient.getAllNotifications<Notification[]>(),
+        );
       } catch (error) {
         console.error("Failed to fetch notifications:", error);
       }
@@ -61,7 +73,7 @@ export function GlobalNotificationHandler() {
     return () => {
       clearInterval(intervalNotification);
     };
-  }, [setNotifications, setupRequired, isAuthenticated, isAdmin]);
+  }, [applyNotifications, canFetch, liveConnected]);
 
   // Set up global notification click handler
   useEffect(() => {

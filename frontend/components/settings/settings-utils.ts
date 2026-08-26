@@ -7,6 +7,7 @@ export interface SettingsFormData {
 export interface SettingInfo {
   label: string;
   description: string;
+  optional?: boolean;
 }
 
 export interface ConnectionStatus {
@@ -19,11 +20,27 @@ export interface VersionMismatchInfo {
   importVersion: string;
 }
 
+export interface SecretInputDisplay {
+  value: string;
+  placeholder: string;
+}
+
+export const getSecretInputDisplay = (
+  setting: AppSetting,
+  value: string,
+  fallbackPlaceholder: string,
+): SecretInputDisplay => {
+  if (setting.private && value !== "" && value === setting.value) {
+    return { value: "", placeholder: "•••••••• (saved)" };
+  }
+  return { value, placeholder: fallbackPlaceholder };
+};
+
 // Function to get setting label and description
 export const getSettingInfo = (setting: AppSetting): SettingInfo => {
   const settingInfoMap: Record<
     string,
-    { label: string; description?: string }
+    { label: string; description?: string; optional?: boolean }
   > = {
     PLEX_SERVER_IP: {
       label: "Plex server IP address",
@@ -150,6 +167,7 @@ export const getSettingInfo = (setting: AppSetting): SettingInfo => {
     CUSTOM_PLEX_URL: {
       label: "Custom Plex URL",
       description: "Override the default Plex URL for media links",
+      optional: true,
     },
     TIMEZONE: {
       label: "Timezone",
@@ -283,7 +301,9 @@ export const getSettingInfo = (setting: AppSetting): SettingInfo => {
       .replace(/\b\w/g, (l) => l.toUpperCase());
   const description = info?.description || "";
 
-  return { label, description };
+  return info?.optional
+    ? { label, description, optional: true }
+    : { label, description };
 };
 
 export const settingsSections = [
@@ -313,8 +333,8 @@ export const settingsSections = [
   },
   {
     id: "database",
-    title: "Database Management",
-    description: "Export and import database settings and data",
+    title: "Settings Management",
+    description: "Export and import settings and data",
     icon: "Database",
   },
   {

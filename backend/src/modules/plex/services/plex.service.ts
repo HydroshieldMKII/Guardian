@@ -1,12 +1,17 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { PlexClient } from './plex-client';
-import { SessionTerminationService } from './session-termination.service';
-import { PlexSessionsResponse } from '../../../types/plex.types';
-import { DeviceTrackingService } from '../../devices/services/device-tracking.service';
-import { ActiveSessionService } from '../../sessions/services/active-session.service';
-import { ConfigService } from '../../config/services/config.service';
-import { SessionOrchestratorService } from '../../../services/session-orchestrator.service';
-import { config } from '../../../config/app.config';
+import { PlexClient } from '@/modules/plex/services/plex-client';
+import { SessionTerminationService } from '@/modules/plex/services/session-termination.service';
+import {
+  EnrichedPlexSession,
+  EnrichedPlexSessionsResponse,
+  PlexSession,
+  PlexSessionsResponse,
+} from '@/types/plex.types';
+import { DeviceTrackingService } from '@/modules/devices/services/device-tracking.service';
+import { ActiveSessionService } from '@/modules/sessions/services/active-session.service';
+import { ConfigService } from '@/modules/config/services/config.service';
+import { SessionOrchestratorService } from '@/services/session-orchestrator.service';
+import { config } from '@/config/app.config';
 
 @Injectable()
 export class PlexService {
@@ -101,7 +106,7 @@ export class PlexService {
       }
 
       return sessions;
-    } catch (error: any) {
+    } catch (error) {
       this.logger.error('Error fetching sessions', error);
       throw error;
     }
@@ -130,10 +135,10 @@ export class PlexService {
   }
 
   private enrichSessionWithMediaUrls(
-    session: any,
-    enableThumbnails: boolean,
-    enableArtwork: boolean,
-  ): any {
+    session: PlexSession,
+    enableThumbnails: boolean | null,
+    enableArtwork: boolean | null,
+  ): EnrichedPlexSession {
     return {
       ...session,
       thumbnailUrl:
@@ -166,7 +171,7 @@ export class PlexService {
         throw new Error('Plex server IP and port not configured');
       }
 
-      const protocol = useSSL === 'true' || useSSL === true ? 'https' : 'http';
+      const protocol = useSSL ? 'https' : 'http';
       return `${protocol}://${ip}:${port}`;
     } catch (error) {
       this.logger.error('Error getting Plex web URL:', error);
@@ -180,13 +185,13 @@ export class PlexService {
       return await this.sessionOrchestratorService.orchestrateSessionUpdate(
         sessions,
       );
-    } catch (error: any) {
+    } catch (error) {
       this.logger.error('Error in updateActiveSessions', error);
       throw error;
     }
   }
 
-  async getActiveSessionsWithMediaUrls(): Promise<any> {
+  async getActiveSessionsWithMediaUrls(): Promise<EnrichedPlexSessionsResponse> {
     try {
       const sessions =
         await this.activeSessionService.getActiveSessionsFormatted();
@@ -198,7 +203,7 @@ export class PlexService {
 
       if (sessions?.MediaContainer?.Metadata) {
         sessions.MediaContainer.Metadata = sessions.MediaContainer.Metadata.map(
-          (session) =>
+          (session: PlexSession) =>
             this.enrichSessionWithMediaUrls(
               session,
               enableThumbnails,
@@ -208,7 +213,7 @@ export class PlexService {
       }
 
       return sessions;
-    } catch (error: any) {
+    } catch (error) {
       this.logger.error('Error getting active sessions with media URLs', error);
       throw error;
     }

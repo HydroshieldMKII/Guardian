@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Users, Loader2, Info } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { UserPreference } from "@/types";
 import { apiClient } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
@@ -50,7 +50,7 @@ export const ConcurrentStreamModal: React.FC<ConcurrentStreamModalProps> = ({
 
   // Get global concurrent stream limit from settings
   const globalLimit = settings?.find(
-    (s) => s.key === "CONCURRENT_STREAM_LIMIT"
+    (s) => s.key === "CONCURRENT_STREAM_LIMIT",
   );
   const globalLimitValue = globalLimit ? Number(globalLimit.value) : 0;
 
@@ -62,7 +62,7 @@ export const ConcurrentStreamModal: React.FC<ConcurrentStreamModalProps> = ({
         try {
           const info =
             await apiClient.getUserConcurrentStreamInfo<ConcurrentStreamInfo>(
-              userId
+              userId,
             );
           const hasCustomLimit = info.isOverridden;
           setUseGlobalDefault(!hasCustomLimit);
@@ -121,7 +121,6 @@ export const ConcurrentStreamModal: React.FC<ConcurrentStreamModalProps> = ({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Users className="w-5 h-5" />
             Concurrent Stream Limit
           </DialogTitle>
           <DialogDescription>
@@ -138,7 +137,6 @@ export const ConcurrentStreamModal: React.FC<ConcurrentStreamModalProps> = ({
           <div className="space-y-4 py-4">
             {/* Global limit info */}
             <div className="flex items-start gap-2 p-3 bg-muted/50 rounded-lg">
-              <Info className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
               <div className="text-sm">
                 <p className="text-muted-foreground">
                   Global limit:{" "}

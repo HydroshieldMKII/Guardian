@@ -39,7 +39,7 @@ export interface PlexErrorResponse {
 export interface PlexSuccessResponse {
   success: true;
   message?: string;
-  data?: any;
+  data?: unknown;
 }
 
 // Union type for all responses
@@ -62,7 +62,7 @@ export function createPlexError(
 // Helper function to create success responses
 export function createPlexSuccess(
   message?: string,
-  data?: any,
+  data?: unknown,
 ): PlexSuccessResponse {
   return {
     success: true,

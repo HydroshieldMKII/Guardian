@@ -18,7 +18,7 @@ export class UserTimeRule {
   @Column({ name: 'user_id' })
   userId: string;
 
-  @Column({ name: 'device_identifier', nullable: true })
+  @Column({ type: 'varchar', name: 'device_identifier', nullable: true })
   deviceIdentifier?: string; // null for user-wide rule
 
   @Column({ name: 'rule_name' })

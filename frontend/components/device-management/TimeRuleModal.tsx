@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, Edit, Save, X, Plus, ChevronDown } from "lucide-react";
+import { Trash2, Edit, Save, X, ChevronDown } from "lucide-react";
 import { UserTimeRule, CreateTimeRuleDto } from "@/types";
 import { useTimeRules } from "@/hooks/device-management/useTimeRules";
 import { useToast } from "@/hooks/use-toast";
@@ -45,11 +45,10 @@ const DAYS_OF_WEEK = [
 const FocusInput: React.FC<{
   value: string;
   onChange: (value: string) => void;
-  onBlur?: () => void;
   type?: string;
   placeholder?: string;
   className?: string;
-}> = ({ value, onChange, onBlur, type = "text", placeholder, className }) => {
+}> = ({ value, onChange, type = "text", placeholder, className }) => {
   const [localValue, setLocalValue] = useState(value);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -66,19 +65,12 @@ const FocusInput: React.FC<{
     onChange(newValue);
   };
 
-  const handleBlur = () => {
-    if (onBlur) {
-      onBlur();
-    }
-  };
-
   return (
     <Input
       ref={inputRef}
       type={type}
       value={localValue}
       onChange={handleChange}
-      onBlur={handleBlur}
       placeholder={placeholder}
       className={className}
     />
@@ -121,7 +113,7 @@ export function TimeRuleModal({
   const [deletingAllRules, setDeletingAllRules] = useState(false);
   const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
   const [showPresetConfirm, setShowPresetConfirm] = useState<string | null>(
-    null
+    null,
   );
   const [newRule, setNewRule] = useState<NewRuleForm>({
     deviceIdentifier: deviceIdentifier || undefined,
@@ -192,7 +184,7 @@ export function TimeRuleModal({
   // Check if two time rules overlap
   const doTimeRulesOverlap = (
     rule1: { startTime: string; endTime: string },
-    rule2: { startTime: string; endTime: string }
+    rule2: { startTime: string; endTime: string },
   ): boolean => {
     const start1 = timeToMinutes(rule1.startTime);
     const end1 = timeToMinutes(rule1.endTime);
@@ -206,13 +198,13 @@ export function TimeRuleModal({
   // Validate if a rule would overlap with existing rules
   const validateRuleOverlap = (
     newRule: { dayOfWeek: number; startTime: string; endTime: string },
-    excludeRuleId?: number
+    excludeRuleId?: number,
   ): { isValid: boolean; conflictingRule?: UserTimeRule } => {
     const conflictingRule = rules.find(
       (rule) =>
         rule.id !== excludeRuleId &&
         rule.dayOfWeek === newRule.dayOfWeek &&
-        doTimeRulesOverlap(newRule, rule)
+        doTimeRulesOverlap(newRule, rule),
     );
 
     return {
@@ -227,7 +219,7 @@ export function TimeRuleModal({
         ...rule,
         isEditing: rule.id === ruleId,
         tempData: rule.id === ruleId ? { ...rule } : undefined,
-      }))
+      })),
     );
   };
 
@@ -237,7 +229,7 @@ export function TimeRuleModal({
         ...rule,
         isEditing: false,
         tempData: undefined,
-      }))
+      })),
     );
   };
 
@@ -251,7 +243,7 @@ export function TimeRuleModal({
           };
         }
         return rule;
-      })
+      }),
     );
   };
 
@@ -266,7 +258,7 @@ export function TimeRuleModal({
         startTime: rule.tempData.startTime || rule.startTime,
         endTime: rule.tempData.endTime || rule.endTime,
       },
-      ruleId
+      ruleId,
     );
 
     if (!validation.isValid && validation.conflictingRule) {
@@ -374,7 +366,7 @@ export function TimeRuleModal({
       const createdRule = await createTimeRule(userId, createDto);
 
       setRules((prev) =>
-        sortRules([...prev, { ...createdRule, isEditing: false }])
+        sortRules([...prev, { ...createdRule, isEditing: false }]),
       );
 
       // Reset new rule form
@@ -443,17 +435,15 @@ export function TimeRuleModal({
 
   const confirmCreatePreset = async (presetType: string) => {
     if (creatingPreset) {
-      console.log("Already creating preset, ignoring duplicate request");
       return;
     }
 
     setCreatingPreset(presetType);
     try {
-      console.log(`Creating ${presetType} preset for user:`, userId);
       const createdRules = await createPreset(
         userId,
         presetType as "weekdays-only" | "weekends-only",
-        deviceIdentifier
+        deviceIdentifier,
       );
 
       const editingRules = createdRules.map((rule) => ({
@@ -649,10 +639,7 @@ export function TimeRuleModal({
                           Creating...
                         </>
                       ) : (
-                        <>
-                          <Plus className="w-4 h-4" />
-                          Create Blocking Rule
-                        </>
+                        <>Create Blocking Rule</>
                       )}
                     </Button>
                   </CardContent>
@@ -676,9 +663,7 @@ export function TimeRuleModal({
                   >
                     {deletingAllRules ? (
                       <div className="w-3 h-3 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
-                    ) : (
-                      <Trash2 className="w-3 h-3 text-red-600 dark:text-red-400" />
-                    )}
+                    ) : null}
                     {deletingAllRules ? "Deleting..." : "Delete All"}
                   </Button>
                 )}
@@ -687,7 +672,7 @@ export function TimeRuleModal({
                 {loadingRules ? (
                   <div className="text-center py-4">Loading rules...</div>
                 ) : rules.length === 0 ? (
-                  <div className="text-center py-8">
+                  <div className="py-8">
                     <div className="text-muted-foreground">
                       <p className="text-sm">No blocking rules configured.</p>
                       <p className="text-xs mt-1">
@@ -863,8 +848,8 @@ export function TimeRuleModal({
                                         prev.map((r) =>
                                           r.id === rule.id
                                             ? { ...r, enabled: checked }
-                                            : r
-                                        )
+                                            : r,
+                                        ),
                                       );
                                     } catch (error: any) {
                                       toast({

@@ -1,15 +1,16 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
-import { UserDevice } from '../../../entities/user-device.entity';
-import { SessionHistory } from '../../../entities/session-history.entity';
-import { UsersService } from '../../users/services/users.service';
-import { ConfigService } from '../../config/services/config.service';
+import { UserDevice } from '@/entities/user-device.entity';
+import { SessionHistory } from '@/entities/session-history.entity';
+import { UsersService } from '@/modules/users/services/users.service';
+import { ConfigService } from '@/modules/config/services/config.service';
 import {
   PlexSession,
   DeviceInfo,
   PlexSessionsResponse,
-} from '../../../types/plex.types';
+} from '@/types/plex.types';
+import { errorMessage } from '@/common/utils/error-types';
 
 export interface NewDeviceDetectedEvent {
   userId: string;
@@ -23,12 +24,12 @@ export interface NewDeviceDetectedEvent {
 
 export interface DeviceLocationChangedEvent {
   userId: string;
-  username: string;
-  deviceName: string;
+  username: string | null;
+  deviceName: string | null;
   deviceIdentifier: string;
-  oldIpAddress: string;
-  newIpAddress: string;
-  sessionKey?: string;
+  oldIpAddress: string | null;
+  newIpAddress: string | null;
+  sessionKey?: string | null;
 }
 
 /**
@@ -315,7 +316,7 @@ export class DeviceTrackingService {
       : `Status: pending, App default action: ${defaultBlock ? 'Block' : 'Allow'}`;
 
     this.logger.warn(
-      `🚨 NEW DEVICE DETECTED! User: ${deviceInfo.username || deviceInfo.userId}, IP: ${deviceInfo.ipAddress || 'Unknown IP'}, Device: ${deviceInfo.deviceName || deviceInfo.deviceIdentifier}, Platform: ${deviceInfo.devicePlatform || 'Unknown'}, ${statusMessage}`,
+      `NEW DEVICE DETECTED! User: ${deviceInfo.username || deviceInfo.userId}, IP: ${deviceInfo.ipAddress || 'Unknown IP'}, Device: ${deviceInfo.deviceName || deviceInfo.deviceIdentifier}, Platform: ${deviceInfo.devicePlatform || 'Unknown'}, ${statusMessage}`,
     );
 
     this.emitNewDeviceEvent({
@@ -325,7 +326,7 @@ export class DeviceTrackingService {
       deviceIdentifier: deviceInfo.deviceIdentifier,
       ipAddress: deviceInfo.ipAddress || 'Unknown IP',
       platform: deviceInfo.devicePlatform || 'Unknown',
-      sessionKey: deviceInfo.sessionKey,
+      sessionKey: deviceInfo.sessionKey ?? undefined,
     });
   }
 
@@ -557,7 +558,7 @@ export class DeviceTrackingService {
       );
     } catch (error) {
       this.logger.error(`Failed to delete device ${deviceId}:`, error);
-      throw new Error(`Device deletion failed: ${error.message}`);
+      throw new Error(`Device deletion failed: ${errorMessage(error)}`);
     }
   }
 

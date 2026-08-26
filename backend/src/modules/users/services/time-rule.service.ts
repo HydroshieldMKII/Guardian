@@ -1,7 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
-import { UserTimeRule } from '../../../entities/user-time-rule.entity';
+import { UserTimeRule } from '@/entities/user-time-rule.entity';
+import { asHttpError, errorMessage } from '@/common/utils/error-types';
 
 export interface CreateTimeRuleDto {
   userId: string;
@@ -166,11 +167,11 @@ export class TimeRuleService {
     } catch (error) {
       // Rollback the transaction on error
       this.logger.error(
-        `Error creating preset: ${error.message}`,
-        error?.stack,
+        `Error creating preset: ${errorMessage(error)}`,
+        asHttpError(error).stack,
       );
       await queryRunner.rollbackTransaction();
-      throw new Error(`Failed to create preset: ${error.message}`);
+      throw new Error(`Failed to create preset: ${errorMessage(error)}`);
     } finally {
       // Release the query runner
       await queryRunner.release();

@@ -1,9 +1,11 @@
 import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import * as nodemailer from 'nodemailer';
-import { EmailTemplateService } from './email-template.service';
-import { StopCodeUtils } from '../../../common/utils/stop-code.utils';
-import { ConfigService } from './config.service';
-import { TimezoneService } from './timezone.service';
+import { EmailTemplateService } from '@/modules/config/services/email-template.service';
+import { StopCodeUtils } from '@/common/utils/stop-code.utils';
+import { ConfigService } from '@/modules/config/services/config.service';
+import { TimezoneService } from '@/modules/config/services/timezone.service';
+import { SettingValues } from '@/modules/config/settings.catalog';
+import { asHttpError } from '@/common/utils/error-types';
 
 export interface SMTPConfig {
   host: string;
@@ -15,6 +17,19 @@ export interface SMTPConfig {
   useTLS: boolean;
   toEmails: string[];
 }
+
+export type SmtpSettings = Pick<
+  SettingValues,
+  | 'SMTP_ENABLED'
+  | 'SMTP_HOST'
+  | 'SMTP_PORT'
+  | 'SMTP_USER'
+  | 'SMTP_PASSWORD'
+  | 'SMTP_FROM_EMAIL'
+  | 'SMTP_FROM_NAME'
+  | 'SMTP_USE_TLS'
+  | 'SMTP_TO_EMAILS'
+>;
 
 export interface NotificationEmailData {
   type:
@@ -150,7 +165,8 @@ export class EmailService {
         success: true,
         message: `SMTP connection successful! Test email sent to ${recipientText}`,
       };
-    } catch (error) {
+    } catch (caught) {
+      const error = asHttpError(caught);
       this.logger.error('SMTP Connection Test Failed', {
         error: error.message,
         code: error.code,
@@ -192,9 +208,7 @@ export class EmailService {
     stopCode: string,
     ipAddress?: string,
   ): Promise<void> {
-    const notificationText =
-      StopCodeUtils.getStopCodeDescription(stopCode) ||
-      `Stream blocked for ${username} on ${deviceName}`;
+    const notificationText = StopCodeUtils.getStopCodeDescription(stopCode);
     const type = 'block';
 
     const notificationData: NotificationEmailData = {
@@ -276,55 +290,72 @@ export class EmailService {
     }
   }
 
+  async loadSmtpSettings(): Promise<SmtpSettings> {
+    const [
+      SMTP_ENABLED,
+      SMTP_HOST,
+      SMTP_PORT,
+      SMTP_USER,
+      SMTP_PASSWORD,
+      SMTP_FROM_EMAIL,
+      SMTP_FROM_NAME,
+      SMTP_USE_TLS,
+      SMTP_TO_EMAILS,
+    ] = await Promise.all([
+      this.configService.getSetting('SMTP_ENABLED'),
+      this.configService.getSetting('SMTP_HOST'),
+      this.configService.getSetting('SMTP_PORT'),
+      this.configService.getSetting('SMTP_USER'),
+      this.configService.getSetting('SMTP_PASSWORD'),
+      this.configService.getSetting('SMTP_FROM_EMAIL'),
+      this.configService.getSetting('SMTP_FROM_NAME'),
+      this.configService.getSetting('SMTP_USE_TLS'),
+      this.configService.getSetting('SMTP_TO_EMAILS'),
+    ]);
+
+    return {
+      SMTP_ENABLED: SMTP_ENABLED ?? false,
+      SMTP_HOST: SMTP_HOST ?? '',
+      SMTP_PORT: SMTP_PORT ?? 0,
+      SMTP_USER: SMTP_USER ?? '',
+      SMTP_PASSWORD: SMTP_PASSWORD ?? '',
+      SMTP_FROM_EMAIL: SMTP_FROM_EMAIL ?? '',
+      SMTP_FROM_NAME: SMTP_FROM_NAME ?? '',
+      SMTP_USE_TLS: SMTP_USE_TLS ?? false,
+      SMTP_TO_EMAILS: SMTP_TO_EMAILS ?? '',
+    };
+  }
+
+  toSmtpConfig(settings: SmtpSettings): SMTPConfig {
+    return {
+      host: settings.SMTP_HOST,
+      port: settings.SMTP_PORT,
+      user: settings.SMTP_USER,
+      password: settings.SMTP_PASSWORD,
+      fromEmail: settings.SMTP_FROM_EMAIL,
+      fromName: settings.SMTP_FROM_NAME,
+      useTLS: settings.SMTP_USE_TLS,
+      toEmails: settings.SMTP_TO_EMAILS.split(/[,;\n]/)
+        .map((email) => email.trim())
+        .filter((email) => email.length > 0),
+    };
+  }
+
   async sendEmail(data: NotificationEmailData): Promise<void> {
     //Print all data
     this.logger.debug('Preparing to send notification email with data:', data);
 
     try {
-      const [
-        smtpEnabled,
-        smtpHost,
-        smtpPort,
-        smtpUser,
-        smtpPassword,
-        smtpFromEmail,
-        smtpFromName,
-        smtpUseTLS,
-        smtpToEmails,
-      ] = await Promise.all([
-        this.configService.getSetting('SMTP_ENABLED'),
-        this.configService.getSetting('SMTP_HOST'),
-        this.configService.getSetting('SMTP_PORT'),
-        this.configService.getSetting('SMTP_USER'),
-        this.configService.getSetting('SMTP_PASSWORD'),
-        this.configService.getSetting('SMTP_FROM_EMAIL'),
-        this.configService.getSetting('SMTP_FROM_NAME'),
-        this.configService.getSetting('SMTP_USE_TLS'),
-        this.configService.getSetting('SMTP_TO_EMAILS'),
-      ]);
+      const settings = await this.loadSmtpSettings();
 
-      if (!smtpEnabled) {
+      if (!settings.SMTP_ENABLED) {
         this.logger.log(
           'SMTP notification email skipped: SMTP email notifications are disabled',
         );
         return;
       }
 
-      const smtpConfig: SMTPConfig = {
-        host: smtpHost,
-        port: parseInt(smtpPort),
-        user: smtpUser,
-        password: smtpPassword,
-        fromEmail: smtpFromEmail,
-        fromName: smtpFromName,
-        useTLS: smtpUseTLS === 'true',
-        toEmails: smtpToEmails
-          ? smtpToEmails
-              .split(/[,;\n]/)
-              .map((email: string) => email.trim())
-              .filter((email: string) => email.length > 0)
-          : [],
-      };
+      const smtpConfig = this.toSmtpConfig(settings);
 
       const validationError = this.validateSMTPConfig(smtpConfig);
 
@@ -378,7 +409,8 @@ export class EmailService {
       this.logger.log(
         `Notification email sent successfully for ${data.type} event: ${data.username}${data.deviceName ? ` on ${data.deviceName}` : ''}`,
       );
-    } catch (error) {
+    } catch (caught) {
+      const error = asHttpError(caught);
       this.logger.error('Failed to send notification email', {
         error: error.message,
         notificationType: data.type,

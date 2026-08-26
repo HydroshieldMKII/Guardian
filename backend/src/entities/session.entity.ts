@@ -6,7 +6,7 @@ import {
   ManyToOne,
   Index,
 } from 'typeorm';
-import { AdminUser } from './admin-user.entity';
+import { AdminUser } from '@/entities/admin-user.entity';
 
 export type SessionUserType = 'admin' | 'plex_user';
 
@@ -49,7 +49,7 @@ export class Session {
   expiresAt: Date;
 
   @Column({ type: 'datetime', nullable: true })
-  lastActivityAt: Date;
+  lastActivityAt: Date | null;
 
   @CreateDateColumn()
   createdAt: Date;

@@ -16,26 +16,26 @@ export class UserDevice {
   @Column({ name: 'user_id' })
   userId: string;
 
-  @Column({ name: 'username', nullable: true })
-  username: string;
+  @Column({ type: 'varchar', name: 'username', nullable: true })
+  username: string | null;
 
-  @Column({ name: 'avatar_url', nullable: true })
-  avatarUrl: string;
+  @Column({ type: 'varchar', name: 'avatar_url', nullable: true })
+  avatarUrl: string | null;
 
   @Column({ name: 'device_identifier' })
   deviceIdentifier: string;
 
-  @Column({ name: 'device_name', nullable: true })
-  deviceName: string;
+  @Column({ type: 'varchar', name: 'device_name', nullable: true })
+  deviceName: string | null;
 
-  @Column({ name: 'device_platform', nullable: true })
-  devicePlatform: string;
+  @Column({ type: 'varchar', name: 'device_platform', nullable: true })
+  devicePlatform: string | null;
 
-  @Column({ name: 'device_product', nullable: true })
-  deviceProduct: string;
+  @Column({ type: 'varchar', name: 'device_product', nullable: true })
+  deviceProduct: string | null;
 
-  @Column({ name: 'device_version', nullable: true })
-  deviceVersion: string;
+  @Column({ type: 'varchar', name: 'device_version', nullable: true })
+  deviceVersion: string | null;
 
   @Column({ name: 'status', default: 'pending' })
   status: 'pending' | 'approved' | 'rejected';
@@ -50,20 +50,28 @@ export class UserDevice {
   sessionCount: number;
 
   // To keep track if it's a new session
-  @Column({ name: 'current_session_key', nullable: true })
-  currentSessionKey: string;
+  @Column({ type: 'varchar', name: 'current_session_key', nullable: true })
+  currentSessionKey: string | null;
 
-  @Column({ name: 'ip_address', nullable: true })
-  ipAddress: string;
+  @Column({ type: 'varchar', name: 'ip_address', nullable: true })
+  ipAddress: string | null;
 
-  @Column({ name: 'temporary_access_until', nullable: true })
-  temporaryAccessUntil: Date;
+  @Column({ type: 'datetime', name: 'temporary_access_until', nullable: true })
+  temporaryAccessUntil: Date | null;
 
-  @Column({ name: 'temporary_access_granted_at', nullable: true })
-  temporaryAccessGrantedAt: Date;
+  @Column({
+    type: 'datetime',
+    name: 'temporary_access_granted_at',
+    nullable: true,
+  })
+  temporaryAccessGrantedAt: Date | null;
 
-  @Column({ name: 'temporary_access_duration_minutes', nullable: true })
-  temporaryAccessDurationMinutes: number;
+  @Column({
+    type: 'int',
+    name: 'temporary_access_duration_minutes',
+    nullable: true,
+  })
+  temporaryAccessDurationMinutes: number | null;
 
   @Column({ name: 'temporary_access_bypass_policies', default: false })
   temporaryAccessBypassPolicies: boolean;
@@ -78,13 +86,13 @@ export class UserDevice {
     type: 'varchar',
     length: 500,
   })
-  requestDescription: string;
+  requestDescription: string | null;
 
   // Timestamp when user submitted a note/request
-  @Column({ name: 'request_submitted_at', nullable: true })
-  requestSubmittedAt: Date;
+  @Column({ type: 'datetime', name: 'request_submitted_at', nullable: true })
+  requestSubmittedAt: Date | null;
 
   // Timestamp when admin read the user's note
-  @Column({ name: 'request_note_read_at', nullable: true })
-  requestNoteReadAt: Date;
+  @Column({ type: 'datetime', name: 'request_note_read_at', nullable: true })
+  requestNoteReadAt: Date | null;
 }

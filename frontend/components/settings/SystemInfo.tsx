@@ -122,7 +122,7 @@ export function SystemInfo({ onSettingsRefresh, settings }: SystemInfoProps) {
 
       if (!versionInfo?.version) {
         throw new Error(
-          "Current version information not available yet. Try again in a moment."
+          "Current version information not available yet. Try again in a moment.",
         );
       }
 
@@ -237,11 +237,12 @@ export function SystemInfo({ onSettingsRefresh, settings }: SystemInfoProps) {
                     </>
                   )}
                 </Badge>
-                {latency !== null && (healthStatus === "ok" || healthStatus === "healthy") && (
-                  <div className="text-xs text-muted-foreground mt-1">
-                    Latency: {latency}ms
-                  </div>
-                )}
+                {latency !== null &&
+                  (healthStatus === "ok" || healthStatus === "healthy") && (
+                    <div className="text-xs text-muted-foreground mt-1">
+                      Latency: {latency}ms
+                    </div>
+                  )}
               </div>
             </div>
           </Card>
@@ -284,9 +285,7 @@ export function SystemInfo({ onSettingsRefresh, settings }: SystemInfoProps) {
       <Card>
         <CardHeader className="mt-4">
           <CardTitle>Update Management</CardTitle>
-          <CardDescription>
-            Check for application updates
-          </CardDescription>
+          <CardDescription>Check for application updates</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Update Status */}

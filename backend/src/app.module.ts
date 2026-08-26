@@ -1,28 +1,29 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ScheduleModule } from '@nestjs/schedule';
-import { SessionsModule } from './modules/sessions/sessions.module';
-import { DevicesModule } from './modules/devices/devices.module';
-import { PlexModule } from './modules/plex/plex.module';
-import { HealthModule } from './modules/health/health.module';
-import { UsersModule } from './modules/users/users.module';
-import { ConfigModule } from './modules/config/config.module';
-import { DashboardModule } from './modules/dashboard/dashboard.module';
-import { NotificationsModule } from './modules/notifications/notifications.module';
-import { AuthModule } from './modules/auth/auth.module';
-import { CommonModule } from './common/common.module';
-import { ServicesModule } from './services/services.module';
-import { UserPortalModule } from './modules/user-portal/user-portal.module';
-import { SchedulerService } from './services/scheduler.service';
-import { UserDevice } from './entities/user-device.entity';
-import { SessionHistory } from './entities/session-history.entity';
-import { UserPreference } from './entities/user-preference.entity';
-import { AppSettings } from './entities/app-settings.entity';
-import { Notification } from './entities/notification.entity';
-import { UserTimeRule } from './entities/user-time-rule.entity';
-import { AdminUser } from './entities/admin-user.entity';
-import { Session } from './entities/session.entity';
-import { config } from './config/app.config';
+import { SessionsModule } from '@/modules/sessions/sessions.module';
+import { DevicesModule } from '@/modules/devices/devices.module';
+import { PlexModule } from '@/modules/plex/plex.module';
+import { HealthModule } from '@/modules/health/health.module';
+import { UsersModule } from '@/modules/users/users.module';
+import { ConfigModule } from '@/modules/config/config.module';
+import { DashboardModule } from '@/modules/dashboard/dashboard.module';
+import { NotificationsModule } from '@/modules/notifications/notifications.module';
+import { AuthModule } from '@/modules/auth/auth.module';
+import { CommonModule } from '@/common/common.module';
+import { ServicesModule } from '@/services/services.module';
+import { UserPortalModule } from '@/modules/user-portal/user-portal.module';
+import { EventsModule } from '@/modules/events/events.module';
+import { SchedulerService } from '@/services/scheduler.service';
+import { UserDevice } from '@/entities/user-device.entity';
+import { SessionHistory } from '@/entities/session-history.entity';
+import { UserPreference } from '@/entities/user-preference.entity';
+import { AppSettings } from '@/entities/app-settings.entity';
+import { Notification } from '@/entities/notification.entity';
+import { UserTimeRule } from '@/entities/user-time-rule.entity';
+import { AdminUser } from '@/entities/admin-user.entity';
+import { Session } from '@/entities/session.entity';
+import { config } from '@/config/app.config';
 import * as path from 'path';
 
 @Module({
@@ -60,6 +61,7 @@ import * as path from 'path';
     CommonModule,
     ServicesModule,
     UserPortalModule,
+    EventsModule,
   ],
   providers: [SchedulerService],
 })
