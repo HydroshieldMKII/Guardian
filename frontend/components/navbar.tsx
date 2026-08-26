@@ -186,7 +186,7 @@ export function Navbar() {
                 alt="Guardian"
                 width={300}
                 height={48}
-                className="block dark:hidden h-[48px] w-auto"
+                className="block dark:hidden h-[56px] sm:h-[64px] w-auto"
                 priority
               />
               {/* Dark theme logo (light logo) */}
@@ -195,7 +195,7 @@ export function Navbar() {
                 alt="Guardian"
                 width={300}
                 height={48}
-                className="hidden dark:block h-[48px] w-auto"
+                className="hidden dark:block h-[56px] sm:h-[64px] w-auto"
                 priority
               />
             </div>

@@ -431,7 +431,7 @@ describe("UserHistoryModal navigation", () => {
     const onNavigateToDevice = jest.fn();
     const { user, onClose } = await renderModal({ onNavigateToDevice });
 
-    await user.click(screen.getAllByTitle("Scroll to Device")[0]);
+    await user.click(screen.getAllByTitle("See Device")[0]);
 
     expect(onClose).toHaveBeenCalled();
     expect(onNavigateToDevice).toHaveBeenCalledWith("u-1", "device-1");
@@ -441,7 +441,7 @@ describe("UserHistoryModal navigation", () => {
   it("routes with query parameters when there is no callback", async () => {
     const { user } = await renderModal();
 
-    await user.click(screen.getAllByTitle("Scroll to Device")[0]);
+    await user.click(screen.getAllByTitle("See Device")[0]);
 
     expect(push).toHaveBeenCalledWith("/?userId=u-1&deviceId=device-1");
   });
@@ -450,7 +450,7 @@ describe("UserHistoryModal navigation", () => {
     fetchMock.mockImplementation(() => ok([session({ userDevice: null })]));
     const { user, onClose } = await renderModal();
 
-    await user.click(screen.getAllByTitle("Scroll to Device")[0]);
+    await user.click(screen.getAllByTitle("See Device")[0]);
 
     expect(onClose).toHaveBeenCalled();
     expect(push).not.toHaveBeenCalled();
@@ -573,5 +573,69 @@ describe("UserHistoryModal deep link", () => {
     await renderModal({ scrollToSessionId: null });
 
     expect(scrollIntoView).not.toHaveBeenCalled();
+  });
+});
+
+describe("UserHistoryModal duration reporting", () => {
+  const overnight = (extra: Record<string, unknown> = {}) =>
+    session({
+      contentTitle: "Keep Your Eyes Peeled",
+      startedAt: "2026-08-26T01:56:00.000Z",
+      endedAt: "2026-08-26T12:26:00.000Z",
+      ...extra,
+    });
+
+  it("reports playback position rather than how long the session stayed open", async () => {
+    fetchMock.mockImplementation(() =>
+      ok([overnight({ duration: 227_000, viewOffset: 227_000 })]),
+    );
+    await renderModal();
+
+    expect(await screen.findAllByText("3m 47s")).not.toHaveLength(0);
+    expect(screen.queryByText(/10h/)).toBeNull();
+  });
+
+  it("caps at the track length when only the media duration is known", async () => {
+    fetchMock.mockImplementation(() => ok([overnight({ duration: 227_000 })]));
+    await renderModal();
+
+    expect(await screen.findAllByText("3m 47s")).not.toHaveLength(0);
+  });
+
+  it("reports a partial listen from the playback position", async () => {
+    fetchMock.mockImplementation(() =>
+      ok([overnight({ duration: 227_000, viewOffset: 30_000 })]),
+    );
+    await renderModal();
+
+    expect(await screen.findAllByText("30s")).not.toHaveLength(0);
+  });
+
+  it("falls back to elapsed time when Plex reported neither", async () => {
+    fetchMock.mockImplementation(() =>
+      ok([
+        session({
+          startedAt: "2026-08-26T12:26:00.000Z",
+          endedAt: "2026-08-26T12:36:20.000Z",
+        }),
+      ]),
+    );
+    await renderModal();
+
+    expect(await screen.findAllByText("10m 20s")).not.toHaveLength(0);
+  });
+
+  it("keeps Unknown for an end that precedes the start", async () => {
+    fetchMock.mockImplementation(() =>
+      ok([
+        session({
+          startedAt: "2026-08-26T12:26:00.000Z",
+          endedAt: "2026-08-26T01:00:00.000Z",
+        }),
+      ]),
+    );
+    await renderModal();
+
+    expect(await screen.findAllByText("Unknown")).not.toHaveLength(0);
   });
 });

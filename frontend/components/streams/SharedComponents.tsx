@@ -1,11 +1,4 @@
 import React from "react";
-import {
-  Smartphone,
-  Tablet,
-  Laptop,
-  Monitor,
-  ExternalLink,
-} from "lucide-react";
 
 // Clickable IP component for external IP lookup
 export const ClickableIP = ({ ipAddress }: { ipAddress: string | null }) => {
@@ -29,28 +22,26 @@ export const ClickableIP = ({ ipAddress }: { ipAddress: string | null }) => {
       title={`Look up ${ipAddress} on ipinfo.io`}
     >
       <span className="truncate">{ipAddress}</span>
-      <ExternalLink className="w-3 h-3 flex-shrink-0 opacity-70" />
     </button>
   );
 };
 
-// Device icon component based on platform
 export const getDeviceIcon = (platform: string = "") => {
   const platformLower = platform.toLowerCase();
   if (platformLower.includes("android") || platformLower.includes("ios")) {
-    return <Smartphone className="w-4 h-4" />;
+    return;
   }
   if (platformLower.includes("tablet") || platformLower.includes("ipad")) {
-    return <Tablet className="w-4 h-4" />;
+    return;
   }
   if (
     platformLower.includes("windows") ||
     platformLower.includes("macos") ||
     platformLower.includes("linux")
   ) {
-    return <Laptop className="w-4 h-4" />;
+    return;
   }
-  return <Monitor className="w-4 h-4" />;
+  return;
 };
 
 // Utility function to format duration in milliseconds to readable time

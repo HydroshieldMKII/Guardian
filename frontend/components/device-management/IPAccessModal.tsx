@@ -123,7 +123,7 @@ export const IPAccessModal: React.FC<IPAccessModalProps> = ({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+          <DialogTitle className="text-lg font-semibold leading-tight tracking-tight text-foreground">
             IP & Network Access Policies
           </DialogTitle>
           <DialogDescription>

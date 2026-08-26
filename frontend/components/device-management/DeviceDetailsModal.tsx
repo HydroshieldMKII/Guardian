@@ -231,7 +231,7 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="w-full sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center text-base sm:text-lg text-foreground text-left">
+          <DialogTitle className="text-left text-lg font-semibold leading-tight tracking-tight text-foreground">
             Device Details
           </DialogTitle>
           <DialogDescription className="text-sm text-muted-foreground text-left">
@@ -242,18 +242,20 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
         <div className="space-y-2">
           {/* Basic Information Section */}
           <Collapsible open={basicInfoOpen} onOpenChange={setBasicInfoOpen}>
-            <CollapsibleTrigger className="flex items-center justify-between w-full p-3 bg-muted/50 rounded-lg hover:bg-muted/70 transition-colors cursor-pointer">
-              <span className="font-semibold text-sm">Basic Information</span>
+            <CollapsibleTrigger className="flex w-full cursor-pointer items-center justify-between rounded-lg border bg-muted/30 px-4 py-3 transition-colors hover:bg-muted/50">
+              <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Basic Information
+              </span>
               <ChevronDown
                 className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${
                   basicInfoOpen ? "rotate-180" : ""
                 }`}
               />
             </CollapsibleTrigger>
-            <CollapsibleContent className="pt-3 px-3">
+            <CollapsibleContent className="px-1 pt-4">
               <div className="grid grid-cols-2 gap-3 sm:gap-4">
                 <div>
-                  <h4 className="font-semibold text-xs sm:text-sm text-muted-foreground">
+                  <h4 className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground/80">
                     Device Name
                   </h4>
                   {editingDevice === device.id ? (
@@ -307,55 +309,55 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
                   )}
                 </div>
                 <div>
-                  <h4 className="font-semibold text-xs sm:text-sm text-muted-foreground">
+                  <h4 className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground/80">
                     User
                   </h4>
-                  <p className="text-sm sm:text-base text-foreground break-words">
+                  <p className="text-sm font-medium text-foreground break-words">
                     {device.username || device.userId}
                   </p>
                 </div>
                 <div>
-                  <h4 className="font-semibold text-xs sm:text-sm text-muted-foreground">
+                  <h4 className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground/80">
                     Platform
                   </h4>
-                  <p className="text-sm sm:text-base text-foreground">
+                  <p className="text-sm font-medium text-foreground">
                     {device.devicePlatform || "Unknown"}
                   </p>
                 </div>
                 <div>
-                  <h4 className="font-semibold text-xs sm:text-sm text-muted-foreground">
+                  <h4 className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground/80">
                     Product
                   </h4>
-                  <p className="text-sm sm:text-base text-foreground">
+                  <p className="text-sm font-medium text-foreground">
                     {device.deviceProduct || "Unknown"}
                   </p>
                 </div>
                 <div>
-                  <h4 className="font-semibold text-xs sm:text-sm text-muted-foreground">
+                  <h4 className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground/80">
                     Version
                   </h4>
-                  <p className="text-sm sm:text-base text-foreground">
+                  <p className="text-sm font-medium text-foreground">
                     {device.deviceVersion || "Unknown"}
                   </p>
                 </div>
                 <div>
-                  <h4 className="font-semibold text-xs sm:text-sm text-muted-foreground">
+                  <h4 className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground/80">
                     IP Address
                   </h4>
-                  <div className="text-sm sm:text-base text-foreground">
+                  <div className="text-sm font-medium text-foreground">
                     <ClickableIP ipAddress={device.ipAddress} />
                   </div>
                 </div>
                 <div>
-                  <h4 className="font-semibold text-xs sm:text-sm text-muted-foreground">
+                  <h4 className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground/80">
                     Streams Started
                   </h4>
-                  <p className="text-sm sm:text-base text-foreground">
+                  <p className="text-sm font-medium text-foreground">
                     {device.sessionCount}
                   </p>
                 </div>
                 <div>
-                  <h4 className="font-semibold text-xs sm:text-sm text-muted-foreground">
+                  <h4 className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground/80">
                     Status
                   </h4>
                   <div>
@@ -368,15 +370,17 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
 
           {/* Device Identifier Section */}
           <Collapsible open={identifierOpen} onOpenChange={setIdentifierOpen}>
-            <CollapsibleTrigger className="flex items-center justify-between w-full p-3 bg-muted/50 rounded-lg hover:bg-muted/70 transition-colors cursor-pointer">
-              <span className="font-semibold text-sm">Device Identifier</span>
+            <CollapsibleTrigger className="flex w-full cursor-pointer items-center justify-between rounded-lg border bg-muted/30 px-4 py-3 transition-colors hover:bg-muted/50">
+              <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Device Identifier
+              </span>
               <ChevronDown
                 className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${
                   identifierOpen ? "rotate-180" : ""
                 }`}
               />
             </CollapsibleTrigger>
-            <CollapsibleContent className="pt-3 px-3">
+            <CollapsibleContent className="px-1 pt-4">
               <p className="text-xs font-mono bg-muted p-2 rounded break-all">
                 {device.deviceIdentifier}
               </p>
@@ -385,29 +389,31 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
 
           {/* Activity Section */}
           <Collapsible open={activityOpen} onOpenChange={setActivityOpen}>
-            <CollapsibleTrigger className="flex items-center justify-between w-full p-3 bg-muted/50 rounded-lg hover:bg-muted/70 transition-colors cursor-pointer">
-              <span className="font-semibold text-sm">Activity</span>
+            <CollapsibleTrigger className="flex w-full cursor-pointer items-center justify-between rounded-lg border bg-muted/30 px-4 py-3 transition-colors hover:bg-muted/50">
+              <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Activity
+              </span>
               <ChevronDown
                 className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${
                   activityOpen ? "rotate-180" : ""
                 }`}
               />
             </CollapsibleTrigger>
-            <CollapsibleContent className="pt-3 px-3">
+            <CollapsibleContent className="px-1 pt-4">
               <div className="grid grid-cols-2 gap-3 sm:gap-4">
                 <div>
-                  <h4 className="font-semibold text-xs sm:text-sm text-muted-foreground">
+                  <h4 className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground/80">
                     First Seen
                   </h4>
-                  <p className="text-xs sm:text-sm text-foreground">
+                  <p className="text-sm font-medium text-foreground">
                     {new Date(device.firstSeen).toLocaleString()}
                   </p>
                 </div>
                 <div>
-                  <h4 className="font-semibold text-xs sm:text-sm text-muted-foreground">
+                  <h4 className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground/80">
                     Last Seen
                   </h4>
-                  <p className="text-xs sm:text-sm text-foreground">
+                  <p className="text-sm font-medium text-foreground">
                     {new Date(device.lastSeen).toLocaleString()}
                   </p>
                 </div>
@@ -420,9 +426,11 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
             device.requestSubmittedAt &&
             noteReadAt && (
               <Collapsible open={userNoteOpen} onOpenChange={setUserNoteOpen}>
-                <CollapsibleTrigger className="flex items-center justify-between w-full p-3 bg-muted/50 rounded-lg hover:bg-muted/70 transition-colors cursor-pointer">
+                <CollapsibleTrigger className="flex w-full cursor-pointer items-center justify-between rounded-lg border bg-muted/30 px-4 py-3 transition-colors hover:bg-muted/50">
                   <div className="flex items-center gap-2">
-                    <span className="font-semibold text-sm">User Note</span>
+                    <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                      User Note
+                    </span>
                   </div>
                   <ChevronDown
                     className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${
@@ -430,7 +438,7 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
                     }`}
                   />
                 </CollapsibleTrigger>
-                <CollapsibleContent className="pt-3 px-3">
+                <CollapsibleContent className="px-1 pt-4">
                   <div className="space-y-3">
                     <div className="p-3 rounded-lg bg-muted/50">
                       <p className="text-sm text-foreground">
@@ -466,9 +474,9 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
             device.temporaryAccessGrantedAt ||
             device.temporaryAccessDurationMinutes) && (
             <Collapsible open={tempAccessOpen} onOpenChange={setTempAccessOpen}>
-              <CollapsibleTrigger className="flex items-center justify-between w-full p-3 bg-muted/50 rounded-lg hover:bg-muted/70 transition-colors cursor-pointer">
+              <CollapsibleTrigger className="flex w-full cursor-pointer items-center justify-between rounded-lg border bg-muted/30 px-4 py-3 transition-colors hover:bg-muted/50">
                 <div className="flex items-center gap-2">
-                  <span className="font-semibold text-sm">
+                  <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                     Temporary Access
                   </span>
                 </div>
@@ -478,14 +486,14 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
                   }`}
                 />
               </CollapsibleTrigger>
-              <CollapsibleContent className="pt-3 px-3">
+              <CollapsibleContent className="px-1 pt-4">
                 <div className="grid grid-cols-2 gap-3 sm:gap-4">
                   {device.temporaryAccessDurationMinutes && (
                     <div>
-                      <h4 className="font-semibold text-xs sm:text-sm text-muted-foreground">
+                      <h4 className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground/80">
                         Original Duration Granted
                       </h4>
-                      <p className="text-sm sm:text-base text-foreground">
+                      <p className="text-sm font-medium text-foreground">
                         {(() => {
                           const minutes = device.temporaryAccessDurationMinutes;
                           if (minutes < 60) {
@@ -516,10 +524,10 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
 
                   {device.temporaryAccessGrantedAt && (
                     <div>
-                      <h4 className="font-semibold text-xs sm:text-sm text-muted-foreground">
+                      <h4 className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground/80">
                         Access Granted At
                       </h4>
-                      <p className="text-xs sm:text-sm text-foreground">
+                      <p className="text-sm font-medium text-foreground">
                         {new Date(
                           device.temporaryAccessGrantedAt,
                         ).toLocaleString()}
@@ -529,19 +537,19 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
 
                   {device.temporaryAccessUntil && (
                     <div>
-                      <h4 className="font-semibold text-xs sm:text-sm text-muted-foreground">
+                      <h4 className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground/80">
                         {hasTemporaryAccess(device)
                           ? "Expires At"
                           : "Expired At"}
                       </h4>
-                      <p className="text-xs sm:text-sm text-foreground">
+                      <p className="text-sm font-medium text-foreground">
                         {new Date(device.temporaryAccessUntil).toLocaleString()}
                       </p>
                     </div>
                   )}
 
                   <div>
-                    <h4 className="font-semibold text-xs sm:text-sm text-muted-foreground">
+                    <h4 className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground/80">
                       Bypass Policies
                     </h4>
                     <div>
@@ -567,15 +575,17 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
             open={deviceSettingsOpen}
             onOpenChange={setDeviceSettingsOpen}
           >
-            <CollapsibleTrigger className="flex items-center justify-between w-full p-3 bg-muted/50 rounded-lg hover:bg-muted/70 transition-colors cursor-pointer">
-              <span className="font-semibold text-sm">Device Settings</span>
+            <CollapsibleTrigger className="flex w-full cursor-pointer items-center justify-between rounded-lg border bg-muted/30 px-4 py-3 transition-colors hover:bg-muted/50">
+              <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Device Settings
+              </span>
               <ChevronDown
                 className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${
                   deviceSettingsOpen ? "rotate-180" : ""
                 }`}
               />
             </CollapsibleTrigger>
-            <CollapsibleContent className="pt-3 px-3 space-y-3">
+            <CollapsibleContent className="space-y-4 px-1 pt-4">
               {/* Exclude from concurrent stream limit - Hide for PlexAmp devices since they're always excluded */}
               {!isPlexampDevice && (
                 <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">

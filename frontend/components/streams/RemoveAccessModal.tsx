@@ -9,7 +9,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { UserX, RefreshCw, User } from "lucide-react";
-import { getContentTitle, getDeviceIcon } from "./SharedComponents";
+import { getContentTitle } from "./SharedComponents";
 import { PlexSession } from "@/types";
 
 interface RemoveAccessModalProps {
@@ -53,7 +53,6 @@ export const RemoveAccessModal: React.FC<RemoveAccessModalProps> = ({
                 </span>
               </div>
               <div className="flex items-center gap-1 min-w-0">
-                {getDeviceIcon(stream.Player?.platform)}
                 <span className="truncate max-w-[100px]">
                   {stream.Player?.title || "Unknown Device"}
                 </span>

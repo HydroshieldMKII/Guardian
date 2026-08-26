@@ -36,7 +36,6 @@ describe("barrel exports", () => {
 
   it.each([
     "ClickableIP",
-    "getDeviceIcon",
     "formatDuration",
     "getProgressPercentage",
     "getContentTitle",

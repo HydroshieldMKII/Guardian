@@ -29,17 +29,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  Users,
   RefreshCw,
-  Wifi,
   Search,
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
-  Monitor,
-  Settings,
-  CheckCircle,
-  XCircle,
   Eye,
   EyeOff,
 } from "lucide-react";
@@ -1220,7 +1214,6 @@ const DeviceManagement = memo(
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div className="flex-1 min-w-0">
                 <CardTitle className="flex items-center text-lg sm:text-xl mt-4">
-                  <Users className="w-5 h-5 mr-2" />
                   User & Device Management
                 </CardTitle>
                 <CardDescription className="mt-1 flex items-center">
@@ -1235,13 +1228,10 @@ const DeviceManagement = memo(
                     onClick={handleAutoRefreshToggle}
                     className={`text-xs sm:text-sm ${
                       autoRefresh
-                        ? "bg-green-50 border-green-200 text-green-700"
+                        ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
                         : ""
                     }`}
                   >
-                    <Wifi
-                      className={`w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 ${autoRefresh ? "animate-pulse" : ""}`}
-                    />
                     {autoRefresh ? "Live" : "Manual"}
                   </Button>
                   <Button
@@ -1265,13 +1255,12 @@ const DeviceManagement = memo(
             <div className="mb-6">
               <div className="flex flex-col sm:flex-row gap-3 mb-4">
                 <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
                   <input
                     type="text"
                     placeholder="Search by username or device..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 text-sm border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                    className="h-10 w-full rounded-md border border-input bg-background px-4 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                   />
                 </div>
 
@@ -1371,10 +1360,7 @@ const DeviceManagement = memo(
                     No users match your search
                   </>
                 ) : (
-                  <>
-                    <Users className="w-6 h-6 mr-2" />
-                    No users found
-                  </>
+                  <>No users found</>
                 )}
               </div>
             ) : (
@@ -1502,7 +1488,6 @@ const DeviceManagement = memo(
             <div className="space-y-3">
               {hiddenUsers.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
-                  <Users className="w-8 h-8 mx-auto mb-2" />
                   <p>No hidden users found</p>
                 </div>
               ) : (

@@ -206,12 +206,12 @@ describe("UserGroupCard badges", () => {
       },
     });
     expect(screen.getByText("Unlimited")).toBeInTheDocument();
-    expect(screen.getByText("∞")).toBeInTheDocument();
   });
 
   it("omits the limit badge when it is inherited", () => {
     renderCard();
-    expect(screen.queryByText(/Stream/)).toBeNull();
+    expect(screen.queryByText(/^\d+ Streams?$/)).toBeNull();
+    expect(screen.queryByText("Blocked")).toBeNull();
   });
 
   it("counts devices excluded from the limit", () => {
@@ -237,9 +237,9 @@ describe("UserGroupCard badges", () => {
 
 describe("UserGroupCard user actions", () => {
   it.each([
-    ["Schedule", "onShowTimePolicy"],
-    ["Temp", "onGrantUserTempAccess"],
-    ["History", "onShowHistory"],
+    ["Time Schedule", "onShowTimePolicy"],
+    ["Temporary Access", "onGrantUserTempAccess"],
+    ["Stream History", "onShowHistory"],
   ] as const)("invokes %s", async (label, handler) => {
     const { user, handlers } = renderCard();
 
@@ -267,7 +267,7 @@ describe("UserGroupCard user actions", () => {
     const { user } = renderCard();
     expect(screen.getByText("ip-modal:false")).toBeInTheDocument();
 
-    await user.click(screen.getByText("IP"));
+    await user.click(screen.getByText("IP Access"));
     expect(screen.getByText("ip-modal:true")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "close ip" }));
@@ -277,7 +277,7 @@ describe("UserGroupCard user actions", () => {
   it("opens and closes the concurrent limit modal", async () => {
     const { user } = renderCard();
 
-    await user.click(screen.getByText("Limit"));
+    await user.click(screen.getByText("Stream Limit"));
     expect(screen.getByText("limit-modal:true")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "close limit" }));

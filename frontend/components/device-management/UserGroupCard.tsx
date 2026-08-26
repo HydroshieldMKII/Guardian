@@ -7,6 +7,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { ChevronDown, ChevronRight } from "lucide-react";
+import { PillRow, StatusPill } from "@/components/ui/entity";
 import { UserDevice, UserPreference } from "@/types";
 import { UserAvatar, getUserPreferenceBadge } from "./SharedComponents";
 import { DeviceCard } from "./DeviceCard";
@@ -92,13 +93,13 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
       onOpenChange={() => onToggleExpansion(group.user.userId)}
     >
       <div
-        className="rounded-lg border bg-card shadow-sm hover:shadow-md transition-shadow"
+        className="overflow-hidden rounded-xl border bg-card"
         data-user-id={group.user.userId}
       >
         <CollapsibleTrigger asChild>
-          <div className="p-2.5 sm:p-4 border-b cursor-pointer hover:bg-muted/50 transition-colors">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-              <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
+          <div className="cursor-pointer border-b p-4 transition-colors hover:bg-muted/40 sm:p-5">
+            <div className="flex items-start gap-3 sm:items-center sm:gap-4">
+              <div className="flex min-w-0 flex-1 items-center gap-3">
                 {isExpanded ? (
                   <ChevronDown className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground flex-shrink-0" />
                 ) : (
@@ -110,92 +111,60 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
                   avatarUrl={group.user.preference?.avatarUrl}
                 />
                 <div className="min-w-0 flex-1">
-                  <h3 className="font-semibold text-foreground truncate text-sm">
+                  <h3 className="truncate text-base font-semibold leading-tight tracking-tight text-foreground">
                     {group.user.username || group.user.userId}
                   </h3>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="mt-0.5 text-xs text-muted-foreground sm:text-sm">
                     {group.devices.length} device
                     {group.devices.length !== 1 ? "s" : ""}
                     {group.pendingCount > 0 && (
-                      <span className="text-yellow-600 dark:text-yellow-400">
-                        {" • "}
+                      <span className="text-amber-600 dark:text-amber-400">
+                        {" · "}
                         {group.pendingCount} pending
                       </span>
                     )}
                   </p>
                 </div>
-                <div className="hidden sm:flex items-center gap-2">
-                  {group.user.preference &&
-                    getUserPreferenceBadge(group.user.preference.defaultBlock)}
-                  {hasTimeSchedules && (
-                    <Badge variant="outline" className="text-xs">
-                      Scheduled
-                    </Badge>
-                  )}
-                  {hasIPPolicies && (
-                    <Badge variant="outline" className="text-xs">
-                      IP Policy
-                    </Badge>
-                  )}
-                  {group.user.preference?.concurrentStreamLimit !== null &&
-                    group.user.preference?.concurrentStreamLimit !==
-                      undefined && (
-                      <Badge variant="outline" className="text-xs">
-                        {group.user.preference.concurrentStreamLimit === 0
-                          ? "Unlimited"
-                          : `${group.user.preference.concurrentStreamLimit} Stream${group.user.preference.concurrentStreamLimit !== 1 ? "s" : ""}`}
-                      </Badge>
-                    )}
-                  {excludedFromLimitCount > 0 && (
-                    <Badge variant="outline" className="text-xs">
-                      {excludedFromLimitCount} Excluded
-                    </Badge>
-                  )}
-                </div>
               </div>
 
-              {/* Mobile: Show preference badge */}
-              <div className="sm:hidden flex items-center gap-1 ml-6 flex-wrap">
+              <PillRow className="hidden shrink-0 justify-end sm:flex">
                 {group.user.preference &&
                   getUserPreferenceBadge(group.user.preference.defaultBlock)}
                 {hasTimeSchedules && (
-                  <Badge
-                    variant="outline"
-                    className="text-[10px] px-1.5 py-0.5"
-                  >
-                    Scheduled
-                  </Badge>
+                  <StatusPill tone="info">Scheduled</StatusPill>
                 )}
                 {hasIPPolicies && (
-                  <Badge
-                    variant="outline"
-                    className="text-[10px] px-1.5 py-0.5"
-                  >
-                    IP
-                  </Badge>
+                  <StatusPill tone="info">IP Policy</StatusPill>
                 )}
                 {group.user.preference?.concurrentStreamLimit !== null &&
                   group.user.preference?.concurrentStreamLimit !==
                     undefined && (
-                    <Badge
-                      variant="outline"
-                      className="text-[10px] px-1.5 py-0.5"
-                    >
+                    <StatusPill tone="neutral">
                       {group.user.preference.concurrentStreamLimit === 0
-                        ? "∞"
-                        : group.user.preference.concurrentStreamLimit}
-                    </Badge>
+                        ? "Unlimited"
+                        : `${group.user.preference.concurrentStreamLimit} Stream${
+                            group.user.preference.concurrentStreamLimit !== 1
+                              ? "s"
+                              : ""
+                          }`}
+                    </StatusPill>
                   )}
                 {excludedFromLimitCount > 0 && (
-                  <Badge
-                    variant="outline"
-                    className="text-[10px] px-1.5 py-0.5"
-                  >
-                    {excludedFromLimitCount}
-                  </Badge>
+                  <StatusPill tone="neutral">
+                    {excludedFromLimitCount} Excluded
+                  </StatusPill>
                 )}
-              </div>
+              </PillRow>
             </div>
+
+            <PillRow className="mt-3 pl-11 sm:hidden">
+              {group.user.preference &&
+                getUserPreferenceBadge(group.user.preference.defaultBlock)}
+              {hasTimeSchedules && (
+                <StatusPill tone="info">Scheduled</StatusPill>
+              )}
+              {hasIPPolicies && <StatusPill tone="info">IP Policy</StatusPill>}
+            </PillRow>
           </div>
         </CollapsibleTrigger>
 
@@ -213,7 +182,6 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                     {/* Actions Label */}
                     <div className="flex items-center space-x-3">
-                      <div className="p-2 bg-primary/10 rounded-lg hidden sm:block"></div>
                       <div>
                         <h4 className="font-semibold text-sm text-foreground">
                           User Actions
@@ -233,7 +201,7 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
                           title="Manage time-based access policies"
                         >
                           <span className="text-[11px] sm:text-xs">
-                            Schedule
+                            Time Schedule
                           </span>
                         </button>
                       )}
@@ -245,7 +213,9 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
                           className="text-xs px-2 sm:px-3 py-2 rounded-md transition-all duration-200 flex items-center justify-center sm:justify-start cursor-pointer text-foreground hover:bg-accent whitespace-nowrap"
                           title="Grant temporary access to user devices"
                         >
-                          <span className="text-[11px] sm:text-xs">Temp</span>
+                          <span className="text-[11px] sm:text-xs">
+                            Temporary Access
+                          </span>
                         </button>
                       )}
                       {onUpdateUserIPPolicy && (
@@ -254,7 +224,9 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
                           className="text-xs px-2 sm:px-3 py-2 rounded-md transition-all duration-200 flex items-center justify-center sm:justify-start cursor-pointer text-foreground hover:bg-accent whitespace-nowrap"
                           title="Configure IP and network access policies"
                         >
-                          <span className="text-[11px] sm:text-xs">IP</span>
+                          <span className="text-[11px] sm:text-xs">
+                            IP Access
+                          </span>
                         </button>
                       )}
                       <button
@@ -262,7 +234,9 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
                         className="text-xs px-2 sm:px-3 py-2 rounded-md transition-all duration-200 flex items-center justify-center sm:justify-start cursor-pointer text-foreground hover:bg-accent whitespace-nowrap"
                         title="Configure concurrent stream limit for this user"
                       >
-                        <span className="text-[11px] sm:text-xs">Limit</span>
+                        <span className="text-[11px] sm:text-xs">
+                          Stream Limit
+                        </span>
                       </button>
                       {onShowHistory && (
                         <button
@@ -271,7 +245,7 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
                           title="Show user history"
                         >
                           <span className="text-[11px] sm:text-xs">
-                            History
+                            Stream History
                           </span>
                         </button>
                       )}
@@ -290,13 +264,13 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
                           {group.user.preference?.hidden ? (
                             <>
                               <span className="text-[11px] sm:text-xs">
-                                Show
+                                Show User
                               </span>
                             </>
                           ) : (
                             <>
                               <span className="text-[11px] sm:text-xs">
-                                Hide
+                                Hide User
                               </span>
                             </>
                           )}
@@ -315,7 +289,6 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                   {/* Policy Label */}
                   <div className="flex items-center space-x-3">
-                    <div className="p-2 bg-primary/10 rounded-lg hidden sm:block"></div>
                     <div>
                       <h4 className="font-semibold text-sm text-foreground">
                         Default Device Policy

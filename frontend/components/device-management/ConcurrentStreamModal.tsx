@@ -120,7 +120,7 @@ export const ConcurrentStreamModal: React.FC<ConcurrentStreamModalProps> = ({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+          <DialogTitle className="text-lg font-semibold leading-tight tracking-tight text-foreground">
             Concurrent Stream Limit
           </DialogTitle>
           <DialogDescription>

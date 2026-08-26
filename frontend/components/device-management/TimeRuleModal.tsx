@@ -474,7 +474,7 @@ export function TimeRuleModal({
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="sm:max-w-[1100px] max-h-[85vh] sm:max-h-[90vh] flex flex-col overflow-hidden">
           <DialogHeader className="flex-shrink-0">
-            <DialogTitle className="flex items-center gap-2">
+            <DialogTitle className="text-lg font-semibold leading-tight tracking-tight text-foreground">
               Manage Blocking Rules
             </DialogTitle>
             <p className="text-sm text-muted-foreground">

@@ -87,7 +87,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
     <Dialog open onOpenChange={onCancel}>
       <DialogContent className="sm:max-w-lg overflow-x-hidden">
         <DialogHeader className="overflow-hidden">
-          <DialogTitle className="flex items-center gap-2 text-base sm:text-lg text-foreground">
+          <DialogTitle className="text-left text-lg font-semibold leading-tight tracking-tight text-foreground">
             {confirmAction.title}
           </DialogTitle>
           <DialogDescription className="text-sm text-muted-foreground pt-1.5">

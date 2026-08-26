@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Badge } from "@/components/ui/badge";
+import { StatusPill } from "@/components/ui/entity";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Tooltip,
@@ -209,24 +210,10 @@ export const DeviceStatus = ({
 // User preference badge component
 export const getUserPreferenceBadge = (defaultBlock: boolean | null) => {
   if (defaultBlock === null) {
-    return <Badge variant="secondary">Global Default</Badge>;
+    return <StatusPill tone="neutral">Global Default</StatusPill>;
   }
   if (defaultBlock) {
-    return (
-      <Badge
-        variant="destructive"
-        className="bg-red-600 dark:bg-red-700 text-white"
-      >
-        Block by Default
-      </Badge>
-    );
+    return <StatusPill tone="danger">Block by Default</StatusPill>;
   }
-  return (
-    <Badge
-      variant="default"
-      className="bg-green-600 dark:bg-green-700 text-white"
-    >
-      Allow by Default
-    </Badge>
-  );
+  return <StatusPill tone="positive">Allow by Default</StatusPill>;
 };

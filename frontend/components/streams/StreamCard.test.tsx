@@ -93,8 +93,8 @@ describe("StreamCard content", () => {
     renderCard();
 
     expect(screen.getByText("Arrival (2016)")).toBeInTheDocument();
-    expect(screen.getAllByText("alice").length).toBeGreaterThan(0);
-    expect(screen.getByText("Living Room TV")).toBeInTheDocument();
+    expect(screen.getByText("alice · Living Room TV")).toBeInTheDocument();
+    expect(screen.getByText("Streaming")).toBeInTheDocument();
     expect(screen.getByText("quality-inline")).toBeInTheDocument();
     expect(screen.getByText("progress")).toBeInTheDocument();
   });
@@ -102,8 +102,7 @@ describe("StreamCard content", () => {
   it("falls back for an unknown user and device", () => {
     renderCard({ User: undefined, Player: undefined });
 
-    expect(screen.getAllByText("Unknown").length).toBeGreaterThan(0);
-    expect(screen.getByText("Device")).toBeInTheDocument();
+    expect(screen.getByText("Unknown")).toBeInTheDocument();
   });
 
   it("shows the poster when there is one", () => {
@@ -126,17 +125,13 @@ describe("StreamCard content", () => {
     expect(img.style.display).toBe("none");
   });
 
-  it("falls back when the poster fails to load", () => {
-    const { container } = renderCard({ thumbnailUrl: "/poster.jpg" });
+  it("hides the poster when it fails to load", () => {
+    renderCard({ thumbnailUrl: "/poster.jpg" });
     const img = screen.getByAltText("Arrival (2016)") as HTMLImageElement;
-    const fallback = container.querySelector(
-      ".thumbnail-fallback",
-    ) as HTMLElement;
 
     fireEvent.error(img);
 
     expect(img.style.display).toBe("none");
-    expect(fallback.style.display).toBe("flex");
   });
 
   it("paints the artwork background and overlay", () => {
@@ -144,7 +139,7 @@ describe("StreamCard content", () => {
     const card = container.firstElementChild as HTMLElement;
 
     expect(card.style.backgroundImage).toContain("/art.jpg");
-    expect(container.innerHTML).toContain("backdrop-blur-[0.5px]");
+    expect(container.innerHTML).toContain("from-black/85");
   });
 
   it("shows the details only when expanded", () => {
@@ -166,12 +161,16 @@ describe("StreamCard content", () => {
     expect(screen.getByText("device-info")).toBeInTheDocument();
   });
 
-  it("swaps the chevron when expanded", () => {
-    const { container: collapsed } = renderCard();
-    expect(collapsed.querySelector(".lucide-chevron-down")).not.toBeNull();
+  it("swaps the details label when expanded", () => {
+    renderCard();
+    expect(
+      screen.getByRole("button", { name: "View Details" }),
+    ).toBeInTheDocument();
 
-    const { container: expanded } = renderCard({}, { isExpanded: true });
-    expect(expanded.querySelector(".lucide-chevron-up")).not.toBeNull();
+    renderCard({}, { isExpanded: true });
+    expect(
+      screen.getByRole("button", { name: "Hide Details" }),
+    ).toBeInTheDocument();
   });
 });
 
@@ -179,7 +178,7 @@ describe("StreamCard navigation", () => {
   it("scrolls to the user", async () => {
     const { user, onNavigateToUser } = renderCard();
 
-    await user.click(screen.getByTitle("Scroll to user"));
+    await user.click(screen.getByTitle("See User"));
 
     expect(onNavigateToUser).toHaveBeenCalledWith("u-1");
   });
@@ -187,7 +186,7 @@ describe("StreamCard navigation", () => {
   it("does not scroll to a user it cannot identify", async () => {
     const { user, onNavigateToUser } = renderCard({ User: undefined });
 
-    await user.click(screen.getByTitle("Scroll to user"));
+    await user.click(screen.getByTitle("See User"));
 
     expect(onNavigateToUser).not.toHaveBeenCalled();
   });
@@ -195,7 +194,7 @@ describe("StreamCard navigation", () => {
   it("scrolls to the device", async () => {
     const { user, onNavigateToDevice } = renderCard();
 
-    await user.click(screen.getByTitle("Scroll to device"));
+    await user.click(screen.getByTitle("See Device"));
 
     expect(onNavigateToDevice).toHaveBeenCalledWith("u-1", "m-1");
   });
@@ -203,7 +202,7 @@ describe("StreamCard navigation", () => {
   it("does not scroll to a device it cannot identify", async () => {
     const { user, onNavigateToDevice } = renderCard({ Player: undefined });
 
-    await user.click(screen.getByTitle("Scroll to device"));
+    await user.click(screen.getByTitle("See Device"));
 
     expect(onNavigateToDevice).not.toHaveBeenCalled();
   });
@@ -221,27 +220,26 @@ describe("StreamCard navigation", () => {
       />,
     );
 
-    await user.click(screen.getByTitle("Scroll to user"));
-    await user.click(screen.getByTitle("Scroll to device"));
+    await user.click(screen.getByTitle("See User"));
+    await user.click(screen.getByTitle("See Device"));
 
     expect(screen.getByText("Arrival (2016)")).toBeInTheDocument();
   });
 
-  it("navigates from the mobile buttons", async () => {
-    const { user, onNavigateToUser, onNavigateToDevice } = renderCard();
+  it("offers one navigation control per target, not a mobile duplicate", () => {
+    renderCard();
 
-    await user.click(screen.getByRole("button", { name: /Go to User/ }));
-    await user.click(screen.getByRole("button", { name: /Go to Device/ }));
-
-    expect(onNavigateToUser).toHaveBeenCalledWith("u-1");
-    expect(onNavigateToDevice).toHaveBeenCalledWith("u-1", "m-1");
+    expect(screen.getAllByRole("button", { name: "See User" })).toHaveLength(1);
+    expect(screen.getAllByRole("button", { name: "See Device" })).toHaveLength(
+      1,
+    );
   });
 
-  it("disables the mobile buttons without identifiers", () => {
+  it("disables navigation without identifiers", () => {
     renderCard({ User: undefined, Player: undefined });
 
-    expect(screen.getByRole("button", { name: /Go to User/ })).toBeDisabled();
-    expect(screen.getByRole("button", { name: /Go to Device/ })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "See User" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "See Device" })).toBeDisabled();
   });
 });
 
@@ -288,43 +286,30 @@ describe("StreamCard access removal", () => {
   });
 });
 
-describe("StreamCard expand-on-tap", () => {
-  it("expands when the card background is tapped on a narrow screen", () => {
-    setViewport(500);
-    const { container, onToggleExpand } = renderCard();
+describe("StreamCard expanding", () => {
+  it("expands from the details button", async () => {
+    const { user, onToggleExpand } = renderCard();
 
-    fireEvent.click(container.firstElementChild as HTMLElement);
+    await user.click(screen.getByRole("button", { name: "View Details" }));
 
     expect(onToggleExpand).toHaveBeenCalled();
   });
 
-  it("does nothing on a wide screen", () => {
-    const { container, onToggleExpand } = renderCard();
+  it("collapses from the same button when open", async () => {
+    const { user, onToggleExpand } = renderCard({}, { isExpanded: true });
 
-    fireEvent.click(container.firstElementChild as HTMLElement);
+    await user.click(screen.getByRole("button", { name: "Hide Details" }));
 
-    expect(onToggleExpand).not.toHaveBeenCalled();
+    expect(onToggleExpand).toHaveBeenCalled();
   });
 
-  it("ignores taps that land on a control", () => {
-    setViewport(500);
-    const { onToggleExpand, onNavigateToUser } = renderCard();
+  it("does not expand when a navigation control is used", async () => {
+    const { user, onToggleExpand, onNavigateToUser } = renderCard();
 
-    fireEvent.click(screen.getByRole("button", { name: /Go to User/ }));
+    await user.click(screen.getByRole("button", { name: "See User" }));
 
-    expect(onToggleExpand).not.toHaveBeenCalled();
     expect(onNavigateToUser).toHaveBeenCalled();
-  });
-
-  it("expands from the desktop chevron", async () => {
-    const { user, onToggleExpand, container } = renderCard();
-
-    await user.click(
-      container.querySelector(".lucide-chevron-down")
-        ?.parentElement as HTMLElement,
-    );
-
-    expect(onToggleExpand).toHaveBeenCalled();
+    expect(onToggleExpand).not.toHaveBeenCalled();
   });
 });
 

@@ -97,7 +97,8 @@ describe("DeviceCard identity", () => {
     expect(screen.getAllByText("Living Room TV").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Roku").length).toBeGreaterThan(0);
     expect(screen.getAllByText("192.168.1.10").length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/7 streams/).length).toBeGreaterThan(0);
+    expect(screen.getByText("Streams")).toBeInTheDocument();
+    expect(screen.getByText("7")).toBeInTheDocument();
   });
 
   it("falls back for a nameless device and unknown platform", () => {
@@ -106,18 +107,19 @@ describe("DeviceCard identity", () => {
   });
 
   it.each([
-    ["approved", "from-green-500"],
-    ["rejected", "from-red-500"],
-    ["pending", "from-yellow-500"],
-  ] as const)("stripes a %s device", (status, expected) => {
+    ["approved", "bg-emerald-500/70", "Approved"],
+    ["rejected", "bg-rose-500/70", "Rejected"],
+    ["pending", "bg-amber-500/70", "Pending"],
+  ] as const)("tones a %s device", (status, rail, label) => {
     const { container } = renderCard({ status });
-    expect(container.innerHTML).toContain(expected);
+    expect(container.innerHTML).toContain(rail);
+    expect(screen.getByText(label)).toBeInTheDocument();
   });
 
-  it("stripes and badges a PlexAmp device", () => {
+  it("tones and labels a PlexAmp device", () => {
     const { container } = renderCard({ deviceProduct: "Plexamp" });
 
-    expect(container.innerHTML).toContain("from-purple-500");
+    expect(container.innerHTML).toContain("bg-violet-500/70");
     expect(screen.getAllByText("Plex Amp").length).toBeGreaterThan(0);
   });
 
@@ -126,9 +128,9 @@ describe("DeviceCard identity", () => {
     expect(screen.getAllByText("Plex Amp").length).toBeGreaterThan(0);
   });
 
-  it("badges anything else as plain Plex", () => {
+  it("shows the product and platform as the subtitle", () => {
     renderCard();
-    expect(screen.getAllByText("Plex").length).toBeGreaterThan(0);
+    expect(screen.getByText("Plex for Roku · Roku")).toBeInTheDocument();
   });
 });
 
@@ -397,20 +399,17 @@ describe("DeviceCard user note", () => {
 });
 
 describe("DeviceCard action ordering", () => {
-  const labelsIn = (root: HTMLElement) =>
-    Array.from(root.querySelectorAll("button"))
+  const actionLabels = (container: HTMLElement) =>
+    Array.from(container.querySelectorAll("button"))
       .map((b) => b.textContent?.trim())
       .filter((text): text is string =>
         ["Approve", "Reject", "View Details", "Delete"].includes(text ?? ""),
       );
 
-  const mobileActions = (container: HTMLElement) =>
-    container.querySelector(".sm\\:hidden") as HTMLElement;
-
   it("puts the decision above the details on a pending device", () => {
     const { container } = renderCard({ status: "pending" });
 
-    expect(labelsIn(mobileActions(container))).toEqual([
+    expect(actionLabels(container)).toEqual([
       "Approve",
       "Reject",
       "View Details",
@@ -418,56 +417,46 @@ describe("DeviceCard action ordering", () => {
     ]);
   });
 
-  it("keeps the same order on the desktop layout", () => {
-    const { container } = renderCard({ status: "pending" });
-    const desktop = container.querySelector(".hidden.sm\\:flex") as HTMLElement;
-
-    expect(labelsIn(desktop)).toEqual([
-      "Approve",
-      "Reject",
-      "View Details",
-      "Delete",
-    ]);
-  });
-
-  it("still offers details on an approved device", () => {
-    const { container } = renderCard({ status: "approved" });
-
-    expect(labelsIn(mobileActions(container))).toEqual([
-      "Reject",
-      "Delete",
-      "View Details",
-    ]);
-  });
-
-  it("still offers details on a rejected device", () => {
+  it("offers re-approval and details on a rejected device", () => {
     const { container } = renderCard({ status: "rejected" });
 
-    expect(labelsIn(mobileActions(container))).toEqual([
+    expect(actionLabels(container)).toEqual([
       "Approve",
       "Delete",
       "View Details",
     ]);
   });
 
-  it("still offers details on a pending PlexAmp device, which has no decision row", () => {
+  it("offers rejection and details on an approved device", () => {
+    const { container } = renderCard({ status: "approved" });
+
+    expect(actionLabels(container)).toEqual([
+      "Reject",
+      "Delete",
+      "View Details",
+    ]);
+  });
+
+  it("offers only delete and details on a PlexAmp device", () => {
     const { container } = renderCard({
       status: "pending",
       deviceProduct: "Plexamp",
     });
 
-    expect(labelsIn(mobileActions(container))).toEqual([
-      "Delete",
-      "View Details",
-    ]);
+    expect(actionLabels(container)).toEqual(["Delete", "View Details"]);
+  });
+
+  it("renders each action once rather than in mobile and desktop copies", () => {
+    const { container } = renderCard({ status: "pending" });
+    const labels = actionLabels(container);
+
+    expect(labels).toEqual([...new Set(labels)]);
   });
 
   it("opens the details modal from its new position", async () => {
     const { user, handlers } = renderCard({ status: "pending" });
 
-    await user.click(
-      screen.getAllByRole("button", { name: /View Details/ })[0],
-    );
+    await user.click(screen.getByRole("button", { name: "View Details" }));
 
     expect(handlers.onShowDetails).toHaveBeenCalled();
   });

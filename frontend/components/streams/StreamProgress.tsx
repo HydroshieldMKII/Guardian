@@ -48,7 +48,7 @@ export const StreamProgress: React.FC<StreamProgressProps> = ({
           style={{
             width: `${getProgressPercentage(
               session.viewOffset,
-              session.duration
+              session.duration,
             )}%`,
           }}
         >

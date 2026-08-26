@@ -5,7 +5,6 @@ import {
   formatDuration,
   getContentTitle,
   getDetailedQuality,
-  getDeviceIcon,
   getProgressPercentage,
 } from "@/components/streams/SharedComponents";
 
@@ -50,32 +49,6 @@ describe("ClickableIP", () => {
       "noopener,noreferrer",
     );
     open.mockRestore();
-  });
-});
-
-describe("getDeviceIcon", () => {
-  it.each([
-    ["Android", "lucide-smartphone"],
-    ["iOS", "lucide-smartphone"],
-    ["Tablet", "lucide-tablet"],
-    ["iPad", "lucide-tablet"],
-    ["Windows", "lucide-laptop"],
-    ["macOS", "lucide-laptop"],
-    ["Linux", "lucide-laptop"],
-    ["Roku", "lucide-monitor"],
-    ["", "lucide-monitor"],
-  ])("maps %p to its icon", (platform, expected) => {
-    const { container } = render(<div>{getDeviceIcon(platform)}</div>);
-    expect(container.querySelector("svg")?.getAttribute("class")).toContain(
-      expected,
-    );
-  });
-
-  it("falls back to a monitor with no platform at all", () => {
-    const { container } = render(<div>{getDeviceIcon()}</div>);
-    expect(container.querySelector("svg")?.getAttribute("class")).toContain(
-      "lucide-monitor",
-    );
   });
 });
 

@@ -9,19 +9,14 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Tv, RefreshCw, AlertCircle, Wifi, Search, Pause } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 
 import { PlexSession, StreamsResponse } from "@/types";
 import { useSwipeToRefresh } from "../hooks/useSwipeToRefresh";
 import { useStreamsData, useStreamActions } from "../hooks/useStreams";
 
 // Import extracted components
-import {
-  RemoveAccessModal,
-  StreamCard,
-  getContentTitle,
-  getDeviceIcon,
-} from "./streams";
+import { RemoveAccessModal, StreamCard, getContentTitle } from "./streams";
 
 interface StreamsListProps {
   sessionsData?: StreamsResponse;
@@ -113,7 +108,6 @@ export default function StreamsList({
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <CardTitle className="flex items-center text-lg sm:text-xl mt-4">
-              <Tv className="w-5 h-5 mr-2" />
               Active Streams
             </CardTitle>
             <CardDescription className="mt-1 text-sm">
@@ -125,13 +119,12 @@ export default function StreamsList({
               variant="outline"
               size="sm"
               onClick={handleAutoRefreshToggle}
-              className={`${
-                autoRefresh ? "bg-green-50 border-green-200 text-green-700" : ""
-              }`}
+              className={
+                autoRefresh
+                  ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                  : ""
+              }
             >
-              <Wifi
-                className={`w-4 h-4 mr-2 ${autoRefresh ? "animate-pulse" : ""}`}
-              />
               {autoRefresh ? "Live" : "Manual"}
             </Button>
             <Button
@@ -152,13 +145,12 @@ export default function StreamsList({
         {/* Search input */}
         <div className="mb-6">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
             <input
               type="text"
               placeholder="Search streams by username, device, content, or app..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 text-sm border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+              className="h-10 w-full rounded-md border border-input bg-background px-4 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
             />
           </div>
           {searchTerm && (
@@ -170,7 +162,6 @@ export default function StreamsList({
 
         {error ? (
           <div className="flex flex-col items-center justify-center py-16 text-red-600 dark:text-red-700 text-center">
-            <AlertCircle className="w-8 h-8 mb-2" />
             <p className="text-sm font-medium mb-1">Connection Error</p>
             <p className="text-xs text-muted-foreground px-4">{error}</p>
             <Button
@@ -183,21 +174,20 @@ export default function StreamsList({
             </Button>
           </div>
         ) : filteredStreams.length === 0 ? (
-          <div className="flex items-center justify-center py-16 text-muted-foreground">
-            {searchTerm ? (
-              <>
-                <Search className="w-6 h-6 mr-2" />
-                No streams match your search
-              </>
-            ) : (
-              <>
-                <Pause className="w-6 h-6 mr-2" />
-                No active streams
-              </>
-            )}
+          <div className="flex flex-col items-center justify-center gap-1 py-20 text-center">
+            <p className="text-sm font-medium text-foreground">
+              {searchTerm
+                ? "No streams match your search"
+                : "No active streams"}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {searchTerm
+                ? "Try a different title, user, or device."
+                : "Streams appear here as soon as someone starts playing."}
+            </p>
           </div>
         ) : (
-          <div className="space-y-3 sm:space-y-4 mb-4">
+          <div className="mb-4 space-y-4">
             {filteredStreams.map((stream, index) => (
               <StreamCard
                 key={stream.sessionKey || index}
@@ -209,7 +199,7 @@ export default function StreamsList({
                   setExpandedStream(
                     expandedStream === stream.sessionKey
                       ? null
-                      : stream.sessionKey
+                      : stream.sessionKey,
                   )
                 }
                 onRemoveAccess={() => setConfirmRemoveStream(stream)}

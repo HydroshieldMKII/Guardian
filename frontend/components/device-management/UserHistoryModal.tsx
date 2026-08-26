@@ -44,6 +44,8 @@ interface SessionHistoryEntry {
   year?: number;
   startedAt: string;
   endedAt?: string;
+  duration?: number;
+  viewOffset?: number;
   terminated?: boolean;
   thumb?: string;
   art?: string;
@@ -299,15 +301,28 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
     }
   }, [scrollToSessionId, sessions, loading]);
 
-  const formatDuration = (session: SessionHistoryEntry) => {
+  const playbackMs = (session: SessionHistoryEntry) => {
     const startTime = new Date(session.startedAt).getTime();
-    // For active sessions (no endedAt), calculate duration from start to now
     const endTime = session.endedAt
       ? new Date(session.endedAt).getTime()
       : Date.now();
-    const durationMs = endTime - startTime;
+    const elapsed = endTime - startTime;
 
-    if (durationMs < 0) return "Unknown";
+    if (elapsed < 0) return null;
+
+    if (typeof session.viewOffset === "number" && session.viewOffset > 0) {
+      return session.viewOffset;
+    }
+    if (typeof session.duration === "number" && session.duration > 0) {
+      return Math.min(elapsed, session.duration);
+    }
+    return elapsed;
+  };
+
+  const formatDuration = (session: SessionHistoryEntry) => {
+    const durationMs = playbackMs(session);
+
+    if (durationMs === null) return "Unknown";
 
     const seconds = Math.floor(durationMs / 1000);
     const minutes = Math.floor(seconds / 60);
@@ -320,9 +335,8 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
     } else if (minutes > 0) {
       const remainingSeconds = seconds % 60;
       return `${minutes}m ${remainingSeconds}s`;
-    } else {
-      return `${seconds}s`;
     }
+    return `${seconds}s`;
   };
 
   const handleDeviceClick = (session: SessionHistoryEntry) => {
@@ -394,7 +408,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+          <DialogTitle className="text-lg font-semibold leading-tight tracking-tight text-foreground">
             Streaming History
           </DialogTitle>
           <DialogDescription>
@@ -596,7 +610,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
                           size="sm"
                           onClick={() => handleDeviceClick(session)}
                           className="h-8 w-8 p-0"
-                          title="Scroll to Device"
+                          title="See Device"
                         >
                           <Monitor className="w-4 h-4" />
                         </Button>
@@ -751,7 +765,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
                           size="sm"
                           onClick={() => handleDeviceClick(session)}
                           className="h-8 px-3 text-xs"
-                          title="Scroll to Device"
+                          title="See Device"
                         >
                           Find Device
                         </Button>
