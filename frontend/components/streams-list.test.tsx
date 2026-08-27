@@ -125,7 +125,7 @@ describe("StreamsList", () => {
       render(<StreamsList onRefresh={onRefresh} />);
 
       expect(
-        screen.getByText("Guardian cannot reach the server"),
+        screen.getByText("Cannot reach the server"),
       ).toBeInTheDocument();
       expect(screen.getByText("backend unreachable")).toBeInTheDocument();
 

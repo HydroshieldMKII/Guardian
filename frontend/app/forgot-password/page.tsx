@@ -35,7 +35,7 @@ export default function ForgotPasswordPage() {
     event.preventDefault();
 
     if (!email.trim()) {
-      setError("Enter the email address on your Guardian account");
+      setError("Enter the email address on your account");
       return;
     }
 
@@ -52,15 +52,13 @@ export default function ForgotPasswordPage() {
         const body = (await response.json().catch(() => ({}))) as {
           message?: string;
         };
-        throw new Error(body.message || "Guardian could not send the email");
+        throw new Error(body.message || "Could not send the email");
       }
 
       setStage("sent");
     } catch (caught) {
       setError(
-        caught instanceof Error
-          ? caught.message
-          : "Guardian could not send the email",
+        caught instanceof Error ? caught.message : "Could not send the email",
       );
     } finally {
       setSubmitting(false);
@@ -79,7 +77,7 @@ export default function ForgotPasswordPage() {
     return (
       <AuthShell
         title="Password Reset"
-        description="This Guardian server does not offer password resets"
+        description="This server does not offer password resets"
       >
         <p className="text-sm leading-relaxed text-muted-foreground">
           Ask the server owner to turn password resets on in Settings. It needs
@@ -97,8 +95,8 @@ export default function ForgotPasswordPage() {
         description="A reset link is on its way if the address is registered"
       >
         <p className="text-sm leading-relaxed text-muted-foreground">
-          Guardian does not say whether an account uses that address. If it
-          does, the link arrives shortly and works for 15 minutes.
+          Whether an account uses that address is never disclosed. If one does,
+          the link arrives shortly and works for 15 minutes.
         </p>
       </AuthShell>
     );
@@ -107,7 +105,7 @@ export default function ForgotPasswordPage() {
   return (
     <AuthShell
       title="Forgot Password"
-      description="Enter your email and Guardian sends you a reset link"
+      description="Enter your email to be sent a reset link"
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">

@@ -149,7 +149,7 @@ describe("starting the flow", () => {
     expect(toast).toHaveBeenCalledWith(
       expect.objectContaining({
         title: "Failed",
-        description: "Guardian could not reach Plex. Try again in a moment.",
+        description: "Could not reach Plex. Try again in a moment.",
         variant: "destructive",
       }),
     );

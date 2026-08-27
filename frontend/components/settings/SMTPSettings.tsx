@@ -104,7 +104,7 @@ export function SMTPSettings({
   return (
     <SettingsCard
       title="Email Notifications (SMTP)"
-      description="Send Guardian notifications by email through your own SMTP server."
+      description="Send notifications by email through your own SMTP server."
       footer={
         <div className="space-y-3">
           {hasUnsavedChanges && (

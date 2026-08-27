@@ -306,7 +306,7 @@ describe("Field", () => {
     render(
       <Field
         label="Default page"
-        hint="Where Guardian opens"
+        hint="Where the app opens"
         action={<button>Streams</button>}
       />,
     );
@@ -315,7 +315,7 @@ describe("Field", () => {
     const control = screen.getByRole("button", { name: "Streams" });
 
     expect(label.parentElement).toBe(control.parentElement);
-    expect(screen.getByText("Where Guardian opens")).toBeInTheDocument();
+    expect(screen.getByText("Where the app opens")).toBeInTheDocument();
   });
 });
 

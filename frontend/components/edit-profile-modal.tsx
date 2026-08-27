@@ -127,11 +127,11 @@ export function EditProfileModal({
     copy: {
       success: {
         title: "Plex Account Linked",
-        description: "You can now sign in to Guardian with Plex",
+        description: "You can now sign in with Plex",
       },
       failed: {
         title: "Plex Link Failed",
-        description: "Guardian could not link your Plex account",
+        description: "Could not link your Plex account",
       },
       expired: {
         title: "Plex Link Expired",
@@ -701,8 +701,8 @@ export function EditProfileModal({
                   {waitingForPlex && (
                     <div className="space-y-2 text-center">
                       <p className="text-xs text-muted-foreground">
-                        Finish linking on the Plex window. Guardian closes it
-                        for you once Plex confirms.
+                        Finish linking on the Plex window. It closes for you
+                        once Plex confirms.
                       </p>
                       <Button
                         type="button"

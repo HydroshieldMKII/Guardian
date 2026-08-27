@@ -167,7 +167,7 @@ describe("UserGroupCard header", () => {
 const badges = (label: string) =>
   screen
     .queryAllByText(label)
-    .map((node) => node.closest("span[title]"))
+    .map((node) => node.closest("span.rounded-full"))
     .filter(Boolean);
 
 describe("UserGroupCard badges", () => {

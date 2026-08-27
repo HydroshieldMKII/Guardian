@@ -159,7 +159,7 @@ export default function LoginPage() {
       },
       failed: {
         title: "Plex Sign-In Failed",
-        description: "Guardian could not sign you in with Plex",
+        description: "Could not sign you in with Plex",
       },
       expired: {
         title: "Plex Sign-In Expired",
@@ -430,8 +430,8 @@ export default function LoginPage() {
               {plexWaiting && (
                 <div className="mt-3 space-y-2 text-center">
                   <p className="text-xs text-muted-foreground">
-                    Finish signing in on the Plex window. Guardian closes it for
-                    you once Plex confirms.
+                    Finish signing in on the Plex window. It closes for you once
+                    Plex confirms.
                   </p>
                   <Button
                     type="button"

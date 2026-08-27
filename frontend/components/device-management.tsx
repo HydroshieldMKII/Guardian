@@ -167,7 +167,7 @@ const CONFIRM_COPY = {
   },
 };
 
-const AUTO_REFRESH_ON = "Guardian is refreshing on its own. Click to stop.";
+const AUTO_REFRESH_ON = "Refreshing on its own. Click to stop.";
 const AUTO_REFRESH_OFF =
   "Refreshing only when you ask. Click to refresh on its own.";
 

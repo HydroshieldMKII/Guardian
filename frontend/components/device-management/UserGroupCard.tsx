@@ -188,8 +188,8 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
               <PillRow className="hidden shrink-0 justify-end sm:flex">
                 {group.user.preference &&
                   getUserPreferenceBadge(group.user.preference.defaultBlock)}
-                {policyBadges.map(({ policy, label, tone, title }) => (
-                  <StatusPill key={policy} tone={tone} title={title}>
+                {policyBadges.map(({ policy, label, tone, hint }) => (
+                  <StatusPill key={policy} tone={tone} hint={hint}>
                     {label}
                   </StatusPill>
                 ))}
@@ -198,7 +198,7 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
                     undefined && (
                     <StatusPill
                       tone="neutral"
-                      title="How many streams this user can run at the same time"
+                      hint="How many streams this user can run at the same time"
                     >
                       {group.user.preference.concurrentStreamLimit === 0
                         ? "Unlimited Streams"
@@ -212,7 +212,7 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
                 {excludedFromLimitCount > 0 && (
                   <StatusPill
                     tone="neutral"
-                    title="Streams from these devices are not counted towards the concurrent stream limit"
+                    hint="Streams from these devices are not counted towards the concurrent stream limit"
                   >
                     {excludedFromLimitCount} Excluded
                   </StatusPill>
@@ -223,8 +223,8 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
             <PillRow className="mt-3 pl-11 sm:hidden">
               {group.user.preference &&
                 getUserPreferenceBadge(group.user.preference.defaultBlock)}
-              {policyBadges.map(({ policy, label, tone, title }) => (
-                <StatusPill key={policy} tone={tone} title={title}>
+              {policyBadges.map(({ policy, label, tone, hint }) => (
+                <StatusPill key={policy} tone={tone} hint={hint}>
                   {label}
                 </StatusPill>
               ))}
@@ -338,7 +338,7 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
                   </h4>
                   <p className="text-xs text-muted-foreground">
                     What happens the first time this user streams from a device
-                    Guardian has not seen before
+                    that has not been seen before
                   </p>
                 </div>
 

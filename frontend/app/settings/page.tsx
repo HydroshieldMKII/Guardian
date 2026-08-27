@@ -326,7 +326,7 @@ export default function SettingsPage() {
       <div className="container mx-auto max-w-2xl px-4 py-20">
         <EmptyState
           title="Settings Unavailable"
-          description="Guardian could not load its settings. Refresh the page to try again."
+          description="Settings could not be loaded. Refresh the page to try again."
         />
       </div>
     );
@@ -336,17 +336,17 @@ export default function SettingsPage() {
     {
       id: "plex",
       label: "Plex",
-      description: "How Guardian reaches your Plex Media Server",
+      description: "How to reach your Plex Media Server",
     },
     {
       id: "guardian",
       label: "Guardian",
-      description: "How Guardian treats devices, users and streams",
+      description: "How devices, users and streams are treated",
     },
     {
       id: "customization",
       label: "Customization",
-      description: "What Guardian shows you, and what it tells your users",
+      description: "What you see, and what your users are told",
     },
     {
       id: "smtp",
@@ -356,7 +356,7 @@ export default function SettingsPage() {
     {
       id: "notifications",
       label: "Notifications",
-      description: "Which events Guardian tells you about, and where",
+      description: "Which events you are told about, and where",
     },
     {
       id: "admin",
@@ -403,7 +403,7 @@ export default function SettingsPage() {
           </Button>
         </div>
         <p className="text-sm text-muted-foreground">
-          Configure Guardian application settings and preferences
+          Configure application settings and preferences
         </p>
       </header>
 

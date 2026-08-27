@@ -124,7 +124,7 @@ export function Navbar() {
       await logout();
       toast({
         title: "Signed Out",
-        description: "You have been signed out of Guardian",
+        description: "You have been signed out",
         variant: "success",
       });
       router.push("/login");

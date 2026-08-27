@@ -83,7 +83,7 @@ const SECTIONS: Record<string, SettingGroup[]> = {
   guardian: [
     {
       title: "Access Control",
-      description: "How Guardian treats devices and how many streams they get.",
+      description: "How devices are treated and how many streams they get.",
       keys: [
         "PLEX_GUARD_DEFAULT_BLOCK",
         "PLEX_GUARD_STRICT_MODE",
@@ -93,7 +93,7 @@ const SECTIONS: Record<string, SettingGroup[]> = {
     {
       title: "Monitoring & Maintenance",
       description:
-        "How often Guardian polls Plex, which clock it uses, and when it drops stale devices.",
+        "How often Plex is polled, which clock is used, and when stale devices are dropped.",
       keys: [
         "PLEXGUARD_REFRESH_INTERVAL",
         "TIMEZONE",
@@ -108,7 +108,7 @@ const SECTIONS: Record<string, SettingGroup[]> = {
     {
       title: "Login Security",
       description:
-        "Password recovery and optional captcha protection for the Guardian login page.",
+        "Password recovery and optional captcha protection for the login page.",
       keys: [
         "PASSWORD_RESET_ENABLED",
         "CLOUDFLARE_TURNSTILE_SITE_KEY",
@@ -119,12 +119,12 @@ const SECTIONS: Record<string, SettingGroup[]> = {
   customization: [
     {
       title: "Interface",
-      description: "What Guardian shows you when you open it.",
+      description: "What you see when you open the app.",
       keys: ["DEFAULT_PAGE", "ENABLE_MEDIA_THUMBNAILS", "ENABLE_MEDIA_ARTWORK"],
     },
     {
       title: "User-Facing Messages",
-      description: "What Plex users are told when Guardian stops a stream.",
+      description: "What Plex users are told when a stream is stopped.",
       keys: [
         "MSG_DEVICE_PENDING",
         "MSG_DEVICE_REJECTED",
@@ -140,7 +140,7 @@ const SECTIONS: Record<string, SettingGroup[]> = {
   notifications: [
     {
       title: "In-App Notifications",
-      description: "Which events raise a notification inside Guardian.",
+      description: "Which events raise a notification in the app.",
       keys: ["IN_APP_ENABLED"],
     },
   ],
@@ -256,16 +256,17 @@ export function GeneralSettings({
           />
           {!emailConfigured && (
             <Banner tone="warning">
-              Set up email notifications first. Guardian sends the reset link
-              over SMTP, so it needs a host and a from address under Email
-              Notifications.
+              Reset links are sent by email. Configure and enable a mail server
+              under{" "}
+              <a href="#smtp" className="font-medium underline">
+                Email settings
+              </a>{" "}
+              first.
             </Banner>
           )}
           {emailConfigured && !appUrlConfigured && (
             <Banner tone="warning">
-              Set the APP_URL environment variable to the address people reach
-              Guardian on. Without it Guardian cannot build the link the email
-              points at.
+              The APP_URL environment variable must be set.
             </Banner>
           )}
         </div>

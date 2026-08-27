@@ -26,7 +26,7 @@ describe("ErrorHandler", () => {
         />,
       );
 
-      expect(screen.getByText("Cannot Reach Guardian")).toBeInTheDocument();
+      expect(screen.getByText("Cannot Reach the Backend")).toBeInTheDocument();
       expect(screen.getByText("Connection refused")).toBeInTheDocument();
     });
 
@@ -62,14 +62,14 @@ describe("ErrorHandler", () => {
     it.each([
       "Backend connection error: something",
       "Failed to fetch dashboard data",
-      "Cannot connect to Guardian backend",
+      "Cannot connect to the backend",
       "Backend server is not reachable",
     ])("recognises %p reported through the Plex status", (connectionStatus) => {
       render(<ErrorHandler plexStatus={status({ connectionStatus })} />);
 
-      expect(screen.getByText("Cannot Reach Guardian")).toBeInTheDocument();
+      expect(screen.getByText("Cannot Reach the Backend")).toBeInTheDocument();
       expect(
-        screen.getByText(/Guardian's own server is not answering/),
+        screen.getByText(/The backend is not answering/),
       ).toBeInTheDocument();
     });
 

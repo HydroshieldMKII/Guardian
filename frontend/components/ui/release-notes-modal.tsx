@@ -65,7 +65,7 @@ export function ReleaseNotesModal({
   return (
     <Modal open={isOpen} onOpenChange={onClose} size="lg">
       <ModalHeader
-        title={`What's New in Guardian v${latestVersion}`}
+        title={`What's New in v${latestVersion}`}
         description="Review the latest features and improvements in this release."
       />
 

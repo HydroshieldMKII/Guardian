@@ -62,7 +62,7 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
       localStorage.removeItem("guardianResetSuccess");
       toast({
         title: "Factory Reset Complete",
-        description: "Guardian is running on its default settings again.",
+        description: "Everything is back to its default settings.",
         variant: "success",
       });
     }
@@ -197,7 +197,7 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
         type: "resetDatabase",
         title: "Factory Reset",
         description:
-          "Enter your password to erase all of your data and restore Guardian to its defaults.",
+          "Enter your password to erase all of your data and restore the default settings.",
         isDangerous: true,
       });
       setShowPasswordModal(true);
@@ -320,7 +320,7 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
       } catch (error) {
         toast({
           title: "Invalid File",
-          description: "Choose a .json file exported from Guardian",
+          description: "Choose an exported .json settings file",
           variant: "destructive",
         });
       }
@@ -500,7 +500,7 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
         <ActionRow
           tone="danger"
           title="Factory Reset"
-          description="Permanently delete everything: settings, devices, user preferences, session history and notifications. Guardian restarts as a fresh install."
+          description="Permanently delete everything: settings, devices, user preferences, session history and notifications. Everything restarts as a fresh install."
           action={
             <Button
               onClick={() => setShowResetDatabaseModal(true)}
@@ -554,7 +554,7 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
         onClose={() => setShowResetDatabaseModal(false)}
         onConfirm={handleResetDatabase}
         title="Factory Reset"
-        description="Everything is deleted for good: settings, devices, users and session history. Guardian restarts as a fresh install. Export your settings first if you want a way back."
+        description="Everything is deleted for good: settings, devices, users and session history. It all restarts as a fresh install. Export your settings first if you want a way back."
         confirmText="Yes, Wipe All Data"
         cancelText="Cancel"
         variant="destructive"
@@ -567,7 +567,7 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
           onClose={handleCancelImport}
           onConfirm={handleProceedWithImport}
           title="Exported by a Different Version"
-          description={`The import file was created with Guardian version ${versionMismatchInfo.importVersion}, but you are currently running version ${versionMismatchInfo.currentVersion}. Importing data from a different version may cause compatibility issues. Do you want to proceed anyway?`}
+          description={`The import file was created with version ${versionMismatchInfo.importVersion}, but you are currently running version ${versionMismatchInfo.currentVersion}. Importing data from a different version may cause compatibility issues. Do you want to proceed anyway?`}
           confirmText="Proceed with Import"
           cancelText="Cancel Import"
           variant="destructive"

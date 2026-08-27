@@ -240,7 +240,9 @@ describe("DeviceCard status pill", () => {
 
     expect(screen.getByText("Rejected")).toBeInTheDocument();
     expect(
-      screen.getByTitle("This device is not allowed to stream"),
+      screen.getByRole("button", {
+        name: /This device is not allowed to stream/,
+      }),
     ).toBeInTheDocument();
   });
 
@@ -251,7 +253,9 @@ describe("DeviceCard status pill", () => {
   });
 
   const plexampPill = () =>
-    screen.queryByTitle("Plexamp devices are always allowed to stream");
+    screen.queryByRole("button", {
+      name: /Plexamp devices are always allowed to stream/,
+    });
 
   it("names an unmanageable PlexAmp device instead of a decision", () => {
     renderCard({ status: "pending", deviceProduct: "Plexamp" });
@@ -277,13 +281,13 @@ describe("DeviceCard status pill", () => {
             policy: "schedule",
             label: "Time Schedule",
             tone: "info",
-            title: "A time schedule blocks streaming during set hours",
+            hint: "A time schedule blocks streaming during set hours",
           },
           {
             policy: "ip",
             label: "IP Access",
             tone: "accent",
-            title: "Network and IP access rules apply to this device",
+            hint: "Network and IP access rules apply to this device",
           },
         ],
       },
@@ -291,7 +295,9 @@ describe("DeviceCard status pill", () => {
 
     expect(screen.getByText("Time Schedule")).toBeInTheDocument();
     expect(
-      screen.getByTitle("Network and IP access rules apply to this device"),
+      screen.getByRole("button", {
+        name: /Network and IP access rules apply to this device/,
+      }),
     ).toHaveTextContent("IP Access");
   });
 

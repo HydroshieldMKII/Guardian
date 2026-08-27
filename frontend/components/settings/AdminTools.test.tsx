@@ -128,7 +128,7 @@ describe("AdminTools post-reload notice", () => {
 
     expect(toast).toHaveBeenCalledWith(
       expect.objectContaining({
-        description: "Guardian is running on its default settings again.",
+        description: "Everything is back to its default settings.",
       }),
     );
     expect(localStorage.getItem("guardianResetSuccess")).toBeNull();

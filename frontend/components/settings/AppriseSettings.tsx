@@ -110,7 +110,7 @@ export function AppriseSettings({
   return (
     <SettingsCard
       title="Apprise Notifications"
-      description="Send Guardian notifications on to Discord, Slack, Telegram, Pushover and many others."
+      description="Send notifications on to Discord, Slack, Telegram, Pushover and many others."
       footer={
         <div className="space-y-3">
           <div className="space-y-1">

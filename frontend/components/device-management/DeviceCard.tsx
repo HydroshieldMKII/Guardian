@@ -179,7 +179,7 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
                 <StatusPill
                   tone="accent"
                   size="sm"
-                  title="Plexamp devices are always allowed to stream"
+                  hint="Plexamp devices are always allowed to stream"
                 >
                   Plexamp
                 </StatusPill>
@@ -188,7 +188,7 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
                 <StatusPill
                   tone="warning"
                   size="sm"
-                  title="This device is waiting for your decision"
+                  hint="This device is waiting for your decision"
                 >
                   Pending
                 </StatusPill>
@@ -197,18 +197,13 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
                 <StatusPill
                   tone="danger"
                   size="sm"
-                  title="This device is not allowed to stream"
+                  hint="This device is not allowed to stream"
                 >
                   Rejected
                 </StatusPill>
               )}
-              {policies.map(({ policy, label, tone: pillTone, title }) => (
-                <StatusPill
-                  key={policy}
-                  tone={pillTone}
-                  size="sm"
-                  title={title}
-                >
+              {policies.map(({ policy, label, tone: pillTone, hint }) => (
+                <StatusPill key={policy} tone={pillTone} size="sm" hint={hint}>
                   {label}
                 </StatusPill>
               ))}

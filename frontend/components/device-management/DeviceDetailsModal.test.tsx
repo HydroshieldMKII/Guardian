@@ -135,13 +135,13 @@ describe("DeviceDetailsModal", () => {
             policy: "schedule",
             label: "Time Schedule",
             tone: "info",
-            title: "A time schedule restricts when this device can stream",
+            hint: "A time schedule restricts when this device can stream",
           },
           {
             policy: "ip",
             label: "IP Access",
             tone: "accent",
-            title: "Network or IP restrictions apply to this device",
+            hint: "Network or IP restrictions apply to this device",
           },
         ],
       },
@@ -167,14 +167,16 @@ describe("DeviceDetailsModal", () => {
             policy: "temporary",
             label: "Temporary Access",
             tone: "positive",
-            title: "Temporary access expires in 2 hours",
+            hint: "Temporary access expires in 2 hours",
           },
         ],
       },
     );
 
     expect(
-      screen.getByTitle("Temporary access expires in 2 hours"),
+      screen.getByRole("button", {
+        name: /Temporary access expires in 2 hours/,
+      }),
     ).toHaveTextContent("Temporary Access");
   });
 
@@ -187,7 +189,7 @@ describe("DeviceDetailsModal", () => {
             policy: "temporary",
             label: "Temporary Access",
             tone: "positive",
-            title: "Temporary access expires in 2 hours",
+            hint: "Temporary access expires in 2 hours",
           },
         ],
       },
@@ -195,7 +197,9 @@ describe("DeviceDetailsModal", () => {
 
     expect(screen.getByText("Rejected")).toBeInTheDocument();
     expect(
-      screen.getByTitle("Temporary access expires in 2 hours"),
+      screen.getByRole("button", {
+        name: /Temporary access expires in 2 hours/,
+      }),
     ).toBeInTheDocument();
   });
 

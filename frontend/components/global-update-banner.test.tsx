@@ -58,7 +58,7 @@ describe("GlobalUpdateBanner", () => {
     render(<GlobalUpdateBanner />);
 
     expect(
-      screen.getByText("Update Available: Guardian v2.0.0"),
+      screen.getByText("Update Available: v2.0.0"),
     ).toBeInTheDocument();
     expect(screen.getByText(/1\.3\.5/)).toBeInTheDocument();
   });

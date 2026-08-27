@@ -281,8 +281,8 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
               </span>
             ) : (
               <PillRow>
-                {policies.map(({ policy, label, tone, title }) => (
-                  <StatusPill key={policy} tone={tone} title={title}>
+                {policies.map(({ policy, label, tone, hint }) => (
+                  <StatusPill key={policy} tone={tone} hint={hint}>
                     {label}
                   </StatusPill>
                 ))}
@@ -353,7 +353,7 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
                   tone={
                     device.temporaryAccessBypassPolicies ? "warning" : "neutral"
                   }
-                  title={
+                  hint={
                     device.temporaryAccessBypassPolicies
                       ? `While this grant lasts, ${BYPASSED_BY_TEMPORARY_ACCESS} are not enforced against this device`
                       : "This grant does not lift any of the user's other policies"
@@ -396,7 +396,7 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
                   side="top"
                   align="center"
                   triggerClassName="h-8 w-full cursor-not-allowed items-center justify-center whitespace-nowrap rounded-md border border-dashed bg-background px-3 text-sm font-medium text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring"
-                  hint="Strict mode is on, so Guardian approves or rejects every device automatically using the default policy. Turn strict mode off in settings to move a device back to pending."
+                  hint="Strict mode is on, so every device is approved or rejected automatically using the default policy. Turn strict mode off in settings to move a device back to pending."
                 >
                   Set to Pending
                 </HintTooltip>
@@ -418,9 +418,9 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
           {plexamp && (
             <Panel>
               <p className="text-xs leading-relaxed text-muted-foreground">
-                Plex provides no way to terminate a Plexamp stream, so Guardian
-                cannot enforce anything against this device. It is exempt from
-                every policy, including the concurrent stream limit.
+                Plex provides no way to terminate a Plexamp stream, so nothing
+                can be enforced against this device. It is exempt from every
+                policy, including the concurrent stream limit.
               </p>
             </Panel>
           )}

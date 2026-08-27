@@ -29,7 +29,7 @@ const StreamCardPlaceholder = () => (
   </div>
 );
 
-const AUTO_REFRESH_ON = "Guardian is refreshing on its own. Click to stop.";
+const AUTO_REFRESH_ON = "Refreshing on its own. Click to stop.";
 const AUTO_REFRESH_OFF =
   "Refreshing only when you ask. Click to refresh on its own.";
 
@@ -181,7 +181,7 @@ export default function StreamsList({
         {error ? (
           <div className="flex flex-col items-center justify-center py-16 text-red-600 dark:text-red-700 text-center">
             <p className="text-sm font-medium mb-1">
-              Guardian cannot reach the server
+              Cannot reach the server
             </p>
             <p className="text-xs text-muted-foreground px-4">{error}</p>
             <Button

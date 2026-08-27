@@ -88,7 +88,7 @@ function ResetPasswordForm() {
         const message = Array.isArray(body.message)
           ? body.message[0]
           : body.message;
-        throw new Error(message || "Guardian could not set the new password");
+        throw new Error(message || "Could not set the new password");
       }
 
       setStage("done");
@@ -96,7 +96,7 @@ function ResetPasswordForm() {
       setError(
         caught instanceof Error
           ? caught.message
-          : "Guardian could not set the new password",
+          : "Could not set the new password",
       );
     } finally {
       setSubmitting(false);
@@ -150,7 +150,7 @@ function ResetPasswordForm() {
   return (
     <AuthShell
       title="Choose a Password"
-      description="Set a new password for your Guardian account"
+      description="Set a new password for your account"
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">

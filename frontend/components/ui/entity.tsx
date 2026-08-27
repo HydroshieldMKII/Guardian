@@ -4,6 +4,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { HintTooltip } from "@/components/ui/hint-tooltip";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
@@ -180,24 +181,24 @@ export function StatusPill({
   tone = "neutral",
   size = "default",
   dot = false,
-  title,
+  hint,
   className,
   children,
 }: {
   tone?: Tone;
   size?: keyof typeof PILL_SIZE;
   dot?: boolean;
-  title?: string;
+  hint?: string;
   className?: string;
   children: React.ReactNode;
 }) {
-  return (
+  const pill = (
     <span
-      title={title}
       className={cn(
         "inline-flex max-w-full items-center rounded-full border font-medium",
         PILL_SIZE[size],
         TONE_PILL[tone],
+        hint && "cursor-help",
         className,
       )}
     >
@@ -209,6 +210,14 @@ export function StatusPill({
       )}
       <span className="min-w-0 truncate">{children}</span>
     </span>
+  );
+
+  if (!hint) return pill;
+
+  return (
+    <HintTooltip hint={hint} triggerClassName="max-w-full">
+      {pill}
+    </HintTooltip>
   );
 }
 
@@ -728,10 +737,10 @@ export function SegmentedControl<T extends string | number | boolean | null>({
           disabled={busy}
           onClick={() => onChange(option.value)}
           className={cn(
-            "relative cursor-pointer whitespace-nowrap rounded-md text-xs font-medium",
+            "relative cursor-pointer rounded-md text-xs font-medium",
             "transition-colors duration-300 ease-out motion-reduce:transition-none",
             "disabled:cursor-progress",
-            size === "md" ? "px-3 py-2" : "px-3 py-1.5",
+            size === "md" ? "px-2 py-2 sm:px-3" : "px-2 py-1.5 sm:px-3",
             index === activeIndex
               ? active.text
               : "text-muted-foreground hover:text-foreground",

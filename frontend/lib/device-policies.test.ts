@@ -263,7 +263,7 @@ describe("devicePolicyBadges", () => {
     );
 
     expect(badge.label).toBe("Temporary Access");
-    expect(badge.title).toBe("Temporary access expires in 2 hours");
+    expect(badge.hint).toBe("Temporary access expires in 2 hours");
     expect(badge.tone).toBe("positive");
   });
 
@@ -277,7 +277,7 @@ describe("devicePolicyBadges", () => {
       [rule()],
     );
 
-    expect(badge.title).toContain(
+    expect(badge.hint).toContain(
       "bypasses the time schedule, IP access rules and device approval",
     );
   });
@@ -295,7 +295,7 @@ describe("devicePolicyBadges", () => {
     ]);
     expect(badges.map((badge) => badge.tone)).toEqual(["info", "accent"]);
     for (const badge of badges) {
-      expect(badge.title.length).toBeGreaterThan(0);
+      expect(badge.hint.length).toBeGreaterThan(0);
     }
   });
 });
@@ -336,7 +336,7 @@ describe("groupPolicyBadges", () => {
     );
 
     expect(badge.label).toBe("Temporary Access");
-    expect(badge.title).toBe("At least one device has temporary access");
+    expect(badge.hint).toBe("At least one device has temporary access");
   });
 
   it("stays empty for a user with no devices", () => {

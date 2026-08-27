@@ -193,7 +193,7 @@ describe("ResetPasswordPage", () => {
     await fillForm(user, "BrandNewPass1!");
 
     expect(
-      await screen.findByText("Guardian could not set the new password"),
+      await screen.findByText("Could not set the new password"),
     ).toBeInTheDocument();
   });
 

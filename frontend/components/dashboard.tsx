@@ -78,7 +78,7 @@ export function Dashboard() {
         configured: false,
         hasValidCredentials: false,
         connectionStatus:
-          "Backend connection error: Cannot connect to Guardian backend service",
+          "Backend connection error: Cannot connect to the backend service",
       });
     } finally {
       setLoading(false);

@@ -65,7 +65,7 @@ export const getSettingInfo = (setting: AppSetting): SettingInfo => {
     PLEXGUARD_REFRESH_INTERVAL: {
       label: "Session refresh interval (seconds)",
       description:
-        "How often Guardian asks Plex what is playing and enforces your policies",
+        "How often Plex is asked what is playing, and your policies enforced",
     },
     PLEX_GUARD_DEFAULT_BLOCK: {
       label: "Block new devices by default",
@@ -75,7 +75,7 @@ export const getSettingInfo = (setting: AppSetting): SettingInfo => {
     PLEX_GUARD_STRICT_MODE: {
       label: "Strict mode",
       description:
-        "Guardian decides every new device immediately using the default policy, so nothing sits pending. Devices waiting now are decided as soon as you turn this on.",
+        "Every new device is decided immediately using the default policy, so nothing sits pending. Devices waiting now are decided as soon as you turn this on.",
     },
     MSG_DEVICE_PENDING: {
       label: "Device pending message",
@@ -117,11 +117,11 @@ export const getSettingInfo = (setting: AppSetting): SettingInfo => {
     },
     DEFAULT_PAGE: {
       label: "Default dashboard page",
-      description: "The page Guardian opens on",
+      description: "The page to open on",
     },
     AUTO_CHECK_UPDATES: {
       label: "Automatically check for updates",
-      description: "Tell me when a newer version of Guardian is released",
+      description: "Tell me when a newer version is released",
     },
     PASSWORD_RESET_ENABLED: {
       label: "Allow password reset by email",
@@ -135,11 +135,11 @@ export const getSettingInfo = (setting: AppSetting): SettingInfo => {
     CLOUDFLARE_TURNSTILE_SECRET_KEY: {
       label: "Cloudflare Turnstile secret key",
       description:
-        "The private key from your Cloudflare Turnstile widget. Guardian uses it to verify each attempt.",
+        "The private key from your Cloudflare Turnstile widget, used to verify each attempt.",
     },
     IN_APP_ENABLED: {
       label: "Enable in-app notifications",
-      description: "Show notifications in the Guardian bell menu",
+      description: "Show notifications in the bell menu",
     },
     AUTO_MARK_NOTIFICATION_READ: {
       label: "Mark notifications as read when opened",
@@ -147,11 +147,11 @@ export const getSettingInfo = (setting: AppSetting): SettingInfo => {
     },
     IN_APP_NOTIFY_ON_NEW_DEVICE: {
       label: "New devices",
-      description: "When Guardian sees a device it has not seen before",
+      description: "When a device is seen for the first time",
     },
     IN_APP_NOTIFY_ON_BLOCK: {
       label: "Blocked streams",
-      description: "When Guardian stops a stream because a policy forbids it",
+      description: "When a stream is stopped because a policy forbids it",
     },
     IN_APP_NOTIFY_ON_LOCATION_CHANGE: {
       label: "Device location changes",
@@ -178,7 +178,7 @@ export const getSettingInfo = (setting: AppSetting): SettingInfo => {
     TIMEZONE: {
       label: "Timezone",
       description:
-        "The clock Guardian uses when deciding whether a time schedule blocks a stream",
+        "The clock used when deciding whether a time schedule blocks a stream",
     },
     SMTP_ENABLED: {
       label: "Enable email notifications",
@@ -213,8 +213,7 @@ export const getSettingInfo = (setting: AppSetting): SettingInfo => {
     },
     SMTP_FROM_NAME: {
       label: "From display name",
-      description:
-        "Display name that will appear as the sender (e.g. Guardian Notifications)",
+      description: "Display name that will appear as the sender",
     },
     SMTP_USE_TLS: {
       label: "Use TLS encryption",
@@ -223,11 +222,11 @@ export const getSettingInfo = (setting: AppSetting): SettingInfo => {
     },
     SMTP_NOTIFY_ON_NEW_DEVICE: {
       label: "New devices",
-      description: "When Guardian sees a device it has not seen before",
+      description: "When a device is seen for the first time",
     },
     SMTP_NOTIFY_ON_BLOCK: {
       label: "Blocked streams",
-      description: "When Guardian stops a stream because a policy forbids it",
+      description: "When a stream is stopped because a policy forbids it",
     },
     SMTP_NOTIFY_ON_LOCATION_CHANGE: {
       label: "Device location changes",
@@ -249,11 +248,11 @@ export const getSettingInfo = (setting: AppSetting): SettingInfo => {
     },
     APPRISE_NOTIFY_ON_NEW_DEVICE: {
       label: "New devices",
-      description: "When Guardian sees a device it has not seen before",
+      description: "When a device is seen for the first time",
     },
     APPRISE_NOTIFY_ON_BLOCK: {
       label: "Blocked streams",
-      description: "When Guardian stops a stream because a policy forbids it",
+      description: "When a stream is stopped because a policy forbids it",
     },
     APPRISE_NOTIFY_ON_LOCATION_CHANGE: {
       label: "Device location changes",
@@ -283,7 +282,7 @@ export const getSettingInfo = (setting: AppSetting): SettingInfo => {
     USER_PORTAL_ENABLED: {
       label: "Enable Plex user portal",
       description:
-        "Plex users can sign in to see their own devices and policies. With this off, only a Plex account you have linked to your Guardian login can sign in.",
+        "Plex users can sign in to see their own devices and policies. With this off, only a Plex account you have linked to your admin login can sign in.",
     },
     USER_PORTAL_SHOW_RULES: {
       label: "Show rules in user portal",

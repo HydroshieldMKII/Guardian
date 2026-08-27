@@ -194,7 +194,7 @@ export const usePlexOAuth = ({
       const response = await fetch("/api/pg/auth/plex/pin", { method: "POST" });
       if (!response.ok) {
         throw new Error(
-          "Guardian could not reach Plex. Try again in a moment.",
+          "Could not reach Plex. Try again in a moment.",
         );
       }
 
@@ -220,7 +220,7 @@ export const usePlexOAuth = ({
           return;
         }
         throw new Error(
-          "Your browser blocked the Plex window. Allow pop-ups for Guardian and try again.",
+          "Your browser blocked the Plex window. Allow pop-ups for this site and try again.",
         );
       }
 

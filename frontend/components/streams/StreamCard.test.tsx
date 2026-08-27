@@ -465,3 +465,40 @@ describe("StreamCard opening in Plex", () => {
     expect(screen.getByTitle("Open this album in Plex")).toBeInTheDocument();
   });
 });
+
+describe("StreamCard music disc", () => {
+  const disc = () => screen.queryByTestId("music-disc");
+
+  it("fills the empty background of a track that has no artwork", () => {
+    renderCard({ type: "track", title: "Roygbiv" });
+    expect(disc()).toBeInTheDocument();
+  });
+
+  it("stays out of the way of real artwork", () => {
+    renderCard({ type: "track", title: "Roygbiv", artUrl: "/art.jpg" });
+    expect(disc()).toBeNull();
+  });
+
+  it("leaves video alone", () => {
+    renderCard();
+    expect(disc()).toBeNull();
+  });
+
+  it("turns only while the track is playing", () => {
+    renderCard({
+      type: "track",
+      title: "Roygbiv",
+      Player: { title: "Phone", state: "playing" },
+    });
+    expect(disc()).toHaveClass("animate-spin");
+  });
+
+  it("rests when the track is paused", () => {
+    renderCard({
+      type: "track",
+      title: "Roygbiv",
+      Player: { title: "Phone", state: "paused" },
+    });
+    expect(disc()).not.toHaveClass("animate-spin");
+  });
+});

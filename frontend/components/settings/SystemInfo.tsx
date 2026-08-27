@@ -124,7 +124,7 @@ export function SystemInfo({
           currentVersion: result.currentVersion,
           message: result.hasUpdate
             ? `A new version (${result.latestVersion}) is available!`
-            : "You are running the latest version of Guardian.",
+            : "You are running the latest version.",
           updateUrl: result.updateUrl,
         };
 
@@ -252,7 +252,7 @@ export function SystemInfo({
           </Banner>
         ) : (
           <p className="text-sm text-muted-foreground">
-            Run a check to see whether a newer Guardian release is available.
+            Run a check to see whether a newer release is available.
           </p>
         )}
       </SettingsCard>

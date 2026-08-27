@@ -392,7 +392,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
       } else {
         toast({
           title: "Delete Failed",
-          description: "Guardian could not delete that entry. Try again.",
+          description: "Could not delete that entry. Try again.",
           variant: "destructive",
         });
       }

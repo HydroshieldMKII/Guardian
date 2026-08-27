@@ -124,7 +124,7 @@ export default function SetupPage() {
 
       toast({
         title: "Account Created",
-        description: "You can sign in to Guardian with it now",
+        description: "You can sign in with it now",
         variant: "success",
       });
 

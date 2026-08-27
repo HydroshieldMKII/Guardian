@@ -545,7 +545,7 @@ describe("EditProfileModal", () => {
           expect.objectContaining({
             title: "Plex Link Failed",
             description:
-              "Guardian could not reach Plex. Try again in a moment.",
+              "Could not reach Plex. Try again in a moment.",
           }),
         ),
       );
@@ -647,7 +647,7 @@ describe("EditProfileModal Plex PIN polling", () => {
     expect(linkPlexAccount).toHaveBeenCalledWith("tok");
     expect(toast).toHaveBeenCalledWith(
       expect.objectContaining({
-        description: "You can now sign in to Guardian with Plex",
+        description: "You can now sign in with Plex",
       }),
     );
     expect(popup.close).toHaveBeenCalled();
@@ -707,7 +707,7 @@ describe("EditProfileModal Plex PIN polling", () => {
 
     expect(toast).toHaveBeenCalledWith(
       expect.objectContaining({
-        description: "Guardian could not link your Plex account",
+        description: "Could not link your Plex account",
       }),
     );
   });
@@ -764,7 +764,7 @@ describe("EditProfileModal remaining edges", () => {
     await waitFor(() =>
       expect(toast).toHaveBeenCalledWith(
         expect.objectContaining({
-          description: "Guardian could not link your Plex account",
+          description: "Could not link your Plex account",
         }),
       ),
     );

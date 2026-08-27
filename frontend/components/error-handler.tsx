@@ -38,7 +38,7 @@ export function ErrorHandler({
     // Check for backend errors FIRST
     if (backendError) {
       return {
-        title: "Cannot Reach Guardian",
+        title: "Cannot Reach the Backend",
         description: backendError,
         showChecklist: false,
         isBackendError: true,
@@ -51,13 +51,13 @@ export function ErrorHandler({
     if (
       status.includes("Backend connection error") ||
       status.includes("Failed to fetch dashboard data") ||
-      status.includes("Cannot connect to Guardian backend") ||
+      status.includes("Cannot connect to the backend") ||
       status.includes("Backend server is not reachable")
     ) {
       return {
-        title: "Cannot Reach Guardian",
+        title: "Cannot Reach the Backend",
         description:
-          "Guardian's own server is not answering. Check that the Guardian service is running.",
+          "The backend is not answering. Check that the service is running.",
         showChecklist: false,
       };
     }
@@ -107,7 +107,7 @@ export function ErrorHandler({
       {
         title: "Something Went Wrong",
         description:
-          "Guardian ran into a problem it could not explain. Check your setup and try again.",
+          "Something went wrong that could not be explained. Check your setup and try again.",
         showChecklist: false,
       },
       status,

@@ -62,13 +62,13 @@ describe("AuthGuard", () => {
 
   describe("a backend that will not answer", () => {
     it("explains the failure instead of spinning forever", () => {
-      auth.backendError = "The Guardian backend service encountered an error.";
+      auth.backendError = "The backend service encountered an error.";
       renderGuard();
 
       expect(shown()).toBe(false);
-      expect(screen.getByText("Cannot Reach Guardian")).toBeInTheDocument();
+      expect(screen.getByText("Cannot Reach the Backend")).toBeInTheDocument();
       expect(
-        screen.getByText("The Guardian backend service encountered an error."),
+        screen.getByText("The backend service encountered an error."),
       ).toBeInTheDocument();
       expect(push).not.toHaveBeenCalled();
     });
@@ -89,7 +89,7 @@ describe("AuthGuard", () => {
       renderGuard();
 
       expect(shown()).toBe(false);
-      expect(screen.getByText("Cannot Reach Guardian")).toBeInTheDocument();
+      expect(screen.getByText("Cannot Reach the Backend")).toBeInTheDocument();
     });
 
     it("reports the failure before setup has ever run", () => {
@@ -99,7 +99,7 @@ describe("AuthGuard", () => {
       renderGuard();
 
       expect(shown()).toBe(false);
-      expect(screen.getByText("Cannot Reach Guardian")).toBeInTheDocument();
+      expect(screen.getByText("Cannot Reach the Backend")).toBeInTheDocument();
       expect(push).not.toHaveBeenCalled();
     });
   });

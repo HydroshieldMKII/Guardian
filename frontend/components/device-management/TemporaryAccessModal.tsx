@@ -473,7 +473,7 @@ export const TemporaryAccessModal: React.FC<TemporaryAccessModalProps> = ({
               <ToggleRow
                 id="bypass-policies"
                 label="Bypass these policies for the selected devices"
-                hint="The concurrent stream limit is not affected. Whether temporary access counts towards it is controlled by its own setting in Guardian settings."
+                hint="The concurrent stream limit is not affected. Whether temporary access counts towards it is controlled by its own setting in Settings."
                 checked={bypassPolicies}
                 onCheckedChange={setBypassPolicies}
               />

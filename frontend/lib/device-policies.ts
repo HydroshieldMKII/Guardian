@@ -8,7 +8,7 @@ export interface PolicyBadge {
   policy: DevicePolicy;
   label: string;
   tone: Tone;
-  title: string;
+  hint: string;
 }
 
 const POLICY_TONE: Record<DevicePolicy, Tone> = {
@@ -25,13 +25,13 @@ const POLICY_LABEL: Record<DevicePolicy, string> = {
 
 const POLICY_ORDER: DevicePolicy[] = ["temporary", "schedule", "ip"];
 
-const GROUP_TITLE: Record<DevicePolicy, string> = {
+const GROUP_HINT: Record<DevicePolicy, string> = {
   temporary: "At least one device has temporary access",
   schedule: "A time schedule applies to at least one device",
   ip: "Network and IP access rules apply to this user",
 };
 
-const DEVICE_TITLE: Record<Exclude<DevicePolicy, "temporary">, string> = {
+const DEVICE_HINT: Record<Exclude<DevicePolicy, "temporary">, string> = {
   schedule:
     "A time schedule blocks streaming from this device during set hours",
   ip: "Network and IP access rules apply to this device",
@@ -111,7 +111,7 @@ export function devicePolicyBadges(
         policy,
         label: POLICY_LABEL.temporary,
         tone: POLICY_TONE.temporary,
-        title: device.temporaryAccessBypassPolicies
+        hint: device.temporaryAccessBypassPolicies
           ? `Temporary access expires in ${timeLeft} and bypasses ${BYPASSED_BY_TEMPORARY_ACCESS}`
           : `Temporary access expires in ${timeLeft}`,
       };
@@ -121,7 +121,7 @@ export function devicePolicyBadges(
       policy,
       label: POLICY_LABEL[policy],
       tone: POLICY_TONE[policy],
-      title: DEVICE_TITLE[policy],
+      hint: DEVICE_HINT[policy],
     };
   });
 }
@@ -142,6 +142,6 @@ export function groupPolicyBadges(
     policy,
     label: POLICY_LABEL[policy],
     tone: POLICY_TONE[policy],
-    title: GROUP_TITLE[policy],
+    hint: GROUP_HINT[policy],
   }));
 }

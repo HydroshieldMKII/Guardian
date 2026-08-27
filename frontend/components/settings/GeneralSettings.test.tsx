@@ -594,7 +594,7 @@ describe("GeneralSettings password reset", () => {
     await renderReset();
 
     expect(toggle()).not.toBeDisabled();
-    expect(screen.queryByText(/Set up email notifications first/)).toBeNull();
+    expect(screen.queryByText(/Reset links are sent by email/)).toBeNull();
   });
 
   it("greys the toggle out while SMTP is off", async () => {
@@ -602,7 +602,7 @@ describe("GeneralSettings password reset", () => {
 
     expect(toggle()).toBeDisabled();
     expect(
-      screen.getByText(/Set up email notifications first/),
+      screen.getByText(/Reset links are sent by email/),
     ).toBeInTheDocument();
   });
 

@@ -1,7 +1,6 @@
 import React from "react";
 import { StatusPill } from "@/components/ui/entity";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { HintTooltip } from "@/components/ui/hint-tooltip";
 import { UserDevice } from "@/types";
 import { isPlexampDevice } from "@/lib/device-policies";
 
@@ -36,14 +35,12 @@ export const UserAvatar = ({
 };
 
 export const NOT_MANAGEABLE_REASON =
-  "Plexamp devices cannot be managed. Plex provides no way to terminate a Plexamp stream, so Guardian cannot enforce any policy against this device.";
+  "Plexamp devices cannot be managed. Plex provides no way to terminate a Plexamp stream, so no policy can be enforced against this device.";
 
 const NotManageableBadge = () => (
-  <HintTooltip hint={NOT_MANAGEABLE_REASON}>
-    <StatusPill tone="accent" className="cursor-help">
-      Not Manageable
-    </StatusPill>
-  </HintTooltip>
+  <StatusPill tone="accent" hint={NOT_MANAGEABLE_REASON}>
+    Not Manageable
+  </StatusPill>
 );
 
 export const DeviceStatus = ({ device }: { device: UserDevice }) => {

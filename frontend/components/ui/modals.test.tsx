@@ -309,7 +309,7 @@ describe("ReleaseNotesModal", () => {
   it("names the version", () => {
     renderModal();
     expect(
-      screen.getByText("What's New in Guardian v2.0.0"),
+      screen.getByText("What's New in v2.0.0"),
     ).toBeInTheDocument();
   });
 

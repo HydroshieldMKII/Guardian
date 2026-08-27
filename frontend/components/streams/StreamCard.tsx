@@ -3,6 +3,7 @@ import { ActionMenu, type Action } from "@/components/ui/action-menu";
 import {
   ChevronsDownUp,
   ChevronsUpDown,
+  Disc3,
   LogOut,
   MonitorSmartphone,
   User,
@@ -13,6 +14,7 @@ import { StreamQuality, StreamQualityDetails } from "./StreamQuality";
 import { StreamDeviceInfo } from "./StreamDeviceInfo";
 import { StreamProgress } from "./StreamProgress";
 import { PlexSession } from "@/types";
+import { cn } from "@/lib/utils";
 import { config } from "../../lib/config";
 
 interface StreamCardProps {
@@ -39,6 +41,7 @@ export const StreamCard: React.FC<StreamCardProps> = ({
   const thumbnailUrl = stream.thumbnailUrl || "";
   const artUrl = stream.artUrl || "";
   const overArt = Boolean(artUrl);
+  const showDisc = stream.type === "track" && !overArt;
 
   const canSeeUser = Boolean(stream.User?.id);
   const canSeeDevice = Boolean(
@@ -132,6 +135,18 @@ export const StreamCard: React.FC<StreamCardProps> = ({
         <div
           aria-hidden
           className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/70 to-black/50"
+        />
+      )}
+
+      {showDisc && (
+        <Disc3
+          aria-hidden
+          data-testid="music-disc"
+          className={cn(
+            "pointer-events-none absolute -bottom-10 -right-8 size-44 text-muted-foreground/10",
+            stream.Player?.state === "playing" &&
+              "animate-spin [animation-duration:8s] motion-reduce:animate-none",
+          )}
         />
       )}
 

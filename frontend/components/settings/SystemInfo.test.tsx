@@ -264,7 +264,7 @@ describe("SystemInfo update checks", () => {
 
     expect(
       await screen.findByText(
-        "You are running the latest version of Guardian.",
+        "You are running the latest version.",
       ),
     ).toBeInTheDocument();
     expect(toast).toHaveBeenCalledWith(

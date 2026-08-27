@@ -92,7 +92,7 @@ describe("ForgotPasswordPage", () => {
 
     expect(await screen.findByText("Check Your Email")).toBeInTheDocument();
     expect(
-      screen.getByText(/does not say whether an account uses that address/),
+      screen.getByText(/never disclosed/),
     ).toBeInTheDocument();
   });
 
@@ -102,7 +102,7 @@ describe("ForgotPasswordPage", () => {
     await user.click(screen.getByRole("button", { name: "Send Reset Link" }));
 
     expect(
-      screen.getByText("Enter the email address on your Guardian account"),
+      screen.getByText("Enter the email address on your account"),
     ).toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
@@ -130,7 +130,7 @@ describe("ForgotPasswordPage", () => {
     await user.click(screen.getByRole("button", { name: "Send Reset Link" }));
 
     expect(
-      await screen.findByText("Guardian could not send the email"),
+      await screen.findByText("Could not send the email"),
     ).toBeInTheDocument();
   });
 
