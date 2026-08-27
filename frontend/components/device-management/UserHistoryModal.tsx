@@ -87,6 +87,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
   const [sessions, setSessions] = useState<SessionHistoryEntry[]>([]);
   const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [loaded, setLoaded] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -154,6 +155,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
       setHasMore(false);
     } finally {
       setLoading(false);
+      setLoaded(true);
     }
   }, [userId, fetchPage]);
 
@@ -211,6 +213,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
     setSearchTerm("");
     setActiveSearch("");
     setShowTerminatedOnly(false);
+    setLoaded(false);
     scrolledToRef.current = null;
   }, [isOpen]);
 
@@ -467,7 +470,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
         </ModalHeader>
 
         <ModalBody className="min-h-96 space-y-3" ref={sessionsListRef}>
-          {loading ? (
+          {loading && !loaded ? (
             <div className="flex min-h-80 items-center justify-center gap-2 text-sm text-muted-foreground">
               <RefreshCw className="size-5 animate-spin" />
               <span>Loading history...</span>
@@ -578,7 +581,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
 
         <ModalFooter className="sm:justify-between">
           <p className="text-xs text-muted-foreground">
-            {loading
+            {loading && !loaded
               ? ""
               : `Showing ${sessions.length} session${
                   sessions.length === 1 ? "" : "s"

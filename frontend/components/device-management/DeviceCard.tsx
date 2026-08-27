@@ -175,9 +175,31 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
               <h4 className="min-w-0 truncate text-sm font-semibold leading-tight text-foreground">
                 {device.deviceName || "Unknown"}
               </h4>
+              {plexAmp && (
+                <StatusPill
+                  tone="accent"
+                  size="sm"
+                  title="Plexamp devices are always allowed to stream"
+                >
+                  Plexamp
+                </StatusPill>
+              )}
               {!plexAmp && device.status === "pending" && (
-                <StatusPill tone="warning" size="sm">
+                <StatusPill
+                  tone="warning"
+                  size="sm"
+                  title="This device is waiting for your decision"
+                >
                   Pending
+                </StatusPill>
+              )}
+              {!plexAmp && device.status === "rejected" && (
+                <StatusPill
+                  tone="danger"
+                  size="sm"
+                  title="This device is not allowed to stream"
+                >
+                  Rejected
                 </StatusPill>
               )}
               {policies.map(({ policy, label, tone: pillTone, title }) => (

@@ -4,7 +4,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { HintTooltip } from "@/components/ui/hint-tooltip";
 import { UserDevice } from "@/types";
 import { isPlexampDevice } from "@/lib/device-policies";
-import { formatTimeLeft } from "@/lib/duration";
 
 export { ClickableIP } from "@/components/ui/clickable-ip";
 
@@ -48,17 +47,6 @@ const NotManageableBadge = () => (
 );
 
 export const DeviceStatus = ({ device }: { device: UserDevice }) => {
-  if (device.temporaryAccessUntil) {
-    const timeLeft = formatTimeLeft(device.temporaryAccessUntil);
-    if (timeLeft !== "Expired") {
-      return (
-        <StatusPill tone="info" title={`Expires in ${timeLeft}`}>
-          Temporary Access
-        </StatusPill>
-      );
-    }
-  }
-
   if (isPlexampDevice(device) && device.status === "pending") {
     return <NotManageableBadge />;
   }

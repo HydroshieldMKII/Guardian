@@ -2,6 +2,7 @@ import {
   apiLimiter,
   authLimiter,
   credentialsLimiter,
+  passwordResetLimiter,
   trustProxyHops,
 } from '@/common/security/rate-limit';
 
@@ -65,6 +66,26 @@ describe('authLimiter', () => {
   });
 });
 
+describe('passwordResetLimiter', () => {
+  it('allows five reset requests per quarter hour', () => {
+    const options = optionsOf(passwordResetLimiter);
+    expect(options.windowMs).toBe(15 * 60 * 1000);
+    expect(options.limit).toBe(5);
+  });
+
+  it('charges every request, so a successful send still spends budget', () => {
+    expect(optionsOf(passwordResetLimiter).skipSuccessfulRequests).toBe(false);
+  });
+
+  it('is stricter than the general auth limiter', () => {
+    const reset = optionsOf(passwordResetLimiter);
+    const auth = optionsOf(authLimiter);
+    expect(reset.limit / reset.windowMs).toBeLessThan(
+      auth.limit / auth.windowMs,
+    );
+  });
+});
+
 describe('apiLimiter', () => {
   it('leaves headroom for the dashboard poll loop', () => {
     const options = optionsOf(apiLimiter);
@@ -75,6 +96,7 @@ describe('apiLimiter', () => {
 
 describe.each([
   ['credentialsLimiter', credentialsLimiter],
+  ['passwordResetLimiter', passwordResetLimiter],
   ['authLimiter', authLimiter],
   ['apiLimiter', apiLimiter],
 ] as const)('%s', (_name, build) => {

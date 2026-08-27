@@ -485,6 +485,116 @@ describe("UserHistoryModal filtering", () => {
   });
 });
 
+describe("UserHistoryModal searching", () => {
+  const search = async (
+    user: ReturnType<typeof userEvent.setup>,
+    term: string,
+  ) => {
+    let release: (value: unknown) => void = () => {};
+    const before = fetchMock.mock.calls.length;
+    fetchMock.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          release = resolve;
+        }),
+    );
+
+    await user.type(
+      screen.getByPlaceholderText(/Search by title, device or IP/),
+      term,
+    );
+    await waitFor(() =>
+      expect(fetchMock.mock.calls.length).toBeGreaterThan(before),
+    );
+
+    return async (results: unknown[]) => {
+      await act(async () => {
+        release({ ok: true, json: async () => results });
+      });
+    };
+  };
+
+  it("leaves the sessions already on screen in place", async () => {
+    const { user } = await renderModal();
+
+    await search(user, "Arr");
+
+    expect(screen.getByText(/Arrival/)).toBeInTheDocument();
+    expect(screen.queryByText("Loading history...")).toBeNull();
+  });
+
+  it("leaves the session count in place", async () => {
+    const { user } = await renderModal();
+
+    await search(user, "Arr");
+
+    expect(
+      screen.getByText(/Showing 1 session matching your filters/),
+    ).toBeInTheDocument();
+  });
+
+  it("shows no spinner at all while a search is in flight", async () => {
+    const { user, container } = await renderModal();
+
+    await search(user, "Arr");
+
+    expect(container.querySelectorAll(".animate-spin")).toHaveLength(0);
+  });
+
+  it("leaves the empty card quiet when a search comes back with nothing", async () => {
+    const { user, container } = await renderModal();
+
+    const settle = await search(user, "zzz");
+    await settle([]);
+    await search(user, "z");
+
+    expect(
+      screen.getByText("No streams match your search"),
+    ).toBeInTheDocument();
+    expect(container.querySelectorAll(".animate-spin")).toHaveLength(0);
+  });
+
+  it("still shows the full loader on the very first open", async () => {
+    fetchMock.mockImplementation(() => new Promise(() => {}));
+
+    render(
+      <UserHistoryModal
+        userId="u-1"
+        username="testuser"
+        isOpen
+        onClose={jest.fn()}
+      />,
+    );
+
+    expect(await screen.findByText("Loading history...")).toBeInTheDocument();
+  });
+
+  it("shows the full loader again after the modal is closed and reopened", async () => {
+    const { rerender } = await renderModal();
+
+    rerender(
+      <UserHistoryModal
+        userId="u-1"
+        username="testuser"
+        isOpen={false}
+        onClose={jest.fn()}
+      />,
+    );
+
+    fetchMock.mockImplementation(() => new Promise(() => {}));
+    rerender(
+      <UserHistoryModal
+        userId="u-1"
+        username="testuser"
+        isOpen
+        onClose={jest.fn()}
+      />,
+    );
+
+    expect(await screen.findByText("Loading history...")).toBeInTheDocument();
+  });
+});
+
 describe("UserHistoryModal paging", () => {
   const fullPage = () =>
     Array.from({ length: 25 }, (_, index) =>

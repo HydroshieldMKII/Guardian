@@ -6,6 +6,7 @@ import { AdminSessionUser } from '@/modules/auth/session-user.types';
 import { AuthController } from '@/modules/auth/auth.controller';
 import { AuthService } from '@/modules/auth/auth.service';
 import { PlexOAuthService } from '@/modules/auth/plex-oauth.service';
+import { PasswordResetService } from '@/modules/auth/password-reset.service';
 import { ConfigService } from '@/modules/config/services/config.service';
 
 describe('AuthController', () => {
@@ -13,6 +14,12 @@ describe('AuthController', () => {
   let authService: Record<string, jest.Mock>;
   let plexOAuthService: Record<string, jest.Mock>;
   let configService: { getSetting: jest.Mock };
+  let passwordResetService: {
+    getStatus: jest.Mock;
+    requestReset: jest.Mock;
+    verify: jest.Mock;
+    confirm: jest.Mock;
+  };
 
   const adminSession = (
     overrides: Partial<AdminSessionUser> = {},
@@ -112,11 +119,23 @@ describe('AuthController', () => {
 
     configService = { getSetting: jest.fn().mockResolvedValue(true) };
 
+    passwordResetService = {
+      getStatus: jest.fn().mockResolvedValue({
+        enabled: true,
+        emailConfigured: true,
+        appUrlConfigured: true,
+      }),
+      requestReset: jest.fn().mockResolvedValue(undefined),
+      verify: jest.fn().mockResolvedValue(true),
+      confirm: jest.fn().mockResolvedValue(undefined),
+    };
+
     const module = await Test.createTestingModule({
       controllers: [AuthController],
       providers: [
         { provide: AuthService, useValue: authService },
         { provide: PlexOAuthService, useValue: plexOAuthService },
+        { provide: PasswordResetService, useValue: passwordResetService },
         { provide: ConfigService, useValue: configService },
       ],
     }).compile();
@@ -315,6 +334,70 @@ describe('AuthController', () => {
       await expect(controller.updateProfile(undefined, {})).rejects.toThrow(
         'Not authenticated',
       );
+    });
+  });
+
+  describe('password reset', () => {
+    it('reports what the login page needs to know', async () => {
+      await expect(controller.passwordResetStatus()).resolves.toEqual({
+        enabled: true,
+        emailConfigured: true,
+        appUrlConfigured: true,
+      });
+    });
+
+    it('hands the address to the service', async () => {
+      await controller.requestPasswordReset({ email: 'owner@example.com' });
+
+      expect(passwordResetService.requestReset).toHaveBeenCalledWith(
+        'owner@example.com',
+      );
+    });
+
+    it('reports success for an address nobody owns', async () => {
+      passwordResetService.requestReset.mockResolvedValue(undefined);
+
+      await expect(
+        controller.requestPasswordReset({ email: 'stranger@example.com' }),
+      ).resolves.toEqual({ success: true });
+    });
+
+    it('reports whether a link is still usable', async () => {
+      await expect(
+        controller.verifyPasswordReset({ token: 'abc' }),
+      ).resolves.toEqual({ valid: true });
+
+      passwordResetService.verify.mockResolvedValue(false);
+      await expect(
+        controller.verifyPasswordReset({ token: 'abc' }),
+      ).resolves.toEqual({ valid: false });
+    });
+
+    it('passes the new password through to the service', async () => {
+      const dto = {
+        token: 'abc',
+        password: 'BrandNewPass1!',
+        confirmPassword: 'BrandNewPass1!',
+      };
+
+      await expect(controller.confirmPasswordReset(dto)).resolves.toEqual({
+        success: true,
+      });
+      expect(passwordResetService.confirm).toHaveBeenCalledWith(dto);
+    });
+
+    it('surfaces a rejected link', async () => {
+      passwordResetService.confirm.mockRejectedValue(
+        new BadRequestException('This reset link is no longer valid.'),
+      );
+
+      await expect(
+        controller.confirmPasswordReset({
+          token: 'abc',
+          password: 'BrandNewPass1!',
+          confirmPassword: 'BrandNewPass1!',
+        }),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 

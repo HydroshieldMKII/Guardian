@@ -264,10 +264,66 @@ describe('EmailTemplateService', () => {
       expect(html).toContain('background-color: #ff4444;">STREAM BLOCKED');
     });
 
-    it('uses the same colour for the details border', () => {
+    it('uses the same colour for the accent bar', () => {
       expect(notification({ statusColor: '#ff4444' })).toContain(
-        'border-left: 4px solid #ff4444',
+        'class="accent-bar" style="background-color: #ff4444;"',
       );
+    });
+  });
+
+  describe('generatePasswordResetEmail', () => {
+    const reset = (
+      url = 'https://guardian.example.com/reset-password?token=abc',
+    ) =>
+      service.generatePasswordResetEmail('owner', url, 15, '2026-08-21 12:00');
+
+    it('links the button at the reset address', () => {
+      expect(reset()).toContain(
+        'href="https://guardian.example.com/reset-password?token=abc"',
+      );
+    });
+
+    it('repeats the address for clients that strip the button', () => {
+      const html = reset();
+      const occurrences = html.split(
+        'https://guardian.example.com/reset-password?token=abc',
+      ).length;
+      expect(occurrences).toBeGreaterThan(2);
+    });
+
+    it('names the account and how long the link lasts', () => {
+      const html = reset();
+      expect(html).toContain('>owner<');
+      expect(html).toContain('15 minutes');
+    });
+
+    it('says the link works once', () => {
+      expect(reset()).toContain('>Single use<');
+    });
+
+    it('tells the reader they can ignore it', () => {
+      expect(reset()).toContain('ignore this email');
+    });
+
+    it('escapes an address that carries markup', () => {
+      const html = reset('https://x.test/?t="><script>alert(1)</script>');
+      expect(html).not.toContain('<script>');
+      expect(html).toContain('&lt;script&gt;');
+    });
+
+    it('escapes a username that carries markup', () => {
+      const html = service.generatePasswordResetEmail(
+        '<script>alert(1)</script>',
+        'https://x.test',
+        15,
+        'ts',
+      );
+      expect(html).not.toContain('<script>');
+      expect(html).toContain('&lt;script&gt;');
+    });
+
+    it('carries the timestamp', () => {
+      expect(reset()).toContain('2026-08-21 12:00');
     });
   });
 

@@ -1,0 +1,61 @@
+name: Bug report
+description: Something in Guardian does not work as documented.
+labels: ["bug"]
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: What happens
+      description: What went wrong, and what you expected instead.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      value: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Guardian version
+      description: Shown under Settings > System Info.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: install
+    attributes:
+      label: Install method
+      options:
+        - Docker image
+        - Docker build from source
+        - Local development
+    validations:
+      required: true
+
+  - type: input
+    id: plex
+    attributes:
+      label: Plex Media Server version
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: Output of `docker logs guardian`. Remove tokens and IP addresses you do not want public.
+      render: shell
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Anything else
+      description: Reverse proxy, TRUST_PROXY_HOPS, APP_URL, browser, screenshots.

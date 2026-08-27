@@ -11,6 +11,24 @@ import { useStreamsData, useStreamActions } from "../hooks/useStreams";
 
 import { RemoveAccessModal, StreamCard, getContentTitle } from "./streams";
 
+const StreamCardPlaceholder = () => (
+  <div
+    aria-hidden
+    className="hidden rounded-xl border border-dashed bg-muted/20 xl:block"
+  >
+    <div className="space-y-5 p-4 opacity-40 sm:space-y-6 sm:p-6">
+      <div className="flex gap-4">
+        <div className="hidden h-24 w-16 shrink-0 rounded-lg bg-muted sm:block" />
+        <div className="min-w-0 flex-1 space-y-3">
+          <div className="h-5 w-2/3 rounded bg-muted" />
+          <div className="h-4 w-1/2 rounded bg-muted" />
+        </div>
+      </div>
+      <div className="h-2 w-full rounded-full bg-muted" />
+    </div>
+  </div>
+);
+
 const AUTO_REFRESH_ON = "Guardian is refreshing on its own. Click to stop.";
 const AUTO_REFRESH_OFF =
   "Refreshing only when you ask. Click to refresh on its own.";
@@ -189,7 +207,7 @@ export default function StreamsList({
             </p>
           </div>
         ) : (
-          <div className="mb-4 space-y-4">
+          <div className="mb-4 grid grid-cols-1 items-start gap-4 xl:grid-cols-2">
             {filteredStreams.map((stream, index) => (
               <StreamCard
                 key={stream.sessionKey || index}
@@ -209,6 +227,7 @@ export default function StreamsList({
                 onNavigateToUser={onNavigateToUser}
               />
             ))}
+            {filteredStreams.length % 2 === 1 && <StreamCardPlaceholder />}
           </div>
         )}
       </CardContent>

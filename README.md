@@ -10,14 +10,12 @@
 
 ![Guardian Banner](https://github.com/user-attachments/assets/ff8b9bbc-f5d4-451a-bdc1-cb2354023c8b)
 
-Guardian is a management platform for Plex Media Server. It monitors streaming activity, enforces granular access controls, and ensures only authorized devices can reach your library.
+Guardian is an access-control layer for Plex Media Server. It polls the Plex sessions API, matches each stream against per-user and per-device policy, and terminates the sessions that fail.
 
 > [!WARNING]
-> **Looking for a maintainer.** Interested? Reach out on [Discord](https://discord.gg/xTKuHyhdS4) or in [Discussions](https://github.com/HydroshieldMKII/Guardian/discussions).
+> **Looking for a maintainer.** Reach out on [Discord](https://discord.gg/xTKuHyhdS4) or in [Discussions](https://github.com/HydroshieldMKII/Guardian/discussions).
 >
-> **In the mean time, it is not recommended to expose Guardian directly to the internet.** Run it on your LAN, behind a VPN, or behind a reverse proxy with SSO.
-
-## Screenshots
+> Do not expose Guardian directly to the internet. Run it on a LAN, behind a VPN, or behind a reverse proxy with SSO.
 
 <img width="3024" alt="Guardian device management" src="https://github.com/user-attachments/assets/d0283784-c009-467e-8e38-b0d7f3907ba0" />
 
@@ -25,13 +23,19 @@ Guardian is a management platform for Plex Media Server. It monitors streaming a
 
 ## Features
 
-**Access control**: automatic session termination for unapproved devices, global and per-user rules, IP restrictions by LAN/WAN/CIDR over both IPv4 and IPv6, time-limited temporary access, and per-user schedules.
+| Area | Capabilities |
+| --- | --- |
+| Access control | Approve, reject or hold devices; global default plus per-user overrides; LAN/WAN and CIDR allowlists over IPv4 and IPv6; weekly time schedules; time-limited temporary grants |
+| Limits | Global and per-user concurrent stream caps, with an option to exclude devices on a temporary grant |
+| Monitoring | Live Plex and Plexamp sessions, device fingerprints, stream quality and progress, searchable session history |
+| Notifications | SMTP email, Apprise (100+ services) and in-app alerts for new devices, blocks, location changes and user notes |
+| Administration | Settings export/import, automatic cleanup of inactive devices, CLI recovery scripts |
+| User portal | Plex users sign in to see their own devices, the policies that apply to them, and to leave notes on rejected devices |
 
-**Monitoring**: live Plex and Plexamp session tracking, detailed device fingerprints, stream quality and progress, and searchable session history.
+## Requirements
 
-**Notifications**: SMTP email and Apprise (100+ services) alerts for new devices, blocks, location changes, and user notes.
-
-**Management**: concurrent stream limits, automatic cleanup of inactive devices, settings export/import, and a self-service portal where Plex users can view their own devices.
+- A reachable Plex Media Server and a [Plex authentication token](https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/)
+- Docker with Compose, or Node.js to run from source
 
 ## Installation
 
@@ -43,9 +47,9 @@ curl -o docker-compose.yml https://raw.githubusercontent.com/HydroshieldMKII/Gua
 docker compose up -d
 ```
 
-Webui is then available at `http://localhost:3000` by default.
+The web UI listens on port 3000 by default
 
-To build from source instead:
+### From source
 
 ```bash
 git clone https://github.com/HydroshieldMKII/Guardian.git
@@ -55,31 +59,21 @@ docker compose -f docker-compose.dev.yml up -d --build
 
 ### Unraid
 
-Under **Docker -> Compose**, create a stack from `docker-compose.example.yml`, adjust the volume and port if needed, and deploy.
+Under **Docker → Compose**, create a stack from `docker-compose.example.yml`, adjust the volume and port, and deploy.
 
 ## Configuration
 
-### Plex token
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `TRUST_PROXY_HOPS` | `1` | Number of proxies in front of Guardian. Determines which address in `X-Forwarded-For` is treated as the client. |
+| `APP_URL` | unset | Public address Guardian is reached on, for example `https://guardian.example.com`. Used to build password reset links. Required for password resets; ignored otherwise. |
+| `DATABASE_PATH` | `/app/data/plex-guard.db` | SQLite database file. |
 
-You will need a [Plex authentication token](https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/) to complete setup.
-
-### Running behind a reverse proxy
-
-`TRUST_PROXY_HOPS` sets how many proxies sit in front of Guardian. Defaults to `1`.
-
-```yaml
-services:
-  guardian:
-    environment:
-      - TRUST_PROXY_HOPS=1
-```
-
-Use `2` for Cloudflare in front of your own proxy, or `0` when nothing is in front. A wrong value will break IP policies and rate limiting.
 
 ## Updating
 
 > [!IMPORTANT]
-> Back up your settings first: **Settings → Admin Tools → Export Settings**.
+> Export your settings first: **Settings → Admin Tools → Export Settings**.
 
 ```bash
 docker compose pull && docker compose up -d
@@ -87,33 +81,35 @@ docker compose pull && docker compose up -d
 
 ## Troubleshooting
 
-**Lost admin access** — reset credentials from the CLI:
+**Lost admin access**
 
 ```bash
 docker compose exec guardian node backend/src/scripts/list-admins.js
 docker compose exec guardian node backend/src/scripts/update-admin.js "USERNAME" "NEW_PASSWORD"
 ```
 
-**Locked out by captcha** — clear the Turnstile keys:
+**Locked out by captcha**
 
 ```bash
 docker compose exec guardian node backend/src/scripts/disable-captcha.js
 ```
 
-**Cannot connect to Plex** — confirm the server is reachable, the token is valid, and no firewall is in the way.
+**Cannot connect to Plex** — check that the server is reachable from the container, the token is valid, and that SSL settings match the server.
 
-**Notifications not arriving** — use the test buttons in Settings, then check credentials and your spam folder.
+**Notifications not arriving** — use the test buttons in Settings, then check credentials and spam filtering.
 
-Still stuck? Ask on [Discord](https://discord.gg/xTKuHyhdS4) or open an [issue](https://github.com/HydroshieldMKII/Guardian/issues).
+**Reset emails not arriving** — confirm SMTP works with the test button, then confirm `APP_URL` is set.
+
+Otherwise, ask on [Discord](https://discord.gg/xTKuHyhdS4) or open an [issue](https://github.com/HydroshieldMKII/Guardian/issues).
 
 ## Development
 
 ```bash
-cd backend  && npm ci && npm run start:dev   # in one terminal
-cd frontend && npm ci && npm run dev         # in another
+cd backend  && npm ci && npm run start:dev   # port 3001
+cd frontend && npm ci && npm run dev         # port 3000
 ```
 
-Before opening a pull request:
+Run before opening a pull request:
 
 ```bash
 (cd backend  && npm run lint:ci && npm run typecheck && npm run test:cov && npm run build)
@@ -122,4 +118,4 @@ Before opening a pull request:
 
 ## Contributing
 
-Bug reports, feature ideas, documentation fixes, and pull requests are all welcome. Please make sure CI passes before requesting review.
+Open an issue with the bug or feature template, or a pull request with the checklist filled in. Report security issues through a [private advisory](https://github.com/HydroshieldMKII/Guardian/security/advisories/new), not a public issue.

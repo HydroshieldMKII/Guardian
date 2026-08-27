@@ -16,6 +16,7 @@ import {
   apiLimiter,
   authLimiter,
   credentialsLimiter,
+  passwordResetLimiter,
   trustProxyHops,
 } from '@/common/security/rate-limit';
 
@@ -40,6 +41,8 @@ async function bootstrap() {
   app.use('/auth/login', credentialsLimiter());
   app.use('/auth/create-admin', credentialsLimiter());
   app.use('/auth/plex/login', credentialsLimiter());
+  app.use('/auth/password-reset/request', passwordResetLimiter());
+  app.use('/auth/password-reset/confirm', passwordResetLimiter());
   app.use('/auth', authLimiter());
   app.use(apiLimiter());
   app.useGlobalFilters(new GlobalExceptionFilter());

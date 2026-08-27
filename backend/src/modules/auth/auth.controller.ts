@@ -14,11 +14,17 @@ import {
 import type { Request, Response } from 'express';
 import { AuthService } from '@/modules/auth/auth.service';
 import { PlexOAuthService } from '@/modules/auth/plex-oauth.service';
+import { PasswordResetService } from '@/modules/auth/password-reset.service';
 import { ConfigService } from '@/modules/config/services/config.service';
 import { CreateAdminDto } from '@/modules/auth/dto/create-admin.dto';
 import { LoginDto } from '@/modules/auth/dto/login.dto';
 import { UpdateProfileDto } from '@/modules/auth/dto/update-profile.dto';
 import { UpdatePasswordDto } from '@/modules/auth/dto/update-password.dto';
+import {
+  ConfirmPasswordResetDto,
+  RequestPasswordResetDto,
+  VerifyPasswordResetDto,
+} from '@/modules/auth/dto/password-reset.dto';
 import { CurrentUser } from '@/modules/auth/decorators/current-user.decorator';
 import { Public } from '@/modules/auth/decorators/public.decorator';
 import { AdminOnly } from '@/modules/auth/decorators/admin-only.decorator';
@@ -38,6 +44,7 @@ export class AuthController {
   constructor(
     private authService: AuthService,
     private plexOAuthService: PlexOAuthService,
+    private passwordResetService: PasswordResetService,
     private configService: ConfigService,
   ) {}
 
@@ -196,6 +203,49 @@ export class AuthController {
     }
 
     await this.authService.updatePassword(user.id, dto, user.sessionId);
+    return { success: true };
+  }
+
+  // ==========================================
+  // Password Reset Endpoints
+  // ==========================================
+
+  /**
+   * Whether the password reset flow can be offered on the login page
+   */
+  @Public()
+  @Get('password-reset/status')
+  async passwordResetStatus() {
+    return this.passwordResetService.getStatus();
+  }
+
+  /**
+   * Start a password reset
+   * Always reports success so the response cannot be used to probe for accounts
+   */
+  @Public()
+  @Post('password-reset/request')
+  async requestPasswordReset(@Body() dto: RequestPasswordResetDto) {
+    await this.passwordResetService.requestReset(dto.email);
+    return { success: true };
+  }
+
+  /**
+   * Check whether a reset link is still usable before showing the form
+   */
+  @Public()
+  @Post('password-reset/verify')
+  async verifyPasswordReset(@Body() dto: VerifyPasswordResetDto) {
+    return { valid: await this.passwordResetService.verify(dto.token) };
+  }
+
+  /**
+   * Set a new password from a reset link
+   */
+  @Public()
+  @Post('password-reset/confirm')
+  async confirmPasswordReset(@Body() dto: ConfirmPasswordResetDto) {
+    await this.passwordResetService.confirm(dto);
     return { success: true };
   }
 

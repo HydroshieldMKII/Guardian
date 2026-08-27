@@ -6,6 +6,7 @@ import { ConfigService } from '@/modules/config/services/config.service';
 import { TimezoneService } from '@/modules/config/services/timezone.service';
 import { SettingValues } from '@/modules/config/settings.catalog';
 import { asHttpError } from '@/common/utils/error-types';
+import { EMAIL_PALETTE } from '@/common/utils/email-palette';
 
 export interface SMTPConfig {
   host: string;
@@ -290,6 +291,63 @@ export class EmailService {
     }
   }
 
+  async sendPasswordResetEmail(
+    toEmail: string,
+    username: string,
+    resetUrl: string,
+    expiresInMinutes: number,
+  ): Promise<void> {
+    const settings = await this.loadSmtpSettings();
+    const smtpConfig = this.toSmtpConfig(settings);
+    smtpConfig.toEmails = [toEmail];
+
+    if (!settings.SMTP_ENABLED) {
+      this.logger.warn(
+        'Password reset email skipped: SMTP email notifications are disabled',
+      );
+      return;
+    }
+
+    const validationError = this.validateSMTPConfig(smtpConfig);
+    if (validationError) {
+      this.logger.warn(`Password reset email skipped: ${validationError}`);
+      return;
+    }
+
+    const currentTimeInTimezone =
+      await this.configService.getCurrentTimeInTimezone();
+    const timestamp = this.timezoneService.formatTimestamp(
+      currentTimeInTimezone,
+    );
+
+    try {
+      const transporter = this.createTransporter(smtpConfig);
+
+      await transporter.sendMail({
+        from: smtpConfig.fromName
+          ? `${smtpConfig.fromName} <${smtpConfig.fromEmail}>`
+          : smtpConfig.fromEmail,
+        to: [toEmail],
+        subject: 'Guardian: Reset your password',
+        text: `Someone asked to reset the password for your Guardian account (${username}).\n\nOpen this link to choose a new password:\n${resetUrl}\n\nThe link expires in ${expiresInMinutes} minutes and works once. If this was not you, ignore this email and nothing changes.\n\nSent at: ${timestamp}`,
+        html: this.emailTemplateService.generatePasswordResetEmail(
+          username,
+          resetUrl,
+          expiresInMinutes,
+          timestamp,
+        ),
+      });
+
+      this.logger.log('Password reset email sent');
+    } catch (caught) {
+      const error = asHttpError(caught);
+      this.logger.error('Failed to send password reset email', {
+        error: error.message,
+        stack: error.stack,
+      });
+    }
+  }
+
   async loadSmtpSettings(): Promise<SmtpSettings> {
     const [
       SMTP_ENABLED,
@@ -445,7 +503,7 @@ export class EmailService {
         return {
           subject: `Guardian Alert: Stream Blocked${deviceName ? ` - ${deviceName}` : ''}`,
           statusLabel: 'STREAM BLOCKED',
-          statusColor: '#ff4444',
+          statusColor: EMAIL_PALETTE.danger,
           mainMessage: stopCode
             ? StopCodeUtils.getStopCodeDescription(stopCode)
             : 'A streaming session has been blocked on your Plex server',
@@ -454,7 +512,7 @@ export class EmailService {
         return {
           subject: `Guardian Warning${deviceName ? ` - ${deviceName}` : ''}`,
           statusLabel: 'WARNING',
-          statusColor: '#ffaa00',
+          statusColor: EMAIL_PALETTE.warning,
           mainMessage:
             'Guardian has detected an issue that requires your attention.',
         };
@@ -462,28 +520,28 @@ export class EmailService {
         return {
           subject: `Guardian Error${deviceName ? ` - ${deviceName}` : ''}`,
           statusLabel: 'ERROR',
-          statusColor: '#ff4444',
+          statusColor: EMAIL_PALETTE.danger,
           mainMessage: 'Guardian has encountered an error during operation.',
         };
       case 'new-device':
         return {
           subject: `Guardian Alert: New Device Detected${deviceName ? ` - ${deviceName}` : ''}`,
           statusLabel: 'NEW DEVICE',
-          statusColor: '#4488ff',
+          statusColor: EMAIL_PALETTE.info,
           mainMessage: `A new device "${deviceName}" has been detected for user "${username}".`,
         };
       case 'location-change':
         return {
           subject: `Guardian Alert: Device Location Changed${deviceName ? ` - ${deviceName}` : ''}`,
           statusLabel: 'LOCATION CHANGED',
-          statusColor: '#ff9900',
+          statusColor: EMAIL_PALETTE.warning,
           mainMessage: `The device "${deviceName}" used by "${username}" has changed its IP address location.`,
         };
       case 'device-note':
         return {
           subject: `Guardian Alert: Device Note Received${deviceName ? ` - ${deviceName}` : ''}`,
           statusLabel: 'DEVICE NOTE',
-          statusColor: '#9966ff',
+          statusColor: EMAIL_PALETTE.accent,
           mainMessage: `User "${username}" has left a note on device "${deviceName}".`,
         };
       case 'info':
@@ -491,7 +549,7 @@ export class EmailService {
         return {
           subject: `Guardian Notification${deviceName ? ` - ${deviceName}` : ''}`,
           statusLabel: 'NOTIFICATION',
-          statusColor: '#4488ff',
+          statusColor: EMAIL_PALETTE.info,
           mainMessage: 'Guardian has a new notification for your Plex server.',
         };
     }

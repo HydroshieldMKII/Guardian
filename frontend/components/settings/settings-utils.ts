@@ -123,6 +123,11 @@ export const getSettingInfo = (setting: AppSetting): SettingInfo => {
       label: "Automatically check for updates",
       description: "Tell me when a newer version of Guardian is released",
     },
+    PASSWORD_RESET_ENABLED: {
+      label: "Allow password reset by email",
+      description:
+        "Show a Forgot password link on the sign-in page and email a single-use link that expires in 15 minutes",
+    },
     CLOUDFLARE_TURNSTILE_SITE_KEY: {
       label: "Cloudflare Turnstile site key",
       description: "The public key from your Cloudflare Turnstile widget",

@@ -33,6 +33,23 @@ const POLICY_CHOICES: {
   { label: "Block", value: true, tone: "danger" },
 ];
 
+const DeviceCardPlaceholder = () => (
+  <div
+    aria-hidden
+    className="hidden rounded-xl border border-dashed bg-muted/20 xl:block"
+  >
+    <div className="space-y-3 p-3 pl-4 opacity-40 sm:p-4 sm:pl-5">
+      <div className="flex items-center gap-4">
+        <div className="min-w-0 flex-1 space-y-2">
+          <div className="h-4 w-2/5 rounded bg-muted" />
+          <div className="h-3 w-4/5 rounded bg-muted" />
+        </div>
+        <div className="size-8 shrink-0 rounded-md bg-muted" />
+      </div>
+    </div>
+  </div>
+);
+
 // User-Device group interface
 interface UserDeviceGroup {
   user: {
@@ -121,7 +138,9 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
   }, [savingPolicy]);
 
   useEffect(() => {
-    setPendingPolicy(null);
+    setPendingPolicy((current) =>
+      current && !Object.is(current.value, storedPolicy) ? current : null,
+    );
   }, [storedPolicy]);
 
   const policyValue = pendingPolicy ? pendingPolicy.value : storedPolicy;
@@ -353,7 +372,7 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
                 </p>
               </div>
             ) : (
-              <div className="space-y-3 sm:space-y-4">
+              <div className="grid grid-cols-1 items-start gap-3 sm:gap-4 xl:grid-cols-2">
                 {group.devices.map((device) => (
                   <DeviceCard
                     key={device.id}
@@ -368,6 +387,7 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
                     onShowDetails={onShowDetails}
                   />
                 ))}
+                {group.devices.length % 2 === 1 && <DeviceCardPlaceholder />}
               </div>
             )}
           </div>

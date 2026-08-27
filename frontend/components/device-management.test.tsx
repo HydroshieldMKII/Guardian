@@ -671,6 +671,40 @@ describe("DeviceManagement user actions", () => {
     );
   });
 
+  it("keeps the saving flag up until the refreshed data lands", async () => {
+    let release: () => void = () => {};
+    const { user, onRefresh } = await renderPanel();
+    onRefresh.mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          release = resolve;
+        }),
+    );
+
+    await user.click(screen.getByRole("button", { name: "block u-1" }));
+
+    await waitFor(() => expect(onRefresh).toHaveBeenCalled());
+    expect(screen.getByText("updating:u-1:u-1")).toBeInTheDocument();
+
+    await act(async () => {
+      release();
+    });
+
+    expect(screen.getByText("updating:u-1:none")).toBeInTheDocument();
+  });
+
+  it("drops the saving flag when the save itself fails", async () => {
+    updateUserPreference.mockResolvedValue(false);
+    const { user, onRefresh } = await renderPanel();
+
+    await user.click(screen.getByRole("button", { name: "block u-1" }));
+
+    await waitFor(() =>
+      expect(screen.getByText("updating:u-1:none")).toBeInTheDocument(),
+    );
+    expect(onRefresh).not.toHaveBeenCalled();
+  });
+
   it("updates an IP policy", async () => {
     const { user } = await renderPanel();
 

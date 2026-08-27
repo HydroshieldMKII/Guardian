@@ -1,3 +1,4 @@
+import React from "react";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { UserDevice } from "@/types";
@@ -37,7 +38,11 @@ const device = (overrides: Partial<UserDevice> = {}): UserDevice => ({
 
 const renderCard = (
   overrides: Partial<UserDevice> = {},
-  props: { actionLoading?: number | null; onDeviceUpdate?: jest.Mock } = {},
+  props: {
+    actionLoading?: number | null;
+    onDeviceUpdate?: jest.Mock;
+    policies?: React.ComponentProps<typeof DeviceCard>["policies"];
+  } = {},
 ) => {
   const handlers = {
     onApprove: jest.fn(),
@@ -52,6 +57,7 @@ const renderCard = (
     <DeviceCard
       device={device(overrides)}
       actionLoading={props.actionLoading ?? null}
+      policies={props.policies}
       onDeviceUpdate={props.onDeviceUpdate}
       {...handlers}
     />,
@@ -229,23 +235,70 @@ describe("DeviceCard status pill", () => {
     expect(screen.getByText("Pending")).toBeInTheDocument();
   });
 
-  it.each(["approved", "rejected"] as const)(
-    "leaves a %s device unlabelled",
-    (status) => {
-      const { container } = renderCard({ status });
+  it("flags a rejected device rather than relying on the rail colour", () => {
+    renderCard({ status: "rejected" });
 
-      expect(container.querySelectorAll(".rounded-full")).toHaveLength(0);
-    },
-  );
+    expect(screen.getByText("Rejected")).toBeInTheDocument();
+    expect(
+      screen.getByTitle("This device is not allowed to stream"),
+    ).toBeInTheDocument();
+  });
 
-  it("leaves an unmanageable PlexAmp device unlabelled too", () => {
-    const { container } = renderCard({
-      status: "pending",
-      deviceProduct: "Plexamp",
-    });
+  it("leaves an approved device unlabelled, since it is the quiet default", () => {
+    const { container } = renderCard({ status: "approved" });
 
-    expect(screen.queryByText("Pending")).toBeNull();
     expect(container.querySelectorAll(".rounded-full")).toHaveLength(0);
+  });
+
+  const plexampPill = () =>
+    screen.queryByTitle("Plexamp devices are always allowed to stream");
+
+  it("names an unmanageable PlexAmp device instead of a decision", () => {
+    renderCard({ status: "pending", deviceProduct: "Plexamp" });
+
+    expect(plexampPill()).toHaveTextContent("Plexamp");
+    expect(screen.queryByText("Pending")).toBeNull();
+    expect(screen.queryByText("Rejected")).toBeNull();
+  });
+
+  it("names a rejected PlexAmp device by its product, not its status", () => {
+    renderCard({ status: "rejected", deviceProduct: "Plexamp" });
+
+    expect(plexampPill()).toBeInTheDocument();
+    expect(screen.queryByText("Rejected")).toBeNull();
+  });
+
+  it("renders the enforced policy pills it is handed", () => {
+    renderCard(
+      { status: "approved" },
+      {
+        policies: [
+          {
+            policy: "schedule",
+            label: "Time Schedule",
+            tone: "info",
+            title: "A time schedule blocks streaming during set hours",
+          },
+          {
+            policy: "ip",
+            label: "IP Access",
+            tone: "accent",
+            title: "Network and IP access rules apply to this device",
+          },
+        ],
+      },
+    );
+
+    expect(screen.getByText("Time Schedule")).toBeInTheDocument();
+    expect(
+      screen.getByTitle("Network and IP access rules apply to this device"),
+    ).toHaveTextContent("IP Access");
+  });
+
+  it("leaves the PlexAmp pill off an ordinary device", () => {
+    renderCard({ status: "approved", deviceProduct: "Plex for Roku" });
+
+    expect(plexampPill()).toBeNull();
   });
 
   it("no longer repeats temporary access, bypass or limit state", () => {

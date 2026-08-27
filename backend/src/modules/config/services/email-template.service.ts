@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { readFileSync } from 'fs';
 import { join } from 'path';
+import { EMAIL_PALETTE } from '@/common/utils/email-palette';
 
 @Injectable()
 export class EmailTemplateService {
@@ -53,190 +54,193 @@ export class EmailTemplateService {
   private getBaseEmailStyles(): string {
     return `
       @media only screen and (max-width: 600px) {
-        .container { width: 100% !important; margin: 0 !important; }
-        .header, .content, .footer { padding-left: 20px !important; padding-right: 20px !important; }
+        .container { width: 100% !important; margin: 0 !important; border-radius: 0 !important; }
+        .email-wrapper { padding: 0 !important; }
+        .header, .content, .footer { padding-left: 24px !important; padding-right: 24px !important; }
         .details { margin: 20px 0 !important; padding: 16px !important; }
+        .detail-label { min-width: 0 !important; }
       }
       @media (prefers-color-scheme: dark) {
-        .header {
-          background-color: #ffffff !important;
-          background: #ffffff !important;
-          color: #000000 !important;
-        }
-        .header h1 {
-          color: #000000 !important;
-        }
-        .container {
-          background-color: #ffffff !important;
-          background: #ffffff !important;
-        }
-        body {
-          background-color: #f5f5f5 !important;
-        }
-        .email-wrapper {
-          background-color: #f5f5f5 !important;
-        }
+        body { background-color: #f1f5f9 !important; }
+        .email-wrapper { background-color: #f1f5f9 !important; }
+        .container { background-color: #ffffff !important; background: #ffffff !important; }
+        .header { background-color: #ffffff !important; background: #ffffff !important; color: #0f172a !important; }
+        .header h1 { color: #0f172a !important; }
       }
       [data-ogsc] .header {
         background-color: #ffffff !important;
         background: #ffffff !important;
       }
       [data-ogsc] .header h1 {
-        color: #000000 !important;
+        color: #0f172a !important;
       }
       body {
         margin: 0;
         padding: 0;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
-        background-color: #f5f5f5;
-        color: #000000;
+        background-color: #f1f5f9;
+        color: #0f172a;
         line-height: 1.6;
       }
       .email-wrapper {
-        background-color: #f5f5f5;
-        padding: 40px 20px;
-        min-height: 100vh;
+        background-color: #f1f5f9;
+        padding: 32px 16px;
       }
       .container {
         max-width: 600px;
         margin: 0 auto;
         background-color: #ffffff;
+        border: 1px solid #e2e8f0;
         border-radius: 12px;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
         overflow: hidden;
       }
       .header {
-        padding: 0px 40px 0px;
+        padding: 24px 32px 20px;
         text-align: center;
         background-color: #ffffff;
-        color: #000000;
-        position: relative;
-      }
-      .header::after {
-        content: '';
-        position: absolute;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        height: 4px;
-        background: linear-gradient(90deg, #ff0000, #ff6600, #ffcc00, #00cc66, #0066cc, #6600cc);
+        color: #0f172a;
+        border-bottom: 1px solid #e2e8f0;
       }
       .header h1 {
         margin: 0;
-        font-size: 36px;
-        font-weight: 800;
-        letter-spacing: -1.5px;
-        color: #000000;
-        text-transform: uppercase;
-        text-shadow: none;
+        font-size: 28px;
+        font-weight: 700;
+        letter-spacing: -0.5px;
+        color: #0f172a;
       }
       .logo {
-        width: 300px;
+        width: 220px;
+        max-width: 100%;
         height: auto;
-        margin: 0;
         display: block;
-        margin-left: auto;
-        margin-right: auto;
+        margin: 0 auto;
+      }
+      .accent-bar {
+        height: 3px;
+        font-size: 0;
+        line-height: 0;
       }
       .content {
-        padding: 40px 40px 30px;
+        padding: 32px 32px 8px;
         background-color: #ffffff;
       }
       .badge {
         display: inline-block;
-        padding: 8px 16px;
+        padding: 6px 12px;
         color: #ffffff !important;
         font-size: 11px;
         font-weight: 700;
         text-transform: uppercase;
-        letter-spacing: 1px;
-        border-radius: 20px;
-        margin-bottom: 24px;
+        letter-spacing: 0.8px;
+        border-radius: 6px;
+        margin-bottom: 20px;
       }
       .main-message {
-        margin: 0 0 32px 0;
-        font-size: 18px;
-        line-height: 1.7;
-        color: #000000;
-        font-weight: 500;
+        margin: 0 0 8px 0;
+        font-size: 16px;
+        line-height: 1.65;
+        color: #0f172a;
       }
       .details {
-        margin: 32px 0;
-        padding: 24px;
-        background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
-        border: 1px solid #e9ecef;
-        border-radius: 8px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        margin: 24px 0;
+        padding: 20px;
+        background-color: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
       }
       .details h3 {
-        margin: 0 0 20px 0;
-        font-size: 14px;
+        margin: 0 0 12px 0;
+        font-size: 12px;
         font-weight: 700;
-        color: #000000;
+        color: #64748b;
         text-transform: uppercase;
-        letter-spacing: 1px;
-        display: flex;
-        align-items: center;
+        letter-spacing: 0.8px;
       }
       .detail-row {
-        display: flex;
-        margin: 12px 0;
-        padding: 8px 0;
-        border-bottom: 1px solid #f0f0f0;
+        margin: 0;
+        padding: 10px 0;
+        border-bottom: 1px solid #e2e8f0;
       }
       .detail-row:last-child {
         border-bottom: none;
+        padding-bottom: 0;
       }
       .detail-label {
-        font-weight: 700;
-        color: #666666;
-        min-width: 100px;
-        font-size: 13px;
+        display: inline-block;
+        font-weight: 600;
+        color: #64748b;
+        min-width: 110px;
+        font-size: 12px;
         text-transform: uppercase;
         letter-spacing: 0.5px;
+        vertical-align: top;
       }
       .detail-value {
-        color: #000000;
+        display: inline-block;
+        color: #0f172a;
         font-weight: 500;
         font-size: 14px;
-        flex: 1;
+        max-width: 340px;
+        vertical-align: top;
+        word-break: break-word;
+      }
+      .action {
+        margin: 24px 0 8px;
+        text-align: center;
+      }
+      .action a.button {
+        display: inline-block;
+        padding: 14px 28px;
+        border-radius: 8px;
+        color: #ffffff !important;
+        font-size: 15px;
+        font-weight: 600;
+        text-decoration: none;
+      }
+      .action .fallback {
+        margin: 16px 0 0 0;
+        font-size: 12px;
+        line-height: 1.6;
+        color: #64748b;
+        word-break: break-all;
       }
       .footer {
-        padding: 30px 40px 40px;
+        padding: 20px 32px 24px;
         text-align: center;
-        background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
-        border-top: 1px solid #e9ecef;
+        background-color: #f8fafc;
+        border-top: 1px solid #e2e8f0;
       }
       .footer p {
         margin: 0;
-        font-size: 12px;
-        color: #666666;
-        font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+        font-size: 11px;
+        color: #64748b;
         text-transform: uppercase;
-        letter-spacing: 0.5px;
-        font-weight: 500;
+        letter-spacing: 0.8px;
+        font-weight: 600;
       }
       .timestamp {
         display: inline-block;
-        background-color: #f1f3f4;
-        padding: 6px 12px;
-        border-radius: 6px;
         margin-top: 8px;
+        padding: 5px 10px;
+        border-radius: 6px;
+        background-color: #e2e8f0;
+        font-size: 12px;
+        color: #334155;
       }
       .stop-code {
         font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
-        background-color: #f1f3f4;
-        padding: 4px 8px;
+        background-color: #e2e8f0;
+        padding: 3px 7px;
         border-radius: 4px;
         font-size: 12px;
-        color: #000000;
+        color: #0f172a;
       }
       .notification-type {
         display: inline-block;
         color: #ffffff;
-        padding: 4px 8px;
+        padding: 3px 8px;
         border-radius: 4px;
-        font-size: 12px;
+        font-size: 11px;
         font-weight: 700;
         letter-spacing: 0.5px;
       }
@@ -251,6 +255,7 @@ export class EmailTemplateService {
     detailsContent: string,
     footerText: string,
     timestamp: string,
+    actionContent = '',
   ): string {
     const logoBase64 = this.getLogoBase64();
 
@@ -266,14 +271,15 @@ export class EmailTemplateService {
     <body>
       <div class="email-wrapper">
         <div class="container">
+          <div class="accent-bar" style="background-color: ${badgeColor};">&nbsp;</div>
           <div class="header">
             ${logoBase64 ? `<img src="${logoBase64}" alt="Guardian Logo" class="logo" />` : '<h1>Guardian</h1>'}
           </div>
           <div class="content">
             <div class="badge" style="background-color: ${badgeColor};">${badgeText}</div>
             <p class="main-message">${mainMessage}</p>
-            
-            <div class="details" style="border-left: 4px solid ${badgeColor};">
+            ${actionContent}
+            <div class="details">
               <h3>${detailsTitle}</h3>
               ${detailsContent}
             </div>
@@ -297,6 +303,50 @@ export class EmailTemplateService {
     `;
   }
 
+  generatePasswordResetEmail(
+    username: string,
+    resetUrl: string,
+    expiresInMinutes: number,
+    timestamp: string,
+  ): string {
+    const safeUsername = this.escapeHtml(username);
+    const safeUrl = this.escapeHtml(resetUrl);
+    const badgeColor = EMAIL_PALETTE.accent;
+
+    const actionContent = `
+      <div class="action">
+        <a class="button" href="${safeUrl}" style="background-color: ${badgeColor};">Choose a new password</a>
+        <p class="fallback">If the button does not work, paste this address into your browser:<br />${safeUrl}</p>
+      </div>
+    `;
+
+    const detailsContent = `
+      <div class="detail-row">
+        <span class="detail-label">Account</span>
+        <span class="detail-value">${safeUsername}</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Link expires</span>
+        <span class="detail-value">${expiresInMinutes} minutes after this email was sent</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Single use</span>
+        <span class="detail-value">The link stops working once a new password is set</span>
+      </div>
+    `;
+
+    return this.generateBaseEmailHtml(
+      badgeColor,
+      'Password Reset',
+      'Someone asked to reset the password for your Guardian account. If that was not you, ignore this email and nothing changes.',
+      'Reset Details',
+      detailsContent,
+      'Password Reset',
+      timestamp,
+      actionContent,
+    );
+  }
+
   generateSMTPTestEmail(recipientEmails: string[], timestamp: string): string {
     const detailsContent = `
       <div class="detail-row">
@@ -316,7 +366,7 @@ export class EmailTemplateService {
     `;
 
     return this.generateBaseEmailHtml(
-      '#00aa00',
+      EMAIL_PALETTE.positive,
       'Test Successful',
       'SMTP configuration test completed successfully. Your email settings are working correctly and Guardian is ready to send notifications.',
       'Test Details',

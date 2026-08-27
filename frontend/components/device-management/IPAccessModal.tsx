@@ -157,6 +157,7 @@ export const IPAccessModal: React.FC<IPAccessModalProps> = ({
     };
 
     onSave(user.userId, updates);
+    onClose();
   };
 
   const noIPsConfigured =

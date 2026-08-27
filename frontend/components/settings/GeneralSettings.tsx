@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { SecretInput } from "@/components/settings/SecretInput";
 import {
@@ -10,7 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Field, SegmentedControl } from "@/components/ui/entity";
-import { SettingControl, SettingsCard, isTruthy } from "./settings-ui";
+import { Banner, SettingControl, SettingsCard, isTruthy } from "./settings-ui";
 import { AppSetting } from "@/types";
 import { getSettingInfo, SettingsFormData } from "./settings-utils";
 
@@ -106,8 +107,10 @@ const SECTIONS: Record<string, SettingGroup[]> = {
     },
     {
       title: "Login Security",
-      description: "Optional captcha protection for the Guardian login page.",
+      description:
+        "Password recovery and optional captcha protection for the Guardian login page.",
       keys: [
+        "PASSWORD_RESET_ENABLED",
         "CLOUDFLARE_TURNSTILE_SITE_KEY",
         "CLOUDFLARE_TURNSTILE_SECRET_KEY",
       ],
@@ -156,6 +159,24 @@ export function GeneralSettings({
   onFormDataChange,
   sectionId,
 }: GeneralSettingsProps) {
+  const [appUrlConfigured, setAppUrlConfigured] = useState(true);
+
+  useEffect(() => {
+    const check = async () => {
+      try {
+        const response = await fetch("/api/pg/auth/password-reset/status");
+        if (response.ok) {
+          const data = await response.json();
+          setAppUrlConfigured(Boolean(data.appUrlConfigured));
+        }
+      } catch (error) {
+        console.error("Failed to check password reset status:", error);
+      }
+    };
+
+    void check();
+  }, []);
+
   const handleInputChange = (key: string, value: string | boolean) => {
     onFormDataChange({ [key]: value });
   };
@@ -208,9 +229,48 @@ export function GeneralSettings({
     );
   };
 
+  const emailConfigured = ["SMTP_ENABLED", "SMTP_HOST", "SMTP_FROM_EMAIL"]
+    .map((key) => {
+      const stored = settings.find((setting) => setting?.key === key);
+      return formData[key] ?? stored?.value;
+    })
+    .every((value, index) =>
+      index === 0 ? isTruthy(value) : Boolean(value && String(value).trim()),
+    );
+
   const renderSetting = (setting: AppSetting, disabled = false) => {
     const { label, description } = getSettingInfo(setting);
     const value = valueOf(setting);
+
+    if (setting.key === "PASSWORD_RESET_ENABLED") {
+      const blocked = !emailConfigured || !appUrlConfigured;
+
+      return (
+        <div className="space-y-3" key={setting.key}>
+          <SettingControl
+            setting={setting}
+            formData={formData}
+            onChange={handleInputChange}
+            disabled={blocked}
+            className={blocked ? "opacity-50" : undefined}
+          />
+          {!emailConfigured && (
+            <Banner tone="warning">
+              Set up email notifications first. Guardian sends the reset link
+              over SMTP, so it needs a host and a from address under Email
+              Notifications.
+            </Banner>
+          )}
+          {emailConfigured && !appUrlConfigured && (
+            <Banner tone="warning">
+              Set the APP_URL environment variable to the address people reach
+              Guardian on. Without it Guardian cannot build the link the email
+              points at.
+            </Banner>
+          )}
+        </div>
+      );
+    }
 
     if (setting.key === "TIMEZONE") {
       return (

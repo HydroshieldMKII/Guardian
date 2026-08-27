@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import Link from "next/link";
 import { useAuth } from "@/contexts/auth-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -59,6 +60,8 @@ export default function LoginPage() {
   const [loginError, setLoginError] = useState<string>("");
   const [showPassword, setShowPassword] = useState(false);
 
+  const [passwordResetEnabled, setPasswordResetEnabled] = useState(false);
+
   // Cloudflare Turnstile state
   const [turnstileSiteKey, setTurnstileSiteKey] = useState<string>("");
   const [turnstileWidgetId, setTurnstileWidgetId] = useState<string | null>(null);
@@ -81,6 +84,22 @@ export default function LoginPage() {
     };
 
     fetchTurnstileKey();
+  }, []);
+
+  useEffect(() => {
+    const checkPasswordReset = async () => {
+      try {
+        const response = await fetch("/api/pg/auth/password-reset/status");
+        if (response.ok) {
+          const data = await response.json();
+          setPasswordResetEnabled(Boolean(data.enabled));
+        }
+      } catch (error) {
+        console.error("Failed to check password reset status:", error);
+      }
+    };
+
+    checkPasswordReset();
   }, []);
 
   // Load Turnstile script and render widget
@@ -329,6 +348,16 @@ export default function LoginPage() {
                 <div className="flex items-center gap-1 text-xs text-red-500">
                   <AlertCircle className="h-3 w-3" />
                   {errors.password}
+                </div>
+              )}
+              {passwordResetEnabled && (
+                <div className="text-right">
+                  <Link
+                    href="/forgot-password"
+                    className="text-xs text-muted-foreground hover:text-foreground hover:underline"
+                  >
+                    Forgot password?
+                  </Link>
                 </div>
               )}
             </div>

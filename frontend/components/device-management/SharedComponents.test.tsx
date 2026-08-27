@@ -80,25 +80,23 @@ describe("UserAvatar", () => {
 });
 
 describe("DeviceStatus", () => {
-  it("names the grant and keeps the countdown in its tooltip", () => {
-    render(
-      <DeviceStatus device={device({ temporaryAccessUntil: inMinutes(30) })} />,
-    );
+  it.each([
+    ["approved", "Approved"],
+    ["rejected", "Rejected"],
+    ["pending", "Pending"],
+  ] as const)(
+    "reports a %s device by its own status, not by a live grant",
+    (status, label) => {
+      render(
+        <DeviceStatus
+          device={device({ status, temporaryAccessUntil: inMinutes(30) })}
+        />,
+      );
 
-    const pill = screen.getByText("Temporary Access").closest("span[title]");
-    expect(pill).toHaveAttribute("title", "Expires in 30 minutes");
-  });
-
-  it("never lets the pill outgrow the field it sits in", () => {
-    render(
-      <DeviceStatus
-        device={device({ temporaryAccessUntil: inMinutes(60 * 24 * 9) })}
-      />,
-    );
-
-    const pill = screen.getByText("Temporary Access").closest("span[title]");
-    expect(pill?.className).toContain("max-w-full");
-  });
+      expect(screen.getByText(label)).toBeInTheDocument();
+      expect(screen.queryByText("Temporary Access")).toBeNull();
+    },
+  );
 
   it("ignores a grant that has already lapsed", () => {
     render(

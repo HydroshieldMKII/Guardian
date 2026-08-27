@@ -159,14 +159,44 @@ describe("DeviceDetailsModal", () => {
   });
 
   it("names the grant in that field and keeps the countdown in its tooltip", () => {
-    renderModal({ temporaryAccessUntil: inHours(2) });
+    renderModal(
+      { temporaryAccessUntil: inHours(2) },
+      {
+        policies: [
+          {
+            policy: "temporary",
+            label: "Temporary Access",
+            tone: "positive",
+            title: "Temporary access expires in 2 hours",
+          },
+        ],
+      },
+    );
 
-    const pill = screen
-      .getAllByText("Temporary Access")
-      .map((node) => node.closest("span[title]"))
-      .find((node) => node?.getAttribute("title")?.startsWith("Expires in"));
+    expect(
+      screen.getByTitle("Temporary access expires in 2 hours"),
+    ).toHaveTextContent("Temporary Access");
+  });
 
-    expect(pill).toHaveAttribute("title", "Expires in 2 hours");
+  it("keeps reporting the status a grant is standing in for", () => {
+    renderModal(
+      { status: "rejected", temporaryAccessUntil: inHours(2) },
+      {
+        policies: [
+          {
+            policy: "temporary",
+            label: "Temporary Access",
+            tone: "positive",
+            title: "Temporary access expires in 2 hours",
+          },
+        ],
+      },
+    );
+
+    expect(screen.getByText("Rejected")).toBeInTheDocument();
+    expect(
+      screen.getByTitle("Temporary access expires in 2 hours"),
+    ).toBeInTheDocument();
   });
 
   it("does not repeat the hardware summary the grid already carries", () => {

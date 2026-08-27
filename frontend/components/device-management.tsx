@@ -625,7 +625,7 @@ const DeviceManagement = memo(
         if (success) {
           // Refresh data without clearing time rule status to prevent "Scheduled" tag flickering
           if (onRefresh) {
-            onRefresh();
+            await onRefresh();
           }
           toast({
             title: "Default Device Policy Updated",

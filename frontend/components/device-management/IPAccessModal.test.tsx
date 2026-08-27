@@ -419,6 +419,15 @@ describe("IPAccessModal", () => {
       expect(onClose).toHaveBeenCalled();
       expect(onSave).not.toHaveBeenCalled();
     });
+
+    it("closes once the policies are saved", async () => {
+      const { user, onSave, onClose } = renderModal();
+
+      await user.click(screen.getByRole("button", { name: "Save Policies" }));
+
+      expect(onSave).toHaveBeenCalled();
+      expect(onClose).toHaveBeenCalled();
+    });
   });
 
   it("re-seeds from the preference each time it reopens", async () => {

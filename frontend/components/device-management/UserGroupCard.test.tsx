@@ -497,6 +497,86 @@ describe("UserGroupCard default device policy", () => {
     expect(pressed(/^Global/)).toBe("true");
     expect(pressed(/^Block$/)).toBe("false");
   });
+
+  it("holds the new choice when a refresh lands on a different value mid-save", async () => {
+    const { user, rerender } = renderCard();
+    const card = (updating: string | null, defaultBlock: boolean | null) => (
+      <UserGroupCard
+        group={
+          {
+            ...group(),
+            user: {
+              userId: "u-1",
+              username: "testuser",
+              preference: { defaultBlock },
+            },
+          } as never
+        }
+        isExpanded
+        actionLoading={null}
+        updatingUserPreference={updating}
+        onToggleExpansion={jest.fn()}
+        onUpdateUserPreference={jest.fn()}
+        onApprove={jest.fn()}
+        onReject={jest.fn()}
+        onDelete={jest.fn()}
+        onToggleApproval={jest.fn()}
+        onRemoveTemporaryAccess={jest.fn()}
+        onShowDetails={jest.fn()}
+      />
+    );
+
+    await user.click(screen.getByRole("button", { name: /^Block$/ }));
+    rerender(card("u-1", false));
+
+    expect(pressed(/^Block$/)).toBe("true");
+    expect(pressed(/^Allow$/)).toBe("false");
+
+    rerender(card(null, false));
+    expect(pressed(/^Allow$/)).toBe("true");
+  });
+
+  it("holds the new choice from the press through to the refreshed group", async () => {
+    const { user, rerender } = renderCard();
+    const card = (updating: string | null, defaultBlock: boolean | null) => (
+      <UserGroupCard
+        group={
+          {
+            ...group(),
+            user: {
+              userId: "u-1",
+              username: "testuser",
+              preference: { defaultBlock },
+            },
+          } as never
+        }
+        isExpanded
+        actionLoading={null}
+        updatingUserPreference={updating}
+        onToggleExpansion={jest.fn()}
+        onUpdateUserPreference={jest.fn()}
+        onApprove={jest.fn()}
+        onReject={jest.fn()}
+        onDelete={jest.fn()}
+        onToggleApproval={jest.fn()}
+        onRemoveTemporaryAccess={jest.fn()}
+        onShowDetails={jest.fn()}
+      />
+    );
+
+    await user.click(screen.getByRole("button", { name: /^Block$/ }));
+    expect(pressed(/^Block$/)).toBe("true");
+
+    rerender(card("u-1", null));
+    expect(pressed(/^Block$/)).toBe("true");
+
+    rerender(card("u-1", true));
+    expect(pressed(/^Block$/)).toBe("true");
+
+    rerender(card(null, true));
+    expect(pressed(/^Block$/)).toBe("true");
+    expect(pressed(/^Global/)).toBe("false");
+  });
 });
 
 describe("UserGroupCard device list", () => {
@@ -505,6 +585,48 @@ describe("UserGroupCard device list", () => {
 
     expect(screen.getByText("device-card:1")).toBeInTheDocument();
     expect(screen.getByText("device-card:2")).toBeInTheDocument();
+  });
+
+  it("lays the devices out in two columns on a wide screen", () => {
+    const { container } = renderCard({
+      devices: [device({ id: 1 }), device({ id: 2 })],
+    });
+
+    const list = container.querySelector(".xl\\:grid-cols-2");
+    expect(list).not.toBeNull();
+    expect(list?.className).toContain("grid-cols-1");
+  });
+
+  describe("the two-column device layout", () => {
+    const placeholders = (container: HTMLElement) =>
+      container.querySelectorAll("[aria-hidden].border-dashed");
+
+    it("fills the last row when the device count is odd", () => {
+      const { container } = renderCard({ devices: [device({ id: 1 })] });
+
+      expect(placeholders(container)).toHaveLength(1);
+    });
+
+    it("adds nothing when the rows are already full", () => {
+      const { container } = renderCard({
+        devices: [device({ id: 1 }), device({ id: 2 })],
+      });
+
+      expect(placeholders(container)).toHaveLength(0);
+    });
+
+    it("adds nothing when the user has no devices at all", () => {
+      const { container } = renderCard({ devices: [] });
+
+      expect(placeholders(container)).toHaveLength(0);
+    });
+
+    it("keeps the filler out of the one-column layout", () => {
+      const { container } = renderCard({ devices: [device({ id: 1 })] });
+
+      expect(placeholders(container)[0].className).toContain("hidden");
+      expect(placeholders(container)[0].className).toContain("xl:block");
+    });
   });
 
   it("says when there are none", () => {

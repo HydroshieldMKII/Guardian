@@ -82,6 +82,10 @@ export const SETTINGS_CATALOG = {
     value: 'false',
     type: 'boolean',
   },
+  PASSWORD_RESET_ENABLED: {
+    value: 'false',
+    type: 'boolean',
+  },
   CLOUDFLARE_TURNSTILE_SITE_KEY: {
     value: '',
     type: 'string',
@@ -121,7 +125,7 @@ export const SETTINGS_CATALOG = {
     type: 'boolean',
   },
   ENABLE_MEDIA_THUMBNAILS: {
-    value: 'true',
+    value: 'false',
     type: 'boolean',
   },
   ENABLE_MEDIA_ARTWORK: {

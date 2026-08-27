@@ -82,6 +82,7 @@ describe('EmailService', () => {
     templateService = {
       generateSMTPTestEmail: jest.fn().mockReturnValue('<p>test</p>'),
       generateNotificationEmail: jest.fn().mockReturnValue('<p>notice</p>'),
+      generatePasswordResetEmail: jest.fn().mockReturnValue('<p>reset</p>'),
     };
 
     configService = {
@@ -523,6 +524,82 @@ describe('EmailService', () => {
       await expect(
         service.sendNewDeviceEmail('new device', 'testuser', 'Shield'),
       ).resolves.toBeUndefined();
+    });
+  });
+
+  describe('sendPasswordResetEmail', () => {
+    const send = () =>
+      service.sendPasswordResetEmail(
+        'owner@example.com',
+        'owner',
+        'https://guardian.example.com/reset-password?token=abc',
+        15,
+      );
+
+    it('writes only to the address that asked, not the notification list', async () => {
+      await send();
+
+      expect(sentMail().to).toEqual(['owner@example.com']);
+    });
+
+    it('sends from the configured identity', async () => {
+      await send();
+
+      expect(sentMail().from).toBe('Guardian <from@example.com>');
+    });
+
+    it('falls back to the bare address without a from name', async () => {
+      stored.SMTP_FROM_NAME = '';
+      await send();
+
+      expect(sentMail().from).toBe('from@example.com');
+    });
+
+    it('names the subject so it is not mistaken for an alert', async () => {
+      await send();
+
+      expect(sentMail().subject).toBe('Guardian: Reset your password');
+    });
+
+    it('repeats the link in the plain text part', async () => {
+      await send();
+
+      expect(sentMail().text).toContain(
+        'https://guardian.example.com/reset-password?token=abc',
+      );
+      expect(sentMail().text).toContain('15 minutes');
+    });
+
+    it('renders the body from the template', async () => {
+      await send();
+
+      expect(templateService.generatePasswordResetEmail).toHaveBeenCalledWith(
+        'owner',
+        'https://guardian.example.com/reset-password?token=abc',
+        15,
+        '2026-08-21 12:00:00',
+      );
+      expect(sentMail().html).toBe('<p>reset</p>');
+    });
+
+    it('sends nothing while SMTP is disabled', async () => {
+      stored.SMTP_ENABLED = false;
+      await send();
+
+      expect(sendMail).not.toHaveBeenCalled();
+    });
+
+    it('sends nothing while the SMTP settings are incomplete', async () => {
+      stored.SMTP_HOST = '';
+      await send();
+
+      expect(sendMail).not.toHaveBeenCalled();
+    });
+
+    it('swallows a transport failure', async () => {
+      sendMail.mockRejectedValue(new Error('relay refused'));
+
+      await expect(send()).resolves.toBeUndefined();
     });
   });
 });

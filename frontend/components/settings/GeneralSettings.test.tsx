@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { AppSetting } from "@/types";
 import { GeneralSettings } from "@/components/settings/GeneralSettings";
@@ -65,7 +65,30 @@ const renderPanel = (
   return { ...view, onFormDataChange, user: userEvent.setup() };
 };
 
-beforeEach(() => jest.clearAllMocks());
+const fetchMock = jest.fn();
+let consoleError: jest.SpyInstance;
+
+beforeEach(() => {
+  jest.clearAllMocks();
+  consoleError = jest.spyOn(console, "error").mockImplementation(() => {});
+  fetchMock.mockResolvedValue({
+    ok: true,
+    json: async () => ({
+      enabled: false,
+      emailConfigured: false,
+      appUrlConfigured: true,
+    }),
+  });
+  Object.defineProperty(global, "fetch", {
+    value: fetchMock,
+    writable: true,
+    configurable: true,
+  });
+});
+
+afterEach(() => {
+  consoleError.mockRestore();
+});
 
 describe("GeneralSettings sections", () => {
   it.each([
@@ -541,5 +564,117 @@ describe("GeneralSettings clearing the Turnstile secret", () => {
     expect(onFormDataChange).toHaveBeenCalledWith({
       CLOUDFLARE_TURNSTILE_SECRET_KEY: "",
     });
+  });
+});
+
+describe("GeneralSettings password reset", () => {
+  const smtp = (overrides: Partial<Record<string, string>> = {}) => [
+    ...guardianSettings,
+    setting("PASSWORD_RESET_ENABLED", "false", "boolean"),
+    setting("SMTP_ENABLED", overrides.SMTP_ENABLED ?? "true", "boolean"),
+    setting("SMTP_HOST", overrides.SMTP_HOST ?? "smtp.example.com"),
+    setting("SMTP_FROM_EMAIL", overrides.SMTP_FROM_EMAIL ?? "a@example.com"),
+  ];
+
+  const toggle = () =>
+    screen.getByRole("switch", { name: /Allow password reset by email/ });
+
+  const renderReset = async (
+    props: { settings?: AppSetting[]; formData?: SettingsFormData } = {},
+  ) => {
+    const view = renderPanel("guardian", {
+      settings: props.settings ?? smtp(),
+      formData: props.formData,
+    });
+    await act(async () => {});
+    return view;
+  };
+
+  it("offers the toggle once email is configured", async () => {
+    await renderReset();
+
+    expect(toggle()).not.toBeDisabled();
+    expect(screen.queryByText(/Set up email notifications first/)).toBeNull();
+  });
+
+  it("greys the toggle out while SMTP is off", async () => {
+    await renderReset({ settings: smtp({ SMTP_ENABLED: "false" }) });
+
+    expect(toggle()).toBeDisabled();
+    expect(
+      screen.getByText(/Set up email notifications first/),
+    ).toBeInTheDocument();
+  });
+
+  it.each(["SMTP_HOST", "SMTP_FROM_EMAIL"])(
+    "greys the toggle out without %s",
+    async (key) => {
+      await renderReset({ settings: smtp({ [key]: "" }) });
+
+      expect(toggle()).toBeDisabled();
+    },
+  );
+
+  it("reads unsaved SMTP edits, not just the stored values", async () => {
+    await renderReset({
+      settings: smtp({ SMTP_ENABLED: "false" }),
+      formData: { SMTP_ENABLED: true },
+    });
+
+    expect(toggle()).not.toBeDisabled();
+  });
+
+  it("warns when the server address is missing", async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        enabled: false,
+        emailConfigured: true,
+        appUrlConfigured: false,
+      }),
+    });
+
+    await renderReset();
+
+    await waitFor(() => expect(toggle()).toBeDisabled());
+    expect(screen.getByText(/APP_URL/)).toBeInTheDocument();
+  });
+
+  it("assumes the address is set when the status cannot be read", async () => {
+    fetchMock.mockRejectedValue(new Error("offline"));
+
+    await renderReset();
+
+    expect(toggle()).not.toBeDisabled();
+    expect(consoleError).toHaveBeenCalledWith(
+      "Failed to check password reset status:",
+      expect.any(Error),
+    );
+  });
+
+  it("assumes the address is set when the status request fails", async () => {
+    fetchMock.mockResolvedValue({ ok: false, json: async () => ({}) });
+
+    await renderReset();
+
+    expect(toggle()).not.toBeDisabled();
+  });
+
+  it("saves the toggle", async () => {
+    const { user, onFormDataChange } = await renderReset();
+
+    await user.click(toggle());
+
+    expect(onFormDataChange).toHaveBeenCalledWith({
+      PASSWORD_RESET_ENABLED: true,
+    });
+  });
+
+  it("explains what the toggle turns on", async () => {
+    await renderReset();
+
+    expect(
+      screen.getByText(/Show a Forgot password link on the sign-in page/),
+    ).toBeInTheDocument();
   });
 });

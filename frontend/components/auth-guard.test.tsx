@@ -16,6 +16,7 @@ let auth = {
   setupRequired: false,
   backendError: null as string | null,
   userType: "admin" as "admin" | "plex_user" | null,
+  retryConnection: jest.fn(),
 };
 
 jest.mock("@/contexts/auth-context", () => ({
@@ -40,6 +41,7 @@ beforeEach(() => {
     setupRequired: false,
     backendError: null,
     userType: "admin",
+    retryConnection: jest.fn(),
   };
 });
 
@@ -58,12 +60,48 @@ describe("AuthGuard", () => {
     expect(push).not.toHaveBeenCalled();
   });
 
-  it("holds everything back and redirects nowhere on a backend error", () => {
-    auth.backendError = "offline";
-    renderGuard();
+  describe("a backend that will not answer", () => {
+    it("explains the failure instead of spinning forever", () => {
+      auth.backendError = "The Guardian backend service encountered an error.";
+      renderGuard();
 
-    expect(shown()).toBe(false);
-    expect(push).not.toHaveBeenCalled();
+      expect(shown()).toBe(false);
+      expect(screen.getByText("Cannot Reach Guardian")).toBeInTheDocument();
+      expect(
+        screen.getByText("The Guardian backend service encountered an error."),
+      ).toBeInTheDocument();
+      expect(push).not.toHaveBeenCalled();
+    });
+
+    it("offers a retry", () => {
+      auth.backendError = "offline";
+      renderGuard();
+
+      expect(
+        screen.getByRole("button", { name: "Retry Connection" }),
+      ).toBeInTheDocument();
+    });
+
+    it("reports the failure on a public route too", () => {
+      pathname = "/login";
+      auth.isAuthenticated = false;
+      auth.backendError = "offline";
+      renderGuard();
+
+      expect(shown()).toBe(false);
+      expect(screen.getByText("Cannot Reach Guardian")).toBeInTheDocument();
+    });
+
+    it("reports the failure before setup has ever run", () => {
+      auth.isAuthenticated = false;
+      auth.setupRequired = true;
+      auth.backendError = "offline";
+      renderGuard();
+
+      expect(shown()).toBe(false);
+      expect(screen.getByText("Cannot Reach Guardian")).toBeInTheDocument();
+      expect(push).not.toHaveBeenCalled();
+    });
   });
 
   describe("setup", () => {
