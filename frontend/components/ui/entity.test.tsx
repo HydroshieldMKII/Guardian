@@ -364,7 +364,7 @@ describe("OptionCard", () => {
         <OptionCard
           selected
           title="Both"
-          description="LAN and WAN"
+          description="Local network and internet"
           onSelect={onSelect}
         />
       </OptionGroup>,
@@ -372,10 +372,10 @@ describe("OptionCard", () => {
 
     const option = screen.getByRole("radio", { name: /Both/ });
     expect(option).toBeChecked();
-    expect(screen.getByText("LAN and WAN")).toBeInTheDocument();
+    expect(screen.getByText("Local network and internet")).toBeInTheDocument();
 
     await user.click(option);
-    expect(onSelect).toHaveBeenCalled();
+    expect(onSelect).toHaveBeenCalledWith();
   });
 
   it("renders unselected and without a description", () => {
@@ -411,7 +411,7 @@ describe("SelectRow", () => {
     expect(screen.getByText("Roku · pending")).toBeInTheDocument();
 
     await user.click(row);
-    expect(onToggle).toHaveBeenCalled();
+    expect(onToggle).toHaveBeenCalledWith();
   });
 
   it("renders unselected without a subtitle", () => {
@@ -444,6 +444,62 @@ describe("SegmentedControl", () => {
     await user.click(screen.getByRole("button", { name: "Calendar" }));
     expect(onChange).toHaveBeenCalledWith("calendar");
   });
+
+  const thumb = (container: HTMLElement) =>
+    container.querySelector("span[aria-hidden]") as HTMLElement;
+
+  const control = (value: string | null, busy = false) =>
+    render(
+      <SegmentedControl
+        value={value}
+        busy={busy}
+        onChange={jest.fn()}
+        options={[
+          { value: null, label: "Global" },
+          { value: "allow", label: "Allow", tone: "positive" },
+          { value: "block", label: "Block", tone: "danger" },
+        ]}
+      />,
+    );
+
+  it("slides one indicator instead of restyling every segment", () => {
+    const { container } = control("block");
+
+    expect(thumb(container).style.transform).toBe("translateX(200%)");
+    expect(thumb(container).style.width).toContain("(100% - 0.5rem)");
+  });
+
+  it("carries the tone of whichever segment is active", () => {
+    expect(thumb(control("allow").container).className).toContain(
+      "bg-emerald-600",
+    );
+    expect(thumb(control("block").container).className).toContain(
+      "bg-rose-600",
+    );
+  });
+
+  it("animates the indicator rather than snapping it", () => {
+    const { container } = control(null);
+    expect(thumb(container).className).toContain("transition-[transform");
+    expect(thumb(container).className).toContain(
+      "motion-reduce:transition-none",
+    );
+  });
+
+  it("hides the indicator when nothing matches", () => {
+    const { container } = control("nonsense");
+    expect(thumb(container)).toBeNull();
+  });
+
+  it("locks the segments while busy without dimming them", () => {
+    control(null, true);
+
+    for (const name of ["Global", "Allow", "Block"]) {
+      const button = screen.getByRole("button", { name });
+      expect(button).toBeDisabled();
+      expect(button.className).not.toContain("opacity");
+    }
+  });
 });
 
 describe("Chip", () => {
@@ -457,7 +513,7 @@ describe("Chip", () => {
     );
 
     await user.click(screen.getByRole("button", { name: "Remove 10.0.0.1" }));
-    expect(onRemove).toHaveBeenCalled();
+    expect(onRemove).toHaveBeenCalledWith();
   });
 
   it("has no control when it cannot be removed", () => {

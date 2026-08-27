@@ -412,7 +412,7 @@ describe("Navbar unsaved-changes guard", () => {
         expect(toast).toHaveBeenCalledWith(
           expect.objectContaining({
             variant: "destructive",
-            description: "Failed to save changes",
+            description: "Failed to save your changes",
           }),
         ),
       );

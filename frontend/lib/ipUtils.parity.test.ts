@@ -124,8 +124,27 @@ describe("isValidIPv4 agrees with the backend validator", () => {
   it("agrees across a deterministic sweep of generated input", () => {
     const random = seededRandom(19700101);
     const octets = [
-      "0", "00", "01", "010", "1", "9", "10", "99", "100", "199",
-      "200", "249", "250", "255", "256", "300", "999", "", "a", "-1", "1e2",
+      "0",
+      "00",
+      "01",
+      "010",
+      "1",
+      "9",
+      "10",
+      "99",
+      "100",
+      "199",
+      "200",
+      "249",
+      "250",
+      "255",
+      "256",
+      "300",
+      "999",
+      "",
+      "a",
+      "-1",
+      "1e2",
     ];
     const disagreements: string[] = [];
 
@@ -150,9 +169,9 @@ describe("normalizeIP agrees with the backend on address family", () => {
     "keeps %p a valid address after normalizing",
     (input) => {
       const normalized = normalizeIP(input);
-      expect(isIPv6(normalized) || /^\d+\.\d+\.\d+\.\d+$/.test(normalized)).toBe(
-        true,
-      );
+      expect(
+        isIPv6(normalized) || /^\d+\.\d+\.\d+\.\d+$/.test(normalized),
+      ).toBe(true);
     },
   );
 });

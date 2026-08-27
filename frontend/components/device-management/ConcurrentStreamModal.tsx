@@ -91,8 +91,8 @@ export const ConcurrentStreamModal: React.FC<ConcurrentStreamModalProps> = ({
       await apiClient.updateUserConcurrentStreamLimit(userId, newLimit);
 
       toast({
-        title: "Success",
-        description: "Concurrent stream limit updated successfully",
+        title: "Stream Limit Updated",
+        description: "The concurrent stream limit for this user has been saved",
         variant: "success",
       });
 
@@ -103,11 +103,11 @@ export const ConcurrentStreamModal: React.FC<ConcurrentStreamModalProps> = ({
       onClose();
     } catch (error) {
       toast({
-        title: "Error",
+        title: "Update Failed",
         description:
           error instanceof Error
             ? error.message
-            : "Failed to update concurrent stream limit",
+            : "Failed to update the concurrent stream limit",
         variant: "destructive",
       });
     } finally {
@@ -115,14 +115,23 @@ export const ConcurrentStreamModal: React.FC<ConcurrentStreamModalProps> = ({
     }
   };
 
-  const effectiveLimit = useGlobalDefault
-    ? globalLimitValue
-    : Number(customLimit);
+  const customLimitValue = Number(customLimit);
+  const effectiveLimit = useGlobalDefault ? globalLimitValue : customLimitValue;
 
   const streamCount = (limit: number) =>
     limit === 0
       ? "Unlimited"
       : `${limit} concurrent stream${limit === 1 ? "" : "s"}`;
+
+  const explanation = useGlobalDefault
+    ? globalLimitValue === 0
+      ? "The global limit is unlimited, so this user can run as many streams at once as they like. Change the global limit in Settings to affect every user."
+      : "This user follows the global limit. Change the global limit in Settings to affect every user."
+    : globalLimitValue === 0
+      ? "The custom limit below applies to this user only. Every other user stays unlimited."
+      : `The custom limit below applies to this user only, replacing the global limit of ${streamCount(globalLimitValue)}.`;
+
+  const inactive = "opacity-45 transition-opacity duration-200";
 
   return (
     <Modal open={isOpen} onOpenChange={onClose} size="md">
@@ -146,21 +155,27 @@ export const ConcurrentStreamModal: React.FC<ConcurrentStreamModalProps> = ({
           </div>
         ) : (
           <>
-            <Panel>
+            <Panel className="space-y-3">
               <MetaGrid className="sm:grid-cols-2">
-                <Meta label="Global limit">
-                  {globalLimitValue === 0 ? "Unlimited" : globalLimitValue}
+                <Meta
+                  label="Global limit"
+                  className={useGlobalDefault ? undefined : inactive}
+                >
+                  {streamCount(globalLimitValue)}
                 </Meta>
-                <Meta label="Effective limit">
+                <Meta label="In effect for this user">
                   {streamCount(effectiveLimit)}
                 </Meta>
               </MetaGrid>
+              <p className="text-xs leading-relaxed text-muted-foreground">
+                {explanation}
+              </p>
             </Panel>
 
             <ToggleRow
               id="use-global"
               label="Use global default"
-              hint="Apply the global concurrent stream limit to this user."
+              hint="Follow the global concurrent stream limit instead of setting one just for this user."
               checked={useGlobalDefault}
               onCheckedChange={setUseGlobalDefault}
             />
@@ -168,12 +183,8 @@ export const ConcurrentStreamModal: React.FC<ConcurrentStreamModalProps> = ({
             <Field
               label="Custom limit for this user"
               htmlFor="custom-limit"
-              hint="Set to 0 for unlimited streams, or enter a specific limit."
-              className={
-                useGlobalDefault
-                  ? "opacity-50 transition-opacity duration-200"
-                  : "transition-opacity duration-200"
-              }
+              hint="How many streams this user may run at once. Set it to 0 for unlimited."
+              className={useGlobalDefault ? inactive : undefined}
             >
               <Input
                 id="custom-limit"
@@ -190,7 +201,7 @@ export const ConcurrentStreamModal: React.FC<ConcurrentStreamModalProps> = ({
       </ModalBody>
 
       <ModalFooter>
-        <Button variant="outline" onClick={onClose} disabled={loading}>
+        <Button variant="outline" onClick={() => onClose()} disabled={loading}>
           Cancel
         </Button>
         <Button onClick={handleSave} disabled={loading}>

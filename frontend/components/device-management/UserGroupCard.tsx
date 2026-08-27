@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -10,12 +10,13 @@ import { ChevronDown, ChevronRight, RefreshCw } from "lucide-react";
 import {
   Panel,
   PillRow,
+  SegmentedControl,
   StatusPill,
-  toneButton,
   type Tone,
 } from "@/components/ui/entity";
 import { cn } from "@/lib/utils";
-import { UserDevice, UserPreference } from "@/types";
+import { UserDevice, UserPreference, UserTimeRule } from "@/types";
+import { devicePolicyBadges, groupPolicyBadges } from "@/lib/device-policies";
 import { UserAvatar, getUserPreferenceBadge } from "./SharedComponents";
 import { DeviceCard } from "./DeviceCard";
 import { IPAccessModal } from "./IPAccessModal";
@@ -49,8 +50,7 @@ interface UserGroupCardProps {
   group: UserDeviceGroup;
   isExpanded: boolean;
   actionLoading: number | null;
-  hasTimeSchedules?: boolean;
-  hasIPPolicies?: boolean;
+  timeRules?: UserTimeRule[];
   updatingUserPreference?: string | null; // Track which user's preference is being updated
   onToggleExpansion: (userId: string) => void;
   onUpdateUserPreference: (
@@ -63,13 +63,13 @@ interface UserGroupCardProps {
   ) => void;
   onToggleUserVisibility?: (userId: string) => void;
   onShowHistory?: (userId: string) => void;
-  onGrantUserTempAccess?: (userId: string) => void;
+  onGrantUserTemporaryAccess?: (userId: string) => void;
   onShowTimePolicy?: (userId: string, deviceIdentifier?: string) => void;
   onApprove: (device: UserDevice) => void;
   onReject: (device: UserDevice) => void;
   onDelete: (device: UserDevice) => void;
   onToggleApproval: (device: UserDevice) => void;
-  onRevokeTempAccess: (deviceId: number) => void;
+  onRemoveTemporaryAccess: (device: UserDevice) => void;
   onShowDetails: (device: UserDevice) => void;
 }
 
@@ -77,21 +77,20 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
   group,
   isExpanded,
   actionLoading,
-  hasTimeSchedules = false,
-  hasIPPolicies = false,
+  timeRules,
   updatingUserPreference,
   onToggleExpansion,
   onUpdateUserPreference,
   onUpdateUserIPPolicy,
   onToggleUserVisibility,
   onShowHistory,
-  onGrantUserTempAccess,
+  onGrantUserTemporaryAccess,
   onShowTimePolicy,
   onApprove,
   onReject,
   onDelete,
   onToggleApproval,
-  onRevokeTempAccess,
+  onRemoveTemporaryAccess,
   onShowDetails,
 }) => {
   const [showIPModal, setShowIPModal] = useState(false);
@@ -104,8 +103,28 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
     (device) => device.excludeFromConcurrentLimit,
   ).length;
 
+  const preference = group.user.preference;
+  const policyBadges = groupPolicyBadges(group.devices, preference, timeRules);
+
   const savingPolicy = updatingUserPreference === group.user.userId;
-  const policyValue = group.user.preference?.defaultBlock ?? null;
+  const storedPolicy = group.user.preference?.defaultBlock ?? null;
+  const [pendingPolicy, setPendingPolicy] = useState<{
+    value: boolean | null;
+  } | null>(null);
+  const wasSavingPolicy = useRef(false);
+
+  useEffect(() => {
+    if (wasSavingPolicy.current && !savingPolicy) {
+      setPendingPolicy(null);
+    }
+    wasSavingPolicy.current = savingPolicy;
+  }, [savingPolicy]);
+
+  useEffect(() => {
+    setPendingPolicy(null);
+  }, [storedPolicy]);
+
+  const policyValue = pendingPolicy ? pendingPolicy.value : storedPolicy;
 
   return (
     <Collapsible
@@ -150,27 +169,32 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
               <PillRow className="hidden shrink-0 justify-end sm:flex">
                 {group.user.preference &&
                   getUserPreferenceBadge(group.user.preference.defaultBlock)}
-                {hasTimeSchedules && (
-                  <StatusPill tone="info">Scheduled</StatusPill>
-                )}
-                {hasIPPolicies && (
-                  <StatusPill tone="info">IP Policy</StatusPill>
-                )}
+                {policyBadges.map(({ policy, label, tone, title }) => (
+                  <StatusPill key={policy} tone={tone} title={title}>
+                    {label}
+                  </StatusPill>
+                ))}
                 {group.user.preference?.concurrentStreamLimit !== null &&
                   group.user.preference?.concurrentStreamLimit !==
                     undefined && (
-                    <StatusPill tone="neutral">
+                    <StatusPill
+                      tone="neutral"
+                      title="How many streams this user can run at the same time"
+                    >
                       {group.user.preference.concurrentStreamLimit === 0
-                        ? "Unlimited"
+                        ? "Unlimited Streams"
                         : `${group.user.preference.concurrentStreamLimit} Stream${
                             group.user.preference.concurrentStreamLimit !== 1
                               ? "s"
                               : ""
-                          }`}
+                          } at Once`}
                     </StatusPill>
                   )}
                 {excludedFromLimitCount > 0 && (
-                  <StatusPill tone="neutral">
+                  <StatusPill
+                    tone="neutral"
+                    title="Streams from these devices are not counted towards the concurrent stream limit"
+                  >
                     {excludedFromLimitCount} Excluded
                   </StatusPill>
                 )}
@@ -180,10 +204,11 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
             <PillRow className="mt-3 pl-11 sm:hidden">
               {group.user.preference &&
                 getUserPreferenceBadge(group.user.preference.defaultBlock)}
-              {hasTimeSchedules && (
-                <StatusPill tone="info">Scheduled</StatusPill>
-              )}
-              {hasIPPolicies && <StatusPill tone="info">IP Policy</StatusPill>}
+              {policyBadges.map(({ policy, label, tone, title }) => (
+                <StatusPill key={policy} tone={tone} title={title}>
+                  {label}
+                </StatusPill>
+              ))}
             </PillRow>
           </div>
         </CollapsibleTrigger>
@@ -193,7 +218,7 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
             {(onToggleUserVisibility ||
               onShowHistory ||
               onUpdateUserIPPolicy ||
-              onGrantUserTempAccess ||
+              onGrantUserTemporaryAccess ||
               onShowTimePolicy) && (
               <Panel className="space-y-3">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -202,7 +227,7 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
                       User Actions
                     </h4>
                     <p className="text-xs text-muted-foreground">
-                      Manage user visibility, history, and access policies
+                      Policies here apply to every device this user owns
                     </p>
                   </div>
 
@@ -212,17 +237,19 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
                         variant="outline"
                         size="sm"
                         onClick={() => onShowTimePolicy(group.user.userId)}
-                        title="Manage time-based access policies"
+                        title="Choose the hours this user is blocked from streaming"
                       >
                         Time Schedule
                       </Button>
                     )}
-                    {onGrantUserTempAccess && (
+                    {onGrantUserTemporaryAccess && (
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => onGrantUserTempAccess(group.user.userId)}
-                        title="Grant temporary access to user devices"
+                        onClick={() =>
+                          onGrantUserTemporaryAccess(group.user.userId)
+                        }
+                        title="Let blocked devices stream for a limited time"
                       >
                         Temporary Access
                       </Button>
@@ -232,7 +259,7 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
                         variant="outline"
                         size="sm"
                         onClick={() => setShowIPModal(true)}
-                        title="Configure IP and network access policies"
+                        title="Choose which networks and IP addresses this user can stream from"
                       >
                         IP Access
                       </Button>
@@ -241,7 +268,7 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
                       variant="outline"
                       size="sm"
                       onClick={() => setShowConcurrentStreamModal(true)}
-                      title="Configure concurrent stream limit for this user"
+                      title="Set how many streams this user can run at once"
                     >
                       Stream Limit
                     </Button>
@@ -250,7 +277,7 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
                         variant="outline"
                         size="sm"
                         onClick={() => onShowHistory(group.user.userId)}
-                        title="Show user history"
+                        title="Browse everything this user has streamed"
                       >
                         Stream History
                       </Button>
@@ -264,8 +291,8 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
                         }
                         title={
                           group.user.preference?.hidden
-                            ? "Show user"
-                            : "Hide user"
+                            ? "Move this user back into the main list"
+                            : "Move this user to the hidden section at the bottom of the list"
                         }
                       >
                         {group.user.preference?.hidden
@@ -281,54 +308,39 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
             <Panel className="space-y-3">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0 space-y-1">
-                  <h4 className="text-sm font-semibold text-foreground">
+                  <h4 className="flex items-center gap-2 text-sm font-semibold text-foreground">
                     Default Device Policy
+                    {savingPolicy && (
+                      <RefreshCw
+                        aria-label="Saving the default device policy"
+                        className="size-3 animate-spin text-muted-foreground"
+                      />
+                    )}
                   </h4>
                   <p className="text-xs text-muted-foreground">
-                    How new devices should be handled
+                    What happens the first time this user streams from a device
+                    Guardian has not seen before
                   </p>
                 </div>
 
-                <div className="flex items-center gap-1 rounded-lg border bg-muted/40 p-1 sm:min-w-[360px]">
-                  {POLICY_CHOICES.map((choice) => {
-                    const active = policyValue === choice.value;
-                    return (
-                      <button
-                        key={choice.label}
-                        type="button"
-                        onClick={() =>
-                          onUpdateUserPreference(
-                            group.user.userId,
-                            choice.value,
-                          )
-                        }
-                        disabled={savingPolicy}
-                        className={cn(
-                          "flex flex-1 cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-md px-3 py-2 text-xs font-medium",
-                          "transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-50",
-                          active
-                            ? choice.tone === "neutral"
-                              ? "bg-background text-foreground shadow-sm"
-                              : toneButton(choice.tone, "solid")
-                            : "text-muted-foreground hover:text-foreground",
-                        )}
-                      >
-                        {savingPolicy && (
-                          <RefreshCw className="size-3 animate-spin" />
-                        )}
-                        {choice.value === null ? (
-                          <span>
-                            Global{" "}
-                            {!configLoading &&
-                              `(${getGlobalDefaultBlock() ? "Block" : "Allow"})`}
-                          </span>
-                        ) : (
-                          choice.label
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
+                <SegmentedControl
+                  className="w-full sm:w-auto sm:min-w-[360px]"
+                  size="md"
+                  busy={savingPolicy}
+                  value={policyValue}
+                  onChange={(next) => {
+                    setPendingPolicy({ value: next });
+                    onUpdateUserPreference(group.user.userId, next);
+                  }}
+                  options={POLICY_CHOICES.map((choice) => ({
+                    value: choice.value,
+                    tone: choice.tone,
+                    label:
+                      choice.value === null
+                        ? `Global${configLoading ? "" : ` (${getGlobalDefaultBlock() ? "Block" : "Allow"})`}`
+                        : choice.label,
+                  }))}
+                />
               </div>
             </Panel>
 
@@ -336,7 +348,8 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
             {group.devices.length === 0 ? (
               <div className="text-center text-muted-foreground py-6 sm:py-8">
                 <p className="text-xs sm:text-sm">
-                  No devices found for this user
+                  No devices yet. They appear here the first time this user
+                  streams.
                 </p>
               </div>
             ) : (
@@ -345,12 +358,13 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
                   <DeviceCard
                     key={device.id}
                     device={device}
+                    policies={devicePolicyBadges(device, preference, timeRules)}
                     actionLoading={actionLoading}
                     onApprove={onApprove}
                     onReject={onReject}
                     onDelete={onDelete}
                     onToggleApproval={onToggleApproval}
-                    onRevokeTempAccess={onRevokeTempAccess}
+                    onRemoveTemporaryAccess={onRemoveTemporaryAccess}
                     onShowDetails={onShowDetails}
                   />
                 ))}

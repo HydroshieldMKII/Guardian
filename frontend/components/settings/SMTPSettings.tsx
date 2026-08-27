@@ -104,12 +104,12 @@ export function SMTPSettings({
   return (
     <SettingsCard
       title="Email Notifications (SMTP)"
-      description="Configure email notifications for Guardian events and alerts."
+      description="Send Guardian notifications by email through your own SMTP server."
       footer={
         <div className="space-y-3">
           {hasUnsavedChanges && (
             <Banner tone="warning">
-              Save your changes before testing SMTP connection
+              Save your changes before testing the connection.
             </Banner>
           )}
 
@@ -125,16 +125,12 @@ export function SMTPSettings({
             className="w-full"
           >
             {testingConnection && <Loader2 className="size-4 animate-spin" />}
-            {testingConnection
-              ? "Sending test email..."
-              : isSmtpEnabled
-                ? "Send test email"
-                : "Test SMTP Connection"}
+            {testingConnection ? "Sending..." : "Send Test Email"}
           </Button>
 
           {!isSmtpEnabled && !hasUnsavedChanges && (
             <p className="text-center text-xs text-muted-foreground">
-              Enable emails to test the connection.
+              Turn email notifications on to test the connection.
             </p>
           )}
         </div>

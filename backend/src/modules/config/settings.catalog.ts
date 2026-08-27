@@ -1,3 +1,5 @@
+import { DEFAULT_BLOCK_MESSAGES } from '@/common/utils/block-messages';
+
 export type SettingType = 'string' | 'number' | 'boolean' | 'json';
 
 interface SettingDefinition {
@@ -41,30 +43,27 @@ export const SETTINGS_CATALOG = {
     type: 'boolean',
   },
   MSG_DEVICE_PENDING: {
-    value:
-      'Device pending approval. The server owner must approve this device before it can be used.',
+    value: DEFAULT_BLOCK_MESSAGES.devicePending,
     type: 'string',
   },
   MSG_DEVICE_REJECTED: {
-    value:
-      'You are not authorized to use this device. Please contact the server administrator for more information.',
+    value: DEFAULT_BLOCK_MESSAGES.deviceRejected,
     type: 'string',
   },
   MSG_TIME_RESTRICTED: {
-    value:
-      'Streaming is not allowed at this time due to scheduling restrictions',
+    value: DEFAULT_BLOCK_MESSAGES.timeRestricted,
     type: 'string',
   },
   MSG_IP_LAN_ONLY: {
-    value: 'Only LAN access is allowed',
+    value: DEFAULT_BLOCK_MESSAGES.lanOnly,
     type: 'string',
   },
   MSG_IP_WAN_ONLY: {
-    value: 'Only WAN access is allowed',
+    value: DEFAULT_BLOCK_MESSAGES.wanOnly,
     type: 'string',
   },
   MSG_IP_NOT_ALLOWED: {
-    value: 'Your current IP address is not in the allowed list',
+    value: DEFAULT_BLOCK_MESSAGES.notAllowed,
     type: 'string',
   },
   DEVICE_CLEANUP_ENABLED: {
@@ -223,8 +222,7 @@ export const SETTINGS_CATALOG = {
     type: 'boolean',
   },
   MSG_CONCURRENT_LIMIT: {
-    value:
-      'You have reached your concurrent stream limit. Please stop another stream before starting a new one.',
+    value: DEFAULT_BLOCK_MESSAGES.concurrentLimit,
     type: 'string',
   },
   USER_PORTAL_ENABLED: {

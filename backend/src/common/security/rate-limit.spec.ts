@@ -28,10 +28,10 @@ const optionsOf = (build: () => unknown): LimiterOptions => {
 };
 
 describe('credentialsLimiter', () => {
-  it('allows 20 failed attempts per quarter hour', () => {
+  it('allows 10 failed attempts per quarter hour', () => {
     const options = optionsOf(credentialsLimiter);
     expect(options.windowMs).toBe(15 * 60 * 1000);
-    expect(options.limit).toBe(20);
+    expect(options.limit).toBe(10);
   });
 
   it('does not spend budget on successful sign-ins', () => {
@@ -48,6 +48,12 @@ describe('credentialsLimiter', () => {
 });
 
 describe('authLimiter', () => {
+  it('leaves room for a Plex sign-in poll to run alongside other traffic', () => {
+    const options = optionsOf(authLimiter);
+    expect(options.windowMs).toBe(60 * 1000);
+    expect(options.limit).toBeGreaterThanOrEqual(120);
+  });
+
   it('counts every request, not just the failures', () => {
     expect(optionsOf(authLimiter).skipSuccessfulRequests).toBe(false);
   });

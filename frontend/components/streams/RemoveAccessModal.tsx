@@ -52,11 +52,15 @@ export const RemoveAccessModal: React.FC<RemoveAccessModalProps> = ({
       )}
 
       <ModalFooter>
-        <Button variant="outline" onClick={onCancel} disabled={isRemoving}>
+        <Button
+          variant="outline"
+          onClick={() => onCancel()}
+          disabled={isRemoving}
+        >
           Cancel
         </Button>
         <Button
-          onClick={onConfirm}
+          onClick={() => onConfirm()}
           disabled={isRemoving}
           className={toneButton("danger", "solid")}
         >

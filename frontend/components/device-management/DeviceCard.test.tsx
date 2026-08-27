@@ -44,7 +44,7 @@ const renderCard = (
     onReject: jest.fn(),
     onDelete: jest.fn(),
     onToggleApproval: jest.fn(),
-    onRevokeTempAccess: jest.fn(),
+    onRemoveTemporaryAccess: jest.fn(),
     onShowDetails: jest.fn(),
   };
 
@@ -203,7 +203,9 @@ describe("DeviceCard dense row", () => {
   it("keeps the pill smaller than the name it annotates", () => {
     renderCard({ status: "pending" });
 
-    expect(screen.getByText("Pending").className).toContain("text-[10px]");
+    expect(
+      screen.getByText("Pending").closest("span.rounded-full")?.className,
+    ).toContain("text-[10px]");
     expect(
       screen.getByRole("heading", { name: "Living Room TV" }).className,
     ).toContain("text-sm");
@@ -324,21 +326,23 @@ describe("DeviceCard actions", () => {
   });
 
   it.each(["pending", "rejected"] as const)(
-    "revokes temporary access for a %s device",
+    "hands the whole device over when removing temporary access on a %s device",
     async (status) => {
       hasTemporaryAccess.mockReturnValue(true);
       const { user, handlers } = renderCard({ status });
 
-      await choose(user, "Revoke Temp Access");
+      await choose(user, "Remove Temporary Access");
 
-      expect(handlers.onRevokeTempAccess).toHaveBeenCalledWith(1);
+      expect(handlers.onRemoveTemporaryAccess).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 1, status }),
+      );
     },
   );
 
-  it("omits the revoke entry without temporary access", async () => {
+  it("omits the removal entry without temporary access", async () => {
     const { user } = renderCard({ status: "pending" });
 
-    expect(await menuLabels(user)).not.toContain("Revoke Temp Access");
+    expect(await menuLabels(user)).not.toContain("Remove Temporary Access");
   });
 
   it("offers only delete and details for a PlexAmp device", async () => {
@@ -464,7 +468,7 @@ describe("DeviceCard user note", () => {
     const onDeviceUpdate = jest.fn();
     const { user } = renderCard(withNote, { onDeviceUpdate });
 
-    await user.click(screen.getByRole("button", { name: "Mark Read" }));
+    await user.click(screen.getByRole("button", { name: "Mark as Read" }));
 
     await waitFor(() => expect(markDeviceNoteAsRead).toHaveBeenCalledWith(1));
     expect(toast).toHaveBeenCalledWith(
@@ -481,7 +485,7 @@ describe("DeviceCard user note", () => {
   it("works without an update callback", async () => {
     const { user } = renderCard(withNote);
 
-    await user.click(screen.getByRole("button", { name: "Mark Read" }));
+    await user.click(screen.getByRole("button", { name: "Mark as Read" }));
 
     await waitFor(() => expect(markDeviceNoteAsRead).toHaveBeenCalled());
   });
@@ -490,7 +494,7 @@ describe("DeviceCard user note", () => {
     markDeviceNoteAsRead.mockRejectedValue(new Error("server said no"));
     const { user } = renderCard(withNote);
 
-    await user.click(screen.getByRole("button", { name: "Mark Read" }));
+    await user.click(screen.getByRole("button", { name: "Mark as Read" }));
 
     await waitFor(() =>
       expect(toast).toHaveBeenCalledWith(
@@ -507,12 +511,12 @@ describe("DeviceCard user note", () => {
     markDeviceNoteAsRead.mockRejectedValue("boom");
     const { user } = renderCard(withNote);
 
-    await user.click(screen.getByRole("button", { name: "Mark Read" }));
+    await user.click(screen.getByRole("button", { name: "Mark as Read" }));
 
     await waitFor(() =>
       expect(toast).toHaveBeenCalledWith(
         expect.objectContaining({
-          description: "Failed to mark note as read",
+          description: "Failed to mark the note as read",
         }),
       ),
     );
@@ -533,7 +537,7 @@ describe("DeviceCard user note", () => {
         onReject={jest.fn()}
         onDelete={jest.fn()}
         onToggleApproval={jest.fn()}
-        onRevokeTempAccess={jest.fn()}
+        onRemoveTemporaryAccess={jest.fn()}
         onShowDetails={jest.fn()}
       />,
     );
@@ -566,7 +570,7 @@ describe("DeviceCard action ordering", () => {
       "Approve",
       "Reject",
       "View Details",
-      "Revoke Temp Access",
+      "Remove Temporary Access",
       "Delete",
     ]);
   });

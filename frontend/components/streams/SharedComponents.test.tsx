@@ -2,7 +2,6 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import {
   ClickableIP,
-  formatDuration,
   getContentTitle,
   getDetailedQuality,
   getProgressPercentage,
@@ -49,20 +48,6 @@ describe("ClickableIP", () => {
       "noopener,noreferrer",
     );
     open.mockRestore();
-  });
-});
-
-describe("formatDuration", () => {
-  it.each([
-    [0, "0:00"],
-    [5_000, "0:05"],
-    [65_000, "1:05"],
-    [600_000, "10:00"],
-    [3_600_000, "1:00:00"],
-    [3_725_000, "1:02:05"],
-    [86_400_000, "24:00:00"],
-  ])("formats %pms as %p", (ms, expected) => {
-    expect(formatDuration(ms)).toBe(expected);
   });
 });
 

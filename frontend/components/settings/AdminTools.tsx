@@ -61,8 +61,8 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
     if (resetSuccess) {
       localStorage.removeItem("guardianResetSuccess");
       toast({
-        title: "Success",
-        description: "New settings have been successfully applied.",
+        title: "Factory Reset Complete",
+        description: "Guardian is running on its default settings again.",
         variant: "success",
       });
     }
@@ -70,12 +70,12 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
   }, []);
 
   const handleResetStreamCounts = async (password?: string) => {
-    if (!password) {
+    if (typeof password !== "string" || password === "") {
       setPendingAction({
         type: "resetStreamCounts",
         title: "Reset Stream Counts",
         description:
-          "Please enter your password to reset all stream statistics.",
+          "Enter your password to reset every device's stream count.",
         isDangerous: false,
       });
       setShowPasswordModal(true);
@@ -88,8 +88,8 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
       await apiClient.resetStreamCounts(password);
 
       toast({
-        title: "Success",
-        description: "Stream counts have been reset successfully.",
+        title: "Stream Counts Reset",
+        description: "Every device's stream count is back to zero.",
         variant: "success",
       });
       setShowPasswordModal(false);
@@ -110,12 +110,12 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
   };
 
   const handleClearSessionHistory = async (password?: string) => {
-    if (!password) {
+    if (typeof password !== "string" || password === "") {
       setPendingAction({
         type: "clearSessionHistory",
         title: "Clear Session History",
         description:
-          "Please enter your password to permanently delete all session history records.",
+          "Enter your password to permanently delete every session history record.",
         isDangerous: true,
       });
       setShowPasswordModal(true);
@@ -128,8 +128,8 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
       await apiClient.clearSessionHistory(password);
 
       toast({
-        title: "Success",
-        description: "Session history has been cleared successfully.",
+        title: "Session History Cleared",
+        description: "Every session history record has been deleted.",
         variant: "success",
       });
       setShowPasswordModal(false);
@@ -150,12 +150,12 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
   };
 
   const handleDeleteAllDevices = async (password?: string) => {
-    if (!password) {
+    if (typeof password !== "string" || password === "") {
       setPendingAction({
         type: "deleteAllDevices",
         title: "Delete All Devices",
         description:
-          "Please enter your password to permanently delete all device records. Users will need re-approval.",
+          "Enter your password to permanently delete every device. Each one has to be approved again the next time it connects.",
         isDangerous: true,
       });
       setShowPasswordModal(true);
@@ -168,8 +168,9 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
       await apiClient.deleteAllDevices(password);
 
       toast({
-        title: "Success",
-        description: "All devices have been deleted successfully.",
+        title: "All Devices Deleted",
+        description:
+          "Every device is gone. They reappear as pending the next time they connect.",
         variant: "success",
       });
       onSettingsRefresh?.();
@@ -191,12 +192,12 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
   };
 
   const handleResetDatabase = async (password?: string) => {
-    if (!password) {
+    if (typeof password !== "string" || password === "") {
       setPendingAction({
         type: "resetDatabase",
         title: "Factory Reset",
         description:
-          "Please enter your password to completely wipe all your data and restore default settings.",
+          "Enter your password to erase all of your data and restore Guardian to its defaults.",
         isDangerous: true,
       });
       setShowPasswordModal(true);
@@ -271,15 +272,16 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
       document.body.removeChild(a);
 
       toast({
-        title: "Export successful",
-        description: "Settings have been exported successfully",
+        title: "Settings Exported",
+        description:
+          "Your settings, user preferences and policies were downloaded",
         variant: "success",
       });
     } catch (error) {
       console.error("Export error:", error);
       toast({
-        title: "Export failed",
-        description: "Failed to export settings",
+        title: "Export Failed",
+        description: "Failed to export your settings",
         variant: "destructive",
       });
     } finally {
@@ -317,8 +319,8 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
         importDatabase(file);
       } catch (error) {
         toast({
-          title: "Invalid file",
-          description: "Please select a valid Guardian export file",
+          title: "Invalid File",
+          description: "Choose a .json file exported from Guardian",
           variant: "destructive",
         });
       }
@@ -338,7 +340,7 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
       await apiClient.importDatabase(formData);
 
       toast({
-        title: "Import successful",
+        title: "Settings Imported",
         description: "Applying new settings...",
         variant: "success",
       });
@@ -353,7 +355,7 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
     } catch (error) {
       console.error("Import error:", error);
       toast({
-        title: "Import failed",
+        title: "Import Failed",
         description:
           error instanceof Error ? error.message : "Failed to import settings",
         variant: "destructive",
@@ -382,12 +384,12 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
   return (
     <>
       <SettingsCard
-        title="Administrative Tools"
-        description="Maintenance operations for the Guardian database."
+        title="Maintenance"
+        description="Routine clean-up that leaves your devices and users in place."
       >
         <ActionRow
           title="Reset Stream Counts"
-          description="Reset session counts for all devices. This will not delete devices."
+          description="Set every device's stream count back to zero. Nothing else about the device changes."
           action={
             <Button
               onClick={() => setShowResetStreamCountsModal(true)}
@@ -403,8 +405,8 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
         />
 
         <ActionRow
-          title="Clear All Session History"
-          description="Permanently remove all session history from the database."
+          title="Clear Session History"
+          description="Permanently delete every session history record. Devices, users and settings are left untouched."
           action={
             <Button
               onClick={() => setShowClearSessionHistoryModal(true)}
@@ -421,12 +423,12 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
       </SettingsCard>
 
       <SettingsCard
-        title="Settings Management"
-        description="Export and restore Guardian settings, user preferences and policies."
+        title="Backup & Restore"
+        description="Save your settings, user preferences and policies to a file, or load them back."
       >
         <ActionRow
           title="Export Settings"
-          description="Download a partial backup of your Guardian data including settings, users preferences and users policies."
+          description="Download your settings, user preferences and policies as a file. Devices and session history are not included."
           action={
             <Button
               onClick={exportDatabase}
@@ -443,7 +445,7 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
 
         <ActionRow
           title="Import Settings"
-          description="Restore Guardian settings from a previously exported backup file."
+          description="Load settings, user preferences and policies from a file you exported earlier. This overwrites what you have now."
           action={
             <>
               <input
@@ -475,12 +477,12 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
 
       <SettingsCard
         title="Dangerous Operations"
-        description="These actions are irreversible. Export your settings first."
+        description="Nothing here can be undone. Export your settings before you continue."
       >
         <ActionRow
           tone="danger"
-          title="Delete All Devices Data"
-          description="Permanently remove all device, sessions history and notifications from the database. This action cannot be undone."
+          title="Delete All Devices"
+          description="Permanently delete every device, along with its session history and notifications. Users and settings are kept, and every device has to be approved again the next time it connects."
           action={
             <Button
               onClick={() => setShowDeleteAllDevicesModal(true)}
@@ -498,7 +500,7 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
         <ActionRow
           tone="danger"
           title="Factory Reset"
-          description="DANGER: This will permanently delete ALL data including settings, devices, user preferences, sessions history and notifications. Default settings will be restored."
+          description="Permanently delete everything: settings, devices, user preferences, session history and notifications. Guardian restarts as a fresh install."
           action={
             <Button
               onClick={() => setShowResetDatabaseModal(true)}
@@ -519,7 +521,7 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
         onClose={() => setShowResetStreamCountsModal(false)}
         onConfirm={handleResetStreamCounts}
         title="Reset Stream Counts"
-        description="This will reset session counts for all devices. Device records will remain but their stream statistics will be reset to zero."
+        description="Every device's stream count goes back to zero. The devices themselves are kept."
         confirmText="Reset Stream Counts"
         cancelText="Cancel"
         variant="default"
@@ -529,8 +531,8 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
         isOpen={showClearSessionHistoryModal}
         onClose={() => setShowClearSessionHistoryModal(false)}
         onConfirm={handleClearSessionHistory}
-        title="Clear All Session History"
-        description="This will permanently remove all session history records from the database. This includes viewing history, timestamps, and session metadata for all users."
+        title="Clear Session History"
+        description="Every session history record is deleted for good, for every user. Devices, users and settings are left untouched."
         confirmText="Clear Session History"
         cancelText="Cancel"
         variant="destructive"
@@ -541,7 +543,7 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
         onClose={() => setShowDeleteAllDevicesModal(false)}
         onConfirm={handleDeleteAllDevices}
         title="Delete All Devices"
-        description="This will permanently remove all device records from the database. Devices will need to be detected again on their next stream attempt. Device preferences will be lost."
+        description="Every device is deleted for good, along with its session history and notifications. Each one reappears as pending the next time it connects, and per-device settings are lost."
         confirmText="Delete All Devices"
         cancelText="Cancel"
         variant="destructive"
@@ -552,7 +554,7 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
         onClose={() => setShowResetDatabaseModal(false)}
         onConfirm={handleResetDatabase}
         title="Factory Reset"
-        description="DANGER: This will permanently delete ALL data including settings, devices, users, and sessions. Default settings will be restored like a fresh install."
+        description="Everything is deleted for good: settings, devices, users and session history. Guardian restarts as a fresh install. Export your settings first if you want a way back."
         confirmText="Yes, Wipe All Data"
         cancelText="Cancel"
         variant="destructive"
@@ -564,7 +566,7 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
           isOpen={showVersionMismatchModal}
           onClose={handleCancelImport}
           onConfirm={handleProceedWithImport}
-          title="Version Mismatch Warning"
+          title="Exported by a Different Version"
           description={`The import file was created with Guardian version ${versionMismatchInfo.importVersion}, but you are currently running version ${versionMismatchInfo.currentVersion}. Importing data from a different version may cause compatibility issues. Do you want to proceed anyway?`}
           confirmText="Proceed with Import"
           cancelText="Cancel Import"

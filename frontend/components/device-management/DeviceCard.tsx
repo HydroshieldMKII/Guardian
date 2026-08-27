@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { ActionMenu, type Action } from "@/components/ui/action-menu";
 import { Ban, Check, Info, RefreshCw, ShieldOff, Trash2 } from "lucide-react";
 import { EntityCard, StatusPill, type Tone } from "@/components/ui/entity";
+import { isPlexampDevice, type PolicyBadge } from "@/lib/device-policies";
 import { UserDevice } from "@/types";
 import { ClickableIP } from "./SharedComponents";
 import { useDeviceUtils } from "@/hooks/device-management/useDeviceUtils";
@@ -11,21 +12,16 @@ import { useToast } from "@/hooks/use-toast";
 
 interface DeviceCardProps {
   device: UserDevice;
+  policies?: PolicyBadge[];
   actionLoading: number | null;
   onApprove: (device: UserDevice) => void;
   onReject: (device: UserDevice) => void;
   onDelete: (device: UserDevice) => void;
   onToggleApproval: (device: UserDevice) => void;
-  onRevokeTempAccess: (deviceId: number) => void;
+  onRemoveTemporaryAccess: (device: UserDevice) => void;
   onShowDetails: (device: UserDevice) => void;
   onDeviceUpdate?: (device: UserDevice) => void;
 }
-
-const isPlexAmp = (device: UserDevice) =>
-  Boolean(
-    device.deviceProduct?.toLowerCase().includes("plexamp") ||
-    device.deviceName?.toLowerCase().includes("plexamp"),
-  );
 
 const STATUS_TONE: Record<string, Tone> = {
   approved: "positive",
@@ -48,12 +44,13 @@ const Fact = ({
 
 export const DeviceCard: React.FC<DeviceCardProps> = ({
   device,
+  policies = [],
   actionLoading,
   onApprove,
   onReject,
   onDelete,
   onToggleApproval,
-  onRevokeTempAccess,
+  onRemoveTemporaryAccess,
   onShowDetails,
   onDeviceUpdate,
 }) => {
@@ -75,8 +72,8 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
       const now = new Date().toISOString();
       setNoteReadAt(now);
       toast({
-        title: "Note marked as read",
-        description: "The user will be notified that their note has been read.",
+        title: "Note Marked as Read",
+        description: "The user will see that you have read their note.",
         variant: "success",
       });
       if (onDeviceUpdate) {
@@ -88,7 +85,7 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
         description:
           error instanceof Error
             ? error.message
-            : "Failed to mark note as read",
+            : "Failed to mark the note as read",
         variant: "destructive",
       });
     } finally {
@@ -96,7 +93,7 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
     }
   };
 
-  const plexAmp = isPlexAmp(device);
+  const plexAmp = isPlexampDevice(device);
   const busy = actionLoading === device.id;
   const tone: Tone = plexAmp
     ? "accent"
@@ -158,10 +155,10 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
 
   if (temporary && !plexAmp && device.status !== "approved") {
     actions.push({
-      label: "Revoke Temp Access",
+      label: "Remove Temporary Access",
       icon: ShieldOff,
       tone: "warning",
-      onSelect: () => onRevokeTempAccess(device.id),
+      onSelect: () => onRemoveTemporaryAccess(device),
     });
   }
 
@@ -183,6 +180,16 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
                   Pending
                 </StatusPill>
               )}
+              {policies.map(({ policy, label, tone: pillTone, title }) => (
+                <StatusPill
+                  key={policy}
+                  tone={pillTone}
+                  size="sm"
+                  title={title}
+                >
+                  {label}
+                </StatusPill>
+              ))}
             </div>
 
             <dl className="flex flex-wrap items-center gap-y-1 text-xs text-muted-foreground">
@@ -218,7 +225,7 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="text-[11px] font-medium uppercase tracking-wide text-amber-700 dark:text-amber-300">
-                  User Note
+                  Note From User
                 </p>
                 <p className="mt-1 text-sm text-amber-900 dark:text-amber-100">
                   {device.requestDescription}
@@ -231,7 +238,7 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
                 disabled={markingAsRead}
                 className="shrink-0 text-xs text-amber-700 hover:bg-amber-500/15 dark:text-amber-300"
               >
-                {markingAsRead ? spinner : "Mark Read"}
+                {markingAsRead ? spinner : "Mark as Read"}
               </Button>
             </div>
           </div>

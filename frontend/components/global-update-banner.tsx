@@ -67,7 +67,7 @@ export function GlobalUpdateBanner() {
                 size="sm"
                 onClick={handleDismiss}
                 className="text-white hover:bg-blue-700 p-1 h-auto"
-                title="Dismiss"
+                title="Hide this update notice"
               >
                 <X className="h-3 w-3" />
               </Button>

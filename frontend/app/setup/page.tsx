@@ -71,7 +71,7 @@ export default function SetupPage() {
     // Email is optional, but if provided must be valid
     const emailRegex = /^[a-zA-Z0-9._%-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     if (formData.email && !emailRegex.test(formData.email)) {
-      newErrors.email = "Please enter a valid email address";
+      newErrors.email = "Enter a valid email address";
     }
 
     if (!formData.password || formData.password.length < 12) {
@@ -86,7 +86,7 @@ export default function SetupPage() {
       !requirements.number ||
       !requirements.special
     ) {
-      newErrors.password = "Password must match all complexity requirements";
+      newErrors.password = "Password must meet every requirement listed below";
     }
 
     if (formData.password !== formData.confirmPassword) {
@@ -123,8 +123,8 @@ export default function SetupPage() {
       );
 
       toast({
-        title: "Success",
-        description: "Admin account created successfully",
+        title: "Account Created",
+        description: "You can sign in to Guardian with it now",
         variant: "success",
       });
 
@@ -135,7 +135,7 @@ export default function SetupPage() {
         description:
           error instanceof Error
             ? error.message
-            : "Failed to create admin account",
+            : "Failed to create the administrator account",
         variant: "destructive",
       });
     } finally {
@@ -428,7 +428,7 @@ export default function SetupPage() {
               className="w-full mt-2"
               size="lg"
             >
-              {isSubmitting ? "Creating Account..." : "Create Admin Account"}
+              {isSubmitting ? "Creating..." : "Create Administrator Account"}
             </Button>
           </form>
         </CardContent>

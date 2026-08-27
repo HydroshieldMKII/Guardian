@@ -64,8 +64,8 @@ function NotificationItem({
           }
           title={
             notification.sessionHistoryId
-              ? "Click to view in session history"
-              : "The session history is not available for this notification"
+              ? "Open this stream in the user's history"
+              : "The stream behind this notification is no longer in the history"
           }
         >
           <div className="flex items-center gap-2 mb-1">
@@ -95,7 +95,7 @@ function NotificationItem({
             size="sm"
             onClick={() => onRemove(notification.id)}
             className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
-            title="Delete notification"
+            title="Delete this notification"
           >
             <X className="h-3 w-3" />
           </Button>

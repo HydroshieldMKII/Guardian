@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import * as net from 'net';
+import { DEFAULT_BLOCK_MESSAGES } from '@/common/utils/block-messages';
 
 const OCTET = '(?:25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)';
 const IPV4 = new RegExp(`^(?:${OCTET}\\.){3}${OCTET}$`);
@@ -245,7 +246,7 @@ export class IPValidationService {
     if (policy.networkPolicy === 'lan' && networkType !== 'lan') {
       return {
         allowed: false,
-        reason: messages.lanOnly || 'Only LAN access is allowed',
+        reason: messages.lanOnly || DEFAULT_BLOCK_MESSAGES.lanOnly,
         stopCode: 'IP_POLICY_LAN_ONLY',
       };
     }
@@ -253,7 +254,7 @@ export class IPValidationService {
     if (policy.networkPolicy === 'wan' && networkType !== 'wan') {
       return {
         allowed: false,
-        reason: messages.wanOnly || 'Only WAN access is allowed',
+        reason: messages.wanOnly || DEFAULT_BLOCK_MESSAGES.wanOnly,
         stopCode: 'IP_POLICY_WAN_ONLY',
       };
     }
@@ -262,9 +263,7 @@ export class IPValidationService {
       if (!this.isIPInAllowedList(clientIP, policy.allowedIPs)) {
         return {
           allowed: false,
-          reason:
-            messages.notAllowed ||
-            'Your current IP address is not in the allowed list',
+          reason: messages.notAllowed || DEFAULT_BLOCK_MESSAGES.notAllowed,
           stopCode: 'IP_POLICY_NOT_ALLOWED',
         };
       }

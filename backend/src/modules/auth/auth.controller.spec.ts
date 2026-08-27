@@ -94,6 +94,7 @@ describe('AuthController', () => {
         },
       }),
       checkPlexPin: jest.fn().mockResolvedValue(null),
+      cancelPlexPin: jest.fn(),
       getPlexUserFromToken: jest.fn().mockResolvedValue({
         id: 9,
         username: 'guest',
@@ -395,6 +396,13 @@ describe('AuthController', () => {
       await expect(controller.createPlexPin()).rejects.toThrow(
         'Failed to create Plex PIN',
       );
+    });
+  });
+
+  describe('cancelPlexPin', () => {
+    it('drops the pending pin', () => {
+      expect(controller.cancelPlexPin('client-1')).toEqual({ cancelled: true });
+      expect(plexOAuthService.cancelPlexPin).toHaveBeenCalledWith('client-1');
     });
   });
 

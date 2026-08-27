@@ -77,6 +77,27 @@ describe("RemoveAccessModal", () => {
     expect(onCancel).toHaveBeenCalled();
   });
 
+  it("hands the callbacks no arguments, so a click event is never mistaken for one", async () => {
+    const onConfirm = jest.fn();
+    const onCancel = jest.fn();
+    const user = userEvent.setup();
+
+    render(
+      <RemoveAccessModal
+        stream={stream()}
+        isRemoving={false}
+        onConfirm={onConfirm}
+        onCancel={onCancel}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: /Remove Access/ }));
+    expect(onConfirm).toHaveBeenCalledWith();
+
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(onCancel).toHaveBeenCalledWith();
+  });
+
   it("locks both buttons and shows progress while removing", () => {
     render(
       <RemoveAccessModal

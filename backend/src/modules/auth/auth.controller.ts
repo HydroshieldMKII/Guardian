@@ -276,6 +276,16 @@ export class AuthController {
   }
 
   /**
+   * Drop a pending Plex PIN when the user abandons the sign-in
+   */
+  @Public()
+  @Delete('plex/pin/:clientId')
+  cancelPlexPin(@Param('clientId') clientId: string) {
+    this.plexOAuthService.cancelPlexPin(clientId);
+    return { cancelled: true };
+  }
+
+  /**
    * Complete Plex login - authenticate with auth token
    * Checks if user is admin (via linked Plex) or regular Plex user
    */

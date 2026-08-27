@@ -23,6 +23,7 @@ import {
 import { RefreshCw } from "lucide-react";
 import { config } from "@/lib/config";
 import { ClickableIP } from "./SharedComponents";
+import { formatElapsed } from "@/lib/duration";
 import { ConfirmationModal } from "@/components/ui/confirmation-modal";
 import { useToast } from "@/hooks/use-toast";
 
@@ -292,7 +293,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
     if (!product) return "Unknown";
 
     if (product.toLowerCase() === "plexamp") {
-      return "Plex Amp";
+      return "Plexamp";
     }
 
     return "Plex";
@@ -345,21 +346,8 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
     const endTime = session.endedAt
       ? new Date(session.endedAt).getTime()
       : Date.now();
-    const elapsed = endTime - new Date(session.startedAt).getTime();
 
-    if (!Number.isFinite(elapsed) || elapsed < 0) return "Unknown";
-
-    const seconds = Math.floor(elapsed / 1000);
-    const minutes = Math.floor(seconds / 60);
-    const hours = Math.floor(minutes / 60);
-
-    if (hours > 0) {
-      return `${hours}h ${minutes % 60}m ${seconds % 60}s`;
-    }
-    if (minutes > 0) {
-      return `${minutes}m ${seconds % 60}s`;
-    }
-    return `${seconds}s`;
+    return formatElapsed(endTime - new Date(session.startedAt).getTime());
   };
 
   const handleDeviceClick = (session: SessionHistoryEntry) => {
@@ -395,20 +383,20 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
         setSessionToDelete(null);
         toast({
           title: "Session Deleted",
-          description: "The session history has been successfully deleted.",
+          description: "That entry is gone from this user's stream history.",
           variant: "success",
         });
       } else {
         toast({
           title: "Delete Failed",
-          description: "Failed to delete session history. Please try again.",
+          description: "Guardian could not delete that entry. Try again.",
           variant: "destructive",
         });
       }
     } catch (error) {
       toast({
         title: "Delete Failed",
-        description: "An error occurred while deleting the session history.",
+        description: "Something went wrong while deleting that entry.",
         variant: "destructive",
       });
     } finally {
@@ -431,7 +419,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
     <>
       <Modal open={isOpen} onOpenChange={onClose} size="xl">
         <ModalHeader
-          title="Streaming History"
+          title="Stream History"
           description={
             <>
               View and manage streaming session history for{" "}
@@ -444,7 +432,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
         >
           <div className="flex flex-col gap-3 pt-3 sm:flex-row sm:items-center">
             <Input
-              placeholder="Search by title, device, or IP address..."
+              placeholder="Search by title, device or IP address"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="flex-1"
@@ -489,8 +477,8 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
               className="min-h-80"
               title={
                 filtered
-                  ? "No sessions found matching your filters"
-                  : "No streaming history found"
+                  ? "No streams match your search"
+                  : "This user has not streamed anything yet"
               }
             />
           ) : (
@@ -545,7 +533,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
                         variant="outline"
                         size="sm"
                         onClick={() => handleDeviceClick(session)}
-                        title="See Device"
+                        title="Go to this device"
                         className="h-10 flex-1 sm:h-8 sm:flex-none"
                       >
                         See Device
@@ -555,7 +543,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
                           variant="outline"
                           size="sm"
                           onClick={() => handleDeleteClick(session)}
-                          title="Delete Session"
+                          title="Delete this entry"
                           className="h-10 flex-1 border-rose-500/40 text-rose-600 hover:bg-rose-500/10 dark:text-rose-400 sm:ml-auto sm:h-8 sm:flex-none"
                         >
                           Delete

@@ -98,7 +98,7 @@ export function PlexSettings({
         <div className="space-y-3">
           {hasUnsavedChanges && (
             <Banner tone="warning">
-              Save your changes before testing the connection
+              Save your changes before testing the connection.
             </Banner>
           )}
 
@@ -114,9 +114,7 @@ export function PlexSettings({
             className="w-full"
           >
             {testingConnection && <Loader2 className="size-4 animate-spin" />}
-            {testingConnection
-              ? "Testing Connection..."
-              : "Test Plex Connection"}
+            {testingConnection ? "Testing..." : "Test Plex Connection"}
           </Button>
         </div>
       }

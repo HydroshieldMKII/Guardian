@@ -163,7 +163,7 @@ describe("NotificationMenu contents", () => {
       screen.getAllByRole("button", { name: "Mark as read" }),
     ).toHaveLength(1);
     expect(
-      screen.getAllByRole("button", { name: "Delete notification" }),
+      screen.getAllByRole("button", { name: "Delete this notification" }),
     ).toHaveLength(2);
   });
 });
@@ -200,7 +200,7 @@ describe("NotificationMenu actions", () => {
     await openMenu(user);
 
     await user.click(
-      screen.getByRole("button", { name: "Delete notification" }),
+      screen.getByRole("button", { name: "Delete this notification" }),
     );
 
     await waitFor(() => expect(deleteNotification).toHaveBeenCalledWith(1));
@@ -238,7 +238,7 @@ describe("NotificationMenu actions", () => {
       "Failed to mark notification as read:",
     ],
     [
-      "Delete notification",
+      "Delete this notification",
       () => deleteNotification,
       "Failed to delete notification:",
     ],
@@ -327,11 +327,11 @@ describe("opening session history from a notification", () => {
 
     expect(screen.getByText("Linked").closest("div")).toHaveAttribute(
       "title",
-      "Click to view in session history",
+      "Open this stream in the user's history",
     );
     expect(screen.getByText("Unlinked").closest("div")).toHaveAttribute(
       "title",
-      "The session history is not available for this notification",
+      "The stream behind this notification is no longer in the history",
     );
   });
 });

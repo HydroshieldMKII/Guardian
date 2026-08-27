@@ -1,16 +1,12 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { HintTooltip } from "@/components/ui/hint-tooltip";
 import {
   Meta,
   MetaGrid,
   Panel,
+  PillRow,
   Section,
   StatusPill,
   ToggleRow,
@@ -23,8 +19,14 @@ import {
 } from "@/components/ui/modal";
 import { Pencil, RefreshCw } from "lucide-react";
 import { UserDevice, AppSetting } from "@/types";
+import {
+  BYPASSED_BY_TEMPORARY_ACCESS,
+  hasTemporaryAccess,
+  isPlexampDevice,
+  type PolicyBadge,
+} from "@/lib/device-policies";
+import { formatMinutes } from "@/lib/duration";
 import { ClickableIP, DeviceStatus } from "./SharedComponents";
-import { useDeviceUtils } from "@/hooks/device-management/useDeviceUtils";
 import { apiClient } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 
@@ -42,6 +44,7 @@ interface DeviceDetailsModalProps {
   onDeviceUpdate?: (device: UserDevice) => void;
   onSetPending?: (deviceId: number) => Promise<boolean>;
   settingsData?: AppSetting[];
+  policies?: PolicyBadge[];
 }
 
 export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
@@ -58,8 +61,8 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
   onDeviceUpdate,
   onSetPending,
   settingsData,
+  policies = [],
 }) => {
-  const { hasTemporaryAccess, getTemporaryAccessTimeLeft } = useDeviceUtils();
   const { toast } = useToast();
   const [excludeLoading, setExcludeLoading] = useState(false);
   const [deletingNote, setDeletingNote] = useState(false);
@@ -71,24 +74,8 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
     device?.requestNoteReadAt,
   );
 
-  // Tooltip state for strict mode disabled button
-  const [strictModeTooltipOpen, setStrictModeTooltipOpen] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
+  const plexamp = device ? isPlexampDevice(device) : false;
 
-  // Detect mobile on mount
-  React.useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 640);
-    checkMobile();
-    window.addEventListener("resize", checkMobile);
-    return () => window.removeEventListener("resize", checkMobile);
-  }, []);
-
-  // Check if device is Plexamp
-  const isPlexampDevice =
-    device?.deviceProduct?.toLowerCase().includes("plexamp") ||
-    device?.deviceName?.toLowerCase().includes("plexamp");
-
-  // Check if strict mode is enabled
   const isStrictModeEnabled =
     settingsData?.find((s) => s.key === "PLEX_GUARD_STRICT_MODE")?.value ===
     "true";
@@ -113,8 +100,8 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
       await apiClient.deleteDeviceNote(device.id);
       setNoteReadAt(undefined);
       toast({
-        title: "Note deleted",
-        description: "The user note has been permanently deleted.",
+        title: "Note Deleted",
+        description: "The note this user left on the device is gone for good.",
         variant: "success",
       });
       // Update parent state if callback provided
@@ -149,7 +136,9 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
       setExcludeFromConcurrentLimit(exclude);
       toast({
         title: "Success",
-        description: `Device ${exclude ? "excluded from" : "included in"} concurrent stream limit`,
+        description: exclude
+          ? "Streams from this device no longer count towards the user's concurrent stream limit"
+          : "Streams from this device now count towards the user's concurrent stream limit",
         variant: "success",
       });
       // Update the parent device state
@@ -162,7 +151,7 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
         description:
           error instanceof Error
             ? error.message
-            : "Failed to update device setting",
+            : "Failed to update this device's settings",
         variant: "destructive",
       });
     } finally {
@@ -178,8 +167,9 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
       const success = await onSetPending(device.id);
       if (success) {
         toast({
-          title: "Device set to pending",
-          description: "The device has been moved back to pending status.",
+          title: "Device Set to Pending",
+          description:
+            "This device is waiting for approval again and follows the user's default device policy until you decide.",
           variant: "success",
         });
         // Update parent state
@@ -219,26 +209,6 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
     onClose();
   };
 
-  const formatGrantedDuration = (minutes: number) => {
-    if (minutes < 60) {
-      return `${minutes} minute${minutes === 1 ? "" : "s"}`;
-    }
-    if (minutes < 1440) {
-      const hours = Math.floor(minutes / 60);
-      const rest = minutes % 60;
-      return (
-        `${hours} hour${hours === 1 ? "" : "s"}` +
-        (rest > 0 ? ` ${rest} minute${rest === 1 ? "" : "s"}` : "")
-      );
-    }
-    const days = Math.floor(minutes / 1440);
-    const rest = Math.floor((minutes % 1440) / 60);
-    return (
-      `${days} day${days === 1 ? "" : "s"}` +
-      (rest > 0 ? ` ${rest} hour${rest === 1 ? "" : "s"}` : "")
-    );
-  };
-
   return (
     <Modal open={isOpen} onOpenChange={handleClose} size="lg">
       <ModalHeader
@@ -251,7 +221,7 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
                 value={newDeviceName}
                 onChange={(e) => onNewDeviceNameChange(e.target.value)}
                 className="h-8 min-w-40 flex-1"
-                placeholder="Enter device name"
+                placeholder="Device name"
                 aria-label="Device name"
                 autoFocus
               />
@@ -304,6 +274,21 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
           <Meta label="Status">
             <DeviceStatus device={device} />
           </Meta>
+          <Meta label="Enforced Policies" wrap className="sm:col-span-3">
+            {policies.length === 0 ? (
+              <span className="text-muted-foreground">
+                None. This device streams without restriction.
+              </span>
+            ) : (
+              <PillRow>
+                {policies.map(({ policy, label, tone, title }) => (
+                  <StatusPill key={policy} tone={tone} title={title}>
+                    {label}
+                  </StatusPill>
+                ))}
+              </PillRow>
+            )}
+          </Meta>
           <Meta label="Identifier" wrap className="sm:col-span-3">
             <span className="font-mono text-xs">{device.deviceIdentifier}</span>
           </Meta>
@@ -345,12 +330,12 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
           <Section title="Temporary Access">
             <MetaGrid className="sm:grid-cols-2">
               {device.temporaryAccessDurationMinutes && (
-                <Meta label="Original Duration Granted">
-                  {formatGrantedDuration(device.temporaryAccessDurationMinutes)}
+                <Meta label="Duration Granted">
+                  {formatMinutes(device.temporaryAccessDurationMinutes)}
                 </Meta>
               )}
               {device.temporaryAccessGrantedAt && (
-                <Meta label="Access Granted At">
+                <Meta label="Granted At">
                   {new Date(device.temporaryAccessGrantedAt).toLocaleString()}
                 </Meta>
               )}
@@ -363,13 +348,20 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
                   {new Date(device.temporaryAccessUntil).toLocaleString()}
                 </Meta>
               )}
-              <Meta label="Bypass Policies">
+              <Meta label="Policy Bypass">
                 <StatusPill
                   tone={
-                    device.temporaryAccessBypassPolicies ? "warning" : "danger"
+                    device.temporaryAccessBypassPolicies ? "warning" : "neutral"
+                  }
+                  title={
+                    device.temporaryAccessBypassPolicies
+                      ? `While this grant lasts, ${BYPASSED_BY_TEMPORARY_ACCESS} are not enforced against this device`
+                      : "This grant does not lift any of the user's other policies"
                   }
                 >
-                  {device.temporaryAccessBypassPolicies ? "Yes" : "No"}
+                  {device.temporaryAccessBypassPolicies
+                    ? "Policies Bypassed"
+                    : "Policies Enforced"}
                 </StatusPill>
               </Meta>
             </MetaGrid>
@@ -377,75 +369,37 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
         )}
 
         <Section title="Device Settings">
-          {!isPlexampDevice && (
+          {!plexamp && (
             <ToggleRow
               id="exclude-concurrent-limit"
               label="Exclude from concurrent stream limit"
-              hint="When enabled, streams from this device won't count towards the user's concurrent stream limit."
+              hint="Streams from this device stop counting towards the user's concurrent stream limit, and never block another device from starting."
               checked={excludeFromConcurrentLimit}
               onCheckedChange={handleExcludeFromConcurrentLimitChange}
               disabled={excludeLoading}
             />
           )}
 
-          {!isPlexampDevice && device.status !== "pending" && onSetPending && (
+          {!plexamp && device.status !== "pending" && onSetPending && (
             <Panel className="space-y-3">
               <div className="space-y-1">
                 <p className="text-sm font-medium text-foreground">
-                  Revert to pending status
+                  Set back to pending
                 </p>
                 <p className="text-xs leading-relaxed text-muted-foreground">
-                  Move this device back to pending status. The device will need
-                  to be approved again.
+                  Undo your decision on this device. It follows the user's
+                  default device policy until you approve or reject it again.
                 </p>
               </div>
               {isStrictModeEnabled ? (
-                <TooltipProvider delayDuration={0}>
-                  <Tooltip
-                    open={strictModeTooltipOpen}
-                    onOpenChange={(open) => {
-                      if (!open) {
-                        setStrictModeTooltipOpen(false);
-                      }
-                    }}
-                  >
-                    <TooltipTrigger asChild>
-                      <button
-                        type="button"
-                        className="inline-flex h-8 w-full cursor-not-allowed items-center justify-center whitespace-nowrap rounded-md border border-dashed bg-background px-3 text-sm font-medium text-muted-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          if (isMobile) {
-                            setStrictModeTooltipOpen((prev) => !prev);
-                          }
-                        }}
-                        onMouseEnter={() => {
-                          if (!isMobile) setStrictModeTooltipOpen(true);
-                        }}
-                        onMouseLeave={() => {
-                          if (!isMobile) setStrictModeTooltipOpen(false);
-                        }}
-                      >
-                        Set to Pending
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent
-                      side="top"
-                      align="center"
-                      onPointerDownOutside={(e) => {
-                        e.preventDefault();
-                        setStrictModeTooltipOpen(false);
-                      }}
-                    >
-                      <p className="max-w-xs">
-                        Strict mode is enabled. Devices cannot be set to pending
-                        as they will be automatically approved or rejected based
-                        on the default policy.
-                      </p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                <HintTooltip
+                  side="top"
+                  align="center"
+                  triggerClassName="h-8 w-full cursor-not-allowed items-center justify-center whitespace-nowrap rounded-md border border-dashed bg-background px-3 text-sm font-medium text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring"
+                  hint="Strict mode is on, so Guardian approves or rejects every device automatically using the default policy. Turn strict mode off in settings to move a device back to pending."
+                >
+                  Set to Pending
+                </HintTooltip>
               ) : (
                 <Button
                   variant="outline"
@@ -461,11 +415,12 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
             </Panel>
           )}
 
-          {isPlexampDevice && (
+          {plexamp && (
             <Panel>
               <p className="text-xs leading-relaxed text-muted-foreground">
-                PlexAmp devices are automatically excluded from all policy
-                checks including concurrent stream limits.
+                Plex provides no way to terminate a Plexamp stream, so Guardian
+                cannot enforce anything against this device. It is exempt from
+                every policy, including the concurrent stream limit.
               </p>
             </Panel>
           )}

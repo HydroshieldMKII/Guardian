@@ -151,7 +151,7 @@ export default function SettingsPage() {
 
       toast({
         title: "Settings Saved",
-        description: `Successfully updated ${changedSettings.length} setting(s).`,
+        description: `${changedSettings.length} ${changedSettings.length === 1 ? "setting" : "settings"} updated.`,
         variant: "success",
       });
 
@@ -256,7 +256,7 @@ export default function SettingsPage() {
     if (!hasUnsavedChanges) {
       toast({
         title: "No Changes",
-        description: "There are no changes to save.",
+        description: "Nothing has been edited yet.",
       });
       return;
     }
@@ -279,7 +279,7 @@ export default function SettingsPage() {
       if (!changedSettings || changedSettings.length === 0) {
         toast({
           title: "No Changes",
-          description: "There are no changes to save.",
+          description: "Nothing has been edited yet.",
         });
         return;
       }
@@ -295,7 +295,7 @@ export default function SettingsPage() {
 
       toast({
         title: "Settings Saved",
-        description: `Successfully updated ${changedSettings.length} setting(s).`,
+        description: `${changedSettings.length} ${changedSettings.length === 1 ? "setting" : "settings"} updated.`,
         variant: "success",
       });
 
@@ -326,7 +326,7 @@ export default function SettingsPage() {
       <div className="container mx-auto max-w-2xl px-4 py-20">
         <EmptyState
           title="Settings Unavailable"
-          description="Unable to load application settings. Please try refreshing the page."
+          description="Guardian could not load its settings. Refresh the page to try again."
         />
       </div>
     );
@@ -335,39 +335,38 @@ export default function SettingsPage() {
   const tabs = [
     {
       id: "plex",
-      label: "Plex Integration",
-      description:
-        "Configure your Plex Media Server connection and related settings",
+      label: "Plex",
+      description: "How Guardian reaches your Plex Media Server",
     },
     {
       id: "guardian",
       label: "Guardian",
-      description: "Core Guardian behavior settings",
+      description: "How Guardian treats devices, users and streams",
     },
     {
       id: "customization",
       label: "Customization",
-      description: "UI and user experience settings",
+      description: "What Guardian shows you, and what it tells your users",
     },
     {
       id: "smtp",
       label: "Email",
-      description: "Email notification configuration",
+      description: "Send notifications by email through your own SMTP server",
     },
     {
       id: "notifications",
       label: "Notifications",
-      description: "Notification preferences",
+      description: "Which events Guardian tells you about, and where",
     },
     {
       id: "admin",
-      label: "Admin Tools",
-      description: "Administrative tools and system maintenance",
+      label: "Maintenance",
+      description: "Back up your settings, clean up data, or start over",
     },
     {
       id: "system",
-      label: "System Info",
-      description: "System information and update management",
+      label: "System",
+      description: "Which version you are running, and whether one is newer",
     },
   ];
 

@@ -111,7 +111,7 @@ export function PasswordConfirmationModal({
         <Button
           type="button"
           variant="outline"
-          onClick={handleClose}
+          onClick={() => handleClose()}
           disabled={isLoading}
         >
           Cancel
@@ -119,7 +119,7 @@ export function PasswordConfirmationModal({
         <Button
           type="button"
           variant={isDangerous ? "destructive" : "default"}
-          onClick={handleConfirm}
+          onClick={() => handleConfirm()}
           disabled={!password.trim() || isLoading}
         >
           {isLoading ? "Confirming..." : "Confirm"}

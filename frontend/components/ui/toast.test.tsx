@@ -100,6 +100,50 @@ describe("Toaster", () => {
     expect(await screen.findByText("Description only")).toBeInTheDocument();
   });
 
+  it("fills toward the dismissal on the top edge", async () => {
+    render(<Toaster />);
+
+    await act(async () => {
+      fireToast({ title: "Expiring" });
+    });
+
+    await screen.findByText("Expiring");
+    const bar = document.querySelector("[data-slot=toast-progress]");
+
+    expect(bar).not.toBeNull();
+    expect(bar?.getAttribute("style")).toContain("4000ms");
+    expect(bar?.className).toContain("top-0");
+    expect(bar?.className).toContain("origin-left");
+  });
+
+  it("times the bar to a custom duration", async () => {
+    render(<Toaster />);
+
+    await act(async () => {
+      fireToast({ title: "Slow", duration: 9000 });
+    });
+
+    await screen.findByText("Slow");
+
+    expect(
+      document
+        .querySelector("[data-slot=toast-progress]")
+        ?.getAttribute("style"),
+    ).toContain("9000ms");
+  });
+
+  it("omits the bar from a toast that never expires", async () => {
+    render(<Toaster />);
+
+    await act(async () => {
+      fireToast({ title: "Sticky", duration: 0 });
+    });
+
+    await screen.findByText("Sticky");
+
+    expect(document.querySelector("[data-slot=toast-progress]")).toBeNull();
+  });
+
   it("renders a supplied action", async () => {
     render(<Toaster />);
 

@@ -118,8 +118,8 @@ describe("StreamCard content", () => {
 
     expect(screen.queryByText("Streaming")).toBeNull();
     expect(await menuLabels(user)).toEqual([
-      "See User",
-      "See Device",
+      "Go to User",
+      "Go to Device",
       "View Details",
       "Remove Access",
     ]);
@@ -212,7 +212,7 @@ describe("StreamCard navigation", () => {
   it("scrolls to the user", async () => {
     const { user, onNavigateToUser } = renderCard();
 
-    await choose(user, "See User");
+    await choose(user, "Go to User");
 
     expect(onNavigateToUser).toHaveBeenCalledWith("u-1");
   });
@@ -220,7 +220,7 @@ describe("StreamCard navigation", () => {
   it("does not scroll to a user it cannot identify", async () => {
     const { user, onNavigateToUser } = renderCard({ User: undefined });
 
-    await choose(user, "See User");
+    await choose(user, "Go to User");
 
     expect(onNavigateToUser).not.toHaveBeenCalled();
   });
@@ -228,7 +228,7 @@ describe("StreamCard navigation", () => {
   it("scrolls to the device", async () => {
     const { user, onNavigateToDevice } = renderCard();
 
-    await choose(user, "See Device");
+    await choose(user, "Go to Device");
 
     expect(onNavigateToDevice).toHaveBeenCalledWith("u-1", "m-1");
   });
@@ -236,7 +236,7 @@ describe("StreamCard navigation", () => {
   it("does not scroll to a device it cannot identify", async () => {
     const { user, onNavigateToDevice } = renderCard({ Player: undefined });
 
-    await choose(user, "See Device");
+    await choose(user, "Go to Device");
 
     expect(onNavigateToDevice).not.toHaveBeenCalled();
   });
@@ -254,8 +254,8 @@ describe("StreamCard navigation", () => {
       />,
     );
 
-    await choose(user, "See User");
-    await choose(user, "See Device");
+    await choose(user, "Go to User");
+    await choose(user, "Go to Device");
 
     expect(screen.getByText("Arrival (2016)")).toBeInTheDocument();
   });
@@ -271,7 +271,7 @@ describe("StreamCard navigation", () => {
     const { user } = renderCard({ User: undefined, Player: undefined });
     await openMenu(user);
 
-    for (const label of ["See User", "See Device"]) {
+    for (const label of ["Go to User", "Go to Device"]) {
       expect(screen.getByRole("menuitem", { name: label })).toHaveAttribute(
         "aria-disabled",
         "true",
@@ -347,7 +347,7 @@ describe("StreamCard expanding", () => {
   it("does not expand when a navigation entry is used", async () => {
     const { user, onToggleExpand, onNavigateToUser } = renderCard();
 
-    await choose(user, "See User");
+    await choose(user, "Go to User");
 
     expect(onNavigateToUser).toHaveBeenCalled();
     expect(onToggleExpand).not.toHaveBeenCalled();
@@ -450,7 +450,7 @@ describe("StreamCard opening in Plex", () => {
 
   it("labels a track differently from other content", () => {
     const { rerender } = renderCard();
-    expect(screen.getByTitle("Click to open in Plex")).toBeInTheDocument();
+    expect(screen.getByTitle("Open this in Plex")).toBeInTheDocument();
 
     rerender(
       <StreamCard
@@ -462,8 +462,6 @@ describe("StreamCard opening in Plex", () => {
         onRemoveAccess={jest.fn()}
       />,
     );
-    expect(
-      screen.getByTitle("Click to open album in Plex"),
-    ).toBeInTheDocument();
+    expect(screen.getByTitle("Open this album in Plex")).toBeInTheDocument();
   });
 });

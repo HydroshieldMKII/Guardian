@@ -60,7 +60,7 @@ describe("GlobalVersionMismatchBanner", () => {
     const { container } = render(<GlobalVersionMismatchBanner />);
 
     await user.click(
-      screen.getByRole("button", { name: "Dismiss (until page reload)" }),
+      screen.getByRole("button", { name: "Hide this until the page reloads" }),
     );
 
     expect(container).toBeEmptyDOMElement();

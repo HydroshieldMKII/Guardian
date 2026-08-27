@@ -56,7 +56,7 @@ const renderModal = (
     userDevices?: UserDevice[];
     isOpen?: boolean;
     actionLoading?: number | null;
-    shouldShowGrantTempAccess?: (device: UserDevice) => boolean;
+    canGrantTemporaryAccess?: (device: UserDevice) => boolean;
   } = {},
 ) => {
   const onClose = jest.fn();
@@ -73,9 +73,7 @@ const renderModal = (
       onClose={onClose}
       onGrantAccess={onGrantAccess}
       actionLoading={props.actionLoading ?? null}
-      shouldShowGrantTempAccess={
-        props.shouldShowGrantTempAccess ?? (() => true)
-      }
+      canGrantTemporaryAccess={props.canGrantTemporaryAccess ?? (() => true)}
     />,
   );
   return { ...view, onClose, onGrantAccess, user: userEvent.setup() };
@@ -126,7 +124,7 @@ describe("TemporaryAccessModal", () => {
           device({ id: 1, deviceName: "TV" }),
           device({ id: 2, deviceName: "Phone" }),
         ],
-        shouldShowGrantTempAccess: (d) => d.id === 1,
+        canGrantTemporaryAccess: (d) => d.id === 1,
       });
 
       expect(screen.getByText("TV")).toBeInTheDocument();
@@ -134,10 +132,10 @@ describe("TemporaryAccessModal", () => {
     });
 
     it("says when none are eligible", () => {
-      renderModal({ shouldShowGrantTempAccess: () => false });
+      renderModal({ canGrantTemporaryAccess: () => false });
 
       expect(
-        screen.getByText("No devices eligible for temporary access"),
+        screen.getByText("No devices are eligible for temporary access"),
       ).toBeInTheDocument();
       expect(screen.queryByRole("button", { name: /Select All/ })).toBeNull();
     });
@@ -150,7 +148,9 @@ describe("TemporaryAccessModal", () => {
     it("flags a device that already has temporary access", () => {
       hasTemporaryAccess.mockReturnValue(true);
       renderModal();
-      expect(screen.getByText("Has temporary access")).toBeInTheDocument();
+      expect(
+        screen.getByText("Already has temporary access"),
+      ).toBeInTheDocument();
     });
 
     it("counts the selection", async () => {
@@ -202,17 +202,17 @@ describe("TemporaryAccessModal", () => {
       const { user, onGrantAccess } = renderModal();
       await selectDevice(user);
 
-      await user.click(screen.getByRole("button", { name: "1d" }));
+      await user.click(screen.getByRole("button", { name: "1 day" }));
       await user.click(screen.getByRole("button", { name: /Grant Access/ }));
 
       expect(onGrantAccess).toHaveBeenCalledWith([1], 1440, false);
     });
 
     it.each([
-      ["1h", 60],
-      ["3h", 180],
-      ["6h", 360],
-      ["1w", 10080],
+      ["1 hour", 60],
+      ["3 hours", 180],
+      ["6 hours", 360],
+      ["1 week", 10080],
     ])("%s converts to %p minutes", async (label, expected) => {
       const { user, onGrantAccess } = renderModal();
       await selectDevice(user);
@@ -239,7 +239,7 @@ describe("TemporaryAccessModal", () => {
       const { user, onGrantAccess } = renderModal();
       await selectDevice(user);
 
-      await user.click(screen.getByRole("button", { name: /hours/ }));
+      await user.click(screen.getByRole("button", { name: "Duration unit" }));
       await user.click(await screen.findByText("minutes"));
       await user.click(screen.getByRole("button", { name: /Grant Access/ }));
 
@@ -254,7 +254,7 @@ describe("TemporaryAccessModal", () => {
       const { user, onGrantAccess } = renderModal();
       await selectDevice(user);
 
-      await user.click(screen.getByRole("button", { name: /hours/ }));
+      await user.click(screen.getByRole("button", { name: "Duration unit" }));
       await user.click(await screen.findByText(unit));
       await user.click(screen.getByRole("button", { name: /Grant Access/ }));
 
@@ -302,7 +302,7 @@ describe("TemporaryAccessModal", () => {
       const { user } = renderModal();
       await selectDevice(user);
 
-      expect(screen.getByText("Access will expire at:")).toBeInTheDocument();
+      expect(screen.getByText("Access will expire at")).toBeInTheDocument();
     });
   });
 
@@ -460,7 +460,7 @@ describe("TemporaryAccessModal", () => {
         onClose={jest.fn()}
         onGrantAccess={jest.fn()}
         actionLoading={null}
-        shouldShowGrantTempAccess={() => true}
+        canGrantTemporaryAccess={() => true}
       />
     );
 

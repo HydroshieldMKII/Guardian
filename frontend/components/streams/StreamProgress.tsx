@@ -1,5 +1,6 @@
 import React from "react";
-import { formatDuration, getProgressPercentage } from "./SharedComponents";
+import { getProgressPercentage } from "./SharedComponents";
+import { formatClock } from "@/lib/duration";
 
 interface StreamProgressProps {
   session: any;
@@ -22,7 +23,7 @@ export const StreamProgress: React.FC<StreamProgressProps> = ({
         <span
           className={`flex-shrink-0 px-1.5 py-0.5 rounded-md font-medium ${hasArt ? "bg-black/60 text-white" : "text-muted-foreground"}`}
         >
-          {formatDuration(session.viewOffset)}
+          {formatClock(session.viewOffset)}
         </span>
         {/* Status text absolutely centered */}
         <span
@@ -35,7 +36,7 @@ export const StreamProgress: React.FC<StreamProgressProps> = ({
         <span
           className={`flex-shrink-0 px-1.5 py-0.5 rounded-md font-medium ${hasArt ? "bg-black/60 text-white" : "text-muted-foreground"}`}
         >
-          {formatDuration(session.duration)}
+          {formatClock(session.duration)}
         </span>
       </div>
       <div className="w-full bg-muted rounded-full h-1.5 sm:h-2">

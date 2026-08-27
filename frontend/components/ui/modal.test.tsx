@@ -156,4 +156,19 @@ describe("ModalBody", () => {
     expect(ref.current).toBeInstanceOf(HTMLDivElement);
     expect(ref.current?.className).toContain("overflow-y-auto");
   });
+
+  it("keeps its scrollbar on show, so more content below is never hidden", () => {
+    const ref = { current: null as HTMLDivElement | null };
+
+    render(
+      <Modal open onOpenChange={jest.fn()}>
+        <ModalHeader title="Titled" />
+        <ModalBody ref={ref}>
+          <p>body</p>
+        </ModalBody>
+      </Modal>,
+    );
+
+    expect(ref.current?.className).toContain("scrollbar-visible");
+  });
 });

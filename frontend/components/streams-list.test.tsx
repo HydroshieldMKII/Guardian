@@ -124,7 +124,9 @@ describe("StreamsList", () => {
       const user = userEvent.setup();
       render(<StreamsList onRefresh={onRefresh} />);
 
-      expect(screen.getByText("Connection Error")).toBeInTheDocument();
+      expect(
+        screen.getByText("Guardian cannot reach the server"),
+      ).toBeInTheDocument();
       expect(screen.getByText("backend unreachable")).toBeInTheDocument();
 
       await user.click(screen.getByRole("button", { name: "Try Again" }));
@@ -171,7 +173,10 @@ describe("StreamsList", () => {
       const user = userEvent.setup();
       render(<StreamsList />);
 
-      await user.type(screen.getByPlaceholderText(/Search streams/), term);
+      await user.type(
+        screen.getByPlaceholderText(/Search by user, device, title or app/),
+        term,
+      );
 
       expect(screen.getByText(`card:${expected}`)).toBeInTheDocument();
       expect(screen.getByText("Showing 1 of 2 streams")).toBeInTheDocument();
@@ -182,7 +187,10 @@ describe("StreamsList", () => {
       const user = userEvent.setup();
       render(<StreamsList />);
 
-      await user.type(screen.getByPlaceholderText(/Search streams/), "fringe");
+      await user.type(
+        screen.getByPlaceholderText(/Search by user, device, title or app/),
+        "fringe",
+      );
 
       expect(screen.getByText("card:s-3")).toBeInTheDocument();
     });
@@ -191,7 +199,10 @@ describe("StreamsList", () => {
       const user = userEvent.setup();
       render(<StreamsList />);
 
-      await user.type(screen.getByPlaceholderText(/Search streams/), "zzz");
+      await user.type(
+        screen.getByPlaceholderText(/Search by user, device, title or app/),
+        "zzz",
+      );
 
       expect(
         screen.getByText("No streams match your search"),
@@ -212,7 +223,10 @@ describe("StreamsList", () => {
       const user = userEvent.setup();
       render(<StreamsList />);
 
-      await user.type(screen.getByPlaceholderText(/Search streams/), "x");
+      await user.type(
+        screen.getByPlaceholderText(/Search by user, device, title or app/),
+        "x",
+      );
 
       expect(
         screen.getByText("No streams match your search"),

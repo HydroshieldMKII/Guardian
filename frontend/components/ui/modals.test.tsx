@@ -87,6 +87,16 @@ describe("ConfirmationModal", () => {
     expect(onClose).toHaveBeenCalled();
   });
 
+  it("hands the callbacks no arguments, so a click event is never mistaken for one", async () => {
+    const { user, onConfirm, onClose } = renderModal();
+
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    expect(onConfirm).toHaveBeenCalledWith();
+
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(onClose).toHaveBeenCalledWith();
+  });
+
   it("closes on escape", async () => {
     const { user, onClose } = renderModal();
 

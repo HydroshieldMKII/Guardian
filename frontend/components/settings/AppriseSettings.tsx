@@ -110,7 +110,7 @@ export function AppriseSettings({
   return (
     <SettingsCard
       title="Apprise Notifications"
-      description="Configure Apprise for sending notifications to various services like Discord, Slack, Telegram, and more."
+      description="Send Guardian notifications on to Discord, Slack, Telegram, Pushover and many others."
       footer={
         <div className="space-y-3">
           <div className="space-y-1">
@@ -118,13 +118,13 @@ export function AppriseSettings({
               Test Apprise Connection
             </p>
             <p className="text-xs text-muted-foreground">
-              Send a test notification to verify your configuration
+              Send a test notification to every service URL above
             </p>
           </div>
 
           {hasUnsavedChanges && (
             <Banner tone="warning">
-              Save your changes before testing apprise connection.
+              Save your changes before testing the connection.
             </Banner>
           )}
 
@@ -143,34 +143,29 @@ export function AppriseSettings({
             className="w-full"
           >
             {testingConnection && <Loader2 className="size-4 animate-spin" />}
-            {testingConnection
-              ? "Testing..."
-              : isAppriseEnabled
-                ? "Send a test notification"
-                : "Send Test"}
+            {testingConnection ? "Testing..." : "Send Test Notification"}
           </Button>
 
           {!isAppriseEnabled && !hasUnsavedChanges && (
             <p className="text-center text-xs text-muted-foreground">
-              Enable apprise to test the connection.
+              Turn Apprise on to test the connection.
             </p>
           )}
         </div>
       }
     >
       <Banner tone="info">
-        Apprise allows you to send notifications to 100+ services including
-        Discord, Slack, Telegram, Pushover, and more. Each service URL follows a
-        specific format.{" "}
+        Apprise forwards notifications to over a hundred services. Each one has
+        its own URL format.{" "}
         <a
           href="https://github.com/caronc/apprise/wiki"
           target="_blank"
           rel="noopener noreferrer"
           className="underline underline-offset-2"
         >
-          View Apprise Documentation
+          See the Apprise documentation
         </a>{" "}
-        to get your service URLs.
+        for the URL your service expects.
       </Banner>
 
       {enabledSetting && (

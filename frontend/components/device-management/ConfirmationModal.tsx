@@ -16,8 +16,9 @@ import {
 import { RefreshCw } from "lucide-react";
 import { UserDevice } from "@/types";
 
-type ConfirmAction = "approve" | "reject" | "delete" | "toggle";
-type ResolvedAction = "approve" | "reject" | "delete";
+type ConfirmAction =
+  "approve" | "reject" | "delete" | "toggle" | "removeTemporaryAccess";
+type ResolvedAction = "approve" | "reject" | "delete" | "removeTemporaryAccess";
 
 interface ConfirmActionData {
   device: UserDevice;
@@ -37,12 +38,14 @@ const ACTION_LABELS: Record<ResolvedAction, string> = {
   approve: "Approve Device",
   reject: "Reject Device",
   delete: "Delete Device",
+  removeTemporaryAccess: "Remove Temporary Access",
 };
 
 const ACTION_TONES: Record<ResolvedAction, Tone> = {
   approve: "positive",
   reject: "danger",
   delete: "danger",
+  removeTemporaryAccess: "warning",
 };
 
 const resolveAction = (
@@ -56,7 +59,10 @@ const resolveAction = (
 const isDestructiveOutline = (
   action: ConfirmAction,
   resolved: ResolvedAction,
-) => action === "delete" || (action === "toggle" && resolved === "reject");
+) =>
+  action === "delete" ||
+  action === "removeTemporaryAccess" ||
+  (action === "toggle" && resolved === "reject");
 
 export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   confirmAction,
@@ -101,12 +107,16 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
       </ModalBody>
 
       <ModalFooter>
-        <Button variant="outline" onClick={onCancel} disabled={isRunning}>
+        <Button
+          variant="outline"
+          onClick={() => onCancel()}
+          disabled={isRunning}
+        >
           Cancel
         </Button>
         <Button
           variant={outlined ? "outline" : "default"}
-          onClick={onConfirm}
+          onClick={() => onConfirm()}
           disabled={isRunning}
           className={toneButton(tone, outlined ? "outline" : "solid")}
         >

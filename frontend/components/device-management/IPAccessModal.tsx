@@ -20,34 +20,43 @@ import {
 import { UserPreference, UserDevice } from "@/types";
 import { isValidIPOrCIDR, getNetworkType } from "@/lib/ipUtils";
 
+const NETWORK_TYPE_LABEL: Record<ReturnType<typeof getNetworkType>, string> = {
+  lan: "local network",
+  wan: "internet",
+  unknown: "unrecognised address",
+};
+
 const NETWORK_OPTIONS = [
   {
     value: "both" as const,
-    title: "Both (LAN + WAN)",
-    description: "Allow streaming from both local network and internet",
+    title: "Local network and internet",
+    description: "Allow streaming from anywhere, at home or away.",
   },
   {
     value: "lan" as const,
-    title: "LAN only",
-    description: "Only allow streaming from local network (same subnet)",
+    title: "Local network only",
+    description:
+      "Allow streaming only from a device on the same network as the Plex server.",
   },
   {
     value: "wan" as const,
-    title: "WAN only",
-    description: "Only allow streaming from internet (remote access)",
+    title: "Internet only",
+    description:
+      "Allow streaming only from a device outside the Plex server's network.",
   },
 ];
 
 const IP_OPTIONS = [
   {
     value: "all" as const,
-    title: "Any IP address",
-    description: "Allow streaming from any IP address",
+    title: "Any address",
+    description: "Allow streaming from any IP address.",
   },
   {
     value: "restricted" as const,
-    title: "Restricted list",
-    description: "Allow only specific IP addresses or CIDR ranges",
+    title: "Only listed addresses",
+    description:
+      "Allow streaming only from the IP addresses and address ranges you list below.",
   },
 ];
 
@@ -110,13 +119,13 @@ export const IPAccessModal: React.FC<IPAccessModalProps> = ({
 
     if (!validateIP(trimmedIP)) {
       setIpError(
-        "Please enter a valid IP address or CIDR range (e.g. 192.168.1.1, 192.168.1.0/24, 2001:db8::1 or 2001:db8::/32)",
+        "Enter a valid IP address or address range, for example 192.168.1.1, 192.168.1.0/24, 2001:db8::1 or 2001:db8::/32",
       );
       return;
     }
 
     if (allowedIPs.includes(trimmedIP)) {
-      setIpError("This IP address is already in the list");
+      setIpError("This address is already in the list");
       return;
     }
 
@@ -159,11 +168,12 @@ export const IPAccessModal: React.FC<IPAccessModalProps> = ({
         title="IP & Network Access"
         description={
           <>
-            Configure network and IP-based access restrictions for{" "}
+            Choose where{" "}
             <span className="font-medium text-foreground">
               {user.username || user.userId}
-            </span>
-            .
+            </span>{" "}
+            is allowed to stream from. These rules apply to every one of their
+            devices.
           </>
         }
       />
@@ -171,7 +181,7 @@ export const IPAccessModal: React.FC<IPAccessModalProps> = ({
       <ModalBody className="space-y-8">
         <Section
           title="Network Policy"
-          description="Control whether streaming is allowed from the local network, the internet, or both."
+          description="Allow streaming from the local network, from the internet, or from both."
         >
           <OptionGroup className="sm:grid-cols-3">
             {NETWORK_OPTIONS.map((option) => (
@@ -188,7 +198,7 @@ export const IPAccessModal: React.FC<IPAccessModalProps> = ({
 
         <Section
           title="IP Access Policy"
-          description="Restrict streaming to specific IP addresses or ranges."
+          description="Narrow access further to a list of specific IP addresses or address ranges."
         >
           <OptionGroup className="sm:grid-cols-2">
             {IP_OPTIONS.map((option) => (
@@ -214,7 +224,7 @@ export const IPAccessModal: React.FC<IPAccessModalProps> = ({
                       size="sm"
                       onClick={handleAutoFillCurrentIPs}
                     >
-                      Add Current Device IPs
+                      Add Current Device Addresses
                     </Button>
                   ) : undefined
                 }
@@ -222,7 +232,7 @@ export const IPAccessModal: React.FC<IPAccessModalProps> = ({
                 <div className="flex gap-2">
                   <Input
                     id="new-ip"
-                    placeholder="e.g. 192.168.1.100, 192.168.1.0/24 or 2001:db8::/32"
+                    placeholder="192.168.1.100, 192.168.1.0/24 or 2001:db8::/32"
                     value={newIP}
                     onChange={(e) => {
                       setNewIP(e.target.value);
@@ -247,8 +257,8 @@ export const IPAccessModal: React.FC<IPAccessModalProps> = ({
               {allowedIPs.length > 0 && (
                 <div className="space-y-2">
                   <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground/80">
-                    {allowedIPs.length} IP address
-                    {allowedIPs.length === 1 ? "" : "es"} configured
+                    {allowedIPs.length} address
+                    {allowedIPs.length === 1 ? "" : "es"} allowed
                   </p>
                   <PillRow>
                     {allowedIPs.map((ip, index) => (
@@ -267,8 +277,8 @@ export const IPAccessModal: React.FC<IPAccessModalProps> = ({
               {noIPsConfigured && (
                 <EmptyState
                   className="border-amber-500/30 bg-amber-500/5"
-                  title="No IP addresses configured"
-                  description="Add at least one IP address to restrict access, otherwise all access will be blocked."
+                  title="No addresses allowed yet"
+                  description="Add at least one address. While this list is empty every stream from this user is blocked."
                 />
               )}
             </Panel>
@@ -277,7 +287,7 @@ export const IPAccessModal: React.FC<IPAccessModalProps> = ({
 
         {userDevices.length > 0 && (
           <Section
-            title={`Current device IPs for ${user.username || user.userId}`}
+            title={`Addresses ${user.username || user.userId} is streaming from`}
           >
             <PillRow>
               {devicesWithIP.map((device) => (
@@ -285,9 +295,7 @@ export const IPAccessModal: React.FC<IPAccessModalProps> = ({
                   <span className="max-w-[140px] truncate font-sans">
                     {device.deviceName || device.deviceIdentifier}
                   </span>
-                  {`${device.ipAddress} (${getNetworkType(
-                    device.ipAddress,
-                  ).toUpperCase()})`}
+                  {`${device.ipAddress} (${NETWORK_TYPE_LABEL[getNetworkType(device.ipAddress)]})`}
                 </Chip>
               ))}
             </PillRow>

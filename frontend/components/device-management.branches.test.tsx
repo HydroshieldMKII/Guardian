@@ -69,11 +69,10 @@ type GroupCardProps = {
     user: { userId: string; username?: string };
     devices: UserDevice[];
   };
-  hasIPPolicies: boolean;
   onUpdateUserPreference: (id: string, block: boolean | null) => void;
   onToggleUserVisibility: (id: string) => void;
   onShowHistory: (id: string) => void;
-  onGrantUserTempAccess: (id: string) => void;
+  onGrantUserTemporaryAccess: (id: string) => void;
   onShowTimePolicy: (id: string, deviceIdentifier?: string) => void;
   onApprove: (d: UserDevice) => void;
   onReject: (d: UserDevice) => void;
@@ -85,11 +84,10 @@ type GroupCardProps = {
 jest.mock("@/components/device-management/UserGroupCard", () => ({
   UserGroupCard: ({
     group,
-    hasIPPolicies,
     onUpdateUserPreference,
     onToggleUserVisibility,
     onShowHistory,
-    onGrantUserTempAccess,
+    onGrantUserTemporaryAccess,
     onShowTimePolicy,
     onApprove,
     onReject,
@@ -102,7 +100,6 @@ jest.mock("@/components/device-management/UserGroupCard", () => ({
     return (
       <div data-user-id={id}>
         <span>{`order:${id}`}</span>
-        <span>{`ip-badge:${id}:${hasIPPolicies}`}</span>
         <button onClick={() => onUpdateUserPreference(id, true)}>
           {`block ${id}`}
         </button>
@@ -111,9 +108,9 @@ jest.mock("@/components/device-management/UserGroupCard", () => ({
         >{`hide ${id}`}</button>
         <button onClick={() => onShowHistory(id)}>{`history ${id}`}</button>
         <button
-          onClick={() => onGrantUserTempAccess(id)}
+          onClick={() => onGrantUserTemporaryAccess(id)}
         >{`temp ${id}`}</button>
-        <button onClick={() => onGrantUserTempAccess("ghost")}>
+        <button onClick={() => onGrantUserTemporaryAccess("ghost")}>
           {`temp ghost via ${id}`}
         </button>
         <button onClick={() => onShowTimePolicy("ghost")}>
@@ -415,8 +412,9 @@ describe("temporary access duration wording", () => {
     await user.click(screen.getByRole("button", { name: "grant batch" }));
 
     await waitFor(() =>
-      expect(toastWithTitle("Partial Success")[0]).toMatchObject({
-        description: "1 devices granted access, 1 failed",
+      expect(toastWithTitle("Some Devices Were Not Granted Access")[0]).toMatchObject({
+        description:
+          "1 of 2 devices were granted temporary access. Try the remaining 1 again.",
       }),
     );
   });
@@ -432,7 +430,7 @@ describe("temporary access duration wording", () => {
 
     await waitFor(() =>
       expect(lastToast()).toMatchObject({
-        description: "Failed to grant temporary access to devices",
+        description: "Failed to grant temporary access to these devices",
       }),
     );
     expect(toastWithTitle("Temporary Access Granted")).toHaveLength(0);
@@ -582,7 +580,7 @@ describe("search filtering", () => {
     });
 
     await user.type(
-      screen.getByPlaceholderText("Search by username or device..."),
+      screen.getByPlaceholderText("Search by user or device"),
       "kitchen",
     );
 
@@ -604,7 +602,7 @@ describe("search filtering", () => {
     });
 
     await user.type(
-      screen.getByPlaceholderText("Search by username or device..."),
+      screen.getByPlaceholderText("Search by user or device"),
       "zzz",
     );
 
@@ -617,7 +615,7 @@ describe("search filtering", () => {
     });
 
     await user.type(
-      screen.getByPlaceholderText("Search by username or device..."),
+      screen.getByPlaceholderText("Search by user or device"),
       "tvos",
     );
 
@@ -631,47 +629,11 @@ describe("search filtering", () => {
     });
 
     await user.type(
-      screen.getByPlaceholderText("Search by username or device..."),
+      screen.getByPlaceholderText("Search by user or device"),
       "plexamp",
     );
 
     expect(screen.getByText("order:u-1")).toBeInTheDocument();
-  });
-});
-
-describe("IP policy badge", () => {
-  it("is off for a user with no stored preference", async () => {
-    await renderPanel({ devices: [device({ userId: "u-9" })], users: [] });
-
-    expect(screen.getByText("ip-badge:u-9:false")).toBeInTheDocument();
-  });
-
-  it("is on when allowed IPs are stored as a non-empty string", async () => {
-    await renderPanel({
-      users: [preference({ allowedIPs: "10.0.0.0/8" as unknown as string[] })],
-    });
-
-    expect(screen.getByText("ip-badge:u-1:true")).toBeInTheDocument();
-  });
-
-  it("is off when allowed IPs are stored as a blank string", async () => {
-    await renderPanel({
-      users: [preference({ allowedIPs: "   " as unknown as string[] })],
-    });
-
-    expect(screen.getByText("ip-badge:u-1:false")).toBeInTheDocument();
-  });
-
-  it("is on for a custom network policy", async () => {
-    await renderPanel({ users: [preference({ networkPolicy: "lan" })] });
-
-    expect(screen.getByText("ip-badge:u-1:true")).toBeInTheDocument();
-  });
-
-  it("is on for a custom IP access policy", async () => {
-    await renderPanel({ users: [preference({ ipAccessPolicy: "restricted" })] });
-
-    expect(screen.getByText("ip-badge:u-1:true")).toBeInTheDocument();
   });
 });
 
@@ -890,7 +852,7 @@ describe("hidden users", () => {
     await waitFor(() => expect(toggleUserVisibility).toHaveBeenCalledWith("u-2"));
     expect(lastToast()).toMatchObject({
       title: "User Shown",
-      description: "bob is now visible in the user list",
+      description: "bob is back in the main user list",
     });
     expect(getHiddenUsers).toHaveBeenCalledTimes(2);
   });
@@ -1090,7 +1052,7 @@ describe("preference updates without a refresh callback", () => {
     await user.click(screen.getByRole("button", { name: "block u-1" }));
 
     await waitFor(() =>
-      expect(lastToast()).toMatchObject({ title: "Device Policy Updated" }),
+      expect(lastToast()).toMatchObject({ title: "Default Device Policy Updated" }),
     );
   });
 
@@ -1103,7 +1065,7 @@ describe("preference updates without a refresh callback", () => {
     await waitFor(() =>
       expect(lastToast()).toMatchObject({
         title: "Update Failed",
-        description: "Failed to update device policy",
+        description: "Failed to update the default device policy",
       }),
     );
   });

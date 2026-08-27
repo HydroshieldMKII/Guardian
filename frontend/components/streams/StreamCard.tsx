@@ -92,13 +92,13 @@ export const StreamCard: React.FC<StreamCardProps> = ({
 
   const actions: Action[] = [
     {
-      label: "See User",
+      label: "Go to User",
       icon: User,
       disabled: !canSeeUser,
       onSelect: () => stream.User?.id && onNavigateToUser?.(stream.User.id),
     },
     {
-      label: "See Device",
+      label: "Go to Device",
       icon: MonitorSmartphone,
       disabled: !canSeeDevice,
       onSelect: () =>
@@ -162,8 +162,8 @@ export const StreamCard: React.FC<StreamCardProps> = ({
                   className="max-w-full cursor-pointer truncate text-left hover:underline"
                   title={
                     stream.type === "track"
-                      ? "Click to open album in Plex"
-                      : "Click to open in Plex"
+                      ? "Open this album in Plex"
+                      : "Open this in Plex"
                   }
                 >
                   {getContentTitle(stream)}

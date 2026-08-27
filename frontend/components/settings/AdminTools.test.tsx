@@ -49,8 +49,8 @@ jest.mock("@/components/ui/confirmation-modal", () => ({
     isOpen ? (
       <div>
         <span>{`confirm:${title}`}</span>
-        <button onClick={() => onConfirm()}>{`yes ${title}`}</button>
-        <button onClick={() => onClose()}>{`no ${title}`}</button>
+        <button onClick={onConfirm}>{`yes ${title}`}</button>
+        <button onClick={onClose}>{`no ${title}`}</button>
       </div>
     ) : null,
 }));
@@ -128,7 +128,7 @@ describe("AdminTools post-reload notice", () => {
 
     expect(toast).toHaveBeenCalledWith(
       expect.objectContaining({
-        description: "New settings have been successfully applied.",
+        description: "Guardian is running on its default settings again.",
       }),
     );
     expect(localStorage.getItem("guardianResetSuccess")).toBeNull();
@@ -145,16 +145,13 @@ describe.each([
   ["Clear Session History", () => clearSessionHistory, true],
   ["Delete All Devices", () => deleteAllDevices, true],
 ] as const)("AdminTools %s", (label, getMock, dangerous) => {
-  const modalTitle =
-    label === "Clear Session History" ? "Clear All Session History" : label;
-
   it("asks for confirmation, then a password, then runs", async () => {
     const { user } = renderPanel();
 
     await user.click(screen.getByRole("button", { name: label }));
-    expect(screen.getByText(`confirm:${modalTitle}`)).toBeInTheDocument();
+    expect(screen.getByText(`confirm:${label}`)).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: `yes ${modalTitle}` }));
+    await user.click(screen.getByRole("button", { name: `yes ${label}` }));
     expect(
       screen.getByText(`password:${label}:${dangerous}`),
     ).toBeInTheDocument();
@@ -172,7 +169,7 @@ describe.each([
     const { user } = renderPanel();
 
     await user.click(screen.getByRole("button", { name: label }));
-    await user.click(screen.getByRole("button", { name: `yes ${modalTitle}` }));
+    await user.click(screen.getByRole("button", { name: `yes ${label}` }));
     await user.click(screen.getByRole("button", { name: "submit password" }));
 
     await waitFor(() =>
@@ -193,7 +190,7 @@ describe.each([
     const { user } = renderPanel();
 
     await user.click(screen.getByRole("button", { name: label }));
-    await user.click(screen.getByRole("button", { name: `yes ${modalTitle}` }));
+    await user.click(screen.getByRole("button", { name: `yes ${label}` }));
     await user.click(screen.getByRole("button", { name: "submit password" }));
 
     await waitFor(() =>
@@ -207,9 +204,9 @@ describe.each([
     const { user } = renderPanel();
 
     await user.click(screen.getByRole("button", { name: label }));
-    await user.click(screen.getByRole("button", { name: `no ${modalTitle}` }));
+    await user.click(screen.getByRole("button", { name: `no ${label}` }));
 
-    expect(screen.queryByText(`confirm:${modalTitle}`)).toBeNull();
+    expect(screen.queryByText(`confirm:${label}`)).toBeNull();
     expect(getMock()).not.toHaveBeenCalled();
   });
 
@@ -217,12 +214,73 @@ describe.each([
     const { user } = renderPanel();
 
     await user.click(screen.getByRole("button", { name: label }));
-    await user.click(screen.getByRole("button", { name: `yes ${modalTitle}` }));
+    await user.click(screen.getByRole("button", { name: `yes ${label}` }));
     await user.click(screen.getByRole("button", { name: "dismiss password" }));
 
     expect(screen.queryByText(/^password:/)).toBeNull();
     expect(getMock()).not.toHaveBeenCalled();
   });
+});
+
+describe("AdminTools dangerous operations", () => {
+  const operations = [
+    {
+      trigger: "Reset Stream Counts",
+      confirm: "Reset Stream Counts",
+      prompt: "Reset Stream Counts:false",
+      endpoint: () => resetStreamCounts,
+    },
+    {
+      trigger: "Clear Session History",
+      confirm: "Clear Session History",
+      prompt: "Clear Session History:true",
+      endpoint: () => clearSessionHistory,
+    },
+    {
+      trigger: "Delete All Devices",
+      confirm: "Delete All Devices",
+      prompt: "Delete All Devices:true",
+      endpoint: () => deleteAllDevices,
+    },
+    {
+      trigger: "Factory Reset",
+      confirm: "Factory Reset",
+      prompt: "Factory Reset:true",
+      endpoint: () => resetDatabase,
+    },
+  ];
+
+  it.each(operations)(
+    "asks $trigger for a password instead of taking the click event as one",
+    async ({ trigger, confirm, prompt, endpoint }) => {
+      const { user } = renderPanel();
+
+      await user.click(screen.getByRole("button", { name: trigger }));
+      await user.click(screen.getByRole("button", { name: `yes ${confirm}` }));
+
+      expect(screen.getByText(`password:${prompt}`)).toBeInTheDocument();
+      expect(endpoint()).not.toHaveBeenCalled();
+
+      await user.click(screen.getByRole("button", { name: "submit password" }));
+      await waitFor(() => expect(endpoint()).toHaveBeenCalledWith("hunter2"));
+    },
+  );
+
+  it.each(operations)(
+    "only ever sends $trigger a string password",
+    async ({ trigger, confirm, endpoint }) => {
+      const { user } = renderPanel();
+
+      await user.click(screen.getByRole("button", { name: trigger }));
+      await user.click(screen.getByRole("button", { name: `yes ${confirm}` }));
+      await user.click(screen.getByRole("button", { name: "submit password" }));
+
+      await waitFor(() => expect(endpoint()).toHaveBeenCalled());
+      for (const call of endpoint().mock.calls) {
+        expect(typeof call[0]).toBe("string");
+      }
+    },
+  );
 });
 
 describe("AdminTools factory reset", () => {
@@ -360,7 +418,7 @@ describe("AdminTools import", () => {
 
     await waitFor(() =>
       expect(toast).toHaveBeenCalledWith(
-        expect.objectContaining({ title: "Invalid file" }),
+        expect.objectContaining({ title: "Invalid File" }),
       ),
     );
     expect(importDatabase).not.toHaveBeenCalled();
@@ -434,7 +492,7 @@ describe("AdminTools import", () => {
       await selectFile(JSON.stringify({ version: "1.3.5" }));
 
       expect(
-        screen.getByText("confirm:Version Mismatch Warning"),
+        screen.getByText("confirm:Exported by a Different Version"),
       ).toBeInTheDocument();
       expect(importDatabase).not.toHaveBeenCalled();
     });
@@ -444,7 +502,9 @@ describe("AdminTools import", () => {
       await selectFile(JSON.stringify({ version: "1.3.5" }));
 
       await user.click(
-        screen.getByRole("button", { name: "yes Version Mismatch Warning" }),
+        screen.getByRole("button", {
+          name: "yes Exported by a Different Version",
+        }),
       );
 
       await waitFor(() => expect(importDatabase).toHaveBeenCalled());
@@ -455,7 +515,9 @@ describe("AdminTools import", () => {
       await selectFile(JSON.stringify({ version: "1.3.5" }));
 
       await user.click(
-        screen.getByRole("button", { name: "no Version Mismatch Warning" }),
+        screen.getByRole("button", {
+          name: "no Exported by a Different Version",
+        }),
       );
 
       expect(screen.queryByText(/^confirm:Version/)).toBeNull();

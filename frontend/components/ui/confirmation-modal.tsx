@@ -56,12 +56,12 @@ export function ConfirmationModal({
       {children && <ModalBody>{children}</ModalBody>}
 
       <ModalFooter>
-        <Button variant="outline" onClick={onClose} disabled={loading}>
+        <Button variant="outline" onClick={() => onClose()} disabled={loading}>
           {cancelText}
         </Button>
         <Button
           variant={destructive ? "outline" : "default"}
-          onClick={onConfirm}
+          onClick={() => onConfirm()}
           disabled={loading}
           className={destructive ? toneButton("danger") : ""}
         >

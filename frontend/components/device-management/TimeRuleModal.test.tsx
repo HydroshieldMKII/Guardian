@@ -113,9 +113,7 @@ describe("TimeRuleModal loading", () => {
 
   it("says when there are no rules", async () => {
     await renderModal();
-    expect(
-      screen.getByText("No blocking rules configured."),
-    ).toBeInTheDocument();
+    expect(screen.getByText("No rules yet")).toBeInTheDocument();
   });
 
   it("lists existing rules", async () => {
@@ -163,7 +161,9 @@ describe("TimeRuleModal loading", () => {
     await renderModal();
 
     expect(toast).toHaveBeenCalledWith(
-      expect.objectContaining({ description: "Failed to load blocking rules" }),
+      expect.objectContaining({
+        description: "Failed to load this user's time schedule",
+      }),
     );
     expect(consoleError).toHaveBeenCalledWith(
       "Failed to load rules:",
@@ -186,9 +186,7 @@ describe("TimeRuleModal creating a rule", () => {
   it("refuses an empty name", async () => {
     const { user } = await renderModal();
 
-    expect(
-      screen.getByRole("button", { name: /Create Blocking Rule/ }),
-    ).toBeDisabled();
+    expect(screen.getByRole("button", { name: /Create Rule/ })).toBeDisabled();
     expect(createTimeRule).not.toHaveBeenCalled();
   });
 
@@ -196,9 +194,7 @@ describe("TimeRuleModal creating a rule", () => {
     const { user } = await renderModal();
 
     await user.type(nameField(), "Sleep time");
-    await user.click(
-      screen.getByRole("button", { name: /Create Blocking Rule/ }),
-    );
+    await user.click(screen.getByRole("button", { name: /Create Rule/ }));
 
     await waitFor(() =>
       expect(createTimeRule).toHaveBeenCalledWith(
@@ -221,9 +217,7 @@ describe("TimeRuleModal creating a rule", () => {
     const { user } = await renderModal({ deviceIdentifier: "device-1" });
 
     await user.type(nameField(), "Sleep time");
-    await user.click(
-      screen.getByRole("button", { name: /Create Blocking Rule/ }),
-    );
+    await user.click(screen.getByRole("button", { name: /Create Rule/ }));
 
     await waitFor(() =>
       expect(createTimeRule).toHaveBeenCalledWith(
@@ -240,9 +234,7 @@ describe("TimeRuleModal creating a rule", () => {
     const { user } = await renderModal();
 
     await user.type(nameField(), "Overlapping");
-    await user.click(
-      screen.getByRole("button", { name: /Create Blocking Rule/ }),
-    );
+    await user.click(screen.getByRole("button", { name: /Create Rule/ }));
 
     await waitFor(() =>
       expect(toast).toHaveBeenCalledWith(
@@ -259,9 +251,7 @@ describe("TimeRuleModal creating a rule", () => {
     const { user } = await renderModal();
 
     await user.type(nameField(), "Adjacent");
-    await user.click(
-      screen.getByRole("button", { name: /Create Blocking Rule/ }),
-    );
+    await user.click(screen.getByRole("button", { name: /Create Rule/ }));
 
     await waitFor(() => expect(createTimeRule).toHaveBeenCalled());
   });
@@ -273,9 +263,7 @@ describe("TimeRuleModal creating a rule", () => {
     const { user } = await renderModal();
 
     await user.type(nameField(), "Other day");
-    await user.click(
-      screen.getByRole("button", { name: /Create Blocking Rule/ }),
-    );
+    await user.click(screen.getByRole("button", { name: /Create Rule/ }));
 
     await waitFor(() => expect(createTimeRule).toHaveBeenCalled());
   });
@@ -285,9 +273,7 @@ describe("TimeRuleModal creating a rule", () => {
     const { user } = await renderModal();
 
     await user.type(nameField(), "Sleep time");
-    await user.click(
-      screen.getByRole("button", { name: /Create Blocking Rule/ }),
-    );
+    await user.click(screen.getByRole("button", { name: /Create Rule/ }));
 
     await waitFor(() =>
       expect(toast).toHaveBeenCalledWith(
@@ -301,9 +287,7 @@ describe("TimeRuleModal creating a rule", () => {
     const { user } = await renderModal();
 
     await user.type(nameField(), "Sleep time");
-    await user.click(
-      screen.getByRole("button", { name: /Create Blocking Rule/ }),
-    );
+    await user.click(screen.getByRole("button", { name: /Create Rule/ }));
 
     await waitFor(() =>
       expect(toast).toHaveBeenCalledWith(
@@ -323,9 +307,7 @@ describe("TimeRuleModal creating a rule", () => {
     await user.type(times[1], "12:45");
 
     await user.type(nameField(), "Morning");
-    await user.click(
-      screen.getByRole("button", { name: /Create Blocking Rule/ }),
-    );
+    await user.click(screen.getByRole("button", { name: /Create Rule/ }));
 
     await waitFor(() =>
       expect(createTimeRule).toHaveBeenCalledWith(
@@ -341,9 +323,7 @@ describe("TimeRuleModal creating a rule", () => {
     await user.type(nameField(), "Friday rule");
     await user.click(screen.getByRole("button", { name: /Sunday/ }));
     await user.click(await screen.findByText("Friday"));
-    await user.click(
-      screen.getByRole("button", { name: /Create Blocking Rule/ }),
-    );
+    await user.click(screen.getByRole("button", { name: /Create Rule/ }));
 
     await waitFor(() =>
       expect(createTimeRule).toHaveBeenCalledWith(
@@ -567,9 +547,7 @@ describe("TimeRuleModal deleting", () => {
     const { user } = await renderModal();
 
     await user.click(screen.getByRole("button", { name: /Delete All/ }));
-    expect(
-      screen.getByText("dialog:Delete All Blocking Rules?"),
-    ).toBeInTheDocument();
+    expect(screen.getByText("dialog:Delete every rule?")).toBeInTheDocument();
 
     await user.click(screen.getByText("confirm dialog"));
 
@@ -603,15 +581,13 @@ describe("TimeRuleModal deleting", () => {
 
 describe("TimeRuleModal presets", () => {
   it.each([
-    ["Weekdays Only", "weekdays-only"],
-    ["Weekends Only", "weekends-only"],
-  ])("applies the %s preset", async (label, presetType) => {
+    ["Allow Weekdays Only", "weekdays-only", "Allow weekdays only?"],
+    ["Allow Weekends Only", "weekends-only", "Allow weekends only?"],
+  ])("applies the %s preset", async (label, presetType, dialogTitle) => {
     const { user } = await renderModal();
 
     await user.click(screen.getByRole("button", { name: label }));
-    expect(
-      screen.getByText(`dialog:Apply ${presetType} Preset?`),
-    ).toBeInTheDocument();
+    expect(screen.getByText(`dialog:${dialogTitle}`)).toBeInTheDocument();
 
     await user.click(screen.getByText("confirm dialog"));
 
@@ -623,7 +599,9 @@ describe("TimeRuleModal presets", () => {
   it("can be abandoned", async () => {
     const { user } = await renderModal();
 
-    await user.click(screen.getByRole("button", { name: "Weekdays Only" }));
+    await user.click(
+      screen.getByRole("button", { name: "Allow Weekdays Only" }),
+    );
     await user.click(screen.getByText("cancel dialog"));
 
     expect(createPreset).not.toHaveBeenCalled();
@@ -633,13 +611,15 @@ describe("TimeRuleModal presets", () => {
     createPreset.mockRejectedValue({});
     const { user } = await renderModal();
 
-    await user.click(screen.getByRole("button", { name: "Weekdays Only" }));
+    await user.click(
+      screen.getByRole("button", { name: "Allow Weekdays Only" }),
+    );
     await user.click(screen.getByText("confirm dialog"));
 
     await waitFor(() =>
       expect(toast).toHaveBeenCalledWith(
         expect.objectContaining({
-          description: "Failed to create weekdays-only preset",
+          description: "Failed to apply the preset",
         }),
       ),
     );
@@ -674,7 +654,9 @@ describe("TimeRuleModal presets", () => {
     createPreset.mockRejectedValue(new Error("server said no"));
     const { user } = await renderModal();
 
-    await user.click(screen.getByRole("button", { name: "Weekdays Only" }));
+    await user.click(
+      screen.getByRole("button", { name: "Allow Weekdays Only" }),
+    );
     await user.click(screen.getByText("confirm dialog"));
 
     await waitFor(() =>
@@ -788,11 +770,15 @@ describe("TimeRuleModal guards", () => {
     );
     const { user } = await renderModal();
 
-    await user.click(screen.getByRole("button", { name: "Weekdays Only" }));
+    await user.click(
+      screen.getByRole("button", { name: "Allow Weekdays Only" }),
+    );
     await user.click(screen.getByText("confirm dialog"));
     await waitFor(() => expect(createPreset).toHaveBeenCalledTimes(1));
 
-    await user.click(screen.getByRole("button", { name: "Weekends Only" }));
+    await user.click(
+      screen.getByRole("button", { name: "Allow Weekends Only" }),
+    );
     await user.click(screen.getByText("confirm dialog"));
 
     expect(createPreset).toHaveBeenCalledTimes(1);

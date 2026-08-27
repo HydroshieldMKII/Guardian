@@ -52,44 +52,48 @@ describe("getTemporaryAccessTimeLeft", () => {
     );
   });
 
-  it("reports sub-minute windows", () => {
-    expect(utils().getTemporaryAccessTimeLeft(deviceExpiring(1))).toBe("1m");
-  });
-
-  it("formats minutes", () => {
-    expect(utils().getTemporaryAccessTimeLeft(deviceExpiring(30 * MINUTE))).toBe(
-      "30m",
+  it("rounds a sub-minute window up to a minute", () => {
+    expect(utils().getTemporaryAccessTimeLeft(deviceExpiring(1))).toBe(
+      "1 minute",
     );
   });
 
-  it("formats hours and minutes", () => {
+  it("spells minutes out", () => {
+    expect(
+      utils().getTemporaryAccessTimeLeft(deviceExpiring(30 * MINUTE)),
+    ).toBe("30 minutes");
+  });
+
+  it("spells hours and minutes out", () => {
     expect(
       utils().getTemporaryAccessTimeLeft(deviceExpiring(2 * HOUR + 5 * MINUTE)),
-    ).toBe("2h 5m");
+    ).toBe("2 hours and 5 minutes");
   });
 
-  it("formats days and hours", () => {
+  it("spells days and hours out", () => {
     expect(
       utils().getTemporaryAccessTimeLeft(deviceExpiring(3 * DAY + 4 * HOUR)),
-    ).toBe("3d 4h");
+    ).toBe("3 days and 4 hours");
   });
 
-  it("formats weeks first", () => {
+  it("leads with weeks", () => {
     expect(
       utils().getTemporaryAccessTimeLeft(deviceExpiring(2 * WEEK + 1 * DAY)),
-    ).toBe("2w 1d");
+    ).toBe("2 weeks and 1 day");
   });
 
-  it("keeps only the three most significant parts", () => {
+  it("keeps only the two most significant parts", () => {
     expect(
       utils().getTemporaryAccessTimeLeft(
         deviceExpiring(WEEK + DAY + HOUR + MINUTE),
       ),
-    ).toBe("1w 1d 1h");
+    ).toBe("1 week and 1 day");
   });
 
   it("omits zeroed units", () => {
-    expect(utils().getTemporaryAccessTimeLeft(deviceExpiring(WEEK))).toBe("1w");
+    expect(utils().getTemporaryAccessTimeLeft(deviceExpiring(WEEK))).toBe(
+      "1 week",
+    );
   });
 });
 

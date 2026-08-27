@@ -104,7 +104,9 @@ describe("GlobalUpdateBanner", () => {
     const user = userEvent.setup();
     const { container } = render(<GlobalUpdateBanner />);
 
-    await user.click(screen.getByRole("button", { name: "Dismiss" }));
+    await user.click(
+      screen.getByRole("button", { name: "Hide this update notice" }),
+    );
 
     expect(clearUpdateInfo).toHaveBeenCalled();
     expect(container).toBeEmptyDOMElement();

@@ -8,12 +8,8 @@ import {
   getUserPreferenceBadge,
 } from "@/components/device-management/SharedComponents";
 
-const hasTemporaryAccess = jest.fn();
-const getTemporaryAccessTimeLeft = jest.fn();
-
-jest.mock("@/hooks/device-management/useDeviceUtils", () => ({
-  useDeviceUtils: () => ({ hasTemporaryAccess, getTemporaryAccessTimeLeft }),
-}));
+const inMinutes = (minutes: number) =>
+  new Date(Date.now() + minutes * 60_000).toISOString();
 
 const device = (overrides: Partial<UserDevice> = {}): UserDevice => ({
   id: 1,
@@ -30,8 +26,6 @@ const device = (overrides: Partial<UserDevice> = {}): UserDevice => ({
 
 beforeEach(() => {
   jest.clearAllMocks();
-  hasTemporaryAccess.mockReturnValue(false);
-  getTemporaryAccessTimeLeft.mockReturnValue("30m");
 });
 
 describe("ClickableIP", () => {
@@ -40,7 +34,7 @@ describe("ClickableIP", () => {
     (ip) => {
       render(<ClickableIP ipAddress={ip} />);
       expect(screen.queryByRole("button")).toBeNull();
-      expect(screen.getByText(ip || "Unknown IP")).toBeInTheDocument();
+      expect(screen.getByText(ip || "Unknown")).toBeInTheDocument();
     },
   );
 
@@ -86,18 +80,34 @@ describe("UserAvatar", () => {
 });
 
 describe("DeviceStatus", () => {
-  it("shows temporary access with the time remaining", () => {
-    hasTemporaryAccess.mockReturnValue(true);
-    render(<DeviceStatus device={device()} />);
+  it("names the grant and keeps the countdown in its tooltip", () => {
+    render(
+      <DeviceStatus device={device({ temporaryAccessUntil: inMinutes(30) })} />,
+    );
 
-    expect(screen.getByText("Temporary Access (30m left)")).toBeInTheDocument();
+    const pill = screen.getByText("Temporary Access").closest("span[title]");
+    expect(pill).toHaveAttribute("title", "Expires in 30 minutes");
   });
 
-  it("drops the time remaining in compact mode", () => {
-    hasTemporaryAccess.mockReturnValue(true);
-    render(<DeviceStatus device={device()} compact />);
+  it("never lets the pill outgrow the field it sits in", () => {
+    render(
+      <DeviceStatus
+        device={device({ temporaryAccessUntil: inMinutes(60 * 24 * 9) })}
+      />,
+    );
 
-    expect(screen.getByText("Temporary Access")).toBeInTheDocument();
+    const pill = screen.getByText("Temporary Access").closest("span[title]");
+    expect(pill?.className).toContain("max-w-full");
+  });
+
+  it("ignores a grant that has already lapsed", () => {
+    render(
+      <DeviceStatus
+        device={device({ temporaryAccessUntil: inMinutes(-30) })}
+      />,
+    );
+
+    expect(screen.getByText("Pending")).toBeInTheDocument();
   });
 
   it.each([
@@ -113,7 +123,7 @@ describe("DeviceStatus", () => {
     ["deviceProduct", { deviceProduct: "Plexamp" }],
     ["deviceName", { deviceName: "Office PlexAmp" }],
   ])(
-    "marks a pending PlexAmp device unmanageable via %s",
+    "marks a pending Plexamp device unmanageable via %s",
     (_label, overrides) => {
       render(
         <DeviceStatus device={device({ status: "pending", ...overrides })} />,
@@ -122,7 +132,7 @@ describe("DeviceStatus", () => {
     },
   );
 
-  it("still reports an approved PlexAmp device as approved", () => {
+  it("still reports an approved Plexamp device as approved", () => {
     render(
       <DeviceStatus
         device={device({ status: "approved", deviceProduct: "Plexamp" })}
@@ -149,7 +159,7 @@ describe("DeviceStatus", () => {
     render(<DeviceStatus device={device({ deviceProduct: "Plexamp" })} />);
 
     expect(
-      screen.getByRole("button", { name: /PlexAmp devices cannot be managed/ }),
+      screen.getByRole("button", { name: /Plexamp devices cannot be managed/ }),
     ).toBeInTheDocument();
   });
 
@@ -165,7 +175,7 @@ describe("DeviceStatus", () => {
     await user.click(screen.getByRole("button"));
 
     expect(
-      screen.getAllByText(/PlexAmp devices cannot be managed/).length,
+      screen.getAllByText(/Plexamp devices cannot be managed/).length,
     ).toBeGreaterThan(0);
 
     Object.defineProperty(window, "innerWidth", {
@@ -181,7 +191,7 @@ describe("DeviceStatus", () => {
     await user.hover(screen.getByRole("button"));
 
     expect(
-      screen.getAllByText(/PlexAmp devices cannot be managed/).length,
+      screen.getAllByText(/Plexamp devices cannot be managed/).length,
     ).toBeGreaterThan(0);
 
     await user.unhover(screen.getByRole("button"));

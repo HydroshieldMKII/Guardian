@@ -162,7 +162,8 @@ describe("UserHistoryModal loading", () => {
     await renderModal();
 
     expect(
-      screen.getByText("No streaming history found").parentElement?.className,
+      screen.getByText("This user has not streamed anything yet").parentElement
+        ?.className,
     ).toContain("min-h-80");
   });
 
@@ -170,7 +171,9 @@ describe("UserHistoryModal loading", () => {
     fetchMock.mockImplementation(() => Promise.resolve({ ok: false }));
     await renderModal();
 
-    expect(screen.getByText("No streaming history found")).toBeInTheDocument();
+    expect(
+      screen.getByText("This user has not streamed anything yet"),
+    ).toBeInTheDocument();
     expect(consoleError).toHaveBeenCalledWith(
       "Error fetching user history:",
       expect.any(Error),
@@ -181,7 +184,9 @@ describe("UserHistoryModal loading", () => {
     fetchMock.mockRejectedValue(new Error("offline"));
     await renderModal();
 
-    expect(screen.getByText("No streaming history found")).toBeInTheDocument();
+    expect(
+      screen.getByText("This user has not streamed anything yet"),
+    ).toBeInTheDocument();
     expect(consoleError).toHaveBeenCalledWith(
       "Error fetching user history:",
       expect.any(Error),
@@ -192,7 +197,9 @@ describe("UserHistoryModal loading", () => {
     fetchMock.mockImplementation(() => ok(null));
     await renderModal();
 
-    expect(screen.getByText("No streaming history found")).toBeInTheDocument();
+    expect(
+      screen.getByText("This user has not streamed anything yet"),
+    ).toBeInTheDocument();
   });
 
   it("refreshes in the background without blanking the list", async () => {
@@ -234,7 +241,8 @@ describe("UserHistoryModal loading", () => {
 
     const pill = screen
       .getAllByText("Active")
-      .find((node) => node.className.includes("rounded-full"));
+      .map((node) => node.closest("span.rounded-full"))
+      .find(Boolean);
 
     expect(pill).toBeDefined();
     expect(pill?.querySelectorAll("span[aria-hidden]")).toHaveLength(0);
@@ -357,7 +365,7 @@ describe("UserHistoryModal formatting", () => {
     const { user } = await renderModal();
 
     await user.type(
-      screen.getByPlaceholderText(/Search by title, device, or IP/),
+      screen.getByPlaceholderText(/Search by title, device or IP/),
       "Arrival",
     );
 
@@ -380,7 +388,7 @@ describe("UserHistoryModal formatting", () => {
 
   it("labels PlexAmp separately", async () => {
     await renderWith({ product: "plexamp" });
-    expect(screen.getAllByText("Plex Amp").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Plexamp").length).toBeGreaterThan(0);
   });
 
   it("labels anything else as Plex", async () => {
@@ -399,9 +407,13 @@ describe("UserHistoryModal formatting", () => {
   });
 
   it.each([
-    ["2026-01-01T10:00:00Z", "2026-01-01T10:00:45Z", "45s"],
-    ["2026-01-01T10:00:00Z", "2026-01-01T10:02:30Z", "2m 30s"],
-    ["2026-01-01T10:00:00Z", "2026-01-01T11:01:05Z", "1h 1m 5s"],
+    ["2026-01-01T10:00:00Z", "2026-01-01T10:00:45Z", "45 seconds"],
+    [
+      "2026-01-01T10:00:00Z",
+      "2026-01-01T10:02:30Z",
+      "2 minutes and 30 seconds",
+    ],
+    ["2026-01-01T10:00:00Z", "2026-01-01T11:01:05Z", "1 hour and 1 minute"],
   ])(
     "formats a %p - %p session as %p",
     async (startedAt, endedAt, expected) => {
@@ -419,8 +431,11 @@ describe("UserHistoryModal formatting", () => {
   });
 
   it("measures an active session up to now", async () => {
-    await renderWith({ endedAt: null, startedAt: new Date().toISOString() });
-    expect(screen.getAllByText(/\d+s/).length).toBeGreaterThan(0);
+    await renderWith({
+      endedAt: null,
+      startedAt: new Date(Date.now() - 5 * 60_000).toISOString(),
+    });
+    expect(screen.getAllByText(/^5 minutes/).length).toBeGreaterThan(0);
   });
 });
 
@@ -432,7 +447,7 @@ describe("UserHistoryModal filtering", () => {
     const { user } = await renderModal();
 
     await user.type(
-      screen.getByPlaceholderText(/Search by title, device, or IP/),
+      screen.getByPlaceholderText(/Search by title, device or IP/),
       "Severance",
     );
 
@@ -445,12 +460,12 @@ describe("UserHistoryModal filtering", () => {
     fetchMock.mockImplementation(() => ok([]));
 
     await user.type(
-      screen.getByPlaceholderText(/Search by title, device, or IP/),
+      screen.getByPlaceholderText(/Search by title, device or IP/),
       "zzz",
     );
 
     expect(
-      await screen.findByText("No sessions found matching your filters"),
+      await screen.findByText("No streams match your search"),
     ).toBeInTheDocument();
   });
 
@@ -613,7 +628,7 @@ describe("UserHistoryModal navigation", () => {
     const onNavigateToDevice = jest.fn();
     const { user, onClose } = await renderModal({ onNavigateToDevice });
 
-    await user.click(screen.getAllByTitle("See Device")[0]);
+    await user.click(screen.getAllByTitle("Go to this device")[0]);
 
     expect(onClose).toHaveBeenCalled();
     expect(onNavigateToDevice).toHaveBeenCalledWith("u-1", "device-1");
@@ -623,7 +638,7 @@ describe("UserHistoryModal navigation", () => {
   it("routes with query parameters when there is no callback", async () => {
     const { user } = await renderModal();
 
-    await user.click(screen.getAllByTitle("See Device")[0]);
+    await user.click(screen.getAllByTitle("Go to this device")[0]);
 
     expect(push).toHaveBeenCalledWith("/?userId=u-1&deviceId=device-1");
   });
@@ -632,7 +647,7 @@ describe("UserHistoryModal navigation", () => {
     fetchMock.mockImplementation(() => ok([session({ userDevice: null })]));
     const { user, onClose } = await renderModal();
 
-    await user.click(screen.getAllByTitle("See Device")[0]);
+    await user.click(screen.getAllByTitle("Go to this device")[0]);
 
     expect(onClose).toHaveBeenCalled();
     expect(push).not.toHaveBeenCalled();
@@ -643,7 +658,7 @@ describe("UserHistoryModal deletion", () => {
   it("removes a session after confirmation", async () => {
     const { user } = await renderModal();
 
-    await user.click(screen.getAllByTitle("Delete Session")[0]);
+    await user.click(screen.getAllByTitle("Delete this entry")[0]);
     expect(screen.getByText("confirm-delete")).toBeInTheDocument();
 
     await user.click(screen.getByText("yes delete"));
@@ -657,7 +672,9 @@ describe("UserHistoryModal deletion", () => {
     expect(toast).toHaveBeenCalledWith(
       expect.objectContaining({ title: "Session Deleted" }),
     );
-    expect(screen.getByText("No streaming history found")).toBeInTheDocument();
+    expect(
+      screen.getByText("This user has not streamed anything yet"),
+    ).toBeInTheDocument();
   });
 
   it("reports a refusal from the server", async () => {
@@ -668,7 +685,7 @@ describe("UserHistoryModal deletion", () => {
     );
     const { user } = await renderModal();
 
-    await user.click(screen.getAllByTitle("Delete Session")[0]);
+    await user.click(screen.getAllByTitle("Delete this entry")[0]);
     await user.click(screen.getByText("yes delete"));
 
     await waitFor(() =>
@@ -686,7 +703,7 @@ describe("UserHistoryModal deletion", () => {
     );
     const { user } = await renderModal();
 
-    await user.click(screen.getAllByTitle("Delete Session")[0]);
+    await user.click(screen.getAllByTitle("Delete this entry")[0]);
     await user.click(screen.getByText("yes delete"));
 
     await waitFor(() =>
@@ -698,7 +715,7 @@ describe("UserHistoryModal deletion", () => {
 
   it("also deletes from the mobile row", async () => {
     const { user } = await renderModal();
-    const buttons = screen.getAllByTitle("Delete Session");
+    const buttons = screen.getAllByTitle("Delete this entry");
 
     await user.click(buttons[buttons.length - 1]);
     await user.click(screen.getByText("yes delete"));
@@ -715,13 +732,13 @@ describe("UserHistoryModal deletion", () => {
     fetchMock.mockImplementation(() => ok([session({ endedAt: null })]));
     await renderModal();
 
-    expect(screen.queryByTitle("Delete Session")).toBeNull();
+    expect(screen.queryByTitle("Delete this entry")).toBeNull();
   });
 
   it("can be cancelled", async () => {
     const { user } = await renderModal();
 
-    await user.click(screen.getAllByTitle("Delete Session")[0]);
+    await user.click(screen.getAllByTitle("Delete this entry")[0]);
     await user.click(screen.getByText("no delete"));
 
     expect(screen.queryByText("confirm-delete")).toBeNull();
@@ -823,7 +840,9 @@ describe("UserHistoryModal duration reporting", () => {
       viewOffset: 1_446_000,
     });
 
-    expect(await screen.findAllByText("1m 9s")).not.toHaveLength(0);
+    expect(
+      await screen.findAllByText("1 minute and 9 seconds"),
+    ).not.toHaveLength(0);
     expect(screen.queryByText("24m 6s")).toBeNull();
   });
 
@@ -834,7 +853,9 @@ describe("UserHistoryModal duration reporting", () => {
       viewOffset: 30_000,
     });
 
-    expect(await screen.findAllByText("10m 20s")).not.toHaveLength(0);
+    expect(
+      await screen.findAllByText("10 minutes and 20 seconds"),
+    ).not.toHaveLength(0);
   });
 
   it("keeps Unknown for an end that precedes the start", async () => {

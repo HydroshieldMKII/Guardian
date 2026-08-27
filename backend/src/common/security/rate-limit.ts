@@ -21,7 +21,7 @@ function limiter(options: {
 export const credentialsLimiter = (): RateLimitRequestHandler =>
   limiter({
     windowMs: 15 * MINUTE_MS,
-    limit: 20,
+    limit: 10,
     skipSuccessfulRequests: true,
     message: 'Too many failed attempts. Try again in a few minutes.',
   });
@@ -29,7 +29,7 @@ export const credentialsLimiter = (): RateLimitRequestHandler =>
 export const authLimiter = (): RateLimitRequestHandler =>
   limiter({
     windowMs: MINUTE_MS,
-    limit: 60,
+    limit: 300,
     message: 'Too many authentication requests. Try again shortly.',
   });
 

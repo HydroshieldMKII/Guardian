@@ -110,7 +110,7 @@ export function Navbar() {
       } catch (error) {
         toast({
           title: "Error",
-          description: "Failed to save changes",
+          description: "Failed to save your changes",
           variant: "destructive",
         });
       } finally {
@@ -123,15 +123,15 @@ export function Navbar() {
     try {
       await logout();
       toast({
-        title: "Success",
-        description: "Logged out successfully",
+        title: "Signed Out",
+        description: "You have been signed out of Guardian",
         variant: "success",
       });
       router.push("/login");
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to logout",
+        description: "Failed to sign out",
         variant: "destructive",
       });
     }

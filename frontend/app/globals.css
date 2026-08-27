@@ -165,41 +165,47 @@
   display: none;
 }
 
-/* Thin scrollbar utility for better mobile/desktop experience */
-.scrollbar-thin {
+/* Scrollbar that stays visible whenever a pane can scroll, so the fact that
+   there is more content below is never hidden behind an overlay scrollbar. */
+.scrollbar-visible {
+  scrollbar-gutter: stable;
   scrollbar-width: thin;
-  scrollbar-color: oklch(0.5 0 0 / 40%) transparent;
+  scrollbar-color: oklch(0.5 0 0 / 45%) oklch(0.5 0 0 / 12%);
 }
 
-.scrollbar-thin::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+.scrollbar-visible::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
 }
 
-.scrollbar-thin::-webkit-scrollbar-track {
-  background: transparent;
+.scrollbar-visible::-webkit-scrollbar-track {
+  background-color: oklch(0.5 0 0 / 12%);
+  border-radius: 9999px;
 }
 
-.scrollbar-thin::-webkit-scrollbar-thumb {
-  background-color: oklch(0.5 0 0 / 40%);
-  border-radius: 3px;
+.scrollbar-visible::-webkit-scrollbar-thumb {
+  background-color: oklch(0.5 0 0 / 45%);
+  border-radius: 9999px;
 }
 
-.scrollbar-thin::-webkit-scrollbar-thumb:hover {
-  background-color: oklch(0.5 0 0 / 60%);
+.scrollbar-visible::-webkit-scrollbar-thumb:hover {
+  background-color: oklch(0.5 0 0 / 65%);
 }
 
-/* Dark mode scrollbar */
-.dark .scrollbar-thin {
-  scrollbar-color: oklch(0.7 0 0 / 30%) transparent;
+.dark .scrollbar-visible {
+  scrollbar-color: oklch(0.75 0 0 / 35%) oklch(1 0 0 / 8%);
 }
 
-.dark .scrollbar-thin::-webkit-scrollbar-thumb {
-  background-color: oklch(0.7 0 0 / 30%);
+.dark .scrollbar-visible::-webkit-scrollbar-track {
+  background-color: oklch(1 0 0 / 8%);
 }
 
-.dark .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-  background-color: oklch(0.7 0 0 / 50%);
+.dark .scrollbar-visible::-webkit-scrollbar-thumb {
+  background-color: oklch(0.75 0 0 / 35%);
+}
+
+.dark .scrollbar-visible::-webkit-scrollbar-thumb:hover {
+  background-color: oklch(0.75 0 0 / 55%);
 }
 
 /* Mobile-specific touch improvements */
@@ -215,5 +221,15 @@
   [role="button"] {
     -webkit-user-select: none;
     user-select: none;
+  }
+}
+
+/* Progress bar filling as a toast runs out its time on screen */
+@keyframes toast-progress {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
   }
 }

@@ -118,7 +118,7 @@ export function ModalBody({
     <div
       ref={ref}
       className={cn(
-        "min-h-0 flex-1 space-y-5 overflow-y-auto overflow-x-hidden px-4 py-5 sm:px-6",
+        "scrollbar-visible min-h-0 flex-1 space-y-5 overflow-y-auto overflow-x-hidden px-4 py-5 sm:px-6",
         className,
       )}
     >

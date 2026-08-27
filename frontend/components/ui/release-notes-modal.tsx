@@ -79,7 +79,11 @@ export function ReleaseNotesModal({
       </ModalBody>
 
       <ModalFooter className="sm:justify-stretch">
-        <Button variant="outline" onClick={onClose} className="sm:flex-1">
+        <Button
+          variant="outline"
+          onClick={() => onClose()}
+          className="sm:flex-1"
+        >
           Close
         </Button>
         <Button

@@ -208,9 +208,14 @@ describe("GeneralSettings inputs", () => {
 
     it("marks the current choice", () => {
       renderPanel("customization", { formData: { DEFAULT_PAGE: "streams" } });
-      expect(
-        screen.getByRole("button", { name: "Streams" }).className,
-      ).toContain("bg-background");
+      expect(screen.getByRole("button", { name: "Streams" })).toHaveAttribute(
+        "aria-pressed",
+        "true",
+      );
+      expect(screen.getByRole("button", { name: "Devices" })).toHaveAttribute(
+        "aria-pressed",
+        "false",
+      );
     });
 
     it("sits on the same row as its label", () => {

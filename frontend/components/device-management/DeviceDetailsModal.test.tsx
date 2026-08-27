@@ -3,11 +3,8 @@ import userEvent from "@testing-library/user-event";
 import type { AppSetting, UserDevice } from "@/types";
 import { DeviceDetailsModal } from "@/components/device-management/DeviceDetailsModal";
 
-const hasTemporaryAccess = jest.fn();
-const getTemporaryAccessTimeLeft = jest.fn();
-jest.mock("@/hooks/device-management/useDeviceUtils", () => ({
-  useDeviceUtils: () => ({ hasTemporaryAccess, getTemporaryAccessTimeLeft }),
-}));
+const inHours = (hours: number) =>
+  new Date(Date.now() + hours * 3_600_000).toISOString();
 
 const deleteDeviceNote = jest.fn();
 const updateDeviceExcludeFromConcurrentLimit = jest.fn();
@@ -52,6 +49,7 @@ const renderModal = (
     onDeviceUpdate?: jest.Mock;
     settingsData?: AppSetting[];
     isOpen?: boolean;
+    policies?: React.ComponentProps<typeof DeviceDetailsModal>["policies"];
   } = {},
 ) => {
   const handlers = {
@@ -72,6 +70,7 @@ const renderModal = (
       onDeviceUpdate={props.onDeviceUpdate}
       onSetPending={props.onSetPending}
       settingsData={props.settingsData}
+      policies={props.policies}
       {...handlers}
     />,
   );
@@ -84,8 +83,6 @@ const seeSection = (name: string) =>
 
 beforeEach(() => {
   jest.clearAllMocks();
-  hasTemporaryAccess.mockReturnValue(false);
-  getTemporaryAccessTimeLeft.mockReturnValue("2h");
   deleteDeviceNote.mockResolvedValue(undefined);
   updateDeviceExcludeFromConcurrentLimit.mockResolvedValue(undefined);
   Object.defineProperty(window, "innerWidth", {
@@ -124,15 +121,52 @@ describe("DeviceDetailsModal", () => {
     expect(labels.slice(labels.indexOf("Last Seen"))).toEqual([
       "Last Seen",
       "Status",
+      "Enforced Policies",
       "Identifier",
     ]);
   });
 
-  it("spells out the remaining temporary access in that field", () => {
-    hasTemporaryAccess.mockReturnValue(true);
-    renderModal();
+  it("lists the policies actually enforced against the device", () => {
+    renderModal(
+      {},
+      {
+        policies: [
+          {
+            policy: "schedule",
+            label: "Time Schedule",
+            tone: "info",
+            title: "A time schedule restricts when this device can stream",
+          },
+          {
+            policy: "ip",
+            label: "IP Access",
+            tone: "accent",
+            title: "Network or IP restrictions apply to this device",
+          },
+        ],
+      },
+    );
 
-    expect(screen.getByText("Temporary Access (2h left)")).toBeInTheDocument();
+    expect(screen.getByText("Time Schedule")).toBeInTheDocument();
+    expect(screen.getByText("IP Access")).toBeInTheDocument();
+  });
+
+  it("says none when nothing is enforced against the device", () => {
+    renderModal();
+    expect(
+      screen.getByText("None. This device streams without restriction."),
+    ).toBeInTheDocument();
+  });
+
+  it("names the grant in that field and keeps the countdown in its tooltip", () => {
+    renderModal({ temporaryAccessUntil: inHours(2) });
+
+    const pill = screen
+      .getAllByText("Temporary Access")
+      .map((node) => node.closest("span[title]"))
+      .find((node) => node?.getAttribute("title")?.startsWith("Expires in"));
+
+    expect(pill).toHaveAttribute("title", "Expires in 2 hours");
   });
 
   it("does not repeat the hardware summary the grid already carries", () => {
@@ -167,7 +201,7 @@ describe("DeviceDetailsModal", () => {
     });
     seeSection("Temporary Access");
 
-    expect(screen.getByText("Yes")).toBeInTheDocument();
+    expect(screen.getByText("Policies Bypassed")).toBeInTheDocument();
   });
 
   it("reports when it does not", async () => {
@@ -177,7 +211,7 @@ describe("DeviceDetailsModal", () => {
     });
     seeSection("Temporary Access");
 
-    expect(screen.getByText("No")).toBeInTheDocument();
+    expect(screen.getByText("Policies Enforced")).toBeInTheDocument();
   });
 
   it("closes from the footer", async () => {
@@ -205,7 +239,7 @@ describe("DeviceDetailsModal", () => {
         { editingDevice: 1, newDeviceName: "Bedroom TV" },
       );
 
-      const input = screen.getByPlaceholderText("Enter device name");
+      const input = screen.getByPlaceholderText("Device name");
       expect(input).toHaveValue("Bedroom TV");
 
       await user.type(input, "!");
@@ -252,7 +286,7 @@ describe("DeviceDetailsModal", () => {
       renderModal({}, { editingDevice: 1, newDeviceName: "Bedroom TV" });
 
       const heading = screen.getByRole("heading", { name: "Living Room TV" });
-      const input = screen.getByPlaceholderText("Enter device name");
+      const input = screen.getByPlaceholderText("Device name");
 
       expect(heading.className).toContain("sr-only");
       expect(heading.parentElement).toContainElement(input);
@@ -281,9 +315,7 @@ describe("DeviceDetailsModal", () => {
       );
 
       expect(screen.queryByRole("button", { name: "Rename" })).toBeNull();
-      expect(row).toContainElement(
-        screen.getByPlaceholderText("Enter device name"),
-      );
+      expect(row).toContainElement(screen.getByPlaceholderText("Device name"));
     });
 
     it("refuses to save an empty name", () => {
@@ -345,14 +377,16 @@ describe("DeviceDetailsModal", () => {
       [1, "1 minute"],
       [45, "45 minutes"],
       [60, "1 hour"],
-      [61, "1 hour 1 minute"],
-      [90, "1 hour 30 minutes"],
+      [61, "1 hour and 1 minute"],
+      [90, "1 hour and 30 minutes"],
       [120, "2 hours"],
       [1440, "1 day"],
-      [1500, "1 day 1 hour"],
-      [1560, "1 day 2 hours"],
+      [1500, "1 day and 1 hour"],
+      [1560, "1 day and 2 hours"],
       [2880, "2 days"],
-      [4400, "3 days 1 hour"],
+      [4400, "3 days and 1 hour"],
+      [10080, "1 week"],
+      [11520, "1 week and 1 day"],
     ])("formats a %p minute grant as %p", async (minutes, expected) => {
       renderModal({
         temporaryAccessDurationMinutes: minutes,
@@ -485,7 +519,8 @@ describe("DeviceDetailsModal", () => {
       );
       expect(toast).toHaveBeenCalledWith(
         expect.objectContaining({
-          description: "Device excluded from concurrent stream limit",
+          description:
+            "Streams from this device no longer count towards the user's concurrent stream limit",
         }),
       );
       expect(onDeviceUpdate).toHaveBeenCalledWith(
@@ -502,7 +537,8 @@ describe("DeviceDetailsModal", () => {
       await waitFor(() =>
         expect(toast).toHaveBeenCalledWith(
           expect.objectContaining({
-            description: "Device included in concurrent stream limit",
+            description:
+              "Streams from this device now count towards the user's concurrent stream limit",
           }),
         ),
       );
@@ -537,7 +573,7 @@ describe("DeviceDetailsModal", () => {
       await waitFor(() =>
         expect(toast).toHaveBeenCalledWith(
           expect.objectContaining({
-            description: "Failed to update device setting",
+            description: "Failed to update this device's settings",
           }),
         ),
       );
@@ -549,7 +585,7 @@ describe("DeviceDetailsModal", () => {
 
       expect(screen.queryByRole("switch")).toBeNull();
       expect(
-        screen.getByText(/PlexAmp devices are automatically excluded/),
+        screen.getByText(/It is exempt from every policy/),
       ).toBeInTheDocument();
     });
   });
@@ -559,14 +595,14 @@ describe("DeviceDetailsModal", () => {
       renderModal();
       seeSection("Device Settings");
 
-      expect(screen.queryByText("Revert to pending status")).toBeNull();
+      expect(screen.queryByText("Set back to pending")).toBeNull();
     });
 
     it("is hidden for a device already pending", async () => {
       renderModal({ status: "pending" }, { onSetPending: jest.fn() });
       seeSection("Device Settings");
 
-      expect(screen.queryByText("Revert to pending status")).toBeNull();
+      expect(screen.queryByText("Set back to pending")).toBeNull();
     });
 
     it("reverts and closes", async () => {
@@ -641,9 +677,9 @@ describe("DeviceDetailsModal", () => {
           screen.getByRole("button", { name: /Set to Pending/ }),
         );
 
-        expect(
-          screen.getAllByText(/Strict mode is enabled/).length,
-        ).toBeGreaterThan(0);
+        expect(screen.getAllByText(/Strict mode is on/).length).toBeGreaterThan(
+          0,
+        );
       });
 
       it("opens and closes the explanation on pointer enter and leave", async () => {
@@ -655,14 +691,12 @@ describe("DeviceDetailsModal", () => {
         const trigger = screen.getByRole("button", { name: /Set to Pending/ });
 
         fireEvent.mouseEnter(trigger);
-        expect(
-          screen.getAllByText(/Strict mode is enabled/).length,
-        ).toBeGreaterThan(0);
+        expect(screen.getAllByText(/Strict mode is on/).length).toBeGreaterThan(
+          0,
+        );
 
         fireEvent.mouseLeave(trigger);
-        await waitFor(() =>
-          expect(screen.queryByText(/Strict mode is enabled/)).toBeNull(),
-        );
+        await waitFor(() => expect(screen.queryByRole("tooltip")).toBeNull());
       });
 
       it("ignores pointer enter and leave on a narrow screen", async () => {
@@ -680,7 +714,7 @@ describe("DeviceDetailsModal", () => {
         fireEvent.mouseEnter(trigger);
         fireEvent.mouseLeave(trigger);
 
-        expect(screen.queryByText(/Strict mode is enabled/)).toBeNull();
+        expect(screen.queryByRole("tooltip")).toBeNull();
       });
 
       it("toggles the explanation on tap on a narrow screen", async () => {
@@ -698,9 +732,9 @@ describe("DeviceDetailsModal", () => {
           screen.getByRole("button", { name: /Set to Pending/ }),
         );
 
-        expect(
-          screen.getAllByText(/Strict mode is enabled/).length,
-        ).toBeGreaterThan(0);
+        expect(screen.getAllByText(/Strict mode is on/).length).toBeGreaterThan(
+          0,
+        );
       });
 
       it("stays enabled when strict mode is off", async () => {
@@ -746,18 +780,16 @@ describe("DeviceDetailsModal", () => {
 
 describe("DeviceDetailsModal temporary access expiry", () => {
   it("labels a live grant as expiring", async () => {
-    hasTemporaryAccess.mockReturnValue(true);
     renderModal({
-      temporaryAccessUntil: "2026-03-01T00:00:00Z",
+      temporaryAccessUntil: inHours(24),
     });
 
     expect(screen.getByText("Expires At")).toBeInTheDocument();
   });
 
   it("labels a lapsed grant as expired", async () => {
-    hasTemporaryAccess.mockReturnValue(false);
     renderModal({
-      temporaryAccessUntil: "2025-03-01T00:00:00Z",
+      temporaryAccessUntil: inHours(-24),
     });
 
     seeSection("Temporary Access");
@@ -799,9 +831,7 @@ describe("DeviceDetailsModal strict mode help", () => {
 
     await user.hover(pendingTrigger());
 
-    expect(
-      await screen.findAllByText(/Strict mode is enabled/),
-    ).not.toHaveLength(0);
+    expect(await screen.findAllByText(/Strict mode is on/)).not.toHaveLength(0);
   });
 
   it("opens the explanation on tap on a narrow screen", async () => {
@@ -814,9 +844,7 @@ describe("DeviceDetailsModal strict mode help", () => {
 
     fireEvent.click(pendingTrigger());
 
-    expect(
-      await screen.findAllByText(/Strict mode is enabled/),
-    ).not.toHaveLength(0);
+    expect(await screen.findAllByText(/Strict mode is on/)).not.toHaveLength(0);
   });
 
   it("ignores hover on a narrow screen", async () => {
@@ -829,6 +857,6 @@ describe("DeviceDetailsModal strict mode help", () => {
 
     fireEvent.mouseEnter(pendingTrigger());
 
-    expect(screen.queryByText(/Strict mode is enabled/)).toBeNull();
+    expect(screen.queryByRole("tooltip")).toBeNull();
   });
 });

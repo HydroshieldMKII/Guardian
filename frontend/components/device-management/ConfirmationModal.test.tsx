@@ -20,7 +20,7 @@ const device = (overrides: Partial<UserDevice> = {}): UserDevice => ({
 });
 
 const action = (
-  act: "approve" | "reject" | "delete" | "toggle",
+  act: "approve" | "reject" | "delete" | "toggle" | "removeTemporaryAccess",
   overrides: Partial<UserDevice> = {},
 ) => ({
   device: device(overrides),
@@ -111,6 +111,7 @@ describe("ConfirmationModal", () => {
       ["approve", "Approve Device"],
       ["reject", "Reject Device"],
       ["delete", "Delete Device"],
+      ["removeTemporaryAccess", "Remove Temporary Access"],
     ] as const)("labels the %s button", (act, button) => {
       renderModal(action(act));
       expect(screen.getByRole("button", { name: button })).toBeInTheDocument();
@@ -155,6 +156,14 @@ describe("ConfirmationModal", () => {
       ).toContain("border-rose-500/40");
     });
 
+    it("uses an outline for removing temporary access, which cannot be undone", () => {
+      renderModal(action("removeTemporaryAccess"));
+      expect(
+        screen.getByRole("button", { name: "Remove Temporary Access" })
+          .className,
+      ).toContain("border-amber-500/40");
+    });
+
     it("uses an outline when a toggle turns into a rejection", () => {
       renderModal(action("toggle", { status: "approved" }));
       expect(
@@ -178,6 +187,16 @@ describe("ConfirmationModal", () => {
 
     await user.click(screen.getByRole("button", { name: "Cancel" }));
     expect(onCancel).toHaveBeenCalled();
+  });
+
+  it("hands the callbacks no arguments, so a click event is never mistaken for one", async () => {
+    const { user, onConfirm, onCancel } = renderModal(action("approve"));
+
+    await user.click(screen.getByRole("button", { name: "Approve Device" }));
+    expect(onConfirm).toHaveBeenCalledWith();
+
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(onCancel).toHaveBeenCalledWith();
   });
 
   it("cancels when the dialog is dismissed", async () => {

@@ -36,18 +36,30 @@ import { cn } from "@/lib/utils";
 const DURATION_UNITS = ["minutes", "hours", "days", "weeks"] as const;
 
 const QUICK_DURATIONS = [
-  { label: "1h", value: 1, unit: "hours" as const },
-  { label: "3h", value: 3, unit: "hours" as const },
-  { label: "6h", value: 6, unit: "hours" as const },
-  { label: "1d", value: 1, unit: "days" as const },
-  { label: "1w", value: 1, unit: "weeks" as const },
+  { label: "1 hour", value: 1, unit: "hours" as const },
+  { label: "3 hours", value: 3, unit: "hours" as const },
+  { label: "6 hours", value: 6, unit: "hours" as const },
+  { label: "1 day", value: 1, unit: "days" as const },
+  { label: "1 week", value: 1, unit: "weeks" as const },
 ];
 
 const BYPASSED_POLICIES = [
-  { name: "Network Policy", detail: "LAN only / WAN only restrictions" },
-  { name: "IP Restrictions", detail: "Allowed IP addresses and CIDR ranges" },
-  { name: "Time Rules", detail: "Scheduled viewing time restrictions" },
-  { name: "Device Status", detail: "Pending or rejected device approval" },
+  {
+    name: "Network Policy",
+    detail: "Restrictions on local network or internet streaming",
+  },
+  {
+    name: "IP Access",
+    detail: "The allowed list of IP addresses and address ranges",
+  },
+  {
+    name: "Time Schedule",
+    detail: "The hours during which streaming is blocked",
+  },
+  {
+    name: "Device Approval",
+    detail: "Devices still pending approval, or already rejected",
+  },
 ];
 
 const EXPIRY_FORMAT: Intl.DateTimeFormatOptions = {
@@ -73,7 +85,7 @@ interface TemporaryAccessModalProps {
     bypassPolicies?: boolean,
   ) => void;
   actionLoading: number | null;
-  shouldShowGrantTempAccess: (device: UserDevice) => boolean;
+  canGrantTemporaryAccess: (device: UserDevice) => boolean;
 }
 
 export const TemporaryAccessModal: React.FC<TemporaryAccessModalProps> = ({
@@ -83,7 +95,7 @@ export const TemporaryAccessModal: React.FC<TemporaryAccessModalProps> = ({
   onClose,
   onGrantAccess,
   actionLoading,
-  shouldShowGrantTempAccess,
+  canGrantTemporaryAccess,
 }) => {
   const [selectedDeviceIds, setSelectedDeviceIds] = useState<number[]>([]);
   const [durationValue, setDurationValue] = useState<number>(1);
@@ -126,7 +138,7 @@ export const TemporaryAccessModal: React.FC<TemporaryAccessModalProps> = ({
 
   // Get eligible devices for temporary access
   const eligibleDevices = userDevices.filter((device) =>
-    shouldShowGrantTempAccess(device),
+    canGrantTemporaryAccess(device),
   );
 
   // Reset when modal opens/closes
@@ -215,8 +227,8 @@ export const TemporaryAccessModal: React.FC<TemporaryAccessModalProps> = ({
         >
           {eligibleDevices.length === 0 ? (
             <EmptyState
-              title="No devices eligible for temporary access"
-              description="Devices must be pending (with blocked by default) or rejected to grant temporary access."
+              title="No devices are eligible for temporary access"
+              description="Only devices that are currently blocked can be granted temporary access, meaning devices this user has had rejected, or devices still pending approval while the default policy blocks them."
             />
           ) : (
             <div className="max-h-64 space-y-2 overflow-y-auto pr-1">
@@ -231,7 +243,7 @@ export const TemporaryAccessModal: React.FC<TemporaryAccessModalProps> = ({
                       {device.devicePlatform} · {device.status}
                       {hasTemporaryAccess(device) && (
                         <span className="ml-2 font-medium text-sky-600 dark:text-sky-400">
-                          Has temporary access
+                          Already has temporary access
                         </span>
                       )}
                     </>
@@ -279,6 +291,7 @@ export const TemporaryAccessModal: React.FC<TemporaryAccessModalProps> = ({
                       <DropdownMenuTrigger asChild>
                         <Button
                           variant="outline"
+                          aria-label="Duration unit"
                           className="w-full justify-between font-normal"
                         >
                           {durationUnit}
@@ -299,7 +312,7 @@ export const TemporaryAccessModal: React.FC<TemporaryAccessModalProps> = ({
                   </Field>
                 </div>
 
-                <Field label="Quick Select">
+                <Field label="Common Durations">
                   <div className="flex flex-wrap gap-2">
                     {QUICK_DURATIONS.map((quick) => (
                       <Button
@@ -318,7 +331,7 @@ export const TemporaryAccessModal: React.FC<TemporaryAccessModalProps> = ({
                 </Field>
               </div>
             ) : (
-              <Field label="Select Expiry Date & Time">
+              <Field label="Expires On">
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button
@@ -426,7 +439,7 @@ export const TemporaryAccessModal: React.FC<TemporaryAccessModalProps> = ({
             {expiry && (
               <Panel tone="info">
                 <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground/80">
-                  Access will expire at:
+                  Access will expire at
                 </p>
                 <p className="mt-1 text-sm font-medium text-foreground">
                   {expiry.toLocaleString(undefined, {
@@ -444,8 +457,8 @@ export const TemporaryAccessModal: React.FC<TemporaryAccessModalProps> = ({
           <Section title="Policy Bypass">
             <Panel tone="warning" className="space-y-4">
               <p className="text-xs leading-relaxed text-muted-foreground">
-                When enabled, the following policies will be bypassed during
-                temporary access:
+                While temporary access lasts, the selected devices stream
+                without any of the following being enforced:
               </p>
               <ul className="space-y-1.5 text-xs text-muted-foreground">
                 {BYPASSED_POLICIES.map((policy) => (
@@ -459,7 +472,8 @@ export const TemporaryAccessModal: React.FC<TemporaryAccessModalProps> = ({
               </ul>
               <ToggleRow
                 id="bypass-policies"
-                label="Bypass all user policies during temporary access"
+                label="Bypass these policies for the selected devices"
+                hint="The concurrent stream limit is not affected. Whether temporary access counts towards it is controlled by its own setting in Guardian settings."
                 checked={bypassPolicies}
                 onCheckedChange={setBypassPolicies}
               />

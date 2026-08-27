@@ -58,7 +58,7 @@ const renderModal = (
   return { ...view, onSave, onClose, user: userEvent.setup() };
 };
 
-const ipField = () => screen.getByPlaceholderText(/e\.g\. 192\.168\.1\.100/);
+const ipField = () => screen.getByPlaceholderText(/192\.168\.1\.100/);
 
 const submitIP = async (user: ReturnType<typeof userEvent.setup>) =>
   user.click(
@@ -110,7 +110,7 @@ describe("IPAccessModal", () => {
       }),
     });
 
-    expect(screen.getByText("2 IP addresses configured")).toBeInTheDocument();
+    expect(screen.getByText("2 addresses allowed")).toBeInTheDocument();
     expect(screen.getByText("10.0.0.0/8")).toBeInTheDocument();
     expect(screen.getByText("2001:db8::/32")).toBeInTheDocument();
   });
@@ -127,14 +127,14 @@ describe("IPAccessModal", () => {
     );
 
     expect(screen.queryByText(/IP addresses? configured/)).toBeNull();
-    expect(screen.queryByPlaceholderText(/e\.g\. 192\.168\.1\.100/)).toBeNull();
+    expect(screen.queryByPlaceholderText(/192\.168\.1\.100/)).toBeNull();
   });
 
   describe("network policy", () => {
     it.each([
-      ["Both (LAN + WAN)", "both"],
-      ["LAN only", "lan"],
-      ["WAN only", "wan"],
+      ["Local network and internet", "both"],
+      ["Local network only", "lan"],
+      ["Internet only", "wan"],
     ])("saves %s", async (label, expected) => {
       const { user, onSave } = renderModal();
 
@@ -150,17 +150,17 @@ describe("IPAccessModal", () => {
     it("describes what each policy does", () => {
       renderModal();
       expect(
+        screen.getByText("Allow streaming from anywhere, at home or away."),
+      ).toBeInTheDocument();
+      expect(
         screen.getByText(
-          "Allow streaming from both local network and internet",
+          "Allow streaming only from a device on the same network as the Plex server.",
         ),
       ).toBeInTheDocument();
       expect(
         screen.getByText(
-          "Only allow streaming from local network (same subnet)",
+          "Allow streaming only from a device outside the Plex server's network.",
         ),
-      ).toBeInTheDocument();
-      expect(
-        screen.getByText("Only allow streaming from internet (remote access)"),
       ).toBeInTheDocument();
     });
   });
@@ -168,16 +168,14 @@ describe("IPAccessModal", () => {
   describe("the allowed-IP list", () => {
     it("stays hidden while access is unrestricted", () => {
       renderModal();
-      expect(
-        screen.queryByPlaceholderText(/e\.g\. 192\.168\.1\.100/),
-      ).toBeNull();
+      expect(screen.queryByPlaceholderText(/192\.168\.1\.100/)).toBeNull();
     });
 
     it("appears once access is restricted", async () => {
       const { user } = renderModal();
-      await user.click(screen.getByText("Restricted list"));
+      await user.click(screen.getByText("Only listed addresses"));
       expect(
-        screen.getByPlaceholderText(/e\.g\. 192\.168\.1\.100/),
+        screen.getByPlaceholderText(/192\.168\.1\.100/),
       ).toBeInTheDocument();
     });
 
@@ -192,7 +190,7 @@ describe("IPAccessModal", () => {
       await addIP(user, ip);
 
       expect(screen.getByText(ip)).toBeInTheDocument();
-      expect(screen.getByText("1 IP address configured")).toBeInTheDocument();
+      expect(screen.getByText("1 address allowed")).toBeInTheDocument();
     });
 
     it.each(["not-an-ip", "999.1.1.1", "010.0.0.1", "2001:db8::/129"])(
@@ -203,7 +201,7 @@ describe("IPAccessModal", () => {
 
         expect(
           screen.getByText(
-            /Please enter a valid IP address or CIDR range.*2001:db8::1/,
+            /Enter a valid IP address or address range.*2001:db8::1/,
           ),
         ).toBeInTheDocument();
         expect(
@@ -216,14 +214,14 @@ describe("IPAccessModal", () => {
       const { user } = await restrictedModal();
       await submitIP(user);
 
-      expect(screen.queryByText(/Please enter a valid IP/)).toBeNull();
+      expect(screen.queryByText(/Enter a valid IP address/)).toBeNull();
       expect(screen.queryByText(/^\d+ IP address(es)? configured$/)).toBeNull();
     });
 
     it("adds on Enter", async () => {
       const { user } = await restrictedModal();
       await user.type(
-        screen.getByPlaceholderText(/e\.g\. 192\.168\.1\.100/),
+        screen.getByPlaceholderText(/192\.168\.1\.100/),
         "2001:db8::5{Enter}",
       );
 
@@ -236,21 +234,18 @@ describe("IPAccessModal", () => {
       await addIP(user, "10.0.0.1");
 
       expect(
-        screen.getByText("This IP address is already in the list"),
+        screen.getByText("This address is already in the list"),
       ).toBeInTheDocument();
-      expect(screen.getByText("1 IP address configured")).toBeInTheDocument();
+      expect(screen.getByText("1 address allowed")).toBeInTheDocument();
     });
 
     it("clears the error as soon as the field is edited again", async () => {
       const { user } = await restrictedModal();
       await addIP(user, "nope");
-      expect(screen.getByText(/Please enter a valid IP/)).toBeInTheDocument();
+      expect(screen.getByText(/Enter a valid IP address/)).toBeInTheDocument();
 
-      await user.type(
-        screen.getByPlaceholderText(/e\.g\. 192\.168\.1\.100/),
-        "1",
-      );
-      expect(screen.queryByText(/Please enter a valid IP/)).toBeNull();
+      await user.type(screen.getByPlaceholderText(/192\.168\.1\.100/), "1");
+      expect(screen.queryByText(/Enter a valid IP address/)).toBeNull();
     });
 
     it("removes an entry", async () => {
@@ -267,14 +262,12 @@ describe("IPAccessModal", () => {
 
       expect(screen.queryByText("10.0.0.1")).toBeNull();
       expect(screen.getByText("10.0.0.2")).toBeInTheDocument();
-      expect(screen.getByText("1 IP address configured")).toBeInTheDocument();
+      expect(screen.getByText("1 address allowed")).toBeInTheDocument();
     });
 
     it("warns while restricted with an empty list", async () => {
       await restrictedModal();
-      expect(
-        screen.getByText(/No IP addresses configured/),
-      ).toBeInTheDocument();
+      expect(screen.getByText(/No addresses allowed yet/)).toBeInTheDocument();
     });
   });
 
@@ -282,7 +275,7 @@ describe("IPAccessModal", () => {
     it("is offered only when the user has devices", async () => {
       renderModal({ preference: preference({ ipAccessPolicy: "restricted" }) });
       expect(
-        screen.queryByRole("button", { name: /Add Current Device IPs/ }),
+        screen.queryByRole("button", { name: /Add Current Device Addresses/ }),
       ).toBeNull();
     });
 
@@ -301,10 +294,10 @@ describe("IPAccessModal", () => {
       });
 
       await user.click(
-        screen.getByRole("button", { name: /Add Current Device IPs/ }),
+        screen.getByRole("button", { name: /Add Current Device Addresses/ }),
       );
 
-      expect(screen.getByText("2 IP addresses configured")).toBeInTheDocument();
+      expect(screen.getByText("2 addresses allowed")).toBeInTheDocument();
     });
 
     it("does nothing when every device IP is already listed", async () => {
@@ -317,10 +310,10 @@ describe("IPAccessModal", () => {
       });
 
       await user.click(
-        screen.getByRole("button", { name: /Add Current Device IPs/ }),
+        screen.getByRole("button", { name: /Add Current Device Addresses/ }),
       );
 
-      expect(screen.getByText("1 IP address configured")).toBeInTheDocument();
+      expect(screen.getByText("1 address allowed")).toBeInTheDocument();
     });
   });
 
@@ -335,9 +328,11 @@ describe("IPAccessModal", () => {
         ],
       });
 
-      expect(screen.getByText(/192\.168\.1\.10 \(LAN\)/)).toBeInTheDocument();
-      expect(screen.getByText(/2001:db8::1 \(WAN\)/)).toBeInTheDocument();
-      expect(screen.getByText(/fd00::1 \(LAN\)/)).toBeInTheDocument();
+      expect(
+        screen.getByText(/192\.168\.1\.10 \(local network\)/),
+      ).toBeInTheDocument();
+      expect(screen.getByText(/2001:db8::1 \(internet\)/)).toBeInTheDocument();
+      expect(screen.getByText(/fd00::1 \(local network\)/)).toBeInTheDocument();
       expect(screen.queryByText("Ghost")).toBeNull();
     });
 
@@ -361,13 +356,13 @@ describe("IPAccessModal", () => {
         />,
       );
       expect(
-        screen.getByText(/Current device IPs for u-42/),
+        screen.getByText(/Addresses u-42 is streaming from/),
       ).toBeInTheDocument();
     });
 
     it("is omitted entirely when the user has no devices", () => {
       renderModal();
-      expect(screen.queryByText(/Current device IPs for/)).toBeNull();
+      expect(screen.queryByText(/Addresses .* is streaming from/)).toBeNull();
     });
   });
 
@@ -380,7 +375,7 @@ describe("IPAccessModal", () => {
         }),
       });
 
-      await user.click(screen.getByText("Any IP address"));
+      await user.click(screen.getByText("Any address"));
       await user.click(screen.getByRole("button", { name: "Save Policies" }));
 
       expect(onSave).toHaveBeenCalledWith("u-1", {

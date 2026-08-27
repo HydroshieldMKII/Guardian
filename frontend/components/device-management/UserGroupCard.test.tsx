@@ -92,13 +92,13 @@ const renderCard = (
     onUpdateUserIPPolicy: jest.fn(),
     onToggleUserVisibility: jest.fn(),
     onShowHistory: jest.fn(),
-    onGrantUserTempAccess: jest.fn(),
+    onGrantUserTemporaryAccess: jest.fn(),
     onShowTimePolicy: jest.fn(),
     onApprove: jest.fn(),
     onReject: jest.fn(),
     onDelete: jest.fn(),
     onToggleApproval: jest.fn(),
-    onRevokeTempAccess: jest.fn(),
+    onRemoveTemporaryAccess: jest.fn(),
     onShowDetails: jest.fn(),
   };
 
@@ -164,18 +164,96 @@ describe("UserGroupCard header", () => {
   });
 });
 
-describe("UserGroupCard badges", () => {
-  it("shows the schedule and IP badges when flagged", () => {
-    renderCard({}, { hasTimeSchedules: true, hasIPPolicies: true });
+const badges = (label: string) =>
+  screen
+    .queryAllByText(label)
+    .map((node) => node.closest("span[title]"))
+    .filter(Boolean);
 
-    expect(screen.getAllByText("Scheduled").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("IP Policy").length).toBeGreaterThan(0);
+describe("UserGroupCard badges", () => {
+  it("raises a schedule badge when a rule reaches any device", () => {
+    renderCard(
+      {},
+      {
+        timeRules: [
+          { id: 1, userId: "u-1", enabled: true, dayOfWeek: 1 },
+        ] as never,
+      },
+    );
+
+    expect(badges("Time Schedule").length).toBeGreaterThan(0);
+  });
+
+  it("raises a schedule badge for a device-specific rule too", () => {
+    renderCard(
+      {},
+      {
+        timeRules: [
+          {
+            id: 1,
+            userId: "u-1",
+            deviceIdentifier: "device-1",
+            enabled: true,
+            dayOfWeek: 1,
+          },
+        ] as never,
+      },
+    );
+
+    expect(badges("Time Schedule").length).toBeGreaterThan(0);
+  });
+
+  it("ignores a rule aimed at some other device", () => {
+    renderCard(
+      {},
+      {
+        timeRules: [
+          {
+            id: 1,
+            userId: "u-1",
+            deviceIdentifier: "other-device",
+            enabled: true,
+            dayOfWeek: 1,
+          },
+        ] as never,
+      },
+    );
+
+    expect(badges("Time Schedule")).toHaveLength(0);
+  });
+
+  it("raises an IP badge from the user's own preference", () => {
+    renderCard({
+      user: {
+        userId: "u-1",
+        username: "testuser",
+        preference: preference({ ipAccessPolicy: "restricted" }),
+      },
+    });
+
+    expect(badges("IP Access").length).toBeGreaterThan(0);
+  });
+
+  it("raises a temporary access badge when any device holds one", () => {
+    renderCard({
+      devices: [
+        device({ id: 1 }),
+        device({
+          id: 2,
+          deviceIdentifier: "device-2",
+          temporaryAccessUntil: new Date(Date.now() + 3600_000).toISOString(),
+        }),
+      ],
+    });
+
+    expect(badges("Temporary Access").length).toBeGreaterThan(0);
   });
 
   it("omits them otherwise", () => {
     renderCard();
-    expect(screen.queryByText("Scheduled")).toBeNull();
-    expect(screen.queryByText("IP Policy")).toBeNull();
+    expect(badges("Time Schedule")).toHaveLength(0);
+    expect(badges("IP Access")).toHaveLength(0);
+    expect(badges("Temporary Access")).toHaveLength(0);
   });
 
   it("shows a concurrent limit", () => {
@@ -185,7 +263,7 @@ describe("UserGroupCard badges", () => {
         preference: preference({ concurrentStreamLimit: 2 }),
       },
     });
-    expect(screen.getByText("2 Streams")).toBeInTheDocument();
+    expect(screen.getByText("2 Streams at Once")).toBeInTheDocument();
   });
 
   it("uses the singular for one stream", () => {
@@ -195,7 +273,7 @@ describe("UserGroupCard badges", () => {
         preference: preference({ concurrentStreamLimit: 1 }),
       },
     });
-    expect(screen.getByText("1 Stream")).toBeInTheDocument();
+    expect(screen.getByText("1 Stream at Once")).toBeInTheDocument();
   });
 
   it("reads zero as unlimited", () => {
@@ -205,7 +283,7 @@ describe("UserGroupCard badges", () => {
         preference: preference({ concurrentStreamLimit: 0 }),
       },
     });
-    expect(screen.getByText("Unlimited")).toBeInTheDocument();
+    expect(screen.getByText("Unlimited Streams")).toBeInTheDocument();
   });
 
   it("omits the limit badge when it is inherited", () => {
@@ -238,7 +316,7 @@ describe("UserGroupCard badges", () => {
 describe("UserGroupCard user actions", () => {
   it.each([
     ["Time Schedule", "onShowTimePolicy"],
-    ["Temporary Access", "onGrantUserTempAccess"],
+    ["Temporary Access", "onGrantUserTemporaryAccess"],
     ["Stream History", "onShowHistory"],
   ] as const)("invokes %s", async (label, handler) => {
     const { user, handlers } = renderCard();
@@ -251,7 +329,11 @@ describe("UserGroupCard user actions", () => {
   it("toggles visibility", async () => {
     const { user, handlers } = renderCard();
 
-    await user.click(screen.getByTitle("Hide user"));
+    await user.click(
+      screen.getByTitle(
+        "Move this user to the hidden section at the bottom of the list",
+      ),
+    );
 
     expect(handlers.onToggleUserVisibility).toHaveBeenCalledWith("u-1");
   });
@@ -260,7 +342,9 @@ describe("UserGroupCard user actions", () => {
     renderCard({
       user: { userId: "u-1", preference: preference({ hidden: true }) },
     });
-    expect(screen.getByTitle("Show user")).toBeInTheDocument();
+    expect(
+      screen.getByTitle("Move this user back into the main list"),
+    ).toBeInTheDocument();
   });
 
   it("opens and closes the IP modal", async () => {
@@ -296,7 +380,7 @@ describe("UserGroupCard user actions", () => {
         onReject={jest.fn()}
         onDelete={jest.fn()}
         onToggleApproval={jest.fn()}
-        onRevokeTempAccess={jest.fn()}
+        onRemoveTemporaryAccess={jest.fn()}
         onShowDetails={jest.fn()}
       />,
     );
@@ -348,6 +432,71 @@ describe("UserGroupCard default device policy", () => {
     renderCard({}, { updatingUserPreference: "u-2" });
     expect(screen.getByRole("button", { name: /^Allow$/ })).not.toBeDisabled();
   });
+
+  const pressed = (name: RegExp) =>
+    screen.getByRole("button", { name }).getAttribute("aria-pressed");
+
+  it("shows one saving indicator rather than one per option", () => {
+    const { container } = renderCard({}, { updatingUserPreference: "u-1" });
+
+    expect(container.querySelectorAll(".animate-spin")).toHaveLength(1);
+    expect(
+      screen.getByLabelText("Saving the default device policy"),
+    ).toBeInTheDocument();
+  });
+
+  it("moves the selection before the save comes back", async () => {
+    const { user, rerender } = renderCard();
+
+    await user.click(screen.getByRole("button", { name: /^Block$/ }));
+    rerender(
+      <UserGroupCard
+        group={group() as never}
+        isExpanded
+        actionLoading={null}
+        updatingUserPreference="u-1"
+        onToggleExpansion={jest.fn()}
+        onUpdateUserPreference={jest.fn()}
+        onApprove={jest.fn()}
+        onReject={jest.fn()}
+        onDelete={jest.fn()}
+        onToggleApproval={jest.fn()}
+        onRemoveTemporaryAccess={jest.fn()}
+        onShowDetails={jest.fn()}
+      />,
+    );
+
+    expect(pressed(/^Block$/)).toBe("true");
+    expect(pressed(/^Global/)).toBe("false");
+  });
+
+  it("falls back to the stored choice when the save fails", async () => {
+    const { user, rerender } = renderCard();
+    const stillGlobal = (updating: string | null) => (
+      <UserGroupCard
+        group={group() as never}
+        isExpanded
+        actionLoading={null}
+        updatingUserPreference={updating}
+        onToggleExpansion={jest.fn()}
+        onUpdateUserPreference={jest.fn()}
+        onApprove={jest.fn()}
+        onReject={jest.fn()}
+        onDelete={jest.fn()}
+        onToggleApproval={jest.fn()}
+        onRemoveTemporaryAccess={jest.fn()}
+        onShowDetails={jest.fn()}
+      />
+    );
+
+    await user.click(screen.getByRole("button", { name: /^Block$/ }));
+    rerender(stillGlobal("u-1"));
+    expect(pressed(/^Block$/)).toBe("true");
+
+    rerender(stillGlobal(null));
+    expect(pressed(/^Global/)).toBe("true");
+    expect(pressed(/^Block$/)).toBe("false");
+  });
 });
 
 describe("UserGroupCard device list", () => {
@@ -360,8 +509,6 @@ describe("UserGroupCard device list", () => {
 
   it("says when there are none", () => {
     renderCard({ devices: [] });
-    expect(
-      screen.getByText("No devices found for this user"),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/No devices yet/)).toBeInTheDocument();
   });
 });

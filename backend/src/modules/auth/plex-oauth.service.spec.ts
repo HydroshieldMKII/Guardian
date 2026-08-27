@@ -510,6 +510,22 @@ describe('PlexOAuthService', () => {
     });
   });
 
+  describe('cancelPlexPin', () => {
+    it('forgets a pin the user abandoned', async () => {
+      await createPin();
+
+      service.cancelPlexPin('client-1');
+
+      await expect(service.checkPlexPin('client-1')).rejects.toThrow(
+        'No pending authentication found',
+      );
+    });
+
+    it('ignores a client id it never issued', () => {
+      expect(() => service.cancelPlexPin('unknown')).not.toThrow();
+    });
+  });
+
   describe('pending pin housekeeping', () => {
     it('forgets a pin that has aged past ten minutes', async () => {
       await createPin();

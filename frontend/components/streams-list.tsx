@@ -9,8 +9,11 @@ import { PlexSession, StreamsResponse } from "@/types";
 import { useSwipeToRefresh } from "../hooks/useSwipeToRefresh";
 import { useStreamsData, useStreamActions } from "../hooks/useStreams";
 
-// Import extracted components
 import { RemoveAccessModal, StreamCard, getContentTitle } from "./streams";
+
+const AUTO_REFRESH_ON = "Guardian is refreshing on its own. Click to stop.";
+const AUTO_REFRESH_OFF =
+  "Refreshing only when you ask. Click to refresh on its own.";
 
 interface StreamsListProps {
   tabs?: React.ReactNode;
@@ -115,6 +118,7 @@ export default function StreamsList({
               variant="outline"
               size="sm"
               onClick={handleAutoRefreshToggle}
+              title={autoRefresh ? AUTO_REFRESH_ON : AUTO_REFRESH_OFF}
               className={
                 autoRefresh
                   ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
@@ -143,7 +147,7 @@ export default function StreamsList({
           <div className="relative">
             <input
               type="text"
-              placeholder="Search streams by username, device, content, or app..."
+              placeholder="Search by user, device, title or app"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="h-10 w-full rounded-md border border-input bg-background px-4 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
@@ -158,7 +162,9 @@ export default function StreamsList({
 
         {error ? (
           <div className="flex flex-col items-center justify-center py-16 text-red-600 dark:text-red-700 text-center">
-            <p className="text-sm font-medium mb-1">Connection Error</p>
+            <p className="text-sm font-medium mb-1">
+              Guardian cannot reach the server
+            </p>
             <p className="text-xs text-muted-foreground px-4">{error}</p>
             <Button
               variant="outline"
@@ -178,7 +184,7 @@ export default function StreamsList({
             </p>
             <p className="text-xs text-muted-foreground">
               {deferredSearchTerm
-                ? "Try a different title, user, or device."
+                ? "Try a different title, user or device."
                 : "Streams appear here as soon as someone starts playing."}
             </p>
           </div>

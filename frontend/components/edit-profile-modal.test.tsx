@@ -84,11 +84,13 @@ describe("EditProfileModal", () => {
   it("marks the email optional with a badge on the label row", async () => {
     await renderModal();
 
-    const badge = screen.getByText("Optional");
+    const badge = screen
+      .getByText("Optional")
+      .closest("span.rounded-full") as HTMLElement;
     const label = screen.getByText("Email");
 
-    expect(badge.className).toContain("rounded-full");
-    expect(label.parentElement).toContainElement(badge);
+    expect(badge).not.toBeNull();
+    expect(label.parentElement?.parentElement).toContainElement(badge);
   });
 
   it("copes with an admin who has no email or avatar recorded", async () => {
@@ -542,7 +544,8 @@ describe("EditProfileModal", () => {
         expect(toast).toHaveBeenCalledWith(
           expect.objectContaining({
             title: "Plex Link Failed",
-            description: "Failed to create Plex PIN",
+            description:
+              "Guardian could not reach Plex. Try again in a moment.",
           }),
         ),
       );
@@ -644,7 +647,7 @@ describe("EditProfileModal Plex PIN polling", () => {
     expect(linkPlexAccount).toHaveBeenCalledWith("tok");
     expect(toast).toHaveBeenCalledWith(
       expect.objectContaining({
-        description: "Plex account linked successfully",
+        description: "You can now sign in to Guardian with Plex",
       }),
     );
     expect(popup.close).toHaveBeenCalled();
@@ -689,7 +692,7 @@ describe("EditProfileModal Plex PIN polling", () => {
 
     expect(toast).toHaveBeenCalledWith(
       expect.objectContaining({
-        title: "Link Failed",
+        title: "Plex Link Failed",
         description: "already linked",
       }),
     );
@@ -704,7 +707,7 @@ describe("EditProfileModal Plex PIN polling", () => {
 
     expect(toast).toHaveBeenCalledWith(
       expect.objectContaining({
-        description: "Failed to link Plex account",
+        description: "Guardian could not link your Plex account",
       }),
     );
   });
@@ -718,7 +721,7 @@ describe("EditProfileModal Plex PIN polling", () => {
     expect(toast).toHaveBeenCalledWith(
       expect.objectContaining({
         title: "Plex Link Expired",
-        description: "Please try again",
+        description: "The Plex window timed out. Start again to retry.",
       }),
     );
   });
@@ -761,7 +764,7 @@ describe("EditProfileModal remaining edges", () => {
     await waitFor(() =>
       expect(toast).toHaveBeenCalledWith(
         expect.objectContaining({
-          description: "Failed to start Plex linking",
+          description: "Guardian could not link your Plex account",
         }),
       ),
     );

@@ -38,7 +38,7 @@ export function ErrorHandler({
     // Check for backend errors FIRST
     if (backendError) {
       return {
-        title: "Backend Connection Error",
+        title: "Cannot Reach Guardian",
         description: backendError,
         showChecklist: false,
         isBackendError: true,
@@ -55,9 +55,9 @@ export function ErrorHandler({
       status.includes("Backend server is not reachable")
     ) {
       return {
-        title: "Backend Connection Error",
+        title: "Cannot Reach Guardian",
         description:
-          "Cannot communicate with the Guardian backend. Please check if the backend service is running.",
+          "Guardian's own server is not answering. Check that the Guardian service is running.",
         showChecklist: false,
       };
     }
@@ -105,9 +105,9 @@ export function ErrorHandler({
     // Fallback for unknown errors
     return withDetail(
       {
-        title: "Oops! Something Went Wrong",
+        title: "Something Went Wrong",
         description:
-          "Something went wrong with Guardian. Please check your setup and try again.",
+          "Guardian ran into a problem it could not explain. Check your setup and try again.",
         showChecklist: false,
       },
       status,

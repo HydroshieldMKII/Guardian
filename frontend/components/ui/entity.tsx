@@ -76,6 +76,15 @@ const TONE_OUTLINE: Record<Tone, string> = {
     "border-violet-500/40 text-violet-700 hover:bg-violet-500/10 dark:text-violet-400",
 };
 
+const TONE_SEGMENT: Record<Tone, { thumb: string; text: string }> = {
+  neutral: { thumb: "bg-background shadow-sm", text: "text-foreground" },
+  positive: { thumb: "bg-emerald-600 shadow-sm", text: "text-white" },
+  warning: { thumb: "bg-amber-600 shadow-sm", text: "text-white" },
+  danger: { thumb: "bg-rose-600 shadow-sm", text: "text-white" },
+  info: { thumb: "bg-sky-600 shadow-sm", text: "text-white" },
+  accent: { thumb: "bg-violet-600 shadow-sm", text: "text-white" },
+};
+
 const TONE_MENU: Record<Tone, string> = {
   neutral: "",
   positive:
@@ -171,19 +180,22 @@ export function StatusPill({
   tone = "neutral",
   size = "default",
   dot = false,
+  title,
   className,
   children,
 }: {
   tone?: Tone;
   size?: keyof typeof PILL_SIZE;
   dot?: boolean;
+  title?: string;
   className?: string;
   children: React.ReactNode;
 }) {
   return (
     <span
+      title={title}
       className={cn(
-        "inline-flex items-center whitespace-nowrap rounded-full border font-medium",
+        "inline-flex max-w-full items-center rounded-full border font-medium",
         PILL_SIZE[size],
         TONE_PILL[tone],
         className,
@@ -195,7 +207,7 @@ export function StatusPill({
           className={cn("size-1.5 shrink-0 rounded-full", TONE_DOT[tone])}
         />
       )}
-      {children}
+      <span className="min-w-0 truncate">{children}</span>
     </span>
   );
 }
@@ -449,21 +461,33 @@ export function Field({
   className?: string;
   children?: React.ReactNode;
 }) {
+  const header = (
+    <div className="flex items-center justify-between gap-3">
+      <Label htmlFor={htmlFor} className="text-sm font-medium text-foreground">
+        {label}
+      </Label>
+      {action}
+    </div>
+  );
+
+  const description = hint ? (
+    <p className="text-xs leading-relaxed text-muted-foreground">{hint}</p>
+  ) : null;
+
+  if (!children) {
+    return (
+      <div className={cn("space-y-1", className)}>
+        {header}
+        {description}
+      </div>
+    );
+  }
+
   return (
     <div className={cn("space-y-2", className)}>
-      <div className="flex items-center justify-between gap-3">
-        <Label
-          htmlFor={htmlFor}
-          className="text-sm font-medium text-foreground"
-        >
-          {label}
-        </Label>
-        {action}
-      </div>
+      {header}
       {children}
-      {hint && (
-        <p className="text-xs leading-relaxed text-muted-foreground">{hint}</p>
-      )}
+      {description}
     </div>
   );
 }
@@ -551,7 +575,7 @@ export function OptionCard({
       type="button"
       role="radio"
       aria-checked={selected}
-      onClick={onSelect}
+      onClick={() => onSelect()}
       disabled={disabled}
       className={cn(
         "flex w-full cursor-pointer flex-col gap-1.5 rounded-lg border p-4 text-left",
@@ -603,7 +627,7 @@ export function SelectRow({
       type="button"
       role="checkbox"
       aria-checked={selected}
-      onClick={onToggle}
+      onClick={() => onToggle()}
       className={cn(
         "flex w-full cursor-pointer items-center gap-3 rounded-lg border p-3 text-left",
         "transition-colors duration-200",
@@ -650,34 +674,66 @@ export function SelectRow({
   );
 }
 
-export function SegmentedControl<T extends string>({
+export function SegmentedControl<T extends string | number | boolean | null>({
   options,
   value,
   onChange,
+  busy = false,
+  size = "sm",
   className,
 }: {
-  options: { value: T; label: string }[];
+  options: { value: T; label: React.ReactNode; tone?: Tone }[];
   value: T;
   onChange: (value: T) => void;
+  busy?: boolean;
+  size?: "sm" | "md";
   className?: string;
 }) {
+  const activeIndex = options.findIndex((option) =>
+    Object.is(option.value, value),
+  );
+  const active = TONE_SEGMENT[options[activeIndex]?.tone ?? "neutral"];
+
   return (
     <div
+      aria-busy={busy || undefined}
       className={cn(
-        "inline-flex shrink-0 items-center gap-1 rounded-lg border bg-muted/40 p-1",
+        "relative grid w-fit shrink-0 rounded-lg border bg-muted/40 p-1",
         className,
       )}
+      style={{
+        gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))`,
+      }}
     >
-      {options.map((option) => (
+      {activeIndex >= 0 && (
+        <span
+          aria-hidden
+          className={cn(
+            "pointer-events-none absolute inset-y-1 left-1 rounded-md",
+            "transition-[transform,background-color] duration-300 ease-out",
+            "motion-reduce:transition-none",
+            active.thumb,
+          )}
+          style={{
+            width: `calc((100% - 0.5rem) / ${options.length})`,
+            transform: `translateX(${Math.max(activeIndex, 0) * 100}%)`,
+          }}
+        />
+      )}
+      {options.map((option, index) => (
         <button
-          key={option.value}
+          key={String(option.value)}
           type="button"
-          aria-pressed={value === option.value}
+          aria-pressed={index === activeIndex}
+          disabled={busy}
           onClick={() => onChange(option.value)}
           className={cn(
-            "cursor-pointer rounded-md px-3 py-1.5 text-xs font-medium transition-colors duration-200",
-            value === option.value
-              ? "bg-background text-foreground shadow-sm"
+            "relative cursor-pointer whitespace-nowrap rounded-md text-xs font-medium",
+            "transition-colors duration-300 ease-out motion-reduce:transition-none",
+            "disabled:cursor-progress",
+            size === "md" ? "px-3 py-2" : "px-3 py-1.5",
+            index === activeIndex
+              ? active.text
               : "text-muted-foreground hover:text-foreground",
           )}
         >
@@ -714,7 +770,7 @@ export function Chip({
       {onRemove && (
         <button
           type="button"
-          onClick={onRemove}
+          onClick={() => onRemove()}
           aria-label={removeLabel}
           className="cursor-pointer rounded-sm text-current opacity-60 transition-opacity hover:opacity-100"
         >

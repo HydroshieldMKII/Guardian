@@ -26,7 +26,7 @@ describe("ErrorHandler", () => {
         />,
       );
 
-      expect(screen.getByText("Backend Connection Error")).toBeInTheDocument();
+      expect(screen.getByText("Cannot Reach Guardian")).toBeInTheDocument();
       expect(screen.getByText("Connection refused")).toBeInTheDocument();
     });
 
@@ -67,9 +67,9 @@ describe("ErrorHandler", () => {
     ])("recognises %p reported through the Plex status", (connectionStatus) => {
       render(<ErrorHandler plexStatus={status({ connectionStatus })} />);
 
-      expect(screen.getByText("Backend Connection Error")).toBeInTheDocument();
+      expect(screen.getByText("Cannot Reach Guardian")).toBeInTheDocument();
       expect(
-        screen.getByText(/Cannot communicate with the Guardian backend/),
+        screen.getByText(/Guardian's own server is not answering/),
       ).toBeInTheDocument();
     });
 
@@ -139,9 +139,7 @@ describe("ErrorHandler", () => {
         <ErrorHandler plexStatus={status({ connectionStatus: "who knows" })} />,
       );
 
-      expect(
-        screen.getByText("Oops! Something Went Wrong"),
-      ).toBeInTheDocument();
+      expect(screen.getByText("Something Went Wrong")).toBeInTheDocument();
       expect(screen.getByText(/who knows/)).toBeInTheDocument();
     });
 
