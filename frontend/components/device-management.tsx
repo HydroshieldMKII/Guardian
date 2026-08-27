@@ -1,6 +1,12 @@
 "use client";
 
-import React, { useState, useEffect, memo, useMemo } from "react";
+import React, {
+  useState,
+  useEffect,
+  memo,
+  useMemo,
+  useDeferredValue,
+} from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -120,7 +126,7 @@ interface DeviceManagementProps {
   };
   usersData?: UserPreference[];
   settingsData?: AppSetting[];
-  onRefresh?: () => void;
+  onRefresh?: () => void | Promise<void>;
   autoRefresh?: boolean;
   onAutoRefreshChange?: (value: boolean) => void;
   navigationTarget?: {
@@ -177,6 +183,7 @@ const DeviceManagement = memo(
     );
     const [expandedUsers, setExpandedUsers] = useState<Set<string>>(new Set());
     const [searchTerm, setSearchTerm] = useState("");
+    const deferredSearchTerm = useDeferredValue(searchTerm);
     const [editingDevice, setEditingDevice] = useState<number | null>(null);
     const [newDeviceName, setNewDeviceName] = useState("");
     const [tempAccessUser, setTempAccessUser] = useState<{
@@ -519,13 +526,17 @@ const DeviceManagement = memo(
       }
     }, [navigationTarget, userGroups.length, onNavigationComplete]); // Removed expandedUsers to prevent infinite loop
 
-    const handleRefresh = () => {
+    const handleRefresh = async () => {
       if (onRefresh) {
         setRefreshing(true);
         setUserTimeRuleStatus({}); // Clear time rule status to force re-fetch
-        onRefresh();
-        // Reset refreshing state after a short delay
-        setTimeout(() => setRefreshing(false), 1000);
+        try {
+          await onRefresh();
+        } catch (error) {
+          console.error("Failed to refresh:", error);
+        } finally {
+          setRefreshing(false);
+        }
       }
     };
 
@@ -543,8 +554,8 @@ const DeviceManagement = memo(
       return userGroups
         .filter((group) => {
           // Apply search filter
-          if (searchTerm.trim()) {
-            const searchLower = searchTerm.toLowerCase();
+          if (deferredSearchTerm.trim()) {
+            const searchLower = deferredSearchTerm.toLowerCase();
             const username = (
               group.user.username || group.user.userId
             ).toLowerCase();
@@ -624,7 +635,7 @@ const DeviceManagement = memo(
           const comparison = valueA.localeCompare(valueB);
           return sortOrder === "asc" ? comparison : -comparison;
         });
-    }, [userGroups, searchTerm, sortBy, sortOrder]);
+    }, [userGroups, deferredSearchTerm, sortBy, sortOrder]);
 
     // Toggle user expansion
     const toggleUserExpansion = (userId: string) => {
@@ -1341,7 +1352,7 @@ const DeviceManagement = memo(
               </div>
             ) : filteredAndSortedGroups.length === 0 ? (
               <div className="flex items-center justify-center py-16 text-muted-foreground">
-                {searchTerm ? (
+                {deferredSearchTerm ? (
                   <>
                     <Search className="w-6 h-6 mr-2" />
                     No users match your search

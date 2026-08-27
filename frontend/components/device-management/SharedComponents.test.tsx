@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { UserDevice } from "@/types";
 import {
@@ -129,6 +129,28 @@ describe("DeviceStatus", () => {
       />,
     );
     expect(screen.getByText("Approved")).toBeInTheDocument();
+  });
+
+  it("keeps the unmanageable tooltip shut until asked", () => {
+    render(<DeviceStatus device={device({ deviceProduct: "Plexamp" })} />);
+
+    expect(screen.queryByRole("tooltip")).toBeNull();
+  });
+
+  it("does not open the tooltip when the badge merely takes focus", async () => {
+    render(<DeviceStatus device={device({ deviceProduct: "Plexamp" })} />);
+
+    screen.getByRole("button").focus();
+
+    await waitFor(() => expect(screen.queryByRole("tooltip")).toBeNull());
+  });
+
+  it("explains itself to a screen reader with the tooltip closed", () => {
+    render(<DeviceStatus device={device({ deviceProduct: "Plexamp" })} />);
+
+    expect(
+      screen.getByRole("button", { name: /PlexAmp devices cannot be managed/ }),
+    ).toBeInTheDocument();
   });
 
   it("toggles the unmanageable tooltip on a narrow viewport", async () => {

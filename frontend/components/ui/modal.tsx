@@ -53,15 +53,31 @@ export function Modal({
 
 export function ModalHeader({
   title,
+  titleHidden = false,
+  titleSuffix,
   description,
   className,
   children,
 }: {
   title: React.ReactNode;
+  titleHidden?: boolean;
+  titleSuffix?: React.ReactNode;
   description?: React.ReactNode;
   className?: string;
   children?: React.ReactNode;
 }) {
+  const heading = (
+    <DialogTitle
+      className={
+        titleHidden
+          ? "sr-only"
+          : "min-w-0 truncate text-base font-semibold leading-tight tracking-tight text-foreground sm:text-lg"
+      }
+    >
+      {title}
+    </DialogTitle>
+  );
+
   return (
     <DialogHeader
       className={cn(
@@ -69,9 +85,14 @@ export function ModalHeader({
         className,
       )}
     >
-      <DialogTitle className="text-base font-semibold leading-tight tracking-tight text-foreground sm:text-lg">
-        {title}
-      </DialogTitle>
+      {titleSuffix ? (
+        <div className="flex flex-wrap items-center gap-2">
+          {heading}
+          {titleSuffix}
+        </div>
+      ) : (
+        heading
+      )}
       {description ? (
         <DialogDescription className="text-sm leading-relaxed text-muted-foreground">
           {description}

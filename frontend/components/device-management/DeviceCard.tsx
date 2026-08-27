@@ -1,28 +1,8 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  Ban,
-  Check,
-  Info,
-  MoreVertical,
-  RefreshCw,
-  ShieldOff,
-  Trash2,
-  type LucideIcon,
-} from "lucide-react";
-import {
-  EntityCard,
-  StatusPill,
-  toneMenuItem,
-  type Tone,
-} from "@/components/ui/entity";
+import { ActionMenu, type Action } from "@/components/ui/action-menu";
+import { Ban, Check, Info, RefreshCw, ShieldOff, Trash2 } from "lucide-react";
+import { EntityCard, StatusPill, type Tone } from "@/components/ui/entity";
 import { UserDevice } from "@/types";
 import { ClickableIP } from "./SharedComponents";
 import { useDeviceUtils } from "@/hooks/device-management/useDeviceUtils";
@@ -53,19 +33,6 @@ const STATUS_TONE: Record<string, Tone> = {
   pending: "warning",
 };
 
-const STATUS_LABEL: Record<string, string> = {
-  approved: "Approved",
-  rejected: "Rejected",
-  pending: "Pending",
-};
-
-interface DeviceAction {
-  label: string;
-  icon: LucideIcon;
-  tone: Tone;
-  onSelect: () => void;
-}
-
 const Fact = ({
   label,
   children,
@@ -90,7 +57,7 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
   onShowDetails,
   onDeviceUpdate,
 }) => {
-  const { hasTemporaryAccess, getTemporaryAccessTimeLeft } = useDeviceUtils();
+  const { hasTemporaryAccess } = useDeviceUtils();
   const { toast } = useToast();
   const [markingAsRead, setMarkingAsRead] = useState(false);
   const [noteReadAt, setNoteReadAt] = useState<string | undefined>(
@@ -144,7 +111,7 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
 
   const spinner = <RefreshCw className="size-4 animate-spin" />;
 
-  const decisions: DeviceAction[] = plexAmp
+  const decisions: Action[] = plexAmp
     ? []
     : device.status === "pending"
       ? [
@@ -179,7 +146,7 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
             },
           ];
 
-  const actions: DeviceAction[] = [
+  const actions: Action[] = [
     ...decisions,
     {
       label: "View Details",
@@ -198,22 +165,6 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
     });
   }
 
-  const menuItem = ({
-    label,
-    icon: Icon,
-    tone: itemTone,
-    onSelect,
-  }: DeviceAction) => (
-    <DropdownMenuItem
-      key={label}
-      onSelect={onSelect}
-      className={toneMenuItem(itemTone)}
-    >
-      <Icon />
-      {label}
-    </DropdownMenuItem>
-  );
-
   return (
     <EntityCard
       id={`device-${device.id}`}
@@ -227,27 +178,11 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
               <h4 className="min-w-0 truncate text-sm font-semibold leading-tight text-foreground">
                 {device.deviceName || "Unknown"}
               </h4>
-              <StatusPill tone={tone} size="sm">
-                {plexAmp
-                  ? "Plex Amp"
-                  : (STATUS_LABEL[device.status] ?? device.status)}
-              </StatusPill>
-              {temporary && (
-                <StatusPill tone="info" size="sm">
-                  {getTemporaryAccessTimeLeft(device)}
-                </StatusPill>
-              )}
-              {temporary && device.temporaryAccessBypassPolicies && (
+              {!plexAmp && device.status === "pending" && (
                 <StatusPill tone="warning" size="sm">
-                  Bypass
+                  Pending
                 </StatusPill>
               )}
-              {device.status === "approved" &&
-                device.excludeFromConcurrentLimit && (
-                  <StatusPill tone="neutral" size="sm">
-                    No Limit
-                  </StatusPill>
-                )}
             </div>
 
             <dl className="flex flex-wrap items-center gap-y-1 text-xs text-muted-foreground">
@@ -265,29 +200,17 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
             </dl>
           </div>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={busy}
-                className="h-10 w-full rounded-md lg:size-8 lg:px-0"
-              >
-                <span className="lg:sr-only">Actions</span>
-                {busy ? spinner : <MoreVertical />}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-52">
-              {actions.map(menuItem)}
-              <DropdownMenuSeparator />
-              {menuItem({
-                label: "Delete",
-                icon: Trash2,
-                tone: "danger",
-                onSelect: () => onDelete(device),
-              })}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <ActionMenu
+            trigger="responsive"
+            busy={busy}
+            actions={actions}
+            destructive={{
+              label: "Delete",
+              icon: Trash2,
+              tone: "danger",
+              onSelect: () => onDelete(device),
+            }}
+          />
         </div>
 
         {showsNote && (

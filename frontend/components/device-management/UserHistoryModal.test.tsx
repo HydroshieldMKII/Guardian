@@ -1,4 +1,11 @@
-import { act, render, screen, waitFor, within } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { UserHistoryModal } from "@/components/device-management/UserHistoryModal";
 
@@ -139,6 +146,24 @@ describe("UserHistoryModal loading", () => {
     render(<UserHistoryModal userId="u-1" isOpen onClose={jest.fn()} />);
 
     expect(screen.getByText("Loading history...")).toBeInTheDocument();
+  });
+
+  it("reserves the same height for the loader and the empty state", async () => {
+    fetchMock.mockReturnValue(new Promise(() => {}));
+    render(<UserHistoryModal userId="u-1" isOpen onClose={jest.fn()} />);
+
+    const loader = screen.getByText("Loading history...").parentElement;
+    expect(loader?.className).toContain("min-h-80");
+
+    fetchMock.mockImplementation(() =>
+      Promise.resolve({ ok: true, json: async () => ({ sessions: [] }) }),
+    );
+    cleanup();
+    await renderModal();
+
+    expect(
+      screen.getByText("No streaming history found").parentElement?.className,
+    ).toContain("min-h-80");
   });
 
   it("empties the list on a failed response", async () => {

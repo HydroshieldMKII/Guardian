@@ -478,14 +478,15 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
           </div>
         </ModalHeader>
 
-        <ModalBody className="space-y-3" ref={sessionsListRef}>
+        <ModalBody className="min-h-96 space-y-3" ref={sessionsListRef}>
           {loading ? (
-            <div className="flex items-center justify-center gap-2 py-12 text-sm text-muted-foreground">
+            <div className="flex min-h-80 items-center justify-center gap-2 text-sm text-muted-foreground">
               <RefreshCw className="size-5 animate-spin" />
               <span>Loading history...</span>
             </div>
           ) : sessions.length === 0 ? (
             <EmptyState
+              className="min-h-80"
               title={
                 filtered
                   ? "No sessions found matching your filters"

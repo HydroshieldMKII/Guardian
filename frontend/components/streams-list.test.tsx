@@ -244,12 +244,17 @@ describe("StreamsList", () => {
       expect(onAutoRefreshChange).toHaveBeenCalledWith(true);
     });
 
-    it("disables refresh briefly after a refresh", async () => {
-      const onRefresh = jest.fn();
+    it("keeps refresh disabled until the request actually settles", async () => {
+      let finish: () => void = () => {};
+      const onRefresh = jest.fn(
+        () =>
+          new Promise<void>((resolve) => {
+            finish = resolve;
+          }),
+      );
       render(<StreamsList onRefresh={onRefresh} />);
       const button = screen.getByRole("button", { name: /Refresh/ });
 
-      jest.useFakeTimers();
       await act(async () => {
         button.click();
       });
@@ -258,9 +263,30 @@ describe("StreamsList", () => {
       expect(button).toBeDisabled();
 
       await act(async () => {
-        jest.advanceTimersByTime(500);
+        finish();
       });
+
       expect(button).not.toBeDisabled();
+    });
+
+    it("re-enables refresh when the request fails", async () => {
+      const consoleError = jest
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
+      const onRefresh = jest.fn(() => Promise.reject(new Error("offline")));
+      render(<StreamsList onRefresh={onRefresh} />);
+      const button = screen.getByRole("button", { name: /Refresh/ });
+
+      await act(async () => {
+        button.click();
+      });
+
+      expect(button).not.toBeDisabled();
+      expect(consoleError).toHaveBeenCalledWith(
+        "Failed to refresh:",
+        expect.any(Error),
+      );
+      consoleError.mockRestore();
     });
 
     it("works without any callbacks supplied", async () => {

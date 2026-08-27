@@ -1,12 +1,13 @@
 import React from "react";
-import { Button } from "@/components/ui/button";
-import { RefreshCw } from "lucide-react";
+import { ActionMenu, type Action } from "@/components/ui/action-menu";
 import {
-  ActionBar,
-  EntityCard,
-  EntityHeader,
-  StatusPill,
-} from "@/components/ui/entity";
+  ChevronsDownUp,
+  ChevronsUpDown,
+  LogOut,
+  MonitorSmartphone,
+  User,
+} from "lucide-react";
+import { EntityCard, EntityHeader } from "@/components/ui/entity";
 import { getContentTitle } from "./SharedComponents";
 import { StreamQuality, StreamQualityDetails } from "./StreamQuality";
 import { StreamDeviceInfo } from "./StreamDeviceInfo";
@@ -89,6 +90,29 @@ export const StreamCard: React.FC<StreamCardProps> = ({
     ? "border-white/25 bg-white/10 text-white hover:bg-white/20"
     : "";
 
+  const actions: Action[] = [
+    {
+      label: "See User",
+      icon: User,
+      disabled: !canSeeUser,
+      onSelect: () => stream.User?.id && onNavigateToUser?.(stream.User.id),
+    },
+    {
+      label: "See Device",
+      icon: MonitorSmartphone,
+      disabled: !canSeeDevice,
+      onSelect: () =>
+        stream.User?.id &&
+        stream.Player?.machineIdentifier &&
+        onNavigateToDevice?.(stream.User.id, stream.Player.machineIdentifier),
+    },
+    {
+      label: isExpanded ? "Hide Details" : "View Details",
+      icon: isExpanded ? ChevronsDownUp : ChevronsUpDown,
+      onSelect: onToggleExpand,
+    },
+  ];
+
   return (
     <EntityCard
       key={stream.sessionKey || index}
@@ -128,14 +152,14 @@ export const StreamCard: React.FC<StreamCardProps> = ({
             </div>
           )}
 
-          <div className="min-w-0 flex-1 space-y-4">
+          <div className="min-w-0 flex-1 space-y-2">
             <EntityHeader
-              className={overArt ? "[&_h4]:text-white [&_p]:text-white/70" : ""}
+              className={overArt ? "[&_h4]:text-white" : ""}
               title={
                 <button
                   type="button"
                   onClick={openInPlex}
-                  className="max-w-full truncate text-left hover:underline"
+                  className="max-w-full cursor-pointer truncate text-left hover:underline"
                   title={
                     stream.type === "track"
                       ? "Click to open album in Plex"
@@ -145,88 +169,42 @@ export const StreamCard: React.FC<StreamCardProps> = ({
                   {getContentTitle(stream)}
                 </button>
               }
-              subtitle={
-                [stream.User?.title || "Unknown", stream.Player?.title]
-                  .filter(Boolean)
-                  .join(" · ") || undefined
-              }
               status={
-                <StatusPill
-                  tone="info"
-                  className={
-                    overArt ? "border-white/25 bg-white/10 text-white" : ""
+                <ActionMenu
+                  busy={isRevoking}
+                  actions={actions}
+                  destructive={
+                    stream.Player?.product === "Plexamp"
+                      ? undefined
+                      : {
+                          label: "Remove Access",
+                          icon: LogOut,
+                          tone: "danger",
+                          disabled: !canRevoke,
+                          onSelect: onRemoveAccess,
+                        }
                   }
-                >
-                  Streaming
-                </StatusPill>
+                  className={secondary}
+                />
               }
             />
 
-            <StreamQuality session={stream} inline hasArt={overArt} />
+            <div className="flex flex-wrap items-center gap-2">
+              <p
+                className={`truncate text-xs sm:text-sm ${
+                  overArt ? "text-white/70" : "text-muted-foreground"
+                }`}
+              >
+                {[stream.User?.title || "Unknown", stream.Player?.title]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </p>
+              <StreamQuality session={stream} inline hasArt={overArt} />
+            </div>
           </div>
         </div>
 
         <StreamProgress session={stream} hasArt={overArt} />
-
-        <ActionBar className={overArt ? "border-white/20" : ""}>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() =>
-              stream.User?.id && onNavigateToUser?.(stream.User.id)
-            }
-            disabled={!canSeeUser}
-            title="See User"
-            className={`h-10 flex-1 rounded-md sm:h-8 sm:flex-none ${secondary}`}
-          >
-            See User
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() =>
-              stream.User?.id &&
-              stream.Player?.machineIdentifier &&
-              onNavigateToDevice?.(
-                stream.User.id,
-                stream.Player.machineIdentifier,
-              )
-            }
-            disabled={!canSeeDevice}
-            title="See Device"
-            className={`h-10 flex-1 rounded-md sm:h-8 sm:flex-none ${secondary}`}
-          >
-            See Device
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onToggleExpand}
-            className={`h-10 flex-1 rounded-md sm:h-8 sm:flex-none ${secondary}`}
-          >
-            {isExpanded ? "Hide Details" : "View Details"}
-          </Button>
-          {stream.Player?.product !== "Plexamp" && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => canRevoke && onRemoveAccess()}
-              disabled={!canRevoke}
-              title={isRevoking ? "Removing access..." : "Remove access"}
-              className={`h-10 flex-1 rounded-md border-rose-500/40 text-rose-600 hover:bg-rose-500/10 dark:text-rose-400 sm:ml-auto sm:h-8 sm:flex-none ${
-                overArt
-                  ? "border-rose-300/40 text-rose-200 hover:bg-rose-500/25"
-                  : ""
-              }`}
-            >
-              {isRevoking ? (
-                <RefreshCw className="size-4 animate-spin" />
-              ) : (
-                "Remove Access"
-              )}
-            </Button>
-          )}
-        </ActionBar>
 
         {isExpanded && (
           <div className="animate-in fade-in slide-in-from-top-2 space-y-4 duration-200 motion-reduce:animate-none">

@@ -112,25 +112,26 @@ describe("DeviceCard identity", () => {
   });
 
   it.each([
-    ["approved", "bg-emerald-500/70", "Approved"],
-    ["rejected", "bg-rose-500/70", "Rejected"],
-    ["pending", "bg-amber-500/70", "Pending"],
-  ] as const)("tones a %s device", (status, rail, label) => {
+    ["approved", "bg-emerald-500/70"],
+    ["rejected", "bg-rose-500/70"],
+    ["pending", "bg-amber-500/70"],
+  ] as const)("carries a %s device's status on the rail", (status, rail) => {
     const { container } = renderCard({ status });
     expect(container.innerHTML).toContain(rail);
-    expect(screen.getByText(label)).toBeInTheDocument();
   });
 
-  it("tones and labels a PlexAmp device", () => {
+  it("tones a PlexAmp device", () => {
     const { container } = renderCard({ deviceProduct: "Plexamp" });
 
     expect(container.innerHTML).toContain("bg-violet-500/70");
-    expect(screen.getAllByText("Plex Amp").length).toBeGreaterThan(0);
   });
 
   it("detects PlexAmp from the device name too", () => {
-    renderCard({ deviceProduct: "Plex", deviceName: "Office PlexAmp" });
-    expect(screen.getAllByText("Plex Amp").length).toBeGreaterThan(0);
+    const { container } = renderCard({
+      deviceProduct: "Plex",
+      deviceName: "Office PlexAmp",
+    });
+    expect(container.innerHTML).toContain("bg-violet-500/70");
   });
 
   it("shows when the device was last seen as the subtitle", () => {
@@ -199,26 +200,13 @@ describe("DeviceCard dense row", () => {
     expect(name.parentElement).toContainElement(pill);
   });
 
-  it("keeps the pills smaller than the name they annotate", () => {
-    hasTemporaryAccess.mockReturnValue(true);
-    renderCard({ status: "pending", temporaryAccessBypassPolicies: true });
+  it("keeps the pill smaller than the name it annotates", () => {
+    renderCard({ status: "pending" });
 
-    for (const label of ["Pending", "2h", "Bypass"]) {
-      expect(screen.getByText(label).className).toContain("text-[10px]");
-    }
+    expect(screen.getByText("Pending").className).toContain("text-[10px]");
     expect(
       screen.getByRole("heading", { name: "Living Room TV" }).className,
     ).toContain("text-sm");
-  });
-
-  it("folds the temporary access pills into the name row", () => {
-    hasTemporaryAccess.mockReturnValue(true);
-    renderCard({ temporaryAccessBypassPolicies: true });
-
-    const name = screen.getByRole("heading", { name: "Living Room TV" });
-
-    expect(name.parentElement).toContainElement(screen.getByText("2h"));
-    expect(name.parentElement).toContainElement(screen.getByText("Bypass"));
   });
 
   it("keeps the note below the row rather than inside it", () => {
@@ -233,46 +221,51 @@ describe("DeviceCard dense row", () => {
   });
 });
 
-describe("DeviceCard badges", () => {
-  it("shows the remaining temporary access", () => {
-    hasTemporaryAccess.mockReturnValue(true);
-    renderCard();
-    expect(screen.getAllByText("2h").length).toBeGreaterThan(0);
+describe("DeviceCard status pill", () => {
+  it("flags a pending device, the one row needing a decision", () => {
+    renderCard({ status: "pending" });
+    expect(screen.getByText("Pending")).toBeInTheDocument();
   });
 
-  it("flags a policy bypass", () => {
-    hasTemporaryAccess.mockReturnValue(true);
-    renderCard({ temporaryAccessBypassPolicies: true });
-    expect(screen.getAllByText("Bypass").length).toBeGreaterThan(0);
+  it.each(["approved", "rejected"] as const)(
+    "leaves a %s device unlabelled",
+    (status) => {
+      const { container } = renderCard({ status });
+
+      expect(container.querySelectorAll(".rounded-full")).toHaveLength(0);
+    },
+  );
+
+  it("leaves an unmanageable PlexAmp device unlabelled too", () => {
+    const { container } = renderCard({
+      status: "pending",
+      deviceProduct: "Plexamp",
+    });
+
+    expect(screen.queryByText("Pending")).toBeNull();
+    expect(container.querySelectorAll(".rounded-full")).toHaveLength(0);
   });
 
-  it("omits the bypass flag without temporary access", () => {
-    renderCard({ temporaryAccessBypassPolicies: true });
+  it("no longer repeats temporary access, bypass or limit state", () => {
+    hasTemporaryAccess.mockReturnValue(true);
+    renderCard({
+      status: "approved",
+      temporaryAccessBypassPolicies: true,
+      excludeFromConcurrentLimit: true,
+    });
+
+    expect(screen.queryByText("2h")).toBeNull();
     expect(screen.queryByText("Bypass")).toBeNull();
-  });
-
-  it("flags an approved device excluded from the concurrent limit", () => {
-    renderCard({ status: "approved", excludeFromConcurrentLimit: true });
-    expect(screen.getAllByText("No Limit").length).toBeGreaterThan(0);
-  });
-
-  it("omits that flag while pending", () => {
-    renderCard({ status: "pending", excludeFromConcurrentLimit: true });
     expect(screen.queryByText("No Limit")).toBeNull();
   });
 
-  it.each(["pending", "approved", "rejected"] as const)(
-    "shows the %s status without a leading dot",
-    (status) => {
-      renderCard({ status });
+  it("shows the pending pill without a leading dot", () => {
+    renderCard({ status: "pending" });
 
-      const pill = screen.getByText(
-        status.charAt(0).toUpperCase() + status.slice(1),
-      );
-
-      expect(pill.querySelectorAll("span[aria-hidden]")).toHaveLength(0);
-    },
-  );
+    expect(
+      screen.getByText("Pending").querySelectorAll("span[aria-hidden]"),
+    ).toHaveLength(0);
+  });
 });
 
 describe("DeviceCard actions", () => {

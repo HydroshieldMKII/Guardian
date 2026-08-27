@@ -79,10 +79,8 @@ const renderModal = (
   return { ...view, handlers, user: userEvent.setup() };
 };
 
-const openSection = async (
-  user: ReturnType<typeof userEvent.setup>,
-  name: string,
-) => user.click(screen.getByText(name));
+const seeSection = (name: string) =>
+  expect(screen.getByText(name)).toBeInTheDocument();
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -102,53 +100,82 @@ describe("DeviceDetailsModal", () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  it("opens on the basic information section", () => {
+  it("names the device in the header instead of a generic title", () => {
     renderModal();
 
-    expect(screen.getByText("Basic Information")).toBeInTheDocument();
-    expect(screen.getByText("Living Room TV")).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: /Living Room TV/ }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Device Details")).toBeNull();
+    expect(screen.queryByText("Basic Information")).toBeNull();
+  });
+
+  it("reports the status as a field beside Last Seen, not on the name", () => {
+    const { baseElement } = renderModal({ status: "pending" });
+
+    const heading = screen.getByRole("heading", { name: "Living Room TV" });
+    const labels = Array.from(baseElement.querySelectorAll("dt")).map(
+      (node) => node.textContent,
+    );
+
+    expect(heading.parentElement).not.toContainElement(
+      screen.getByText("Pending"),
+    );
+    expect(labels.slice(labels.indexOf("Last Seen"))).toEqual([
+      "Last Seen",
+      "Status",
+      "Identifier",
+    ]);
+  });
+
+  it("spells out the remaining temporary access in that field", () => {
+    hasTemporaryAccess.mockReturnValue(true);
+    renderModal();
+
+    expect(screen.getByText("Temporary Access (2h left)")).toBeInTheDocument();
+  });
+
+  it("does not repeat the hardware summary the grid already carries", () => {
+    renderModal();
+
+    expect(screen.queryByText(/Plex for Roku · Roku/)).toBeNull();
+    expect(screen.getByText("Plex for Roku")).toBeInTheDocument();
+    expect(screen.getByText("Roku")).toBeInTheDocument();
   });
 
   it("falls back for a nameless device", () => {
     renderModal({ deviceName: undefined });
-    expect(screen.getByText("Unknown")).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Unknown" }),
+    ).toBeInTheDocument();
   });
 
-  it("says unknown for every missing hardware field", async () => {
-    const { user } = renderModal({
+  it("says unknown for every missing hardware field", () => {
+    renderModal({
       devicePlatform: undefined,
       deviceProduct: undefined,
       deviceVersion: undefined,
     });
-    await openSection(user, "Device Identifier");
 
     expect(screen.getAllByText("Unknown").length).toBeGreaterThan(2);
   });
 
-  it("collapses the basic information section again", async () => {
-    const { user } = renderModal();
-
-    await openSection(user, "Basic Information");
-
-    expect(screen.getByText("Basic Information")).toBeInTheDocument();
-  });
-
   it("reports whether temporary access bypasses policies", async () => {
-    const { user } = renderModal({
+    renderModal({
       temporaryAccessUntil: "2026-03-01T00:00:00Z",
       temporaryAccessBypassPolicies: true,
     });
-    await openSection(user, "Temporary Access");
+    seeSection("Temporary Access");
 
     expect(screen.getByText("Yes")).toBeInTheDocument();
   });
 
   it("reports when it does not", async () => {
-    const { user } = renderModal({
+    renderModal({
       temporaryAccessUntil: "2026-03-01T00:00:00Z",
       temporaryAccessBypassPolicies: false,
     });
-    await openSection(user, "Temporary Access");
+    seeSection("Temporary Access");
 
     expect(screen.getByText("No")).toBeInTheDocument();
   });
@@ -167,7 +194,7 @@ describe("DeviceDetailsModal", () => {
     it("starts an edit", async () => {
       const { user, handlers } = renderModal();
 
-      await user.click(screen.getByTitle("Rename device"));
+      await user.click(screen.getByRole("button", { name: "Rename" }));
 
       expect(handlers.onEdit).toHaveBeenCalled();
     });
@@ -186,6 +213,77 @@ describe("DeviceDetailsModal", () => {
 
       await user.click(screen.getByRole("button", { name: "Save" }));
       expect(handlers.onRename).toHaveBeenCalledWith(1, "Bedroom TV");
+    });
+
+    it("discards an edit in progress when the modal closes", async () => {
+      const { user, handlers } = renderModal(
+        {},
+        { editingDevice: 1, newDeviceName: "Bedroom TV" },
+      );
+
+      await user.click(screen.getByRole("button", { name: "Close" }));
+
+      expect(handlers.onCancelEdit).toHaveBeenCalled();
+      expect(handlers.onClose).toHaveBeenCalled();
+    });
+
+    it("discards it on escape too, not just the close button", async () => {
+      const { user, handlers } = renderModal(
+        {},
+        { editingDevice: 1, newDeviceName: "Bedroom TV" },
+      );
+
+      await user.keyboard("{Escape}");
+
+      expect(handlers.onCancelEdit).toHaveBeenCalled();
+      expect(handlers.onClose).toHaveBeenCalled();
+    });
+
+    it("leaves the edit state alone when nothing is being renamed", async () => {
+      const { user, handlers } = renderModal();
+
+      await user.click(screen.getByRole("button", { name: "Close" }));
+
+      expect(handlers.onCancelEdit).not.toHaveBeenCalled();
+      expect(handlers.onClose).toHaveBeenCalled();
+    });
+
+    it("edits the name in place rather than in a row underneath", () => {
+      renderModal({}, { editingDevice: 1, newDeviceName: "Bedroom TV" });
+
+      const heading = screen.getByRole("heading", { name: "Living Room TV" });
+      const input = screen.getByPlaceholderText("Enter device name");
+
+      expect(heading.className).toContain("sr-only");
+      expect(heading.parentElement).toContainElement(input);
+      expect(heading.parentElement).toContainElement(
+        screen.getByRole("button", { name: "Save" }),
+      );
+    });
+
+    it("hands the pencil's place to the editor", () => {
+      const { rerender } = renderModal();
+      const row = screen.getByRole("button", { name: "Rename" }).parentElement;
+
+      rerender(
+        <DeviceDetailsModal
+          device={device()}
+          isOpen
+          onClose={jest.fn()}
+          editingDevice={1}
+          newDeviceName="Bedroom TV"
+          actionLoading={null}
+          onEdit={jest.fn()}
+          onCancelEdit={jest.fn()}
+          onRename={jest.fn()}
+          onNewDeviceNameChange={jest.fn()}
+        />,
+      );
+
+      expect(screen.queryByRole("button", { name: "Rename" })).toBeNull();
+      expect(row).toContainElement(
+        screen.getByPlaceholderText("Enter device name"),
+      );
     });
 
     it("refuses to save an empty name", () => {
@@ -221,17 +319,27 @@ describe("DeviceDetailsModal", () => {
     });
   });
 
-  describe("collapsible sections", () => {
-    it.each(["Device Identifier", "Activity", "Device Settings"])(
-      "opens %s",
-      async (name) => {
-        const { user } = renderModal();
+  describe("overview", () => {
+    it("shows the identifier and both timestamps without a click", () => {
+      renderModal();
 
-        await openSection(user, name);
+      expect(screen.getByText("device-1")).toBeInTheDocument();
+      expect(screen.getByText("First Seen")).toBeInTheDocument();
+      expect(screen.getByText("Last Seen")).toBeInTheDocument();
+    });
 
-        expect(screen.getByText(name)).toBeInTheDocument();
-      },
-    );
+    it("keeps nothing behind a disclosure", () => {
+      const { container } = renderModal();
+
+      expect(container.querySelectorAll("[data-state=closed]")).toHaveLength(0);
+      for (const gone of [
+        "Basic Information",
+        "Device Identifier",
+        "Activity",
+      ]) {
+        expect(screen.queryByText(gone)).toBeNull();
+      }
+    });
 
     it.each([
       [1, "1 minute"],
@@ -246,11 +354,11 @@ describe("DeviceDetailsModal", () => {
       [2880, "2 days"],
       [4400, "3 days 1 hour"],
     ])("formats a %p minute grant as %p", async (minutes, expected) => {
-      const { user } = renderModal({
+      renderModal({
         temporaryAccessDurationMinutes: minutes,
         temporaryAccessGrantedAt: "2026-01-01T00:00:00Z",
       });
-      await openSection(user, "Temporary Access");
+      seeSection("Temporary Access");
 
       expect(screen.getByText(expected)).toBeInTheDocument();
     });
@@ -259,11 +367,11 @@ describe("DeviceDetailsModal", () => {
       renderModal();
       expect(screen.queryByText("Temporary Access")).toBeNull();
 
-      const { user } = renderModal({
+      renderModal({
         temporaryAccessUntil: "2026-03-01T00:00:00Z",
         temporaryAccessDurationMinutes: 90,
       });
-      await openSection(user, "Temporary Access");
+      seeSection("Temporary Access");
 
       expect(screen.getByText("Temporary Access")).toBeInTheDocument();
     });
@@ -290,9 +398,9 @@ describe("DeviceDetailsModal", () => {
     });
 
     it("shows the note text", async () => {
-      const { user } = renderModal(withNote);
+      renderModal(withNote);
 
-      await openSection(user, "User Note");
+      seeSection("User Note");
 
       expect(screen.getByText("Please let me in")).toBeInTheDocument();
     });
@@ -300,7 +408,7 @@ describe("DeviceDetailsModal", () => {
     it("deletes the note", async () => {
       const onDeviceUpdate = jest.fn();
       const { user } = renderModal(withNote, { onDeviceUpdate });
-      await openSection(user, "User Note");
+      seeSection("User Note");
 
       await user.click(screen.getByRole("button", { name: /Delete Note/ }));
 
@@ -315,7 +423,7 @@ describe("DeviceDetailsModal", () => {
 
     it("deletes without an update callback", async () => {
       const { user } = renderModal(withNote);
-      await openSection(user, "User Note");
+      seeSection("User Note");
 
       await user.click(screen.getByRole("button", { name: /Delete Note/ }));
 
@@ -325,7 +433,7 @@ describe("DeviceDetailsModal", () => {
     it("reports a delete failure", async () => {
       deleteDeviceNote.mockRejectedValue(new Error("server said no"));
       const { user } = renderModal(withNote);
-      await openSection(user, "User Note");
+      seeSection("User Note");
 
       await user.click(screen.getByRole("button", { name: /Delete Note/ }));
 
@@ -342,7 +450,7 @@ describe("DeviceDetailsModal", () => {
     it("falls back to a generic delete message", async () => {
       deleteDeviceNote.mockRejectedValue("boom");
       const { user } = renderModal(withNote);
-      await openSection(user, "User Note");
+      seeSection("User Note");
 
       await user.click(screen.getByRole("button", { name: /Delete Note/ }));
 
@@ -354,8 +462,8 @@ describe("DeviceDetailsModal", () => {
     });
 
     it("shows when the note was read", async () => {
-      const { user } = renderModal(withNote);
-      await openSection(user, "User Note");
+      renderModal(withNote);
+      seeSection("User Note");
 
       expect(screen.getByText("Read")).toBeInTheDocument();
     });
@@ -365,7 +473,7 @@ describe("DeviceDetailsModal", () => {
     it("toggles on and reports success", async () => {
       const onDeviceUpdate = jest.fn();
       const { user } = renderModal({}, { onDeviceUpdate });
-      await openSection(user, "Device Settings");
+      seeSection("Device Settings");
 
       await user.click(screen.getByRole("switch"));
 
@@ -387,7 +495,7 @@ describe("DeviceDetailsModal", () => {
 
     it("toggles back off", async () => {
       const { user } = renderModal({ excludeFromConcurrentLimit: true });
-      await openSection(user, "Device Settings");
+      seeSection("Device Settings");
 
       await user.click(screen.getByRole("switch"));
 
@@ -405,7 +513,7 @@ describe("DeviceDetailsModal", () => {
         new Error("nope"),
       );
       const { user } = renderModal();
-      await openSection(user, "Device Settings");
+      seeSection("Device Settings");
 
       await user.click(screen.getByRole("switch"));
 
@@ -422,7 +530,7 @@ describe("DeviceDetailsModal", () => {
     it("falls back to a generic failure message", async () => {
       updateDeviceExcludeFromConcurrentLimit.mockRejectedValue("boom");
       const { user } = renderModal();
-      await openSection(user, "Device Settings");
+      seeSection("Device Settings");
 
       await user.click(screen.getByRole("switch"));
 
@@ -436,8 +544,8 @@ describe("DeviceDetailsModal", () => {
     });
 
     it("is hidden for a PlexAmp device, which is always excluded", async () => {
-      const { user } = renderModal({ deviceProduct: "Plexamp" });
-      await openSection(user, "Device Settings");
+      renderModal({ deviceProduct: "Plexamp" });
+      seeSection("Device Settings");
 
       expect(screen.queryByRole("switch")).toBeNull();
       expect(
@@ -448,18 +556,15 @@ describe("DeviceDetailsModal", () => {
 
   describe("reverting to pending", () => {
     it("is hidden without the callback", async () => {
-      const { user } = renderModal();
-      await openSection(user, "Device Settings");
+      renderModal();
+      seeSection("Device Settings");
 
       expect(screen.queryByText("Revert to pending status")).toBeNull();
     });
 
     it("is hidden for a device already pending", async () => {
-      const { user } = renderModal(
-        { status: "pending" },
-        { onSetPending: jest.fn() },
-      );
-      await openSection(user, "Device Settings");
+      renderModal({ status: "pending" }, { onSetPending: jest.fn() });
+      seeSection("Device Settings");
 
       expect(screen.queryByText("Revert to pending status")).toBeNull();
     });
@@ -471,7 +576,7 @@ describe("DeviceDetailsModal", () => {
         {},
         { onSetPending, onDeviceUpdate },
       );
-      await openSection(user, "Device Settings");
+      seeSection("Device Settings");
 
       await user.click(screen.getByRole("button", { name: /Set to Pending/ }));
 
@@ -485,7 +590,7 @@ describe("DeviceDetailsModal", () => {
     it("reports a refusal from the server", async () => {
       const onSetPending = jest.fn().mockResolvedValue(false);
       const { user, handlers } = renderModal({}, { onSetPending });
-      await openSection(user, "Device Settings");
+      seeSection("Device Settings");
 
       await user.click(screen.getByRole("button", { name: /Set to Pending/ }));
 
@@ -503,7 +608,7 @@ describe("DeviceDetailsModal", () => {
     it("reports a thrown failure", async () => {
       const onSetPending = jest.fn().mockRejectedValue(new Error("nope"));
       const { user } = renderModal({}, { onSetPending });
-      await openSection(user, "Device Settings");
+      seeSection("Device Settings");
 
       await user.click(screen.getByRole("button", { name: /Set to Pending/ }));
 
@@ -517,7 +622,7 @@ describe("DeviceDetailsModal", () => {
     it("works without an update callback", async () => {
       const onSetPending = jest.fn().mockResolvedValue(true);
       const { user } = renderModal({}, { onSetPending });
-      await openSection(user, "Device Settings");
+      seeSection("Device Settings");
 
       await user.click(screen.getByRole("button", { name: /Set to Pending/ }));
 
@@ -530,7 +635,7 @@ describe("DeviceDetailsModal", () => {
           {},
           { onSetPending: jest.fn(), settingsData: strictMode("true") },
         );
-        await openSection(user, "Device Settings");
+        seeSection("Device Settings");
 
         await user.hover(
           screen.getByRole("button", { name: /Set to Pending/ }),
@@ -542,11 +647,11 @@ describe("DeviceDetailsModal", () => {
       });
 
       it("opens and closes the explanation on pointer enter and leave", async () => {
-        const { user } = renderModal(
+        renderModal(
           {},
           { onSetPending: jest.fn(), settingsData: strictMode("true") },
         );
-        await openSection(user, "Device Settings");
+        seeSection("Device Settings");
         const trigger = screen.getByRole("button", { name: /Set to Pending/ });
 
         fireEvent.mouseEnter(trigger);
@@ -565,11 +670,11 @@ describe("DeviceDetailsModal", () => {
           configurable: true,
           value: 500,
         });
-        const { user } = renderModal(
+        renderModal(
           {},
           { onSetPending: jest.fn(), settingsData: strictMode("true") },
         );
-        await openSection(user, "Device Settings");
+        seeSection("Device Settings");
         const trigger = screen.getByRole("button", { name: /Set to Pending/ });
 
         fireEvent.mouseEnter(trigger);
@@ -587,7 +692,7 @@ describe("DeviceDetailsModal", () => {
           {},
           { onSetPending: jest.fn(), settingsData: strictMode("true") },
         );
-        await openSection(user, "Device Settings");
+        seeSection("Device Settings");
 
         await user.click(
           screen.getByRole("button", { name: /Set to Pending/ }),
@@ -604,7 +709,7 @@ describe("DeviceDetailsModal", () => {
           {},
           { onSetPending, settingsData: strictMode("false") },
         );
-        await openSection(user, "Device Settings");
+        seeSection("Device Settings");
 
         await user.click(
           screen.getByRole("button", { name: /Set to Pending/ }),
@@ -633,31 +738,29 @@ describe("DeviceDetailsModal", () => {
       />,
     );
 
-    expect(screen.getByText("Basic Information")).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: /Living Room TV/ }),
+    ).toBeInTheDocument();
   });
 });
 
 describe("DeviceDetailsModal temporary access expiry", () => {
   it("labels a live grant as expiring", async () => {
     hasTemporaryAccess.mockReturnValue(true);
-    const { user } = renderModal({
+    renderModal({
       temporaryAccessUntil: "2026-03-01T00:00:00Z",
     });
-
-    await user.click(
-      screen.getByRole("button", { name: /^Temporary Access$/ }),
-    );
 
     expect(screen.getByText("Expires At")).toBeInTheDocument();
   });
 
   it("labels a lapsed grant as expired", async () => {
     hasTemporaryAccess.mockReturnValue(false);
-    const { user } = renderModal({
+    renderModal({
       temporaryAccessUntil: "2025-03-01T00:00:00Z",
     });
 
-    await openSection(user, "Temporary Access");
+    seeSection("Temporary Access");
 
     expect(screen.getByText("Expired At")).toBeInTheDocument();
   });
@@ -668,7 +771,7 @@ describe("DeviceDetailsModal set to pending", () => {
     const onSetPending = jest.fn().mockRejectedValue("nope");
     const { user } = renderModal({}, { onSetPending });
 
-    await openSection(user, "Device Settings");
+    seeSection("Device Settings");
     await user.click(screen.getByRole("button", { name: /Set to Pending/ }));
 
     await waitFor(() =>
@@ -692,7 +795,7 @@ describe("DeviceDetailsModal strict mode help", () => {
 
   it("lets the tooltip drive its own open state on a wide screen", async () => {
     const { user } = renderModal({}, strictOn());
-    await openSection(user, "Device Settings");
+    seeSection("Device Settings");
 
     await user.hover(pendingTrigger());
 
@@ -706,8 +809,8 @@ describe("DeviceDetailsModal strict mode help", () => {
       configurable: true,
       value: 500,
     });
-    const { user } = renderModal({}, strictOn());
-    await openSection(user, "Device Settings");
+    renderModal({}, strictOn());
+    seeSection("Device Settings");
 
     fireEvent.click(pendingTrigger());
 
@@ -721,8 +824,8 @@ describe("DeviceDetailsModal strict mode help", () => {
       configurable: true,
       value: 500,
     });
-    const { user } = renderModal({}, strictOn());
-    await openSection(user, "Device Settings");
+    renderModal({}, strictOn());
+    seeSection("Device Settings");
 
     fireEvent.mouseEnter(pendingTrigger());
 

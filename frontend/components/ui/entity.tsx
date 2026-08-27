@@ -236,10 +236,12 @@ export function MetaGrid({
 export function Meta({
   label,
   children,
+  wrap = false,
   className,
 }: {
   label: string;
   children: React.ReactNode;
+  wrap?: boolean;
   className?: string;
 }) {
   return (
@@ -247,7 +249,12 @@ export function Meta({
       <dt className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground/80">
         {label}
       </dt>
-      <dd className="mt-1 truncate text-sm font-medium text-foreground">
+      <dd
+        className={cn(
+          "mt-1 text-sm font-medium text-foreground",
+          wrap ? "break-all" : "truncate",
+        )}
+      >
         {children}
       </dd>
     </div>

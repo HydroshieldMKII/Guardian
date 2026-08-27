@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useDeferredValue } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
@@ -15,7 +15,7 @@ import { RemoveAccessModal, StreamCard, getContentTitle } from "./streams";
 interface StreamsListProps {
   tabs?: React.ReactNode;
   sessionsData?: StreamsResponse;
-  onRefresh?: () => void;
+  onRefresh?: () => void | Promise<void>;
   autoRefresh?: boolean;
   onAutoRefreshChange?: (value: boolean) => void;
   onNavigateToDevice?: (userId: string, deviceIdentifier: string) => void;
@@ -44,14 +44,20 @@ export default function StreamsList({
   const [confirmRemoveStream, setConfirmRemoveStream] =
     useState<PlexSession | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const deferredSearchTerm = useDeferredValue(searchTerm);
 
   // Swipe to refresh functionality
   const swipeHandlers = useSwipeToRefresh({ onRefresh: handleRefresh });
 
-  function handleRefresh() {
+  async function handleRefresh() {
     setRefreshing(true);
-    onRefresh();
-    setTimeout(() => setRefreshing(false), 500);
+    try {
+      await onRefresh();
+    } catch (error) {
+      console.error("Failed to refresh:", error);
+    } finally {
+      setRefreshing(false);
+    }
   }
 
   // Initialize state from props or fetch data
@@ -69,19 +75,20 @@ export default function StreamsList({
   };
 
   // Filter streams based on search term
-  const filteredStreams = streams.filter((stream) => {
-    if (!searchTerm) return true;
+  const filteredStreams = useMemo(() => {
+    if (!deferredSearchTerm) return streams;
 
-    const searchLower = searchTerm.toLowerCase();
-    return (
-      (stream.User?.title || "").toLowerCase().includes(searchLower) ||
-      (stream.Player?.title || "").toLowerCase().includes(searchLower) ||
-      (stream.Player?.platform || "").toLowerCase().includes(searchLower) ||
-      (stream.title || "").toLowerCase().includes(searchLower) ||
-      (stream.grandparentTitle || "").toLowerCase().includes(searchLower) ||
-      (stream.Player?.product || "").toLowerCase().includes(searchLower)
+    const searchLower = deferredSearchTerm.toLowerCase();
+    return streams.filter(
+      (stream) =>
+        (stream.User?.title || "").toLowerCase().includes(searchLower) ||
+        (stream.Player?.title || "").toLowerCase().includes(searchLower) ||
+        (stream.Player?.platform || "").toLowerCase().includes(searchLower) ||
+        (stream.title || "").toLowerCase().includes(searchLower) ||
+        (stream.grandparentTitle || "").toLowerCase().includes(searchLower) ||
+        (stream.Player?.product || "").toLowerCase().includes(searchLower),
     );
-  });
+  }, [streams, deferredSearchTerm]);
 
   const handleRevokeAuthorization = async (stream: PlexSession) => {
     const success = await revokeDeviceAuthorization(stream);
@@ -142,7 +149,7 @@ export default function StreamsList({
               className="h-10 w-full rounded-md border border-input bg-background px-4 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
             />
           </div>
-          {searchTerm && (
+          {deferredSearchTerm && (
             <p className="text-xs text-muted-foreground mt-2">
               Showing {filteredStreams.length} of {streams.length} streams
             </p>
@@ -165,12 +172,12 @@ export default function StreamsList({
         ) : filteredStreams.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-1 py-20 text-center">
             <p className="text-sm font-medium text-foreground">
-              {searchTerm
+              {deferredSearchTerm
                 ? "No streams match your search"
                 : "No active streams"}
             </p>
             <p className="text-xs text-muted-foreground">
-              {searchTerm
+              {deferredSearchTerm
                 ? "Try a different title, user, or device."
                 : "Streams appear here as soon as someone starts playing."}
             </p>

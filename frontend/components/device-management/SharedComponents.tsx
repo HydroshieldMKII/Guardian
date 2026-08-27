@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { Badge } from "@/components/ui/badge";
 import { StatusPill } from "@/components/ui/entity";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -71,6 +70,9 @@ export const UserAvatar = ({
 };
 
 // Device icon component
+const NOT_MANAGEABLE_REASON =
+  "PlexAmp devices cannot be managed. Plex does not provide native controls to terminate PlexAmp streams, so policies cannot be enforced for this device.";
+
 // Not Manageable badge component with controlled tooltip for mobile support
 const NotManageableBadge = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -84,10 +86,10 @@ const NotManageableBadge = () => {
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
-  // Handle open change - only allow Radix to control on desktop
+  // Hover and tap are the only ways in; focus must not open it
   const handleOpenChange = (open: boolean) => {
-    if (!isMobile) {
-      setIsOpen(open);
+    if (!open) {
+      setIsOpen(false);
     }
   };
 
@@ -112,12 +114,10 @@ const NotManageableBadge = () => {
               if (!isMobile) setIsOpen(false);
             }}
           >
-            <Badge
-              variant="secondary"
-              className="bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 border-purple-300 dark:border-purple-700 cursor-help"
-            >
+            <StatusPill tone="accent" className="cursor-help">
               Not Manageable
-            </Badge>
+            </StatusPill>
+            <span className="sr-only">{NOT_MANAGEABLE_REASON}</span>
           </button>
         </TooltipTrigger>
         <TooltipContent
@@ -126,11 +126,7 @@ const NotManageableBadge = () => {
             setIsOpen(false);
           }}
         >
-          <p className="max-w-xs">
-            PlexAmp devices cannot be managed. Plex does not provide native
-            controls to terminate PlexAmp streams, so policies cannot be
-            enforced for this device.
-          </p>
+          <p className="max-w-xs">{NOT_MANAGEABLE_REASON}</p>
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
@@ -159,14 +155,9 @@ export const DeviceStatus = ({
   if (hasTemporaryAccess(device)) {
     const timeLeft = getTemporaryAccessTimeLeft(device);
     return (
-      <div className="flex items-center gap-2">
-        <Badge
-          variant="default"
-          className="bg-blue-600 dark:bg-blue-700 text-white"
-        >
-          {compact ? "Temporary Access" : `Temporary Access (${timeLeft} left)`}
-        </Badge>
-      </div>
+      <StatusPill tone="info">
+        {compact ? "Temporary Access" : `Temporary Access (${timeLeft} left)`}
+      </StatusPill>
     );
   }
 
@@ -177,33 +168,12 @@ export const DeviceStatus = ({
 
   switch (device.status) {
     case "approved":
-      return (
-        <Badge
-          variant="default"
-          className="bg-green-600 dark:bg-green-700 text-white"
-        >
-          Approved
-        </Badge>
-      );
+      return <StatusPill tone="positive">Approved</StatusPill>;
     case "rejected":
-      return (
-        <Badge
-          variant="destructive"
-          className="bg-red-600 dark:bg-red-700 text-white"
-        >
-          Rejected
-        </Badge>
-      );
+      return <StatusPill tone="danger">Rejected</StatusPill>;
     case "pending":
     default:
-      return (
-        <Badge
-          variant="secondary"
-          className="bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 border-yellow-300 dark:border-yellow-700"
-        >
-          Pending
-        </Badge>
-      );
+      return <StatusPill tone="warning">Pending</StatusPill>;
   }
 };
 

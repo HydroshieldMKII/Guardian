@@ -42,6 +42,7 @@ export const StreamQuality: React.FC<StreamQualityProps> = ({
     ): React.ReactNode => (
       <StatusPill
         tone={tone}
+        size="sm"
         className={`${className} ${
           hasArt ? "border-white/25 bg-white/10 text-white" : ""
         }`}
