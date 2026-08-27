@@ -62,6 +62,7 @@ import { ConfirmationModal } from "@/components/device-management/ConfirmationMo
 import { UserHistoryModal } from "@/components/device-management/UserHistoryModal";
 import { TimeRuleModal } from "@/components/device-management/TimeRuleModal";
 import { UserAvatar } from "@/components/device-management/SharedComponents";
+import { HIGHLIGHT_CLASSES } from "@/lib/highlight";
 
 // User-Device group interface
 interface UserDeviceGroup {
@@ -467,17 +468,9 @@ const DeviceManagement = memo(
 
             // Add highlight effect
             setTimeout(() => {
-              deviceElement.classList.add(
-                "ring-2",
-                "ring-blue-500",
-                "ring-opacity-75",
-              );
+              deviceElement.classList.add(...HIGHLIGHT_CLASSES);
               setTimeout(() => {
-                deviceElement.classList.remove(
-                  "ring-2",
-                  "ring-blue-500",
-                  "ring-opacity-75",
-                );
+                deviceElement.classList.remove(...HIGHLIGHT_CLASSES);
                 // Call completion callback
                 if (onNavigationComplete) {
                   onNavigationComplete();
@@ -795,17 +788,9 @@ const DeviceManagement = memo(
 
             // Add highlight effect
             setTimeout(() => {
-              deviceElement.classList.add(
-                "ring-2",
-                "ring-blue-500",
-                "ring-opacity-75",
-              );
+              deviceElement.classList.add(...HIGHLIGHT_CLASSES);
               setTimeout(() => {
-                deviceElement.classList.remove(
-                  "ring-2",
-                  "ring-blue-500",
-                  "ring-opacity-75",
-                );
+                deviceElement.classList.remove(...HIGHLIGHT_CLASSES);
               }, 1500);
             }, 200);
           }

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useAuth } from "@/contexts/auth-context";
 import { Button } from "@/components/ui/button";
+import { LogoMark } from "@/components/ui/logo-mark";
 import { Input } from "@/components/ui/input";
 import { Field, StatusPill } from "@/components/ui/entity";
 import {
@@ -184,8 +185,11 @@ export default function SetupPage() {
       </Button>
 
       <Card className="w-full max-w-md shadow-xl max-h-[90vh] overflow-y-auto">
-        <CardHeader className="space-y-1 text-center pb-6 mt-4">
-          <CardTitle className="text-3xl font-bold">Guardian</CardTitle>
+        <CardHeader className="space-y-1 text-center pb-6 pt-8">
+          <CardTitle className="flex items-center justify-center gap-3 text-3xl font-bold">
+            <LogoMark className="h-9 w-auto" />
+            Guardian
+          </CardTitle>
           <CardDescription className="text-sm">
             Create your admin account to get started
           </CardDescription>
@@ -398,6 +402,7 @@ export default function SetupPage() {
             <Field
               label="Email"
               htmlFor="email"
+              hint="Needed to reset your password if you forget it."
               action={<StatusPill tone="neutral">Optional</StatusPill>}
             >
               <div className="relative">

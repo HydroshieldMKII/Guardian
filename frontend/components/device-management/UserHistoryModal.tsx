@@ -26,6 +26,7 @@ import { ClickableIP } from "./SharedComponents";
 import { formatElapsed } from "@/lib/duration";
 import { ConfirmationModal } from "@/components/ui/confirmation-modal";
 import { useToast } from "@/hooks/use-toast";
+import { HIGHLIGHT_CLASSES } from "@/lib/highlight";
 
 interface UserDevice {
   id: number;
@@ -73,7 +74,6 @@ interface UserHistoryModalProps {
 const PAGE_SIZE = 25;
 const SEARCH_DEBOUNCE_MS = 300;
 const DEEP_LINK_MAX_PAGES = 4;
-const HIGHLIGHT = ["ring-2", "ring-primary", "ring-offset-2"];
 
 export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
   userId,
@@ -336,10 +336,10 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
       block: "center",
       inline: "nearest",
     });
-    sessionElement.classList.add(...HIGHLIGHT);
+    sessionElement.classList.add(...HIGHLIGHT_CLASSES);
 
     const timeout = setTimeout(
-      () => sessionElement.classList.remove(...HIGHLIGHT),
+      () => sessionElement.classList.remove(...HIGHLIGHT_CLASSES),
       2000,
     );
     return () => clearTimeout(timeout);

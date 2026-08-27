@@ -152,7 +152,7 @@ describe("ResetPasswordPage", () => {
 
     expect(await screen.findByText("Password Changed")).toBeInTheDocument();
     expect(
-      screen.getByText(/Every other session was signed out/),
+      screen.getByText(/Your other devices were signed out/),
     ).toBeInTheDocument();
   });
 

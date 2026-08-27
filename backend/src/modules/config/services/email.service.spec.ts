@@ -4,6 +4,7 @@ import { EmailService, SMTPConfig, SmtpSettings } from './email.service';
 import { EmailTemplateService } from './email-template.service';
 import { ConfigService } from './config.service';
 import { TimezoneService } from './timezone.service';
+import { EMAIL_PALETTE } from '@/common/utils/email-palette';
 
 const mockCreateTransport = jest.fn<
   { verify: jest.Mock; sendMail: jest.Mock },
@@ -345,7 +346,7 @@ describe('EmailService', () => {
 
   describe('sendEmail', () => {
     const notice = {
-      type: 'info' as const,
+      type: 'block' as const,
       text: 'hello',
       username: 'testuser',
     };
@@ -446,10 +447,11 @@ describe('EmailService', () => {
     });
 
     it.each([
-      ['warning', 'Guardian Warning - Shield', 'WARNING'],
-      ['error', 'Guardian Error - Shield', 'ERROR'],
-      ['info', 'Guardian Notification - Shield', 'NOTIFICATION'],
-    ] as const)('labels a %s notification', async (type, subject, label) => {
+      ['block', EMAIL_PALETTE.danger],
+      ['new-device', EMAIL_PALETTE.info],
+      ['location-change', EMAIL_PALETTE.warning],
+      ['device-note', EMAIL_PALETTE.accent],
+    ] as const)('paints a %s notification', async (type, colour) => {
       await service.sendEmail({
         type,
         text: 'x',
@@ -457,10 +459,9 @@ describe('EmailService', () => {
         deviceName: 'Shield',
       });
 
-      expect(sentMail().subject).toBe(subject);
-      const [, , statusLabel] = templateService.generateNotificationEmail.mock
-        .calls[0] as [unknown, unknown, string];
-      expect(statusLabel).toBe(label);
+      const [, statusColor] = templateService.generateNotificationEmail.mock
+        .calls[0] as [unknown, string];
+      expect(statusColor).toBe(colour);
     });
 
     it('describes a block with no stop code generically', async () => {
@@ -470,8 +471,8 @@ describe('EmailService', () => {
         username: 'testuser',
       });
 
-      const [, , , mainMessage] = templateService.generateNotificationEmail.mock
-        .calls[0] as [unknown, unknown, unknown, string];
+      const [, , mainMessage] = templateService.generateNotificationEmail.mock
+        .calls[0] as [unknown, unknown, string];
       expect(mainMessage).toBe(
         'A streaming session has been blocked on your Plex server',
       );

@@ -100,8 +100,7 @@ export function PasswordConfirmationModal({
           <Panel tone="danger">
             <p className="text-sm leading-relaxed text-rose-700 dark:text-rose-300">
               <strong className="font-semibold">Warning:</strong> This action
-              cannot be undone. Please ensure you have exported your database
-              before proceeding.
+              cannot be undone.
             </p>
           </Panel>
         )}

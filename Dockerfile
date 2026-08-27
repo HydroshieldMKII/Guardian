@@ -29,7 +29,6 @@ RUN apk add --no-cache wget python3 py3-pip tini su-exec \
 COPY --from=backend-deps /app/backend/node_modules ./backend/node_modules
 COPY --from=backend-build /app/backend/dist ./backend/dist
 COPY --from=backend-build /app/backend/package.json ./backend/package.json
-COPY --from=backend-build /app/backend/src/assets/logo_dark.svg ./backend/dist/assets/logo_dark.svg
 COPY --from=backend-build /app/backend/src/scripts ./backend/src/scripts
 
 COPY --from=frontend-build /app/frontend/.next/standalone ./frontend/

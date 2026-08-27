@@ -21,7 +21,7 @@ export function AuthShell({
   title: string;
   description: string;
   footer?: React.ReactNode;
-  children: React.ReactNode;
+  children?: React.ReactNode;
 }) {
   const { theme, toggleTheme } = useTheme();
 
@@ -42,7 +42,7 @@ export function AuthShell({
       </Button>
 
       <Card className="max-h-[90vh] w-full max-w-md overflow-y-auto shadow-xl">
-        <CardHeader className="mt-4 space-y-1 pb-6 text-center">
+        <CardHeader className="space-y-1 pb-4 pt-8 text-center">
           <CardTitle className="text-3xl font-bold">{title}</CardTitle>
           <CardDescription className="text-sm">{description}</CardDescription>
         </CardHeader>

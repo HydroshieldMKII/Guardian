@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useAuth } from "@/contexts/auth-context";
 import { Button } from "@/components/ui/button";
+import { LogoMark } from "@/components/ui/logo-mark";
 import { Input } from "@/components/ui/input";
 import {
   Card,
@@ -271,8 +272,11 @@ export default function LoginPage() {
       </Button>
 
       <Card className="w-full max-w-md shadow-xl max-h-[90vh] overflow-y-auto">
-        <CardHeader className="space-y-1 text-center pb-6 mt-4">
-          <CardTitle className="text-3xl font-bold">Guardian</CardTitle>
+        <CardHeader className="space-y-1 text-center pb-6 pt-8">
+          <CardTitle className="flex items-center justify-center gap-3 text-3xl font-bold">
+            <LogoMark className="h-9 w-auto" />
+            Guardian
+          </CardTitle>
           <CardDescription className="text-sm">
             Sign in to your account
           </CardDescription>
@@ -428,21 +432,17 @@ export default function LoginPage() {
               </Button>
 
               {plexWaiting && (
-                <div className="mt-3 space-y-2 text-center">
-                  <p className="text-xs text-muted-foreground">
-                    Finish signing in on the Plex window. It closes for you once
-                    Plex confirms.
-                  </p>
-                  <Button
+                <p className="mt-3 text-center text-xs text-muted-foreground">
+                  Finish signing in on the Plex window, or{" "}
+                  <button
                     type="button"
-                    variant="ghost"
-                    size="sm"
                     onClick={() => cancelPlexLogin()}
-                    className="text-xs text-muted-foreground hover:text-foreground"
+                    className="cursor-pointer underline underline-offset-2 hover:text-foreground"
                   >
-                    Cancel Plex sign-in
-                  </Button>
-                </div>
+                    cancel
+                  </button>
+                  .
+                </p>
               )}
             </>
           )}

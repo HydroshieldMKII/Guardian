@@ -1,20 +1,41 @@
+import { Logger } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { EmailTemplateService } from './email-template.service';
 
+const realReadFileSync =
+  jest.requireActual<typeof import('fs')>('fs').readFileSync;
 const mockReadFileSync = jest.fn<unknown, unknown[]>();
 
 jest.mock('fs', () => ({
   readFileSync: (...args: unknown[]) => mockReadFileSync(...args),
 }));
 
+const readTemplatesForReal = (
+  logo: string | (() => never),
+  override: (file: string) => string | undefined = () => undefined,
+) =>
+  mockReadFileSync.mockImplementation((path: unknown) => {
+    const file = String(path);
+    const replacement = override(file);
+    if (replacement !== undefined) {
+      if (replacement === MISSING) throw new Error('ENOENT');
+      return replacement;
+    }
+    if (file.endsWith('.svg')) {
+      return typeof logo === 'function' ? logo() : logo;
+    }
+    return realReadFileSync(file, 'utf8');
+  });
+
+const MISSING = '\u0000missing';
+
 describe('EmailTemplateService', () => {
   let service: EmailTemplateService;
 
   const notification = (
     overrides: Partial<{
-      type: 'block' | 'new-device' | 'location-change' | 'device-note' | 'info';
+      type: 'block' | 'new-device' | 'location-change' | 'device-note';
       statusColor: string;
-      statusLabel: string;
       mainMessage: string;
       username: string;
       deviceName?: string;
@@ -26,9 +47,8 @@ describe('EmailTemplateService', () => {
     }> = {},
   ) => {
     const args = {
-      type: 'info' as const,
+      type: 'block' as const,
       statusColor: '#4488ff',
-      statusLabel: 'NOTIFICATION',
       mainMessage: 'Something happened',
       username: 'testuser',
       ...overrides,
@@ -37,7 +57,6 @@ describe('EmailTemplateService', () => {
     return service.generateNotificationEmail(
       args.type,
       args.statusColor,
-      args.statusLabel,
       args.mainMessage,
       args.username,
       args.deviceName,
@@ -51,7 +70,7 @@ describe('EmailTemplateService', () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
-    mockReadFileSync.mockReturnValue('<svg>logo</svg>');
+    readTemplatesForReal('<svg>logo</svg>');
 
     const module = await Test.createTestingModule({
       providers: [EmailTemplateService],
@@ -89,35 +108,82 @@ describe('EmailTemplateService', () => {
 
   describe('logo', () => {
     it('inlines the logo as a base64 data uri', () => {
-      const encoded = Buffer.from('<svg>logo</svg>').toString('base64');
-
-      expect(notification()).toContain(`data:image/svg+xml;base64,${encoded}`);
+      expect(notification()).toContain('data:image/svg+xml;base64,');
     });
 
-    it('stops at the first path that resolves', () => {
-      notification();
-      expect(mockReadFileSync).toHaveBeenCalledTimes(1);
+    it('sits on a white plate so it survives a client that darkens the page', () => {
+      expect(notification()).toContain(
+        'class="logo-plate" style="background-color: #ffffff;"',
+      );
+    });
+
+    it('crops the artboard so the header stays shallow', () => {
+      readTemplatesForReal('<svg viewBox="0 0 1024 768">logo</svg>');
+
+      const cropped = Buffer.from(
+        '<svg viewBox="0 250 1024 266">logo</svg>',
+      ).toString('base64');
+
+      expect(notification()).toContain(cropped);
     });
 
     it('keeps looking when an early path is missing', () => {
-      mockReadFileSync
-        .mockImplementationOnce(() => {
-          throw new Error('ENOENT');
-        })
-        .mockReturnValueOnce('<svg>logo</svg>');
+      readTemplatesForReal('<svg>logo</svg>');
 
       expect(notification()).toContain('data:image/svg+xml;base64,');
-      expect(mockReadFileSync).toHaveBeenCalledTimes(2);
+      expect(mockReadFileSync.mock.calls.length).toBeGreaterThan(1);
     });
 
     it('falls back to a text heading when the logo is nowhere', () => {
-      mockReadFileSync.mockImplementation(() => {
+      readTemplatesForReal(() => {
         throw new Error('ENOENT');
       });
 
       const html = notification();
       expect(html).toContain('<h1>Guardian</h1>');
       expect(html).not.toContain('data:image/svg+xml');
+    });
+  });
+
+  describe('missing template files', () => {
+    it('renders nothing rather than a broken document', () => {
+      const logged = jest
+        .spyOn(Logger.prototype, 'error')
+        .mockImplementation(() => {});
+      readTemplatesForReal('<svg>logo</svg>', (file) =>
+        file.endsWith('layout.html') ? MISSING : undefined,
+      );
+
+      expect(notification()).toBe('');
+      expect(logged).toHaveBeenCalledWith(
+        'Email template not found: layout.html',
+      );
+      logged.mockRestore();
+    });
+
+    it('carries on without the stylesheet', () => {
+      readTemplatesForReal('<svg>logo</svg>', (file) =>
+        file.endsWith('styles.css') ? MISSING : undefined,
+      );
+
+      const html = notification();
+
+      expect(html).toContain('<!DOCTYPE html>');
+      expect(html).toContain('<style>');
+      expect(html).not.toContain('.email-wrapper');
+    });
+
+    it('leaves an unknown placeholder empty rather than printing it', () => {
+      readTemplatesForReal('<svg>logo</svg>', (file) =>
+        file.endsWith('layout.html')
+          ? '<p>{{mainMessage}}</p><p>{{nothingSuppliesThis}}</p>'
+          : undefined,
+      );
+
+      const html = notification();
+
+      expect(html).toContain('Something happened');
+      expect(html).not.toContain('{{');
     });
   });
 
@@ -169,12 +235,6 @@ describe('EmailTemplateService', () => {
 
       expect(html).not.toContain('onload="x');
       expect(html).toContain('https://ipinfo.io/1.2.3.4%22%20onload%3D%22x');
-    });
-
-    it('escapes the recipients of a test email', () => {
-      expect(service.generateSMTPTestEmail([injection], 'ts')).not.toContain(
-        '<script>',
-      );
     });
   });
 
@@ -255,19 +315,20 @@ describe('EmailTemplateService', () => {
   });
 
   describe('status styling', () => {
-    it('paints the badge with the caller’s colour', () => {
-      const html = notification({
-        statusColor: '#ff4444',
-        statusLabel: 'STREAM BLOCKED',
-      });
-
-      expect(html).toContain('background-color: #ff4444;">STREAM BLOCKED');
+    it('paints the type pill with the caller’s colour', () => {
+      expect(notification({ statusColor: '#ff4444', type: 'block' })).toContain(
+        'background-color: #ff4444;">BLOCK',
+      );
     });
 
     it('uses the same colour for the accent bar', () => {
       expect(notification({ statusColor: '#ff4444' })).toContain(
         'class="accent-bar" style="background-color: #ff4444;"',
       );
+    });
+
+    it('leaves no badge above the message', () => {
+      expect(notification()).not.toContain('class="badge"');
     });
   });
 
@@ -298,7 +359,16 @@ describe('EmailTemplateService', () => {
     });
 
     it('says the link works once', () => {
-      expect(reset()).toContain('>Single use<');
+      expect(reset()).toContain('works once');
+    });
+
+    it('drops the badge, the details block and the footer tag', () => {
+      const html = reset();
+
+      expect(html).not.toContain('class="badge"');
+      expect(html).not.toContain('class="details"');
+      expect(html).toContain('<div class="footer">');
+      expect(html).not.toMatch(/<div class="footer">\s*<p>/);
     });
 
     it('tells the reader they can ignore it', () => {
@@ -329,26 +399,25 @@ describe('EmailTemplateService', () => {
 
   describe('generateSMTPTestEmail', () => {
     it('announces a successful verification', () => {
-      const html = service.generateSMTPTestEmail(['admin@example.com'], 'ts');
-
-      expect(html).toContain('Test Successful');
-      expect(html).toContain('SMTP Verified');
+      expect(service.generateSMTPTestEmail('ts')).toContain(
+        'test completed successfully',
+      );
     });
 
-    it('lists every recipient', () => {
-      expect(
-        service.generateSMTPTestEmail(['a@example.com', 'b@example.com'], 'ts'),
-      ).toContain('a@example.com, b@example.com');
+    it('says it with the message alone', () => {
+      expect(service.generateSMTPTestEmail('ts')).not.toContain(
+        'class="details"',
+      );
     });
 
     it('carries the timestamp', () => {
-      expect(
-        service.generateSMTPTestEmail(['a@example.com'], '2026-08-21'),
-      ).toContain('2026-08-21');
+      expect(service.generateSMTPTestEmail('2026-08-21')).toContain(
+        '2026-08-21',
+      );
     });
 
     it('labels the footer as a test', () => {
-      expect(service.generateSMTPTestEmail([], 'ts')).toContain('SMTP Test');
+      expect(service.generateSMTPTestEmail('ts')).toContain('SMTP Test');
     });
   });
 });

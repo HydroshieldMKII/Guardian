@@ -4,6 +4,20 @@ import type { AppSetting } from "@/types";
 import { GeneralSettings } from "@/components/settings/GeneralSettings";
 import type { SettingsFormData } from "@/components/settings/settings-utils";
 
+const auth = {
+  user: { id: "a-1", username: "owner", email: "owner@example.com" } as {
+    id: string;
+    username: string;
+    email: string;
+  } | null,
+};
+
+jest.mock("@/contexts/auth-context", () => ({
+  useAuth: () => auth,
+  isAdminUser: (user: unknown) =>
+    user !== null && typeof user === "object" && "username" in user,
+}));
+
 const setting = (
   key: string,
   value: string,
@@ -70,6 +84,7 @@ let consoleError: jest.SpyInstance;
 
 beforeEach(() => {
   jest.clearAllMocks();
+  auth.user = { id: "a-1", username: "owner", email: "owner@example.com" };
   consoleError = jest.spyOn(console, "error").mockImplementation(() => {});
   fetchMock.mockResolvedValue({
     ok: true,
@@ -590,20 +605,23 @@ describe("GeneralSettings password reset", () => {
     return view;
   };
 
+  const unmet = () =>
+    screen.queryAllByRole("listitem").map((item) => item.textContent);
+
   it("offers the toggle once email is configured", async () => {
     await renderReset();
 
     expect(toggle()).not.toBeDisabled();
-    expect(screen.queryByText(/Reset links are sent by email/)).toBeNull();
+    expect(screen.queryByText(/need the following first/)).toBeNull();
   });
 
   it("greys the toggle out while SMTP is off", async () => {
     await renderReset({ settings: smtp({ SMTP_ENABLED: "false" }) });
 
     expect(toggle()).toBeDisabled();
-    expect(
-      screen.getByText(/Reset links are sent by email/),
-    ).toBeInTheDocument();
+    expect(unmet()).toEqual([
+      "Configure and enable a mail server under Email settings",
+    ]);
   });
 
   it.each(["SMTP_HOST", "SMTP_FROM_EMAIL"])(
@@ -676,5 +694,52 @@ describe("GeneralSettings password reset", () => {
     expect(
       screen.getByText(/Show a Forgot password link on the sign-in page/),
     ).toBeInTheDocument();
+  });
+
+  it("says nothing while the signed-in admin has an address of their own", async () => {
+    await renderReset();
+
+    expect(unmet()).toEqual([]);
+  });
+
+  it("blocks the toggle when the signed-in admin has no address", async () => {
+    auth.user = { id: "a-1", username: "owner", email: "" };
+
+    await renderReset();
+
+    expect(toggle()).toBeDisabled();
+    expect(unmet()).toEqual(["Add an email address to your admin account"]);
+  });
+
+  it("gathers every unmet requirement into one list", async () => {
+    auth.user = { id: "a-1", username: "owner", email: "" };
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({ appUrlConfigured: false }),
+    });
+
+    await renderReset({ settings: smtp({ SMTP_ENABLED: "false" }) });
+
+    expect(screen.getAllByText(/need the following first/)).toHaveLength(1);
+    expect(unmet()).toEqual([
+      "Configure and enable a mail server under Email settings",
+      "Set the APP_URL environment variable",
+      "Add an email address to your admin account",
+    ]);
+  });
+
+  it("drops a requirement from the list once it is met", async () => {
+    auth.user = { id: "a-1", username: "owner", email: "" };
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({ appUrlConfigured: false }),
+    });
+
+    await renderReset();
+
+    expect(unmet()).toEqual([
+      "Set the APP_URL environment variable",
+      "Add an email address to your admin account",
+    ]);
   });
 });

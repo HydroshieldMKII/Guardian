@@ -80,9 +80,7 @@ export default function ForgotPasswordPage() {
         description="This server does not offer password resets"
       >
         <p className="text-sm leading-relaxed text-muted-foreground">
-          Ask the server owner to turn password resets on in Settings. It needs
-          email notifications configured and the server address set through the
-          APP_URL environment variable.
+          Ask the server owner to turn password resets on.
         </p>
       </AuthShell>
     );
@@ -93,12 +91,7 @@ export default function ForgotPasswordPage() {
       <AuthShell
         title="Check Your Email"
         description="A reset link is on its way if the address is registered"
-      >
-        <p className="text-sm leading-relaxed text-muted-foreground">
-          Whether an account uses that address is never disclosed. If one does,
-          the link arrives shortly and works for 15 minutes.
-        </p>
-      </AuthShell>
+      />
     );
   }
 

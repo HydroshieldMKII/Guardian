@@ -92,7 +92,9 @@ describe("ForgotPasswordPage", () => {
 
     expect(await screen.findByText("Check Your Email")).toBeInTheDocument();
     expect(
-      screen.getByText(/never disclosed/),
+      screen.getByText(
+        /A reset link is on its way if the address is registered/,
+      ),
     ).toBeInTheDocument();
   });
 

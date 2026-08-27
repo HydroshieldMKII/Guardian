@@ -699,21 +699,17 @@ export function EditProfileModal({
                   </Button>
 
                   {waitingForPlex && (
-                    <div className="space-y-2 text-center">
-                      <p className="text-xs text-muted-foreground">
-                        Finish linking on the Plex window. It closes for you
-                        once Plex confirms.
-                      </p>
-                      <Button
+                    <p className="text-center text-xs text-muted-foreground">
+                      Finish linking on the Plex window, or{" "}
+                      <button
                         type="button"
-                        variant="ghost"
-                        size="sm"
                         onClick={() => cancelPlexLink()}
-                        className="text-xs text-muted-foreground hover:text-foreground"
+                        className="cursor-pointer underline underline-offset-2 hover:text-foreground"
                       >
-                        Cancel Plex linking
-                      </Button>
-                    </div>
+                        cancel
+                      </button>
+                      .
+                    </p>
                   )}
                 </>
               )}

@@ -7,6 +7,7 @@ import { TimezoneService } from '@/modules/config/services/timezone.service';
 import { SettingValues } from '@/modules/config/settings.catalog';
 import { asHttpError } from '@/common/utils/error-types';
 import { EMAIL_PALETTE } from '@/common/utils/email-palette';
+import { NotificationEmailType } from '@/common/utils/notification-email-type';
 
 export interface SMTPConfig {
   host: string;
@@ -33,14 +34,7 @@ export type SmtpSettings = Pick<
 >;
 
 export interface NotificationEmailData {
-  type:
-    | 'block'
-    | 'info'
-    | 'warning'
-    | 'error'
-    | 'new-device'
-    | 'location-change'
-    | 'device-note';
+  type: NotificationEmailType;
   text: string;
   username: string;
   deviceName?: string;
@@ -135,10 +129,8 @@ export class EmailService {
       const transporter = this.createTransporter(config);
       await transporter.verify();
 
-      const emailHtml = this.emailTemplateService.generateSMTPTestEmail(
-        config.toEmails,
-        timestamp,
-      );
+      const emailHtml =
+        this.emailTemplateService.generateSMTPTestEmail(timestamp);
 
       const testMailOptions = {
         from: config.fromName
@@ -329,7 +321,7 @@ export class EmailService {
           : smtpConfig.fromEmail,
         to: [toEmail],
         subject: 'Guardian: Reset your password',
-        text: `Someone asked to reset the password for your Guardian account (${username}).\n\nOpen this link to choose a new password:\n${resetUrl}\n\nThe link expires in ${expiresInMinutes} minutes and works once. If this was not you, ignore this email and nothing changes.\n\nSent at: ${timestamp}`,
+        text: `Someone asked to reset the password for your Guardian account (${username}).\n\nOpen this link to choose a new password:\n${resetUrl}\n\nThe link expires in ${expiresInMinutes} minutes and works once. If this was not you, you can safely ignore this email.\n\nSent at: ${timestamp}`,
         html: this.emailTemplateService.generatePasswordResetEmail(
           username,
           resetUrl,
@@ -424,7 +416,7 @@ export class EmailService {
 
       const transporter = this.createTransporter(smtpConfig);
 
-      const { subject, statusLabel, statusColor, mainMessage } =
+      const { subject, statusColor, mainMessage } =
         this.getNotificationEmailContent(
           data.type,
           data.stopCode,
@@ -441,7 +433,6 @@ export class EmailService {
       const emailHtml = this.emailTemplateService.generateNotificationEmail(
         data.type,
         statusColor,
-        statusLabel,
         mainMessage,
         data.username,
         data.deviceName,
@@ -481,76 +472,42 @@ export class EmailService {
   }
 
   private getNotificationEmailContent(
-    notificationType:
-      | 'block'
-      | 'info'
-      | 'warning'
-      | 'error'
-      | 'new-device'
-      | 'location-change'
-      | 'device-note',
+    notificationType: NotificationEmailType,
     stopCode?: string,
     username?: string,
     deviceName?: string,
   ): {
     subject: string;
-    statusLabel: string;
     statusColor: string;
     mainMessage: string;
   } {
     switch (notificationType) {
-      case 'block':
-        return {
-          subject: `Guardian Alert: Stream Blocked${deviceName ? ` - ${deviceName}` : ''}`,
-          statusLabel: 'STREAM BLOCKED',
-          statusColor: EMAIL_PALETTE.danger,
-          mainMessage: stopCode
-            ? StopCodeUtils.getStopCodeDescription(stopCode)
-            : 'A streaming session has been blocked on your Plex server',
-        };
-      case 'warning':
-        return {
-          subject: `Guardian Warning${deviceName ? ` - ${deviceName}` : ''}`,
-          statusLabel: 'WARNING',
-          statusColor: EMAIL_PALETTE.warning,
-          mainMessage:
-            'Guardian has detected an issue that requires your attention.',
-        };
-      case 'error':
-        return {
-          subject: `Guardian Error${deviceName ? ` - ${deviceName}` : ''}`,
-          statusLabel: 'ERROR',
-          statusColor: EMAIL_PALETTE.danger,
-          mainMessage: 'Guardian has encountered an error during operation.',
-        };
       case 'new-device':
         return {
           subject: `Guardian Alert: New Device Detected${deviceName ? ` - ${deviceName}` : ''}`,
-          statusLabel: 'NEW DEVICE',
           statusColor: EMAIL_PALETTE.info,
           mainMessage: `A new device "${deviceName}" has been detected for user "${username}".`,
         };
       case 'location-change':
         return {
           subject: `Guardian Alert: Device Location Changed${deviceName ? ` - ${deviceName}` : ''}`,
-          statusLabel: 'LOCATION CHANGED',
           statusColor: EMAIL_PALETTE.warning,
-          mainMessage: `The device "${deviceName}" used by "${username}" has changed its IP address location.`,
+          mainMessage: 'A device is streaming from a new location.',
         };
       case 'device-note':
         return {
           subject: `Guardian Alert: Device Note Received${deviceName ? ` - ${deviceName}` : ''}`,
-          statusLabel: 'DEVICE NOTE',
           statusColor: EMAIL_PALETTE.accent,
           mainMessage: `User "${username}" has left a note on device "${deviceName}".`,
         };
-      case 'info':
+      case 'block':
       default:
         return {
-          subject: `Guardian Notification${deviceName ? ` - ${deviceName}` : ''}`,
-          statusLabel: 'NOTIFICATION',
-          statusColor: EMAIL_PALETTE.info,
-          mainMessage: 'Guardian has a new notification for your Plex server.',
+          subject: `Guardian Alert: Stream Blocked${deviceName ? ` - ${deviceName}` : ''}`,
+          statusColor: EMAIL_PALETTE.danger,
+          mainMessage: stopCode
+            ? StopCodeUtils.getStopCodeDescription(stopCode)
+            : 'A streaming session has been blocked on your Plex server',
         };
     }
   }

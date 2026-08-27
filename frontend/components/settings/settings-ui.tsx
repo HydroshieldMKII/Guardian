@@ -100,7 +100,9 @@ export function Banner({
 
   return (
     <Panel tone={tone} className={cn("py-3", className)}>
-      <p className={cn("text-sm leading-relaxed", text[tone])}>{children}</p>
+      <div className={cn("text-sm leading-relaxed", text[tone])}>
+        {children}
+      </div>
     </Panel>
   );
 }

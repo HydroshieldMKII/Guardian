@@ -11,6 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Field, SegmentedControl } from "@/components/ui/entity";
+import { isAdminUser, useAuth } from "@/contexts/auth-context";
 import { Banner, SettingControl, SettingsCard, isTruthy } from "./settings-ui";
 import { AppSetting } from "@/types";
 import { getSettingInfo, SettingsFormData } from "./settings-utils";
@@ -159,6 +160,7 @@ export function GeneralSettings({
   onFormDataChange,
   sectionId,
 }: GeneralSettingsProps) {
+  const { user } = useAuth();
   const [appUrlConfigured, setAppUrlConfigured] = useState(true);
 
   useEffect(() => {
@@ -243,7 +245,37 @@ export function GeneralSettings({
     const value = valueOf(setting);
 
     if (setting.key === "PASSWORD_RESET_ENABLED") {
-      const blocked = !emailConfigured || !appUrlConfigured;
+      const unmet: { key: string; label: React.ReactNode }[] = [];
+
+      if (!emailConfigured) {
+        unmet.push({
+          key: "smtp",
+          label: (
+            <>
+              Configure and enable a mail server under{" "}
+              <a href="#smtp" className="font-medium underline">
+                Email settings
+              </a>
+            </>
+          ),
+        });
+      }
+
+      if (!appUrlConfigured) {
+        unmet.push({
+          key: "app-url",
+          label: "Set the APP_URL environment variable",
+        });
+      }
+
+      if (isAdminUser(user) && !user.email) {
+        unmet.push({
+          key: "admin-email",
+          label: "Add an email address to your admin account",
+        });
+      }
+
+      const blocked = unmet.length > 0;
 
       return (
         <div className="space-y-3" key={setting.key}>
@@ -254,19 +286,14 @@ export function GeneralSettings({
             disabled={blocked}
             className={blocked ? "opacity-50" : undefined}
           />
-          {!emailConfigured && (
+          {blocked && (
             <Banner tone="warning">
-              Reset links are sent by email. Configure and enable a mail server
-              under{" "}
-              <a href="#smtp" className="font-medium underline">
-                Email settings
-              </a>{" "}
-              first.
-            </Banner>
-          )}
-          {emailConfigured && !appUrlConfigured && (
-            <Banner tone="warning">
-              The APP_URL environment variable must be set.
+              <p>Reset links need the following first:</p>
+              <ul className="mt-2 list-disc space-y-1 pl-5">
+                {unmet.map((requirement) => (
+                  <li key={requirement.key}>{requirement.label}</li>
+                ))}
+              </ul>
             </Banner>
           )}
         </div>

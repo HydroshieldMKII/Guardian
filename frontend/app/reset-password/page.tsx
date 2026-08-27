@@ -116,20 +116,12 @@ function ResetPasswordForm() {
       <AuthShell
         title="Link Expired"
         description="This reset link no longer works"
-      >
-        <p className="text-sm leading-relaxed text-muted-foreground">
-          Reset links last 15 minutes and work once. Ask for a new one to try
-          again.
-        </p>
-        <p className="text-center text-sm text-muted-foreground">
-          <Link
-            href="/forgot-password"
-            className="text-primary hover:underline"
-          >
-            Request a new link
-          </Link>
-        </p>
-      </AuthShell>
+        footer={
+          <Button asChild className="w-full">
+            <Link href="/forgot-password">Request a new link</Link>
+          </Button>
+        }
+      />
     );
   }
 
@@ -137,13 +129,13 @@ function ResetPasswordForm() {
     return (
       <AuthShell
         title="Password Changed"
-        description="Sign in with your new password"
-      >
-        <p className="text-sm leading-relaxed text-muted-foreground">
-          Every other session was signed out, so any device that was still
-          logged in has to sign in again.
-        </p>
-      </AuthShell>
+        description="Your other devices were signed out"
+        footer={
+          <Button asChild className="w-full">
+            <Link href="/login">Back to sign in</Link>
+          </Button>
+        }
+      />
     );
   }
 

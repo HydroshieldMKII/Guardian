@@ -29,6 +29,7 @@ import { config } from "@/lib/config";
 import { useVersion } from "@/contexts/version-context";
 import { useAuth } from "@/contexts/auth-context";
 import { useLiveDashboard } from "@/hooks/useLiveDashboard";
+import { HIGHLIGHT_CLASSES } from "@/lib/highlight";
 
 export function Dashboard() {
   const router = useRouter();
@@ -124,17 +125,9 @@ export function Dashboard() {
 
         // Add highlight effect
         setTimeout(() => {
-          userElement.classList.add(
-            "ring-2",
-            "ring-blue-500",
-            "ring-opacity-75",
-          );
+          userElement.classList.add(...HIGHLIGHT_CLASSES);
           setTimeout(() => {
-            userElement.classList.remove(
-              "ring-2",
-              "ring-blue-500",
-              "ring-opacity-75",
-            );
+            userElement.classList.remove(...HIGHLIGHT_CLASSES);
           }, 1500);
         }, 200);
       }
