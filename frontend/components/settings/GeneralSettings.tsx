@@ -162,6 +162,7 @@ export function GeneralSettings({
 }: GeneralSettingsProps) {
   const { user } = useAuth();
   const [appUrlConfigured, setAppUrlConfigured] = useState(true);
+  const [anyAdminEmail, setAnyAdminEmail] = useState(true);
 
   useEffect(() => {
     const check = async () => {
@@ -170,6 +171,7 @@ export function GeneralSettings({
         if (response.ok) {
           const data = await response.json();
           setAppUrlConfigured(Boolean(data.appUrlConfigured));
+          setAnyAdminEmail(Boolean(data.adminEmailConfigured));
         }
       } catch (error) {
         console.error("Failed to check password reset status:", error);
@@ -268,7 +270,9 @@ export function GeneralSettings({
         });
       }
 
-      if (isAdminUser(user) && !user.email) {
+      const ownEmail = isAdminUser(user) && Boolean(user.email);
+
+      if (!anyAdminEmail && !ownEmail) {
         unmet.push({
           key: "admin-email",
           label: "Add an email address to your admin account",

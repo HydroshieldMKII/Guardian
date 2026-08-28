@@ -78,11 +78,7 @@ export default function ForgotPasswordPage() {
       <AuthShell
         title="Password Reset"
         description="This server does not offer password resets"
-      >
-        <p className="text-sm leading-relaxed text-muted-foreground">
-          Ask the server owner to turn password resets on.
-        </p>
-      </AuthShell>
+      />
     );
   }
 

@@ -17,9 +17,24 @@ Guardian is an access-control layer for Plex Media Server. It polls the Plex ses
 >
 > Do not expose Guardian directly to the internet. Run it on a LAN, behind a VPN, or behind a reverse proxy with SSO.
 
-<img width="3024" alt="Guardian device management" src="https://github.com/user-attachments/assets/d0283784-c009-467e-8e38-b0d7f3907ba0" />
+<img alt="Device management" src="docs/screenshots/device-management.png" />
 
-<img width="3024" alt="Guardian active streams" src="https://github.com/user-attachments/assets/3c2e9d9b-0836-4e95-913d-fcc71634820f" />
+<img alt="Active streams" src="docs/screenshots/active-streams.jpg" />
+
+<details>
+<summary>More screenshots</summary>
+
+<img alt="Device actions" src="docs/screenshots/device-actions.png" />
+
+<img alt="Device details" src="docs/screenshots/device-details.png" />
+
+<img alt="Session history" src="docs/screenshots/session-history.png" />
+
+<img alt="Notifications" src="docs/screenshots/notifications.png" />
+
+<img alt="Active streams in light theme" src="docs/screenshots/active-streams-light.jpg" />
+
+</details>
 
 ## Features
 
@@ -98,7 +113,7 @@ docker compose exec guardian node backend/src/scripts/disable-captcha.js
 
 **Notifications not arriving** — use the test buttons in Settings, then check credentials and spam filtering.
 
-**Reset emails not arriving** — confirm SMTP works with the test button, then confirm `APP_URL` is set.
+**Reset emails not arriving** — confirm SMTP works with the test button, confirm `APP_URL` is set, and confirm the admin account has an email address.
 
 Otherwise, ask on [Discord](https://discord.gg/xTKuHyhdS4) or open an [issue](https://github.com/HydroshieldMKII/Guardian/issues).
 
@@ -119,3 +134,7 @@ Run before opening a pull request:
 ## Contributing
 
 Open an issue with the bug or feature template, or a pull request with the checklist filled in. Report security issues through a [private advisory](https://github.com/HydroshieldMKII/Guardian/security/advisories/new), not a public issue.
+
+## License
+
+Released under the [PolyForm Noncommercial License 1.0.0](LICENSE.md). Fork it, change it and share it for any noncommercial purpose, keeping the copyright notice with it. Commercial use is not covered. The software comes with no warranty.

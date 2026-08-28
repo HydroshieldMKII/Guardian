@@ -711,6 +711,22 @@ describe("GeneralSettings password reset", () => {
     expect(unmet()).toEqual(["Add an email address to your admin account"]);
   });
 
+  it("says nothing while another admin can receive the link", async () => {
+    auth.user = { id: "a-1", username: "owner", email: "" };
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        appUrlConfigured: true,
+        adminEmailConfigured: true,
+      }),
+    });
+
+    await renderReset();
+
+    await waitFor(() => expect(toggle()).not.toBeDisabled());
+    expect(unmet()).toEqual([]);
+  });
+
   it("gathers every unmet requirement into one list", async () => {
     auth.user = { id: "a-1", username: "owner", email: "" };
     fetchMock.mockResolvedValue({

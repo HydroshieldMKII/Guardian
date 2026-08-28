@@ -477,12 +477,12 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
 
       <SettingsCard
         title="Dangerous Operations"
-        description="Nothing here can be undone. Export your settings before you continue."
+        description="Nothing here can be undone."
       >
         <ActionRow
           tone="danger"
           title="Delete All Devices"
-          description="Permanently delete every device, along with its session history and notifications. Users and settings are kept, and every device has to be approved again the next time it connects."
+          description="Permanently delete every device, along with its session history and notifications. Users and application settings are kept, and every device has to be approved again the next time it connects."
           action={
             <Button
               onClick={() => setShowDeleteAllDevicesModal(true)}
@@ -554,7 +554,7 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
         onClose={() => setShowResetDatabaseModal(false)}
         onConfirm={handleResetDatabase}
         title="Factory Reset"
-        description="Everything is deleted for good: settings, devices, users and session history. It all restarts as a fresh install. Export your settings first if you want a way back."
+        description="Everything is deleted for good: settings, devices, users and session history. It all restarts as a fresh install."
         confirmText="Yes, Wipe All Data"
         cancelText="Cancel"
         variant="destructive"

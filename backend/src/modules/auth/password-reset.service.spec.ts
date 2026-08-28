@@ -49,7 +49,11 @@ describe('PasswordResetService', () => {
     >;
   };
   let authService: { clearAllSessions: jest.Mock };
-  let queryBuilder: { where: jest.Mock; getOne: jest.Mock };
+  let queryBuilder: {
+    where: jest.Mock;
+    getOne: jest.Mock;
+    getCount: jest.Mock;
+  };
 
   beforeEach(async () => {
     process.env.APP_URL = 'https://guardian.example.com';
@@ -57,6 +61,7 @@ describe('PasswordResetService', () => {
     queryBuilder = {
       where: jest.fn().mockReturnThis(),
       getOne: jest.fn().mockResolvedValue(ADMIN),
+      getCount: jest.fn().mockResolvedValue(1),
     };
 
     adminRepo = {
@@ -135,6 +140,7 @@ describe('PasswordResetService', () => {
         enabled: true,
         emailConfigured: true,
         appUrlConfigured: true,
+        adminEmailConfigured: true,
       });
     });
 
@@ -179,6 +185,18 @@ describe('PasswordResetService', () => {
         enabled: false,
         emailConfigured: true,
         appUrlConfigured: false,
+        adminEmailConfigured: true,
+      });
+    });
+
+    it('is not ready while no admin account carries an email address', async () => {
+      queryBuilder.getCount.mockResolvedValue(0);
+
+      await expect(service.getStatus()).resolves.toEqual({
+        enabled: false,
+        emailConfigured: true,
+        appUrlConfigured: true,
+        adminEmailConfigured: false,
       });
     });
   });
@@ -242,7 +260,16 @@ describe('PasswordResetService', () => {
       await service.requestReset('owner@example.com');
 
       expect(emailService.sendPasswordResetEmail).not.toHaveBeenCalled();
-      expect(adminRepo.createQueryBuilder).not.toHaveBeenCalled();
+      expect(queryBuilder.getOne).not.toHaveBeenCalled();
+    });
+
+    it('sends nothing while no admin account carries an email address', async () => {
+      queryBuilder.getCount.mockResolvedValue(0);
+
+      await service.requestReset('owner@example.com');
+
+      expect(emailService.sendPasswordResetEmail).not.toHaveBeenCalled();
+      expect(queryBuilder.getOne).not.toHaveBeenCalled();
     });
 
     it('clears tokens that have already expired', async () => {

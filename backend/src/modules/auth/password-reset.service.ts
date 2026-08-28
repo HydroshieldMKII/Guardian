@@ -36,21 +36,32 @@ export class PasswordResetService {
     enabled: boolean;
     emailConfigured: boolean;
     appUrlConfigured: boolean;
+    adminEmailConfigured: boolean;
   }> {
-    const [toggled, smtp] = await Promise.all([
+    const [toggled, smtp, addressableAdmins] = await Promise.all([
       this.configService.getSetting('PASSWORD_RESET_ENABLED'),
       this.emailService.loadSmtpSettings(),
+      this.adminUserRepository
+        .createQueryBuilder('admin')
+        .where("TRIM(COALESCE(admin.email, '')) <> ''")
+        .getCount(),
     ]);
 
     const emailConfigured = Boolean(
       smtp.SMTP_ENABLED && smtp.SMTP_HOST && smtp.SMTP_FROM_EMAIL,
     );
     const appUrlConfigured = appUrl() !== null;
+    const adminEmailConfigured = addressableAdmins > 0;
 
     return {
-      enabled: toggled === true && emailConfigured && appUrlConfigured,
+      enabled:
+        toggled === true &&
+        emailConfigured &&
+        appUrlConfigured &&
+        adminEmailConfigured,
       emailConfigured,
       appUrlConfigured,
+      adminEmailConfigured,
     };
   }
 
