@@ -395,6 +395,27 @@ describe("TimeRuleModal editing a rule", () => {
     );
   });
 
+  it("edits the end of the window too", async () => {
+    const { user } = await renderModal();
+    await startEditing(user);
+
+    const times =
+      document.querySelectorAll<HTMLInputElement>('input[type="time"]');
+    await user.clear(times[1]);
+    await user.type(times[1], "18:45");
+    await user.tab();
+
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() =>
+      expect(updateTimeRule).toHaveBeenCalledWith(
+        "u-1",
+        1,
+        expect.objectContaining({ endTime: "18:45" }),
+      ),
+    );
+  });
+
   it("reports a toggle failure", async () => {
     updateTimeRule.mockRejectedValue(new Error("server said no"));
     const { user } = await renderModal();
@@ -552,6 +573,22 @@ describe("TimeRuleModal deleting", () => {
     await user.click(screen.getByText("confirm dialog"));
 
     await waitFor(() => expect(deleteTimeRule).toHaveBeenCalledWith("u-1", 1));
+  });
+
+  it("counts the rules it cleared in the plural", async () => {
+    getTimeRules.mockResolvedValue([rule({ id: 1 }), rule({ id: 2 })]);
+    const { user } = await renderModal();
+
+    await user.click(screen.getByRole("button", { name: /Delete All/ }));
+    await user.click(screen.getByText("confirm dialog"));
+
+    await waitFor(() =>
+      expect(toast).toHaveBeenCalledWith(
+        expect.objectContaining({
+          description: expect.stringContaining("Deleted 2 rules."),
+        }),
+      ),
+    );
   });
 
   it("can abandon deleting every rule", async () => {

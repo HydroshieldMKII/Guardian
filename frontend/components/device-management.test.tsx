@@ -525,6 +525,20 @@ describe("DeviceManagement toolbar", () => {
     expect(onRefresh).toHaveBeenCalled();
   });
 
+  it("logs a refresh that fails instead of leaving the button spinning", async () => {
+    const { user, onRefresh } = await renderPanel();
+    onRefresh.mockRejectedValue(new Error("offline"));
+
+    await user.click(screen.getByRole("button", { name: /Refresh/ }));
+
+    await waitFor(() =>
+      expect(consoleError).toHaveBeenCalledWith(
+        "Failed to refresh:",
+        expect.any(Error),
+      ),
+    );
+  });
+
   it("toggles auto refresh", async () => {
     const { user, onAutoRefreshChange } = await renderPanel({
       autoRefresh: true,
@@ -936,6 +950,18 @@ describe("DeviceManagement hidden users", () => {
     await user.click(screen.getByRole("button", { name: /Show Hidden Users/ }));
 
     expect(await screen.findByText("ghost")).toBeInTheDocument();
+  });
+
+  it("closes the hidden users dialog", async () => {
+    const { user } = await renderPanel();
+    await user.click(screen.getByRole("button", { name: /Show Hidden Users/ }));
+    await screen.findByText("No hidden users found");
+
+    await user.click(screen.getByRole("button", { name: "Close" }));
+
+    await waitFor(() =>
+      expect(screen.queryByText("No hidden users found")).toBeNull(),
+    );
   });
 
   it("says when nobody is hidden", async () => {

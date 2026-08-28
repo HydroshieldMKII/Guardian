@@ -74,6 +74,15 @@ describe("EditProfileModal", () => {
     expect(screen.queryByText("Edit Profile")).toBeNull();
   });
 
+  it("closes the Plex tab from its footer button", async () => {
+    const { onOpenChange, ui } = await renderModal();
+    await openTab(ui, "Plex");
+
+    await ui.click(await screen.findByRole("button", { name: "Close" }));
+
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
   it("seeds the profile form from the signed-in admin", async () => {
     await renderModal();
 
@@ -544,8 +553,7 @@ describe("EditProfileModal", () => {
         expect(toast).toHaveBeenCalledWith(
           expect.objectContaining({
             title: "Plex Link Failed",
-            description:
-              "Could not reach Plex. Try again in a moment.",
+            description: "Could not reach Plex. Try again in a moment.",
           }),
         ),
       );
@@ -650,6 +658,19 @@ describe("EditProfileModal Plex PIN polling", () => {
         description: "You can now sign in with Plex",
       }),
     );
+    expect(popup.close).toHaveBeenCalled();
+  });
+
+  it("stops waiting when you cancel from the hint", async () => {
+    wirePinFetch({ ok: true, json: async () => ({}) });
+    await startLinking();
+
+    fireEvent.click(screen.getByRole("button", { name: "cancel" }));
+    await flush();
+
+    expect(
+      screen.queryByText(/Finish linking on the Plex window/),
+    ).not.toBeInTheDocument();
     expect(popup.close).toHaveBeenCalled();
   });
 

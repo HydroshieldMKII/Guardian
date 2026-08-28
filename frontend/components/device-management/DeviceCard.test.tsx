@@ -150,6 +150,27 @@ describe("DeviceCard identity", () => {
     expect(screen.getByText("Product")).toBeInTheDocument();
     expect(screen.getByText("Plex for Roku")).toBeInTheDocument();
   });
+
+  it("says Unknown when Plex reports no product or platform", () => {
+    const { container } = renderCard({
+      deviceProduct: undefined,
+      devicePlatform: undefined,
+    });
+
+    const facts = container.querySelector("dl");
+
+    expect(facts?.textContent).toContain("Unknown");
+  });
+
+  it("falls back to a neutral tone for a status it does not recognise", () => {
+    const { container } = renderCard({
+      status: "archived" as UserDevice["status"],
+    });
+
+    expect(screen.getByText("Living Room TV")).toBeInTheDocument();
+    expect(screen.queryByText("Pending")).not.toBeInTheDocument();
+    expect(screen.queryByText("Rejected")).not.toBeInTheDocument();
+  });
 });
 
 describe("DeviceCard dense row", () => {

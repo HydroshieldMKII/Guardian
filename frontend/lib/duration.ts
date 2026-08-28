@@ -23,8 +23,11 @@ const SECOND_UNITS: [string, number][] = [
 export const pluralize = (count: number, noun: string): string =>
   `${count} ${count === 1 ? noun : `${noun}s`}`;
 
-const joinParts = (parts: string[]): string => {
-  if (parts.length <= 1) return parts[0] ?? "";
+const isFilled = (parts: string[]): parts is [string, ...string[]] =>
+  parts.length > 0;
+
+const joinParts = (parts: [string, ...string[]]): string => {
+  if (parts.length === 1) return parts[0];
   return `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}`;
 };
 
@@ -55,12 +58,12 @@ export const formatUnitCount = (value: number, unit: DurationUnit): string =>
 
 export const formatMinutes = (minutes: number, maxParts = 2): string => {
   const parts = breakDown(Math.round(minutes), MINUTE_UNITS, maxParts);
-  return parts.length > 0 ? joinParts(parts) : "less than a minute";
+  return isFilled(parts) ? joinParts(parts) : "less than a minute";
 };
 
 export const formatSeconds = (seconds: number, maxParts = 2): string => {
   const parts = breakDown(Math.round(seconds), SECOND_UNITS, maxParts);
-  return parts.length > 0 ? joinParts(parts) : "less than a second";
+  return isFilled(parts) ? joinParts(parts) : "less than a second";
 };
 
 export const formatTimeLeft = (until: string | Date, maxParts = 2): string => {

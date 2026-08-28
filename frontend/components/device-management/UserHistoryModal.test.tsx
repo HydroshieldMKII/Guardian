@@ -109,6 +109,32 @@ describe("UserHistoryModal loading", () => {
     expect(screen.getAllByText("Arrival").length).toBeGreaterThan(0);
   });
 
+  it("fetches nothing without a user", async () => {
+    await renderModal({ userId: null });
+
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("marks a session that Guardian stopped differently from one that ended", async () => {
+    fetchMock.mockImplementation(() =>
+      ok([
+        session({ id: 1, contentTitle: "Stopped", terminated: true }),
+        session({ id: 2, contentTitle: "Finished", terminated: false }),
+      ]),
+    );
+
+    await renderModal();
+
+    expect(screen.getAllByText("Stopped").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Finished").length).toBeGreaterThan(0);
+  });
+
+  it("survives being asked to scroll to a session it never loaded", async () => {
+    await renderModal({ scrollToSessionId: 4242 });
+
+    expect(screen.getAllByText("Arrival").length).toBeGreaterThan(0);
+  });
+
   it("fetches nothing while closed", async () => {
     await renderModal({ isOpen: false });
     expect(fetchMock).not.toHaveBeenCalled();
@@ -711,6 +737,45 @@ describe("UserHistoryModal paging", () => {
     });
 
     expect(await screen.findByText("Much Older")).toBeInTheDocument();
+    global.IntersectionObserver = original;
+  });
+
+  it("stays put while the trigger is out of view", async () => {
+    class TestIntersectionObserver implements IntersectionObserver {
+      static callbacks: IntersectionObserverCallback[] = [];
+      readonly root = null;
+      readonly rootMargin = "";
+      readonly thresholds: ReadonlyArray<number> = [];
+      constructor(callback: IntersectionObserverCallback) {
+        TestIntersectionObserver.callbacks.push(callback);
+      }
+      observe(): void {}
+      unobserve(): void {}
+      disconnect(): void {}
+      takeRecords(): IntersectionObserverEntry[] {
+        return [];
+      }
+    }
+    const original = global.IntersectionObserver;
+    global.IntersectionObserver = TestIntersectionObserver;
+
+    fetchMock.mockImplementationOnce(() => ok(fullPage()));
+    await renderModal();
+    const callsBefore = fetchMock.mock.calls.length;
+
+    const observer = new TestIntersectionObserver(() => {});
+    const callback =
+      TestIntersectionObserver.callbacks[
+        TestIntersectionObserver.callbacks.length - 2
+      ];
+    await act(async () => {
+      callback(
+        [{ isIntersecting: false } as IntersectionObserverEntry],
+        observer,
+      );
+    });
+
+    expect(fetchMock.mock.calls).toHaveLength(callsBefore);
     global.IntersectionObserver = original;
   });
 

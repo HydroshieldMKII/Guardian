@@ -145,6 +145,12 @@ describe("hasIPPolicy", () => {
       hasIPPolicy(preference({ allowedIPs: "   " as unknown as string[] })),
     ).toBe(false);
   });
+
+  it("is off when the allow list is missing entirely", () => {
+    expect(
+      hasIPPolicy(preference({ allowedIPs: null as unknown as string[] })),
+    ).toBe(false);
+  });
 });
 
 describe("hasTimeSchedule", () => {
