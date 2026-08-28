@@ -17,22 +17,24 @@ Guardian is an access-control layer for Plex Media Server. It polls the Plex ses
 >
 > Do not expose Guardian directly to the internet. Run it on a LAN, behind a VPN, or behind a reverse proxy with SSO.
 
-<img alt="Device management" src="docs/screenshots/device-management.png" />
+<img alt="Device management" src="docs/screenshots/device-management.webp" />
 
-<img alt="Active streams" src="docs/screenshots/active-streams.jpg" />
+<img alt="Active streams" src="docs/screenshots/active-streams.webp" />
 
 <details>
 <summary>More screenshots</summary>
 
-<img alt="Device actions" src="docs/screenshots/device-actions.png" />
+<img alt="The portal a Plex user sees" src="docs/screenshots/user-portal.webp" />
 
-<img alt="Device details" src="docs/screenshots/device-details.png" />
+<img alt="Device actions" src="docs/screenshots/device-actions.webp" />
 
-<img alt="Session history" src="docs/screenshots/session-history.png" />
+<img alt="Device details" src="docs/screenshots/device-details.webp" />
 
-<img alt="Notifications" src="docs/screenshots/notifications.png" />
+<img alt="Session history" src="docs/screenshots/session-history.webp" />
 
-<img alt="Active streams in light theme" src="docs/screenshots/active-streams-light.jpg" />
+<img alt="Notifications" src="docs/screenshots/notifications.webp" />
+
+<img alt="Active streams in light theme" src="docs/screenshots/active-streams-light.webp" />
 
 </details>
 
