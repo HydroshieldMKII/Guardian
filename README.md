@@ -2,9 +2,10 @@
 
 [![CI](https://github.com/HydroshieldMKII/Guardian/actions/workflows/ci.yml/badge.svg)](https://github.com/HydroshieldMKII/Guardian/actions/workflows/ci.yml)
 [![CD](https://github.com/HydroshieldMKII/Guardian/actions/workflows/cd.yml/badge.svg)](https://github.com/HydroshieldMKII/Guardian/actions/workflows/cd.yml)
-[![Frontend coverage](https://codecov.io/gh/HydroshieldMKII/Guardian/branch/main/graph/badge.svg?flag=frontend)](https://codecov.io/gh/HydroshieldMKII/Guardian?flags[0]=frontend)
-[![Backend coverage](https://codecov.io/gh/HydroshieldMKII/Guardian/branch/main/graph/badge.svg?flag=backend)](https://codecov.io/gh/HydroshieldMKII/Guardian?flags[0]=backend)
-[![Docker Pulls](https://img.shields.io/docker/pulls/hydroshieldmkii/guardian.svg)](https://hub.docker.com/r/hydroshieldmkii/guardian)
+[![Frontend coverage](https://img.shields.io/codecov/c/github/HydroshieldMKII/Guardian/main?flag=frontend&label=frontend%20coverage)](https://codecov.io/gh/HydroshieldMKII/Guardian?flags[0]=frontend)
+[![Backend coverage](https://img.shields.io/codecov/c/github/HydroshieldMKII/Guardian/main?flag=backend&label=backend%20coverage)](https://codecov.io/gh/HydroshieldMKII/Guardian?flags[0]=backend)
+[![Docker Pulls](https://img.shields.io/docker/pulls/hydroshieldmkii/guardian.svg?label=pulls%20(v2))](https://hub.docker.com/r/hydroshieldmkii/guardian)
+[![Legacy Pulls](https://img.shields.io/docker/pulls/hydroshieldmkii/guardian-frontend.svg?label=pulls%20(v1))](https://hub.docker.com/r/hydroshieldmkii/guardian-frontend)
 [![Stars](https://img.shields.io/github/stars/HydroshieldMKII/Guardian.svg?style=flat)](https://github.com/HydroshieldMKII/Guardian/stargazers)
 [![Discord](https://img.shields.io/discord/1415505445883215955?logo=discord&label=Discord)](https://discord.gg/xTKuHyhdS4)
 
