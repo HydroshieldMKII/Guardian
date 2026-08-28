@@ -36,7 +36,6 @@ export const getSecretInputDisplay = (
   return { value, placeholder: fallbackPlaceholder };
 };
 
-// Function to get setting label and description
 export const getSettingInfo = (setting: AppSetting): SettingInfo => {
   const settingInfoMap: Record<
     string,
@@ -56,126 +55,134 @@ export const getSettingInfo = (setting: AppSetting): SettingInfo => {
     },
     USE_SSL: {
       label: "Use SSL/HTTPS",
-      description: "Connect to Plex server using HTTPS instead of HTTP",
+      description: "Reach your Plex server over HTTPS instead of HTTP",
     },
     IGNORE_CERT_ERRORS: {
       label: "Ignore SSL certificate errors",
       description:
-        "Skip SSL certificate validation (not recommended for production)",
+        "Connect even when the server's certificate cannot be verified. Only safe on a network you control.",
     },
     PLEXGUARD_REFRESH_INTERVAL: {
       label: "Session refresh interval (seconds)",
       description:
-        "How often to check for active Plex sessions and enforce rules",
+        "How often Plex is asked what is playing, and your policies enforced",
     },
     PLEX_GUARD_DEFAULT_BLOCK: {
       label: "Block new devices by default",
-      description: "Block access for all pending devices",
+      description:
+        "New devices cannot stream until you approve them. A user's own policy overrides this.",
     },
     PLEX_GUARD_STRICT_MODE: {
       label: "Strict mode",
       description:
-        "Automatically approve or reject new devices based on the default policy. Current pending devices will also be affected.",
+        "Every new device is decided immediately using the default policy, so nothing sits pending. Devices waiting now are decided as soon as you turn this on.",
     },
     MSG_DEVICE_PENDING: {
       label: "Device pending message",
-      description: "Message shown when a device is waiting for approval",
+      description: "Shown when a device is still waiting for your approval",
     },
     MSG_DEVICE_REJECTED: {
       label: "Device rejected message",
-      description: "Message shown when a device has been rejected",
+      description: "Shown when you have rejected the device",
     },
     MSG_TIME_RESTRICTED: {
-      label: "Time restriction message",
+      label: "Time schedule message",
       description:
-        "Message shown when streaming is blocked due to time restrictions",
+        "Shown when a user's time schedule blocks streaming at this hour",
     },
     MSG_IP_LAN_ONLY: {
-      label: "LAN only message",
-      description: "Message shown when only local network access is allowed",
+      label: "Local network only message",
+      description:
+        "Shown when a user is only allowed to stream on the local network, but is streaming from the internet",
     },
     MSG_IP_WAN_ONLY: {
-      label: "WAN only message",
-      description: "Message shown when only external access is allowed",
+      label: "Internet only message",
+      description:
+        "Shown when a user is only allowed to stream from the internet, but is streaming on the local network",
     },
     MSG_IP_NOT_ALLOWED: {
-      label: "IP not allowed message",
+      label: "Address not allowed message",
       description:
-        "Message shown when the IP address is not in the allowed list",
+        "Shown when a user streams from an IP address that is not on their allowed list",
     },
     DEVICE_CLEANUP_ENABLED: {
       label: "Enable automatic device cleanup",
       description:
-        "Automatically remove inactive devices after a certain period",
+        "Delete devices that have not streamed for a while, so the list stays short",
     },
     DEVICE_CLEANUP_INTERVAL_DAYS: {
-      label: "Device cleanup interval (days)",
+      label: "Delete devices unused for (days)",
       description:
-        "Number of days before inactive devices are automatically deleted",
+        "A device is deleted once this many days pass without it streaming",
     },
     DEFAULT_PAGE: {
       label: "Default dashboard page",
-      description: "Page to show when opening Guardian",
+      description: "The page to open on",
     },
     AUTO_CHECK_UPDATES: {
       label: "Automatically check for updates",
-      description: "Check for new Guardian versions automatically",
+      description: "Tell me when a newer version is released",
+    },
+    PASSWORD_RESET_ENABLED: {
+      label: "Allow password reset by email",
+      description:
+        "Show a Forgot password link on the sign-in page and email a single-use link that expires in 15 minutes",
     },
     CLOUDFLARE_TURNSTILE_SITE_KEY: {
       label: "Cloudflare Turnstile site key",
-      description: "Site key for Cloudflare Turnstile captcha on login page",
+      description: "The public key from your Cloudflare Turnstile widget",
     },
     CLOUDFLARE_TURNSTILE_SECRET_KEY: {
       label: "Cloudflare Turnstile secret key",
-      description: "Secret key for Cloudflare Turnstile captcha verification",
+      description:
+        "The private key from your Cloudflare Turnstile widget, used to verify each attempt.",
     },
     IN_APP_ENABLED: {
       label: "Enable in-app notifications",
-      description: "Enable all in-app notifications in Guardian",
+      description: "Show notifications in the bell menu",
     },
     AUTO_MARK_NOTIFICATION_READ: {
-      label: "Auto-mark notifications as read",
-      description:
-        "Automatically mark in-app notifications as read when clicked",
+      label: "Mark notifications as read when opened",
+      description: "Opening a notification clears it, without a second click",
     },
     IN_APP_NOTIFY_ON_NEW_DEVICE: {
-      label: "In-app notifications for new devices",
-      description: "Show in-app notifications when new devices are detected",
+      label: "New devices",
+      description: "When a device is seen for the first time",
     },
     IN_APP_NOTIFY_ON_BLOCK: {
-      label: "In-app notifications for blocked streams",
-      description:
-        "Show in-app notifications when streams are blocked due to policies",
+      label: "Blocked streams",
+      description: "When a stream is stopped because a policy forbids it",
     },
     IN_APP_NOTIFY_ON_LOCATION_CHANGE: {
-      label: "In-app notifications for device location changes",
-      description: "Show in-app notifications when device location changes",
+      label: "Device location changes",
+      description: "When a known device starts streaming from a new address",
     },
     IN_APP_NOTIFY_ON_DEVICE_NOTE: {
-      label: "In-app notifications for device notes",
-      description:
-        "Show in-app notifications when a user leaves a note on their device",
+      label: "Notes from users",
+      description: "When a user leaves a note asking you to review a device",
     },
     ENABLE_MEDIA_THUMBNAILS: {
       label: "Show media thumbnails",
-      description: "Display thumbnail images for media in streams",
+      description: "Show a small still from whatever is playing",
     },
     ENABLE_MEDIA_ARTWORK: {
       label: "Show media artwork",
-      description: "Display artwork for media in streams",
+      description: "Show the poster or album cover behind each stream",
     },
     CUSTOM_PLEX_URL: {
       label: "Custom Plex URL",
-      description: "Override the default Plex URL for media links",
+      description:
+        'Where the "open in Plex" links point, if your server is not at the default address',
       optional: true,
     },
     TIMEZONE: {
       label: "Timezone",
-      description: "Timezone offset for time based restrictions and scheduling",
+      description:
+        "The clock used when deciding whether a time schedule blocks a stream",
     },
     SMTP_ENABLED: {
-      label: "Enable email",
-      description: "Enable the email notification system",
+      label: "Enable email notifications",
+      description: "Send notifications by email through your own SMTP server",
     },
     SMTP_HOST: {
       label: "SMTP server hostname",
@@ -206,8 +213,7 @@ export const getSettingInfo = (setting: AppSetting): SettingInfo => {
     },
     SMTP_FROM_NAME: {
       label: "From display name",
-      description:
-        "Display name that will appear as the sender (e.g. Guardian Notifications)",
+      description: "Display name that will appear as the sender",
     },
     SMTP_USE_TLS: {
       label: "Use TLS encryption",
@@ -215,26 +221,25 @@ export const getSettingInfo = (setting: AppSetting): SettingInfo => {
         "Enable TLS/STARTTLS encryption for secure email transmission",
     },
     SMTP_NOTIFY_ON_NEW_DEVICE: {
-      label: "Email notifications for new devices",
-      description: "Send email notifications when new devices are detected",
+      label: "New devices",
+      description: "When a device is seen for the first time",
     },
     SMTP_NOTIFY_ON_BLOCK: {
-      label: "Email notifications for blocked streams",
-      description:
-        "Send email notifications when streams are blocked due to rules",
+      label: "Blocked streams",
+      description: "When a stream is stopped because a policy forbids it",
     },
     SMTP_NOTIFY_ON_LOCATION_CHANGE: {
-      label: "Email notifications for device location changes",
-      description: "Send email notifications when device location changes",
+      label: "Device location changes",
+      description: "When a known device starts streaming from a new address",
     },
     SMTP_NOTIFY_ON_DEVICE_NOTE: {
-      label: "Email notifications for device notes",
-      description:
-        "Send email notifications when a user leaves a note on their device",
+      label: "Notes from users",
+      description: "When a user leaves a note asking you to review a device",
     },
     APPRISE_ENABLED: {
       label: "Enable Apprise notifications",
-      description: "Enable the Apprise notification system",
+      description:
+        "Send notifications through Apprise to Discord, Telegram, Pushover and others",
     },
     APPRISE_URLS: {
       label: "Apprise service URLs",
@@ -242,53 +247,52 @@ export const getSettingInfo = (setting: AppSetting): SettingInfo => {
         "Enter your notification service URLs, separated by comma, semicolon, or new lines",
     },
     APPRISE_NOTIFY_ON_NEW_DEVICE: {
-      label: "Notify on new devices",
-      description: "Send notifications when new devices are detected",
+      label: "New devices",
+      description: "When a device is seen for the first time",
     },
     APPRISE_NOTIFY_ON_BLOCK: {
-      label: "Notify on blocked streams",
-      description: "Send notifications when streams are blocked due to rules",
+      label: "Blocked streams",
+      description: "When a stream is stopped because a policy forbids it",
     },
     APPRISE_NOTIFY_ON_LOCATION_CHANGE: {
-      label: "Notify on device location changes",
-      description: "Send notifications when device location changes",
+      label: "Device location changes",
+      description: "When a known device starts streaming from a new address",
     },
     APPRISE_NOTIFY_ON_DEVICE_NOTE: {
-      label: "Notify on device notes",
-      description:
-        "Send notifications when a user leaves a note on their device",
+      label: "Notes from users",
+      description: "When a user leaves a note asking you to review a device",
     },
     // Concurrent Stream Limit Settings
     CONCURRENT_STREAM_LIMIT: {
       label: "Global concurrent stream limit",
       description:
-        "Maximum number of simultaneous streams per user (0 = unlimited)",
+        "How many streams one user can run at the same time. Zero means no limit. A user's own limit overrides this.",
     },
     CONCURRENT_LIMIT_INCLUDE_TEMP_ACCESS: {
-      label: "Include temp access in stream limit",
+      label: "Count temporary access towards the limit",
       description:
-        "Count devices with temporary access towards the concurrent stream limit",
+        "Streams from devices on a temporary grant count towards the concurrent stream limit like any other",
     },
     MSG_CONCURRENT_LIMIT: {
-      label: "Concurrent limit message",
+      label: "Stream limit message",
       description:
-        "Message shown when a user exceeds their concurrent stream limit",
+        "Shown when a user starts more streams at once than their limit allows",
     },
     // User Portal Settings
     USER_PORTAL_ENABLED: {
       label: "Enable Plex user portal",
       description:
-        "Allow Plex users to log in and view their devices. If disabled, Plex login only works if admin has linked their account.",
+        "Plex users can sign in to see their own devices and policies. With this off, only a Plex account you have linked to your admin login can sign in.",
     },
     USER_PORTAL_SHOW_RULES: {
       label: "Show rules in user portal",
       description:
-        "Allow Plex users to see their assigned rules (network policy, concurrent limits, time rules, etc.)",
+        "Users can see the policies that apply to them: network and IP access, stream limit and time schedule",
     },
     USER_PORTAL_ALLOW_REJECTED_REQUESTS: {
       label: "Allow notes on rejected devices",
       description:
-        "Allow Plex users to submit notes for devices that have been rejected",
+        "Users can ask you to reconsider a device you have already rejected",
     },
   };
 
@@ -305,42 +309,3 @@ export const getSettingInfo = (setting: AppSetting): SettingInfo => {
     ? { label, description, optional: true }
     : { label, description };
 };
-
-export const settingsSections = [
-  {
-    id: "guardian",
-    title: "Guardian Configuration",
-    description: "Configure Guardian behavior and settings",
-    icon: "Shield",
-  },
-  {
-    id: "customization",
-    title: "Customization",
-    description: "Customize user interface, messages, and experience",
-    icon: "User",
-  },
-  {
-    id: "notifications",
-    title: "Notification Settings",
-    description: "Configure notification behavior and preferences",
-    icon: "BellRing",
-  },
-  {
-    id: "plex",
-    title: "Plex Integration",
-    description: "Configure Plex server connection and settings",
-    icon: "Server",
-  },
-  {
-    id: "database",
-    title: "Settings Management",
-    description: "Export and import settings and data",
-    icon: "Database",
-  },
-  {
-    id: "admin",
-    title: "Administrative Tools",
-    description: "Dangerous operations for database management",
-    icon: "AlertTriangle",
-  },
-];

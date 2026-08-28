@@ -26,7 +26,6 @@ describe("barrel exports", () => {
   it.each([
     "PlexSettings",
     "SMTPSettings",
-    "DatabaseManagement",
     "GeneralSettings",
     "AdminTools",
     "getSettingInfo",
@@ -36,8 +35,6 @@ describe("barrel exports", () => {
 
   it.each([
     "ClickableIP",
-    "getDeviceIcon",
-    "formatDuration",
     "getProgressPercentage",
     "getContentTitle",
     "getDetailedQuality",

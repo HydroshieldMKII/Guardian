@@ -150,27 +150,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUserType(null);
 
       // Distinguish between network errors and server errors
-      let errorMessage = "Unable to connect to Guardian backend service.";
+      let errorMessage = "Unable to connect to the backend service.";
 
       if (error instanceof TypeError) {
         // Network/connection errors
         errorMessage =
-          "Unable to reach Guardian backend service. Please ensure the service is running and accessible.";
+          "Unable to reach the backend service. Please ensure the service is running and accessible.";
       } else if (error instanceof Error) {
         // Server errors with specific codes
         const msg = error.message;
         if (msg.includes("500")) {
           errorMessage =
-            "The Guardian backend service encountered an internal error.";
+            "The backend service encountered an internal error.";
         } else if (msg.includes("502") || msg.includes("503")) {
           errorMessage =
-            "The Guardian backend service is temporarily unavailable. Please try again shortly.";
+            "The backend service is temporarily unavailable. Please try again shortly.";
         } else if (msg.includes("404")) {
           errorMessage =
-            "The Guardian backend service is not properly configured. Please check your setup.";
+            "The backend service is not properly configured. Please check your setup.";
         } else {
           errorMessage =
-            "The Guardian backend service is not responding correctly. Please try again.";
+            "The backend service is not responding correctly. Please try again.";
         }
       }
 

@@ -1,39 +1,32 @@
 import React, { useState } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
+import { HintTooltip } from "@/components/ui/hint-tooltip";
 import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+  Meta,
+  MetaGrid,
+  Panel,
+  PillRow,
+  Section,
+  StatusPill,
+  ToggleRow,
+} from "@/components/ui/entity";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import {
-  Edit2,
-  Save,
-  X,
-  RefreshCw,
-  ChevronDown,
-  HelpCircle,
-} from "lucide-react";
+  Modal,
+  ModalBody,
+  ModalFooter,
+  ModalHeader,
+} from "@/components/ui/modal";
+import { Pencil, RefreshCw } from "lucide-react";
 import { UserDevice, AppSetting } from "@/types";
+import {
+  BYPASSED_BY_TEMPORARY_ACCESS,
+  hasTemporaryAccess,
+  isPlexampDevice,
+  type PolicyBadge,
+} from "@/lib/device-policies";
+import { formatMinutes } from "@/lib/duration";
 import { ClickableIP, DeviceStatus } from "./SharedComponents";
-import { useDeviceUtils } from "@/hooks/device-management/useDeviceUtils";
 import { apiClient } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 
@@ -51,6 +44,7 @@ interface DeviceDetailsModalProps {
   onDeviceUpdate?: (device: UserDevice) => void;
   onSetPending?: (deviceId: number) => Promise<boolean>;
   settingsData?: AppSetting[];
+  policies?: PolicyBadge[];
 }
 
 export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
@@ -67,8 +61,8 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
   onDeviceUpdate,
   onSetPending,
   settingsData,
+  policies = [],
 }) => {
-  const { hasTemporaryAccess, getTemporaryAccessTimeLeft } = useDeviceUtils();
   const { toast } = useToast();
   const [excludeLoading, setExcludeLoading] = useState(false);
   const [deletingNote, setDeletingNote] = useState(false);
@@ -80,32 +74,8 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
     device?.requestNoteReadAt,
   );
 
-  // Collapsible section states
-  const [basicInfoOpen, setBasicInfoOpen] = useState(true);
-  const [identifierOpen, setIdentifierOpen] = useState(false);
-  const [activityOpen, setActivityOpen] = useState(false);
-  const [tempAccessOpen, setTempAccessOpen] = useState(false);
-  const [deviceSettingsOpen, setDeviceSettingsOpen] = useState(false);
-  const [userNoteOpen, setUserNoteOpen] = useState(false);
+  const plexamp = device ? isPlexampDevice(device) : false;
 
-  // Tooltip state for strict mode disabled button
-  const [strictModeTooltipOpen, setStrictModeTooltipOpen] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
-
-  // Detect mobile on mount
-  React.useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 640);
-    checkMobile();
-    window.addEventListener("resize", checkMobile);
-    return () => window.removeEventListener("resize", checkMobile);
-  }, []);
-
-  // Check if device is Plexamp
-  const isPlexampDevice =
-    device?.deviceProduct?.toLowerCase().includes("plexamp") ||
-    device?.deviceName?.toLowerCase().includes("plexamp");
-
-  // Check if strict mode is enabled
   const isStrictModeEnabled =
     settingsData?.find((s) => s.key === "PLEX_GUARD_STRICT_MODE")?.value ===
     "true";
@@ -130,8 +100,8 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
       await apiClient.deleteDeviceNote(device.id);
       setNoteReadAt(undefined);
       toast({
-        title: "Note deleted",
-        description: "The user note has been permanently deleted.",
+        title: "Note Deleted",
+        description: "The note this user left on the device is gone for good.",
         variant: "success",
       });
       // Update parent state if callback provided
@@ -166,7 +136,9 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
       setExcludeFromConcurrentLimit(exclude);
       toast({
         title: "Success",
-        description: `Device ${exclude ? "excluded from" : "included in"} concurrent stream limit`,
+        description: exclude
+          ? "Streams from this device no longer count towards the user's concurrent stream limit"
+          : "Streams from this device now count towards the user's concurrent stream limit",
         variant: "success",
       });
       // Update the parent device state
@@ -179,7 +151,7 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
         description:
           error instanceof Error
             ? error.message
-            : "Failed to update device setting",
+            : "Failed to update this device's settings",
         variant: "destructive",
       });
     } finally {
@@ -195,15 +167,16 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
       const success = await onSetPending(device.id);
       if (success) {
         toast({
-          title: "Device set to pending",
-          description: "The device has been moved back to pending status.",
+          title: "Device Set to Pending",
+          description:
+            "This device is waiting for approval again and follows the user's default device policy until you decide.",
           variant: "success",
         });
         // Update parent state
         if (onDeviceUpdate) {
           onDeviceUpdate({ ...device, status: "pending" });
         }
-        onClose();
+        handleClose();
       } else {
         toast({
           title: "Error",
@@ -225,486 +198,240 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
     }
   };
 
-  if (!device) return null;
+  const renaming = editingDevice === device.id;
+  const busy = actionLoading === device.id;
+  const spinner = <RefreshCw className="size-4 animate-spin" />;
+
+  const handleClose = () => {
+    if (renaming) {
+      onCancelEdit();
+    }
+    onClose();
+  };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="w-full sm:max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center text-base sm:text-lg text-foreground text-left">
-            Device Details
-          </DialogTitle>
-          <DialogDescription className="text-sm text-muted-foreground text-left">
-            Detailed information about this device
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-2">
-          {/* Basic Information Section */}
-          <Collapsible open={basicInfoOpen} onOpenChange={setBasicInfoOpen}>
-            <CollapsibleTrigger className="flex items-center justify-between w-full p-3 bg-muted/50 rounded-lg hover:bg-muted/70 transition-colors cursor-pointer">
-              <span className="font-semibold text-sm">Basic Information</span>
-              <ChevronDown
-                className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${
-                  basicInfoOpen ? "rotate-180" : ""
-                }`}
+    <Modal open={isOpen} onOpenChange={handleClose} size="lg">
+      <ModalHeader
+        title={device.deviceName || "Unknown"}
+        titleHidden={renaming}
+        titleSuffix={
+          renaming ? (
+            <>
+              <Input
+                value={newDeviceName}
+                onChange={(e) => onNewDeviceNameChange(e.target.value)}
+                className="h-8 min-w-40 flex-1"
+                placeholder="Device name"
+                aria-label="Device name"
+                autoFocus
               />
-            </CollapsibleTrigger>
-            <CollapsibleContent className="pt-3 px-3">
-              <div className="grid grid-cols-2 gap-3 sm:gap-4">
-                <div>
-                  <h4 className="font-semibold text-xs sm:text-sm text-muted-foreground">
-                    Device Name
-                  </h4>
-                  {editingDevice === device.id ? (
-                    <div className="flex items-center gap-2">
-                      <Input
-                        value={newDeviceName}
-                        onChange={(e) => onNewDeviceNameChange(e.target.value)}
-                        className="text-sm flex-1"
-                        placeholder="Enter device name"
-                      />
-                      <Button
-                        size="sm"
-                        variant="default"
-                        onClick={() => onRename(device.id, newDeviceName)}
-                        disabled={
-                          !newDeviceName.trim() || actionLoading === device.id
-                        }
-                        className="px-2"
-                      >
-                        {actionLoading === device.id ? (
-                          <RefreshCw className="w-3 h-3 animate-spin" />
-                        ) : (
-                          <Save className="w-3 h-3" />
-                        )}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={onCancelEdit}
-                        disabled={actionLoading === device.id}
-                        className="px-2"
-                      >
-                        <X className="w-3 h-3" />
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm sm:text-base text-foreground break-words flex-1 max-w-[200px] truncate">
-                        {device.deviceName || "Unknown"}
-                      </p>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => onEdit(device)}
-                        className="px-2 h-6"
-                        title="Rename device"
-                      >
-                        <Edit2 className="w-3 h-3" />
-                      </Button>
-                    </div>
-                  )}
-                </div>
-                <div>
-                  <h4 className="font-semibold text-xs sm:text-sm text-muted-foreground">
-                    User
-                  </h4>
-                  <p className="text-sm sm:text-base text-foreground break-words">
-                    {device.username || device.userId}
-                  </p>
-                </div>
-                <div>
-                  <h4 className="font-semibold text-xs sm:text-sm text-muted-foreground">
-                    Platform
-                  </h4>
-                  <p className="text-sm sm:text-base text-foreground">
-                    {device.devicePlatform || "Unknown"}
-                  </p>
-                </div>
-                <div>
-                  <h4 className="font-semibold text-xs sm:text-sm text-muted-foreground">
-                    Product
-                  </h4>
-                  <p className="text-sm sm:text-base text-foreground">
-                    {device.deviceProduct || "Unknown"}
-                  </p>
-                </div>
-                <div>
-                  <h4 className="font-semibold text-xs sm:text-sm text-muted-foreground">
-                    Version
-                  </h4>
-                  <p className="text-sm sm:text-base text-foreground">
-                    {device.deviceVersion || "Unknown"}
-                  </p>
-                </div>
-                <div>
-                  <h4 className="font-semibold text-xs sm:text-sm text-muted-foreground">
-                    IP Address
-                  </h4>
-                  <div className="text-sm sm:text-base text-foreground">
-                    <ClickableIP ipAddress={device.ipAddress} />
-                  </div>
-                </div>
-                <div>
-                  <h4 className="font-semibold text-xs sm:text-sm text-muted-foreground">
-                    Streams Started
-                  </h4>
-                  <p className="text-sm sm:text-base text-foreground">
-                    {device.sessionCount}
-                  </p>
-                </div>
-                <div>
-                  <h4 className="font-semibold text-xs sm:text-sm text-muted-foreground">
-                    Status
-                  </h4>
-                  <div>
-                    <DeviceStatus device={device} compact />
-                  </div>
-                </div>
-              </div>
-            </CollapsibleContent>
-          </Collapsible>
+              <Button
+                size="sm"
+                onClick={() => onRename(device.id, newDeviceName)}
+                disabled={!newDeviceName.trim() || busy}
+              >
+                {busy ? spinner : "Save"}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={onCancelEdit}
+                disabled={busy}
+              >
+                Cancel
+              </Button>
+            </>
+          ) : (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onEdit(device)}
+              aria-label="Rename"
+              className="size-7 shrink-0 px-0 text-muted-foreground"
+            >
+              <Pencil className="size-3.5" />
+            </Button>
+          )
+        }
+      />
 
-          {/* Device Identifier Section */}
-          <Collapsible open={identifierOpen} onOpenChange={setIdentifierOpen}>
-            <CollapsibleTrigger className="flex items-center justify-between w-full p-3 bg-muted/50 rounded-lg hover:bg-muted/70 transition-colors cursor-pointer">
-              <span className="font-semibold text-sm">Device Identifier</span>
-              <ChevronDown
-                className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${
-                  identifierOpen ? "rotate-180" : ""
-                }`}
-              />
-            </CollapsibleTrigger>
-            <CollapsibleContent className="pt-3 px-3">
-              <p className="text-xs font-mono bg-muted p-2 rounded break-all">
-                {device.deviceIdentifier}
-              </p>
-            </CollapsibleContent>
-          </Collapsible>
-
-          {/* Activity Section */}
-          <Collapsible open={activityOpen} onOpenChange={setActivityOpen}>
-            <CollapsibleTrigger className="flex items-center justify-between w-full p-3 bg-muted/50 rounded-lg hover:bg-muted/70 transition-colors cursor-pointer">
-              <span className="font-semibold text-sm">Activity</span>
-              <ChevronDown
-                className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${
-                  activityOpen ? "rotate-180" : ""
-                }`}
-              />
-            </CollapsibleTrigger>
-            <CollapsibleContent className="pt-3 px-3">
-              <div className="grid grid-cols-2 gap-3 sm:gap-4">
-                <div>
-                  <h4 className="font-semibold text-xs sm:text-sm text-muted-foreground">
-                    First Seen
-                  </h4>
-                  <p className="text-xs sm:text-sm text-foreground">
-                    {new Date(device.firstSeen).toLocaleString()}
-                  </p>
-                </div>
-                <div>
-                  <h4 className="font-semibold text-xs sm:text-sm text-muted-foreground">
-                    Last Seen
-                  </h4>
-                  <p className="text-xs sm:text-sm text-foreground">
-                    {new Date(device.lastSeen).toLocaleString()}
-                  </p>
-                </div>
-              </div>
-            </CollapsibleContent>
-          </Collapsible>
-
-          {/* User Note Section - Only show if note has been read (archived view) */}
-          {device.requestDescription &&
-            device.requestSubmittedAt &&
-            noteReadAt && (
-              <Collapsible open={userNoteOpen} onOpenChange={setUserNoteOpen}>
-                <CollapsibleTrigger className="flex items-center justify-between w-full p-3 bg-muted/50 rounded-lg hover:bg-muted/70 transition-colors cursor-pointer">
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold text-sm">User Note</span>
-                  </div>
-                  <ChevronDown
-                    className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${
-                      userNoteOpen ? "rotate-180" : ""
-                    }`}
-                  />
-                </CollapsibleTrigger>
-                <CollapsibleContent className="pt-3 px-3">
-                  <div className="space-y-3">
-                    <div className="p-3 rounded-lg bg-muted/50">
-                      <p className="text-sm text-foreground">
-                        {device.requestDescription}
-                      </p>
-                    </div>
-                    <div className="flex items-center justify-between text-xs text-muted-foreground">
-                      <span>
-                        Submitted:{" "}
-                        {new Date(device.requestSubmittedAt).toLocaleString()}
-                      </span>
-                      <span>Read: {new Date(noteReadAt).toLocaleString()}</span>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleDeleteNote}
-                      disabled={deletingNote}
-                      className="w-full border-red-600 text-red-700 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-900/30"
-                    >
-                      {deletingNote ? (
-                        <RefreshCw className="w-4 h-4 animate-spin mr-2" />
-                      ) : null}
-                      Delete Note
-                    </Button>
-                  </div>
-                </CollapsibleContent>
-              </Collapsible>
+      <ModalBody>
+        <MetaGrid className="sm:grid-cols-3">
+          <Meta label="User">{device.username || device.userId}</Meta>
+          <Meta label="Platform">{device.devicePlatform || "Unknown"}</Meta>
+          <Meta label="Product">{device.deviceProduct || "Unknown"}</Meta>
+          <Meta label="Version">{device.deviceVersion || "Unknown"}</Meta>
+          <Meta label="IP Address">
+            <ClickableIP ipAddress={device.ipAddress} />
+          </Meta>
+          <Meta label="Streams Started">{device.sessionCount}</Meta>
+          <Meta label="First Seen">
+            {new Date(device.firstSeen).toLocaleString()}
+          </Meta>
+          <Meta label="Last Seen">
+            {new Date(device.lastSeen).toLocaleString()}
+          </Meta>
+          <Meta label="Status">
+            <DeviceStatus device={device} />
+          </Meta>
+          <Meta label="Enforced Policies" wrap className="sm:col-span-3">
+            {policies.length === 0 ? (
+              <span className="text-muted-foreground">
+                None. This device streams without restriction.
+              </span>
+            ) : (
+              <PillRow>
+                {policies.map(({ policy, label, tone, hint }) => (
+                  <StatusPill key={policy} tone={tone} hint={hint}>
+                    {label}
+                  </StatusPill>
+                ))}
+              </PillRow>
             )}
+          </Meta>
+          <Meta label="Identifier" wrap className="sm:col-span-3">
+            <span className="font-mono text-xs">{device.deviceIdentifier}</span>
+          </Meta>
+        </MetaGrid>
 
-          {/* Temporary Access Section - Only show if device has or had temporary access */}
-          {(device.temporaryAccessUntil ||
-            device.temporaryAccessGrantedAt ||
-            device.temporaryAccessDurationMinutes) && (
-            <Collapsible open={tempAccessOpen} onOpenChange={setTempAccessOpen}>
-              <CollapsibleTrigger className="flex items-center justify-between w-full p-3 bg-muted/50 rounded-lg hover:bg-muted/70 transition-colors cursor-pointer">
-                <div className="flex items-center gap-2">
-                  <span className="font-semibold text-sm">
-                    Temporary Access
-                  </span>
-                </div>
-                <ChevronDown
-                  className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${
-                    tempAccessOpen ? "rotate-180" : ""
-                  }`}
-                />
-              </CollapsibleTrigger>
-              <CollapsibleContent className="pt-3 px-3">
-                <div className="grid grid-cols-2 gap-3 sm:gap-4">
-                  {device.temporaryAccessDurationMinutes && (
-                    <div>
-                      <h4 className="font-semibold text-xs sm:text-sm text-muted-foreground">
-                        Original Duration Granted
-                      </h4>
-                      <p className="text-sm sm:text-base text-foreground">
-                        {(() => {
-                          const minutes = device.temporaryAccessDurationMinutes;
-                          if (minutes < 60) {
-                            return `${minutes} minute${minutes !== 1 ? "s" : ""}`;
-                          } else if (minutes < 1440) {
-                            const hours = Math.floor(minutes / 60);
-                            const remainingMinutes = minutes % 60;
-                            let result = `${hours} hour${hours !== 1 ? "s" : ""}`;
-                            if (remainingMinutes > 0) {
-                              result += ` ${remainingMinutes} minute${remainingMinutes !== 1 ? "s" : ""}`;
-                            }
-                            return result;
-                          } else {
-                            const days = Math.floor(minutes / 1440);
-                            const remainingHours = Math.floor(
-                              (minutes % 1440) / 60,
-                            );
-                            let result = `${days} day${days !== 1 ? "s" : ""}`;
-                            if (remainingHours > 0) {
-                              result += ` ${remainingHours} hour${remainingHours !== 1 ? "s" : ""}`;
-                            }
-                            return result;
-                          }
-                        })()}
-                      </p>
-                    </div>
-                  )}
-
-                  {device.temporaryAccessGrantedAt && (
-                    <div>
-                      <h4 className="font-semibold text-xs sm:text-sm text-muted-foreground">
-                        Access Granted At
-                      </h4>
-                      <p className="text-xs sm:text-sm text-foreground">
-                        {new Date(
-                          device.temporaryAccessGrantedAt,
-                        ).toLocaleString()}
-                      </p>
-                    </div>
-                  )}
-
-                  {device.temporaryAccessUntil && (
-                    <div>
-                      <h4 className="font-semibold text-xs sm:text-sm text-muted-foreground">
-                        {hasTemporaryAccess(device)
-                          ? "Expires At"
-                          : "Expired At"}
-                      </h4>
-                      <p className="text-xs sm:text-sm text-foreground">
-                        {new Date(device.temporaryAccessUntil).toLocaleString()}
-                      </p>
-                    </div>
-                  )}
-
-                  <div>
-                    <h4 className="font-semibold text-xs sm:text-sm text-muted-foreground">
-                      Bypass Policies
-                    </h4>
-                    <div>
-                      <Badge
-                        variant="outline"
-                        className={
-                          device.temporaryAccessBypassPolicies
-                            ? "border-amber-600 dark:border-amber-700 text-amber-700 dark:text-amber-400"
-                            : "border-red-600 dark:border-red-700 text-red-700 dark:text-red-400"
-                        }
-                      >
-                        {device.temporaryAccessBypassPolicies ? "Yes" : "No"}
-                      </Badge>
-                    </div>
-                  </div>
-                </div>
-              </CollapsibleContent>
-            </Collapsible>
+        {device.requestDescription &&
+          device.requestSubmittedAt &&
+          noteReadAt && (
+            <Section title="User Note">
+              <Panel>
+                <p className="text-sm leading-relaxed text-foreground">
+                  {device.requestDescription}
+                </p>
+              </Panel>
+              <MetaGrid className="sm:grid-cols-2">
+                <Meta label="Submitted">
+                  {new Date(device.requestSubmittedAt).toLocaleString()}
+                </Meta>
+                <Meta label="Read">
+                  {new Date(noteReadAt).toLocaleString()}
+                </Meta>
+              </MetaGrid>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleDeleteNote}
+                disabled={deletingNote}
+                className="w-full border-rose-500/40 text-rose-600 hover:bg-rose-500/10 dark:text-rose-400"
+              >
+                {deletingNote && spinner}
+                Delete Note
+              </Button>
+            </Section>
           )}
 
-          {/* Device Settings Section */}
-          <Collapsible
-            open={deviceSettingsOpen}
-            onOpenChange={setDeviceSettingsOpen}
-          >
-            <CollapsibleTrigger className="flex items-center justify-between w-full p-3 bg-muted/50 rounded-lg hover:bg-muted/70 transition-colors cursor-pointer">
-              <span className="font-semibold text-sm">Device Settings</span>
-              <ChevronDown
-                className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${
-                  deviceSettingsOpen ? "rotate-180" : ""
-                }`}
-              />
-            </CollapsibleTrigger>
-            <CollapsibleContent className="pt-3 px-3 space-y-3">
-              {/* Exclude from concurrent stream limit - Hide for PlexAmp devices since they're always excluded */}
-              {!isPlexampDevice && (
-                <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                  <div className="space-y-0.5">
-                    <Label
-                      htmlFor="exclude-concurrent-limit"
-                      className="text-sm font-medium"
-                    >
-                      Exclude from concurrent stream limit
-                    </Label>
-                    <p className="text-xs text-muted-foreground">
-                      When enabled, streams from this device won&apos;t count
-                      towards the user&apos;s concurrent stream limit
-                    </p>
-                  </div>
-                  <Switch
-                    id="exclude-concurrent-limit"
-                    checked={excludeFromConcurrentLimit}
-                    onCheckedChange={handleExcludeFromConcurrentLimitChange}
-                    disabled={excludeLoading}
-                    className="cursor-pointer"
-                  />
-                </div>
+        {(device.temporaryAccessUntil ||
+          device.temporaryAccessGrantedAt ||
+          device.temporaryAccessDurationMinutes) && (
+          <Section title="Temporary Access">
+            <MetaGrid className="sm:grid-cols-2">
+              {device.temporaryAccessDurationMinutes && (
+                <Meta label="Duration Granted">
+                  {formatMinutes(device.temporaryAccessDurationMinutes)}
+                </Meta>
               )}
-              {/* Set to pending - Hide for PlexAmp devices and only show if not already pending */}
-              {!isPlexampDevice &&
-                device.status !== "pending" &&
-                onSetPending && (
-                  <div className="p-3 bg-muted/50 rounded-lg">
-                    <div className="flex flex-col gap-2">
-                      <div className="space-y-0.5">
-                        <Label className="text-sm font-medium">
-                          Revert to pending status
-                        </Label>
-                        <p className="text-xs text-muted-foreground">
-                          Move this device back to pending status. The device
-                          will need to be approved again.
-                        </p>
-                      </div>
-                      {isStrictModeEnabled ? (
-                        <TooltipProvider delayDuration={0}>
-                          <Tooltip
-                            open={strictModeTooltipOpen}
-                            onOpenChange={(open) => {
-                              if (!isMobile) {
-                                setStrictModeTooltipOpen(open);
-                              }
-                            }}
-                          >
-                            <TooltipTrigger asChild>
-                              <button
-                                type="button"
-                                className="w-full inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium rounded-md border border-muted-foreground/50 bg-background h-8 px-3 text-muted-foreground cursor-not-allowed focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  if (isMobile) {
-                                    setStrictModeTooltipOpen((prev) => !prev);
-                                  }
-                                }}
-                                onMouseEnter={() => {
-                                  if (!isMobile) setStrictModeTooltipOpen(true);
-                                }}
-                                onMouseLeave={() => {
-                                  if (!isMobile)
-                                    setStrictModeTooltipOpen(false);
-                                }}
-                              >
-                                <HelpCircle className="w-4 h-4" />
-                                Set to Pending
-                              </button>
-                            </TooltipTrigger>
-                            <TooltipContent
-                              side="top"
-                              align="center"
-                              avoidCollisions={false}
-                              onPointerDownOutside={(e) => {
-                                e.preventDefault();
-                                setStrictModeTooltipOpen(false);
-                              }}
-                            >
-                              <p className="max-w-xs">
-                                Strict mode is enabled. Devices cannot be set to
-                                pending as they will be automatically approved
-                                or rejected based on the default policy.
-                              </p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      ) : (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={handleSetPending}
-                          disabled={setPendingLoading}
-                          className="w-full border-amber-600 text-amber-700 hover:bg-amber-50 dark:border-amber-700 dark:text-amber-400 dark:hover:bg-amber-900/30"
-                        >
-                          {setPendingLoading ? (
-                            <RefreshCw className="w-4 h-4 animate-spin mr-2" />
-                          ) : null}
-                          Set to Pending
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                )}
-              {/* Show message for PlexAmp devices */}
-              {isPlexampDevice && (
-                <div className="p-3 bg-muted/50 rounded-lg">
-                  <p className="text-xs text-muted-foreground">
-                    PlexAmp devices are automatically excluded from all policy
-                    checks including concurrent stream limits.
-                  </p>
-                </div>
+              {device.temporaryAccessGrantedAt && (
+                <Meta label="Granted At">
+                  {new Date(device.temporaryAccessGrantedAt).toLocaleString()}
+                </Meta>
               )}
-            </CollapsibleContent>
-          </Collapsible>
-        </div>
+              {device.temporaryAccessUntil && (
+                <Meta
+                  label={
+                    hasTemporaryAccess(device) ? "Expires At" : "Expired At"
+                  }
+                >
+                  {new Date(device.temporaryAccessUntil).toLocaleString()}
+                </Meta>
+              )}
+              <Meta label="Policy Bypass">
+                <StatusPill
+                  tone={
+                    device.temporaryAccessBypassPolicies ? "warning" : "neutral"
+                  }
+                  hint={
+                    device.temporaryAccessBypassPolicies
+                      ? `While this grant lasts, ${BYPASSED_BY_TEMPORARY_ACCESS} are not enforced against this device`
+                      : "This grant does not lift any of the user's other policies"
+                  }
+                >
+                  {device.temporaryAccessBypassPolicies
+                    ? "Policies Bypassed"
+                    : "Policies Enforced"}
+                </StatusPill>
+              </Meta>
+            </MetaGrid>
+          </Section>
+        )}
 
-        <DialogFooter className="flex-col sm:flex-row gap-2">
-          <Button
-            variant="outline"
-            onClick={onClose}
-            className="w-full sm:w-auto"
-          >
-            Close
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        <Section title="Device Settings">
+          {!plexamp && (
+            <ToggleRow
+              id="exclude-concurrent-limit"
+              label="Exclude from concurrent stream limit"
+              hint="Streams from this device stop counting towards the user's concurrent stream limit, and never block another device from starting."
+              checked={excludeFromConcurrentLimit}
+              onCheckedChange={handleExcludeFromConcurrentLimitChange}
+              disabled={excludeLoading}
+            />
+          )}
+
+          {!plexamp && device.status !== "pending" && onSetPending && (
+            <Panel className="space-y-3">
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-foreground">
+                  Set back to pending
+                </p>
+                <p className="text-xs leading-relaxed text-muted-foreground">
+                  Undo your decision on this device. It follows the user's
+                  default device policy until you approve or reject it again.
+                </p>
+              </div>
+              {isStrictModeEnabled ? (
+                <HintTooltip
+                  side="top"
+                  align="center"
+                  triggerClassName="h-8 w-full cursor-not-allowed items-center justify-center whitespace-nowrap rounded-md border border-dashed bg-background px-3 text-sm font-medium text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring"
+                  hint="Strict mode is on, so every device is approved or rejected automatically using the default policy. Turn strict mode off in settings to move a device back to pending."
+                >
+                  Set to Pending
+                </HintTooltip>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleSetPending}
+                  disabled={setPendingLoading}
+                  className="w-full border-amber-500/40 text-amber-700 hover:bg-amber-500/10 dark:text-amber-400"
+                >
+                  {setPendingLoading && spinner}
+                  Set to Pending
+                </Button>
+              )}
+            </Panel>
+          )}
+
+          {plexamp && (
+            <Panel>
+              <p className="text-xs leading-relaxed text-muted-foreground">
+                Plex provides no way to terminate a Plexamp stream, so nothing
+                can be enforced against this device. It is exempt from every
+                policy, including the concurrent stream limit.
+              </p>
+            </Panel>
+          )}
+        </Section>
+      </ModalBody>
+
+      <ModalFooter>
+        <Button variant="outline" onClick={handleClose}>
+          Close
+        </Button>
+      </ModalFooter>
+    </Modal>
   );
 };

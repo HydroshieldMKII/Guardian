@@ -1,6 +1,7 @@
 import React from "react";
 import { Video, Signal, Wifi, Headphones, HardDrive } from "lucide-react";
 import { getDetailedQuality } from "./SharedComponents";
+import { PillRow, StatusPill, type Tone } from "@/components/ui/entity";
 
 interface StreamQualityProps {
   session: any;
@@ -34,51 +35,38 @@ export const StreamQuality: React.FC<StreamQualityProps> = ({
 
   // Inline mode - returns fragments for parent to arrange
   if (inline) {
+    const pill = (
+      value: string,
+      tone: Tone,
+      className = "",
+    ): React.ReactNode => (
+      <StatusPill
+        tone={tone}
+        size="sm"
+        className={`${className} ${
+          hasArt ? "border-white/25 bg-white/10 text-white" : ""
+        }`}
+      >
+        {value}
+      </StatusPill>
+    );
+
     return (
-      <>
-        {!isMusic && quality.resolution !== "Unknown" && (
-          <div
-            className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full text-xs ${
-              hasArt ? "bg-blue-600/80 text-white" : "bg-blue-600/90 text-white"
-            }`}
-          >
-            <span>{quality.resolution}</span>
-          </div>
-        )}
-        {/* Video codec - hidden on mobile for video content */}
-        {!isMusic && quality.videoCodec !== "Unknown" && (
-          <div
-            className={`hidden sm:flex items-center gap-1 px-1.5 py-0.5 rounded-full text-xs ${
-              hasArt
-                ? "bg-green-600/80 text-white"
-                : "bg-green-600/90 text-white"
-            }`}
-          >
-            <span>{quality.videoCodec}</span>
-          </div>
-        )}
-        {/* Container - hidden on mobile for video content, always shown for music */}
-        {quality.container !== "Unknown" && (
-          <div
-            className={`${isMusic ? "flex" : "hidden sm:flex"} items-center gap-1 px-1.5 py-0.5 rounded-full text-xs ${
-              hasArt ? "bg-gray-600/80 text-white" : "bg-gray-600/90 text-white"
-            }`}
-          >
-            <span>{quality.container}</span>
-          </div>
-        )}
-        {quality.bitrate !== "Unknown" && (
-          <div
-            className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full text-xs ${
-              hasArt
-                ? "bg-purple-600/80 text-white"
-                : "bg-purple-600/90 text-white"
-            }`}
-          >
-            <span>{quality.bitrate}</span>
-          </div>
-        )}
-      </>
+      <PillRow>
+        {!isMusic &&
+          quality.resolution !== "Unknown" &&
+          pill(quality.resolution, "info")}
+        {!isMusic &&
+          quality.videoCodec !== "Unknown" &&
+          pill(quality.videoCodec, "positive", "hidden sm:inline-flex")}
+        {quality.container !== "Unknown" &&
+          pill(
+            quality.container,
+            "neutral",
+            isMusic ? "" : "hidden sm:inline-flex",
+          )}
+        {quality.bitrate !== "Unknown" && pill(quality.bitrate, "accent")}
+      </PillRow>
     );
   }
 
@@ -152,7 +140,6 @@ export const StreamQualityDetails: React.FC<StreamQualityDetailsProps> = ({
                   : "bg-card border-border/30"
               }`}
             >
-              <Video className="w-3 h-3 flex-shrink-0 text-blue-600 dark:text-blue-400" />
               <div className="min-w-0 flex-1">
                 <div
                   className={`font-semibold ${
@@ -181,7 +168,6 @@ export const StreamQualityDetails: React.FC<StreamQualityDetailsProps> = ({
                   : "bg-card border-border/30"
               }`}
             >
-              <Wifi className="w-3 h-3 flex-shrink-0 text-cyan-600 dark:text-cyan-400" />
               <div className="min-w-0 flex-1">
                 <div
                   className={`font-semibold ${
@@ -210,7 +196,6 @@ export const StreamQualityDetails: React.FC<StreamQualityDetailsProps> = ({
                   : "bg-card border-border/30"
               }`}
             >
-              <Video className="w-3 h-3 flex-shrink-0 text-green-600 dark:text-green-400" />
               <div className="min-w-0 flex-1">
                 <div
                   className={`font-semibold ${
@@ -239,7 +224,6 @@ export const StreamQualityDetails: React.FC<StreamQualityDetailsProps> = ({
             hasArt ? "bg-black/40 border-white/20" : "bg-card border-border/30"
           }`}
         >
-          <Signal className="w-3 h-3 flex-shrink-0 text-purple-600 dark:text-purple-400" />
           <div className="min-w-0 flex-1">
             <div
               className={`font-semibold ${
@@ -266,7 +250,6 @@ export const StreamQualityDetails: React.FC<StreamQualityDetailsProps> = ({
             hasArt ? "bg-black/40 border-white/20" : "bg-card border-border/30"
           }`}
         >
-          <Headphones className="w-3 h-3 flex-shrink-0 text-red-600 dark:text-red-400" />
           <div className="min-w-0 flex-1">
             <div
               className={`font-semibold ${
@@ -293,7 +276,6 @@ export const StreamQualityDetails: React.FC<StreamQualityDetailsProps> = ({
             hasArt ? "bg-black/40 border-white/20" : "bg-card border-border/30"
           }`}
         >
-          <HardDrive className="w-3 h-3 flex-shrink-0 text-gray-600 dark:text-gray-400" />
           <div className="min-w-0 flex-1">
             <div
               className={`font-semibold ${

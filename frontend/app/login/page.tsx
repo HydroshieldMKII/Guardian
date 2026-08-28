@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
+import Link from "next/link";
 import { useAuth } from "@/contexts/auth-context";
 import { Button } from "@/components/ui/button";
+import { LogoMark } from "@/components/ui/logo-mark";
 import { Input } from "@/components/ui/input";
 import {
   Card,
@@ -11,7 +13,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { useToast } from "@/hooks/use-toast";
 import { useTheme } from "@/hooks/use-theme";
 import {
   Lock,
@@ -25,17 +26,7 @@ import {
 } from "lucide-react";
 import { ThreeDotLoader } from "@/components/three-dot-loader";
 import { ErrorHandler } from "@/components/error-handler";
-
-// Plex OAuth constants
-const PLEX_AUTH_URL = "https://app.plex.tv/auth";
-const PIN_CHECK_INTERVAL = 2000; // 2 seconds
-
-interface PlexPin {
-  id: number;
-  code: string;
-  clientId: string;
-  expiresAt: string;
-}
+import { usePlexOAuth } from "@/hooks/use-plex-oauth";
 
 // Extend window to include turnstile
 declare global {
@@ -59,7 +50,6 @@ export default function LoginPage() {
     retryConnection,
     plexOAuthEnabled,
   } = useAuth();
-  const { toast } = useToast();
   const { theme, toggleTheme } = useTheme();
 
   const [formData, setFormData] = useState({
@@ -71,15 +61,12 @@ export default function LoginPage() {
   const [loginError, setLoginError] = useState<string>("");
   const [showPassword, setShowPassword] = useState(false);
 
+  const [passwordResetEnabled, setPasswordResetEnabled] = useState(false);
+
   // Cloudflare Turnstile state
   const [turnstileSiteKey, setTurnstileSiteKey] = useState<string>("");
   const [turnstileWidgetId, setTurnstileWidgetId] = useState<string | null>(null);
   const turnstileRef = useRef<HTMLDivElement>(null);
-
-  // Plex OAuth state
-  const [plexLoading, setPlexLoading] = useState(false);
-  const [plexPin, setPlexPin] = useState<PlexPin | null>(null);
-  const [plexPopup, setPlexPopup] = useState<Window | null>(null);
 
   // Fetch Turnstile site key
   useEffect(() => {
@@ -98,6 +85,22 @@ export default function LoginPage() {
     };
 
     fetchTurnstileKey();
+  }, []);
+
+  useEffect(() => {
+    const checkPasswordReset = async () => {
+      try {
+        const response = await fetch("/api/pg/auth/password-reset/status");
+        if (response.ok) {
+          const data = await response.json();
+          setPasswordResetEnabled(Boolean(data.enabled));
+        }
+      } catch (error) {
+        console.error("Failed to check password reset status:", error);
+      }
+    };
+
+    checkPasswordReset();
   }, []);
 
   // Load Turnstile script and render widget
@@ -142,192 +145,33 @@ export default function LoginPage() {
     };
   }, [turnstileSiteKey, theme]);
 
-  // Check Plex PIN status
-  const checkPlexPin = useCallback(async () => {
-    if (!plexPin) return;
-
-    try {
-      const response = await fetch(`/api/pg/auth/plex/pin/${plexPin.clientId}`);
-      if (!response.ok) return;
-
-      const data = await response.json();
-
-      if (data.authToken) {
-        // User authenticated with Plex
-        setPlexLoading(true);
-
-        try {
-          await loginWithPlex(data.authToken);
-          toast({
-            title: "Success",
-            description: "Logged in with Plex successfully",
-            variant: "success",
-          });
-        } catch (error) {
-          toast({
-            title: "Login Failed",
-            description:
-              error instanceof Error ? error.message : "Plex login failed",
-            variant: "destructive",
-          });
-        } finally {
-          setPlexLoading(false);
-          setPlexPin(null);
-        }
-      }
-    } catch (error) {
-      console.error("Failed to check Plex PIN:", error);
-    }
-  }, [plexPin, loginWithPlex, toast]);
-
-  // Poll for Plex PIN completion
-  useEffect(() => {
-    if (!plexPin) return;
-
-    const interval = setInterval(checkPlexPin, PIN_CHECK_INTERVAL);
-
-    // Check if PIN has expired
-    const expiresAt = new Date(plexPin.expiresAt);
-    const timeout = setTimeout(() => {
-      setPlexPin(null);
-      setPlexLoading(false);
-      toast({
-        title: "Plex Login Expired",
-        description: "Please try again",
-        variant: "destructive",
-      });
-    }, expiresAt.getTime() - Date.now());
-
-    return () => {
-      clearInterval(interval);
-      clearTimeout(timeout);
-    };
-  }, [plexPin, checkPlexPin, toast]);
-
-  // Close popup when done
-  useEffect(() => {
-    if (!plexPin && plexPopup && !plexPopup.closed) {
-      plexPopup.close();
-      setPlexPopup(null);
-    }
-  }, [plexPin, plexPopup]);
-
-  // Check for stored Plex PIN on mount (mobile redirect flow)
-  useEffect(() => {
-    const storedPin = sessionStorage.getItem("plexPin");
-    if (storedPin) {
-      sessionStorage.removeItem("plexPin");
-      try {
-        const pinData: PlexPin = JSON.parse(storedPin);
-        // Check if PIN hasn't expired
-        if (new Date(pinData.expiresAt) > new Date()) {
-          setPlexPin(pinData);
-          setPlexLoading(true);
-          // Immediately check the PIN since user just returned from Plex
-          (async () => {
-            try {
-              const response = await fetch(
-                `/api/pg/auth/plex/pin/${pinData.clientId}`
-              );
-              if (response.ok) {
-                const data = await response.json();
-                if (data.authToken) {
-                  await loginWithPlex(data.authToken);
-                  toast({
-                    title: "Success",
-                    description: "Logged in with Plex successfully",
-                    variant: "success",
-                  });
-                  setPlexLoading(false);
-                  setPlexPin(null);
-                  return;
-                }
-              }
-            } catch (error) {
-              console.error("Immediate PIN check failed:", error);
-            }
-            // If immediate check didn't complete auth, polling will continue
-          })();
-        }
-      } catch {
-        // Invalid stored PIN data
-      }
-    }
-  }, [loginWithPlex, toast]);
-
-  const handlePlexLogin = async () => {
-    setPlexLoading(true);
-
-    try {
-      // Create PIN
-      const response = await fetch("/api/pg/auth/plex/pin", {
-        method: "POST",
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to create Plex PIN");
-      }
-
-      const pinData: PlexPin = await response.json();
-      setPlexPin(pinData);
-
-      // Check if mobile device - use redirect instead of popup
-      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-
-      // Build auth URL with forward URL for mobile redirect flow
-      const forwardUrl = encodeURIComponent(window.location.href);
-      const authUrl = isMobile
-        ? `${PLEX_AUTH_URL}#?clientID=${pinData.clientId}&code=${pinData.code}&context%5Bdevice%5D%5Bproduct%5D=Guardian&forwardUrl=${forwardUrl}`
-        : `${PLEX_AUTH_URL}#?clientID=${pinData.clientId}&code=${pinData.code}&context%5Bdevice%5D%5Bproduct%5D=Guardian`;
-
-      if (isMobile) {
-        // Store PIN info in sessionStorage so we can check it when user returns
-        sessionStorage.setItem("plexPin", JSON.stringify(pinData));
-        // Redirect to Plex auth page
-        window.location.href = authUrl;
-        return;
-      }
-
-      const width = 600;
-      const height = 700;
-      const left = window.screenX + (window.outerWidth - width) / 2;
-      const top = window.screenY + (window.outerHeight - height) / 2;
-
-      const popup = window.open(
-        authUrl,
-        "PlexAuth",
-        `width=${width},height=${height},left=${left},top=${top},toolbar=no,menubar=no,scrollbars=yes,resizable=yes`
-      );
-
-      if (popup) {
-        setPlexPopup(popup);
-
-        // Check if popup was closed without completing auth
-        const popupCheck = setInterval(() => {
-          if (popup.closed) {
-            clearInterval(popupCheck);
-            // Only clear if we haven't received auth token
-            if (plexPin) {
-              setPlexLoading(false);
-            }
-          }
-        }, 500);
-      } else {
-        // Popup was blocked - fall back to redirect with forwardUrl
-        const redirectUrl = `${PLEX_AUTH_URL}#?clientID=${pinData.clientId}&code=${pinData.code}&context%5Bdevice%5D%5Bproduct%5D=Guardian&forwardUrl=${forwardUrl}`;
-        sessionStorage.setItem("plexPin", JSON.stringify(pinData));
-        window.location.href = redirectUrl;
-      }
-    } catch (error) {
-      toast({
-        title: "Plex Login Failed",
-        description:
-          error instanceof Error ? error.message : "Failed to start Plex login",
-        variant: "destructive",
-      });
-      setPlexLoading(false);
-    }
-  };
+  const {
+    loading: plexLoading,
+    waiting: plexWaiting,
+    start: handlePlexLogin,
+    cancel: cancelPlexLogin,
+  } = usePlexOAuth({
+    redirectWhenPopupIsUnavailable: true,
+    onAuthenticated: loginWithPlex,
+    copy: {
+      success: {
+        title: "Signed In",
+        description: "You are signed in with Plex",
+      },
+      failed: {
+        title: "Plex Sign-In Failed",
+        description: "Could not sign you in with Plex",
+      },
+      expired: {
+        title: "Plex Sign-In Expired",
+        description: "The sign-in window timed out. Start again to retry.",
+      },
+      cancelled: {
+        title: "Plex Sign-In Cancelled",
+        description: "The Plex window closed before you signed in",
+      },
+    },
+  });
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -428,8 +272,11 @@ export default function LoginPage() {
       </Button>
 
       <Card className="w-full max-w-md shadow-xl max-h-[90vh] overflow-y-auto">
-        <CardHeader className="space-y-1 text-center pb-6 mt-4">
-          <CardTitle className="text-3xl font-bold">Guardian</CardTitle>
+        <CardHeader className="space-y-1 text-center pb-6 pt-8">
+          <CardTitle className="flex items-center justify-center gap-3 text-3xl font-bold">
+            <LogoMark className="h-9 w-auto" />
+            Guardian
+          </CardTitle>
           <CardDescription className="text-sm">
             Sign in to your account
           </CardDescription>
@@ -507,6 +354,16 @@ export default function LoginPage() {
                   {errors.password}
                 </div>
               )}
+              {passwordResetEnabled && (
+                <div className="text-right">
+                  <Link
+                    href="/forgot-password"
+                    className="text-xs text-muted-foreground hover:text-foreground hover:underline"
+                  >
+                    Forgot password?
+                  </Link>
+                </div>
+              )}
             </div>
 
             {/* Cloudflare Turnstile Captcha */}
@@ -573,6 +430,20 @@ export default function LoginPage() {
                   </>
                 )}
               </Button>
+
+              {plexWaiting && (
+                <p className="mt-3 text-center text-xs text-muted-foreground">
+                  Finish signing in on the Plex window, or{" "}
+                  <button
+                    type="button"
+                    onClick={() => cancelPlexLogin()}
+                    className="cursor-pointer underline underline-offset-2 hover:text-foreground"
+                  >
+                    cancel
+                  </button>
+                  .
+                </p>
+              )}
             </>
           )}
         </CardContent>

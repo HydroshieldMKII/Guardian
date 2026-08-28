@@ -2,6 +2,7 @@ import {
   apiLimiter,
   authLimiter,
   credentialsLimiter,
+  passwordResetLimiter,
   trustProxyHops,
 } from '@/common/security/rate-limit';
 
@@ -28,10 +29,10 @@ const optionsOf = (build: () => unknown): LimiterOptions => {
 };
 
 describe('credentialsLimiter', () => {
-  it('allows 20 failed attempts per quarter hour', () => {
+  it('allows 10 failed attempts per quarter hour', () => {
     const options = optionsOf(credentialsLimiter);
     expect(options.windowMs).toBe(15 * 60 * 1000);
-    expect(options.limit).toBe(20);
+    expect(options.limit).toBe(10);
   });
 
   it('does not spend budget on successful sign-ins', () => {
@@ -48,6 +49,12 @@ describe('credentialsLimiter', () => {
 });
 
 describe('authLimiter', () => {
+  it('leaves room for a Plex sign-in poll to run alongside other traffic', () => {
+    const options = optionsOf(authLimiter);
+    expect(options.windowMs).toBe(60 * 1000);
+    expect(options.limit).toBeGreaterThanOrEqual(120);
+  });
+
   it('counts every request, not just the failures', () => {
     expect(optionsOf(authLimiter).skipSuccessfulRequests).toBe(false);
   });
@@ -55,6 +62,26 @@ describe('authLimiter', () => {
   it('is stricter than the blanket api limiter', () => {
     expect(optionsOf(authLimiter).limit).toBeLessThan(
       optionsOf(apiLimiter).limit,
+    );
+  });
+});
+
+describe('passwordResetLimiter', () => {
+  it('allows five reset requests per quarter hour', () => {
+    const options = optionsOf(passwordResetLimiter);
+    expect(options.windowMs).toBe(15 * 60 * 1000);
+    expect(options.limit).toBe(5);
+  });
+
+  it('charges every request, so a successful send still spends budget', () => {
+    expect(optionsOf(passwordResetLimiter).skipSuccessfulRequests).toBe(false);
+  });
+
+  it('is stricter than the general auth limiter', () => {
+    const reset = optionsOf(passwordResetLimiter);
+    const auth = optionsOf(authLimiter);
+    expect(reset.limit / reset.windowMs).toBeLessThan(
+      auth.limit / auth.windowMs,
     );
   });
 });
@@ -69,6 +96,7 @@ describe('apiLimiter', () => {
 
 describe.each([
   ['credentialsLimiter', credentialsLimiter],
+  ['passwordResetLimiter', passwordResetLimiter],
   ['authLimiter', authLimiter],
   ['apiLimiter', apiLimiter],
 ] as const)('%s', (_name, build) => {

@@ -8,6 +8,7 @@ services:
       - guardian_data:/app/data
     environment:
       - TRUST_PROXY_HOPS=1
+      # - APP_URL=https://guardian.example.com # For password reset by email
     restart: unless-stopped
 
 volumes:

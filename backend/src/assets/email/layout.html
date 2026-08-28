@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+{{styles}}
+    </style>
+  </head>
+  <body>
+    <div class="email-wrapper">
+      <div class="container">
+        <div class="accent-bar" style="background-color: {{accentColor}};">&nbsp;</div>
+        <div class="header">{{logo}}</div>
+        <div class="content">
+          <p class="main-message">{{mainMessage}}</p>
+          {{action}}
+          {{details}}
+        </div>
+        <div class="footer">
+          {{footerTag}}
+          <div class="timestamp">{{timestamp}}</div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

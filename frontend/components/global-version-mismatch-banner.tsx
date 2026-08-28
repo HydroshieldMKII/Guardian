@@ -47,7 +47,7 @@ export function GlobalVersionMismatchBanner() {
               size="sm"
               onClick={() => setDismissed(true)}
               className="text-white hover:bg-red-700 p-1 h-auto"
-              title="Dismiss (until page reload)"
+              title="Hide this until the page reloads"
             >
               <X className="h-3 w-3" />
             </Button>

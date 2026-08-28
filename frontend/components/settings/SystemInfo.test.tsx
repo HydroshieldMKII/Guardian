@@ -1,6 +1,7 @@
 import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { AppSetting } from "@/types";
+import type { SettingsFormData } from "@/components/settings/settings-utils";
 import { SystemInfo } from "@/components/settings/SystemInfo";
 
 const getHealth = jest.fn();
@@ -29,16 +30,25 @@ const health = (overrides: Record<string, unknown> = {}) => ({
   ...overrides,
 });
 
-const renderPanel = async () => {
-  const onSettingsRefresh = jest.fn();
+const autoCheck = {
+  key: "AUTO_CHECK_UPDATES",
+  value: "false",
+  type: "boolean",
+} as AppSetting;
+
+const renderPanel = async (
+  props: { settings?: AppSetting[]; formData?: SettingsFormData } = {},
+) => {
+  const onFormDataChange = jest.fn();
   const view = render(
     <SystemInfo
-      onSettingsRefresh={onSettingsRefresh}
-      settings={[] as AppSetting[]}
+      settings={props.settings ?? ([] as AppSetting[])}
+      formData={props.formData ?? {}}
+      onFormDataChange={onFormDataChange}
     />,
   );
   await act(async () => {});
-  return { ...view, onSettingsRefresh, user: userEvent.setup() };
+  return { ...view, onFormDataChange, user: userEvent.setup() };
 };
 
 let consoleError: jest.SpyInstance;
@@ -94,7 +104,7 @@ describe("SystemInfo health", () => {
       await renderPanel();
 
       expect(screen.getByText("OK")).toBeInTheDocument();
-      expect(screen.getByText(/Latency: \d+ms/)).toBeInTheDocument();
+      expect(screen.getByText(/^\d+ms$/)).toBeInTheDocument();
     },
   );
 
@@ -110,8 +120,9 @@ describe("SystemInfo health", () => {
     getHealth.mockReturnValue(new Promise(() => {}));
     render(
       <SystemInfo
-        onSettingsRefresh={jest.fn()}
         settings={[] as AppSetting[]}
+        formData={{}}
+        onFormDataChange={jest.fn()}
       />,
     );
 
@@ -134,12 +145,12 @@ describe("SystemInfo health", () => {
     await renderPanel();
 
     expect(screen.getByText("OK")).toBeInTheDocument();
-    expect(screen.queryByText(/Since /)).toBeNull();
+    expect(screen.queryByText(/\(since /)).toBeNull();
   });
 
   it("shows when the service started", async () => {
     await renderPanel();
-    expect(screen.getByText(/Since /)).toBeInTheDocument();
+    expect(screen.getByText(/^\(since .+\)$/)).toBeInTheDocument();
   });
 });
 
@@ -177,8 +188,9 @@ describe("SystemInfo uptime formatting", () => {
     jest.useFakeTimers();
     render(
       <SystemInfo
-        onSettingsRefresh={jest.fn()}
         settings={[] as AppSetting[]}
+        formData={{}}
+        onFormDataChange={jest.fn()}
       />,
     );
     await act(async () => {});
@@ -194,8 +206,9 @@ describe("SystemInfo uptime formatting", () => {
     jest.useFakeTimers();
     render(
       <SystemInfo
-        onSettingsRefresh={jest.fn()}
         settings={[] as AppSetting[]}
+        formData={{}}
+        onFormDataChange={jest.fn()}
       />,
     );
     await act(async () => {});
@@ -211,8 +224,9 @@ describe("SystemInfo uptime formatting", () => {
     jest.useFakeTimers();
     const { unmount } = render(
       <SystemInfo
-        onSettingsRefresh={jest.fn()}
         settings={[] as AppSetting[]}
+        formData={{}}
+        onFormDataChange={jest.fn()}
       />,
     );
     await act(async () => {});
@@ -226,6 +240,23 @@ describe("SystemInfo uptime formatting", () => {
 });
 
 describe("SystemInfo update checks", () => {
+  it("keeps the automatic update check with the manual one", async () => {
+    const { user, onFormDataChange } = await renderPanel({
+      settings: [autoCheck],
+    });
+
+    await user.click(screen.getByRole("switch"));
+
+    expect(onFormDataChange).toHaveBeenCalledWith({
+      AUTO_CHECK_UPDATES: true,
+    });
+  });
+
+  it("omits the automatic check when the setting is missing", async () => {
+    await renderPanel();
+    expect(screen.queryByRole("switch")).toBeNull();
+  });
+
   it("reports that the app is current", async () => {
     const { user } = await renderPanel();
 
@@ -233,7 +264,7 @@ describe("SystemInfo update checks", () => {
 
     expect(
       await screen.findByText(
-        "You are running the latest version of Guardian.",
+        "You are running the latest version.",
       ),
     ).toBeInTheDocument();
     expect(toast).toHaveBeenCalledWith(

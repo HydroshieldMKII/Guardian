@@ -23,6 +23,7 @@ import { Notification } from '@/entities/notification.entity';
 import { UserTimeRule } from '@/entities/user-time-rule.entity';
 import { AdminUser } from '@/entities/admin-user.entity';
 import { Session } from '@/entities/session.entity';
+import { PasswordResetToken } from '@/entities/password-reset-token.entity';
 import { config } from '@/config/app.config';
 import * as path from 'path';
 
@@ -43,6 +44,7 @@ import * as path from 'path';
         UserTimeRule,
         AdminUser,
         Session,
+        PasswordResetToken,
       ],
       synchronize: true,
       logging: config.database.logging,

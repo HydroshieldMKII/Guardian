@@ -163,7 +163,7 @@ describe("NotificationMenu contents", () => {
       screen.getAllByRole("button", { name: "Mark as read" }),
     ).toHaveLength(1);
     expect(
-      screen.getAllByRole("button", { name: "Delete notification" }),
+      screen.getAllByRole("button", { name: "Delete this notification" }),
     ).toHaveLength(2);
   });
 });
@@ -200,7 +200,7 @@ describe("NotificationMenu actions", () => {
     await openMenu(user);
 
     await user.click(
-      screen.getByRole("button", { name: "Delete notification" }),
+      screen.getByRole("button", { name: "Delete this notification" }),
     );
 
     await waitFor(() => expect(deleteNotification).toHaveBeenCalledWith(1));
@@ -238,7 +238,7 @@ describe("NotificationMenu actions", () => {
       "Failed to mark notification as read:",
     ],
     [
-      "Delete notification",
+      "Delete this notification",
       () => deleteNotification,
       "Failed to delete notification:",
     ],
@@ -303,6 +303,28 @@ describe("opening session history from a notification", () => {
     );
   });
 
+  it("closes the panel once the stream is on its way", async () => {
+    notifications = [notification({ sessionHistoryId: 42, text: "Linked" })];
+    const user = userEvent.setup();
+    render(<NotificationMenu />);
+    await openMenu(user);
+
+    await user.click(screen.getByText("Linked"));
+
+    await waitFor(() => expect(screen.queryByRole("menu")).toBeNull());
+  });
+
+  it("stays open while triaging, so several can be cleared at once", async () => {
+    notifications = [notification({ id: 1, text: "First" })];
+    const user = userEvent.setup();
+    render(<NotificationMenu />);
+    await openMenu(user);
+
+    await user.click(screen.getByTitle("Mark as read"));
+
+    expect(screen.getByRole("menu")).toBeInTheDocument();
+  });
+
   it("does nothing when no session is linked", async () => {
     notifications = [
       notification({ sessionHistoryId: undefined, text: "Unlinked" }),
@@ -327,11 +349,92 @@ describe("opening session history from a notification", () => {
 
     expect(screen.getByText("Linked").closest("div")).toHaveAttribute(
       "title",
-      "Click to view in session history",
+      "Open this stream in the user's history",
     );
     expect(screen.getByText("Unlinked").closest("div")).toHaveAttribute(
       "title",
-      "The session history is not available for this notification",
+      "The stream behind this notification is no longer in the history",
     );
+  });
+});
+
+describe("on a narrow viewport", () => {
+  const originalWidth = window.innerWidth;
+
+  const setWidth = (value: number) =>
+    Object.defineProperty(window, "innerWidth", {
+      configurable: true,
+      value,
+    });
+
+  beforeEach(() => setWidth(400));
+  afterEach(() => setWidth(originalWidth));
+
+  const openSheet = async (user: ReturnType<typeof userEvent.setup>) => {
+    await user.click(screen.getByTitle("Notifications"));
+    return screen.findByRole("dialog");
+  };
+
+  it("opens a modal instead of a dropdown", async () => {
+    notifications = [notification({ text: "Linked" })];
+    const user = userEvent.setup();
+    render(<NotificationMenu />);
+
+    const dialog = await openSheet(user);
+
+    expect(within(dialog).getByText("Linked")).toBeInTheDocument();
+    expect(screen.queryByRole("menu")).toBeNull();
+  });
+
+  it("names the panel for a screen reader", async () => {
+    const user = userEvent.setup();
+    render(<NotificationMenu />);
+
+    const dialog = await openSheet(user);
+
+    expect(dialog).toHaveAccessibleName("Notifications");
+  });
+
+  it("still offers the bulk actions", async () => {
+    notifications = [notification()];
+    unreadCount = 1;
+    const user = userEvent.setup();
+    render(<NotificationMenu />);
+
+    const dialog = await openSheet(user);
+
+    expect(within(dialog).getByTitle("Mark all as read")).toBeInTheDocument();
+    expect(within(dialog).getByText("Clear all")).toBeInTheDocument();
+  });
+
+  it("closes once a stream is on its way", async () => {
+    notifications = [notification({ sessionHistoryId: 42, text: "Linked" })];
+    const user = userEvent.setup();
+    render(<NotificationMenu />);
+    const dialog = await openSheet(user);
+
+    await user.click(within(dialog).getByText("Linked"));
+
+    expect(onNotificationClick).toHaveBeenCalled();
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+
+  it("offers a way out that is not the overlay", async () => {
+    const user = userEvent.setup();
+    render(<NotificationMenu />);
+    const dialog = await openSheet(user);
+
+    await user.click(within(dialog).getByRole("button", { name: "Close" }));
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+
+  it("says when there is nothing to show", async () => {
+    const user = userEvent.setup();
+    render(<NotificationMenu />);
+
+    const dialog = await openSheet(user);
+
+    expect(within(dialog).getByText("No notifications")).toBeInTheDocument();
   });
 });

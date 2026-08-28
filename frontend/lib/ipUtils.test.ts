@@ -56,10 +56,13 @@ describe("isValidIPOrCIDR", () => {
 });
 
 describe("isPrivateIP", () => {
-  it.each(["10.0.0.1", "172.16.0.1", "172.31.255.255", "192.168.1.1", "127.0.0.1"])(
-    "treats %s as private",
-    (ip) => expect(isPrivateIP(ip)).toBe(true),
-  );
+  it.each([
+    "10.0.0.1",
+    "172.16.0.1",
+    "172.31.255.255",
+    "192.168.1.1",
+    "127.0.0.1",
+  ])("treats %s as private", (ip) => expect(isPrivateIP(ip)).toBe(true));
 
   it.each(["8.8.8.8", "172.15.0.1", "172.32.0.1", "192.169.1.1", "1.1.1.1"])(
     "treats %s as public",
@@ -180,7 +183,7 @@ describe("validateIPAccess", () => {
   it("rejects a malformed address", () => {
     expect(validateIPAccess("nope")).toEqual({
       allowed: false,
-      reason: "Invalid IP address format",
+      reason: "This is not a valid IP address",
     });
   });
 
@@ -191,7 +194,7 @@ describe("validateIPAccess", () => {
   it("blocks a WAN address under a lan-only policy", () => {
     expect(validateIPAccess("8.8.8.8", "lan")).toEqual({
       allowed: false,
-      reason: "Only LAN access is allowed",
+      reason: "Streaming is only allowed on the local network",
     });
   });
 
@@ -202,7 +205,7 @@ describe("validateIPAccess", () => {
   it("blocks a LAN address under a wan-only policy", () => {
     expect(validateIPAccess("192.168.1.10", "wan")).toEqual({
       allowed: false,
-      reason: "Only WAN access is allowed",
+      reason: "Streaming is only allowed from the internet",
     });
   });
 
@@ -211,9 +214,9 @@ describe("validateIPAccess", () => {
   });
 
   it("enforces the allow list when restricted", () => {
-    expect(validateIPAccess("8.8.8.8", "both", "restricted", ["1.1.1.1"])).toEqual(
-      { allowed: false, reason: "IP address not in allowed list" },
-    );
+    expect(
+      validateIPAccess("8.8.8.8", "both", "restricted", ["1.1.1.1"]),
+    ).toEqual({ allowed: false, reason: "This IP address is not on the allowed list" });
   });
 
   it("permits a listed address when restricted", () => {
@@ -229,7 +232,9 @@ describe("formatIPForDisplay", () => {
   });
 
   it("annotates a CIDR with its host count", () => {
-    expect(formatIPForDisplay("192.168.1.0/24")).toBe("192.168.1.0/24 (254 hosts)");
+    expect(formatIPForDisplay("192.168.1.0/24")).toBe(
+      "192.168.1.0/24 (254 hosts)",
+    );
   });
 
   it("annotates a LAN address", () => {
@@ -289,10 +294,13 @@ describe("isValidCIDRv6", () => {
     (cidr) => expect(isValidCIDRv6(cidr)).toBe(true),
   );
 
-  it.each(["2001:db8::/129", "2001:db8::", "10.0.0.0/8", "2001:db8::/x", "/32"])(
-    "rejects %s",
-    (cidr) => expect(isValidCIDRv6(cidr)).toBe(false),
-  );
+  it.each([
+    "2001:db8::/129",
+    "2001:db8::",
+    "10.0.0.0/8",
+    "2001:db8::/x",
+    "/32",
+  ])("rejects %s", (cidr) => expect(isValidCIDRv6(cidr)).toBe(false));
 });
 
 describe("normalizeIP", () => {
@@ -438,7 +446,7 @@ describe("regressions that must never be reintroduced", () => {
     it("cannot slip a public address past a lan-only policy", () => {
       expect(validateIPAccess("::ffff:8.8.8.8", "lan")).toEqual({
         allowed: false,
-        reason: "Only LAN access is allowed",
+        reason: "Streaming is only allowed on the local network",
       });
     });
 

@@ -1,0 +1,37 @@
+name: Feature request
+description: Suggest a capability Guardian does not have.
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What you are trying to do that Guardian cannot do today.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behaviour
+      description: What Guardian should do instead, from a user's point of view.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Workarounds you tried, and why they are not enough.
+
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Area
+      options:
+        - label: Device access control
+        - label: Streams and sessions
+        - label: Notifications
+        - label: User portal
+        - label: Settings and configuration
+        - label: Deployment

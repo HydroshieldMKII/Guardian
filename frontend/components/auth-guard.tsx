@@ -4,15 +4,27 @@ import { useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/contexts/auth-context";
 import { ThreeDotLoader } from "@/components/three-dot-loader";
+import { ErrorHandler } from "@/components/error-handler";
 
-const PUBLIC_ROUTES = ["/login", "/setup"];
+const PUBLIC_ROUTES = [
+  "/login",
+  "/setup",
+  "/forgot-password",
+  "/reset-password",
+];
 const USER_PORTAL_ROUTES = ["/portal"];
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { isAuthenticated, isLoading, setupRequired, backendError, userType } =
-    useAuth();
+  const {
+    isAuthenticated,
+    isLoading,
+    setupRequired,
+    backendError,
+    userType,
+    retryConnection,
+  } = useAuth();
 
   useEffect(() => {
     if (isLoading || backendError) {
@@ -84,7 +96,6 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
 
   const shouldRenderContent =
     !isLoading && // Auth check complete
-    !backendError && // No backend errors
     (isPublicRoute || // Public routes always render
       (isAuthenticated && !setupRequired) || // Authenticated users on protected routes
       setupRequired); // Setup page renders during setup
@@ -96,6 +107,10 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   // Additional check for Admins - they cannot access portal
   const adminAllowed =
     userType !== "admin" || !isUserPortalRoute || isPublicRoute;
+
+  if (backendError) {
+    return <ErrorHandler backendError={backendError} onRetry={retryConnection} />;
+  }
 
   // Show loading state while checking auth or redirecting
   if (!shouldRenderContent || !plexUserAllowed || !adminAllowed) {

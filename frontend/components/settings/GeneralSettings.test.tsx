@@ -1,8 +1,22 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { AppSetting } from "@/types";
 import { GeneralSettings } from "@/components/settings/GeneralSettings";
 import type { SettingsFormData } from "@/components/settings/settings-utils";
+
+const auth = {
+  user: { id: "a-1", username: "owner", email: "owner@example.com" } as {
+    id: string;
+    username: string;
+    email: string;
+  } | null,
+};
+
+jest.mock("@/contexts/auth-context", () => ({
+  useAuth: () => auth,
+  isAdminUser: (user: unknown) =>
+    user !== null && typeof user === "object" && "username" in user,
+}));
 
 const setting = (
   key: string,
@@ -65,16 +79,61 @@ const renderPanel = (
   return { ...view, onFormDataChange, user: userEvent.setup() };
 };
 
-beforeEach(() => jest.clearAllMocks());
+const fetchMock = jest.fn();
+let consoleError: jest.SpyInstance;
+
+beforeEach(() => {
+  jest.clearAllMocks();
+  auth.user = { id: "a-1", username: "owner", email: "owner@example.com" };
+  consoleError = jest.spyOn(console, "error").mockImplementation(() => {});
+  fetchMock.mockResolvedValue({
+    ok: true,
+    json: async () => ({
+      enabled: false,
+      emailConfigured: false,
+      appUrlConfigured: true,
+    }),
+  });
+  Object.defineProperty(global, "fetch", {
+    value: fetchMock,
+    writable: true,
+    configurable: true,
+  });
+});
+
+afterEach(() => {
+  consoleError.mockRestore();
+});
 
 describe("GeneralSettings sections", () => {
   it.each([
-    ["guardian", "Guardian Configuration"],
-    ["customization", "Customization"],
-    ["notifications", "Notification Settings"],
-  ])("titles the %s section", (sectionId, title) => {
+    [
+      "guardian",
+      [
+        "Access Control",
+        "Monitoring & Maintenance",
+        "User Portal",
+        "Login Security",
+      ],
+    ],
+    ["customization", ["Interface", "User-Facing Messages"]],
+    ["notifications", ["In-App Notifications"]],
+  ])("groups the %s settings into cards", (sectionId, titles) => {
     renderPanel(sectionId);
-    expect(screen.getByText(title)).toBeInTheDocument();
+    for (const title of titles) {
+      expect(screen.getByText(title)).toBeInTheDocument();
+    }
+  });
+
+  it("drops a card whose settings are all missing", () => {
+    renderPanel("guardian", {
+      settings: guardianSettings.filter(
+        (s) => !s.key.startsWith("CLOUDFLARE_"),
+      ),
+    });
+
+    expect(screen.queryByText("Login Security")).toBeNull();
+    expect(screen.getByText("Access Control")).toBeInTheDocument();
   });
 
   it("renders nothing for an unknown section", () => {
@@ -187,9 +246,23 @@ describe("GeneralSettings inputs", () => {
 
     it("marks the current choice", () => {
       renderPanel("customization", { formData: { DEFAULT_PAGE: "streams" } });
-      expect(
-        screen.getByRole("button", { name: "Streams" }).className,
-      ).toContain("bg-background");
+      expect(screen.getByRole("button", { name: "Streams" })).toHaveAttribute(
+        "aria-pressed",
+        "true",
+      );
+      expect(screen.getByRole("button", { name: "Devices" })).toHaveAttribute(
+        "aria-pressed",
+        "false",
+      );
+    });
+
+    it("sits on the same row as its label", () => {
+      renderPanel("customization");
+
+      const label = screen.getByText("Default dashboard page");
+      const control = screen.getByRole("button", { name: "Devices" });
+
+      expect(label.parentElement).toContainElement(control);
     });
   });
 
@@ -372,7 +445,7 @@ describe("GeneralSettings user portal group", () => {
     });
 
     expect(container.querySelector("#USER_PORTAL_ENABLED")).toBeNull();
-    expect(screen.getByText("Guardian Configuration")).toBeInTheDocument();
+    expect(screen.getByText("Access Control")).toBeInTheDocument();
   });
 
   it("stringifies a numeric timezone value", () => {
@@ -506,5 +579,183 @@ describe("GeneralSettings clearing the Turnstile secret", () => {
     expect(onFormDataChange).toHaveBeenCalledWith({
       CLOUDFLARE_TURNSTILE_SECRET_KEY: "",
     });
+  });
+});
+
+describe("GeneralSettings password reset", () => {
+  const smtp = (overrides: Partial<Record<string, string>> = {}) => [
+    ...guardianSettings,
+    setting("PASSWORD_RESET_ENABLED", "false", "boolean"),
+    setting("SMTP_ENABLED", overrides.SMTP_ENABLED ?? "true", "boolean"),
+    setting("SMTP_HOST", overrides.SMTP_HOST ?? "smtp.example.com"),
+    setting("SMTP_FROM_EMAIL", overrides.SMTP_FROM_EMAIL ?? "a@example.com"),
+  ];
+
+  const toggle = () =>
+    screen.getByRole("switch", { name: /Allow password reset by email/ });
+
+  const renderReset = async (
+    props: { settings?: AppSetting[]; formData?: SettingsFormData } = {},
+  ) => {
+    const view = renderPanel("guardian", {
+      settings: props.settings ?? smtp(),
+      formData: props.formData,
+    });
+    await act(async () => {});
+    return view;
+  };
+
+  const unmet = () =>
+    screen.queryAllByRole("listitem").map((item) => item.textContent);
+
+  it("offers the toggle once email is configured", async () => {
+    await renderReset();
+
+    expect(toggle()).not.toBeDisabled();
+    expect(screen.queryByText(/need the following first/)).toBeNull();
+  });
+
+  it("greys the toggle out while SMTP is off", async () => {
+    await renderReset({ settings: smtp({ SMTP_ENABLED: "false" }) });
+
+    expect(toggle()).toBeDisabled();
+    expect(unmet()).toEqual([
+      "Configure and enable a mail server under Email settings",
+    ]);
+  });
+
+  it.each(["SMTP_HOST", "SMTP_FROM_EMAIL"])(
+    "greys the toggle out without %s",
+    async (key) => {
+      await renderReset({ settings: smtp({ [key]: "" }) });
+
+      expect(toggle()).toBeDisabled();
+    },
+  );
+
+  it("reads unsaved SMTP edits, not just the stored values", async () => {
+    await renderReset({
+      settings: smtp({ SMTP_ENABLED: "false" }),
+      formData: { SMTP_ENABLED: true },
+    });
+
+    expect(toggle()).not.toBeDisabled();
+  });
+
+  it("warns when the server address is missing", async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        enabled: false,
+        emailConfigured: true,
+        appUrlConfigured: false,
+      }),
+    });
+
+    await renderReset();
+
+    await waitFor(() => expect(toggle()).toBeDisabled());
+    expect(screen.getByText(/APP_URL/)).toBeInTheDocument();
+  });
+
+  it("assumes the address is set when the status cannot be read", async () => {
+    fetchMock.mockRejectedValue(new Error("offline"));
+
+    await renderReset();
+
+    expect(toggle()).not.toBeDisabled();
+    expect(consoleError).toHaveBeenCalledWith(
+      "Failed to check password reset status:",
+      expect.any(Error),
+    );
+  });
+
+  it("assumes the address is set when the status request fails", async () => {
+    fetchMock.mockResolvedValue({ ok: false, json: async () => ({}) });
+
+    await renderReset();
+
+    expect(toggle()).not.toBeDisabled();
+  });
+
+  it("saves the toggle", async () => {
+    const { user, onFormDataChange } = await renderReset();
+
+    await user.click(toggle());
+
+    expect(onFormDataChange).toHaveBeenCalledWith({
+      PASSWORD_RESET_ENABLED: true,
+    });
+  });
+
+  it("explains what the toggle turns on", async () => {
+    await renderReset();
+
+    expect(
+      screen.getByText(/Show a Forgot password link on the sign-in page/),
+    ).toBeInTheDocument();
+  });
+
+  it("says nothing while the signed-in admin has an address of their own", async () => {
+    await renderReset();
+
+    expect(unmet()).toEqual([]);
+  });
+
+  it("blocks the toggle when the signed-in admin has no address", async () => {
+    auth.user = { id: "a-1", username: "owner", email: "" };
+
+    await renderReset();
+
+    expect(toggle()).toBeDisabled();
+    expect(unmet()).toEqual(["Add an email address to your admin account"]);
+  });
+
+  it("says nothing while another admin can receive the link", async () => {
+    auth.user = { id: "a-1", username: "owner", email: "" };
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        appUrlConfigured: true,
+        adminEmailConfigured: true,
+      }),
+    });
+
+    await renderReset();
+
+    await waitFor(() => expect(toggle()).not.toBeDisabled());
+    expect(unmet()).toEqual([]);
+  });
+
+  it("gathers every unmet requirement into one list", async () => {
+    auth.user = { id: "a-1", username: "owner", email: "" };
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({ appUrlConfigured: false }),
+    });
+
+    await renderReset({ settings: smtp({ SMTP_ENABLED: "false" }) });
+
+    expect(screen.getAllByText(/need the following first/)).toHaveLength(1);
+    expect(unmet()).toEqual([
+      "Configure and enable a mail server under Email settings",
+      "Set the APP_URL environment variable",
+      "Add an email address to your admin account",
+    ]);
+  });
+
+  it("drops a requirement from the list once it is met", async () => {
+    auth.user = { id: "a-1", username: "owner", email: "" };
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({ appUrlConfigured: false }),
+    });
+
+    await renderReset();
+
+    expect(unmet()).toEqual([
+      "Set the APP_URL environment variable",
+      "Add an email address to your admin account",
+    ]);
   });
 });

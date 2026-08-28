@@ -51,6 +51,6 @@ describe("StreamDeviceInfo", () => {
     );
 
     expect(plain.innerHTML).toContain("bg-muted/30");
-    expect(overArt.innerHTML).toContain("bg-black/60");
+    expect(overArt.innerHTML).toContain("bg-black/50");
   });
 });

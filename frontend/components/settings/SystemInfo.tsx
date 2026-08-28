@@ -1,35 +1,20 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Meta, MetaGrid, StatusPill } from "@/components/ui/entity";
+import { Banner, SettingControl, SettingsCard } from "./settings-ui";
 import { useToast } from "@/hooks/use-toast";
-import {
-  Info,
-  CheckCircle,
-  Download,
-  Loader2,
-  RefreshCw,
-  GitBranch,
-  Database,
-  Server,
-  Clock,
-  AlertTriangle,
-} from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { apiClient } from "@/lib/api";
 import { useVersion } from "@/contexts/version-context";
 import { AppSetting } from "@/types";
+import { SettingsFormData } from "./settings-utils";
 
 interface SystemInfoProps {
-  onSettingsRefresh: () => void;
   settings: AppSetting[];
+  formData: SettingsFormData;
+  onFormDataChange: (updates: Partial<SettingsFormData>) => void;
 }
 
 interface UptimeInfo {
@@ -45,7 +30,11 @@ interface HealthResponse {
   uptime?: UptimeInfo;
 }
 
-export function SystemInfo({ onSettingsRefresh, settings }: SystemInfoProps) {
+export function SystemInfo({
+  settings,
+  formData,
+  onFormDataChange,
+}: SystemInfoProps) {
   const [checkingUpdates, setCheckingUpdates] = useState(false);
   const [updateStatus, setUpdateStatus] = useState<{
     available: boolean;
@@ -135,7 +124,7 @@ export function SystemInfo({ onSettingsRefresh, settings }: SystemInfoProps) {
           currentVersion: result.currentVersion,
           message: result.hasUpdate
             ? `A new version (${result.latestVersion}) is available!`
-            : "You are running the latest version of Guardian.",
+            : "You are running the latest version.",
           updateUrl: result.updateUrl,
         };
 
@@ -165,185 +154,108 @@ export function SystemInfo({ onSettingsRefresh, settings }: SystemInfoProps) {
       setCheckingUpdates(false);
     }
   };
+  const healthy = healthStatus === "ok" || healthStatus === "healthy";
+  const autoCheckSetting = settings.find(
+    (setting) => setting?.key === "AUTO_CHECK_UPDATES",
+  );
+
   return (
     <div className="space-y-6">
-      {/* System Information Card */}
-      <Card>
-        <CardHeader className="mt-4">
-          <CardTitle>System Information</CardTitle>
-          <CardDescription>
-            Current system status and version information
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Application Version */}
-          <Card className="p-4 my-4">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium flex items-center gap-2">
-                <GitBranch className="h-4 w-4" />
-                Application Version
-              </span>
-              <Badge variant="outline" className="font-mono">
-                v{versionInfo?.version || "N/A"}
-              </Badge>
-            </div>
-          </Card>
-
-          {/* Database Version */}
-          <Card className="p-4 my-4">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium flex items-center gap-2">
-                <Database className="h-4 w-4" />
-                Database Version
-              </span>
-              <Badge variant="outline" className="font-mono">
-                v{versionInfo?.databaseVersion || "N/A"}
-              </Badge>
-            </div>
-          </Card>
-
-          {/* System Status */}
-          <Card className="p-4 my-4">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium flex items-center gap-2">
-                <Server className="h-4 w-4" />
-                System Status
-              </span>
-              <div className="text-right">
-                <Badge
-                  variant="outline"
-                  className={
-                    healthStatus === "checking"
-                      ? "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/50 dark:text-blue-300 dark:border-blue-700"
-                      : healthStatus === "ok" || healthStatus === "healthy"
-                        ? "bg-green-50 text-green-700 border-green-200 dark:bg-green-950/50 dark:text-green-300 dark:border-green-700"
-                        : "bg-red-50 text-red-700 border-red-200 dark:bg-red-950/50 dark:text-red-300 dark:border-red-700"
-                  }
-                >
-                  {healthStatus === "ok" || healthStatus === "healthy" ? (
-                    <>
-                      <CheckCircle className="h-3 w-3 mr-1" />
-                      OK
-                    </>
-                  ) : healthStatus === "checking" ? (
-                    <>
-                      <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                      Checking...
-                    </>
-                  ) : (
-                    <>
-                      <AlertTriangle className="h-3 w-3 mr-1" />
-                      Error
-                    </>
-                  )}
-                </Badge>
-                {latency !== null &&
-                  (healthStatus === "ok" || healthStatus === "healthy") && (
-                    <div className="text-xs text-muted-foreground mt-1">
-                      Latency: {latency}ms
-                    </div>
-                  )}
-              </div>
-            </div>
-          </Card>
-
-          {/* Uptime */}
-          <Card className="p-4 my-4">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium flex items-center gap-2">
-                <Clock className="h-4 w-4" />
-                Uptime
-              </span>
-              <div className="text-right">
-                <div className="text-sm font-mono font-medium">
-                  {formatUptime(currentUptime)}
-                </div>
-                {uptimeInfo && (
-                  <div className="text-xs text-muted-foreground mt-1">
-                    Since {new Date(uptimeInfo.startTime).toLocaleDateString()}{" "}
-                    {new Date(uptimeInfo.startTime).toLocaleTimeString()}
-                  </div>
-                )}
-              </div>
-            </div>
-          </Card>
-
-          {/* Version Mismatch Warning */}
-          {versionInfo?.isVersionMismatch && (
-            <Card className="p-4 my-4 border-orange-200 dark:border-orange-800">
-              <p className="text-sm text-orange-800 dark:text-orange-200 flex items-center gap-2">
-                <RefreshCw className="h-4 w-4" />
-                <strong>Version Mismatch:</strong> Database version is newer
-                than application version.
-              </p>
-            </Card>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Update Management Card */}
-      <Card>
-        <CardHeader className="mt-4">
-          <CardTitle>Update Management</CardTitle>
-          <CardDescription>Check for application updates</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Update Status */}
-          {updateStatus && (
-            <Card
-              className={`p-4 my-4 ${
-                updateStatus.available
-                  ? "border-blue-200 dark:border-blue-800"
-                  : "border-green-200 dark:border-green-800"
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                {updateStatus.available ? (
-                  <Download className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                ) : (
-                  <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
-                )}
-                <p
-                  className={`text-sm font-medium ${
-                    updateStatus.available
-                      ? "text-blue-800 dark:text-blue-200"
-                      : "text-green-800 dark:text-green-200"
-                  }`}
-                >
-                  {updateStatus.message}
-                </p>
-              </div>
-              {updateStatus.available && updateStatus.latestVersion && (
-                <p className="text-xs text-muted-foreground mt-2">
-                  Latest version: v{updateStatus.latestVersion}
-                </p>
+      <SettingsCard
+        title="System Information"
+        description="Current system status and version information."
+      >
+        <MetaGrid className="sm:grid-cols-2">
+          <Meta label="Application Version">
+            <span className="font-mono">v{versionInfo?.version || "N/A"}</span>
+          </Meta>
+          <Meta label="Database Version">
+            <span className="font-mono">
+              v{versionInfo?.databaseVersion || "N/A"}
+            </span>
+          </Meta>
+          <Meta label="System Status">
+            <span className="flex items-center gap-2">
+              <StatusPill
+                tone={
+                  healthStatus === "checking"
+                    ? "info"
+                    : healthy
+                      ? "positive"
+                      : "danger"
+                }
+                dot
+              >
+                {healthy
+                  ? "OK"
+                  : healthStatus === "checking"
+                    ? "Checking..."
+                    : "Error"}
+              </StatusPill>
+              {latency !== null && healthy && (
+                <span className="text-xs text-muted-foreground">
+                  {latency}ms
+                </span>
               )}
-            </Card>
-          )}
+            </span>
+          </Meta>
+          <Meta label="Uptime">
+            <span className="font-mono">{formatUptime(currentUptime)}</span>
+            {uptimeInfo && (
+              <span className="ml-2 text-xs font-normal text-muted-foreground">
+                (since {new Date(uptimeInfo.startTime).toLocaleDateString()}{" "}
+                {new Date(uptimeInfo.startTime).toLocaleTimeString()})
+              </span>
+            )}
+          </Meta>
+        </MetaGrid>
 
-          {/* Manual Update Check Button */}
-          <div className="pt-2 mb-4">
-            <Button
-              onClick={() => checkForUpdates()}
-              disabled={checkingUpdates || !versionInfo?.version}
-              className="w-full"
-              variant="outline"
-            >
-              {checkingUpdates ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Checking for Updates...
-                </>
-              ) : (
-                <>
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                  Check for Updates
-                </>
-              )}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+        {versionInfo?.isVersionMismatch && (
+          <Banner tone="warning">
+            <strong className="font-semibold">Version Mismatch:</strong>{" "}
+            Database version is newer than application version.
+          </Banner>
+        )}
+      </SettingsCard>
+
+      <SettingsCard
+        title="Update Management"
+        description="Check for application updates."
+        footer={
+          <Button
+            onClick={() => checkForUpdates()}
+            disabled={checkingUpdates || !versionInfo?.version}
+            className="w-full"
+            variant="outline"
+          >
+            {checkingUpdates && <Loader2 className="size-4 animate-spin" />}
+            {checkingUpdates ? "Checking for Updates..." : "Check for Updates"}
+          </Button>
+        }
+      >
+        {autoCheckSetting && (
+          <SettingControl
+            setting={autoCheckSetting}
+            formData={formData}
+            onChange={(key, value) => onFormDataChange({ [key]: value })}
+          />
+        )}
+
+        {updateStatus ? (
+          <Banner tone={updateStatus.available ? "info" : "positive"}>
+            {updateStatus.message}
+            {updateStatus.available && updateStatus.latestVersion && (
+              <span className="mt-1 block text-xs text-muted-foreground">
+                Latest version: v{updateStatus.latestVersion}
+              </span>
+            )}
+          </Banner>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            Run a check to see whether a newer release is available.
+          </p>
+        )}
+      </SettingsCard>
     </div>
   );
 }

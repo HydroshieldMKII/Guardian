@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/HydroshieldMKII/Guardian/security/advisories/new
+    about: Report privately. Do not open a public issue.
+  - name: Question or setup help
+    url: https://github.com/HydroshieldMKII/Guardian/discussions
+    about: Ask in Discussions.

@@ -1,9 +1,5 @@
 import { AppSetting } from "@/types";
-import {
-  getSettingInfo,
-  getSecretInputDisplay,
-  settingsSections,
-} from "./settings-utils";
+import { getSettingInfo, getSecretInputDisplay } from "./settings-utils";
 
 const setting = (key: string): AppSetting => ({ key }) as AppSetting;
 
@@ -45,32 +41,6 @@ describe("getSettingInfo", () => {
 
   it("returns an empty label for an empty key", () => {
     expect(getSettingInfo(setting("")).label).toBe("");
-  });
-});
-
-describe("settingsSections", () => {
-  it("lists every expected section", () => {
-    expect(settingsSections.map((s) => s.id)).toEqual([
-      "guardian",
-      "customization",
-      "notifications",
-      "plex",
-      "database",
-      "admin",
-    ]);
-  });
-
-  it("gives each section a title, description and icon", () => {
-    for (const section of settingsSections) {
-      expect(section.title.length).toBeGreaterThan(0);
-      expect(section.description.length).toBeGreaterThan(0);
-      expect(section.icon.length).toBeGreaterThan(0);
-    }
-  });
-
-  it("uses unique ids", () => {
-    const ids = settingsSections.map((s) => s.id);
-    expect(new Set(ids).size).toBe(ids.length);
   });
 });
 

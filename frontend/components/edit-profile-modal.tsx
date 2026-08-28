@@ -14,20 +14,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Field, StatusPill } from "@/components/ui/entity";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Upload, Loader2, X, AlertCircle, Link2, Unlink } from "lucide-react";
-
-// Plex OAuth constants
-const PLEX_AUTH_URL = "https://app.plex.tv/auth";
-const PIN_CHECK_INTERVAL = 2000;
-
-interface PlexPin {
-  id: number;
-  code: string;
-  clientId: string;
-  expiresAt: string;
-}
+import { usePlexOAuth } from "@/hooks/use-plex-oauth";
 
 interface EditProfileModalProps {
   open: boolean;
@@ -71,9 +62,7 @@ export function EditProfileModal({
   const [showProfileError, setShowProfileError] = useState<string | null>(null);
 
   // Plex linking state
-  const [plexLoading, setPlexLoading] = useState(false);
-  const [plexPin, setPlexPin] = useState<PlexPin | null>(null);
-  const [plexPopup, setPlexPopup] = useState<Window | null>(null);
+  const [unlinkingPlex, setUnlinkingPlex] = useState(false);
 
   // Fresh user data fetched when modal opens
   const [freshUserData, setFreshUserData] = useState<{
@@ -124,80 +113,39 @@ export function EditProfileModal({
       setClearSessions(true);
       setShowPasswordError(null);
       setShowProfileError(null);
-      setPlexPin(null);
-      setPlexLoading(false);
+      cancelPlexLinkRef.current();
     }
   }, [open, user]);
 
-  // Check Plex PIN status for linking
-  const checkPlexPin = useCallback(async () => {
-    if (!plexPin) return;
-
-    try {
-      const response = await fetch(`/api/pg/auth/plex/pin/${plexPin.clientId}`);
-      if (!response.ok) return;
-
-      const data = await response.json();
-
-      if (data.authToken) {
-        // User authenticated with Plex - link the account
-        try {
-          await linkPlexAccount(data.authToken);
-          toast({
-            title: "Success",
-            description: "Plex account linked successfully",
-            variant: "success",
-          });
-        } catch (error) {
-          toast({
-            title: "Link Failed",
-            description:
-              error instanceof Error
-                ? error.message
-                : "Failed to link Plex account",
-            variant: "destructive",
-          });
-        } finally {
-          setPlexLoading(false);
-          setPlexPin(null);
-        }
-      }
-    } catch (error) {
-      console.error("Failed to check Plex PIN:", error);
-    }
-  }, [plexPin, linkPlexAccount, toast]);
-
-  // Poll for Plex PIN completion
-  useEffect(() => {
-    if (!plexPin) return;
-
-    const interval = setInterval(checkPlexPin, PIN_CHECK_INTERVAL);
-
-    // Check if PIN has expired
-    const expiresAt = new Date(plexPin.expiresAt);
-    const timeout = setTimeout(() => {
-      setPlexPin(null);
-      setPlexLoading(false);
-      toast({
+  const {
+    loading: linkingPlex,
+    waiting: waitingForPlex,
+    start: handlePlexLink,
+    cancel: cancelPlexLink,
+  } = usePlexOAuth({
+    onAuthenticated: linkPlexAccount,
+    copy: {
+      success: {
+        title: "Plex Account Linked",
+        description: "You can now sign in with Plex",
+      },
+      failed: {
+        title: "Plex Link Failed",
+        description: "Could not link your Plex account",
+      },
+      expired: {
         title: "Plex Link Expired",
-        description: "Please try again",
-        variant: "destructive",
-      });
-    }, expiresAt.getTime() - Date.now());
+        description: "The Plex window timed out. Start again to retry.",
+      },
+      cancelled: {
+        title: "Plex Link Cancelled",
+        description: "The Plex window closed before the account was linked",
+      },
+    },
+  });
 
-    return () => {
-      clearInterval(interval);
-      clearTimeout(timeout);
-    };
-  }, [plexPin, checkPlexPin, toast]);
-
-  // Close popup when done
-  useEffect(() => {
-    if (!plexPin && plexPopup && !plexPopup.closed) {
-      plexPopup.close();
-      setPlexPopup(null);
-    }
-  }, [plexPin, plexPopup]);
+  const cancelPlexLinkRef = useRef(cancelPlexLink);
+  cancelPlexLinkRef.current = cancelPlexLink;
 
   const validateEmail = (email: string): { valid: boolean; error?: string } => {
     if (!email) {
@@ -235,69 +183,13 @@ export function EditProfileModal({
       profileData.email !== user.email ||
       profileData.avatarUrl !== user.avatarUrl);
 
-  const handlePlexLink = async () => {
-    setPlexLoading(true);
-
-    try {
-      // Create PIN
-      const response = await fetch("/api/pg/auth/plex/pin", {
-        method: "POST",
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to create Plex PIN");
-      }
-
-      const pinData: PlexPin = await response.json();
-      setPlexPin(pinData);
-
-      // Open Plex auth popup
-      const authUrl = `${PLEX_AUTH_URL}#?clientID=${pinData.clientId}&code=${pinData.code}&context%5Bdevice%5D%5Bproduct%5D=Guardian`;
-
-      const width = 600;
-      const height = 700;
-      const left = window.screenX + (window.outerWidth - width) / 2;
-      const top = window.screenY + (window.outerHeight - height) / 2;
-
-      const popup = window.open(
-        authUrl,
-        "PlexAuth",
-        `width=${width},height=${height},left=${left},top=${top},toolbar=no,menubar=no,scrollbars=yes,resizable=yes`
-      );
-
-      if (popup) {
-        setPlexPopup(popup);
-
-        // Check if popup was closed without completing auth
-        const popupCheck = setInterval(() => {
-          if (popup.closed) {
-            clearInterval(popupCheck);
-            if (plexPin) {
-              setPlexLoading(false);
-            }
-          }
-        }, 500);
-      }
-    } catch (error) {
-      toast({
-        title: "Plex Link Failed",
-        description:
-          error instanceof Error
-            ? error.message
-            : "Failed to start Plex linking",
-        variant: "destructive",
-      });
-      setPlexLoading(false);
-    }
-  };
-
   const handlePlexUnlink = async () => {
-    setPlexLoading(true);
+    setUnlinkingPlex(true);
     try {
       await unlinkPlexAccount();
       toast({
-        title: "Success",
-        description: "Plex account unlinked successfully",
+        title: "Plex Account Unlinked",
+        description: "Signing in with Plex is no longer available for this account",
         variant: "success",
       });
     } catch (error) {
@@ -310,7 +202,7 @@ export function EditProfileModal({
         variant: "destructive",
       });
     } finally {
-      setPlexLoading(false);
+      setUnlinkingPlex(false);
     }
   };
 
@@ -569,13 +461,11 @@ export function EditProfileModal({
               </div>
 
               {/* Email */}
-              <div className="space-y-2">
-                <Label htmlFor="email">
-                  Email{" "}
-                  <span className="text-xs font-normal text-muted-foreground">
-                    (optional)
-                  </span>
-                </Label>
+              <Field
+                label="Email"
+                htmlFor="email"
+                action={<StatusPill tone="neutral">Optional</StatusPill>}
+              >
                 <Input
                   id="email"
                   type="email"
@@ -591,7 +481,7 @@ export function EditProfileModal({
                       : ""
                   }
                 />
-              </div>
+              </Field>
               {showProfileError && (
                 <div className="flex items-center gap-1 text-xs text-red-500">
                   <AlertCircle className="h-3 w-3" />
@@ -763,11 +653,11 @@ export function EditProfileModal({
 
                   <Button
                     variant="destructive"
-                    onClick={handlePlexUnlink}
-                    disabled={plexLoading}
+                    onClick={() => handlePlexUnlink()}
+                    disabled={unlinkingPlex}
                     className="w-full"
                   >
-                    {plexLoading ? (
+                    {unlinkingPlex ? (
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     ) : (
                       <Unlink className="mr-2 h-4 w-4" />
@@ -787,11 +677,11 @@ export function EditProfileModal({
                   </Card>
 
                   <Button
-                    onClick={handlePlexLink}
-                    disabled={plexLoading}
+                    onClick={() => handlePlexLink()}
+                    disabled={linkingPlex}
                     className="w-full bg-[#e5a00d] hover:bg-[#cc8f0c] text-black border-[#e5a00d] hover:border-[#cc8f0c]"
                   >
-                    {plexLoading ? (
+                    {linkingPlex ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         Waiting for Plex...
@@ -807,9 +697,33 @@ export function EditProfileModal({
                       </>
                     )}
                   </Button>
+
+                  {waitingForPlex && (
+                    <p className="text-center text-xs text-muted-foreground">
+                      Finish linking on the Plex window, or{" "}
+                      <button
+                        type="button"
+                        onClick={() => cancelPlexLink()}
+                        className="cursor-pointer underline underline-offset-2 hover:text-foreground"
+                      >
+                        cancel
+                      </button>
+                      .
+                    </p>
+                  )}
                 </>
               )}
             </div>
+
+            <DialogFooter className="gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+              >
+                Close
+              </Button>
+            </DialogFooter>
           </TabsContent>
         </Tabs>
       </DialogContent>

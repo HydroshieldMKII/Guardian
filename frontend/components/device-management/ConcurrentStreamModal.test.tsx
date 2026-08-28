@@ -103,7 +103,7 @@ describe("ConcurrentStreamModal", () => {
   describe("the global limit", () => {
     it("reports the configured value", async () => {
       await renderModal();
-      expect(screen.getByText("3")).toBeInTheDocument();
+      expect(screen.getAllByText("3 concurrent streams")).toHaveLength(2);
     });
 
     it("reports zero as unlimited", async () => {
@@ -125,7 +125,7 @@ describe("ConcurrentStreamModal", () => {
 
       expect(screen.getByRole("switch")).toBeChecked();
       expect(screen.getByLabelText(/Custom limit/)).toBeDisabled();
-      expect(screen.getByText("3 concurrent streams")).toBeInTheDocument();
+      expect(screen.getAllByText("3 concurrent streams")).toHaveLength(2);
     });
 
     it("uses the stored override when the user has one", async () => {
@@ -179,6 +179,79 @@ describe("ConcurrentStreamModal", () => {
         isOverridden: true,
       });
       await renderModal();
+
+      expect(screen.getByText("1 concurrent stream")).toBeInTheDocument();
+    });
+  });
+
+  describe("showing which limit is in effect", () => {
+    const globalLimitCell = () =>
+      screen.getByText("Global limit").closest("div") as HTMLElement;
+
+    it("keeps the global limit lit while the user follows it", async () => {
+      await renderModal();
+      expect(globalLimitCell().className).not.toMatch(/opacity/);
+    });
+
+    it("dims the global limit once a custom limit overrides it", async () => {
+      const { user } = await renderModal();
+
+      await user.click(screen.getByRole("switch"));
+
+      expect(globalLimitCell().className).toMatch(/opacity-45/);
+    });
+
+    it("dims the custom limit while the user follows the global one", async () => {
+      await renderModal();
+
+      const field = screen
+        .getByText("Custom limit for this user")
+        .closest("div")?.parentElement as HTMLElement;
+      expect(field.className).toMatch(/opacity-45/);
+    });
+
+    it("names the global limit it is replacing", async () => {
+      const { user } = await renderModal();
+
+      await user.click(screen.getByRole("switch"));
+
+      expect(
+        screen.getByText(/replacing the global limit of 3 concurrent streams/),
+      ).toBeInTheDocument();
+    });
+
+    it("says every other user stays unlimited when the global limit is off", async () => {
+      settings = [{ key: "CONCURRENT_STREAM_LIMIT", value: "0" }];
+      const { user } = await renderModal();
+
+      await user.click(screen.getByRole("switch"));
+
+      expect(
+        screen.getByText(/Every other user stays unlimited/),
+      ).toBeInTheDocument();
+    });
+
+    it("points at Settings while the user follows a global limit", async () => {
+      await renderModal();
+      expect(
+        screen.getByText(/This user follows the global limit/),
+      ).toBeInTheDocument();
+    });
+
+    it("explains an unlimited global limit", async () => {
+      settings = [{ key: "CONCURRENT_STREAM_LIMIT", value: "0" }];
+      await renderModal();
+      expect(
+        screen.getByText(/The global limit is unlimited/),
+      ).toBeInTheDocument();
+    });
+
+    it("follows the typed value as it changes", async () => {
+      const { user } = await renderModal();
+
+      await user.click(screen.getByRole("switch"));
+      await user.clear(screen.getByLabelText(/Custom limit/));
+      await user.type(screen.getByLabelText(/Custom limit/), "1");
 
       expect(screen.getByText("1 concurrent stream")).toBeInTheDocument();
     });
@@ -244,7 +317,7 @@ describe("ConcurrentStreamModal", () => {
       await waitFor(() =>
         expect(toast).toHaveBeenCalledWith(
           expect.objectContaining({
-            description: "Failed to update concurrent stream limit",
+            description: "Failed to update the concurrent stream limit",
           }),
         ),
       );

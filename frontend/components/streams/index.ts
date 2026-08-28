@@ -1,7 +1,5 @@
 export {
   ClickableIP,
-  getDeviceIcon,
-  formatDuration,
   getProgressPercentage,
   getContentTitle,
   getDetailedQuality,

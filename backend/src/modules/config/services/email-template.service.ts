@@ -1,12 +1,52 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { readFileSync } from 'fs';
 import { join } from 'path';
+import { EMAIL_PALETTE } from '@/common/utils/email-palette';
+import { NotificationEmailType } from '@/common/utils/notification-email-type';
+
+type TemplateVars = Record<string, string>;
+
+const LOGO_VIEW_BOX = '0 250 1024 266';
+
+const ASSET_DIRECTORIES = [
+  () => join(process.cwd(), 'backend', 'src', 'assets'),
+  () => join(process.cwd(), 'src', 'assets'),
+  () => join(__dirname, '..', 'assets'),
+  () => join(__dirname, '..', '..', 'assets'),
+  () => join(__dirname, '..', '..', '..', 'assets'),
+];
 
 @Injectable()
 export class EmailTemplateService {
-  /**
-   * Escapes HTML entities for email content
-   */
+  private readonly logger = new Logger(EmailTemplateService.name);
+
+  private readAsset(...segments: string[]): string | null {
+    for (const directory of ASSET_DIRECTORIES) {
+      try {
+        return readFileSync(join(directory(), ...segments), 'utf8');
+      } catch {
+        continue;
+      }
+    }
+    return null;
+  }
+
+  private template(name: string, vars: TemplateVars = {}): string {
+    const source = this.readAsset('email', name);
+    if (source === null) {
+      this.logger.error(`Email template not found: ${name}`);
+      return '';
+    }
+    return this.fill(source, vars);
+  }
+
+  private fill(source: string, vars: TemplateVars): string {
+    return source.replace(
+      /\{\{(\w+)\}\}/g,
+      (_, key: string) => vars[key] ?? '',
+    );
+  }
+
   private escapeHtml(text: string): string {
     const htmlEntities: Record<string, string> = {
       '&': '&amp;',
@@ -17,326 +57,112 @@ export class EmailTemplateService {
     };
     return text.replace(/[&<>"']/g, (char) => htmlEntities[char]);
   }
-  private getLogoBase64(): string {
-    try {
-      const possiblePaths = [
-        // If repo root is CWD
-        join(process.cwd(), 'backend', 'src', 'assets', 'logo_dark.svg'),
-        join(process.cwd(), 'src', 'assets', 'logo_dark.svg'),
-        // When running from dist
-        join(__dirname, '..', 'assets', 'logo_dark.svg'),
-        join(__dirname, '..', '..', 'assets', 'logo_dark.svg'),
-        join(__dirname, '..', '..', '..', 'assets', 'logo_dark.svg'),
-      ];
 
-      for (const logoPath of possiblePaths) {
-        try {
-          const logoContent = readFileSync(logoPath, 'utf8');
-          const base64Logo = Buffer.from(logoContent).toString('base64');
-          return `data:image/svg+xml;base64,${base64Logo}`;
-        } catch {
-          // Try next path
-          continue;
-        }
-      }
-
-      // If not found, fall back to empty string (text fallback will be used)
-      throw new Error('Logo file not found in any expected location');
-    } catch (error) {
-      console.warn(
-        'Logo file not found, using text fallback:',
-        error instanceof Error ? error.message : String(error),
-      );
-      return '';
+  private renderLogo(): string {
+    const contents = this.readAsset('logo_dark.svg');
+    if (contents === null) {
+      this.logger.warn('Logo file not found, using text fallback');
+      return this.template('logo-fallback.html');
     }
-  }
-  private getBaseEmailStyles(): string {
-    return `
-      @media only screen and (max-width: 600px) {
-        .container { width: 100% !important; margin: 0 !important; }
-        .header, .content, .footer { padding-left: 20px !important; padding-right: 20px !important; }
-        .details { margin: 20px 0 !important; padding: 16px !important; }
-      }
-      @media (prefers-color-scheme: dark) {
-        .header {
-          background-color: #ffffff !important;
-          background: #ffffff !important;
-          color: #000000 !important;
-        }
-        .header h1 {
-          color: #000000 !important;
-        }
-        .container {
-          background-color: #ffffff !important;
-          background: #ffffff !important;
-        }
-        body {
-          background-color: #f5f5f5 !important;
-        }
-        .email-wrapper {
-          background-color: #f5f5f5 !important;
-        }
-      }
-      [data-ogsc] .header {
-        background-color: #ffffff !important;
-        background: #ffffff !important;
-      }
-      [data-ogsc] .header h1 {
-        color: #000000 !important;
-      }
-      body {
-        margin: 0;
-        padding: 0;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
-        background-color: #f5f5f5;
-        color: #000000;
-        line-height: 1.6;
-      }
-      .email-wrapper {
-        background-color: #f5f5f5;
-        padding: 40px 20px;
-        min-height: 100vh;
-      }
-      .container {
-        max-width: 600px;
-        margin: 0 auto;
-        background-color: #ffffff;
-        border-radius: 12px;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-        overflow: hidden;
-      }
-      .header {
-        padding: 0px 40px 0px;
-        text-align: center;
-        background-color: #ffffff;
-        color: #000000;
-        position: relative;
-      }
-      .header::after {
-        content: '';
-        position: absolute;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        height: 4px;
-        background: linear-gradient(90deg, #ff0000, #ff6600, #ffcc00, #00cc66, #0066cc, #6600cc);
-      }
-      .header h1 {
-        margin: 0;
-        font-size: 36px;
-        font-weight: 800;
-        letter-spacing: -1.5px;
-        color: #000000;
-        text-transform: uppercase;
-        text-shadow: none;
-      }
-      .logo {
-        width: 300px;
-        height: auto;
-        margin: 0;
-        display: block;
-        margin-left: auto;
-        margin-right: auto;
-      }
-      .content {
-        padding: 40px 40px 30px;
-        background-color: #ffffff;
-      }
-      .badge {
-        display: inline-block;
-        padding: 8px 16px;
-        color: #ffffff !important;
-        font-size: 11px;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        border-radius: 20px;
-        margin-bottom: 24px;
-      }
-      .main-message {
-        margin: 0 0 32px 0;
-        font-size: 18px;
-        line-height: 1.7;
-        color: #000000;
-        font-weight: 500;
-      }
-      .details {
-        margin: 32px 0;
-        padding: 24px;
-        background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
-        border: 1px solid #e9ecef;
-        border-radius: 8px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-      }
-      .details h3 {
-        margin: 0 0 20px 0;
-        font-size: 14px;
-        font-weight: 700;
-        color: #000000;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        display: flex;
-        align-items: center;
-      }
-      .detail-row {
-        display: flex;
-        margin: 12px 0;
-        padding: 8px 0;
-        border-bottom: 1px solid #f0f0f0;
-      }
-      .detail-row:last-child {
-        border-bottom: none;
-      }
-      .detail-label {
-        font-weight: 700;
-        color: #666666;
-        min-width: 100px;
-        font-size: 13px;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-      }
-      .detail-value {
-        color: #000000;
-        font-weight: 500;
-        font-size: 14px;
-        flex: 1;
-      }
-      .footer {
-        padding: 30px 40px 40px;
-        text-align: center;
-        background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
-        border-top: 1px solid #e9ecef;
-      }
-      .footer p {
-        margin: 0;
-        font-size: 12px;
-        color: #666666;
-        font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        font-weight: 500;
-      }
-      .timestamp {
-        display: inline-block;
-        background-color: #f1f3f4;
-        padding: 6px 12px;
-        border-radius: 6px;
-        margin-top: 8px;
-      }
-      .stop-code {
-        font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
-        background-color: #f1f3f4;
-        padding: 4px 8px;
-        border-radius: 4px;
-        font-size: 12px;
-        color: #000000;
-      }
-      .notification-type {
-        display: inline-block;
-        color: #ffffff;
-        padding: 4px 8px;
-        border-radius: 4px;
-        font-size: 12px;
-        font-weight: 700;
-        letter-spacing: 0.5px;
-      }
-    `;
+
+    const cropped = contents.replace(
+      /viewBox="[^"]*"/,
+      `viewBox="${LOGO_VIEW_BOX}"`,
+    );
+
+    return this.template('logo.html', {
+      logoDataUri: `data:image/svg+xml;base64,${Buffer.from(cropped).toString('base64')}`,
+    });
   }
 
-  private generateBaseEmailHtml(
-    badgeColor: string,
-    badgeText: string,
-    mainMessage: string,
-    detailsTitle: string,
-    detailsContent: string,
-    footerText: string,
-    timestamp: string,
+  private detailRow(
+    label: string,
+    value: string,
+    valueAttributes = '',
   ): string {
-    const logoBase64 = this.getLogoBase64();
-
-    return `<!DOCTYPE html>
-    <html lang="en">
-    <head>
-      <meta charset="UTF-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <style>
-        ${this.getBaseEmailStyles()}
-      </style>
-    </head>
-    <body>
-      <div class="email-wrapper">
-        <div class="container">
-          <div class="header">
-            ${logoBase64 ? `<img src="${logoBase64}" alt="Guardian Logo" class="logo" />` : '<h1>Guardian</h1>'}
-          </div>
-          <div class="content">
-            <div class="badge" style="background-color: ${badgeColor};">${badgeText}</div>
-            <p class="main-message">${mainMessage}</p>
-            
-            <div class="details" style="border-left: 4px solid ${badgeColor};">
-              <h3>${detailsTitle}</h3>
-              ${detailsContent}
-            </div>
-          </div>
-          <div class="footer">
-            <p>${footerText}</p>
-            <div class="timestamp">${timestamp}</div>
-          </div>
-        </div>
-      </div>
-    </body>
-    </html>`;
+    return this.template('detail-row.html', {
+      label,
+      value,
+      valueAttributes,
+    });
   }
 
   private ipDetailRow(label: string, address: string): string {
-    return `
-      <div class="detail-row">
-        <span class="detail-label">${label}</span>
-        <span class="detail-value"><a href="https://ipinfo.io/${address}" target="_blank" rel="noopener noreferrer" style="color: #4488ff; text-decoration: underline;">${address}</a></span>
-      </div>
-    `;
-  }
-
-  generateSMTPTestEmail(recipientEmails: string[], timestamp: string): string {
-    const detailsContent = `
-      <div class="detail-row">
-        <span class="detail-label">Status</span>
-        <span class="detail-value">SMTP Verified</span>
-      </div>
-      <div class="detail-row">
-        <span class="detail-label">Recipients</span>
-        <span class="detail-value">${recipientEmails
-          .map((email) => this.escapeHtml(email))
-          .join(', ')}</span>
-      </div>
-      <div class="detail-row">
-        <span class="detail-label">Test Type</span>
-        <span class="detail-value">Connection & Delivery</span>
-      </div>
-    `;
-
-    return this.generateBaseEmailHtml(
-      '#00aa00',
-      'Test Successful',
-      'SMTP configuration test completed successfully. Your email settings are working correctly and Guardian is ready to send notifications.',
-      'Test Details',
-      detailsContent,
-      'SMTP Test',
-      timestamp,
+    return this.detailRow(
+      label,
+      `<a href="https://ipinfo.io/${address}" target="_blank" rel="noopener noreferrer" style="color: #4488ff; text-decoration: underline;">${address}</a>`,
     );
   }
 
+  private renderLayout(options: {
+    accentColor: string;
+    mainMessage: string;
+    timestamp: string;
+    footerText?: string;
+    detailsTitle?: string;
+    detailRows?: string;
+    action?: string;
+  }): string {
+    const footerTag = options.footerText
+      ? this.template('footer-tag.html', { footerText: options.footerText })
+      : '';
+
+    const details =
+      options.detailsTitle && options.detailRows
+        ? this.template('details.html', {
+            detailsTitle: options.detailsTitle,
+            detailRows: options.detailRows,
+          })
+        : '';
+
+    return this.template('layout.html', {
+      styles: this.readAsset('email', 'styles.css') ?? '',
+      accentColor: options.accentColor,
+      logo: this.renderLogo(),
+      mainMessage: options.mainMessage,
+      action: options.action ?? '',
+      details,
+      footerTag,
+      timestamp: options.timestamp,
+    });
+  }
+
+  generatePasswordResetEmail(
+    username: string,
+    resetUrl: string,
+    expiresInMinutes: number,
+    timestamp: string,
+  ): string {
+    const safeUsername = this.escapeHtml(username);
+    const safeUrl = this.escapeHtml(resetUrl);
+    const accentColor = EMAIL_PALETTE.accent;
+
+    return this.renderLayout({
+      accentColor,
+      mainMessage: `Someone asked to reset the password for <strong>${safeUsername}</strong>. If that was not you, you can safely ignore this email.`,
+      timestamp,
+      action: this.template('action.html', {
+        accentColor,
+        url: safeUrl,
+        label: 'Choose a new password',
+        fallbackText: `This link works once and expires in ${expiresInMinutes} minutes. If the button does not work, paste this address into your browser:`,
+      }),
+    });
+  }
+
+  generateSMTPTestEmail(timestamp: string): string {
+    return this.renderLayout({
+      accentColor: EMAIL_PALETTE.positive,
+      mainMessage:
+        'SMTP configuration test completed successfully. Your email settings are working correctly and notifications are ready to send.',
+      footerText: 'SMTP Test',
+      timestamp,
+    });
+  }
+
   generateNotificationEmail(
-    notificationType:
-      | 'block'
-      | 'info'
-      | 'warning'
-      | 'error'
-      | 'new-device'
-      | 'location-change'
-      | 'device-note',
+    notificationType: NotificationEmailType,
     statusColor: string,
-    statusLabel: string,
     mainMessage: string,
     username: string,
     deviceName?: string,
@@ -346,75 +172,56 @@ export class EmailTemplateService {
     oldIpAddress?: string,
     note?: string,
   ): string {
-    const safeUsername = this.escapeHtml(username);
     const safeDeviceName = deviceName ? this.escapeHtml(deviceName) : undefined;
     const safeNote = note ? this.escapeHtml(note) : undefined;
     const safeStopCode = stopCode ? this.escapeHtml(stopCode) : undefined;
-    const safeMessage = this.escapeHtml(mainMessage);
     const safeIpAddress = ipAddress ? encodeURIComponent(ipAddress) : undefined;
     const safeOldIpAddress = oldIpAddress
       ? encodeURIComponent(oldIpAddress)
       : undefined;
 
-    let detailsContent = `
-      <div class="detail-row">
-        <span class="detail-label">User</span>
-        <span class="detail-value">${safeUsername}</span>
-      </div>
-    `;
+    const rows = [this.detailRow('User', this.escapeHtml(username))];
 
     if (safeDeviceName) {
-      detailsContent += `
-        <div class="detail-row">
-          <span class="detail-label">Device</span>
-          <span class="detail-value">${safeDeviceName}</span>
-        </div>
-      `;
+      rows.push(this.detailRow('Device', safeDeviceName));
     }
 
-    // Special handling for location change - show both old and new IP
     if (safeOldIpAddress && safeIpAddress) {
-      detailsContent += `
-        ${this.ipDetailRow('Old IP', safeOldIpAddress)}
-        ${this.ipDetailRow('New IP', safeIpAddress)}
-      `;
+      rows.push(this.ipDetailRow('Old IP', safeOldIpAddress));
+      rows.push(this.ipDetailRow('New IP', safeIpAddress));
     } else if (safeIpAddress) {
-      detailsContent += this.ipDetailRow('IP Address', safeIpAddress);
+      rows.push(this.ipDetailRow('IP Address', safeIpAddress));
     }
 
-    detailsContent += `
-      <div class="detail-row">
-        <span class="detail-label">Type</span>
-        <span class="detail-value"><span class="notification-type" style="background-color: ${statusColor};">${notificationType.toUpperCase()}</span></span>
-      </div>
-    `;
+    rows.push(
+      this.detailRow(
+        'Type',
+        `<span class="notification-type" style="background-color: ${statusColor};">${notificationType.toUpperCase()}</span>`,
+      ),
+    );
 
     if (safeStopCode) {
-      detailsContent += `
-        <div class="detail-row">
-          <span class="detail-label">Code</span>
-          <span class="detail-value"><span class="stop-code">${safeStopCode}</span></span>
-        </div>
-      `;
+      rows.push(
+        this.detailRow(
+          'Code',
+          `<span class="stop-code">${safeStopCode}</span>`,
+        ),
+      );
     }
 
     if (safeNote && notificationType === 'device-note') {
-      detailsContent += `
-        <div class="detail-row">
-          <span class="detail-label">Note</span>
-          <span class="detail-value" style="white-space: pre-wrap;">${safeNote}</span>
-        </div>
-      `;
+      rows.push(
+        this.detailRow('Note', safeNote, ' style="white-space: pre-wrap;"'),
+      );
     }
 
-    return this.generateBaseEmailHtml(
-      statusColor,
-      statusLabel,
-      safeMessage,
-      'Event Details',
-      detailsContent,
-      'Notification System',
-      timestamp || '',
-    );
+    return this.renderLayout({
+      accentColor: statusColor,
+      mainMessage: this.escapeHtml(mainMessage),
+      detailsTitle: 'Event Details',
+      detailRows: rows.join(''),
+      footerText: 'Notification System',
+      timestamp: timestamp || '',
+    });
   }
 }

@@ -2,10 +2,8 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import {
   ClickableIP,
-  formatDuration,
   getContentTitle,
   getDetailedQuality,
-  getDeviceIcon,
   getProgressPercentage,
 } from "@/components/streams/SharedComponents";
 
@@ -50,46 +48,6 @@ describe("ClickableIP", () => {
       "noopener,noreferrer",
     );
     open.mockRestore();
-  });
-});
-
-describe("getDeviceIcon", () => {
-  it.each([
-    ["Android", "lucide-smartphone"],
-    ["iOS", "lucide-smartphone"],
-    ["Tablet", "lucide-tablet"],
-    ["iPad", "lucide-tablet"],
-    ["Windows", "lucide-laptop"],
-    ["macOS", "lucide-laptop"],
-    ["Linux", "lucide-laptop"],
-    ["Roku", "lucide-monitor"],
-    ["", "lucide-monitor"],
-  ])("maps %p to its icon", (platform, expected) => {
-    const { container } = render(<div>{getDeviceIcon(platform)}</div>);
-    expect(container.querySelector("svg")?.getAttribute("class")).toContain(
-      expected,
-    );
-  });
-
-  it("falls back to a monitor with no platform at all", () => {
-    const { container } = render(<div>{getDeviceIcon()}</div>);
-    expect(container.querySelector("svg")?.getAttribute("class")).toContain(
-      "lucide-monitor",
-    );
-  });
-});
-
-describe("formatDuration", () => {
-  it.each([
-    [0, "0:00"],
-    [5_000, "0:05"],
-    [65_000, "1:05"],
-    [600_000, "10:00"],
-    [3_600_000, "1:00:00"],
-    [3_725_000, "1:02:05"],
-    [86_400_000, "24:00:00"],
-  ])("formats %pms as %p", (ms, expected) => {
-    expect(formatDuration(ms)).toBe(expected);
   });
 });
 

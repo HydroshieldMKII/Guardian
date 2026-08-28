@@ -124,7 +124,9 @@ describe("StreamsList", () => {
       const user = userEvent.setup();
       render(<StreamsList onRefresh={onRefresh} />);
 
-      expect(screen.getByText("Connection Error")).toBeInTheDocument();
+      expect(
+        screen.getByText("Cannot reach the server"),
+      ).toBeInTheDocument();
       expect(screen.getByText("backend unreachable")).toBeInTheDocument();
 
       await user.click(screen.getByRole("button", { name: "Try Again" }));
@@ -137,6 +139,63 @@ describe("StreamsList", () => {
       render(<StreamsList />);
 
       expect(screen.queryByText("card:s-1")).toBeNull();
+    });
+  });
+
+  describe("the two-column layout", () => {
+    const placeholders = (container: HTMLElement) =>
+      container.querySelectorAll("[aria-hidden].border-dashed");
+
+    it("fills the last row when the stream count is odd", () => {
+      streams = [session({ sessionKey: "s-1" })];
+      const { container } = render(<StreamsList />);
+
+      expect(placeholders(container)).toHaveLength(1);
+    });
+
+    it("adds nothing when the rows are already full", () => {
+      streams = [
+        session({ sessionKey: "s-1" }),
+        session({ sessionKey: "s-2" }),
+      ];
+      const { container } = render(<StreamsList />);
+
+      expect(placeholders(container)).toHaveLength(0);
+    });
+
+    it("fills the last row of a longer odd list", () => {
+      streams = [
+        session({ sessionKey: "s-1" }),
+        session({ sessionKey: "s-2" }),
+        session({ sessionKey: "s-3" }),
+      ];
+      const { container } = render(<StreamsList />);
+
+      expect(placeholders(container)).toHaveLength(1);
+    });
+
+    it("counts the filtered streams, not every stream", async () => {
+      const user = userEvent.setup();
+      streams = [
+        session({ sessionKey: "s-1", title: "Arrival" }),
+        session({ sessionKey: "s-2", title: "Severance" }),
+      ];
+      const { container } = render(<StreamsList />);
+
+      await user.type(
+        screen.getByPlaceholderText(/Search by user, device, title or app/),
+        "Arrival",
+      );
+
+      await waitFor(() => expect(placeholders(container)).toHaveLength(1));
+    });
+
+    it("keeps the filler out of the one-column layout", () => {
+      streams = [session({ sessionKey: "s-1" })];
+      const { container } = render(<StreamsList />);
+
+      expect(placeholders(container)[0].className).toContain("hidden");
+      expect(placeholders(container)[0].className).toContain("xl:block");
     });
   });
 
@@ -171,7 +230,10 @@ describe("StreamsList", () => {
       const user = userEvent.setup();
       render(<StreamsList />);
 
-      await user.type(screen.getByPlaceholderText(/Search streams/), term);
+      await user.type(
+        screen.getByPlaceholderText(/Search by user, device, title or app/),
+        term,
+      );
 
       expect(screen.getByText(`card:${expected}`)).toBeInTheDocument();
       expect(screen.getByText("Showing 1 of 2 streams")).toBeInTheDocument();
@@ -182,7 +244,10 @@ describe("StreamsList", () => {
       const user = userEvent.setup();
       render(<StreamsList />);
 
-      await user.type(screen.getByPlaceholderText(/Search streams/), "fringe");
+      await user.type(
+        screen.getByPlaceholderText(/Search by user, device, title or app/),
+        "fringe",
+      );
 
       expect(screen.getByText("card:s-3")).toBeInTheDocument();
     });
@@ -191,7 +256,10 @@ describe("StreamsList", () => {
       const user = userEvent.setup();
       render(<StreamsList />);
 
-      await user.type(screen.getByPlaceholderText(/Search streams/), "zzz");
+      await user.type(
+        screen.getByPlaceholderText(/Search by user, device, title or app/),
+        "zzz",
+      );
 
       expect(
         screen.getByText("No streams match your search"),
@@ -212,7 +280,10 @@ describe("StreamsList", () => {
       const user = userEvent.setup();
       render(<StreamsList />);
 
-      await user.type(screen.getByPlaceholderText(/Search streams/), "x");
+      await user.type(
+        screen.getByPlaceholderText(/Search by user, device, title or app/),
+        "x",
+      );
 
       expect(
         screen.getByText("No streams match your search"),
@@ -244,12 +315,17 @@ describe("StreamsList", () => {
       expect(onAutoRefreshChange).toHaveBeenCalledWith(true);
     });
 
-    it("disables refresh briefly after a refresh", async () => {
-      const onRefresh = jest.fn();
+    it("keeps refresh disabled until the request actually settles", async () => {
+      let finish: () => void = () => {};
+      const onRefresh = jest.fn(
+        () =>
+          new Promise<void>((resolve) => {
+            finish = resolve;
+          }),
+      );
       render(<StreamsList onRefresh={onRefresh} />);
       const button = screen.getByRole("button", { name: /Refresh/ });
 
-      jest.useFakeTimers();
       await act(async () => {
         button.click();
       });
@@ -258,9 +334,30 @@ describe("StreamsList", () => {
       expect(button).toBeDisabled();
 
       await act(async () => {
-        jest.advanceTimersByTime(500);
+        finish();
       });
+
       expect(button).not.toBeDisabled();
+    });
+
+    it("re-enables refresh when the request fails", async () => {
+      const consoleError = jest
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
+      const onRefresh = jest.fn(() => Promise.reject(new Error("offline")));
+      render(<StreamsList onRefresh={onRefresh} />);
+      const button = screen.getByRole("button", { name: /Refresh/ });
+
+      await act(async () => {
+        button.click();
+      });
+
+      expect(button).not.toBeDisabled();
+      expect(consoleError).toHaveBeenCalledWith(
+        "Failed to refresh:",
+        expect.any(Error),
+      );
+      consoleError.mockRestore();
     });
 
     it("works without any callbacks supplied", async () => {

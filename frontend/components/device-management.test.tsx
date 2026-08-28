@@ -39,10 +39,10 @@ jest.mock("@/hooks/device-management/useDeviceUtils", () => ({
   }),
 }));
 
-const hasTimeRules = jest.fn();
+const getAllTimeRules = jest.fn();
 const fetchAllTimeRules = jest.fn();
 jest.mock("@/hooks/device-management/useTimeRules", () => ({
-  useTimeRules: () => ({ hasTimeRules, fetchAllTimeRules }),
+  useTimeRules: () => ({ getAllTimeRules, fetchAllTimeRules }),
 }));
 
 const toast = jest.fn();
@@ -61,40 +61,38 @@ jest.mock("@/components/device-management/UserGroupCard", () => ({
   UserGroupCard: ({
     group,
     isExpanded,
-    hasTimeSchedules,
-    hasIPPolicies,
+    timeRules,
     updatingUserPreference,
     onToggleExpansion,
     onUpdateUserPreference,
     onUpdateUserIPPolicy,
     onToggleUserVisibility,
     onShowHistory,
-    onGrantUserTempAccess,
+    onGrantUserTemporaryAccess,
     onShowTimePolicy,
     onApprove,
     onReject,
     onDelete,
     onToggleApproval,
-    onRevokeTempAccess,
+    onRemoveTemporaryAccess,
     onShowDetails,
   }: Record<string, never> & {
     group: { user: { userId: string }; devices: UserDevice[] };
     isExpanded: boolean;
-    hasTimeSchedules: boolean;
-    hasIPPolicies: boolean;
+    timeRules?: { id: number }[];
     updatingUserPreference?: string | null;
     onToggleExpansion: (id: string) => void;
     onUpdateUserPreference: (id: string, block: boolean | null) => void;
     onUpdateUserIPPolicy: (id: string, updates: unknown) => void;
     onToggleUserVisibility: (id: string) => void;
     onShowHistory: (id: string) => void;
-    onGrantUserTempAccess: (id: string) => void;
+    onGrantUserTemporaryAccess: (id: string) => void;
     onShowTimePolicy: (id: string, deviceIdentifier?: string) => void;
     onApprove: (d: UserDevice) => void;
     onReject: (d: UserDevice) => void;
     onDelete: (d: UserDevice) => void;
     onToggleApproval: (d: UserDevice) => void;
-    onRevokeTempAccess: (id: number) => void;
+    onRemoveTemporaryAccess: (device: { id: number }) => void;
     onShowDetails: (d: UserDevice) => void;
   }) => {
     const id = group.user.userId;
@@ -103,7 +101,7 @@ jest.mock("@/components/device-management/UserGroupCard", () => ({
       <div data-user-id={id}>
         <span>{`group:${id}`}</span>
         <span>{`expanded:${id}:${isExpanded}`}</span>
-        <span>{`badges:${id}:${hasTimeSchedules}:${hasIPPolicies}`}</span>
+        <span>{`rules:${id}:${timeRules?.length ?? "none"}`}</span>
         <span>{`updating:${id}:${updatingUserPreference ?? "none"}`}</span>
         <button onClick={() => onToggleExpansion(id)}>{`toggle ${id}`}</button>
         <button onClick={() => onUpdateUserPreference(id, true)}>
@@ -119,7 +117,7 @@ jest.mock("@/components/device-management/UserGroupCard", () => ({
         >{`hide ${id}`}</button>
         <button onClick={() => onShowHistory(id)}>{`history ${id}`}</button>
         <button
-          onClick={() => onGrantUserTempAccess(id)}
+          onClick={() => onGrantUserTemporaryAccess(id)}
         >{`temp ${id}`}</button>
         <button onClick={() => onShowTimePolicy(id)}>{`schedule ${id}`}</button>
         {device && (
@@ -130,7 +128,7 @@ jest.mock("@/components/device-management/UserGroupCard", () => ({
             <button onClick={() => onToggleApproval(device)}>
               {`switch ${id}`}
             </button>
-            <button onClick={() => onRevokeTempAccess(device.id)}>
+            <button onClick={() => onRemoveTemporaryAccess(device)}>
               {`revoke ${id}`}
             </button>
             <button onClick={() => onShowDetails(device)}>
@@ -176,20 +174,20 @@ jest.mock("@/components/device-management/TemporaryAccessModal", () => ({
     isOpen,
     onClose,
     onGrantAccess,
-    shouldShowGrantTempAccess,
+    canGrantTemporaryAccess,
     userDevices,
   }: {
     user: { userId: string } | null;
     isOpen: boolean;
     onClose: () => void;
     onGrantAccess: (ids: number[], minutes: number, bypass?: boolean) => void;
-    shouldShowGrantTempAccess: (d: UserDevice) => boolean;
+    canGrantTemporaryAccess: (d: UserDevice) => boolean;
     userDevices: UserDevice[];
   }) => (
     <div>
       <span>{`temp-modal:${isOpen}:${user?.userId ?? "none"}`}</span>
       <span>{`eligible:${userDevices
-        .filter(shouldShowGrantTempAccess)
+        .filter(canGrantTemporaryAccess)
         .map((d) => d.id)
         .join(",")}`}</span>
       <button onClick={onClose}>close temp</button>
@@ -339,7 +337,7 @@ beforeEach(() => {
   localStorage.clear();
   consoleError = jest.spyOn(console, "error").mockImplementation(() => {});
   hasTemporaryAccess.mockReturnValue(false);
-  hasTimeRules.mockResolvedValue(false);
+  getAllTimeRules.mockResolvedValue([]);
   fetchAllTimeRules.mockResolvedValue(undefined);
   approveDevice.mockResolvedValue(true);
   rejectDevice.mockResolvedValue(true);
@@ -391,37 +389,15 @@ describe("DeviceManagement grouping", () => {
     expect(screen.queryByText("group:u-1")).toBeNull();
   });
 
-  it("flags a schedule when the user has time rules", async () => {
-    hasTimeRules.mockResolvedValue(true);
+  it("hands each group the user's time rules for per-device badges", async () => {
+    getAllTimeRules.mockResolvedValue([
+      { id: 1, userId: "u-1", enabled: true, dayOfWeek: 1 },
+    ]);
     await renderPanel();
 
     await waitFor(() =>
-      expect(screen.getByText("badges:u-1:true:false")).toBeInTheDocument(),
+      expect(screen.getByText("rules:u-1:1")).toBeInTheDocument(),
     );
-  });
-
-  it("flags an IP policy when one is customised", async () => {
-    await renderPanel({
-      users: [preference({ networkPolicy: "lan" })],
-    });
-
-    expect(screen.getByText("badges:u-1:false:true")).toBeInTheDocument();
-  });
-
-  it("flags an IP policy from a restricted access policy", async () => {
-    await renderPanel({
-      users: [preference({ ipAccessPolicy: "restricted" })],
-    });
-
-    expect(screen.getByText("badges:u-1:false:true")).toBeInTheDocument();
-  });
-
-  it("flags an IP policy from a populated allow list", async () => {
-    await renderPanel({
-      users: [preference({ allowedIPs: ["10.0.0.1"] })],
-    });
-
-    expect(screen.getByText("badges:u-1:false:true")).toBeInTheDocument();
   });
 
   it("logs a failure loading time-rule status", async () => {
@@ -464,7 +440,7 @@ describe("DeviceManagement search and sort", () => {
     const { user } = await renderPanel(twoUsers);
 
     await user.type(
-      screen.getByPlaceholderText("Search by username or device..."),
+      screen.getByPlaceholderText("Search by user or device"),
       term,
     );
 
@@ -476,7 +452,7 @@ describe("DeviceManagement search and sort", () => {
     const { user } = await renderPanel(twoUsers);
 
     await user.type(
-      screen.getByPlaceholderText("Search by username or device..."),
+      screen.getByPlaceholderText("Search by user or device"),
       "zzz",
     );
 
@@ -490,7 +466,7 @@ describe("DeviceManagement search and sort", () => {
     });
 
     await user.type(
-      screen.getByPlaceholderText("Search by username or device..."),
+      screen.getByPlaceholderText("Search by user or device"),
       "u-42",
     );
 
@@ -547,6 +523,20 @@ describe("DeviceManagement toolbar", () => {
     await user.click(screen.getByRole("button", { name: /Refresh/ }));
 
     expect(onRefresh).toHaveBeenCalled();
+  });
+
+  it("logs a refresh that fails instead of leaving the button spinning", async () => {
+    const { user, onRefresh } = await renderPanel();
+    onRefresh.mockRejectedValue(new Error("offline"));
+
+    await user.click(screen.getByRole("button", { name: /Refresh/ }));
+
+    await waitFor(() =>
+      expect(consoleError).toHaveBeenCalledWith(
+        "Failed to refresh:",
+        expect.any(Error),
+      ),
+    );
   });
 
   it("toggles auto refresh", async () => {
@@ -626,12 +616,29 @@ describe("DeviceManagement device actions", () => {
     expect(toast).not.toHaveBeenCalled();
   });
 
-  it("revokes temporary access", async () => {
+  it("asks before removing temporary access", async () => {
     const { user } = await renderPanel();
 
     await user.click(screen.getByRole("button", { name: "revoke u-1" }));
 
+    expect(
+      screen.getByText("confirm:removeTemporaryAccess"),
+    ).toBeInTheDocument();
+    expect(revokeTemporaryAccess).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "do it" }));
+
     await waitFor(() => expect(revokeTemporaryAccess).toHaveBeenCalledWith(1));
+  });
+
+  it("leaves temporary access alone when the confirmation is dismissed", async () => {
+    const { user } = await renderPanel();
+
+    await user.click(screen.getByRole("button", { name: "revoke u-1" }));
+    await user.click(screen.getByRole("button", { name: "never mind" }));
+
+    expect(screen.queryByText(/^confirm:/)).toBeNull();
+    expect(revokeTemporaryAccess).not.toHaveBeenCalled();
   });
 });
 
@@ -676,6 +683,40 @@ describe("DeviceManagement user actions", () => {
     await waitFor(() =>
       expect(updateUserPreference).toHaveBeenCalledWith("u-1", true),
     );
+  });
+
+  it("keeps the saving flag up until the refreshed data lands", async () => {
+    let release: () => void = () => {};
+    const { user, onRefresh } = await renderPanel();
+    onRefresh.mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          release = resolve;
+        }),
+    );
+
+    await user.click(screen.getByRole("button", { name: "block u-1" }));
+
+    await waitFor(() => expect(onRefresh).toHaveBeenCalled());
+    expect(screen.getByText("updating:u-1:u-1")).toBeInTheDocument();
+
+    await act(async () => {
+      release();
+    });
+
+    expect(screen.getByText("updating:u-1:none")).toBeInTheDocument();
+  });
+
+  it("drops the saving flag when the save itself fails", async () => {
+    updateUserPreference.mockResolvedValue(false);
+    const { user, onRefresh } = await renderPanel();
+
+    await user.click(screen.getByRole("button", { name: "block u-1" }));
+
+    await waitFor(() =>
+      expect(screen.getByText("updating:u-1:none")).toBeInTheDocument(),
+    );
+    expect(onRefresh).not.toHaveBeenCalled();
   });
 
   it("updates an IP policy", async () => {
@@ -911,6 +952,18 @@ describe("DeviceManagement hidden users", () => {
     expect(await screen.findByText("ghost")).toBeInTheDocument();
   });
 
+  it("closes the hidden users dialog", async () => {
+    const { user } = await renderPanel();
+    await user.click(screen.getByRole("button", { name: /Show Hidden Users/ }));
+    await screen.findByText("No hidden users found");
+
+    await user.click(screen.getByRole("button", { name: "Close" }));
+
+    await waitFor(() =>
+      expect(screen.queryByText("No hidden users found")).toBeNull(),
+    );
+  });
+
   it("says when nobody is hidden", async () => {
     const { user } = await renderPanel();
 
@@ -996,6 +1049,7 @@ describe("DeviceManagement granting temporary access", () => {
     const { user } = await renderPanel();
 
     await user.click(screen.getByRole("button", { name: "revoke u-1" }));
+    await user.click(screen.getByRole("button", { name: "do it" }));
 
     await waitFor(() => expect(revokeTemporaryAccess).toHaveBeenCalled());
   });

@@ -62,7 +62,9 @@ describe("request behaviour", () => {
   });
 
   it("uses the server message for a failed request", async () => {
-    fetchMock.mockImplementation(async () => jsonResponse({ message: "Nope" }, 400));
+    fetchMock.mockImplementation(async () =>
+      jsonResponse({ message: "Nope" }, 400),
+    );
     await expect(apiClient.get("/x")).rejects.toMatchObject({
       status: 400,
       message: "Nope",
@@ -70,7 +72,9 @@ describe("request behaviour", () => {
   });
 
   it("falls back to the error field", async () => {
-    fetchMock.mockImplementation(async () => jsonResponse({ error: "Bad" }, 400));
+    fetchMock.mockImplementation(async () =>
+      jsonResponse({ error: "Bad" }, 400),
+    );
     await expect(apiClient.get("/x")).rejects.toMatchObject({ message: "Bad" });
   });
 
@@ -98,8 +102,18 @@ describe("request behaviour", () => {
 
 describe("endpoint helpers", () => {
   const cases: Array<[string, () => Promise<unknown>, string, string]> = [
-    ["getDashboardData", () => apiClient.getDashboardData(), "GET", "/api/pg/dashboard"],
-    ["getHiddenUsers", () => apiClient.getHiddenUsers(), "GET", "/api/pg/users/hidden/list"],
+    [
+      "getDashboardData",
+      () => apiClient.getDashboardData(),
+      "GET",
+      "/api/pg/dashboard",
+    ],
+    [
+      "getHiddenUsers",
+      () => apiClient.getHiddenUsers(),
+      "GET",
+      "/api/pg/users/hidden/list",
+    ],
     ["hideUser", () => apiClient.hideUser("7"), "POST", "/api/pg/users/7/hide"],
     ["showUser", () => apiClient.showUser("7"), "POST", "/api/pg/users/7/show"],
     [
@@ -213,28 +227,29 @@ describe("endpoint helpers", () => {
     expect(lastRequest().init.method).toBe(verb);
   });
 
-  const scriptCases: Array<[string, (p: string) => Promise<unknown>, string]> = [
+  const scriptCases: Array<[string, (p: string) => Promise<unknown>, string]> =
     [
-      "resetStreamCounts",
-      (p) => apiClient.resetStreamCounts(p),
-      "/api/pg/config/scripts/reset-stream-counts",
-    ],
-    [
-      "clearSessionHistory",
-      (p) => apiClient.clearSessionHistory(p),
-      "/api/pg/config/scripts/clear-session-history",
-    ],
-    [
-      "deleteAllDevices",
-      (p) => apiClient.deleteAllDevices(p),
-      "/api/pg/config/scripts/delete-all-devices",
-    ],
-    [
-      "resetDatabase",
-      (p) => apiClient.resetDatabase(p),
-      "/api/pg/config/scripts/reset-database",
-    ],
-  ];
+      [
+        "resetStreamCounts",
+        (p) => apiClient.resetStreamCounts(p),
+        "/api/pg/config/scripts/reset-stream-counts",
+      ],
+      [
+        "clearSessionHistory",
+        (p) => apiClient.clearSessionHistory(p),
+        "/api/pg/config/scripts/clear-session-history",
+      ],
+      [
+        "deleteAllDevices",
+        (p) => apiClient.deleteAllDevices(p),
+        "/api/pg/config/scripts/delete-all-devices",
+      ],
+      [
+        "resetDatabase",
+        (p) => apiClient.resetDatabase(p),
+        "/api/pg/config/scripts/reset-database",
+      ],
+    ];
 
   it.each(scriptCases)(
     "%s posts the confirmation password",

@@ -4,6 +4,7 @@ import { EmailService, SMTPConfig, SmtpSettings } from './email.service';
 import { EmailTemplateService } from './email-template.service';
 import { ConfigService } from './config.service';
 import { TimezoneService } from './timezone.service';
+import { EMAIL_PALETTE } from '@/common/utils/email-palette';
 
 const mockCreateTransport = jest.fn<
   { verify: jest.Mock; sendMail: jest.Mock },
@@ -82,6 +83,7 @@ describe('EmailService', () => {
     templateService = {
       generateSMTPTestEmail: jest.fn().mockReturnValue('<p>test</p>'),
       generateNotificationEmail: jest.fn().mockReturnValue('<p>notice</p>'),
+      generatePasswordResetEmail: jest.fn().mockReturnValue('<p>reset</p>'),
     };
 
     configService = {
@@ -344,7 +346,7 @@ describe('EmailService', () => {
 
   describe('sendEmail', () => {
     const notice = {
-      type: 'info' as const,
+      type: 'block' as const,
       text: 'hello',
       username: 'testuser',
     };
@@ -445,10 +447,11 @@ describe('EmailService', () => {
     });
 
     it.each([
-      ['warning', 'Guardian Warning - Shield', 'WARNING'],
-      ['error', 'Guardian Error - Shield', 'ERROR'],
-      ['info', 'Guardian Notification - Shield', 'NOTIFICATION'],
-    ] as const)('labels a %s notification', async (type, subject, label) => {
+      ['block', EMAIL_PALETTE.danger],
+      ['new-device', EMAIL_PALETTE.info],
+      ['location-change', EMAIL_PALETTE.warning],
+      ['device-note', EMAIL_PALETTE.accent],
+    ] as const)('paints a %s notification', async (type, colour) => {
       await service.sendEmail({
         type,
         text: 'x',
@@ -456,10 +459,9 @@ describe('EmailService', () => {
         deviceName: 'Shield',
       });
 
-      expect(sentMail().subject).toBe(subject);
-      const [, , statusLabel] = templateService.generateNotificationEmail.mock
-        .calls[0] as [unknown, unknown, string];
-      expect(statusLabel).toBe(label);
+      const [, statusColor] = templateService.generateNotificationEmail.mock
+        .calls[0] as [unknown, string];
+      expect(statusColor).toBe(colour);
     });
 
     it('describes a block with no stop code generically', async () => {
@@ -469,8 +471,8 @@ describe('EmailService', () => {
         username: 'testuser',
       });
 
-      const [, , , mainMessage] = templateService.generateNotificationEmail.mock
-        .calls[0] as [unknown, unknown, unknown, string];
+      const [, , mainMessage] = templateService.generateNotificationEmail.mock
+        .calls[0] as [unknown, unknown, string];
       expect(mainMessage).toBe(
         'A streaming session has been blocked on your Plex server',
       );
@@ -523,6 +525,82 @@ describe('EmailService', () => {
       await expect(
         service.sendNewDeviceEmail('new device', 'testuser', 'Shield'),
       ).resolves.toBeUndefined();
+    });
+  });
+
+  describe('sendPasswordResetEmail', () => {
+    const send = () =>
+      service.sendPasswordResetEmail(
+        'owner@example.com',
+        'owner',
+        'https://guardian.example.com/reset-password?token=abc',
+        15,
+      );
+
+    it('writes only to the address that asked, not the notification list', async () => {
+      await send();
+
+      expect(sentMail().to).toEqual(['owner@example.com']);
+    });
+
+    it('sends from the configured identity', async () => {
+      await send();
+
+      expect(sentMail().from).toBe('Guardian <from@example.com>');
+    });
+
+    it('falls back to the bare address without a from name', async () => {
+      stored.SMTP_FROM_NAME = '';
+      await send();
+
+      expect(sentMail().from).toBe('from@example.com');
+    });
+
+    it('names the subject so it is not mistaken for an alert', async () => {
+      await send();
+
+      expect(sentMail().subject).toBe('Guardian: Reset your password');
+    });
+
+    it('repeats the link in the plain text part', async () => {
+      await send();
+
+      expect(sentMail().text).toContain(
+        'https://guardian.example.com/reset-password?token=abc',
+      );
+      expect(sentMail().text).toContain('15 minutes');
+    });
+
+    it('renders the body from the template', async () => {
+      await send();
+
+      expect(templateService.generatePasswordResetEmail).toHaveBeenCalledWith(
+        'owner',
+        'https://guardian.example.com/reset-password?token=abc',
+        15,
+        '2026-08-21 12:00:00',
+      );
+      expect(sentMail().html).toBe('<p>reset</p>');
+    });
+
+    it('sends nothing while SMTP is disabled', async () => {
+      stored.SMTP_ENABLED = false;
+      await send();
+
+      expect(sendMail).not.toHaveBeenCalled();
+    });
+
+    it('sends nothing while the SMTP settings are incomplete', async () => {
+      stored.SMTP_HOST = '';
+      await send();
+
+      expect(sendMail).not.toHaveBeenCalled();
+    });
+
+    it('swallows a transport failure', async () => {
+      sendMail.mockRejectedValue(new Error('relay refused'));
+
+      await expect(send()).resolves.toBeUndefined();
     });
   });
 });

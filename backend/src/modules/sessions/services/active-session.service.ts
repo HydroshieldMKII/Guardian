@@ -12,6 +12,14 @@ import {
   PlexSessionsResponse,
 } from '@/types/plex.types';
 
+export interface SessionHistoryQuery {
+  limit?: number;
+  offset?: number;
+  includeActive?: boolean;
+  search?: string;
+  terminatedOnly?: boolean;
+}
+
 interface PlexSessionData {
   sessionKey: string;
   User?: {
@@ -369,20 +377,47 @@ export class ActiveSessionService {
 
   async getUserSessionHistory(
     userId: string,
-    limit: number = 50,
-    includeActive: boolean = false,
+    query: SessionHistoryQuery = {},
   ): Promise<SessionHistory[]> {
+    const {
+      limit = 50,
+      offset = 0,
+      includeActive = false,
+      search,
+      terminatedOnly = false,
+    } = query;
+
     try {
       const queryBuilder = this.sessionHistoryRepository
         .createQueryBuilder('session')
         .leftJoinAndSelect('session.userDevice', 'device')
         .where('session.userId = :userId', { userId })
         .orderBy('session.startedAt', 'DESC')
+        .skip(offset)
         .take(limit);
 
       // By default, only return completed sessions (with endedAt)
       if (!includeActive) {
         queryBuilder.andWhere('session.endedAt IS NOT NULL');
+      }
+
+      if (terminatedOnly) {
+        queryBuilder.andWhere('session.terminated = :terminated', {
+          terminated: true,
+        });
+      }
+
+      const term = search?.trim().toLowerCase();
+      if (term) {
+        queryBuilder.andWhere(
+          '(LOWER(session.contentTitle) LIKE :term' +
+            ' OR LOWER(session.grandparentTitle) LIKE :term' +
+            ' OR LOWER(session.parentTitle) LIKE :term' +
+            ' OR LOWER(session.deviceAddress) LIKE :term' +
+            ' OR LOWER(device.deviceName) LIKE :term' +
+            ' OR LOWER(device.deviceProduct) LIKE :term)',
+          { term: `%${term}%` },
+        );
       }
 
       return await queryBuilder.getMany();

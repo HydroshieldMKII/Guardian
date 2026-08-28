@@ -244,16 +244,22 @@ export const validateIPAccess = (
   allowedIPs: string[] = [],
 ): { allowed: boolean; reason?: string } => {
   if (!isValidIP(clientIP)) {
-    return { allowed: false, reason: "Invalid IP address format" };
+    return { allowed: false, reason: "This is not a valid IP address" };
   }
 
   const networkType = getNetworkType(clientIP);
 
   if (networkPolicy === "lan" && networkType !== "lan") {
-    return { allowed: false, reason: "Only LAN access is allowed" };
+    return {
+      allowed: false,
+      reason: "Streaming is only allowed on the local network",
+    };
   }
   if (networkPolicy === "wan" && networkType !== "wan") {
-    return { allowed: false, reason: "Only WAN access is allowed" };
+    return {
+      allowed: false,
+      reason: "Streaming is only allowed from the internet",
+    };
   }
 
   if (ipAccessPolicy === "all") {
@@ -261,7 +267,10 @@ export const validateIPAccess = (
   }
 
   if (!isIPAllowed(clientIP, allowedIPs)) {
-    return { allowed: false, reason: "IP address not in allowed list" };
+    return {
+    allowed: false,
+    reason: "This IP address is not on the allowed list",
+  };
   }
 
   return { allowed: true };

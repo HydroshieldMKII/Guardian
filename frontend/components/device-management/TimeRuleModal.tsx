@@ -1,14 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { ConfirmationModal } from "@/components/ui/confirmation-modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import {
   DropdownMenu,
@@ -16,9 +9,20 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Trash2, Edit, Save, X, ChevronDown } from "lucide-react";
+import {
+  EmptyState,
+  Field,
+  Panel,
+  Section,
+  StatusPill,
+} from "@/components/ui/entity";
+import {
+  Modal,
+  ModalBody,
+  ModalFooter,
+  ModalHeader,
+} from "@/components/ui/modal";
+import { ChevronDown, RefreshCw } from "lucide-react";
 import { UserTimeRule, CreateTimeRuleDto } from "@/types";
 import { useTimeRules } from "@/hooks/device-management/useTimeRules";
 import { useToast } from "@/hooks/use-toast";
@@ -161,7 +165,7 @@ export function TimeRuleModal({
       console.error("Failed to load rules:", error);
       toast({
         title: "Error",
-        description: "Failed to load blocking rules",
+        description: "Failed to load this user's time schedule",
         variant: "destructive",
       });
     } finally {
@@ -264,7 +268,7 @@ export function TimeRuleModal({
     if (!validation.isValid && validation.conflictingRule) {
       toast({
         title: "Time Conflict",
-        description: `This rule would overlap with "${validation.conflictingRule.ruleName}" on ${getDayLabel(validation.conflictingRule.dayOfWeek)}`,
+        description: `This rule overlaps with "${validation.conflictingRule.ruleName}" on ${getDayLabel(validation.conflictingRule.dayOfWeek)}. Adjust the times so they do not cover the same hours.`,
         variant: "destructive",
       });
       return;
@@ -298,7 +302,7 @@ export function TimeRuleModal({
 
       toast({
         title: "Rule Updated",
-        description: "Blocking rule has been updated successfully",
+        description: "The rule has been updated",
         variant: "success",
       });
     } catch (error: any) {
@@ -319,7 +323,7 @@ export function TimeRuleModal({
       setRules((prev) => prev.filter((r) => r.id !== ruleId));
       toast({
         title: "Rule Deleted",
-        description: "Blocking rule has been deleted successfully",
+        description: "The rule has been removed from this user's time schedule",
         variant: "success",
       });
     } catch (error: any) {
@@ -337,7 +341,7 @@ export function TimeRuleModal({
     if (!newRule.ruleName.trim()) {
       toast({
         title: "Error",
-        description: "Please enter a rule name",
+        description: "Enter a name for this rule",
         variant: "destructive",
       });
       return;
@@ -353,7 +357,7 @@ export function TimeRuleModal({
     if (!validation.isValid && validation.conflictingRule) {
       toast({
         title: "Time Conflict",
-        description: `This rule would overlap with "${validation.conflictingRule.ruleName}" on ${getDayLabel(validation.conflictingRule.dayOfWeek)}`,
+        description: `This rule overlaps with "${validation.conflictingRule.ruleName}" on ${getDayLabel(validation.conflictingRule.dayOfWeek)}. Adjust the times so they do not cover the same hours.`,
         variant: "destructive",
       });
       return;
@@ -382,7 +386,7 @@ export function TimeRuleModal({
 
       toast({
         title: "Rule Created",
-        description: "Blocking rule has been created successfully",
+        description: "The rule has been added to this user's time schedule",
         variant: "success",
       });
     } catch (error: any) {
@@ -417,8 +421,8 @@ export function TimeRuleModal({
 
       setRules([]);
       toast({
-        title: "All Rules Deleted",
-        description: `Successfully deleted ${rules.length} blocking rules`,
+        title: "Time Schedule Cleared",
+        description: `Deleted ${rules.length} ${rules.length === 1 ? "rule" : "rules"}. This user can now stream at any time.`,
         variant: "success",
       });
     } catch (error: any) {
@@ -453,14 +457,17 @@ export function TimeRuleModal({
       setRules(sortRules(editingRules));
       toast({
         title: "Preset Applied",
-        description: `${presetType === "weekdays-only" ? "Weekdays" : "Weekends"} preset successfully applied`,
+        description:
+          presetType === "weekdays-only"
+            ? "Streaming is now blocked all day on Saturday and Sunday"
+            : "Streaming is now blocked all day from Monday to Friday",
         variant: "success",
       });
     } catch (error: any) {
       console.error(`Error creating ${presetType} preset:`, error);
       toast({
         title: "Error",
-        description: error.message || `Failed to create ${presetType} preset`,
+        description: error.message || "Failed to apply the preset",
         variant: "destructive",
       });
     } finally {
@@ -469,51 +476,263 @@ export function TimeRuleModal({
     }
   };
 
+  const spinner = <RefreshCw className="size-3.5 animate-spin" />;
+
   return (
     <>
-      <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="sm:max-w-[1100px] max-h-[85vh] sm:max-h-[90vh] flex flex-col overflow-hidden">
-          <DialogHeader className="flex-shrink-0">
-            <DialogTitle className="flex items-center gap-2">
-              Manage Blocking Rules
-            </DialogTitle>
-            <p className="text-sm text-muted-foreground">
-              Managing blocking rules for{" "}
-              <span className="font-semibold text-foreground">{username}</span>.
-              Streaming is allowed by default - add rules to block access during
-              specific times.
-            </p>
-          </DialogHeader>
+      <Modal open={isOpen} onOpenChange={onClose} size="xl">
+        <ModalHeader
+          title="Time Schedule"
+          description={
+            <>
+              <span className="font-medium text-foreground">{username}</span>{" "}
+              can stream at any time unless a rule below says otherwise. Each
+              rule blocks streaming on one day, between the two times you set.
+            </>
+          }
+        />
 
-          <div className="flex flex-col lg:flex-row gap-6 flex-1 overflow-y-auto lg:overflow-hidden min-h-0">
-            {/* Right Column - New Rules (Show second on mobile and desktop) */}
-            <div className="lg:w-1/2 flex flex-col min-h-0 space-y-4 flex-shrink-0 lg:flex-1 lg:flex-initial order-2">
-              <div className="flex items-center justify-between">
-                <Label className="text-sm font-medium">
-                  Add New Blocking Rule
-                </Label>
-              </div>
+        <ModalBody className="space-y-0">
+          <div className="flex flex-col gap-8 lg:flex-row lg:gap-10">
+            <Section
+              className="order-1 lg:w-1/2"
+              title="Active Rules"
+              action={
+                rules.length > 0 ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={deleteAllRules}
+                    disabled={deletingAllRules || loadingRules}
+                    className="border-rose-500/40 text-rose-600 hover:bg-rose-500/10 dark:text-rose-400"
+                  >
+                    {deletingAllRules && spinner}
+                    {deletingAllRules ? "Deleting..." : "Delete All"}
+                  </Button>
+                ) : undefined
+              }
+            >
+              {loadingRules ? (
+                <div className="flex items-center justify-center gap-2 py-10 text-sm text-muted-foreground">
+                  {spinner}
+                  <span>Loading rules...</span>
+                </div>
+              ) : rules.length === 0 ? (
+                <EmptyState
+                  title="No rules yet"
+                  description="This user can stream at any time. Add a rule to block streaming during a set part of the day."
+                />
+              ) : (
+                <div className="space-y-3">
+                  {rules.map((rule) => {
+                    const displayData =
+                      rule.isEditing && rule.tempData
+                        ? { ...rule, ...rule.tempData }
+                        : rule;
+                    const busy = updatingRuleId === rule.id;
 
-              {/* Quick Presets */}
-              <div className="space-y-2">
-                <Label className="text-xs font-medium text-muted-foreground">
-                  Quick Presets
-                </Label>
+                    return (
+                      <div
+                        key={rule.id}
+                        className={`rounded-lg border p-4 ${
+                          rule.enabled ? "bg-card" : "bg-muted/30"
+                        }`}
+                      >
+                        {rule.isEditing ? (
+                          <div className="space-y-4">
+                            <Field label="Rule Name">
+                              <FocusInput
+                                value={displayData.ruleName}
+                                onChange={(value) =>
+                                  updateTempData(rule.id, { ruleName: value })
+                                }
+                                placeholder="Rule name"
+                                className="w-full"
+                              />
+                            </Field>
+
+                            <Field label="Day">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    className="w-full justify-between font-normal"
+                                  >
+                                    {getDayLabel(displayData.dayOfWeek)}
+                                    <ChevronDown className="size-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent
+                                  align="start"
+                                  className="w-[160px]"
+                                >
+                                  {DAYS_OF_WEEK.map((day) => (
+                                    <DropdownMenuItem
+                                      key={day.value}
+                                      onClick={() =>
+                                        updateTempData(rule.id, {
+                                          dayOfWeek: day.value,
+                                        })
+                                      }
+                                    >
+                                      {day.label}
+                                    </DropdownMenuItem>
+                                  ))}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </Field>
+
+                            <Field label="Time Range">
+                              <div className="flex items-center gap-2">
+                                <FocusInput
+                                  type="time"
+                                  value={displayData.startTime}
+                                  onChange={(value) =>
+                                    updateTempData(rule.id, {
+                                      startTime: value,
+                                    })
+                                  }
+                                  className="flex-1"
+                                />
+                                <span className="text-sm text-muted-foreground">
+                                  to
+                                </span>
+                                <FocusInput
+                                  type="time"
+                                  value={displayData.endTime}
+                                  onChange={(value) =>
+                                    updateTempData(rule.id, { endTime: value })
+                                  }
+                                  className="flex-1"
+                                />
+                              </div>
+                            </Field>
+
+                            <div className="flex gap-2 border-t pt-4">
+                              <Button
+                                onClick={() => saveEdit(rule.id)}
+                                disabled={busy}
+                                size="sm"
+                                className="flex-1 sm:flex-none"
+                              >
+                                {busy ? "Saving..." : "Save"}
+                              </Button>
+                              <Button
+                                variant="outline"
+                                onClick={() => cancelEdit(rule.id)}
+                                disabled={busy}
+                                size="sm"
+                                className="flex-1 sm:flex-none"
+                              >
+                                Cancel
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="space-y-3">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0 flex-1">
+                                <p
+                                  className={`truncate text-sm font-semibold ${
+                                    rule.enabled
+                                      ? "text-foreground"
+                                      : "text-muted-foreground"
+                                  }`}
+                                >
+                                  {rule.ruleName}
+                                </p>
+                                <p className="mt-1 text-xs text-muted-foreground">
+                                  {getDayLabel(rule.dayOfWeek)} ·{" "}
+                                  {rule.startTime} - {rule.endTime}
+                                </p>
+                              </div>
+                              <StatusPill
+                                tone={rule.enabled ? "danger" : "neutral"}
+                              >
+                                Block
+                              </StatusPill>
+                            </div>
+
+                            <div className="flex items-center gap-2 border-t pt-3">
+                              <Switch
+                                checked={rule.enabled}
+                                disabled={busy}
+                                className="cursor-pointer"
+                                onCheckedChange={async (checked) => {
+                                  setUpdatingRuleId(rule.id);
+                                  try {
+                                    await updateTimeRule(userId, rule.id, {
+                                      enabled: checked,
+                                    });
+                                    setRules((prev) =>
+                                      prev.map((r) =>
+                                        r.id === rule.id
+                                          ? { ...r, enabled: checked }
+                                          : r,
+                                      ),
+                                    );
+                                  } catch (error: any) {
+                                    toast({
+                                      title: "Error",
+                                      description:
+                                        error.message ||
+                                        "Failed to update rule",
+                                      variant: "destructive",
+                                    });
+                                  } finally {
+                                    setUpdatingRuleId(null);
+                                  }
+                                }}
+                              />
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => startEdit(rule.id)}
+                                disabled={busy || deletingRuleId === rule.id}
+                                className="ml-auto"
+                              >
+                                Edit
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => deleteRule(rule.id)}
+                                disabled={busy || deletingRuleId === rule.id}
+                                className="border-rose-500/40 text-rose-600 hover:bg-rose-500/10 dark:text-rose-400"
+                              >
+                                {deletingRuleId === rule.id
+                                  ? spinner
+                                  : "Delete"}
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </Section>
+
+            <Section className="order-2 lg:w-1/2" title="Add a Rule">
+              <Field
+                label="Presets"
+                hint="Each preset replaces every existing rule with a schedule that blocks the other days entirely."
+              >
                 <div className="grid grid-cols-2 gap-2">
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={createWeekdaysOnlyPreset}
                     disabled={!!creatingPreset || creatingRule}
-                    className="text-xs"
                   >
                     {creatingPreset === "weekdays-only" ? (
                       <>
-                        <div className="w-3 h-3 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin mr-1" />
+                        {spinner}
                         Applying...
                       </>
                     ) : (
-                      "Weekdays Only"
+                      "Allow Weekdays Only"
                     )}
                   </Button>
                   <Button
@@ -521,414 +740,147 @@ export function TimeRuleModal({
                     size="sm"
                     onClick={createWeekendsOnlyPreset}
                     disabled={!!creatingPreset || creatingRule}
-                    className="text-xs"
                   >
                     {creatingPreset === "weekends-only" ? (
                       <>
-                        <div className="w-3 h-3 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin mr-1" />
+                        {spinner}
                         Applying...
                       </>
                     ) : (
-                      "Weekends Only"
+                      "Allow Weekends Only"
                     )}
                   </Button>
                 </div>
-              </div>
+              </Field>
 
-              <div className="overflow-y-auto lg:flex-1 lg:overflow-y-auto">
-                <Card>
-                  <CardContent className="px-4 py-3 space-y-4">
-                    {/* Rule Name */}
-                    <div>
-                      <Label className="text-sm font-medium">
-                        Block Rule Name
-                      </Label>
-                      <Input
-                        value={newRule.ruleName}
-                        onChange={(e) =>
-                          setNewRule((prev) => ({
-                            ...prev,
-                            ruleName: e.target.value,
-                          }))
-                        }
-                        placeholder="e.g. School hours, Sleep time, Work hours"
-                      />
-                    </div>
+              <Panel className="space-y-4">
+                <Field label="Rule Name" htmlFor="new-rule-name">
+                  <Input
+                    id="new-rule-name"
+                    value={newRule.ruleName}
+                    onChange={(e) =>
+                      setNewRule((prev) => ({
+                        ...prev,
+                        ruleName: e.target.value,
+                      }))
+                    }
+                    placeholder="e.g. School hours, Sleep time, Work hours"
+                  />
+                </Field>
 
-                    {/* Day */}
-                    <div>
-                      <Label className="text-sm font-medium">Day</Label>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="outline"
-                            className="w-full justify-between text-sm"
-                          >
-                            {getDayLabel(newRule.dayOfWeek)}
-                            <ChevronDown className="w-4 h-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent
-                          align="start"
-                          className="w-[160px]"
-                        >
-                          {DAYS_OF_WEEK.map((day) => (
-                            <DropdownMenuItem
-                              key={day.value}
-                              onClick={() =>
-                                setNewRule((prev) => ({
-                                  ...prev,
-                                  dayOfWeek: day.value,
-                                }))
-                              }
-                            >
-                              {day.label}
-                            </DropdownMenuItem>
-                          ))}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-
-                    {/* Time Range */}
-                    <div>
-                      <Label className="text-sm font-medium">
-                        Block During Time Range
-                      </Label>
-                      <div className="flex gap-2 items-center">
-                        <Input
-                          type="time"
-                          value={newRule.startTime}
-                          onChange={(e) =>
-                            setNewRule((prev) => ({
-                              ...prev,
-                              startTime: e.target.value,
-                            }))
-                          }
-                          className="flex-1"
-                        />
-                        <span className="text-sm text-muted-foreground">
-                          to
-                        </span>
-                        <Input
-                          type="time"
-                          value={newRule.endTime}
-                          onChange={(e) =>
-                            setNewRule((prev) => ({
-                              ...prev,
-                              endTime: e.target.value,
-                            }))
-                          }
-                          className="flex-1"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Create Button */}
-                    <Button
-                      onClick={createRule}
-                      disabled={
-                        creatingRule ||
-                        !!creatingPreset ||
-                        !newRule.ruleName.trim()
-                      }
-                      className="w-full flex items-center gap-2"
-                    >
-                      {creatingRule ? (
-                        <>
-                          <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
-                          Creating...
-                        </>
-                      ) : (
-                        <>Create Blocking Rule</>
-                      )}
-                    </Button>
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
-
-            {/* Left Column - Existing Rules (Show first on mobile and desktop) */}
-            <div className="lg:w-1/2 flex flex-col min-h-0 flex-shrink-0 lg:flex-1 order-1">
-              <div className="flex items-center justify-between mb-3 pr-2">
-                <Label className="text-sm font-medium">
-                  Active Blocking Rules
-                </Label>
-                {rules.length > 0 && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={deleteAllRules}
-                    disabled={deletingAllRules || loadingRules}
-                    className="flex items-center gap-1 border-red-600 text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-700 dark:hover:bg-red-900/20"
-                  >
-                    {deletingAllRules ? (
-                      <div className="w-3 h-3 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
-                    ) : null}
-                    {deletingAllRules ? "Deleting..." : "Delete All"}
-                  </Button>
-                )}
-              </div>
-              <div className="overflow-y-auto space-y-2 scrollbar-hide lg:flex-1 lg:overflow-y-auto">
-                {loadingRules ? (
-                  <div className="text-center py-4">Loading rules...</div>
-                ) : rules.length === 0 ? (
-                  <div className="py-8">
-                    <div className="text-muted-foreground">
-                      <p className="text-sm">No blocking rules configured.</p>
-                      <p className="text-xs mt-1">
-                        Streaming is allowed by default. Add blocking rules to
-                        restrict access during specific time periods.
-                      </p>
-                    </div>
-                  </div>
-                ) : (
-                  rules.map((rule) => {
-                    const displayData =
-                      rule.isEditing && rule.tempData
-                        ? { ...rule, ...rule.tempData }
-                        : rule;
-
-                    return (
-                      <Card
-                        key={rule.id}
-                        className={!rule.enabled ? "bg-muted/30" : ""}
+                <Field label="Day">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="w-full justify-between font-normal"
                       >
-                        <CardContent className="px-4 py-3">
-                          {rule.isEditing ? (
-                            <div className="space-y-4">
-                              {/* Rule Name */}
-                              <div>
-                                <Label className="text-sm font-medium">
-                                  Rule Name
-                                </Label>
-                                <FocusInput
-                                  value={displayData.ruleName}
-                                  onChange={(value) =>
-                                    updateTempData(rule.id, {
-                                      ruleName: value,
-                                    })
-                                  }
-                                  placeholder="Rule name"
-                                  className="w-full"
-                                />
-                              </div>
+                        {getDayLabel(newRule.dayOfWeek)}
+                        <ChevronDown className="size-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="w-[160px]">
+                      {DAYS_OF_WEEK.map((day) => (
+                        <DropdownMenuItem
+                          key={day.value}
+                          onClick={() =>
+                            setNewRule((prev) => ({
+                              ...prev,
+                              dayOfWeek: day.value,
+                            }))
+                          }
+                        >
+                          {day.label}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </Field>
 
-                              {/* Day */}
-                              <div>
-                                <Label className="text-sm font-medium">
-                                  Day
-                                </Label>
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <Button
-                                      variant="outline"
-                                      className="w-full justify-between text-sm"
-                                    >
-                                      {getDayLabel(displayData.dayOfWeek)}
-                                      <ChevronDown className="w-4 h-4" />
-                                    </Button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent
-                                    align="start"
-                                    className="w-[160px]"
-                                  >
-                                    {DAYS_OF_WEEK.map((day) => (
-                                      <DropdownMenuItem
-                                        key={day.value}
-                                        onClick={() =>
-                                          updateTempData(rule.id, {
-                                            dayOfWeek: day.value,
-                                          })
-                                        }
-                                      >
-                                        {day.label}
-                                      </DropdownMenuItem>
-                                    ))}
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
-                              </div>
+                <Field
+                  label="Block Streaming Between"
+                  hint="An end time earlier than the start time runs past midnight into the next day."
+                >
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="time"
+                      value={newRule.startTime}
+                      onChange={(e) =>
+                        setNewRule((prev) => ({
+                          ...prev,
+                          startTime: e.target.value,
+                        }))
+                      }
+                      className="flex-1"
+                    />
+                    <span className="text-sm text-muted-foreground">to</span>
+                    <Input
+                      type="time"
+                      value={newRule.endTime}
+                      onChange={(e) =>
+                        setNewRule((prev) => ({
+                          ...prev,
+                          endTime: e.target.value,
+                        }))
+                      }
+                      className="flex-1"
+                    />
+                  </div>
+                </Field>
 
-                              {/* Time Range */}
-                              <div>
-                                <Label className="text-sm font-medium">
-                                  Time Range
-                                </Label>
-                                <div className="flex gap-2 items-center">
-                                  <FocusInput
-                                    type="time"
-                                    value={displayData.startTime}
-                                    onChange={(value) =>
-                                      updateTempData(rule.id, {
-                                        startTime: value,
-                                      })
-                                    }
-                                    className="flex-1"
-                                  />
-                                  <span className="text-sm text-muted-foreground">
-                                    to
-                                  </span>
-                                  <FocusInput
-                                    type="time"
-                                    value={displayData.endTime}
-                                    onChange={(value) =>
-                                      updateTempData(rule.id, {
-                                        endTime: value,
-                                      })
-                                    }
-                                    className="flex-1"
-                                  />
-                                </div>
-                              </div>
-
-                              {/* Actions */}
-                              <div className="flex gap-2">
-                                <Button
-                                  onClick={() => saveEdit(rule.id)}
-                                  disabled={updatingRuleId === rule.id}
-                                  size="sm"
-                                  className="flex items-center gap-1"
-                                >
-                                  <Save className="w-3 h-3" />
-                                  {updatingRuleId === rule.id
-                                    ? "Saving..."
-                                    : "Save"}
-                                </Button>
-                                <Button
-                                  variant="outline"
-                                  onClick={() => cancelEdit(rule.id)}
-                                  disabled={updatingRuleId === rule.id}
-                                  size="sm"
-                                  className="flex items-center gap-1"
-                                >
-                                  <X className="w-3 h-3" />
-                                  Cancel
-                                </Button>
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="flex items-start justify-between gap-4">
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                  <span
-                                    className={`font-medium truncate ${!rule.enabled ? "text-muted-foreground" : ""}`}
-                                  >
-                                    {rule.ruleName}
-                                  </span>
-                                  <div className="flex gap-1 flex-shrink-0">
-                                    <Badge
-                                      variant="default"
-                                      className={`text-xs text-white ${
-                                        !rule.enabled
-                                          ? "bg-gray-400 hover:bg-gray-500 dark:bg-gray-600 dark:hover:bg-gray-700 border-gray-400"
-                                          : "bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800 border-red-600"
-                                      }`}
-                                    >
-                                      Block
-                                    </Badge>
-                                  </div>
-                                </div>
-                                <p
-                                  className={`text-sm ${!rule.enabled ? "text-muted-foreground/60" : "text-muted-foreground"}`}
-                                >
-                                  {getDayLabel(rule.dayOfWeek)} •{" "}
-                                  {rule.startTime} - {rule.endTime}
-                                </p>
-                              </div>
-                              <div className="flex items-center gap-2 flex-shrink-0">
-                                <Switch
-                                  checked={rule.enabled}
-                                  disabled={updatingRuleId === rule.id}
-                                  onCheckedChange={async (checked) => {
-                                    setUpdatingRuleId(rule.id);
-                                    try {
-                                      await updateTimeRule(userId, rule.id, {
-                                        enabled: checked,
-                                      });
-                                      setRules((prev) =>
-                                        prev.map((r) =>
-                                          r.id === rule.id
-                                            ? { ...r, enabled: checked }
-                                            : r,
-                                        ),
-                                      );
-                                    } catch (error: any) {
-                                      toast({
-                                        title: "Error",
-                                        description:
-                                          error.message ||
-                                          "Failed to update rule",
-                                        variant: "destructive",
-                                      });
-                                    } finally {
-                                      setUpdatingRuleId(null);
-                                    }
-                                  }}
-                                />
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => startEdit(rule.id)}
-                                  disabled={
-                                    updatingRuleId === rule.id ||
-                                    deletingRuleId === rule.id
-                                  }
-                                >
-                                  <Edit className="w-4 h-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => deleteRule(rule.id)}
-                                  disabled={
-                                    updatingRuleId === rule.id ||
-                                    deletingRuleId === rule.id
-                                  }
-                                >
-                                  {deletingRuleId === rule.id ? (
-                                    <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
-                                  ) : (
-                                    <Trash2 className="w-4 h-4 text-red-600 dark:text-red-400" />
-                                  )}
-                                </Button>
-                              </div>
-                            </div>
-                          )}
-                        </CardContent>
-                      </Card>
-                    );
-                  })
-                )}
-              </div>
-            </div>
+                <Button
+                  onClick={createRule}
+                  disabled={
+                    creatingRule || !!creatingPreset || !newRule.ruleName.trim()
+                  }
+                  className="w-full"
+                >
+                  {creatingRule ? (
+                    <>
+                      {spinner}
+                      Creating...
+                    </>
+                  ) : (
+                    "Create Rule"
+                  )}
+                </Button>
+              </Panel>
+            </Section>
           </div>
-          {/* Footer */}
-          <div className="flex justify-end pt-4 border-t">
-            <Button variant="outline" onClick={onClose}>
-              Close
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+        </ModalBody>
 
-      {/* Delete All Confirmation Dialog */}
+        <ModalFooter>
+          <Button variant="outline" onClick={onClose}>
+            Close
+          </Button>
+        </ModalFooter>
+      </Modal>
+
       <ConfirmationModal
         isOpen={showDeleteAllConfirm}
         onClose={() => setShowDeleteAllConfirm(false)}
         onConfirm={confirmDeleteAllRules}
-        title="Delete All Blocking Rules?"
-        description="This action will permanently delete all existing blocking rules for this user. This cannot be undone."
+        title="Delete every rule?"
+        description="This permanently deletes every rule in this user's time schedule, so they will be able to stream at any time. This cannot be undone."
         confirmText="Delete All"
         variant="destructive"
         loading={deletingAllRules}
       />
 
-      {/* Preset Confirmation Dialog */}
       <ConfirmationModal
         isOpen={!!showPresetConfirm}
         onClose={() => setShowPresetConfirm(null)}
         onConfirm={() => confirmCreatePreset(showPresetConfirm!)}
-        title={`Apply ${showPresetConfirm} Preset?`}
-        description={`This will delete all existing rules and create new blocking rules for ${showPresetConfirm?.toLowerCase()}. This action cannot be undone.`}
+        title={
+          showPresetConfirm === "weekdays-only"
+            ? "Allow weekdays only?"
+            : "Allow weekends only?"
+        }
+        description={
+          showPresetConfirm === "weekdays-only"
+            ? "This deletes every existing rule and blocks streaming all day on Saturday and Sunday. This cannot be undone."
+            : "This deletes every existing rule and blocks streaming all day from Monday to Friday. This cannot be undone."
+        }
         confirmText="Apply Preset"
         variant="default"
         loading={creatingPreset === showPresetConfirm}

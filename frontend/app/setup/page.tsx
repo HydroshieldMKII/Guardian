@@ -3,7 +3,9 @@
 import { useState } from "react";
 import { useAuth } from "@/contexts/auth-context";
 import { Button } from "@/components/ui/button";
+import { LogoMark } from "@/components/ui/logo-mark";
 import { Input } from "@/components/ui/input";
+import { Field, StatusPill } from "@/components/ui/entity";
 import {
   Card,
   CardContent,
@@ -70,7 +72,7 @@ export default function SetupPage() {
     // Email is optional, but if provided must be valid
     const emailRegex = /^[a-zA-Z0-9._%-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     if (formData.email && !emailRegex.test(formData.email)) {
-      newErrors.email = "Please enter a valid email address";
+      newErrors.email = "Enter a valid email address";
     }
 
     if (!formData.password || formData.password.length < 12) {
@@ -85,7 +87,7 @@ export default function SetupPage() {
       !requirements.number ||
       !requirements.special
     ) {
-      newErrors.password = "Password must match all complexity requirements";
+      newErrors.password = "Password must meet every requirement listed below";
     }
 
     if (formData.password !== formData.confirmPassword) {
@@ -122,8 +124,8 @@ export default function SetupPage() {
       );
 
       toast({
-        title: "Success",
-        description: "Admin account created successfully",
+        title: "Account Created",
+        description: "You can sign in with it now",
         variant: "success",
       });
 
@@ -134,7 +136,7 @@ export default function SetupPage() {
         description:
           error instanceof Error
             ? error.message
-            : "Failed to create admin account",
+            : "Failed to create the administrator account",
         variant: "destructive",
       });
     } finally {
@@ -183,8 +185,11 @@ export default function SetupPage() {
       </Button>
 
       <Card className="w-full max-w-md shadow-xl max-h-[90vh] overflow-y-auto">
-        <CardHeader className="space-y-1 text-center pb-6 mt-4">
-          <CardTitle className="text-3xl font-bold">Guardian</CardTitle>
+        <CardHeader className="space-y-1 text-center pb-6 pt-8">
+          <CardTitle className="flex items-center justify-center gap-3 text-3xl font-bold">
+            <LogoMark className="h-9 w-auto" />
+            Guardian
+          </CardTitle>
           <CardDescription className="text-sm">
             Create your admin account to get started
           </CardDescription>
@@ -394,16 +399,12 @@ export default function SetupPage() {
             </div>
 
             {/* Email */}
-            <div className="space-y-2">
-              <label
-                htmlFor="email"
-                className="text-sm font-semibold text-foreground"
-              >
-                Email{" "}
-                <span className="text-xs font-normal text-muted-foreground">
-                  (optional)
-                </span>
-              </label>
+            <Field
+              label="Email"
+              htmlFor="email"
+              hint="Needed to reset your password if you forget it."
+              action={<StatusPill tone="neutral">Optional</StatusPill>}
+            >
               <div className="relative">
                 <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -423,7 +424,7 @@ export default function SetupPage() {
                   {errors.email}
                 </div>
               )}
-            </div>
+            </Field>
 
             {/* Submit Button */}
             <Button
@@ -432,7 +433,7 @@ export default function SetupPage() {
               className="w-full mt-2"
               size="lg"
             >
-              {isSubmitting ? "Creating Account..." : "Create Admin Account"}
+              {isSubmitting ? "Creating..." : "Create Administrator Account"}
             </Button>
           </form>
         </CardContent>

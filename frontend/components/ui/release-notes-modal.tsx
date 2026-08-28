@@ -1,15 +1,12 @@
 "use client";
 
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Download, ExternalLink, X } from "lucide-react";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Modal,
+  ModalBody,
+  ModalFooter,
+  ModalHeader,
+} from "@/components/ui/modal";
 
 interface ReleaseNotesModalProps {
   isOpen: boolean;
@@ -66,49 +63,48 @@ export function ReleaseNotesModal({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[80vh]">
-        <DialogHeader>
-          <DialogTitle>
-            What&apos;s New in Guardian v{latestVersion}
-          </DialogTitle>
-          <DialogDescription>
-            Review the latest features and improvements in this release.
-          </DialogDescription>
-        </DialogHeader>
+    <Modal open={isOpen} onOpenChange={onClose} size="lg">
+      <ModalHeader
+        title={`What's New in v${latestVersion}`}
+        description="Review the latest features and improvements in this release."
+      />
 
-        <ScrollArea className="max-h-[50vh]">
-          <div
-            className="prose prose-sm dark:prose-invert max-w-none text-sm leading-relaxed"
-            dangerouslySetInnerHTML={{
-              __html: formatReleaseNotes(releaseNotes),
-            }}
-          />
-        </ScrollArea>
+      <ModalBody>
+        <div
+          className="prose prose-sm dark:prose-invert max-w-none text-sm leading-relaxed"
+          dangerouslySetInnerHTML={{
+            __html: formatReleaseNotes(releaseNotes),
+          }}
+        />
+      </ModalBody>
 
-        <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t">
-          <Button
-            onClick={() => window.open(updateUrl, "_blank")}
-            className="flex-1"
-          >
-            <ExternalLink className="h-4 w-4 mr-2" />
-            View on Github
-          </Button>
-          <Button
-            onClick={() =>
-              window.open(
-                "https://github.com/HydroshieldMKII/Guardian?tab=readme-ov-file#updating",
-                "_blank",
-              )
-            }
-            variant="outline"
-            className="flex-1"
-          >
-            <Download className="h-4 w-4 mr-2" />
-            How to Update
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
+      <ModalFooter className="sm:justify-stretch">
+        <Button
+          variant="outline"
+          onClick={() => onClose()}
+          className="sm:flex-1"
+        >
+          Close
+        </Button>
+        <Button
+          variant="outline"
+          onClick={() =>
+            window.open(
+              "https://github.com/HydroshieldMKII/Guardian?tab=readme-ov-file#updating",
+              "_blank",
+            )
+          }
+          className="sm:flex-1"
+        >
+          How to Update
+        </Button>
+        <Button
+          onClick={() => window.open(updateUrl, "_blank")}
+          className="sm:flex-1"
+        >
+          View on Github
+        </Button>
+      </ModalFooter>
+    </Modal>
   );
 }

@@ -9,7 +9,11 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PlexStatus } from "@/types";
-import { PlexErrorCode, ERROR_DISPLAY_CONFIG } from "@/types/plex-errors";
+import {
+  PlexErrorCode,
+  ERROR_DISPLAY_CONFIG,
+  ErrorDisplayConfig,
+} from "@/types/plex-errors";
 
 interface ErrorHandlerProps {
   plexStatus?: PlexStatus | null;
@@ -24,12 +28,17 @@ export function ErrorHandler({
   onShowSettings,
   onRetry,
 }: ErrorHandlerProps) {
+  const withDetail = (config: ErrorDisplayConfig, detail: string) =>
+    detail
+      ? { ...config, description: `${config.description} (${detail})` }
+      : { ...config };
+
   // Determine the appropriate display configuration based on the error
   const getErrorInfo = () => {
     // Check for backend errors FIRST
     if (backendError) {
       return {
-        title: "Backend Connection Error",
+        title: "Cannot Reach the Backend",
         description: backendError,
         showChecklist: false,
         isBackendError: true,
@@ -42,13 +51,13 @@ export function ErrorHandler({
     if (
       status.includes("Backend connection error") ||
       status.includes("Failed to fetch dashboard data") ||
-      status.includes("Cannot connect to Guardian backend") ||
+      status.includes("Cannot connect to the backend") ||
       status.includes("Backend server is not reachable")
     ) {
       return {
-        title: "Backend Connection Error",
+        title: "Cannot Reach the Backend",
         description:
-          "Cannot communicate with the Guardian backend. Please check if the backend service is running.",
+          "The backend is not answering. Check that the service is running.",
         showChecklist: false,
       };
     }
@@ -87,16 +96,22 @@ export function ErrorHandler({
 
     // If we found an error code, use the configured display
     if (errorCode && ERROR_DISPLAY_CONFIG[errorCode]) {
-      return { ...ERROR_DISPLAY_CONFIG[errorCode] };
+      return withDetail(
+        ERROR_DISPLAY_CONFIG[errorCode],
+        status.slice(status.indexOf(":") + 1).trim(),
+      );
     }
 
     // Fallback for unknown errors
-    return {
-      title: "Oops! Something Went Wrong",
-      description:
-        "Something went wrong with Guardian. Please check your setup and try again.",
-      showChecklist: false,
-    };
+    return withDetail(
+      {
+        title: "Something Went Wrong",
+        description:
+          "Something went wrong that could not be explained. Check your setup and try again.",
+        showChecklist: false,
+      },
+      status,
+    );
   };
 
   const errorInfo = getErrorInfo();
@@ -115,15 +130,6 @@ export function ErrorHandler({
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="bg-primary/10 dark:bg-primary/20 border border-primary/20 rounded-lg p-4">
-                <h3 className="text-sm font-medium text-primary">
-                  Connection Status
-                </h3>
-                <p className="text-sm text-primary/80">
-                  {plexStatus?.connectionStatus || "Not configured"}
-                </p>
-              </div>
-
               {errorInfo.showChecklist && (
                 <div className="space-y-4">
                   <h4 className="text-sm font-medium text-foreground">

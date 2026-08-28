@@ -16,6 +16,7 @@ import {
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import { Field, StatusPill } from "@/components/ui/entity";
 import {
   Dialog,
   DialogContent,
@@ -24,12 +25,9 @@ import {
   DialogFooter,
   DialogDescription,
 } from "@/components/ui/dialog";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { HintTooltip } from "@/components/ui/hint-tooltip";
+import { BYPASSED_BY_TEMPORARY_ACCESS } from "@/lib/device-policies";
+import { formatTimeLeft } from "@/lib/duration";
 import {
   Sun,
   Moon,
@@ -102,6 +100,12 @@ interface PortalSettings {
   allowRejectedRequests: boolean;
 }
 
+const NETWORK_POLICY_LABEL: Record<string, string> = {
+  both: "Local network and internet",
+  lan: "Local network only",
+  wan: "Internet only",
+};
+
 const DAY_NAMES = [
   "Sunday",
   "Monday",
@@ -112,108 +116,62 @@ const DAY_NAMES = [
   "Saturday",
 ];
 
-// Helper function to calculate time left
-const getTemporaryAccessTimeLeft = (until: string) => {
-  const now = new Date();
-  const endTime = new Date(until);
-  const diffMs = endTime.getTime() - now.getTime();
-
-  if (diffMs <= 0) return "Expired";
-
-  const diffMins = Math.floor(diffMs / 60000);
-  const totalHours = Math.floor(diffMins / 60);
-  const days = Math.floor(totalHours / 24);
-  const hours = totalHours % 24;
-  const mins = diffMins % 60;
-
-  const parts: string[] = [];
-  if (days > 0) parts.push(`${days}d`);
-  if (hours > 0) parts.push(`${hours}h`);
-  if (mins > 0 || parts.length === 0) parts.push(`${mins}m`);
-
-  return parts.join(" ");
-};
-
-// Temporary Access Badge component with controlled tooltip for mobile support
 const TemporaryAccessBadge = ({ device }: { device: UserPortalDevice }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
-
-  // Detect mobile on mount
-  React.useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 640);
-    checkMobile();
-    window.addEventListener("resize", checkMobile);
-    return () => window.removeEventListener("resize", checkMobile);
-  }, []);
-
-  // Handle open change - only allow Radix to control on desktop
-  const handleOpenChange = (open: boolean) => {
-    if (!isMobile) {
-      setIsOpen(open);
-    }
-  };
-
-  const timeLeft = getTemporaryAccessTimeLeft(device.temporaryAccessUntil!);
+  const timeLeft = formatTimeLeft(device.temporaryAccessUntil!);
 
   return (
-    <TooltipProvider delayDuration={0}>
-      <Tooltip open={isOpen} onOpenChange={handleOpenChange}>
-        <TooltipTrigger asChild>
-          <button
-            type="button"
-            className="inline-flex focus:outline-none rounded-md"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              if (isMobile) {
-                setIsOpen((prev) => !prev);
-              }
-            }}
-            onMouseEnter={() => {
-              if (!isMobile) setIsOpen(true);
-            }}
-            onMouseLeave={() => {
-              if (!isMobile) setIsOpen(false);
-            }}
-          >
-            <Badge
-              variant="outline"
-              className={`cursor-help ${
-                device.temporaryAccessBypassPolicies
-                  ? "text-purple-500 border-purple-500"
-                  : "text-blue-500 border-blue-500"
-              }`}
-            >
-              <Clock className="mr-1 h-3 w-3" />
-              Temporary Access
-              <HelpCircle className="ml-1 h-3 w-3 opacity-60" />
-            </Badge>
-          </button>
-        </TooltipTrigger>
-        <TooltipContent
-          className="max-w-xs"
-          onPointerDownOutside={(e) => {
-            e.preventDefault();
-            setIsOpen(false);
-          }}
-        >
-          <div className="space-y-1">
-            <p className="font-medium">Temporary access granted</p>
-            <p className="text-sm">Time remaining: {timeLeft}</p>
-            {device.temporaryAccessBypassPolicies && (
-              <p className="text-sm text-purple-400">
-                ✓ Bypasses all account rules
-              </p>
-            )}
-          </div>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+    <HintTooltip
+      hint={
+        <div className="space-y-1">
+          <p className="font-medium">Temporary access granted</p>
+          <p className="text-sm">Time remaining: {timeLeft}</p>
+          {device.temporaryAccessBypassPolicies && (
+            <p className="text-sm text-purple-400">
+              While it lasts, {BYPASSED_BY_TEMPORARY_ACCESS} do not apply to
+              this device.
+            </p>
+          )}
+        </div>
+      }
+      screenReaderHint={`Temporary access expires in ${timeLeft}`}
+    >
+      <Badge
+        variant="outline"
+        className={`cursor-help ${
+          device.temporaryAccessBypassPolicies
+            ? "text-purple-500 border-purple-500"
+            : "text-blue-500 border-blue-500"
+        }`}
+      >
+        <Clock className="mr-1 h-3 w-3" />
+        Temporary Access
+        <HelpCircle className="ml-1 h-3 w-3 opacity-60" />
+      </Badge>
+    </HintTooltip>
   );
 };
 
-// Status Badge component with controlled tooltip for mobile support
+const STATUS_BADGES = {
+  approved: {
+    className: "text-green-500 border-green-500",
+    icon: <CheckCircle className="mr-1 h-3 w-3" />,
+    label: "Approved",
+    hint: "The server owner has approved this device. You can stream on it.",
+  },
+  rejected: {
+    className: "text-red-500 border-red-500",
+    icon: <XCircle className="mr-1 h-3 w-3" />,
+    label: "Rejected",
+    hint: "The server owner has blocked this device. You cannot stream on it.",
+  },
+  pending: {
+    className: "text-yellow-500 border-yellow-500",
+    icon: <AlertCircle className="mr-1 h-3 w-3" />,
+    label: "Pending",
+    hint: "The server owner has not reviewed this device yet.",
+  },
+} as const;
+
 const StatusBadge = ({
   type,
   device,
@@ -221,88 +179,19 @@ const StatusBadge = ({
   type: "approved" | "rejected" | "pending";
   device: UserPortalDevice;
 }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
-
-  // Detect mobile on mount
-  React.useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 640);
-    checkMobile();
-    window.addEventListener("resize", checkMobile);
-    return () => window.removeEventListener("resize", checkMobile);
-  }, []);
-
-  // Handle open change - only allow Radix to control on desktop
-  const handleOpenChange = (open: boolean) => {
-    if (!isMobile) {
-      setIsOpen(open);
-    }
-  };
-
-  const badgeConfig = {
-    approved: {
-      className: "text-green-500 border-green-500",
-      icon: <CheckCircle className="mr-1 h-3 w-3" />,
-      label: "Approved",
-      tooltip: "This device has been approved by the administrator",
-    },
-    rejected: {
-      className: "text-red-500 border-red-500",
-      icon: <XCircle className="mr-1 h-3 w-3" />,
-      label: "Rejected",
-      tooltip: "This device has been rejected by the administrator.",
-    },
-    pending: {
-      className: "text-yellow-500 border-yellow-500",
-      icon: <AlertCircle className="mr-1 h-3 w-3" />,
-      label: "Pending",
-      tooltip: `This device has not been reviewed by the administrator yet${device.requestSubmittedAt ? ". Your note has been submitted." : ""}`,
-    },
-  };
-
-  const config = badgeConfig[type];
+  const badge = STATUS_BADGES[type];
+  const hint =
+    type === "pending" && device.requestSubmittedAt
+      ? `${badge.hint} Your note has been sent to them.`
+      : badge.hint;
 
   return (
-    <TooltipProvider delayDuration={0}>
-      <Tooltip open={isOpen} onOpenChange={handleOpenChange}>
-        <TooltipTrigger asChild>
-          <button
-            type="button"
-            className="inline-flex focus:outline-none rounded-md"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              if (isMobile) {
-                setIsOpen((prev) => !prev);
-              }
-            }}
-            onMouseEnter={() => {
-              if (!isMobile) setIsOpen(true);
-            }}
-            onMouseLeave={() => {
-              if (!isMobile) setIsOpen(false);
-            }}
-          >
-            <Badge
-              variant="outline"
-              className={`cursor-help ${config.className}`}
-            >
-              {config.icon}
-              {config.label}
-            </Badge>
-          </button>
-        </TooltipTrigger>
-        <TooltipContent
-          className="max-w-xs"
-          onPointerDownOutside={(e) => {
-            e.preventDefault();
-            setIsOpen(false);
-          }}
-        >
-          <p>{config.tooltip}</p>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+    <HintTooltip hint={hint}>
+      <Badge variant="outline" className={`cursor-help ${badge.className}`}>
+        {badge.icon}
+        {badge.label}
+      </Badge>
+    </HintTooltip>
   );
 };
 
@@ -390,7 +279,7 @@ export default function UserPortalPage() {
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to logout",
+        description: "Failed to sign out",
         variant: "destructive",
       });
     }
@@ -426,7 +315,7 @@ export default function UserPortalPage() {
 
       toast({
         title: "Note Submitted",
-        description: "Your note has been sent to the administrator",
+        description: "The server owner will see your note next to this device",
         variant: "success",
       });
 
@@ -588,16 +477,16 @@ export default function UserPortalPage() {
                 <CardContent className="py-12">
                   <div className="text-center">
                     <Monitor className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
-                    <p className="text-muted-foreground">No devices found</p>
+                    <p className="text-muted-foreground">No devices yet</p>
                     <p className="text-sm text-muted-foreground/70 mt-1">
-                      Your devices will appear here once you start streaming
+                      Your devices appear here the first time you stream on
+                      them
                     </p>
                   </div>
                 </CardContent>
               </Card>
             ) : (
-              <TooltipProvider delayDuration={0}>
-                <div className="grid gap-4">
+              <div className="grid gap-4">
                   {devices.map((device) => (
                     <Card key={device.id} className="overflow-hidden">
                       <CardContent className="p-0">
@@ -757,7 +646,7 @@ export default function UserPortalPage() {
                             <div className="bg-blue-500/5 rounded-lg p-3 border border-blue-500/20">
                               <p className="text-xs font-medium text-blue-600 dark:text-blue-400 mb-2 flex items-center gap-1">
                                 <Clock className="h-3 w-3" />
-                                Device Time Rules
+                                Time Schedule for This Device
                               </p>
                               <div className="space-y-1">
                                 {device.rules.timeRules.map((rule) => (
@@ -780,7 +669,7 @@ export default function UserPortalPage() {
                                       }
                                       className="text-xs"
                                     >
-                                      {rule.enabled ? "Active" : "Inactive"}
+                                      {rule.enabled ? "Blocking" : "Paused"}
                                     </Badge>
                                   </div>
                                 ))}
@@ -791,8 +680,7 @@ export default function UserPortalPage() {
                       </CardContent>
                     </Card>
                   ))}
-                </div>
-              </TooltipProvider>
+              </div>
             )}
           </section>
 
@@ -804,7 +692,7 @@ export default function UserPortalPage() {
                   Your Rules
                 </h2>
                 <p className="text-muted-foreground mt-1">
-                  Access rules set by the server administrator for your account
+                  What the server owner allows on your account
                 </p>
               </div>
 
@@ -817,7 +705,7 @@ export default function UserPortalPage() {
                       Network Access
                     </CardTitle>
                     <CardDescription>
-                      Controls where you can stream from
+                      Where you are allowed to stream from
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -826,10 +714,9 @@ export default function UserPortalPage() {
                         <Wifi className="h-4 w-4 text-muted-foreground" />
                         <span className="text-sm">Network Policy</span>
                       </div>
-                      <Badge variant="outline" className="capitalize">
-                        {userRules.networkPolicy === "both"
-                          ? "LAN & WAN"
-                          : userRules.networkPolicy.toUpperCase()}
+                      <Badge variant="outline">
+                        {NETWORK_POLICY_LABEL[userRules.networkPolicy] ??
+                          NETWORK_POLICY_LABEL.both}
                       </Badge>
                     </div>
                     <div className="flex items-center justify-between mb-2">
@@ -837,10 +724,10 @@ export default function UserPortalPage() {
                         <Shield className="h-4 w-4 text-muted-foreground" />
                         <span className="text-sm">IP Access</span>
                       </div>
-                      <Badge variant="outline" className="capitalize">
+                      <Badge variant="outline">
                         {userRules.ipAccessPolicy === "all"
-                          ? "All IPs Allowed"
-                          : "Restricted IPs"}
+                          ? "Any address"
+                          : "Only listed addresses"}
                       </Badge>
                     </div>
                     {userRules.ipAccessPolicy === "restricted" &&
@@ -848,7 +735,7 @@ export default function UserPortalPage() {
                       userRules.allowedIPs.length > 0 && (
                         <div className="pt-2 border-t mb-2">
                           <p className="text-xs text-muted-foreground mb-1">
-                            Allowed IP addresses:
+                            You can only stream from these addresses
                           </p>
                           <div className="flex flex-wrap gap-1">
                             {userRules.allowedIPs.map((ip, idx) => (
@@ -891,8 +778,8 @@ export default function UserPortalPage() {
                         }
                       >
                         {userRules.effectiveDefaultBlock
-                          ? "Block until approved"
-                          : "Allowed by default"}
+                          ? "Blocked until approved"
+                          : "Allowed straight away"}
                       </Badge>
                     </div>
                   </CardContent>
@@ -929,10 +816,10 @@ export default function UserPortalPage() {
                     <CardHeader className="pb-3 mt-2">
                       <CardTitle className="text-lg flex items-center gap-2">
                         <Clock className="h-5 w-5 text-primary" />
-                        Viewing Schedule
+                        Time Schedule
                       </CardTitle>
                       <CardDescription>
-                        Time restrictions that apply to all your devices
+                        The hours you cannot stream, on any of your devices
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -965,7 +852,7 @@ export default function UserPortalPage() {
                               variant={rule.enabled ? "default" : "secondary"}
                               className="text-xs"
                             >
-                              {rule.enabled ? "Blocking" : "Inactive"}
+                              {rule.enabled ? "Blocking" : "Paused"}
                             </Badge>
                           </div>
                         ))}
@@ -983,10 +870,10 @@ export default function UserPortalPage() {
       <Dialog open={requestModalOpen} onOpenChange={setRequestModalOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Add Note for Administrator</DialogTitle>
+            <DialogTitle>Send a Note to the Server Owner</DialogTitle>
             <DialogDescription>
-              Add a note for the server administrator explaining why you need
-              access to this device.
+              Tell the server owner why you need access on this device. They
+              see your note next to the device when they review it.
             </DialogDescription>
           </DialogHeader>
 
@@ -999,10 +886,14 @@ export default function UserPortalPage() {
               </p>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Note (optional)</label>
+            <Field
+              label="Note"
+              htmlFor="request-note"
+              action={<StatusPill tone="neutral">Optional</StatusPill>}
+            >
               <Textarea
-                placeholder="e.g., This is my living room TV..."
+                id="request-note"
+                placeholder="This is my living room TV"
                 value={requestDescription}
                 onChange={(e) => setRequestDescription(e.target.value)}
                 maxLength={500}
@@ -1011,7 +902,7 @@ export default function UserPortalPage() {
               <p className="text-xs text-muted-foreground text-right">
                 {requestDescription.length}/500
               </p>
-            </div>
+            </Field>
           </div>
 
           <DialogFooter>

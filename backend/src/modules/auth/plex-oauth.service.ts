@@ -163,6 +163,13 @@ export class PlexOAuthService {
   }
 
   /**
+   * Drop a pending PIN when the user abandons the Plex window
+   */
+  cancelPlexPin(clientId: string): void {
+    this.pendingPins.delete(clientId);
+  }
+
+  /**
    * Get Plex user information using their auth token
    * Public method for direct auth token usage (e.g., from frontend after OAuth)
    */

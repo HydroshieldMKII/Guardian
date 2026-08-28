@@ -19,14 +19,17 @@ export class SessionsController {
     @Param('userId') userId: string,
     @Query('limit') limit?: string,
     @Query('includeActive') includeActive?: string,
+    @Query('offset') offset?: string,
+    @Query('search') search?: string,
+    @Query('terminatedOnly') terminatedOnly?: string,
   ): Promise<SessionHistory[]> {
-    const limitNum = limit ? parseInt(limit, 10) : 50;
-    const includeActiveFlag = includeActive === 'true';
-    return this.activeSessionService.getUserSessionHistory(
-      userId,
-      limitNum,
-      includeActiveFlag,
-    );
+    return this.activeSessionService.getUserSessionHistory(userId, {
+      limit: limit ? parseInt(limit, 10) : 50,
+      offset: offset ? parseInt(offset, 10) : 0,
+      includeActive: includeActive === 'true',
+      search,
+      terminatedOnly: terminatedOnly === 'true',
+    });
   }
 
   @Delete('history/:sessionId')

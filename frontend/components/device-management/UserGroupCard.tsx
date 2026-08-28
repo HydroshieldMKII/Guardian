@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -6,13 +6,49 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { ChevronDown, ChevronRight } from "lucide-react";
-import { UserDevice, UserPreference } from "@/types";
+import { ChevronDown, ChevronRight, RefreshCw } from "lucide-react";
+import {
+  Panel,
+  PillRow,
+  SegmentedControl,
+  StatusPill,
+  type Tone,
+} from "@/components/ui/entity";
+import { cn } from "@/lib/utils";
+import { UserDevice, UserPreference, UserTimeRule } from "@/types";
+import { devicePolicyBadges, groupPolicyBadges } from "@/lib/device-policies";
 import { UserAvatar, getUserPreferenceBadge } from "./SharedComponents";
 import { DeviceCard } from "./DeviceCard";
 import { IPAccessModal } from "./IPAccessModal";
 import { ConcurrentStreamModal } from "./ConcurrentStreamModal";
 import { useSettings } from "@/contexts/settings-context";
+
+const POLICY_CHOICES: {
+  label: string;
+  value: boolean | null;
+  tone: Tone;
+}[] = [
+  { label: "Global", value: null, tone: "neutral" },
+  { label: "Allow", value: false, tone: "positive" },
+  { label: "Block", value: true, tone: "danger" },
+];
+
+const DeviceCardPlaceholder = () => (
+  <div
+    aria-hidden
+    className="hidden rounded-xl border border-dashed bg-muted/20 xl:block"
+  >
+    <div className="space-y-3 p-3 pl-4 opacity-40 sm:p-4 sm:pl-5">
+      <div className="flex items-center gap-4">
+        <div className="min-w-0 flex-1 space-y-2">
+          <div className="h-4 w-2/5 rounded bg-muted" />
+          <div className="h-3 w-4/5 rounded bg-muted" />
+        </div>
+        <div className="size-8 shrink-0 rounded-md bg-muted" />
+      </div>
+    </div>
+  </div>
+);
 
 // User-Device group interface
 interface UserDeviceGroup {
@@ -31,8 +67,7 @@ interface UserGroupCardProps {
   group: UserDeviceGroup;
   isExpanded: boolean;
   actionLoading: number | null;
-  hasTimeSchedules?: boolean;
-  hasIPPolicies?: boolean;
+  timeRules?: UserTimeRule[];
   updatingUserPreference?: string | null; // Track which user's preference is being updated
   onToggleExpansion: (userId: string) => void;
   onUpdateUserPreference: (
@@ -45,13 +80,13 @@ interface UserGroupCardProps {
   ) => void;
   onToggleUserVisibility?: (userId: string) => void;
   onShowHistory?: (userId: string) => void;
-  onGrantUserTempAccess?: (userId: string) => void;
+  onGrantUserTemporaryAccess?: (userId: string) => void;
   onShowTimePolicy?: (userId: string, deviceIdentifier?: string) => void;
   onApprove: (device: UserDevice) => void;
   onReject: (device: UserDevice) => void;
   onDelete: (device: UserDevice) => void;
   onToggleApproval: (device: UserDevice) => void;
-  onRevokeTempAccess: (deviceId: number) => void;
+  onRemoveTemporaryAccess: (device: UserDevice) => void;
   onShowDetails: (device: UserDevice) => void;
 }
 
@@ -59,21 +94,20 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
   group,
   isExpanded,
   actionLoading,
-  hasTimeSchedules = false,
-  hasIPPolicies = false,
+  timeRules,
   updatingUserPreference,
   onToggleExpansion,
   onUpdateUserPreference,
   onUpdateUserIPPolicy,
   onToggleUserVisibility,
   onShowHistory,
-  onGrantUserTempAccess,
+  onGrantUserTemporaryAccess,
   onShowTimePolicy,
   onApprove,
   onReject,
   onDelete,
   onToggleApproval,
-  onRevokeTempAccess,
+  onRemoveTemporaryAccess,
   onShowDetails,
 }) => {
   const [showIPModal, setShowIPModal] = useState(false);
@@ -86,19 +120,44 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
     (device) => device.excludeFromConcurrentLimit,
   ).length;
 
+  const preference = group.user.preference;
+  const policyBadges = groupPolicyBadges(group.devices, preference, timeRules);
+
+  const savingPolicy = updatingUserPreference === group.user.userId;
+  const storedPolicy = group.user.preference?.defaultBlock ?? null;
+  const [pendingPolicy, setPendingPolicy] = useState<{
+    value: boolean | null;
+  } | null>(null);
+  const wasSavingPolicy = useRef(false);
+
+  useEffect(() => {
+    if (wasSavingPolicy.current && !savingPolicy) {
+      setPendingPolicy(null);
+    }
+    wasSavingPolicy.current = savingPolicy;
+  }, [savingPolicy]);
+
+  useEffect(() => {
+    setPendingPolicy((current) =>
+      current && !Object.is(current.value, storedPolicy) ? current : null,
+    );
+  }, [storedPolicy]);
+
+  const policyValue = pendingPolicy ? pendingPolicy.value : storedPolicy;
+
   return (
     <Collapsible
       open={isExpanded}
       onOpenChange={() => onToggleExpansion(group.user.userId)}
     >
       <div
-        className="rounded-lg border bg-card shadow-sm hover:shadow-md transition-shadow"
+        className="overflow-hidden rounded-xl border bg-card"
         data-user-id={group.user.userId}
       >
         <CollapsibleTrigger asChild>
-          <div className="p-2.5 sm:p-4 border-b cursor-pointer hover:bg-muted/50 transition-colors">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-              <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
+          <div className="cursor-pointer border-b p-4 transition-colors hover:bg-muted/40 sm:p-5">
+            <div className="flex items-start gap-3 sm:items-center sm:gap-4">
+              <div className="flex min-w-0 flex-1 items-center gap-3">
                 {isExpanded ? (
                   <ChevronDown className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground flex-shrink-0" />
                 ) : (
@@ -110,304 +169,225 @@ export const UserGroupCard: React.FC<UserGroupCardProps> = ({
                   avatarUrl={group.user.preference?.avatarUrl}
                 />
                 <div className="min-w-0 flex-1">
-                  <h3 className="font-semibold text-foreground truncate text-sm">
+                  <h3 className="truncate text-base font-semibold leading-tight tracking-tight text-foreground">
                     {group.user.username || group.user.userId}
                   </h3>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="mt-0.5 text-xs text-muted-foreground sm:text-sm">
                     {group.devices.length} device
                     {group.devices.length !== 1 ? "s" : ""}
                     {group.pendingCount > 0 && (
-                      <span className="text-yellow-600 dark:text-yellow-400">
-                        {" • "}
+                      <span className="text-amber-600 dark:text-amber-400">
+                        {" · "}
                         {group.pendingCount} pending
                       </span>
                     )}
                   </p>
                 </div>
-                <div className="hidden sm:flex items-center gap-2">
-                  {group.user.preference &&
-                    getUserPreferenceBadge(group.user.preference.defaultBlock)}
-                  {hasTimeSchedules && (
-                    <Badge variant="outline" className="text-xs">
-                      Scheduled
-                    </Badge>
-                  )}
-                  {hasIPPolicies && (
-                    <Badge variant="outline" className="text-xs">
-                      IP Policy
-                    </Badge>
-                  )}
-                  {group.user.preference?.concurrentStreamLimit !== null &&
-                    group.user.preference?.concurrentStreamLimit !==
-                      undefined && (
-                      <Badge variant="outline" className="text-xs">
-                        {group.user.preference.concurrentStreamLimit === 0
-                          ? "Unlimited"
-                          : `${group.user.preference.concurrentStreamLimit} Stream${group.user.preference.concurrentStreamLimit !== 1 ? "s" : ""}`}
-                      </Badge>
-                    )}
-                  {excludedFromLimitCount > 0 && (
-                    <Badge variant="outline" className="text-xs">
-                      {excludedFromLimitCount} Excluded
-                    </Badge>
-                  )}
-                </div>
               </div>
 
-              {/* Mobile: Show preference badge */}
-              <div className="sm:hidden flex items-center gap-1 ml-6 flex-wrap">
+              <PillRow className="hidden shrink-0 justify-end sm:flex">
                 {group.user.preference &&
                   getUserPreferenceBadge(group.user.preference.defaultBlock)}
-                {hasTimeSchedules && (
-                  <Badge
-                    variant="outline"
-                    className="text-[10px] px-1.5 py-0.5"
-                  >
-                    Scheduled
-                  </Badge>
-                )}
-                {hasIPPolicies && (
-                  <Badge
-                    variant="outline"
-                    className="text-[10px] px-1.5 py-0.5"
-                  >
-                    IP
-                  </Badge>
-                )}
+                {policyBadges.map(({ policy, label, tone, hint }) => (
+                  <StatusPill key={policy} tone={tone} hint={hint}>
+                    {label}
+                  </StatusPill>
+                ))}
                 {group.user.preference?.concurrentStreamLimit !== null &&
                   group.user.preference?.concurrentStreamLimit !==
                     undefined && (
-                    <Badge
-                      variant="outline"
-                      className="text-[10px] px-1.5 py-0.5"
+                    <StatusPill
+                      tone="neutral"
+                      hint="How many streams this user can run at the same time"
                     >
                       {group.user.preference.concurrentStreamLimit === 0
-                        ? "∞"
-                        : group.user.preference.concurrentStreamLimit}
-                    </Badge>
+                        ? "Unlimited Streams"
+                        : `${group.user.preference.concurrentStreamLimit} Stream${
+                            group.user.preference.concurrentStreamLimit !== 1
+                              ? "s"
+                              : ""
+                          } at Once`}
+                    </StatusPill>
                   )}
                 {excludedFromLimitCount > 0 && (
-                  <Badge
-                    variant="outline"
-                    className="text-[10px] px-1.5 py-0.5"
+                  <StatusPill
+                    tone="neutral"
+                    hint="Streams from these devices are not counted towards the concurrent stream limit"
                   >
-                    {excludedFromLimitCount}
-                  </Badge>
+                    {excludedFromLimitCount} Excluded
+                  </StatusPill>
                 )}
-              </div>
+              </PillRow>
             </div>
+
+            <PillRow className="mt-3 pl-11 sm:hidden">
+              {group.user.preference &&
+                getUserPreferenceBadge(group.user.preference.defaultBlock)}
+              {policyBadges.map(({ policy, label, tone, hint }) => (
+                <StatusPill key={policy} tone={tone} hint={hint}>
+                  {label}
+                </StatusPill>
+              ))}
+            </PillRow>
           </div>
         </CollapsibleTrigger>
 
         <CollapsibleContent>
           <div className="p-2.5 sm:p-4 space-y-3 sm:space-y-4">
-            {/* User Actions Card */}
             {(onToggleUserVisibility ||
               onShowHistory ||
               onUpdateUserIPPolicy ||
-              onGrantUserTempAccess ||
+              onGrantUserTemporaryAccess ||
               onShowTimePolicy) && (
-              <div className="bg-gradient-to-r from-card to-card/50 border rounded-lg p-2.5 sm:p-4 shadow-sm">
-                <div className="flex flex-col gap-3 sm:gap-0">
-                  {/* Header with buttons inline on desktop */}
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                    {/* Actions Label */}
-                    <div className="flex items-center space-x-3">
-                      <div className="p-2 bg-primary/10 rounded-lg hidden sm:block"></div>
-                      <div>
-                        <h4 className="font-semibold text-sm text-foreground">
-                          User Actions
-                        </h4>
-                        <p className="text-xs text-muted-foreground">
-                          Manage user visibility, history, and access policies
-                        </p>
-                      </div>
-                    </div>
+              <Panel className="space-y-3">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0 space-y-1">
+                    <h4 className="text-sm font-semibold text-foreground">
+                      User Actions
+                    </h4>
+                    <p className="text-xs text-muted-foreground">
+                      Policies here apply to every device this user owns
+                    </p>
+                  </div>
 
-                    {/* Action Buttons - inline on desktop, stacked on mobile */}
-                    <div className="grid grid-cols-2 sm:flex sm:flex-wrap sm:items-center bg-muted/50 rounded-lg p-1.5 sm:p-1 gap-1 sm:ml-auto">
-                      {onShowTimePolicy && (
-                        <button
-                          onClick={() => onShowTimePolicy(group.user.userId)}
-                          className="text-xs px-2 sm:px-3 py-2 rounded-md transition-all duration-200 flex items-center justify-center sm:justify-start cursor-pointer text-foreground hover:bg-accent whitespace-nowrap"
-                          title="Manage time-based access policies"
-                        >
-                          <span className="text-[11px] sm:text-xs">
-                            Schedule
-                          </span>
-                        </button>
-                      )}
-                      {onGrantUserTempAccess && (
-                        <button
-                          onClick={() =>
-                            onGrantUserTempAccess(group.user.userId)
-                          }
-                          className="text-xs px-2 sm:px-3 py-2 rounded-md transition-all duration-200 flex items-center justify-center sm:justify-start cursor-pointer text-foreground hover:bg-accent whitespace-nowrap"
-                          title="Grant temporary access to user devices"
-                        >
-                          <span className="text-[11px] sm:text-xs">Temp</span>
-                        </button>
-                      )}
-                      {onUpdateUserIPPolicy && (
-                        <button
-                          onClick={() => setShowIPModal(true)}
-                          className="text-xs px-2 sm:px-3 py-2 rounded-md transition-all duration-200 flex items-center justify-center sm:justify-start cursor-pointer text-foreground hover:bg-accent whitespace-nowrap"
-                          title="Configure IP and network access policies"
-                        >
-                          <span className="text-[11px] sm:text-xs">IP</span>
-                        </button>
-                      )}
-                      <button
-                        onClick={() => setShowConcurrentStreamModal(true)}
-                        className="text-xs px-2 sm:px-3 py-2 rounded-md transition-all duration-200 flex items-center justify-center sm:justify-start cursor-pointer text-foreground hover:bg-accent whitespace-nowrap"
-                        title="Configure concurrent stream limit for this user"
+                  <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:justify-end">
+                    {onShowTimePolicy && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onShowTimePolicy(group.user.userId)}
+                        title="Choose the hours this user is blocked from streaming"
                       >
-                        <span className="text-[11px] sm:text-xs">Limit</span>
-                      </button>
-                      {onShowHistory && (
-                        <button
-                          onClick={() => onShowHistory(group.user.userId)}
-                          className="text-xs px-2 sm:px-3 py-2 rounded-md transition-all duration-200 flex items-center justify-center sm:justify-start cursor-pointer text-foreground hover:bg-accent whitespace-nowrap"
-                          title="Show user history"
-                        >
-                          <span className="text-[11px] sm:text-xs">
-                            History
-                          </span>
-                        </button>
-                      )}
-                      {onToggleUserVisibility && (
-                        <button
-                          onClick={() =>
-                            onToggleUserVisibility(group.user.userId)
-                          }
-                          className="text-xs px-2 sm:px-3 py-2 rounded-md transition-all duration-200 flex items-center justify-center sm:justify-start cursor-pointer text-foreground hover:bg-accent whitespace-nowrap"
-                          title={
-                            group.user.preference?.hidden
-                              ? "Show user"
-                              : "Hide user"
-                          }
-                        >
-                          {group.user.preference?.hidden ? (
-                            <>
-                              <span className="text-[11px] sm:text-xs">
-                                Show
-                              </span>
-                            </>
-                          ) : (
-                            <>
-                              <span className="text-[11px] sm:text-xs">
-                                Hide
-                              </span>
-                            </>
-                          )}
-                        </button>
-                      )}
-                    </div>
+                        Time Schedule
+                      </Button>
+                    )}
+                    {onGrantUserTemporaryAccess && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          onGrantUserTemporaryAccess(group.user.userId)
+                        }
+                        title="Let blocked devices stream for a limited time"
+                      >
+                        Temporary Access
+                      </Button>
+                    )}
+                    {onUpdateUserIPPolicy && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowIPModal(true)}
+                        title="Choose which networks and IP addresses this user can stream from"
+                      >
+                        IP Access
+                      </Button>
+                    )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowConcurrentStreamModal(true)}
+                      title="Set how many streams this user can run at once"
+                    >
+                      Stream Limit
+                    </Button>
+                    {onShowHistory && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onShowHistory(group.user.userId)}
+                        title="Browse everything this user has streamed"
+                      >
+                        Stream History
+                      </Button>
+                    )}
+                    {onToggleUserVisibility && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          onToggleUserVisibility(group.user.userId)
+                        }
+                        title={
+                          group.user.preference?.hidden
+                            ? "Move this user back into the main list"
+                            : "Move this user to the hidden section at the bottom of the list"
+                        }
+                      >
+                        {group.user.preference?.hidden
+                          ? "Show User"
+                          : "Hide User"}
+                      </Button>
+                    )}
                   </div>
                 </div>
-              </div>
+              </Panel>
             )}
 
-            {/* Device Policy Card */}
-            <div className="bg-gradient-to-r from-card to-card/50 border rounded-lg p-2.5 sm:p-4 shadow-sm">
-              <div className="flex flex-col gap-3 sm:gap-0">
-                {/* Header with buttons inline on desktop */}
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                  {/* Policy Label */}
-                  <div className="flex items-center space-x-3">
-                    <div className="p-2 bg-primary/10 rounded-lg hidden sm:block"></div>
-                    <div>
-                      <h4 className="font-semibold text-sm text-foreground">
-                        Default Device Policy
-                      </h4>
-                      <p className="text-xs text-muted-foreground">
-                        How new devices should be handled
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Policy Toggle Buttons - inline on desktop, stacked on mobile */}
-                  <div className="flex items-center bg-muted/50 rounded-lg p-1 gap-1 sm:ml-auto sm:min-w-[400px]">
-                    <button
-                      onClick={() =>
-                        onUpdateUserPreference(group.user.userId, null)
-                      }
-                      disabled={updatingUserPreference === group.user.userId}
-                      className={`flex-1 text-xs px-3 py-2.5 rounded-md transition-all duration-200 flex items-center justify-center cursor-pointer whitespace-nowrap ${
-                        !group.user.preference ||
-                        group.user.preference.defaultBlock === null
-                          ? "bg-gray-200 text-black shadow-sm font-medium hover:bg-gray-100"
-                          : "text-foreground hover:bg-accent"
-                      } ${updatingUserPreference === group.user.userId ? "opacity-50 cursor-not-allowed" : ""}`}
-                    >
-                      {updatingUserPreference === group.user.userId ? (
-                        <div className="w-3 h-3 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin mr-2" />
-                      ) : null}
-                      <span>
-                        Global{" "}
-                        {!configLoading &&
-                          `(${getGlobalDefaultBlock() ? "Block" : "Allow"})`}
-                      </span>
-                    </button>
-                    <button
-                      onClick={() =>
-                        onUpdateUserPreference(group.user.userId, false)
-                      }
-                      disabled={updatingUserPreference === group.user.userId}
-                      className={`flex-1 text-xs px-3 py-2.5 rounded-md transition-all duration-200 flex items-center justify-center cursor-pointer ${
-                        group.user.preference?.defaultBlock === false
-                          ? "bg-green-600 text-white shadow-sm font-medium hover:bg-green-600"
-                          : "text-foreground hover:bg-accent"
-                      } ${updatingUserPreference === group.user.userId ? "opacity-50 cursor-not-allowed" : ""}`}
-                    >
-                      {updatingUserPreference === group.user.userId ? (
-                        <div className="w-3 h-3 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin mr-2" />
-                      ) : null}
-                      Allow
-                    </button>
-                    <button
-                      onClick={() =>
-                        onUpdateUserPreference(group.user.userId, true)
-                      }
-                      disabled={updatingUserPreference === group.user.userId}
-                      className={`flex-1 text-xs px-3 py-2.5 rounded-md transition-all duration-200 flex items-center justify-center cursor-pointer ${
-                        group.user.preference?.defaultBlock === true
-                          ? "bg-red-600 dark:bg-red-700 text-white shadow-sm font-medium hover:bg-red-700 dark:hover:bg-red-800"
-                          : "text-foreground hover:bg-accent"
-                      } ${updatingUserPreference === group.user.userId ? "opacity-50 cursor-not-allowed" : ""}`}
-                    >
-                      {updatingUserPreference === group.user.userId ? (
-                        <div className="w-3 h-3 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin mr-2" />
-                      ) : null}
-                      Block
-                    </button>
-                  </div>
+            <Panel className="space-y-3">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0 space-y-1">
+                  <h4 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                    Default Device Policy
+                    {savingPolicy && (
+                      <RefreshCw
+                        aria-label="Saving the default device policy"
+                        className="size-3 animate-spin text-muted-foreground"
+                      />
+                    )}
+                  </h4>
+                  <p className="text-xs text-muted-foreground">
+                    What happens the first time this user streams from a device
+                    that has not been seen before
+                  </p>
                 </div>
+
+                <SegmentedControl
+                  className="w-full sm:w-auto sm:min-w-[360px]"
+                  size="md"
+                  busy={savingPolicy}
+                  value={policyValue}
+                  onChange={(next) => {
+                    setPendingPolicy({ value: next });
+                    onUpdateUserPreference(group.user.userId, next);
+                  }}
+                  options={POLICY_CHOICES.map((choice) => ({
+                    value: choice.value,
+                    tone: choice.tone,
+                    label:
+                      choice.value === null
+                        ? `Global${configLoading ? "" : ` (${getGlobalDefaultBlock() ? "Block" : "Allow"})`}`
+                        : choice.label,
+                  }))}
+                />
               </div>
-            </div>
+            </Panel>
 
             {/* Devices List */}
             {group.devices.length === 0 ? (
               <div className="text-center text-muted-foreground py-6 sm:py-8">
                 <p className="text-xs sm:text-sm">
-                  No devices found for this user
+                  No devices yet. They appear here the first time this user
+                  streams.
                 </p>
               </div>
             ) : (
-              <div className="space-y-3 sm:space-y-4">
+              <div className="grid grid-cols-1 items-start gap-3 sm:gap-4 xl:grid-cols-2">
                 {group.devices.map((device) => (
                   <DeviceCard
                     key={device.id}
                     device={device}
+                    policies={devicePolicyBadges(device, preference, timeRules)}
                     actionLoading={actionLoading}
                     onApprove={onApprove}
                     onReject={onReject}
                     onDelete={onDelete}
                     onToggleApproval={onToggleApproval}
-                    onRevokeTempAccess={onRevokeTempAccess}
+                    onRemoveTemporaryAccess={onRemoveTemporaryAccess}
                     onShowDetails={onShowDetails}
                   />
                 ))}
+                {group.devices.length % 2 === 1 && <DeviceCardPlaceholder />}
               </div>
             )}
           </div>

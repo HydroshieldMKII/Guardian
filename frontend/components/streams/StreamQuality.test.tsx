@@ -94,14 +94,14 @@ describe("StreamQuality", () => {
 
       expect(screen.getByText("1080")).toBeInTheDocument();
       expect(container.innerHTML).toContain("rounded-full");
-      expect(container.innerHTML).toContain("bg-blue-600/90");
+      expect(container.innerHTML).toContain("bg-sky-500/10");
     });
 
     it("switches to the over-artwork palette", () => {
       const { container } = render(
         <StreamQuality session={session()} inline hasArt />,
       );
-      expect(container.innerHTML).toContain("bg-blue-600/80");
+      expect(container.innerHTML).toContain("bg-white/10");
     });
 
     it("always shows the container for music but hides it on mobile for video", () => {
@@ -112,8 +112,8 @@ describe("StreamQuality", () => {
         <StreamQuality session={session()} inline />,
       );
 
-      expect(music.innerHTML).not.toContain("hidden sm:flex");
-      expect(video.innerHTML).toContain("hidden sm:flex");
+      expect(music.innerHTML).not.toContain("hidden sm:inline-flex");
+      expect(video.innerHTML).toContain("hidden sm:inline-flex");
     });
 
     it("omits unknown fields", () => {

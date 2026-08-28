@@ -1,3 +1,4 @@
+import { DEFAULT_BLOCK_MESSAGES } from '@/common/utils/block-messages';
 import { Test } from '@nestjs/testing';
 import {
   IPValidationService,
@@ -405,7 +406,7 @@ describe('IPValidationService', () => {
         ),
       ).toEqual({
         allowed: false,
-        reason: 'Only WAN access is allowed',
+        reason: DEFAULT_BLOCK_MESSAGES.wanOnly,
         stopCode: 'IP_POLICY_WAN_ONLY',
       });
     });
@@ -427,7 +428,7 @@ describe('IPValidationService', () => {
         ),
       ).toEqual({
         allowed: false,
-        reason: 'Your current IP address is not in the allowed list',
+        reason: DEFAULT_BLOCK_MESSAGES.notAllowed,
         stopCode: 'IP_POLICY_NOT_ALLOWED',
       });
     });

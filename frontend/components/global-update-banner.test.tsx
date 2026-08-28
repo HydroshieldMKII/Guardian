@@ -58,7 +58,7 @@ describe("GlobalUpdateBanner", () => {
     render(<GlobalUpdateBanner />);
 
     expect(
-      screen.getByText("Update Available: Guardian v2.0.0"),
+      screen.getByText("Update Available: v2.0.0"),
     ).toBeInTheDocument();
     expect(screen.getByText(/1\.3\.5/)).toBeInTheDocument();
   });
@@ -104,7 +104,9 @@ describe("GlobalUpdateBanner", () => {
     const user = userEvent.setup();
     const { container } = render(<GlobalUpdateBanner />);
 
-    await user.click(screen.getByRole("button", { name: "Dismiss" }));
+    await user.click(
+      screen.getByRole("button", { name: "Hide this update notice" }),
+    );
 
     expect(clearUpdateInfo).toHaveBeenCalled();
     expect(container).toBeEmptyDOMElement();

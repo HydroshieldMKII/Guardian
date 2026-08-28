@@ -110,7 +110,7 @@ export function Navbar() {
       } catch (error) {
         toast({
           title: "Error",
-          description: "Failed to save changes",
+          description: "Failed to save your changes",
           variant: "destructive",
         });
       } finally {
@@ -123,15 +123,15 @@ export function Navbar() {
     try {
       await logout();
       toast({
-        title: "Success",
-        description: "Logged out successfully",
+        title: "Signed Out",
+        description: "You have been signed out",
         variant: "success",
       });
       router.push("/login");
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to logout",
+        description: "Failed to sign out",
         variant: "destructive",
       });
     }
@@ -186,7 +186,7 @@ export function Navbar() {
                 alt="Guardian"
                 width={300}
                 height={48}
-                className="block dark:hidden h-[48px] w-auto"
+                className="block dark:hidden h-[56px] sm:h-[64px] w-auto"
                 priority
               />
               {/* Dark theme logo (light logo) */}
@@ -195,7 +195,7 @@ export function Navbar() {
                 alt="Guardian"
                 width={300}
                 height={48}
-                className="hidden dark:block h-[48px] w-auto"
+                className="hidden dark:block h-[56px] sm:h-[64px] w-auto"
                 priority
               />
             </div>

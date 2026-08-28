@@ -1,13 +1,13 @@
 "use client";
 
-import React, { useState, useEffect, memo, useMemo } from "react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import React, {
+  useState,
+  useEffect,
+  memo,
+  useMemo,
+  useDeferredValue,
+} from "react";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -29,17 +29,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  Users,
   RefreshCw,
-  Wifi,
   Search,
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
-  Monitor,
-  Settings,
-  CheckCircle,
-  XCircle,
   Eye,
   EyeOff,
 } from "lucide-react";
@@ -52,7 +46,9 @@ import { useTimeRules } from "@/hooks/device-management/useTimeRules";
 import { useToast } from "@/hooks/use-toast";
 
 // Types
-import { UserDevice, UserPreference, AppSetting } from "@/types";
+import { UserDevice, UserPreference, UserTimeRule, AppSetting } from "@/types";
+import { devicePolicyBadges, isPlexampDevice } from "@/lib/device-policies";
+import { formatMinutes } from "@/lib/duration";
 
 // API
 import { apiClient } from "@/lib/api";
@@ -66,6 +62,7 @@ import { ConfirmationModal } from "@/components/device-management/ConfirmationMo
 import { UserHistoryModal } from "@/components/device-management/UserHistoryModal";
 import { TimeRuleModal } from "@/components/device-management/TimeRuleModal";
 import { UserAvatar } from "@/components/device-management/SharedComponents";
+import { HIGHLIGHT_CLASSES } from "@/lib/highlight";
 
 // User-Device group interface
 interface UserDeviceGroup {
@@ -123,6 +120,7 @@ const UserGroupSkeleton = () => (
 );
 
 interface DeviceManagementProps {
+  tabs?: React.ReactNode;
   devicesData?: {
     all: UserDevice[];
     pending: UserDevice[];
@@ -131,7 +129,7 @@ interface DeviceManagementProps {
   };
   usersData?: UserPreference[];
   settingsData?: AppSetting[];
-  onRefresh?: () => void;
+  onRefresh?: () => void | Promise<void>;
   autoRefresh?: boolean;
   onAutoRefreshChange?: (value: boolean) => void;
   navigationTarget?: {
@@ -143,13 +141,40 @@ interface DeviceManagementProps {
 
 interface ConfirmActionData {
   device: UserDevice;
-  action: "approve" | "reject" | "delete" | "toggle";
+  action: "approve" | "reject" | "delete" | "toggle" | "removeTemporaryAccess";
   title: string;
   description: string;
 }
 
+const CONFIRM_COPY = {
+  approve: {
+    title: "Approve Device",
+    description: "This device will be able to stream from your Plex server.",
+  },
+  reject: {
+    title: "Reject Device",
+    description:
+      "This device will be blocked from streaming from your Plex server.",
+  },
+  removeTemporaryAccess: {
+    title: "Remove Temporary Access",
+    description:
+      "The grant ends now instead of when it was due to expire. This device goes straight back under the user's usual policies, so it stops streaming if they block it.",
+  },
+  delete: {
+    title: "Delete Device",
+    description:
+      "The record is removed for good. The device reappears as pending the next time it connects, and follows the user's default device policy until then.",
+  },
+};
+
+const AUTO_REFRESH_ON = "Refreshing on its own. Click to stop.";
+const AUTO_REFRESH_OFF =
+  "Refreshing only when you ask. Click to refresh on its own.";
+
 const DeviceManagement = memo(
   ({
+    tabs,
     devicesData,
     usersData,
     settingsData,
@@ -170,9 +195,10 @@ const DeviceManagement = memo(
     );
     const [expandedUsers, setExpandedUsers] = useState<Set<string>>(new Set());
     const [searchTerm, setSearchTerm] = useState("");
+    const deferredSearchTerm = useDeferredValue(searchTerm);
     const [editingDevice, setEditingDevice] = useState<number | null>(null);
     const [newDeviceName, setNewDeviceName] = useState("");
-    const [tempAccessUser, setTempAccessUser] = useState<{
+    const [temporaryAccessUser, setTemporaryAccessUser] = useState<{
       userId: string;
       username?: string;
     } | null>(null);
@@ -192,8 +218,8 @@ const DeviceManagement = memo(
       username?: string;
       deviceIdentifier?: string;
     } | null>(null);
-    const [userTimeRuleStatus, setUserTimeRuleStatus] = useState<
-      Record<string, boolean>
+    const [userTimeRules, setUserTimeRules] = useState<
+      Record<string, UserTimeRule[]>
     >({});
     const [loadingTimeRules, setLoadingTimeRules] = useState(false);
     const [updatingUserPreference, setUpdatingUserPreference] = useState<
@@ -213,7 +239,7 @@ const DeviceManagement = memo(
     const deviceActions = useDeviceActions();
     const userPreferences = useUserPreferences();
     const deviceUtils = useDeviceUtils();
-    const { hasTimeRules, fetchAllTimeRules } = useTimeRules();
+    const { getAllTimeRules, fetchAllTimeRules } = useTimeRules();
     const { toast } = useToast();
 
     // Local storage keys for sorting preferences
@@ -239,39 +265,6 @@ const DeviceManagement = memo(
     };
 
     // Format duration in minutes to a human-readable format
-    const formatDuration = (minutes: number): string => {
-      if (minutes < 60) {
-        return `${minutes} minute${minutes !== 1 ? "s" : ""}`;
-      } else if (minutes < 1440) {
-        // Less than 24 hours
-        const hours = Math.floor(minutes / 60);
-        const remainingMinutes = minutes % 60;
-        if (remainingMinutes === 0) {
-          return `${hours} hour${hours !== 1 ? "s" : ""}`;
-        } else {
-          return `${hours} hour${hours !== 1 ? "s" : ""} and ${remainingMinutes} minute${remainingMinutes !== 1 ? "s" : ""}`;
-        }
-      } else if (minutes < 10080) {
-        // Less than 7 days
-        const days = Math.floor(minutes / 1440);
-        const remainingHours = Math.floor((minutes % 1440) / 60);
-        if (remainingHours === 0) {
-          return `${days} day${days !== 1 ? "s" : ""}`;
-        } else {
-          return `${days} day${days !== 1 ? "s" : ""} and ${remainingHours} hour${remainingHours !== 1 ? "s" : ""}`;
-        }
-      } else {
-        // 7 days or more
-        const weeks = Math.floor(minutes / 10080);
-        const remainingDays = Math.floor((minutes % 10080) / 1440);
-        if (remainingDays === 0) {
-          return `${weeks} week${weeks !== 1 ? "s" : ""}`;
-        } else {
-          return `${weeks} week${weeks !== 1 ? "s" : ""} and ${remainingDays} day${remainingDays !== 1 ? "s" : ""}`;
-        }
-      }
-    };
-
     // Sorting state with localStorage initialization
     const [sortBy, setSortBy] = useState<
       "username" | "deviceCount" | "pendingCount" | "lastSeen" | "streamCount"
@@ -322,19 +315,11 @@ const DeviceManagement = memo(
           const group = deviceGroups.get(userId)!;
           group.devices.push(device);
 
-          // Helper function to identify PlexAmp devices
-          const isPlexAmpDevice = (device: UserDevice) => {
-            return (
-              device.deviceProduct?.toLowerCase().includes("plexamp") ||
-              device.deviceName?.toLowerCase().includes("plexamp")
-            );
-          };
-
-          // Update counts (exclude PlexAmp from pending count)
+          // Update counts (exclude Plexamp from pending count)
           switch (device.status) {
             case "pending":
-              // Only count pending devices that are not PlexAmp
-              if (!isPlexAmpDevice(device)) {
+              // Only count pending devices that are not Plexamp
+              if (!isPlexampDevice(device)) {
                 group.pendingCount++;
               }
               break;
@@ -388,28 +373,21 @@ const DeviceManagement = memo(
             ...group,
             devices: group.devices.sort((a, b) => {
               // Helper function to identify Plex Amp devices
-              const isPlexAmpDevice = (device: UserDevice) => {
-                return (
-                  device.deviceProduct?.toLowerCase().includes("plexamp") ||
-                  device.deviceName?.toLowerCase().includes("plexamp")
-                );
-              };
+              // Plexamp devices always go last
+              const aIsPlexamp = isPlexampDevice(a);
+              const bIsPlexamp = isPlexampDevice(b);
 
-              // PlexAmp devices always go last
-              const aIsPlexAmp = isPlexAmpDevice(a);
-              const bIsPlexAmp = isPlexAmpDevice(b);
-
-              if (aIsPlexAmp && !bIsPlexAmp) return 1; // a goes after b
-              if (!aIsPlexAmp && bIsPlexAmp) return -1; // a goes before b
-              if (aIsPlexAmp && bIsPlexAmp) {
-                // Both are PlexAmp, sort by lastSeen
+              if (aIsPlexamp && !bIsPlexamp) return 1; // a goes after b
+              if (!aIsPlexamp && bIsPlexamp) return -1; // a goes before b
+              if (aIsPlexamp && bIsPlexamp) {
+                // Both are Plexamp, sort by lastSeen
                 return (
                   new Date(b.lastSeen).getTime() -
                   new Date(a.lastSeen).getTime()
                 );
               }
 
-              // For non-PlexAmp devices, sort by status (pending first, then rejected, then approved)
+              // For non-Plexamp devices, sort by status (pending first, then rejected, then approved)
               if (a.status !== b.status) {
                 const statusOrder = { pending: 0, rejected: 1, approved: 2 };
                 return statusOrder[a.status] - statusOrder[b.status];
@@ -436,12 +414,12 @@ const DeviceManagement = memo(
             // Fetch all time rules at once (cached globally)
             await fetchAllTimeRules(userIds);
 
-            // Check time rule status for each user using cached data
-            const statusMap: Record<string, boolean> = {};
+            // Keep the full rules so each device can report its own schedule
+            const ruleMap: Record<string, UserTimeRule[]> = {};
             for (const userId of userIds) {
-              statusMap[userId] = await hasTimeRules(userId);
+              ruleMap[userId] = await getAllTimeRules(userId);
             }
-            setUserTimeRuleStatus(statusMap);
+            setUserTimeRules(ruleMap);
           } catch (error) {
             console.error("Error loading time rule status:", error);
           } finally {
@@ -490,17 +468,9 @@ const DeviceManagement = memo(
 
             // Add highlight effect
             setTimeout(() => {
-              deviceElement.classList.add(
-                "ring-2",
-                "ring-blue-500",
-                "ring-opacity-75",
-              );
+              deviceElement.classList.add(...HIGHLIGHT_CLASSES);
               setTimeout(() => {
-                deviceElement.classList.remove(
-                  "ring-2",
-                  "ring-blue-500",
-                  "ring-opacity-75",
-                );
+                deviceElement.classList.remove(...HIGHLIGHT_CLASSES);
                 // Call completion callback
                 if (onNavigationComplete) {
                   onNavigationComplete();
@@ -512,13 +482,17 @@ const DeviceManagement = memo(
       }
     }, [navigationTarget, userGroups.length, onNavigationComplete]); // Removed expandedUsers to prevent infinite loop
 
-    const handleRefresh = () => {
+    const handleRefresh = async () => {
       if (onRefresh) {
         setRefreshing(true);
-        setUserTimeRuleStatus({}); // Clear time rule status to force re-fetch
-        onRefresh();
-        // Reset refreshing state after a short delay
-        setTimeout(() => setRefreshing(false), 1000);
+        setUserTimeRules({}); // Clear cached rules to force re-fetch
+        try {
+          await onRefresh();
+        } catch (error) {
+          console.error("Failed to refresh:", error);
+        } finally {
+          setRefreshing(false);
+        }
       }
     };
 
@@ -536,8 +510,8 @@ const DeviceManagement = memo(
       return userGroups
         .filter((group) => {
           // Apply search filter
-          if (searchTerm.trim()) {
-            const searchLower = searchTerm.toLowerCase();
+          if (deferredSearchTerm.trim()) {
+            const searchLower = deferredSearchTerm.toLowerCase();
             const username = (
               group.user.username || group.user.userId
             ).toLowerCase();
@@ -617,7 +591,7 @@ const DeviceManagement = memo(
           const comparison = valueA.localeCompare(valueB);
           return sortOrder === "asc" ? comparison : -comparison;
         });
-    }, [userGroups, searchTerm, sortBy, sortOrder]);
+    }, [userGroups, deferredSearchTerm, sortBy, sortOrder]);
 
     // Toggle user expansion
     const toggleUserExpansion = (userId: string) => {
@@ -644,17 +618,18 @@ const DeviceManagement = memo(
         if (success) {
           // Refresh data without clearing time rule status to prevent "Scheduled" tag flickering
           if (onRefresh) {
-            onRefresh();
+            await onRefresh();
           }
           toast({
-            title: "Device Policy Updated",
-            description: `Default device policy has been updated successfully`,
+            title: "Default Device Policy Updated",
+            description:
+              "New devices from this user will follow the policy you picked",
             variant: "success",
           });
         } else {
           toast({
             title: "Update Failed",
-            description: "Failed to update device policy",
+            description: "Failed to update the default device policy",
             variant: "destructive",
           });
         }
@@ -662,7 +637,7 @@ const DeviceManagement = memo(
         console.error("Error updating user preference:", error);
         toast({
           title: "Update Failed",
-          description: "Failed to update device policy",
+          description: "Failed to update the default device policy",
           variant: "destructive",
         });
       } finally {
@@ -679,14 +654,15 @@ const DeviceManagement = memo(
       if (success) {
         handleRefresh();
         toast({
-          title: "IP Policy Updated",
-          description: `Access policies have been updated for this user`,
+          title: "IP Access Updated",
+          description:
+            "The new network and IP rules apply to every device this user owns",
           variant: "success",
         });
       } else {
         toast({
           title: "Update Failed",
-          description: "Failed to update IP access policies",
+          description: "Failed to update the IP access policies",
           variant: "destructive",
         });
       }
@@ -714,14 +690,14 @@ const DeviceManagement = memo(
           // User was hidden, now showing
           toast({
             title: "User Shown",
-            description: `${username} is now visible in the user list`,
+            description: `${username} is back in the main user list`,
             variant: "success",
           });
         } else {
           // User was visible, now hiding
           toast({
             title: "User Hidden",
-            description: `${username} has been hidden from the user list. You can manage hidden users at the bottom of the user list.`,
+            description: `${username} moved to the hidden section at the bottom of the user list. Their policies still apply.`,
             variant: "success",
           });
         }
@@ -751,7 +727,7 @@ const DeviceManagement = memo(
 
         toast({
           title: "User Hidden",
-          description: `${username} has been hidden from the user list. You can manage hidden users at the bottom of the user list.`,
+          description: `${username} moved to the hidden section at the bottom of the user list. Their policies still apply.`,
           variant: "success",
         });
 
@@ -812,17 +788,9 @@ const DeviceManagement = memo(
 
             // Add highlight effect
             setTimeout(() => {
-              deviceElement.classList.add(
-                "ring-2",
-                "ring-blue-500",
-                "ring-opacity-75",
-              );
+              deviceElement.classList.add(...HIGHLIGHT_CLASSES);
               setTimeout(() => {
-                deviceElement.classList.remove(
-                  "ring-2",
-                  "ring-blue-500",
-                  "ring-opacity-75",
-                );
+                deviceElement.classList.remove(...HIGHLIGHT_CLASSES);
               }, 1500);
             }, 200);
           }
@@ -863,7 +831,7 @@ const DeviceManagement = memo(
           setTimeout(handleRefresh, 100);
           toast({
             title: "Device Approved",
-            description: "Device has been successfully approved",
+            description: "This device can now stream from your Plex server",
             variant: "success",
           });
         }
@@ -881,7 +849,7 @@ const DeviceManagement = memo(
           setTimeout(handleRefresh, 100);
           toast({
             title: "Device Rejected",
-            description: "Device has been successfully rejected",
+            description: "This device is now blocked from streaming",
             variant: "success",
           });
         }
@@ -899,7 +867,8 @@ const DeviceManagement = memo(
           setTimeout(handleRefresh, 100);
           toast({
             title: "Device Set to Pending",
-            description: "Device has been moved back to pending status",
+            description:
+              "This device follows the user's default device policy until you approve or reject it",
             variant: "success",
           });
           setSelectedDevice(null);
@@ -918,7 +887,8 @@ const DeviceManagement = memo(
           setTimeout(handleRefresh, 100);
           toast({
             title: "Device Deleted",
-            description: "Device has been successfully deleted",
+            description:
+              "The record is gone. The device reappears as pending the next time it connects.",
             variant: "success",
           });
         }
@@ -985,7 +955,7 @@ const DeviceManagement = memo(
           if (!success) {
             toast({
               title: "Error",
-              description: `Failed to grant temporary access`,
+              description: "Failed to grant temporary access",
               variant: "destructive",
             });
             return;
@@ -1001,7 +971,7 @@ const DeviceManagement = memo(
           if (!result.success) {
             toast({
               title: "Error",
-              description: `Failed to grant temporary access to devices`,
+              description: "Failed to grant temporary access to these devices",
               variant: "destructive",
             });
             return;
@@ -1012,18 +982,18 @@ const DeviceManagement = memo(
             result.results?.filter((r: any) => !r.success) || [];
           if (failedDevices.length > 0) {
             toast({
-              title: "Partial Success",
-              description: `${deviceIds.length - failedDevices.length} devices granted access, ${failedDevices.length} failed`,
+              title: "Some Devices Were Not Granted Access",
+              description: `${deviceIds.length - failedDevices.length} of ${deviceIds.length} devices were granted temporary access. Try the remaining ${failedDevices.length} again.`,
               variant: "destructive",
             });
           }
         }
 
         setTimeout(handleRefresh, 100);
-        setTempAccessUser(null);
+        setTemporaryAccessUser(null);
         toast({
           title: "Temporary Access Granted",
-          description: `Temporary access granted to ${deviceIds.length} device${deviceIds.length > 1 ? "s" : ""} for ${formatDuration(durationMinutes)}`,
+          description: `Temporary access granted to ${deviceIds.length} device${deviceIds.length > 1 ? "s" : ""} for ${formatMinutes(durationMinutes)}`,
           variant: "success",
         });
       } finally {
@@ -1031,32 +1001,34 @@ const DeviceManagement = memo(
       }
     };
 
-    const handleGrantUserTempAccess = (userId: string) => {
+    const handleGrantUserTemporaryAccess = (userId: string) => {
       const userGroup = userGroups.find(
         (group) => group.user.userId === userId,
       );
       if (userGroup) {
-        setTempAccessUser({
+        setTemporaryAccessUser({
           userId: userGroup.user.userId,
           username: userGroup.user.username,
         });
       }
     };
 
-    const handleRevokeTemporaryAccess = async (deviceId: number) => {
+    const handleRemoveTemporaryAccess = async (deviceId: number) => {
       try {
         setActionLoading(deviceId);
         const success = await deviceActions.revokeTemporaryAccess(deviceId);
         if (success) {
           setTimeout(handleRefresh, 100);
           toast({
-            title: "Temporary Access Revoked",
-            description: "Temporary access has been successfully revoked",
+            title: "Temporary Access Removed",
+            description:
+              "The grant ended early. This device is back under the user's usual policies.",
             variant: "success",
           });
         }
       } finally {
         setActionLoading(null);
+        setConfirmAction(null);
       }
     };
 
@@ -1089,12 +1061,12 @@ const DeviceManagement = memo(
           // Refresh all time rules (cached globally)
           await fetchAllTimeRules(userIds);
 
-          // Check updated time rule status for each user using cached data
-          const statusMap: Record<string, boolean> = {};
+          // Keep the full rules so each device can report its own schedule
+          const ruleMap: Record<string, UserTimeRule[]> = {};
           for (const userId of userIds) {
-            statusMap[userId] = await hasTimeRules(userId);
+            ruleMap[userId] = await getAllTimeRules(userId);
           }
-          setUserTimeRuleStatus(statusMap);
+          setUserTimeRules(ruleMap);
         } catch (error) {
           console.error("Error refreshing time rule status:", error);
         } finally {
@@ -1107,13 +1079,10 @@ const DeviceManagement = memo(
       return deviceUtils.hasTemporaryAccess(device);
     };
 
-    // Utility function to check if grant temp access should be shown
-    const shouldShowGrantTempAccess = (device: UserDevice): boolean => {
-      // Exclude PlexAmp devices - they are not eligible for temporary access
-      if (
-        device.deviceProduct?.toLowerCase().includes("plexamp") ||
-        device.deviceName?.toLowerCase().includes("plexamp")
-      ) {
+    // Only devices Guardian is currently blocking can be granted temporary access
+    const canGrantTemporaryAccess = (device: UserDevice): boolean => {
+      // Plexamp devices are exempt from every policy, so they never need a grant
+      if (isPlexampDevice(device)) {
         return false;
       }
 
@@ -1122,7 +1091,7 @@ const DeviceManagement = memo(
         return false;
       }
 
-      // Always show Grant Temp Access for rejected devices
+      // A rejected device is always blocked
       if (device.status === "rejected") {
         return true;
       }
@@ -1130,7 +1099,7 @@ const DeviceManagement = memo(
       // For pending devices, check user and global policies
       const userPreference = usersData?.find((u) => u.userId === device.userId);
 
-      // If user policy is explicitly set to allow (defaultBlock = false), don't show Grant Temp Access for pending devices
+      // A pending device is only blocked when the effective default policy blocks
       if (userPreference && userPreference.defaultBlock === false) {
         return false;
       }
@@ -1142,55 +1111,41 @@ const DeviceManagement = memo(
           (s) => s.key === "PLEX_GUARD_DEFAULT_BLOCK",
         );
 
-        // If global setting is to allow (value "false"), don't show Grant Temp Access for pending devices
+        // The global default allows, so this pending device is already streaming
         if (globalDefaultBlock && globalDefaultBlock.value === "false") {
           return false;
         }
       }
 
-      // Show Grant Temp Access for pending devices if:
-      // - User is explicitly set to block (defaultBlock = true), OR
-      // - User is set to global AND global is to block (default behavior)
       return true;
     };
 
     // Confirmation dialog handlers
     const showApproveConfirmation = (device: UserDevice) => {
-      setConfirmAction({
-        device,
-        action: "approve",
-        title: "Approve Device",
-        description: `Are you sure you want to approve this device? "${device.deviceName || device.deviceIdentifier}" will be able to access your Plex server.`,
-      });
+      setConfirmAction({ device, action: "approve", ...CONFIRM_COPY.approve });
     };
 
     const showRejectConfirmation = (device: UserDevice) => {
-      setConfirmAction({
-        device,
-        action: "reject",
-        title: "Reject Device",
-        description: `Are you sure you want to reject this device? "${device.deviceName || device.deviceIdentifier}" will be blocked from accessing your Plex server.`,
-      });
+      setConfirmAction({ device, action: "reject", ...CONFIRM_COPY.reject });
     };
 
     const showDeleteConfirmation = (device: UserDevice) => {
+      setConfirmAction({ device, action: "delete", ...CONFIRM_COPY.delete });
+    };
+
+    const showRemoveTemporaryAccessConfirmation = (device: UserDevice) => {
       setConfirmAction({
         device,
-        action: "delete",
-        title: "Delete Device",
-        description: `Are you sure you want to permanently delete this device record? This action cannot be undone. The device "${device.deviceName || device.deviceIdentifier}" will need to be re-approved if it tries to connect again.`,
+        action: "removeTemporaryAccess",
+        ...CONFIRM_COPY.removeTemporaryAccess,
       });
     };
 
     const showToggleConfirmation = (device: UserDevice) => {
-      const isCurrentlyApproved = device.status === "approved";
       setConfirmAction({
         device,
         action: "toggle",
-        title: isCurrentlyApproved ? "Reject Device" : "Approve Device",
-        description: isCurrentlyApproved
-          ? `Are you sure you want to reject "${device.deviceName || device.deviceIdentifier}"? This will block access to your Plex server.`
-          : `Are you sure you want to approve "${device.deviceName || device.deviceIdentifier}"? This will grant access to your Plex server.`,
+        ...CONFIRM_COPY[device.status === "approved" ? "reject" : "approve"],
       });
     };
 
@@ -1210,38 +1165,31 @@ const DeviceManagement = memo(
         case "toggle":
           await handleToggleApproval(confirmAction.device);
           break;
+        case "removeTemporaryAccess":
+          await handleRemoveTemporaryAccess(confirmAction.device.id);
+          break;
       }
     };
 
     return (
       <>
         <Card>
-          <CardHeader>
+          <CardHeader className="py-4">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div className="flex-1 min-w-0">
-                <CardTitle className="flex items-center text-lg sm:text-xl mt-4">
-                  <Users className="w-5 h-5 mr-2" />
-                  User & Device Management
-                </CardTitle>
-                <CardDescription className="mt-1 flex items-center">
-                  Manage all users and their devices
-                </CardDescription>
-              </div>
+              <div className="flex-1 min-w-0">{tabs}</div>
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-2">
                 <div className="flex items-center gap-2">
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={handleAutoRefreshToggle}
+                    title={autoRefresh ? AUTO_REFRESH_ON : AUTO_REFRESH_OFF}
                     className={`text-xs sm:text-sm ${
                       autoRefresh
-                        ? "bg-green-50 border-green-200 text-green-700"
+                        ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
                         : ""
                     }`}
                   >
-                    <Wifi
-                      className={`w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 ${autoRefresh ? "animate-pulse" : ""}`}
-                    />
                     {autoRefresh ? "Live" : "Manual"}
                   </Button>
                   <Button
@@ -1265,13 +1213,12 @@ const DeviceManagement = memo(
             <div className="mb-6">
               <div className="flex flex-col sm:flex-row gap-3 mb-4">
                 <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
                   <input
                     type="text"
-                    placeholder="Search by username or device..."
+                    placeholder="Search by user or device"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 text-sm border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                    className="h-10 w-full rounded-md border border-input bg-background px-4 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                   />
                 </div>
 
@@ -1365,15 +1312,14 @@ const DeviceManagement = memo(
               </div>
             ) : filteredAndSortedGroups.length === 0 ? (
               <div className="flex items-center justify-center py-16 text-muted-foreground">
-                {searchTerm ? (
+                {deferredSearchTerm ? (
                   <>
                     <Search className="w-6 h-6 mr-2" />
                     No users match your search
                   </>
                 ) : (
                   <>
-                    <Users className="w-6 h-6 mr-2" />
-                    No users found
+                    No users yet. They appear here the first time they stream.
                   </>
                 )}
               </div>
@@ -1385,42 +1331,22 @@ const DeviceManagement = memo(
                     group={group}
                     isExpanded={expandedUsers.has(group.user.userId)}
                     actionLoading={actionLoading}
-                    hasTimeSchedules={
-                      userTimeRuleStatus[group.user.userId] || false
-                    }
-                    hasIPPolicies={(() => {
-                      const pref = usersData?.find(
-                        (u) => u.userId === group.user.userId,
-                      );
-                      if (!pref) return false;
-                      const networkPolicyIsCustom =
-                        pref.networkPolicy !== "both";
-                      const ipAccessPolicyIsCustom =
-                        pref.ipAccessPolicy !== "all";
-                      const allowedIPsPresent =
-                        pref.allowedIPs != null &&
-                        (Array.isArray(pref.allowedIPs)
-                          ? pref.allowedIPs.length > 0
-                          : String(pref.allowedIPs).trim() !== "");
-                      return (
-                        networkPolicyIsCustom ||
-                        ipAccessPolicyIsCustom ||
-                        allowedIPsPresent
-                      );
-                    })()}
+                    timeRules={userTimeRules[group.user.userId]}
                     updatingUserPreference={updatingUserPreference}
                     onToggleExpansion={toggleUserExpansion}
                     onUpdateUserPreference={handleUpdateUserPreference}
                     onUpdateUserIPPolicy={handleUpdateUserIPPolicy}
                     onToggleUserVisibility={handleToggleUserVisibility}
                     onShowHistory={handleShowHistory}
-                    onGrantUserTempAccess={handleGrantUserTempAccess}
+                    onGrantUserTemporaryAccess={handleGrantUserTemporaryAccess}
                     onShowTimePolicy={handleShowTimePolicy}
                     onApprove={showApproveConfirmation}
                     onReject={showRejectConfirmation}
                     onDelete={showDeleteConfirmation}
                     onToggleApproval={showToggleConfirmation}
-                    onRevokeTempAccess={handleRevokeTemporaryAccess}
+                    onRemoveTemporaryAccess={
+                      showRemoveTemporaryAccessConfirmation
+                    }
                     onShowDetails={setSelectedDevice}
                   />
                 ))}
@@ -1455,23 +1381,32 @@ const DeviceManagement = memo(
           onNewDeviceNameChange={setNewDeviceName}
           onSetPending={handleSetPending}
           settingsData={settingsData}
+          policies={
+            selectedDevice
+              ? devicePolicyBadges(
+                  selectedDevice,
+                  usersData?.find((u) => u.userId === selectedDevice.userId),
+                  userTimeRules[selectedDevice.userId],
+                )
+              : []
+          }
         />
 
         {/* Temporary Access Modal */}
         <TemporaryAccessModal
-          user={tempAccessUser}
+          user={temporaryAccessUser}
           userDevices={
-            tempAccessUser
+            temporaryAccessUser
               ? userGroups.find(
-                  (group) => group.user.userId === tempAccessUser.userId,
+                  (group) => group.user.userId === temporaryAccessUser.userId,
                 )?.devices || []
               : []
           }
-          isOpen={!!tempAccessUser}
-          onClose={() => setTempAccessUser(null)}
+          isOpen={!!temporaryAccessUser}
+          onClose={() => setTemporaryAccessUser(null)}
           onGrantAccess={handleGrantTemporaryAccess}
           actionLoading={actionLoading}
-          shouldShowGrantTempAccess={shouldShowGrantTempAccess}
+          canGrantTemporaryAccess={canGrantTemporaryAccess}
         />
 
         {/* Confirmation Modal */}
@@ -1502,7 +1437,6 @@ const DeviceManagement = memo(
             <div className="space-y-3">
               {hiddenUsers.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
-                  <Users className="w-8 h-8 mx-auto mb-2" />
                   <p>No hidden users found</p>
                 </div>
               ) : (
@@ -1535,6 +1469,15 @@ const DeviceManagement = memo(
                 ))
               )}
             </div>
+
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setHiddenUsersModalOpen(false)}
+              >
+                Close
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
 

@@ -61,15 +61,20 @@ describe("ConfirmationModal", () => {
     ).toBeInTheDocument();
   });
 
-  it("warns for the destructive variant", () => {
-    renderModal({ variant: "destructive" });
+  it("tones the confirm button as dangerous for the destructive variant", () => {
+    renderModal({ variant: "destructive", confirmText: "Delete" });
 
-    expect(document.querySelector(".lucide-triangle-alert")).not.toBeNull();
+    expect(screen.getByRole("button", { name: "Delete" }).className).toContain(
+      "border-rose-500/40",
+    );
   });
 
-  it("shows no warning icon by default", () => {
-    renderModal();
-    expect(document.querySelector(".lucide-triangle-alert")).toBeNull();
+  it("leaves the confirm button in the default tone otherwise", () => {
+    renderModal({ confirmText: "Delete" });
+
+    expect(
+      screen.getByRole("button", { name: "Delete" }).className,
+    ).not.toContain("border-rose-500/40");
   });
 
   it("confirms and cancels", async () => {
@@ -80,6 +85,16 @@ describe("ConfirmationModal", () => {
 
     await user.click(screen.getByRole("button", { name: "Cancel" }));
     expect(onClose).toHaveBeenCalled();
+  });
+
+  it("hands the callbacks no arguments, so a click event is never mistaken for one", async () => {
+    const { user, onConfirm, onClose } = renderModal();
+
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    expect(onConfirm).toHaveBeenCalledWith();
+
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(onClose).toHaveBeenCalledWith();
   });
 
   it("closes on escape", async () => {
@@ -201,7 +216,7 @@ describe("PasswordConfirmationModal", () => {
 
     expect(field).toHaveAttribute("type", "password");
 
-    const toggle = field.parentElement?.querySelector("button") as HTMLElement;
+    const toggle = screen.getByRole("button", { name: /password/i });
     await user.click(toggle);
     expect(field).toHaveAttribute("type", "text");
 
@@ -209,10 +224,9 @@ describe("PasswordConfirmationModal", () => {
     expect(field).toHaveAttribute("type", "password");
   });
 
-  it("warns and restyles for a dangerous action", () => {
+  it("warns for a dangerous action", () => {
     renderModal({ isDangerous: true });
 
-    expect(document.querySelector(".lucide-triangle-alert")).not.toBeNull();
     expect(
       screen.getByText(/This action cannot be undone/),
     ).toBeInTheDocument();
@@ -221,7 +235,6 @@ describe("PasswordConfirmationModal", () => {
   it("shows no warning for an ordinary action", () => {
     renderModal();
 
-    expect(document.querySelector(".lucide-triangle-alert")).toBeNull();
     expect(screen.queryByText(/This action cannot be undone/)).toBeNull();
   });
 
@@ -296,7 +309,7 @@ describe("ReleaseNotesModal", () => {
   it("names the version", () => {
     renderModal();
     expect(
-      screen.getByText("What's New in Guardian v2.0.0"),
+      screen.getByText("What's New in v2.0.0"),
     ).toBeInTheDocument();
   });
 

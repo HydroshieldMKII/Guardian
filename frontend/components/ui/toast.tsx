@@ -59,6 +59,25 @@ const Toast = React.forwardRef<
 });
 Toast.displayName = ToastPrimitives.Root.displayName;
 
+const ToastProgress = ({
+  duration,
+  className,
+}: {
+  duration: number;
+  className?: string;
+}) => (
+  <span
+    aria-hidden
+    data-slot="toast-progress"
+    style={{ animation: `toast-progress ${duration}ms linear forwards` }}
+    className={cn(
+      "absolute inset-x-0 top-0 h-1 origin-left bg-current/25 motion-reduce:animate-none",
+      className,
+    )}
+  />
+);
+ToastProgress.displayName = "ToastProgress";
+
 const ToastAction = React.forwardRef<
   React.ElementRef<typeof ToastPrimitives.Action>,
   React.ComponentPropsWithoutRef<typeof ToastPrimitives.Action>
@@ -128,6 +147,7 @@ export {
   ToastProvider,
   ToastViewport,
   Toast,
+  ToastProgress,
   ToastTitle,
   ToastDescription,
   ToastClose,

@@ -180,10 +180,10 @@ describe("SMTPSettings", () => {
       renderPanel();
 
       expect(
-        screen.getByRole("button", { name: /Test SMTP Connection/ }),
+        screen.getByRole("button", { name: /Send Test Email/ }),
       ).toBeDisabled();
       expect(
-        screen.getByText("Enable emails to test the connection."),
+        screen.getByText("Turn email notifications on to test the connection."),
       ).toBeInTheDocument();
     });
 
@@ -191,10 +191,12 @@ describe("SMTPSettings", () => {
       renderPanel({ hasUnsavedChanges: true });
 
       expect(
-        screen.getByText("Save your changes before testing SMTP connection"),
+        screen.getByText("Save your changes before testing the connection."),
       ).toBeInTheDocument();
       expect(
-        screen.queryByText("Enable emails to test the connection."),
+        screen.queryByText(
+          "Turn email notifications on to test the connection.",
+        ),
       ).toBeNull();
     });
 
@@ -208,7 +210,7 @@ describe("SMTPSettings", () => {
       });
 
       expect(
-        screen.getByRole("button", { name: /Send test email/ }),
+        screen.getByRole("button", { name: /Send Test Email/ }),
       ).toBeInTheDocument();
     });
   });
@@ -219,7 +221,7 @@ describe("SMTPSettings", () => {
     it("reports success", async () => {
       const { user } = renderPanel(enabled);
 
-      await user.click(screen.getByRole("button", { name: /Send test email/ }));
+      await user.click(screen.getByRole("button", { name: /Send Test Email/ }));
 
       expect(await screen.findByText("Sent")).toBeInTheDocument();
     });
@@ -231,7 +233,7 @@ describe("SMTPSettings", () => {
       });
       const { user } = renderPanel(enabled);
 
-      await user.click(screen.getByRole("button", { name: /Send test email/ }));
+      await user.click(screen.getByRole("button", { name: /Send Test Email/ }));
 
       expect(await screen.findByText("Auth rejected")).toBeInTheDocument();
     });
@@ -240,7 +242,7 @@ describe("SMTPSettings", () => {
       testSmtpConnection.mockResolvedValue({ success: false });
       const { user } = renderPanel(enabled);
 
-      await user.click(screen.getByRole("button", { name: /Send test email/ }));
+      await user.click(screen.getByRole("button", { name: /Send Test Email/ }));
 
       expect(await screen.findByText("SMTP test failed")).toBeInTheDocument();
     });
@@ -249,7 +251,7 @@ describe("SMTPSettings", () => {
       testSmtpConnection.mockRejectedValue(new Error("offline"));
       const { user } = renderPanel(enabled);
 
-      await user.click(screen.getByRole("button", { name: /Send test email/ }));
+      await user.click(screen.getByRole("button", { name: /Send Test Email/ }));
 
       expect(await screen.findByText("offline")).toBeInTheDocument();
     });
@@ -258,7 +260,7 @@ describe("SMTPSettings", () => {
       testSmtpConnection.mockRejectedValue("boom");
       const { user } = renderPanel(enabled);
 
-      await user.click(screen.getByRole("button", { name: /Send test email/ }));
+      await user.click(screen.getByRole("button", { name: /Send Test Email/ }));
 
       expect(
         await screen.findByText("Failed to test SMTP connection"),
@@ -269,10 +271,10 @@ describe("SMTPSettings", () => {
       renderPanel({ ...enabled, hasUnsavedChanges: true });
 
       expect(
-        screen.getByRole("button", { name: /Send test email/ }),
+        screen.getByRole("button", { name: /Send Test Email/ }),
       ).toBeDisabled();
       expect(
-        screen.getByText("Save your changes before testing SMTP connection"),
+        screen.getByText("Save your changes before testing the connection."),
       ).toBeInTheDocument();
     });
 
@@ -280,9 +282,9 @@ describe("SMTPSettings", () => {
       testSmtpConnection.mockReturnValue(new Promise(() => {}));
       const { user } = renderPanel(enabled);
 
-      await user.click(screen.getByRole("button", { name: /Send test email/ }));
+      await user.click(screen.getByRole("button", { name: /Send Test Email/ }));
 
-      expect(screen.getByText("Sending test email...")).toBeInTheDocument();
+      expect(screen.getByText("Sending...")).toBeInTheDocument();
     });
   });
 });

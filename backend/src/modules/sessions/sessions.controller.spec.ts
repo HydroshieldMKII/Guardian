@@ -31,30 +31,57 @@ describe('SessionsController', () => {
     });
   });
 
-  it('defaults the history limit to 50 and excludes active sessions', async () => {
+  it('defaults the history page to the first 50 completed sessions', async () => {
     await controller.getUserSessionHistory('u1');
     expect(activeSessionService.getUserSessionHistory).toHaveBeenCalledWith(
       'u1',
-      50,
-      false,
+      {
+        limit: 50,
+        offset: 0,
+        includeActive: false,
+        search: undefined,
+        terminatedOnly: false,
+      },
     );
   });
 
-  it('parses the limit and the include-active flag', async () => {
-    await controller.getUserSessionHistory('u1', '10', 'true');
+  it('parses the paging, filter and search parameters', async () => {
+    await controller.getUserSessionHistory(
+      'u1',
+      '10',
+      'true',
+      '20',
+      'ennemie',
+      'true',
+    );
     expect(activeSessionService.getUserSessionHistory).toHaveBeenCalledWith(
       'u1',
-      10,
-      true,
+      {
+        limit: 10,
+        offset: 20,
+        includeActive: true,
+        search: 'ennemie',
+        terminatedOnly: true,
+      },
     );
   });
 
-  it('treats any other include-active value as false', async () => {
-    await controller.getUserSessionHistory('u1', '10', 'yes');
+  it('treats any other flag value as false', async () => {
+    await controller.getUserSessionHistory(
+      'u1',
+      '10',
+      'yes',
+      undefined,
+      undefined,
+      'yes',
+    );
     expect(activeSessionService.getUserSessionHistory).toHaveBeenCalledWith(
       'u1',
-      10,
-      false,
+      expect.objectContaining({
+        includeActive: false,
+        terminatedOnly: false,
+        offset: 0,
+      }),
     );
   });
 

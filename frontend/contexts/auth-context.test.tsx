@@ -185,7 +185,7 @@ describe("initial load", () => {
 
     const { result } = await renderAuth();
 
-    expect(result.current.backendError).toContain("Unable to reach Guardian");
+    expect(result.current.backendError).toContain("Unable to reach the backend");
   });
 
   it("clears the error on a successful retry", async () => {

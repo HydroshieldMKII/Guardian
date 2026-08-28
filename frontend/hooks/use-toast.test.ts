@@ -106,6 +106,33 @@ describe("useToast", () => {
     expect(result.current.toasts[0].open).toBe(false);
   });
 
+  it("honours a custom dismissal delay", () => {
+    const { result } = renderHook(() => useToast());
+
+    act(() => {
+      result.current.toast({ title: "Slow", duration: 9000 });
+    });
+    act(() => {
+      jest.advanceTimersByTime(4000);
+    });
+    expect(result.current.toasts[0].open).toBe(true);
+
+    act(() => {
+      jest.advanceTimersByTime(5000);
+    });
+    expect(result.current.toasts[0].open).toBe(false);
+  });
+
+  it("records the delay so the countdown bar can match it", () => {
+    const { result } = renderHook(() => useToast());
+
+    act(() => {
+      result.current.toast({ title: "Auto" });
+    });
+
+    expect(result.current.toasts[0].duration).toBe(4000);
+  });
+
   it("keeps a zero-duration toast open", () => {
     const { result } = renderHook(() => useToast());
 

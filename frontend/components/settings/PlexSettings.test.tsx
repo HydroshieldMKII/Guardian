@@ -273,7 +273,7 @@ describe("PlexSettings", () => {
         screen.getByRole("button", { name: /Test Plex Connection/ }),
       ).toBeDisabled();
       expect(
-        screen.getByText("Save your changes before testing the connection"),
+        screen.getByText("Save your changes before testing the connection."),
       ).toBeInTheDocument();
     });
 
@@ -327,7 +327,7 @@ describe("PlexSettings", () => {
       await user.click(
         screen.getByRole("button", { name: /Test Plex Connection/ }),
       );
-      expect(screen.getByText("Testing Connection...")).toBeInTheDocument();
+      expect(screen.getByText("Testing...")).toBeInTheDocument();
 
       await waitFor(async () => {
         resolve({ success: true, message: "Connected" });

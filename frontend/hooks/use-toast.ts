@@ -138,7 +138,7 @@ function dispatch(action: Action) {
 
 type Toast = Omit<ToasterToast, "id">;
 
-function toast({ duration, ...props }: Toast) {
+function toast({ duration = TOAST_AUTO_DISMISS_DELAY, ...props }: Toast) {
   const id = genId();
 
   const update = (props: ToasterToast) =>
@@ -153,6 +153,7 @@ function toast({ duration, ...props }: Toast) {
     toast: {
       ...props,
       id,
+      duration,
       open: true,
       onOpenChange: (open) => {
         if (!open) dismiss();
@@ -160,11 +161,11 @@ function toast({ duration, ...props }: Toast) {
     },
   });
 
-  // Auto-dismiss after 4 seconds unless duration is explicitly set to 0
+  // Auto-dismiss unless the caller asked for a sticky toast
   if (duration !== 0) {
     setTimeout(() => {
       dismiss();
-    }, TOAST_AUTO_DISMISS_DELAY);
+    }, duration);
   }
 
   return {

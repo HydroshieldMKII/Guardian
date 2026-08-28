@@ -9,18 +9,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { StatTile } from "@/components/ui/entity";
 import { Button } from "@/components/ui/button";
-import {
-  Activity,
-  Users,
-  Shield,
-  AlertTriangle,
-  CheckCircle,
-  Settings,
-} from "lucide-react";
+import { Users, AlertTriangle, CheckCircle } from "lucide-react";
 import StreamsList from "./streams-list";
 import { DeviceManagement } from "./device-management";
+import { DashboardTabs } from "./dashboard-tabs";
 import { PlexErrorHandler, ErrorHandler } from "./error-handler";
 import { ThreeDotLoader } from "./three-dot-loader";
 
@@ -35,6 +29,7 @@ import { config } from "@/lib/config";
 import { useVersion } from "@/contexts/version-context";
 import { useAuth } from "@/contexts/auth-context";
 import { useLiveDashboard } from "@/hooks/useLiveDashboard";
+import { HIGHLIGHT_CLASSES } from "@/lib/highlight";
 
 export function Dashboard() {
   const router = useRouter();
@@ -84,7 +79,7 @@ export function Dashboard() {
         configured: false,
         hasValidCredentials: false,
         connectionStatus:
-          "Backend connection error: Cannot connect to Guardian backend service",
+          "Backend connection error: Cannot connect to the backend service",
       });
     } finally {
       setLoading(false);
@@ -95,7 +90,7 @@ export function Dashboard() {
   useEffect(() => {
     if (dashboardData && !initialTabSet) {
       const defaultPageSetting = dashboardData.settings.find(
-        (s) => s.key === "DEFAULT_PAGE"
+        (s) => s.key === "DEFAULT_PAGE",
       );
       const defaultPage = defaultPageSetting?.value || "devices";
       setActiveTab(defaultPage === "streams" ? "streams" : "devices");
@@ -130,17 +125,9 @@ export function Dashboard() {
 
         // Add highlight effect
         setTimeout(() => {
-          userElement.classList.add(
-            "ring-2",
-            "ring-blue-500",
-            "ring-opacity-75"
-          );
+          userElement.classList.add(...HIGHLIGHT_CLASSES);
           setTimeout(() => {
-            userElement.classList.remove(
-              "ring-2",
-              "ring-blue-500",
-              "ring-opacity-75"
-            );
+            userElement.classList.remove(...HIGHLIGHT_CLASSES);
           }, 1500);
         }, 200);
       }
@@ -186,19 +173,16 @@ export function Dashboard() {
     }
   }, [versionInfo?.version, checkForUpdatesIfEnabled]);
 
-  const applyLiveDashboard = useCallback(
-    (payload: UnifiedDashboardData) => {
-      setDashboardData(payload);
-      setPlexStatus(payload.plexStatus);
-      setStats(payload.stats);
-      setLoading(false);
-    },
-    []
-  );
+  const applyLiveDashboard = useCallback((payload: UnifiedDashboardData) => {
+    setDashboardData(payload);
+    setPlexStatus(payload.plexStatus);
+    setStats(payload.stats);
+    setLoading(false);
+  }, []);
 
   const { connected: liveConnected } = useLiveDashboard<UnifiedDashboardData>(
     applyLiveDashboard,
-    autoRefresh && !setupRequired
+    autoRefresh && !setupRequired,
   );
 
   // Poll only while the live connection is unavailable
@@ -208,7 +192,7 @@ export function Dashboard() {
 
     const interval = setInterval(
       () => refreshDashboard(true),
-      config.app.refreshInterval
+      config.app.refreshInterval,
     );
     return () => clearInterval(interval);
   }, [autoRefresh, liveConnected, refreshDashboard]);
@@ -243,6 +227,15 @@ export function Dashboard() {
     );
   }
 
+  const tabs = (
+    <DashboardTabs
+      activeTab={activeTab}
+      onTabChange={setActiveTab}
+      pendingDevices={stats.pendingDevices}
+      activeStreams={stats.activeStreams}
+    />
+  );
+
   return (
     <div className="min-h-[calc(100vh-3.5rem)] sm:min-h-[calc(100vh-4rem)]">
       <div className="w-full max-w-[1400px] mx-auto px-2 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
@@ -252,156 +245,27 @@ export function Dashboard() {
             Devices Overview
           </h3>
 
-          {/* Mobile: Compact horizontal layout */}
-          <Card className="sm:hidden overflow-hidden">
-            <CardContent className="p-3">
-              <div className="grid grid-cols-4 gap-2">
-                {/* Streams */}
-                <div className="flex flex-col items-center justify-center p-2 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
-                  <div className="flex items-center gap-1 mb-2">
-                    <Activity className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-                    <div className="text-[10px] font-medium text-muted-foreground">
-                      Streams
-                    </div>
-                  </div>
-                  <div className="text-2xl font-bold text-foreground">
-                    {stats.activeStreams}
-                  </div>
-                </div>
-
-                {/* Pending */}
-                <div className="flex flex-col items-center justify-center p-2 bg-yellow-50 dark:bg-yellow-950/30 rounded-lg border border-yellow-200 dark:border-yellow-800">
-                  <div className="flex items-center gap-1 mb-2">
-                    <AlertTriangle className="w-3.5 h-3.5 text-yellow-600 dark:text-yellow-400" />
-                    <div className="text-[10px] font-medium text-muted-foreground">
-                      Pending
-                    </div>
-                  </div>
-                  <div className="text-2xl font-bold text-foreground">
-                    {stats.pendingDevices}
-                  </div>
-                </div>
-
-                {/* Approved */}
-                <div className="flex flex-col items-center justify-center p-2 bg-green-50 dark:bg-green-950/30 rounded-lg border border-green-200 dark:border-green-800">
-                  <div className="flex items-center gap-1 mb-2">
-                    <CheckCircle className="w-3.5 h-3.5 text-green-600 dark:text-green-400" />
-                    <div className="text-[10px] font-medium text-muted-foreground">
-                      Approved
-                    </div>
-                  </div>
-                  <div className="text-2xl font-bold text-foreground">
-                    {stats.approvedDevices}
-                  </div>
-                </div>
-
-                {/* Total */}
-                <div className="flex flex-col items-center justify-center p-2 bg-purple-50 dark:bg-purple-950/30 rounded-lg border border-purple-200 dark:border-purple-800">
-                  <div className="flex items-center gap-1 mb-2">
-                    <Users className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
-                    <div className="text-[10px] font-medium text-muted-foreground">
-                      Total
-                    </div>
-                  </div>
-                  <div className="text-2xl font-bold text-foreground">
-                    {stats.totalDevices}
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Desktop: Original card layout */}
-          <div className="hidden sm:grid sm:grid-cols-2 xl:grid-cols-4 gap-4 lg:gap-6">
-            <Card className="border-l-4 border-l-blue-500 transition-all hover:shadow-md">
-              <CardHeader className="p-4 lg:pb-4">
-                <CardTitle className="text-sm font-medium text-muted-foreground flex items-center mb-2">
-                  <Activity className="w-4 h-4 mr-2" />
-                  Active Streams
-                </CardTitle>
-                <CardDescription className="text-2xl lg:text-3xl xl:text-4xl font-bold text-foreground">
-                  {stats.activeStreams}
-                </CardDescription>
-              </CardHeader>
-            </Card>
-
-            <Card className="border-l-4 border-l-yellow-500 transition-all hover:shadow-md">
-              <CardHeader className="p-4 lg:pb-4">
-                <CardTitle className="text-sm font-medium text-muted-foreground flex items-center mb-2">
-                  <AlertTriangle className="w-4 h-4 mr-2" />
-                  Pending Approval
-                </CardTitle>
-                <CardDescription className="text-2xl lg:text-3xl xl:text-4xl font-bold text-foreground">
-                  {stats.pendingDevices}
-                </CardDescription>
-              </CardHeader>
-            </Card>
-
-            <Card className="border-l-4 border-l-green-500 transition-all hover:shadow-md">
-              <CardHeader className="p-4 lg:pb-4">
-                <CardTitle className="text-sm font-medium text-muted-foreground flex items-center mb-2">
-                  <CheckCircle className="w-4 h-4 mr-2" />
-                  Approved Devices
-                </CardTitle>
-                <CardDescription className="text-2xl lg:text-3xl xl:text-4xl font-bold text-foreground">
-                  {stats.approvedDevices}
-                </CardDescription>
-              </CardHeader>
-            </Card>
-
-            <Card className="border-l-4 border-l-purple-500 transition-all hover:shadow-md">
-              <CardHeader className="p-4 lg:pb-4">
-                <CardTitle className="text-sm font-medium text-muted-foreground flex items-center mb-2">
-                  <Users className="w-4 h-4 mr-2" />
-                  Total Devices
-                </CardTitle>
-                <CardDescription className="text-2xl lg:text-3xl xl:text-4xl font-bold text-foreground">
-                  {stats.totalDevices}
-                </CardDescription>
-              </CardHeader>
-            </Card>
-          </div>
-        </div>
-
-        {/* Tab Navigation */}
-        <div className="mb-4 sm:mb-6 lg:mb-8">
-          <div className="flex w-full lg:w-fit space-x-1 bg-muted p-1 sm:p-1.5 rounded-lg">
-            <Button
-              variant={activeTab === "devices" ? "default" : "ghost"}
-              onClick={() => setActiveTab("devices")}
-              className="flex-1 lg:flex-none px-2 sm:px-4 lg:px-8 py-2 sm:py-2.5 text-xs sm:text-sm font-medium relative min-w-0"
-            >
-              <Shield className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1 sm:mr-2 flex-shrink-0" />
-              <span className="truncate hidden sm:inline">
-                Device Management
-              </span>
-              <span className="truncate sm:hidden">Devices</span>
-              {stats.pendingDevices > 0 && (
-                <Badge
-                  variant="destructive"
-                  className="ml-1 sm:ml-2 min-w-4 sm:min-w-5 h-4 sm:h-5 text-[10px] sm:text-xs bg-red-600 dark:bg-red-700 text-white flex-shrink-0"
-                >
-                  {stats.pendingDevices}
-                </Badge>
-              )}
-            </Button>
-            <Button
-              variant={activeTab === "streams" ? "default" : "ghost"}
-              onClick={() => setActiveTab("streams")}
-              className="flex-1 lg:flex-none px-2 sm:px-4 lg:px-8 py-2 sm:py-2.5 text-xs sm:text-sm font-medium relative min-w-0"
-            >
-              <Activity className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1 sm:mr-2 flex-shrink-0" />
-              <span className="truncate hidden sm:inline">Active Streams</span>
-              <span className="truncate sm:hidden">Streams</span>
-              {stats.activeStreams > 0 && (
-                <Badge
-                  variant="default"
-                  className="ml-1 sm:ml-2 min-w-4 sm:min-w-5 h-4 sm:h-5 text-[10px] sm:text-xs bg-blue-600 dark:bg-blue-700 text-white flex-shrink-0"
-                >
-                  {stats.activeStreams}
-                </Badge>
-              )}
-            </Button>
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4 lg:gap-6">
+            <StatTile
+              label="Active Streams"
+              value={stats.activeStreams}
+              tone="info"
+            />
+            <StatTile
+              label="Pending Approval"
+              value={stats.pendingDevices}
+              tone="warning"
+            />
+            <StatTile
+              label="Approved Devices"
+              value={stats.approvedDevices}
+              tone="positive"
+            />
+            <StatTile
+              label="Total Devices"
+              value={stats.totalDevices}
+              tone="accent"
+            />
           </div>
         </div>
 
@@ -409,6 +273,7 @@ export function Dashboard() {
         <div className="w-full">
           {activeTab === "streams" ? (
             <StreamsList
+              tabs={tabs}
               sessionsData={dashboardData?.sessions}
               onRefresh={() => refreshDashboard(true)}
               autoRefresh={autoRefresh}
@@ -418,6 +283,7 @@ export function Dashboard() {
             />
           ) : (
             <DeviceManagement
+              tabs={tabs}
               devicesData={dashboardData?.devices}
               usersData={dashboardData?.users}
               settingsData={dashboardData?.settings}
