@@ -1,6 +1,5 @@
 services:
   guardian:
-    image: hydroshieldmkii/guardian:latest
     build:
       context: .
       dockerfile: Dockerfile
@@ -8,12 +7,8 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      - guardian_data:/app/data
+      - ./data:/app/data
     environment:
       - TRUST_PROXY_HOPS=1
       # - APP_URL=https://guardian.example.com # For password reset by email
     restart: unless-stopped
-
-volumes:
-  guardian_data:
-    driver: local
