@@ -13,7 +13,7 @@
 Guardian is an access-control layer for Plex Media Server. It polls the Plex sessions API, matches each stream against per-user and per-device policy, and terminates the sessions that fail.
 
 > [!WARNING]
-> **Looking for a maintainer.** Reach out on [Discord](https://discord.gg/xTKuHyhdS4) or in [Discussions](https://github.com/HydroshieldMKII/Guardian/discussions).
+> **Looking for a maintainer.** Reach out in [Discussions](https://github.com/HydroshieldMKII/Guardian/discussions).
 >
 > Do not expose Guardian directly to the internet. Run it on a LAN, behind a VPN, or behind a reverse proxy with SSO.
 
@@ -117,7 +117,7 @@ docker compose exec guardian node backend/src/scripts/disable-captcha.js
 
 **Reset emails not arriving** — confirm SMTP works with the test button, confirm `APP_URL` is set, and confirm the admin account has an email address.
 
-Otherwise, ask on [Discord](https://discord.gg/xTKuHyhdS4) or open an [issue](https://github.com/HydroshieldMKII/Guardian/issues).
+Otherwise, open an [issue](https://github.com/HydroshieldMKII/Guardian/issues).
 
 ## Development
 
