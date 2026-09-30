@@ -139,4 +139,4 @@ Open an issue with the bug or feature template, or a pull request with the check
 
 ## License
 
-Released under the [PolyForm Noncommercial License 1.0.0](LICENSE.md). Fork it, change it and share it for any noncommercial purpose, keeping the copyright notice with it. Commercial use is not covered. The software comes with no warranty.
+Released under the [PolyForm Noncommercial License 1.0.0](LICENSE.md).
