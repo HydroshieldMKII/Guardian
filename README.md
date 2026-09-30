@@ -7,7 +7,6 @@
 [![Docker Pulls](https://img.shields.io/docker/pulls/hydroshieldmkii/guardian.svg?label=pulls%20(v2))](https://hub.docker.com/r/hydroshieldmkii/guardian)
 [![Legacy Pulls](https://img.shields.io/docker/pulls/hydroshieldmkii/guardian-frontend.svg?label=pulls%20(v1))](https://hub.docker.com/r/hydroshieldmkii/guardian-frontend)
 [![Stars](https://img.shields.io/github/stars/HydroshieldMKII/Guardian.svg?style=flat)](https://github.com/HydroshieldMKII/Guardian/stargazers)
-[![Discord](https://img.shields.io/discord/1415505445883215955?logo=discord&label=Discord)](https://discord.gg/xTKuHyhdS4)
 
 ![Guardian Banner](https://github.com/user-attachments/assets/ff8b9bbc-f5d4-451a-bdc1-cb2354023c8b)
 
