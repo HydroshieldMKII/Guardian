@@ -15,7 +15,7 @@ class ClientIpController {
 
 const CLIENT = '203.0.113.5';
 const EDGE_PROXY = '198.51.100.7';
-const LOOPBACK = '::ffff:127.0.0.1';
+const LOOPBACK = /^(::ffff:)?127\.0\.0\.1$/;
 
 describe('trust proxy wiring', () => {
   const original = process.env.TRUST_PROXY_HOPS;
@@ -76,7 +76,7 @@ describe('trust proxy wiring', () => {
   it('ignores the forwarded header when nothing is trusted', async () => {
     await bootWith('0');
 
-    expect(await clientIpFor(`${CLIENT}, ${EDGE_PROXY}`)).toBe(LOOPBACK);
+    expect(await clientIpFor(`${CLIENT}, ${EDGE_PROXY}`)).toMatch(LOOPBACK);
   });
 
   it('falls back to one hop when the setting is nonsense', async () => {
@@ -88,6 +88,6 @@ describe('trust proxy wiring', () => {
   it('uses the socket address when no proxy forwards a header', async () => {
     await bootWith(undefined);
 
-    expect(await clientIpFor()).toBe(LOOPBACK);
+    expect(await clientIpFor()).toMatch(LOOPBACK);
   });
 });
