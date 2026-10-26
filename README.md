@@ -15,12 +15,6 @@ Guardian is an access-control layer for Plex Media Server. It polls the Plex ses
 > [!NOTE]
 > Guardian V2 is now out! If you are still running V1, please update your Compose file. See the [v2.0.0 release notes](https://github.com/HydroshieldMKII/Guardian/releases/tag/v2.0.0) for more information.
 
-> [!IMPORTANT]
-> **Looking for a maintainer.** Reach out in [Discussions](https://github.com/HydroshieldMKII/Guardian/discussions) if you have prior experience.
-
-> [!WARNING]
-> Do not expose Guardian directly to the internet, as security patches may be slow to arrive. Run it on a LAN, behind a VPN, or behind a reverse proxy with SSO.
-
 <img alt="Device management" src="docs/screenshots/device-management.webp" />
 
 <img alt="Active streams" src="docs/screenshots/active-streams.webp" />
