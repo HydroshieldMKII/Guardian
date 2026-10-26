@@ -109,8 +109,17 @@ jest.mock("@/components/device-management", () => ({
 }));
 
 jest.mock("@/components/error-handler", () => ({
-  ErrorHandler: ({ backendError }: { backendError: string }) => (
-    <div>backend-error:{backendError}</div>
+  ErrorHandler: ({
+    backendError,
+    onRetry,
+  }: {
+    backendError: string;
+    onRetry: () => void;
+  }) => (
+    <div>
+      <div>backend-error:{backendError}</div>
+      <button onClick={onRetry}>retry backend</button>
+    </div>
   ),
   PlexErrorHandler: ({
     plexStatus,
@@ -176,6 +185,16 @@ describe("Dashboard", () => {
 
     expect(screen.getByText("backend-error:offline")).toBeInTheDocument();
     expect(screen.queryByText("device-management")).toBeNull();
+  });
+
+  it("retries the backend connection from the error handler", async () => {
+    authState = { setupRequired: false, backendError: "offline" };
+    const user = userEvent.setup();
+    render(<Dashboard />);
+
+    await user.click(screen.getByRole("button", { name: "retry backend" }));
+
+    expect(retryConnection).toHaveBeenCalledTimes(1);
   });
 
   it("renders nothing and fetches nothing during setup", () => {

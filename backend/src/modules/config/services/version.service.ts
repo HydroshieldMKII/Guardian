@@ -4,13 +4,17 @@ import { dirname, join } from 'path';
 
 const RELEASE_VERSION_PATTERN = /^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$/;
 
-function nearestPackageJson(directory: string): string {
-  const candidate = join(directory, 'package.json');
-  if (existsSync(candidate)) return candidate;
-  if (dirname(directory) === directory) {
-    throw new Error(`No package.json found above ${__dirname}`);
+export function nearestPackageJson(start: string): string {
+  let directory = start;
+  while (true) {
+    const candidate = join(directory, 'package.json');
+    if (existsSync(candidate)) return candidate;
+    const parent = dirname(directory);
+    if (parent === directory) {
+      throw new Error(`No package.json found above ${start}`);
+    }
+    directory = parent;
   }
-  return nearestPackageJson(dirname(directory));
 }
 
 function packageVersion(): string {

@@ -9,8 +9,6 @@ import {
 } from '@/database/initialize-database';
 
 class FailingMigration9999999999999 implements MigrationInterface {
-  name = 'FailingMigration9999999999999';
-
   async up(): Promise<void> {
     throw new Error('migration failed');
   }

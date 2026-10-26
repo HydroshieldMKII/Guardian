@@ -259,6 +259,30 @@ describe("checkForUpdatesIfEnabled", () => {
       json([{ key: "AUTO_CHECK_UPDATES", value: "true" }]);
   };
 
+  it("checks a second after the version loads, then periodically", async () => {
+    enableAutoCheck();
+    jest.useFakeTimers();
+    try {
+      await renderVersion();
+      const githubCalls = () =>
+        fetchMock.mock.calls.filter(([url]) => urlString(url) === GITHUB_LATEST)
+          .length;
+      expect(githubCalls()).toBe(0);
+
+      await act(async () => {
+        await jest.advanceTimersByTimeAsync(1000);
+      });
+      expect(githubCalls()).toBe(1);
+
+      await act(async () => {
+        await jest.advanceTimersByTimeAsync(30 * 60 * 1000);
+      });
+      expect(githubCalls()).toBe(2);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
   it("does nothing while auto-checking is disabled", async () => {
     const { result } = await renderVersion();
 
@@ -505,6 +529,7 @@ describe("version comparison", () => {
     ["1.3.5.1", true],
     ["1.3.5-rc.1", false],
     ["1.3.6-rc.1", true],
+    ["1.3.x", false],
   ])("treats %s against 1.3.5 as hasUpdate=%p", async (tag, expected) => {
     routes[GITHUB_LATEST] = () => json(release(`v${tag}`));
     const { result } = await renderVersion();

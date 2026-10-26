@@ -13,10 +13,8 @@ async function column(
   sql: string,
   parameters: string[] = [],
 ): Promise<string[]> {
-  const rows: unknown = await dataSource.query(sql, parameters);
-  return Array.isArray(rows)
-    ? (rows as { value: string }[]).map((row) => row.value)
-    : [];
+  const rows = await dataSource.query<{ value: string }[]>(sql, parameters);
+  return rows.map((row) => row.value);
 }
 
 async function executedMigrations(

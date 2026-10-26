@@ -27,8 +27,12 @@ jest.mock("@/hooks/useStreams", () => ({
   }),
 }));
 
+let swipeRefresh: (() => void) | undefined;
 jest.mock("@/hooks/useSwipeToRefresh", () => ({
-  useSwipeToRefresh: () => ({ "data-swipe": "true" }),
+  useSwipeToRefresh: ({ onRefresh }: { onRefresh: () => void }) => {
+    swipeRefresh = onRefresh;
+    return { "data-swipe": "true" };
+  },
 }));
 
 jest.mock("@/components/streams", () => ({
@@ -116,6 +120,17 @@ describe("StreamsList", () => {
     it("says there are no active streams", () => {
       render(<StreamsList />);
       expect(screen.getByText("No active streams")).toBeInTheDocument();
+    });
+
+    it("refreshes when swiped down", async () => {
+      const onRefresh = jest.fn();
+      render(<StreamsList onRefresh={onRefresh} />);
+
+      await act(async () => {
+        swipeRefresh?.();
+      });
+
+      expect(onRefresh).toHaveBeenCalledTimes(1);
     });
 
     it("shows a connection error with a retry", async () => {

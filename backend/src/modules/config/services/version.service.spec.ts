@@ -1,8 +1,10 @@
 import { Test } from '@nestjs/testing';
-import { readFileSync } from 'fs';
+import { readFileSync, mkdtempSync, rmSync } from 'fs';
+import { tmpdir } from 'os';
 import { join } from 'path';
 import {
   VersionService,
+  nearestPackageJson,
   resolveAppVersion,
 } from '@/modules/config/services/version.service';
 
@@ -30,6 +32,23 @@ describe('resolveAppVersion', () => {
     expect(resolveAppVersion('latest')).toBe(fallback);
     expect(resolveAppVersion('2.4')).toBe(fallback);
     expect(resolveAppVersion('2.4.7; rm -rf /')).toBe(fallback);
+  });
+
+  it('walks up to the nearest package.json', () => {
+    expect(nearestPackageJson(__dirname)).toBe(
+      join(process.cwd(), 'package.json'),
+    );
+  });
+
+  it('fails loudly when no package.json can be found', () => {
+    const directory = mkdtempSync(join(tmpdir(), 'guardian-version-'));
+    try {
+      expect(() => nearestPackageJson(directory)).toThrow(
+        `No package.json found above ${directory}`,
+      );
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
   });
 });
 
@@ -98,6 +117,11 @@ describe('VersionService', () => {
 
     it('treats unparseable segments as zero', () => {
       expect(service.compareVersions('1.x.0', '1.0.0')).toBe(0);
+    });
+
+    it('treats a missing version as zero', () => {
+      expect(service.compareVersions(null, '0.0.0')).toBe(0);
+      expect(service.compareVersions('1.0.0', null)).toBe(1);
     });
   });
 
