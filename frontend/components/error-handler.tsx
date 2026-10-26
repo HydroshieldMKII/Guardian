@@ -133,7 +133,7 @@ export function ErrorHandler({
               {errorInfo.showChecklist && (
                 <div className="space-y-4">
                   <h4 className="text-sm font-medium text-foreground">
-                    To get started, you'll need to configure:
+                    To get started, you&apos;ll need to configure:
                   </h4>
                   <ul className="space-y-2 list-disc list-inside">
                     <li className="text-sm text-muted-foreground">

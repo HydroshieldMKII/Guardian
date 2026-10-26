@@ -3,9 +3,14 @@ name: CD
 on:
   release:
     types: [published]
+  workflow_call:
+    inputs:
+      tag:
+        type: string
+        required: true
 
 concurrency:
-  group: cd-${{ github.event.release.tag_name }}
+  group: cd-${{ inputs.tag || github.event.release.tag_name }}
   cancel-in-progress: false
 
 permissions:
@@ -13,11 +18,62 @@ permissions:
 
 env:
   IMAGE: docker.io/hydroshieldmkii/guardian
+  TAG: ${{ inputs.tag || github.event.release.tag_name }}
 
 jobs:
+  resolve:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      prerelease: ${{ steps.version.outputs.prerelease }}
+      promote: ${{ steps.version.outputs.promote }}
+      revision: ${{ steps.version.outputs.revision }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.TAG }}
+          fetch-depth: 0
+
+      - name: Only ship tags that are on main
+        run: |
+          git fetch origin main
+          git merge-base --is-ancestor "$(git rev-parse "$TAG^{commit}")" origin/main \
+            || { echo "$TAG is not on main" >&2; exit 1; }
+
+      - id: version
+        env:
+          EVENT_PRERELEASE: ${{ github.event.release.prerelease || false }}
+        run: |
+          echo "$TAG" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$' \
+            || { echo "$TAG is not a vX.Y.Z tag" >&2; exit 1; }
+          version="${TAG#v}"
+          core="${version%%-*}"
+          prerelease=false
+          if [ "$version" != "$core" ] || [ "$EVENT_PRERELEASE" = "true" ]; then
+            prerelease=true
+          fi
+          minor="${core%.*}"
+          major="${core%%.*}"
+          stable=$(git tag --list 'v*' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V)
+          highest() { printf '%s\n' "$stable" | grep -F "$1" | tail -1; }
+          promote=""
+          if [ "$prerelease" = false ]; then
+            [ "$(highest v)" = "$TAG" ] && promote="latest"
+            [ "$(highest "v$major.")" = "$TAG" ] && promote="$promote v$major"
+            [ "$(highest "v$minor.")" = "$TAG" ] && promote="$promote v$minor"
+          fi
+          {
+            echo "version=$version"
+            echo "prerelease=$prerelease"
+            echo "promote=${promote# }"
+            echo "revision=$(git rev-parse "$TAG^{commit}")"
+          } >> "$GITHUB_OUTPUT"
+          echo "version=$version prerelease=$prerelease promote=${promote# }"
+
   build:
+    needs: resolve
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         include:
           - platform: linux/amd64
@@ -26,23 +82,34 @@ jobs:
             runner: ubuntu-24.04-arm
     runs-on: ${{ matrix.runner }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.TAG }}
 
-      - uses: docker/setup-buildx-action@v4
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
-      - uses: docker/login-action@v4
+      - uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - id: build
-        uses: docker/build-push-action@v7
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
           platforms: ${{ matrix.platform }}
+          build-args: GUARDIAN_VERSION=${{ needs.resolve.outputs.version }}
+          labels: |
+            org.opencontainers.image.version=${{ needs.resolve.outputs.version }}
+            org.opencontainers.image.revision=${{ needs.resolve.outputs.revision }}
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
           outputs: type=image,name=${{ env.IMAGE }},push-by-digest=true,name-canonical=true,push=true
           cache-from: type=gha,scope=guardian-${{ matrix.platform }}
           cache-to: type=gha,scope=guardian-${{ matrix.platform }},mode=max
+
+      - run: .github/scripts/smoke-test.sh "$IMAGE@$DIGEST"
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
 
       - run: |
           mkdir -p /tmp/digests
@@ -50,7 +117,7 @@ jobs:
         env:
           DIGEST: ${{ steps.build.outputs.digest }}
 
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: digest-${{ strategy.job-index }}
           path: /tmp/digests/*
@@ -60,25 +127,42 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           path: /tmp/digests
           pattern: digest-*
           merge-multiple: true
 
-      - uses: docker/setup-buildx-action@v4
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
-      - uses: docker/login-action@v4
+      - uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - working-directory: /tmp/digests
-        env:
-          TAG: ${{ github.event.release.tag_name }}
         run: |
-          docker buildx imagetools create \
-            --tag "$IMAGE:$TAG" \
-            --tag "$IMAGE:latest" \
-            $(printf "$IMAGE@sha256:%s " *)
+          set --
+          for digest in *; do set -- "$@" "$IMAGE@sha256:$digest"; done
+          docker buildx imagetools create --tag "$IMAGE:$TAG" "$@"
           docker buildx imagetools inspect "$IMAGE:$TAG"
+
+  promote:
+    needs: [resolve, publish]
+    if: needs.resolve.outputs.promote != ''
+    runs-on: ubuntu-latest
+    steps:
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - env:
+          PROMOTE: ${{ needs.resolve.outputs.promote }}
+        run: |
+          set --
+          for name in $PROMOTE; do set -- "$@" --tag "$IMAGE:$name"; done
+          docker buildx imagetools create "$@" "$IMAGE:$TAG"
+          echo "$TAG is now also: $PROMOTE" >> "$GITHUB_STEP_SUMMARY"

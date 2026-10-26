@@ -48,7 +48,10 @@ class ApiClient {
       let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
 
       try {
-        const errorBody = await response.json();
+        const errorBody = (await response.json()) as {
+          message?: string;
+          error?: string;
+        };
         if (errorBody.message) {
           errorMessage = errorBody.message;
         } else if (errorBody.error) {
@@ -61,21 +64,21 @@ class ApiClient {
       throw new ApiError(response.status, errorMessage, response);
     }
 
-    return response.json();
+    return response.json() as Promise<T>;
   }
 
   async get<T>(endpoint: string): Promise<T> {
     return this.request<T>(endpoint, { method: "GET" });
   }
 
-  async post<T>(endpoint: string, data?: any): Promise<T> {
+  async post<T>(endpoint: string, data?: unknown): Promise<T> {
     return this.request<T>(endpoint, {
       method: "POST",
       body: data ? JSON.stringify(data) : undefined,
     });
   }
 
-  async patch<T>(endpoint: string, data?: any): Promise<T> {
+  async patch<T>(endpoint: string, data?: unknown): Promise<T> {
     return this.request<T>(endpoint, {
       method: "PATCH",
       body: data ? JSON.stringify(data) : undefined,
@@ -107,7 +110,7 @@ class ApiClient {
     return this.post<T>(`/users/${userId}/toggle-visibility`);
   }
 
-  async updateUserIPPolicy<T>(userId: string, updates: any): Promise<T> {
+  async updateUserIPPolicy<T>(userId: string, updates: unknown): Promise<T> {
     return this.post<T>(`/users/${userId}/ip-policy`, updates);
   }
 
@@ -175,7 +178,7 @@ class ApiClient {
   }
 
   // Settings/Config methods
-  async updateConfig<T>(settings: any): Promise<T> {
+  async updateConfig<T>(settings: unknown): Promise<T> {
     return this.request<T>(`/config`, {
       method: "PUT",
       body: JSON.stringify(settings),
@@ -234,11 +237,11 @@ class ApiClient {
   }
 
   // Auth/Profile methods
-  async updateProfile<T>(data: any): Promise<T> {
+  async updateProfile<T>(data: unknown): Promise<T> {
     return this.patch<T>(`/auth/profile`, data);
   }
 
-  async updatePassword<T>(data: any): Promise<T> {
+  async updatePassword<T>(data: unknown): Promise<T> {
     return this.patch<T>(`/auth/password`, data);
   }
 }

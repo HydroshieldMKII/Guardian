@@ -10,12 +10,8 @@ import { apiClient } from "@/lib/api";
 import { Notification } from "@/types";
 
 export function GlobalNotificationHandler() {
-  const {
-    setNotificationClickHandler,
-    updateNotifications,
-    notifications,
-    setNotifications,
-  } = useNotificationContext();
+  const { setNotificationClickHandler, updateNotifications, setNotifications } =
+    useNotificationContext();
 
   const { settings } = useSettings();
   const { setupRequired, isAuthenticated, user } = useAuth();
@@ -67,8 +63,11 @@ export function GlobalNotificationHandler() {
     };
 
     // Fetch notifications immediately on mount
-    fetchNotifications();
-    const intervalNotification = setInterval(fetchNotifications, 10000);
+    void fetchNotifications();
+    const intervalNotification = setInterval(
+      () => void fetchNotifications(),
+      10000,
+    );
 
     return () => {
       clearInterval(intervalNotification);

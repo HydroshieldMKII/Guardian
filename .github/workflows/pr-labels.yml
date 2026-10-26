@@ -1,0 +1,30 @@
+name: PR labels
+
+on:
+  pull_request_target:
+    types: [opened, edited, reopened]
+
+permissions:
+  pull-requests: write
+
+jobs:
+  label:
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+          TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          type=$(printf '%s' "$TITLE" | sed -nE 's/^([a-z]+)(\([^)]*\))?!?:.*/\1/p')
+          case "$type" in
+            feat) label=feature ;;
+            fix) label=bug ;;
+            refactor|perf|harden|style) label=enhancement ;;
+            security) label=security ;;
+            *) label="" ;;
+          esac
+          stale=$(gh pr view "$PR" --repo "$GITHUB_REPOSITORY" --json labels --jq '.labels[].name' \
+            | grep -xE 'feature|bug|enhancement|security' | grep -vxF "$label" | paste -sd, || true)
+          [ -z "$stale" ] || gh pr edit "$PR" --repo "$GITHUB_REPOSITORY" --remove-label "$stale"
+          [ -z "$label" ] || gh pr edit "$PR" --repo "$GITHUB_REPOSITORY" --add-label "$label"

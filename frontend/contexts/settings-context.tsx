@@ -2,6 +2,7 @@
 
 import React, {
   createContext,
+  useCallback,
   useContext,
   useState,
   useEffect,
@@ -16,7 +17,7 @@ interface SettingsContextType {
   loading: boolean;
   error: string | null;
   refreshSettings: () => Promise<void>;
-  updateSettings: (updates: { key: string; value: any }[]) => void;
+  updateSettings: (updates: { key: string; value: unknown }[]) => void;
   getSetting: (key: string) => string | null;
   getBooleanSetting: (key: string) => boolean | null;
   getNumberSetting: (key: string) => number | null;
@@ -45,7 +46,7 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchSettings = async () => {
+  const fetchSettings = useCallback(async () => {
     // Skip fetching during setup, auth loading, or if not admin
     if (setupRequired || authLoading || !isAdmin) {
       setLoading(false);
@@ -57,7 +58,7 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({
       setError(null);
       const response = await fetch(`${config.api.baseUrl}/config`);
       if (response.ok) {
-        const data = await response.json();
+        const data = (await response.json()) as AppSetting[];
         setSettings(data);
       } else {
         setError("Failed to fetch configuration");
@@ -68,19 +69,19 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [setupRequired, authLoading, isAdmin]);
 
   useEffect(() => {
     if (isAuthenticated && isAdmin) {
-      fetchSettings();
+      void fetchSettings();
     }
-  }, [setupRequired, authLoading, isAuthenticated, isAdmin]);
+  }, [isAuthenticated, isAdmin, fetchSettings]);
 
   const refreshSettings = async () => {
     await fetchSettings();
   };
 
-  const updateSettings = (updates: { key: string; value: any }[]) => {
+  const updateSettings = (updates: { key: string; value: unknown }[]) => {
     setSettings((prevSettings) => {
       const updatedSettings = [...prevSettings];
       updates.forEach(({ key, value }) => {

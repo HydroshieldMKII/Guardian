@@ -17,6 +17,10 @@ import { PlexSession } from "@/types";
 import { cn } from "@/lib/utils";
 import { config } from "../../lib/config";
 
+interface PlexWebUrlResponse {
+  webUrl?: string;
+}
+
 interface StreamCardProps {
   stream: PlexSession;
   index: number;
@@ -71,7 +75,7 @@ export const StreamCard: React.FC<StreamCardProps> = ({
 
     try {
       const response = await fetch(`${config.api.baseUrl}/plex/web-url`);
-      const data = await response.json();
+      const data = (await response.json()) as PlexWebUrlResponse;
 
       if (!data.webUrl) {
         console.warn("No Plex web URL available");
@@ -173,7 +177,7 @@ export const StreamCard: React.FC<StreamCardProps> = ({
               title={
                 <button
                   type="button"
-                  onClick={openInPlex}
+                  onClick={(e) => void openInPlex(e)}
                   className="max-w-full cursor-pointer truncate text-left hover:underline"
                   title={
                     stream.type === "track"

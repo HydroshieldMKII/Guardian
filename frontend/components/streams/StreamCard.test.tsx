@@ -91,7 +91,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   consoleError = jest.spyOn(console, "error").mockImplementation(() => {});
   consoleWarn = jest.spyOn(console, "warn").mockImplementation(() => {});
-  global.fetch = fetchMock as unknown as typeof fetch;
+  global.fetch = fetchMock;
   fetchMock.mockResolvedValue({
     json: async () => ({ webUrl: "https://plex.test" }),
   });
@@ -153,7 +153,7 @@ describe("StreamCard content", () => {
 
   it("survives a poster error with no fallback node", () => {
     const { container } = renderCard({ thumbnailUrl: "/poster.jpg" });
-    const img = screen.getByAltText("Arrival (2016)") as HTMLImageElement;
+    const img = screen.getByAltText<HTMLImageElement>("Arrival (2016)");
     container.querySelector(".thumbnail-fallback")?.remove();
 
     fireEvent.error(img);
@@ -163,7 +163,7 @@ describe("StreamCard content", () => {
 
   it("hides the poster when it fails to load", () => {
     renderCard({ thumbnailUrl: "/poster.jpg" });
-    const img = screen.getByAltText("Arrival (2016)") as HTMLImageElement;
+    const img = screen.getByAltText<HTMLImageElement>("Arrival (2016)");
 
     fireEvent.error(img);
 

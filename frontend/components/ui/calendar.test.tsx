@@ -139,12 +139,7 @@ describe("CalendarDayButton", () => {
 
   it("stamps the date it represents", () => {
     const { container } = render(
-      <CalendarDayButton
-        day={day}
-        modifiers={
-          {} as React.ComponentProps<typeof CalendarDayButton>["modifiers"]
-        }
-      >
+      <CalendarDayButton day={day} modifiers={{}}>
         15
       </CalendarDayButton>,
     );
@@ -157,14 +152,7 @@ describe("CalendarDayButton", () => {
 
   it("focuses itself when the day is focused", () => {
     render(
-      <CalendarDayButton
-        day={day}
-        modifiers={
-          { focused: true } as unknown as React.ComponentProps<
-            typeof CalendarDayButton
-          >["modifiers"]
-        }
-      >
+      <CalendarDayButton day={day} modifiers={{ focused: true }}>
         15
       </CalendarDayButton>,
     );
@@ -174,13 +162,7 @@ describe("CalendarDayButton", () => {
 
   it("merges a custom class", () => {
     const { container } = render(
-      <CalendarDayButton
-        day={day}
-        modifiers={
-          {} as React.ComponentProps<typeof CalendarDayButton>["modifiers"]
-        }
-        className="my-day"
-      >
+      <CalendarDayButton day={day} modifiers={{}} className="my-day">
         15
       </CalendarDayButton>,
     );

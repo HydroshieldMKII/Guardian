@@ -66,7 +66,7 @@ export function AppriseSettings({
       setTestingConnection(true);
       setConnectionStatus(null);
 
-      const result = await apiClient.testAppriseConnection<any>();
+      const result = await apiClient.testAppriseConnection<ConnectionStatus>();
 
       if (result.success) {
         setConnectionStatus({ success: true, message: result.message });
@@ -135,7 +135,7 @@ export function AppriseSettings({
           )}
 
           <Button
-            onClick={testAppriseConnection}
+            onClick={() => void testAppriseConnection()}
             disabled={
               !isAppriseEnabled || testingConnection || hasUnsavedChanges
             }

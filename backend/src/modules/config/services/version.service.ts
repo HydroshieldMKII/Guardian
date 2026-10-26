@@ -1,7 +1,33 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { existsSync, readFileSync } from 'fs';
+import { dirname, join } from 'path';
 
-// App version
-const CURRENT_APP_VERSION = '2.0.1';
+const RELEASE_VERSION_PATTERN = /^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$/;
+
+function nearestPackageJson(directory: string): string {
+  const candidate = join(directory, 'package.json');
+  if (existsSync(candidate)) return candidate;
+  if (dirname(directory) === directory) {
+    throw new Error(`No package.json found above ${__dirname}`);
+  }
+  return nearestPackageJson(dirname(directory));
+}
+
+function packageVersion(): string {
+  const manifest = JSON.parse(
+    readFileSync(nearestPackageJson(__dirname), 'utf8'),
+  ) as { version: string };
+  return manifest.version;
+}
+
+export function resolveAppVersion(raw: string | undefined): string {
+  const version = raw?.trim().replace(/^v/, '');
+  return version && RELEASE_VERSION_PATTERN.test(version)
+    ? version
+    : packageVersion();
+}
+
+const CURRENT_APP_VERSION = resolveAppVersion(process.env.GUARDIAN_VERSION);
 
 @Injectable()
 export class VersionService {
@@ -12,23 +38,32 @@ export class VersionService {
   }
 
   compareVersions(version1: string | null, version2: string | null): number {
-    const parseVersion = (version: string | null): number[] => {
-      return (version ?? '').split('.').map((v) => parseInt(v) || 0);
+    const parseVersion = (version: string | null) => {
+      const [core, ...prerelease] = (version ?? '').split('-');
+      return {
+        parts: core.split('.').map((v) => parseInt(v) || 0),
+        prerelease: prerelease.join('-'),
+      };
     };
 
-    const v1Parts = parseVersion(version1);
-    const v2Parts = parseVersion(version2);
-    const maxLength = Math.max(v1Parts.length, v2Parts.length);
+    const v1 = parseVersion(version1);
+    const v2 = parseVersion(version2);
+    const maxLength = Math.max(v1.parts.length, v2.parts.length);
 
     for (let i = 0; i < maxLength; i++) {
-      const v1Part = v1Parts[i] || 0;
-      const v2Part = v2Parts[i] || 0;
+      const v1Part = v1.parts[i] || 0;
+      const v2Part = v2.parts[i] || 0;
 
       if (v1Part > v2Part) return 1;
       if (v1Part < v2Part) return -1;
     }
 
-    return 0; // versions are equal
+    if (v1.prerelease === v2.prerelease) return 0;
+    if (!v1.prerelease) return 1;
+    if (!v2.prerelease) return -1;
+    return Math.sign(
+      v1.prerelease.localeCompare(v2.prerelease, undefined, { numeric: true }),
+    );
   }
 
   async updateAppVersionIfNewer(

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useAuth, isAdminUser } from "@/contexts/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -17,8 +17,14 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Field, StatusPill } from "@/components/ui/entity";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Upload, Loader2, X, AlertCircle, Link2, Unlink } from "lucide-react";
+import { Upload, Loader2, X, AlertCircle, Unlink } from "lucide-react";
 import { usePlexOAuth } from "@/hooks/use-plex-oauth";
+
+interface FreshUserData {
+  plexUserId?: string;
+  plexUsername?: string;
+  plexThumb?: string;
+}
 
 interface EditProfileModalProps {
   open: boolean;
@@ -65,18 +71,16 @@ export function EditProfileModal({
   const [unlinkingPlex, setUnlinkingPlex] = useState(false);
 
   // Fresh user data fetched when modal opens
-  const [freshUserData, setFreshUserData] = useState<{
-    plexUserId?: string;
-    plexUsername?: string;
-    plexThumb?: string;
-  } | null>(null);
+  const [freshUserData, setFreshUserData] = useState<FreshUserData | null>(
+    null,
+  );
 
   // Fetch fresh user data when modal opens
   useEffect(() => {
     if (open && user && isAdminUser(user)) {
       // Fetch fresh user data to get Plex account info
       fetch("/api/pg/auth/me", { credentials: "include" })
-        .then((res) => (res.ok ? res.json() : null))
+        .then((res) => (res.ok ? (res.json() as Promise<FreshUserData>) : null))
         .then((data) => {
           if (data) {
             setFreshUserData({
@@ -165,7 +169,7 @@ export function EditProfileModal({
     password: string
   ): { valid: boolean; error?: string } => {
     const passwordRegex =
-      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};:'",./<>?\\|~])[A-Za-z\d!@#$%^&*()_+\-=\[\]{};:'",./<>?\\|~]{12,128}$/;
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};:'",./<>?\\|~])[A-Za-z\d!@#$%^&*()_+\-=[\]{};:'",./<>?\\|~]{12,128}$/;
     if (!passwordRegex.test(password)) {
       return {
         valid: false,
@@ -220,7 +224,7 @@ export function EditProfileModal({
         return;
       }
 
-      const updates: Record<string, any> = {};
+      const updates: Parameters<typeof updateProfile>[0] = {};
       if (user && isAdminUser(user)) {
         if (profileData.username !== user.username) {
           updates.username = profileData.username;
@@ -397,7 +401,10 @@ export function EditProfileModal({
 
           {/* Profile Tab */}
           <TabsContent value="profile" className="space-y-4">
-            <form onSubmit={handleProfileSubmit} className="space-y-4">
+            <form
+              onSubmit={(e) => void handleProfileSubmit(e)}
+              className="space-y-4"
+            >
               {/* Avatar Preview and Upload */}
               <Card className="p-4 flex flex-col items-center gap-4">
                 <Avatar className="h-20 w-20">
@@ -513,7 +520,10 @@ export function EditProfileModal({
 
           {/* Password Tab */}
           <TabsContent value="password" className="space-y-4">
-            <form onSubmit={handlePasswordSubmit} className="space-y-4">
+            <form
+              onSubmit={(e) => void handlePasswordSubmit(e)}
+              className="space-y-4"
+            >
               {/* Current Password */}
               <div className="space-y-2">
                 <Label htmlFor="currentPassword">Current Password</Label>
@@ -653,7 +663,7 @@ export function EditProfileModal({
 
                   <Button
                     variant="destructive"
-                    onClick={() => handlePlexUnlink()}
+                    onClick={() => void handlePlexUnlink()}
                     disabled={unlinkingPlex}
                     className="w-full"
                   >
@@ -677,7 +687,7 @@ export function EditProfileModal({
                   </Card>
 
                   <Button
-                    onClick={() => handlePlexLink()}
+                    onClick={() => void handlePlexLink()}
                     disabled={linkingPlex}
                     className="w-full bg-[#e5a00d] hover:bg-[#cc8f0c] text-black border-[#e5a00d] hover:border-[#cc8f0c]"
                   >

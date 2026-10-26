@@ -22,7 +22,7 @@ jest.mock("next/navigation", () => ({
   useSearchParams: () => searchParams,
 }));
 
-const getDashboardData = jest.fn();
+const getDashboardData = jest.fn<Promise<UnifiedDashboardData>, unknown[]>();
 jest.mock("@/lib/api", () => ({
   apiClient: {
     getDashboardData: (...args: unknown[]) => getDashboardData(...args),
@@ -423,9 +423,15 @@ describe("Dashboard", () => {
   });
 
   describe("update checks", () => {
-    it("runs once on mount", async () => {
+    it("runs on mount when the version is known", async () => {
+      versionInfo = { version: "2.0.0" };
       await renderDashboard();
-      expect(checkForUpdatesIfEnabled).toHaveBeenCalled();
+      expect(checkForUpdatesIfEnabled).toHaveBeenCalledTimes(1);
+    });
+
+    it("waits for the version before checking", async () => {
+      await renderDashboard();
+      expect(checkForUpdatesIfEnabled).not.toHaveBeenCalled();
     });
 
     it("runs again when the version becomes known", async () => {

@@ -46,7 +46,7 @@ export function useNotifications(props?: UseNotificationsProps) {
   // Initial load only if no initial data provided
   useEffect(() => {
     if (!props?.initialData) {
-      fetchNotifications();
+      void fetchNotifications();
     } else {
       setIsLoading(false);
     }
@@ -107,7 +107,7 @@ export function useNotifications(props?: UseNotificationsProps) {
 
   // Refresh notifications
   const refreshNotifications = useCallback(() => {
-    fetchNotifications();
+    void fetchNotifications();
   }, [fetchNotifications]);
 
   return {

@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { UserDevice, UserPreference } from "@/types";
 import { UserGroupCard } from "@/components/device-management/UserGroupCard";
@@ -451,7 +451,7 @@ describe("UserGroupCard default device policy", () => {
     await user.click(screen.getByRole("button", { name: /^Block$/ }));
     rerender(
       <UserGroupCard
-        group={group() as never}
+        group={group()}
         isExpanded
         actionLoading={null}
         updatingUserPreference="u-1"
@@ -474,7 +474,7 @@ describe("UserGroupCard default device policy", () => {
     const { user, rerender } = renderCard();
     const stillGlobal = (updating: string | null) => (
       <UserGroupCard
-        group={group() as never}
+        group={group()}
         isExpanded
         actionLoading={null}
         updatingUserPreference={updating}

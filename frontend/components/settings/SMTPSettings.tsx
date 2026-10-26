@@ -65,7 +65,7 @@ export function SMTPSettings({
       setTestingConnection(true);
       setConnectionStatus(null);
 
-      const result = await apiClient.testSmtpConnection<any>();
+      const result = await apiClient.testSmtpConnection<ConnectionStatus>();
 
       if (result.success) {
         setConnectionStatus({ success: true, message: result.message });
@@ -120,7 +120,7 @@ export function SMTPSettings({
           )}
 
           <Button
-            onClick={testSMTPConnection}
+            onClick={() => void testSMTPConnection()}
             disabled={!isSmtpEnabled || testingConnection || hasUnsavedChanges}
             className="w-full"
           >

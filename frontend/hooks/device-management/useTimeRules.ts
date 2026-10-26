@@ -4,7 +4,6 @@ import { UserTimeRule, CreateTimeRuleDto, UpdateTimeRuleDto } from "@/types";
 
 // Global cache for all time rules. Persists until manually cleared
 const globalTimeRuleCache = new Map<string, UserTimeRule[]>();
-let isInitialFetchDone = false;
 
 // Cache for hasTimeRules results
 const hasRulesCache = new Map<
@@ -39,7 +38,10 @@ export const useTimeRules = () => {
       });
 
       if (response.ok) {
-        const data: Record<string, UserTimeRule[]> = await response.json();
+        const data = (await response.json()) as Record<
+          string,
+          UserTimeRule[]
+        >;
 
         // Cache the results for each user
         Object.entries(data).forEach(([userId, rules]) => {
@@ -59,8 +61,6 @@ export const useTimeRules = () => {
           globalTimeRuleCache.set(userId, []);
         });
       }
-
-      isInitialFetchDone = true;
     } catch (error) {
       console.error("Error fetching all time rules:", error);
       // Cache empty arrays on error to prevent repeated failures
@@ -98,7 +98,7 @@ export const useTimeRules = () => {
 
       const response = await fetch(endpoint);
       if (response.ok) {
-        const data = await response.json();
+        const data = (await response.json()) as UserTimeRule[];
 
         // If this was a user-wide request, cache all rules for the user
         if (!deviceIdentifier) {
@@ -129,7 +129,7 @@ export const useTimeRules = () => {
         `${config.api.baseUrl}/users/${encodeURIComponent(userId)}/rules/all`
       );
       if (response.ok) {
-        const data = await response.json();
+        const data = (await response.json()) as UserTimeRule[];
         // Cache the result
         globalTimeRuleCache.set(userId, data);
         return data;
@@ -167,7 +167,7 @@ export const useTimeRules = () => {
       );
 
       if (response.ok) {
-        const newRule = await response.json();
+        const newRule = (await response.json()) as UserTimeRule;
 
         // Update cache
         const cached = globalTimeRuleCache.get(userId) || [];
@@ -179,9 +179,9 @@ export const useTimeRules = () => {
         return newRule;
       }
 
-      const errorData = await response
+      const errorData = (await response
         .json()
-        .catch(() => ({ message: "Unknown error" }));
+        .catch(() => ({ message: "Unknown error" }))) as { message?: string };
       throw new Error(errorData.message || "Failed to create time rule");
     } catch (error) {
       console.error("Error creating time rule:", error);
@@ -224,7 +224,7 @@ export const useTimeRules = () => {
       );
 
       if (response.ok) {
-        const updatedRule = await response.json();
+        const updatedRule = (await response.json()) as UserTimeRule;
 
         // Update cache
         const cached = globalTimeRuleCache.get(userId) || [];
@@ -239,9 +239,9 @@ export const useTimeRules = () => {
         return updatedRule;
       }
 
-      const errorData = await response
+      const errorData = (await response
         .json()
-        .catch(() => ({ message: "Unknown error" }));
+        .catch(() => ({ message: "Unknown error" }))) as { message?: string };
       throw new Error(errorData.message || "Failed to update time rule");
     } catch (error) {
       console.error("Error updating time rule:", error);
@@ -306,7 +306,7 @@ export const useTimeRules = () => {
       );
 
       if (response.ok) {
-        const newRules = await response.json();
+        const newRules = (await response.json()) as UserTimeRule[];
 
         // Update cache with new rules (replace existing)
         globalTimeRuleCache.set(userId, newRules);
@@ -317,9 +317,9 @@ export const useTimeRules = () => {
         return newRules;
       }
 
-      const errorData = await response
+      const errorData = (await response
         .json()
-        .catch(() => ({ message: "Unknown error" }));
+        .catch(() => ({ message: "Unknown error" }))) as { message?: string };
       throw new Error(errorData.message || "Failed to create preset");
     } catch (error) {
       console.error("Error creating preset:", error);
@@ -343,7 +343,7 @@ export const useTimeRules = () => {
       );
 
       if (response.ok) {
-        const updatedRule = await response.json();
+        const updatedRule = (await response.json()) as UserTimeRule;
 
         // Update cache
         const cached = globalTimeRuleCache.get(userId) || [];
@@ -379,7 +379,10 @@ export const useTimeRules = () => {
         `${config.api.baseUrl}/users/${encodeURIComponent(userId)}/rules/check${queryParams}`
       );
       if (response.ok) {
-        return await response.json();
+        return (await response.json()) as {
+          allowed: boolean;
+          reason: string;
+        };
       }
       throw new Error("Failed to check streaming status");
     } catch (error) {
@@ -415,9 +418,10 @@ export const useTimeRules = () => {
       );
 
       if (response.ok) {
-        const data = await response.json();
+        const data: unknown = await response.json();
         const hasEnabledRules =
-          Array.isArray(data) && data.some((rule: any) => rule.enabled);
+          Array.isArray(data) &&
+          data.some((rule: Pick<UserTimeRule, "enabled">) => rule.enabled);
         // Cache the result
         hasRulesCache.set(userId, {
           hasRules: hasEnabledRules,
@@ -474,7 +478,6 @@ export const useTimeRules = () => {
     } else {
       globalTimeRuleCache.clear();
       hasRulesCache.clear();
-      isInitialFetchDone = false;
     }
   };
 

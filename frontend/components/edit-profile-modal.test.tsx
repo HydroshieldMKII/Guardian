@@ -38,6 +38,20 @@ const admin = {
 const fetchMock = jest.fn();
 let consoleError: jest.SpyInstance;
 
+const setClosed = (target: Window, closed: boolean) =>
+  Object.defineProperty(target, "closed", {
+    value: closed,
+    writable: true,
+    configurable: true,
+  });
+
+const makePopup = (): Window => {
+  const created = Object.create(window) as Window;
+  setClosed(created, false);
+  created.close = jest.fn();
+  return created;
+};
+
 const renderModal = async (open = true) => {
   const onOpenChange = jest.fn();
   const view = render(
@@ -60,7 +74,7 @@ beforeEach(() => {
   linkPlexAccount.mockResolvedValue(undefined);
   unlinkPlexAccount.mockResolvedValue(undefined);
   fetchMock.mockResolvedValue({ ok: true, json: async () => ({}) });
-  global.fetch = fetchMock as unknown as typeof fetch;
+  global.fetch = fetchMock;
 });
 
 afterEach(() => {
@@ -512,10 +526,8 @@ describe("EditProfileModal", () => {
     });
 
     it("opens a Plex popup when linking", async () => {
-      const popup = { closed: false, close: jest.fn() };
-      const open = jest
-        .spyOn(window, "open")
-        .mockReturnValue(popup as unknown as Window);
+      const popup = makePopup();
+      const open = jest.spyOn(window, "open").mockReturnValue(popup);
       fetchMock.mockImplementation((url: string) =>
         url === "/api/pg/auth/plex/pin"
           ? Promise.resolve({
@@ -584,7 +596,7 @@ describe("EditProfileModal", () => {
 });
 
 describe("EditProfileModal Plex PIN polling", () => {
-  let popup: { closed: boolean; close: jest.Mock };
+  let popup: Window;
 
   const wirePinFetch = (statusResponse: unknown) => {
     fetchMock.mockImplementation((url: string) => {
@@ -638,8 +650,8 @@ describe("EditProfileModal Plex PIN polling", () => {
   };
 
   beforeEach(() => {
-    popup = { closed: false, close: jest.fn() };
-    jest.spyOn(window, "open").mockReturnValue(popup as unknown as Window);
+    popup = makePopup();
+    jest.spyOn(window, "open").mockReturnValue(popup);
   });
 
   afterEach(() => {
@@ -751,7 +763,7 @@ describe("EditProfileModal Plex PIN polling", () => {
     wirePinFetch({ ok: true, json: async () => ({}) });
     await startLinking();
 
-    popup.closed = true;
+    setClosed(popup, true);
     await tick(500);
 
     expect(popup.close).not.toHaveBeenCalled();
@@ -772,9 +784,12 @@ describe("EditProfileModal remaining edges", () => {
   });
 
   it("falls back to a generic message when linking fails without one", async () => {
+    const rejectWithoutError = jest
+      .fn<Promise<never>, []>()
+      .mockRejectedValue("nope");
     fetchMock.mockImplementation((url: string) =>
       url === "/api/pg/auth/plex/pin"
-        ? Promise.reject("nope")
+        ? rejectWithoutError()
         : Promise.resolve({ ok: true, json: async () => ({}) }),
     );
     const { ui } = await renderModal();

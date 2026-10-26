@@ -2,8 +2,8 @@ import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ConcurrentStreamModal } from "@/components/device-management/ConcurrentStreamModal";
 
-const getUserConcurrentStreamInfo = jest.fn();
-const updateUserConcurrentStreamLimit = jest.fn();
+const getUserConcurrentStreamInfo = jest.fn<Promise<unknown>, unknown[]>();
+const updateUserConcurrentStreamLimit = jest.fn<Promise<unknown>, unknown[]>();
 
 jest.mock("@/lib/api", () => ({
   apiClient: {

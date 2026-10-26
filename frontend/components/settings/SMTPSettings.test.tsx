@@ -4,7 +4,7 @@ import type { AppSetting } from "@/types";
 import { SMTPSettings } from "@/components/settings/SMTPSettings";
 import type { SettingsFormData } from "@/components/settings/settings-utils";
 
-const testSmtpConnection = jest.fn();
+const testSmtpConnection = jest.fn<Promise<unknown>, unknown[]>();
 jest.mock("@/lib/api", () => ({
   apiClient: {
     testSmtpConnection: (...a: unknown[]) => testSmtpConnection(...a),
@@ -122,7 +122,7 @@ describe("SMTPSettings", () => {
       "enables the children when SMTP is %p",
       (value) => {
         const { container } = renderPanel({
-          formData: { SMTP_ENABLED: value as string | boolean },
+          formData: { SMTP_ENABLED: value },
         });
         expect(
           container.querySelector("#SMTP_NOTIFY_ON_BLOCK"),
@@ -167,7 +167,7 @@ describe("SMTPSettings", () => {
         const { container } = renderPanel({
           formData: {
             SMTP_ENABLED: true,
-            SMTP_NOTIFY_ON_BLOCK: value as string | boolean,
+            SMTP_NOTIFY_ON_BLOCK: value,
           },
         });
         expect(container.querySelector("#SMTP_NOTIFY_ON_BLOCK")).toBeChecked();

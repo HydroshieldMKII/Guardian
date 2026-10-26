@@ -109,7 +109,12 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     userType !== "admin" || !isUserPortalRoute || isPublicRoute;
 
   if (backendError) {
-    return <ErrorHandler backendError={backendError} onRetry={retryConnection} />;
+    return (
+      <ErrorHandler
+        backendError={backendError}
+        onRetry={() => void retryConnection()}
+      />
+    );
   }
 
   // Show loading state while checking auth or redirecting

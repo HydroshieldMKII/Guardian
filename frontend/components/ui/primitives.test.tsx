@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { Separator } from "@/components/ui/separator";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Table,
   TableBody,

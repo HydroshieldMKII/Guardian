@@ -80,17 +80,17 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
     settingsData?.find((s) => s.key === "PLEX_GUARD_STRICT_MODE")?.value ===
     "true";
 
+  const deviceId = device?.id;
+  const deviceExcludeFromConcurrentLimit = device?.excludeFromConcurrentLimit;
+  const deviceRequestNoteReadAt = device?.requestNoteReadAt;
+
   // Sync local state when device prop changes
   React.useEffect(() => {
-    if (device) {
-      setExcludeFromConcurrentLimit(device.excludeFromConcurrentLimit ?? false);
-      setNoteReadAt(device.requestNoteReadAt);
+    if (deviceId !== undefined) {
+      setExcludeFromConcurrentLimit(deviceExcludeFromConcurrentLimit ?? false);
+      setNoteReadAt(deviceRequestNoteReadAt);
     }
-  }, [
-    device?.id,
-    device?.excludeFromConcurrentLimit,
-    device?.requestNoteReadAt,
-  ]);
+  }, [deviceId, deviceExcludeFromConcurrentLimit, deviceRequestNoteReadAt]);
 
   if (!device) return null;
 
@@ -314,7 +314,7 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={handleDeleteNote}
+                onClick={() => void handleDeleteNote()}
                 disabled={deletingNote}
                 className="w-full border-rose-500/40 text-rose-600 hover:bg-rose-500/10 dark:text-rose-400"
               >
@@ -375,7 +375,9 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
               label="Exclude from concurrent stream limit"
               hint="Streams from this device stop counting towards the user's concurrent stream limit, and never block another device from starting."
               checked={excludeFromConcurrentLimit}
-              onCheckedChange={handleExcludeFromConcurrentLimitChange}
+              onCheckedChange={(checked) =>
+                void handleExcludeFromConcurrentLimitChange(checked)
+              }
               disabled={excludeLoading}
             />
           )}
@@ -387,7 +389,7 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
                   Set back to pending
                 </p>
                 <p className="text-xs leading-relaxed text-muted-foreground">
-                  Undo your decision on this device. It follows the user's
+                  Undo your decision on this device. It follows the user&apos;s
                   default device policy until you approve or reject it again.
                 </p>
               </div>
@@ -404,7 +406,7 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={handleSetPending}
+                  onClick={() => void handleSetPending()}
                   disabled={setPendingLoading}
                   className="w-full border-amber-500/40 text-amber-700 hover:bg-amber-500/10 dark:text-amber-400"
                 >

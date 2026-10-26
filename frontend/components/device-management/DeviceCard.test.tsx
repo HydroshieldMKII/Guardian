@@ -10,7 +10,7 @@ jest.mock("@/hooks/device-management/useDeviceUtils", () => ({
   useDeviceUtils: () => ({ hasTemporaryAccess, getTemporaryAccessTimeLeft }),
 }));
 
-const markDeviceNoteAsRead = jest.fn();
+const markDeviceNoteAsRead = jest.fn<Promise<unknown>, unknown[]>();
 jest.mock("@/lib/api", () => ({
   apiClient: {
     markDeviceNoteAsRead: (...a: unknown[]) => markDeviceNoteAsRead(...a),
@@ -163,7 +163,7 @@ describe("DeviceCard identity", () => {
   });
 
   it("falls back to a neutral tone for a status it does not recognise", () => {
-    const { container } = renderCard({
+    renderCard({
       status: "archived" as UserDevice["status"],
     });
 
@@ -555,7 +555,9 @@ describe("DeviceCard user note", () => {
       expect.objectContaining({ variant: "success" }),
     );
     expect(onDeviceUpdate).toHaveBeenCalledWith(
-      expect.objectContaining({ requestNoteReadAt: expect.any(String) }),
+      expect.objectContaining({
+        requestNoteReadAt: expect.any(String) as unknown,
+      }),
     );
     await waitFor(() =>
       expect(screen.queryByText("Please let me in")).toBeNull(),

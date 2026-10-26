@@ -9,7 +9,7 @@ import { PlexSession, StreamsResponse } from "@/types";
 import { useSwipeToRefresh } from "../hooks/useSwipeToRefresh";
 import { useStreamsData, useStreamActions } from "../hooks/useStreams";
 
-import { RemoveAccessModal, StreamCard, getContentTitle } from "./streams";
+import { RemoveAccessModal, StreamCard } from "./streams";
 
 const StreamCardPlaceholder = () => (
   <div
@@ -53,11 +53,10 @@ export default function StreamsList({
   onNavigateToUser,
 }: StreamsListProps) {
   // Custom hooks
-  const { streams, loading, error, fetchStreamsData, updateStreamsFromProps } =
+  const { streams, error, fetchStreamsData, updateStreamsFromProps } =
     useStreamsData();
 
-  const { revokingAuth, revokeDeviceAuthorization, setRevokingAuth } =
-    useStreamActions();
+  const { revokingAuth, revokeDeviceAuthorization } = useStreamActions();
 
   // Local state
   const [refreshing, setRefreshing] = useState(false);
@@ -68,7 +67,9 @@ export default function StreamsList({
   const deferredSearchTerm = useDeferredValue(searchTerm);
 
   // Swipe to refresh functionality
-  const swipeHandlers = useSwipeToRefresh({ onRefresh: handleRefresh });
+  const swipeHandlers = useSwipeToRefresh({
+    onRefresh: () => void handleRefresh(),
+  });
 
   async function handleRefresh() {
     setRefreshing(true);
@@ -86,7 +87,7 @@ export default function StreamsList({
     if (sessionsData) {
       updateStreamsFromProps(sessionsData);
     } else {
-      fetchStreamsData();
+      void fetchStreamsData();
     }
   }, [sessionsData, fetchStreamsData, updateStreamsFromProps]);
 
@@ -115,14 +116,14 @@ export default function StreamsList({
     const success = await revokeDeviceAuthorization(stream);
     if (success) {
       // Refresh the streams to reflect any changes
-      handleRefresh();
+      void handleRefresh();
     }
     setConfirmRemoveStream(null);
   };
 
   const handleConfirmRemoveAccess = () => {
     if (confirmRemoveStream) {
-      handleRevokeAuthorization(confirmRemoveStream);
+      void handleRevokeAuthorization(confirmRemoveStream);
     }
   };
 
@@ -148,7 +149,7 @@ export default function StreamsList({
             <Button
               variant="outline"
               size="sm"
-              onClick={handleRefresh}
+              onClick={() => void handleRefresh()}
               disabled={refreshing}
             >
               <RefreshCw
@@ -187,7 +188,7 @@ export default function StreamsList({
             <Button
               variant="outline"
               size="sm"
-              onClick={handleRefresh}
+              onClick={() => void handleRefresh()}
               className="mt-3"
             >
               Try Again

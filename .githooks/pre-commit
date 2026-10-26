@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+set -euo pipefail
+name="$(git var GIT_AUTHOR_IDENT) $(git var GIT_COMMITTER_IDENT)"
+if printf '%s' "$name" | grep -Eiq -e '@(anthropic|openai)\.com|claude[ -]?code|copilot|chatgpt|codex|gemini[ -]?(cli|code)|\[bot\]'; then
+  echo "pre-commit hook: author/committer identity must be the human owner, not an AI assistant." >&2
+  echo "Got: $(git var GIT_AUTHOR_IDENT)" >&2
+  exit 1
+fi

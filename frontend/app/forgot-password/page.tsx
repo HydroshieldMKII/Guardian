@@ -96,7 +96,7 @@ export default function ForgotPasswordPage() {
       title="Forgot Password"
       description="Enter your email to be sent a reset link"
     >
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4">
         <div className="space-y-2">
           <label
             htmlFor="email"

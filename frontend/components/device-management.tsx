@@ -3,6 +3,7 @@
 import React, {
   useState,
   useEffect,
+  useRef,
   memo,
   useMemo,
   useDeferredValue,
@@ -15,11 +16,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 import {
   Dialog,
   DialogContent,
@@ -41,7 +37,6 @@ import {
 // Hooks
 import { useDeviceActions } from "@/hooks/device-management/useDeviceActions";
 import { useUserPreferences } from "@/hooks/device-management/useUserPreferences";
-import { useDeviceUtils } from "@/hooks/device-management/useDeviceUtils";
 import { useTimeRules } from "@/hooks/device-management/useTimeRules";
 import { useToast } from "@/hooks/use-toast";
 
@@ -55,7 +50,6 @@ import { apiClient } from "@/lib/api";
 
 // Components
 import { UserGroupCard } from "@/components/device-management/UserGroupCard";
-import { DeviceCard } from "@/components/device-management/DeviceCard";
 import { DeviceDetailsModal } from "@/components/device-management/DeviceDetailsModal";
 import { TemporaryAccessModal } from "@/components/device-management/TemporaryAccessModal";
 import { ConfirmationModal } from "@/components/device-management/ConfirmationModal";
@@ -221,7 +215,7 @@ const DeviceManagement = memo(
     const [userTimeRules, setUserTimeRules] = useState<
       Record<string, UserTimeRule[]>
     >({});
-    const [loadingTimeRules, setLoadingTimeRules] = useState(false);
+    const loadingTimeRulesRef = useRef(false);
     const [updatingUserPreference, setUpdatingUserPreference] = useState<
       string | null
     >(null);
@@ -238,9 +232,18 @@ const DeviceManagement = memo(
     // Custom hooks
     const deviceActions = useDeviceActions();
     const userPreferences = useUserPreferences();
-    const deviceUtils = useDeviceUtils();
     const { getAllTimeRules, fetchAllTimeRules } = useTimeRules();
+    const timeRulesApiRef = useRef({ getAllTimeRules, fetchAllTimeRules });
+    const expandedUsersRef = useRef(expandedUsers);
     const { toast } = useToast();
+
+    useEffect(() => {
+      timeRulesApiRef.current = { getAllTimeRules, fetchAllTimeRules };
+    });
+
+    useEffect(() => {
+      expandedUsersRef.current = expandedUsers;
+    }, [expandedUsers]);
 
     // Local storage keys for sorting preferences
     const USER_SORT_BY_KEY = "guardian-unified-sort-by";
@@ -406,9 +409,11 @@ const DeviceManagement = memo(
     // Load time policy status for all users when user groups change
     useEffect(() => {
       const loadTimePolicyStatus = async () => {
-        if (userGroups.length > 0 && !loadingTimeRules) {
-          setLoadingTimeRules(true);
+        if (userGroups.length > 0 && !loadingTimeRulesRef.current) {
+          loadingTimeRulesRef.current = true;
           const userIds = userGroups.map((group) => group.user.userId);
+          const { fetchAllTimeRules, getAllTimeRules } =
+            timeRulesApiRef.current;
 
           try {
             // Fetch all time rules at once (cached globally)
@@ -423,12 +428,12 @@ const DeviceManagement = memo(
           } catch (error) {
             console.error("Error loading time rule status:", error);
           } finally {
-            setLoadingTimeRules(false);
+            loadingTimeRulesRef.current = false;
           }
         }
       };
 
-      loadTimePolicyStatus();
+      void loadTimePolicyStatus();
     }, [userGroups]);
 
     // Sync local autoRefresh with parent
@@ -444,11 +449,9 @@ const DeviceManagement = memo(
         const { userId, deviceIdentifier } = navigationTarget;
 
         // First expand the user if not already expanded
-        const wasExpanded = expandedUsers.has(userId);
+        const wasExpanded = expandedUsersRef.current.has(userId);
         if (!wasExpanded) {
-          const newExpanded = new Set(expandedUsers);
-          newExpanded.add(userId);
-          setExpandedUsers(newExpanded);
+          setExpandedUsers((prev) => new Set(prev).add(userId));
         }
 
         // Use appropriate delay based on whether expansion is needed
@@ -480,7 +483,7 @@ const DeviceManagement = memo(
           }
         }, delay);
       }
-    }, [navigationTarget, userGroups.length, onNavigationComplete]); // Removed expandedUsers to prevent infinite loop
+    }, [navigationTarget, userGroups.length, onNavigationComplete]);
 
     const handleRefresh = async () => {
       if (onRefresh) {
@@ -538,8 +541,8 @@ const DeviceManagement = memo(
           return true;
         })
         .sort((a, b) => {
-          let valueA: any;
-          let valueB: any;
+          let valueA: string | number;
+          let valueB: string | number;
 
           switch (sortBy) {
             case "username":
@@ -577,18 +580,13 @@ const DeviceManagement = memo(
           }
 
           // For numeric values, use numeric comparison
-          if (
-            sortBy === "deviceCount" ||
-            sortBy === "pendingCount" ||
-            sortBy === "lastSeen" ||
-            sortBy === "streamCount"
-          ) {
+          if (typeof valueA === "number" && typeof valueB === "number") {
             const comparison = valueA - valueB;
             return sortOrder === "asc" ? comparison : -comparison;
           }
 
           // For string values, use localeCompare
-          const comparison = valueA.localeCompare(valueB);
+          const comparison = String(valueA).localeCompare(String(valueB));
           return sortOrder === "asc" ? comparison : -comparison;
         });
     }, [userGroups, deferredSearchTerm, sortBy, sortOrder]);
@@ -652,7 +650,7 @@ const DeviceManagement = memo(
     ) => {
       const success = await userPreferences.updateUserIPPolicy(userId, updates);
       if (success) {
-        handleRefresh();
+        void handleRefresh();
         toast({
           title: "IP Access Updated",
           description:
@@ -702,7 +700,7 @@ const DeviceManagement = memo(
           });
         }
 
-        handleRefresh(); // Refresh to get updated user data
+        void handleRefresh();
         // If modal is open, refresh hidden users list
         if (hiddenUsersModalOpen) {
           await loadHiddenUsers();
@@ -731,7 +729,7 @@ const DeviceManagement = memo(
           variant: "success",
         });
 
-        handleRefresh();
+        void handleRefresh();
         if (hiddenUsersModalOpen) {
           await loadHiddenUsers();
         }
@@ -828,7 +826,7 @@ const DeviceManagement = memo(
         setActionLoading(deviceId);
         const success = await deviceActions.approveDevice(deviceId);
         if (success) {
-          setTimeout(handleRefresh, 100);
+          setTimeout(() => void handleRefresh(), 100);
           toast({
             title: "Device Approved",
             description: "This device can now stream from your Plex server",
@@ -846,7 +844,7 @@ const DeviceManagement = memo(
         setActionLoading(deviceId);
         const success = await deviceActions.rejectDevice(deviceId);
         if (success) {
-          setTimeout(handleRefresh, 100);
+          setTimeout(() => void handleRefresh(), 100);
           toast({
             title: "Device Rejected",
             description: "This device is now blocked from streaming",
@@ -864,7 +862,7 @@ const DeviceManagement = memo(
         setActionLoading(deviceId);
         const success = await deviceActions.setPendingDevice(deviceId);
         if (success) {
-          setTimeout(handleRefresh, 100);
+          setTimeout(() => void handleRefresh(), 100);
           toast({
             title: "Device Set to Pending",
             description:
@@ -884,7 +882,7 @@ const DeviceManagement = memo(
         setActionLoading(deviceId);
         const success = await deviceActions.deleteDevice(deviceId);
         if (success) {
-          setTimeout(handleRefresh, 100);
+          setTimeout(() => void handleRefresh(), 100);
           toast({
             title: "Device Deleted",
             description:
@@ -919,7 +917,7 @@ const DeviceManagement = memo(
             });
           }
 
-          setTimeout(handleRefresh, 100);
+          setTimeout(() => void handleRefresh(), 100);
           setEditingDevice(null);
           setNewDeviceName("");
         }
@@ -978,8 +976,9 @@ const DeviceManagement = memo(
           }
 
           // Check if any devices failed
-          const failedDevices =
-            result.results?.filter((r: any) => !r.success) || [];
+          const batchResults = result.results as
+            { success: boolean }[] | undefined;
+          const failedDevices = batchResults?.filter((r) => !r.success) || [];
           if (failedDevices.length > 0) {
             toast({
               title: "Some Devices Were Not Granted Access",
@@ -989,7 +988,7 @@ const DeviceManagement = memo(
           }
         }
 
-        setTimeout(handleRefresh, 100);
+        setTimeout(() => void handleRefresh(), 100);
         setTemporaryAccessUser(null);
         toast({
           title: "Temporary Access Granted",
@@ -1018,7 +1017,7 @@ const DeviceManagement = memo(
         setActionLoading(deviceId);
         const success = await deviceActions.revokeTemporaryAccess(deviceId);
         if (success) {
-          setTimeout(handleRefresh, 100);
+          setTimeout(() => void handleRefresh(), 100);
           toast({
             title: "Temporary Access Removed",
             description:
@@ -1053,8 +1052,8 @@ const DeviceManagement = memo(
       setTimeRuleModalOpen(false);
       setSelectedTimeRuleUser(null);
       // Refresh time policy status for all users after policy changes
-      if (userGroups.length > 0 && !loadingTimeRules) {
-        setLoadingTimeRules(true);
+      if (userGroups.length > 0 && !loadingTimeRulesRef.current) {
+        loadingTimeRulesRef.current = true;
         const userIds = userGroups.map((group) => group.user.userId);
 
         try {
@@ -1070,13 +1069,9 @@ const DeviceManagement = memo(
         } catch (error) {
           console.error("Error refreshing time rule status:", error);
         } finally {
-          setLoadingTimeRules(false);
+          loadingTimeRulesRef.current = false;
         }
       }
-    };
-
-    const hasTemporaryAccess = (device: UserDevice): boolean => {
-      return deviceUtils.hasTemporaryAccess(device);
     };
 
     // Only devices Guardian is currently blocking can be granted temporary access
@@ -1195,7 +1190,7 @@ const DeviceManagement = memo(
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={handleRefresh}
+                    onClick={() => void handleRefresh()}
                     disabled={refreshing}
                     className="text-xs sm:text-sm"
                   >
@@ -1334,9 +1329,15 @@ const DeviceManagement = memo(
                     timeRules={userTimeRules[group.user.userId]}
                     updatingUserPreference={updatingUserPreference}
                     onToggleExpansion={toggleUserExpansion}
-                    onUpdateUserPreference={handleUpdateUserPreference}
-                    onUpdateUserIPPolicy={handleUpdateUserIPPolicy}
-                    onToggleUserVisibility={handleToggleUserVisibility}
+                    onUpdateUserPreference={(userId, defaultBlock) =>
+                      void handleUpdateUserPreference(userId, defaultBlock)
+                    }
+                    onUpdateUserIPPolicy={(userId, updates) =>
+                      void handleUpdateUserIPPolicy(userId, updates)
+                    }
+                    onToggleUserVisibility={(userId) =>
+                      void handleToggleUserVisibility(userId)
+                    }
                     onShowHistory={handleShowHistory}
                     onGrantUserTemporaryAccess={handleGrantUserTemporaryAccess}
                     onShowTimePolicy={handleShowTimePolicy}
@@ -1355,7 +1356,7 @@ const DeviceManagement = memo(
                 <div className="mt-6 mb-6 pt-4 border-t border-border">
                   <Button
                     variant="outline"
-                    onClick={openHiddenUsersModal}
+                    onClick={() => void openHiddenUsersModal()}
                     className="w-full text-sm"
                   >
                     <EyeOff className="w-4 h-4 mr-2" />
@@ -1377,7 +1378,7 @@ const DeviceManagement = memo(
           actionLoading={actionLoading}
           onEdit={startEditing}
           onCancelEdit={cancelEditing}
-          onRename={handleRename}
+          onRename={(deviceId, newName) => void handleRename(deviceId, newName)}
           onNewDeviceNameChange={setNewDeviceName}
           onSetPending={handleSetPending}
           settingsData={settingsData}
@@ -1404,7 +1405,13 @@ const DeviceManagement = memo(
           }
           isOpen={!!temporaryAccessUser}
           onClose={() => setTemporaryAccessUser(null)}
-          onGrantAccess={handleGrantTemporaryAccess}
+          onGrantAccess={(deviceIds, durationMinutes, bypassPolicies) =>
+            void handleGrantTemporaryAccess(
+              deviceIds,
+              durationMinutes,
+              bypassPolicies,
+            )
+          }
           actionLoading={actionLoading}
           canGrantTemporaryAccess={canGrantTemporaryAccess}
         />
@@ -1413,7 +1420,7 @@ const DeviceManagement = memo(
         <ConfirmationModal
           confirmAction={confirmAction}
           actionLoading={actionLoading}
-          onConfirm={handleConfirmAction}
+          onConfirm={() => void handleConfirmAction()}
           onCancel={() => setConfirmAction(null)}
         />
 
@@ -1429,8 +1436,8 @@ const DeviceManagement = memo(
                 Hidden Users
               </DialogTitle>
               <DialogDescription>
-                These users are hidden from the main list. Click "Show" to make
-                them visible again.
+                These users are hidden from the main list. Click
+                &quot;Show&quot; to make them visible again.
               </DialogDescription>
             </DialogHeader>
 
@@ -1459,7 +1466,9 @@ const DeviceManagement = memo(
                     </div>
                     <Button
                       size="sm"
-                      onClick={() => handleToggleUserVisibility(user.userId)}
+                      onClick={() =>
+                        void handleToggleUserVisibility(user.userId)
+                      }
                       className="ml-4"
                     >
                       <Eye className="w-4 h-4 mr-1" />
@@ -1497,7 +1506,7 @@ const DeviceManagement = memo(
 
         <TimeRuleModal
           isOpen={timeRuleModalOpen}
-          onClose={handleTimeRuleModalClose}
+          onClose={() => void handleTimeRuleModalClose()}
           userId={selectedTimeRuleUser?.userId || ""}
           username={selectedTimeRuleUser?.username || "Unknown User"}
           deviceIdentifier={selectedTimeRuleUser?.deviceIdentifier}
@@ -1525,8 +1534,8 @@ const DeviceManagement = memo(
             <div className="space-y-3 py-4">
               <div className="bg-muted/50 p-3 rounded-md text-sm">
                 <p className="text-muted-foreground">
-                  Hidden users can be managed from the "Manage Hidden Users"
-                  section at the bottom of the user list.
+                  Hidden users can be managed from the &quot;Manage Hidden
+                  Users&quot; section at the bottom of the user list.
                 </p>
               </div>
             </div>
@@ -1538,7 +1547,10 @@ const DeviceManagement = memo(
               >
                 Cancel
               </Button>
-              <Button onClick={confirmHideUser} className="w-full sm:w-auto">
+              <Button
+                onClick={() => void confirmHideUser()}
+                className="w-full sm:w-auto"
+              >
                 <EyeOff className="w-4 h-4 mr-2" />
                 Hide User
               </Button>

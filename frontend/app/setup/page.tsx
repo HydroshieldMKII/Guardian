@@ -58,7 +58,7 @@ export default function SetupPage() {
       uppercase: /[A-Z]/.test(password),
       lowercase: /[a-z]/.test(password),
       number: /\d/.test(password),
-      special: /[!@#$%^&*()_+\-=\[\]{};:'",./<>?\\|~]/.test(password),
+      special: /[!@#$%^&*()_+\-=[\]{};:'",./<>?\\|~]/.test(password),
     };
   };
 
@@ -156,7 +156,10 @@ export default function SetupPage() {
   // Show error if backend is unavailable
   if (backendError) {
     return (
-      <ErrorHandler backendError={backendError} onRetry={retryConnection} />
+      <ErrorHandler
+        backendError={backendError}
+        onRetry={() => void retryConnection()}
+      />
     );
   }
 
@@ -196,7 +199,10 @@ export default function SetupPage() {
         </CardHeader>
 
         <CardContent className="pb-6">
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form
+            onSubmit={(e) => void handleSubmit(e)}
+            className="space-y-4"
+          >
             {/* Username */}
             <div className="space-y-2">
               <label

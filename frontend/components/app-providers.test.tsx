@@ -1,18 +1,21 @@
 import { render, screen } from "@testing-library/react";
 import { AppProviders } from "@/components/app-providers";
 
-const useDisableScroll = jest.fn();
+const useDisableScroll = jest.fn<void, []>();
 jest.mock("@/hooks/use-disable-scroll", () => ({
   useDisableScroll: () => useDisableScroll(),
 }));
 
 function mockProvider(name: string) {
-  return ({ children }: { children: React.ReactNode }) => (
-    <div>
-      <span>{name}</span>
-      {children}
-    </div>
-  );
+  function MockProvider({ children }: { children: React.ReactNode }) {
+    return (
+      <div>
+        <span>{name}</span>
+        {children}
+      </div>
+    );
+  }
+  return MockProvider;
 }
 
 jest.mock("@/contexts/version-context", () => ({

@@ -60,7 +60,10 @@ const renderModal = (
   } = {},
 ) => {
   const onClose = jest.fn();
-  const onGrantAccess = jest.fn();
+  const onGrantAccess = jest.fn<
+    void,
+    [number[], number, boolean | undefined]
+  >();
   const view = render(
     <TemporaryAccessModal
       user={

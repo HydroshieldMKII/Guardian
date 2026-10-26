@@ -39,7 +39,7 @@ export interface PlexErrorResponse {
 export interface PlexSuccessResponse {
   success: true;
   message?: string;
-  data?: any;
+  data?: unknown;
 }
 
 // Union type for all responses

@@ -7,7 +7,13 @@ const lastRequest = () => {
   const call = fetchMock.mock.calls.at(-1);
   if (!call) throw new Error("fetch was never called");
   const [input, init] = call;
-  return { url: String(input), init: init ?? {} };
+  const url =
+    typeof input === "string"
+      ? input
+      : input instanceof URL
+        ? input.href
+        : input.url;
+  return { url, init: init ?? {} };
 };
 
 const prefs = () => renderHook(() => useUserPreferences()).result.current;

@@ -4,7 +4,7 @@ import type { AppSetting } from "@/types";
 import { AppriseSettings } from "@/components/settings/AppriseSettings";
 import type { SettingsFormData } from "@/components/settings/settings-utils";
 
-const testAppriseConnection = jest.fn();
+const testAppriseConnection = jest.fn<Promise<unknown>, unknown[]>();
 jest.mock("@/lib/api", () => ({
   apiClient: {
     testAppriseConnection: (...a: unknown[]) => testAppriseConnection(...a),
@@ -71,7 +71,7 @@ describe("AppriseSettings", () => {
   it("skips malformed settings entries", () => {
     renderPanel({
       settings: [
-        null as unknown as AppSetting,
+        JSON.parse("null") as AppSetting,
         { value: "x" } as AppSetting,
         setting("APPRISE_ENABLED", "false", "boolean"),
       ],

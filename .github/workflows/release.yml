@@ -1,0 +1,146 @@
+name: Release
+
+on:
+  schedule:
+    - cron: '0 14 * * 1'
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: Which part of the version to increase
+        type: choice
+        options: [patch, minor, major]
+        default: patch
+      prerelease:
+        description: Pre-release suffix such as rc.1, leave empty for a normal release
+        type: string
+        default: ''
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      ship: ${{ steps.plan.outputs.ship }}
+      tag: ${{ steps.plan.outputs.tag }}
+      previous: ${{ steps.plan.outputs.previous }}
+      prerelease: ${{ steps.plan.outputs.prerelease }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - id: plan
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          BUMP: ${{ inputs.bump || 'patch' }}
+          PRE: ${{ inputs.prerelease }}
+          PAUSED: ${{ vars.RELEASE_PAUSED }}
+          MIN_AGE_DAYS: 13
+        run: |
+          skip() { echo "ship=false" >> "$GITHUB_OUTPUT"; echo "skip: $1"; exit 0; }
+
+          [ "$GITHUB_REF" = refs/heads/main ] || { echo "releases are cut from main only" >&2; exit 1; }
+
+          latest=$(gh release view --repo "$GITHUB_REPOSITORY" \
+            --json tagName,publishedAt --jq '.tagName + " " + .publishedAt') || latest=""
+          read -r previous published <<< "$latest"
+          [ -n "$previous" ] || { echo "no latest release found" >&2; exit 1; }
+          highest=$(git tag --list 'v*' --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -1)
+
+          if [ "$EVENT" = schedule ]; then
+            [ "$PAUSED" = "true" ] && skip "automatic releases are paused (RELEASE_PAUSED)"
+            age_days=$(( ($(date +%s) - $(date -d "$published" +%s)) / 86400 ))
+            [ "$age_days" -ge "$MIN_AGE_DAYS" ] || skip "$previous is only $age_days days old"
+            shipped=$(git diff --name-only "$previous" HEAD -- \
+                backend frontend Dockerfile docker-entrypoint.sh .dockerignore \
+              | grep -vE '(\.spec\.tsx?|\.test\.tsx?)$|/__tests__/|^backend/test/|\.md$' || true)
+            [ -n "$shipped" ] || skip "nothing that ships in the image changed since $previous"
+            echo "changed since $previous:"
+            echo "$shipped"
+          fi
+
+          IFS=. read -r major minor patch <<< "${highest#v}"
+          case "$BUMP" in
+            major) major=$((major + 1)); minor=0; patch=0 ;;
+            minor) minor=$((minor + 1)); patch=0 ;;
+            *) patch=$((patch + 1)) ;;
+          esac
+          tag="v$major.$minor.$patch"
+          prerelease=false
+          if [ -n "$PRE" ]; then
+            echo "$PRE" | grep -Eq '^[0-9A-Za-z.-]+$' || { echo "invalid pre-release suffix: $PRE" >&2; exit 1; }
+            tag="$tag-$PRE"
+            prerelease=true
+          fi
+          if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
+            echo "$tag already exists" >&2
+            exit 1
+          fi
+
+          {
+            echo "ship=true"
+            echo "tag=$tag"
+            echo "previous=$previous"
+            echo "prerelease=$prerelease"
+          } >> "$GITHUB_OUTPUT"
+          echo "will release $tag (previous $previous) from $GITHUB_SHA"
+
+  ci:
+    needs: plan
+    if: needs.plan.outputs.ship == 'true'
+    permissions:
+      contents: read
+      pull-requests: read
+    uses: ./.github/workflows/ci.yml
+    with:
+      full: true
+    secrets: inherit
+
+  release:
+    needs: [plan, ci]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.plan.outputs.tag }}
+          PREVIOUS: ${{ needs.plan.outputs.previous }}
+          PRERELEASE: ${{ needs.plan.outputs.prerelease }}
+        run: |
+          flags=""
+          [ "$PRERELEASE" = "true" ] && flags="--prerelease"
+          gh release create "$TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "Guardian $TAG" \
+            --generate-notes \
+            --notes-start-tag "$PREVIOUS" \
+            --latest=false \
+            $flags
+
+  deploy:
+    needs: [plan, release]
+    uses: ./.github/workflows/cd.yml
+    with:
+      tag: ${{ needs.plan.outputs.tag }}
+    secrets: inherit
+
+  announce:
+    needs: [plan, deploy]
+    if: needs.plan.outputs.prerelease != 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.plan.outputs.tag }}
+        run: gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --latest

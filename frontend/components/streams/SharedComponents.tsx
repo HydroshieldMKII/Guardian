@@ -1,3 +1,5 @@
+import type { PlexSession } from "@/types";
+
 export { ClickableIP } from "@/components/ui/clickable-ip";
 
 export const getProgressPercentage = (
@@ -8,7 +10,14 @@ export const getProgressPercentage = (
   return Math.min(100, (viewOffset / duration) * 100);
 };
 
-export const getContentTitle = (session: any) => {
+type ContentTitleSource = Pick<
+  PlexSession,
+  "type" | "title" | "grandparentTitle" | "parentTitle" | "year" | "parentYear"
+>;
+
+type QualitySource = Pick<PlexSession, "Media" | "Session">;
+
+export const getContentTitle = (session: ContentTitleSource) => {
   if (session.type === "episode" && session.grandparentTitle) {
     return `${session.grandparentTitle} - ${session.parentTitle}: ${session.title}`;
   }
@@ -29,7 +38,7 @@ export const getContentTitle = (session: any) => {
   return session.title || "Unknown Title";
 };
 
-export const getDetailedQuality = (session: any) => {
+export const getDetailedQuality = (session: QualitySource) => {
   const media = session.Media?.[0];
   if (!media) return null;
 

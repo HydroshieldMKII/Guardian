@@ -9,6 +9,7 @@ import React, {
   useRef,
 } from "react";
 import { config } from "@/lib/config";
+import { AppSetting } from "@/types";
 import { useAuth, isAdminUser } from "./auth-context";
 
 interface VersionInfo {
@@ -25,6 +26,12 @@ interface UpdateInfo {
   currentVersion: string;
   updateUrl: string;
   releaseNotes?: string;
+}
+
+interface GitHubRelease {
+  tag_name: string;
+  html_url: string;
+  body?: string | null;
 }
 
 type UpdateCheckResult = {
@@ -52,21 +59,32 @@ const isVersionNewer = (
   currentVersion: string
 ): boolean => {
   const parseVersion = (version: string) => {
-    return version.split(".").map((v) => parseInt(v) || 0);
+    const [core, ...prerelease] = version.split("-");
+    return {
+      parts: core.split(".").map((v) => parseInt(v) || 0),
+      prerelease: prerelease.join("-"),
+    };
   };
 
   const newV = parseVersion(newVersion);
   const currentV = parseVersion(currentVersion);
 
-  for (let i = 0; i < Math.max(newV.length, currentV.length); i++) {
-    const newPart = newV[i] || 0;
-    const currentPart = currentV[i] || 0;
+  for (let i = 0; i < Math.max(newV.parts.length, currentV.parts.length); i++) {
+    const newPart = newV.parts[i] || 0;
+    const currentPart = currentV.parts[i] || 0;
 
     if (newPart > currentPart) return true;
     if (newPart < currentPart) return false;
   }
 
-  return false; // versions are equal
+  if (newV.prerelease === currentV.prerelease) return false;
+  if (!newV.prerelease) return true;
+  if (!currentV.prerelease) return false;
+  return (
+    newV.prerelease.localeCompare(currentV.prerelease, undefined, {
+      numeric: true,
+    }) > 0
+  );
 };
 
 const VersionContext = createContext<VersionContextType | undefined>(undefined);
@@ -107,7 +125,7 @@ export function VersionProvider({ children }: { children: React.ReactNode }) {
       setError(null);
       const response = await fetch(`${config.api.baseUrl}/config/version`);
       if (response.ok) {
-        const data = await response.json();
+        const data = (await response.json()) as VersionInfo;
         setVersionInfo(data);
       } else {
         throw new Error(`Failed to fetch version info: ${response.status}`);
@@ -161,9 +179,9 @@ export function VersionProvider({ children }: { children: React.ReactNode }) {
         return null;
       }
 
-      const settings = await settingsResponse.json();
+      const settings = (await settingsResponse.json()) as AppSetting[];
       const autoCheckSetting = settings.find(
-        (setting: any) => setting.key === "AUTO_CHECK_UPDATES"
+        (setting) => setting.key === "AUTO_CHECK_UPDATES"
       );
       const shouldAutoCheck = autoCheckSetting?.value === "true";
 
@@ -186,7 +204,7 @@ export function VersionProvider({ children }: { children: React.ReactNode }) {
         return null;
       }
 
-      const release = await response.json();
+      const release = (await response.json()) as GitHubRelease;
       const latestVersion = release.tag_name.replace(/^v/, ""); // Remove 'v' prefix if present
       const currentVersion = versionInfo.version;
 
@@ -214,7 +232,6 @@ export function VersionProvider({ children }: { children: React.ReactNode }) {
           updateUrl: release.html_url,
           releaseNotes: release.body || "",
         });
-      } else {
       }
 
       return result;
@@ -240,7 +257,7 @@ export function VersionProvider({ children }: { children: React.ReactNode }) {
         return null;
       }
 
-      const release = await response.json();
+      const release = (await response.json()) as GitHubRelease;
       const latestVersion = release.tag_name.replace(/^v/, ""); // Remove 'v' prefix if present
       const currentVersion = versionInfo.version;
 
@@ -280,14 +297,14 @@ export function VersionProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    fetchVersionInfo();
+    void fetchVersionInfo();
   }, [fetchVersionInfo, setupRequired, authLoading]);
 
   // Automatically check for updates once version info is available
   useEffect(() => {
     if (versionInfo?.version) {
       const timeoutId = setTimeout(() => {
-        checkForUpdatesIfEnabled();
+        void checkForUpdatesIfEnabled();
       }, 1000); // 1 second delay
 
       return () => clearTimeout(timeoutId);
@@ -299,7 +316,7 @@ export function VersionProvider({ children }: { children: React.ReactNode }) {
     if (!versionInfo?.version) return;
 
     const intervalId = setInterval(() => {
-      checkForUpdatesIfEnabled();
+      void checkForUpdatesIfEnabled();
     }, PERIODIC_UPDATE_CHECK_INTERVAL);
 
     return () => clearInterval(intervalId);

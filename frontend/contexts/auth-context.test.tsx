@@ -7,8 +7,8 @@ import {
   useAuth,
 } from "./auth-context";
 
-const updateProfile = jest.fn();
-const updatePassword = jest.fn();
+const updateProfile = jest.fn<Promise<unknown>, unknown[]>();
+const updatePassword = jest.fn<Promise<unknown>, unknown[]>();
 
 jest.mock("@/lib/api", () => ({
   apiClient: {
@@ -40,7 +40,12 @@ interface RouteMap {
 
 const routes: RouteMap = {};
 
-const route = (url: RequestInfo | URL) => String(url).split("?")[0];
+const urlString = (url: RequestInfo | URL) => {
+  if (typeof url === "string") return url;
+  return url instanceof URL ? url.href : url.url;
+};
+
+const route = (url: RequestInfo | URL) => urlString(url).split("?")[0];
 
 const wrapper = ({ children }: { children: ReactNode }) => (
   <AuthProvider>{children}</AuthProvider>

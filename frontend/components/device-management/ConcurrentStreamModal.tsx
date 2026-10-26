@@ -79,7 +79,7 @@ export const ConcurrentStreamModal: React.FC<ConcurrentStreamModalProps> = ({
           setFetching(false);
         }
       };
-      fetchCurrentLimit();
+      void fetchCurrentLimit();
     }
   }, [isOpen, userId]);
 
@@ -204,7 +204,7 @@ export const ConcurrentStreamModal: React.FC<ConcurrentStreamModalProps> = ({
         <Button variant="outline" onClick={() => onClose()} disabled={loading}>
           Cancel
         </Button>
-        <Button onClick={handleSave} disabled={loading}>
+        <Button onClick={() => void handleSave()} disabled={loading}>
           {loading && <Loader2 className="size-4 animate-spin" />}
           Save
         </Button>

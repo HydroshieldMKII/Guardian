@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   Collapsible,
   CollapsibleContent,
@@ -14,7 +13,6 @@ import {
   StatusPill,
   type Tone,
 } from "@/components/ui/entity";
-import { cn } from "@/lib/utils";
 import { UserDevice, UserPreference, UserTimeRule } from "@/types";
 import { devicePolicyBadges, groupPolicyBadges } from "@/lib/device-policies";
 import { UserAvatar, getUserPreferenceBadge } from "./SharedComponents";

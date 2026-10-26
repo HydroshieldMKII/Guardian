@@ -1,9 +1,10 @@
 import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { TimeRuleModal } from "@/components/device-management/TimeRuleModal";
+import type { CreateTimeRuleDto } from "@/types";
 
 const getTimeRules = jest.fn();
-const createTimeRule = jest.fn();
+const createTimeRule = jest.fn<Promise<unknown>, [string, CreateTimeRuleDto]>();
 const updateTimeRule = jest.fn();
 const deleteTimeRule = jest.fn();
 const createPreset = jest.fn();
@@ -184,7 +185,7 @@ describe("TimeRuleModal creating a rule", () => {
     screen.getByPlaceholderText("e.g. School hours, Sleep time, Work hours");
 
   it("refuses an empty name", async () => {
-    const { user } = await renderModal();
+    await renderModal();
 
     expect(screen.getByRole("button", { name: /Create Rule/ })).toBeDisabled();
     expect(createTimeRule).not.toHaveBeenCalled();
@@ -585,7 +586,7 @@ describe("TimeRuleModal deleting", () => {
     await waitFor(() =>
       expect(toast).toHaveBeenCalledWith(
         expect.objectContaining({
-          description: expect.stringContaining("Deleted 2 rules."),
+          description: expect.stringContaining("Deleted 2 rules.") as unknown,
         }),
       ),
     );
@@ -681,7 +682,7 @@ describe("TimeRuleModal presets", () => {
     await waitFor(() =>
       expect(toast).toHaveBeenCalledWith(
         expect.objectContaining({
-          description: expect.stringContaining("Unknown"),
+          description: expect.stringContaining("Unknown") as unknown,
         }),
       ),
     );

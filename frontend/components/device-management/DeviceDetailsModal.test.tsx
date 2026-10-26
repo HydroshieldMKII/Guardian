@@ -6,8 +6,11 @@ import { DeviceDetailsModal } from "@/components/device-management/DeviceDetails
 const inHours = (hours: number) =>
   new Date(Date.now() + hours * 3_600_000).toISOString();
 
-const deleteDeviceNote = jest.fn();
-const updateDeviceExcludeFromConcurrentLimit = jest.fn();
+const deleteDeviceNote = jest.fn<Promise<unknown>, unknown[]>();
+const updateDeviceExcludeFromConcurrentLimit = jest.fn<
+  Promise<unknown>,
+  unknown[]
+>();
 jest.mock("@/lib/api", () => ({
   apiClient: {
     deleteDeviceNote: (...a: unknown[]) => deleteDeviceNote(...a),
