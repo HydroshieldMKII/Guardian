@@ -12,7 +12,7 @@ const ok = (body: unknown = {}) =>
 
 const lastCall = () => fetchMock.mock.calls[fetchMock.mock.calls.length - 1];
 
-const bodyOf = () => JSON.parse(lastCall()[1]?.body as string);
+const bodyOf = (): unknown => JSON.parse(lastCall()[1]?.body as string);
 
 beforeEach(() => {
   jest.clearAllMocks();

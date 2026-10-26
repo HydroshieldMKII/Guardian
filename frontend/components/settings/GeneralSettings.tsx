@@ -154,6 +154,11 @@ interface GeneralSettingsProps {
   sectionId: string;
 }
 
+interface PasswordResetStatus {
+  appUrlConfigured?: boolean;
+  adminEmailConfigured?: boolean;
+}
+
 export function GeneralSettings({
   settings,
   formData,
@@ -169,7 +174,7 @@ export function GeneralSettings({
       try {
         const response = await fetch("/api/pg/auth/password-reset/status");
         if (response.ok) {
-          const data = await response.json();
+          const data = (await response.json()) as PasswordResetStatus;
           setAppUrlConfigured(Boolean(data.appUrlConfigured));
           setAnyAdminEmail(Boolean(data.adminEmailConfigured));
         }

@@ -144,7 +144,7 @@ function ResetPasswordForm() {
       title="Choose a Password"
       description="Set a new password for your account"
     >
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4">
         <div className="space-y-2">
           <label
             htmlFor="password"

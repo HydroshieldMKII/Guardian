@@ -105,7 +105,6 @@ export function TimeRuleModal({
     updateTimeRule,
     deleteTimeRule,
     createPreset,
-    loading,
   } = useTimeRules();
 
   const [rules, setRules] = useState<EditingRule[]>([]);
@@ -145,13 +144,6 @@ export function TimeRuleModal({
     });
   };
 
-  // Load rules when modal opens
-  useEffect(() => {
-    if (isOpen) {
-      loadRules();
-    }
-  }, [isOpen, userId, deviceIdentifier]);
-
   const loadRules = async () => {
     setLoadingRules(true);
     try {
@@ -172,6 +164,18 @@ export function TimeRuleModal({
       setLoadingRules(false);
     }
   };
+
+  const loadRulesRef = useRef(loadRules);
+
+  useEffect(() => {
+    loadRulesRef.current = loadRules;
+  });
+
+  useEffect(() => {
+    if (isOpen) {
+      void loadRulesRef.current();
+    }
+  }, [isOpen, userId, deviceIdentifier]);
 
   // Helper functions
   const getDayLabel = (dayOfWeek: number): string => {
@@ -227,7 +231,7 @@ export function TimeRuleModal({
     );
   };
 
-  const cancelEdit = (ruleId: number) => {
+  const cancelEdit = (_ruleId: number) => {
     setRules((prev) =>
       prev.map((rule) => ({
         ...rule,
@@ -305,10 +309,32 @@ export function TimeRuleModal({
         description: "The rule has been updated",
         variant: "success",
       });
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: "Error",
-        description: error.message || "Failed to update rule",
+        description:
+          (error instanceof Error && error.message) || "Failed to update rule",
+        variant: "destructive",
+      });
+    } finally {
+      setUpdatingRuleId(null);
+    }
+  };
+
+  const toggleRuleEnabled = async (ruleId: number, checked: boolean) => {
+    setUpdatingRuleId(ruleId);
+    try {
+      await updateTimeRule(userId, ruleId, {
+        enabled: checked,
+      });
+      setRules((prev) =>
+        prev.map((r) => (r.id === ruleId ? { ...r, enabled: checked } : r)),
+      );
+    } catch (error) {
+      toast({
+        title: "Error",
+        description:
+          (error instanceof Error && error.message) || "Failed to update rule",
         variant: "destructive",
       });
     } finally {
@@ -326,10 +352,11 @@ export function TimeRuleModal({
         description: "The rule has been removed from this user's time schedule",
         variant: "success",
       });
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: "Error",
-        description: error.message || "Failed to delete rule",
+        description:
+          (error instanceof Error && error.message) || "Failed to delete rule",
         variant: "destructive",
       });
     } finally {
@@ -366,7 +393,7 @@ export function TimeRuleModal({
     setCreatingRule(true);
     try {
       // Extract enabled field and create the DTO
-      const { enabled, ...createDto } = newRule;
+      const { enabled: _enabled, ...createDto } = newRule;
       const createdRule = await createTimeRule(userId, createDto);
 
       setRules((prev) =>
@@ -389,10 +416,11 @@ export function TimeRuleModal({
         description: "The rule has been added to this user's time schedule",
         variant: "success",
       });
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: "Error",
-        description: error.message || "Failed to create rule",
+        description:
+          (error instanceof Error && error.message) || "Failed to create rule",
         variant: "destructive",
       });
     } finally {
@@ -425,10 +453,12 @@ export function TimeRuleModal({
         description: `Deleted ${rules.length} ${rules.length === 1 ? "rule" : "rules"}. This user can now stream at any time.`,
         variant: "success",
       });
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: "Error",
-        description: error.message || "Failed to delete all rules",
+        description:
+          (error instanceof Error && error.message) ||
+          "Failed to delete all rules",
         variant: "destructive",
       });
     } finally {
@@ -463,11 +493,13 @@ export function TimeRuleModal({
             : "Streaming is now blocked all day from Monday to Friday",
         variant: "success",
       });
-    } catch (error: any) {
+    } catch (error) {
       console.error(`Error creating ${presetType} preset:`, error);
       toast({
         title: "Error",
-        description: error.message || "Failed to apply the preset",
+        description:
+          (error instanceof Error && error.message) ||
+          "Failed to apply the preset",
         variant: "destructive",
       });
     } finally {
@@ -610,7 +642,7 @@ export function TimeRuleModal({
 
                             <div className="flex gap-2 border-t pt-4">
                               <Button
-                                onClick={() => saveEdit(rule.id)}
+                                onClick={() => void saveEdit(rule.id)}
                                 disabled={busy}
                                 size="sm"
                                 className="flex-1 sm:flex-none"
@@ -658,31 +690,9 @@ export function TimeRuleModal({
                                 checked={rule.enabled}
                                 disabled={busy}
                                 className="cursor-pointer"
-                                onCheckedChange={async (checked) => {
-                                  setUpdatingRuleId(rule.id);
-                                  try {
-                                    await updateTimeRule(userId, rule.id, {
-                                      enabled: checked,
-                                    });
-                                    setRules((prev) =>
-                                      prev.map((r) =>
-                                        r.id === rule.id
-                                          ? { ...r, enabled: checked }
-                                          : r,
-                                      ),
-                                    );
-                                  } catch (error: any) {
-                                    toast({
-                                      title: "Error",
-                                      description:
-                                        error.message ||
-                                        "Failed to update rule",
-                                      variant: "destructive",
-                                    });
-                                  } finally {
-                                    setUpdatingRuleId(null);
-                                  }
-                                }}
+                                onCheckedChange={(checked) =>
+                                  void toggleRuleEnabled(rule.id, checked)
+                                }
                               />
                               <Button
                                 variant="outline"
@@ -696,7 +706,7 @@ export function TimeRuleModal({
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => deleteRule(rule.id)}
+                                onClick={() => void deleteRule(rule.id)}
                                 disabled={busy || deletingRuleId === rule.id}
                                 className="border-rose-500/40 text-rose-600 hover:bg-rose-500/10 dark:text-rose-400"
                               >
@@ -829,7 +839,7 @@ export function TimeRuleModal({
                 </Field>
 
                 <Button
-                  onClick={createRule}
+                  onClick={() => void createRule()}
                   disabled={
                     creatingRule || !!creatingPreset || !newRule.ruleName.trim()
                   }
@@ -859,7 +869,7 @@ export function TimeRuleModal({
       <ConfirmationModal
         isOpen={showDeleteAllConfirm}
         onClose={() => setShowDeleteAllConfirm(false)}
-        onConfirm={confirmDeleteAllRules}
+        onConfirm={() => void confirmDeleteAllRules()}
         title="Delete every rule?"
         description="This permanently deletes every rule in this user's time schedule, so they will be able to stream at any time. This cannot be undone."
         confirmText="Delete All"
@@ -870,7 +880,7 @@ export function TimeRuleModal({
       <ConfirmationModal
         isOpen={!!showPresetConfirm}
         onClose={() => setShowPresetConfirm(null)}
-        onConfirm={() => confirmCreatePreset(showPresetConfirm!)}
+        onConfirm={() => void confirmCreatePreset(showPresetConfirm!)}
         title={
           showPresetConfirm === "weekdays-only"
             ? "Allow weekdays only?"

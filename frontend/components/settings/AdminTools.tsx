@@ -66,8 +66,7 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
         variant: "success",
       });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [toast]);
 
   const handleResetStreamCounts = async (password?: string) => {
     if (typeof password !== "string" || password === "") {
@@ -297,7 +296,7 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
     reader.onload = (e) => {
       try {
         const content = e.target?.result as string;
-        const importData = JSON.parse(content);
+        const importData = JSON.parse(content) as { version?: string };
 
         // Check for version mismatch
         if (importData.version && versionInfo?.version) {
@@ -316,8 +315,8 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
         }
 
         // No version mismatch, proceed with import
-        importDatabase(file);
-      } catch (error) {
+        void importDatabase(file);
+      } catch {
         toast({
           title: "Invalid File",
           description: "Choose an exported .json settings file",
@@ -369,7 +368,7 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
   const handleProceedWithImport = () => {
     if (pendingImportFile) {
       setShowVersionMismatchModal(false);
-      importDatabase(pendingImportFile);
+      void importDatabase(pendingImportFile);
     }
   };
 
@@ -431,7 +430,7 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
           description="Download your settings, user preferences and policies as a file. Devices and session history are not included."
           action={
             <Button
-              onClick={exportDatabase}
+              onClick={() => void exportDatabase()}
               disabled={exportingDatabase}
               size="sm"
               variant="outline"
@@ -519,7 +518,7 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
       <ConfirmationModal
         isOpen={showResetStreamCountsModal}
         onClose={() => setShowResetStreamCountsModal(false)}
-        onConfirm={handleResetStreamCounts}
+        onConfirm={() => void handleResetStreamCounts()}
         title="Reset Stream Counts"
         description="Every device's stream count goes back to zero. The devices themselves are kept."
         confirmText="Reset Stream Counts"
@@ -530,7 +529,7 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
       <ConfirmationModal
         isOpen={showClearSessionHistoryModal}
         onClose={() => setShowClearSessionHistoryModal(false)}
-        onConfirm={handleClearSessionHistory}
+        onConfirm={() => void handleClearSessionHistory()}
         title="Clear Session History"
         description="Every session history record is deleted for good, for every user. Devices, users and settings are left untouched."
         confirmText="Clear Session History"
@@ -541,7 +540,7 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
       <ConfirmationModal
         isOpen={showDeleteAllDevicesModal}
         onClose={() => setShowDeleteAllDevicesModal(false)}
-        onConfirm={handleDeleteAllDevices}
+        onConfirm={() => void handleDeleteAllDevices()}
         title="Delete All Devices"
         description="Every device is deleted for good, along with its session history and notifications. Each one reappears as pending the next time it connects, and per-device settings are lost."
         confirmText="Delete All Devices"
@@ -552,7 +551,7 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
       <ConfirmationModal
         isOpen={showResetDatabaseModal}
         onClose={() => setShowResetDatabaseModal(false)}
-        onConfirm={handleResetDatabase}
+        onConfirm={() => void handleResetDatabase()}
         title="Factory Reset"
         description="Everything is deleted for good: settings, devices, users and session history. It all restarts as a fresh install."
         confirmText="Yes, Wipe All Data"
@@ -581,7 +580,7 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
           setShowPasswordModal(false);
           setPendingAction(null);
         }}
-        onConfirm={handlePasswordConfirmation}
+        onConfirm={(password) => void handlePasswordConfirmation(password)}
         title={pendingAction?.title || "Confirm Action"}
         description={
           pendingAction?.description ||

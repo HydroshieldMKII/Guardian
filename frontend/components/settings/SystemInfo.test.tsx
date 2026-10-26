@@ -4,7 +4,7 @@ import type { AppSetting } from "@/types";
 import type { SettingsFormData } from "@/components/settings/settings-utils";
 import { SystemInfo } from "@/components/settings/SystemInfo";
 
-const getHealth = jest.fn();
+const getHealth = jest.fn<Promise<unknown>, unknown[]>();
 jest.mock("@/lib/api", () => ({
   apiClient: { getHealth: (...a: unknown[]) => getHealth(...a) },
 }));

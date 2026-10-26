@@ -1,0 +1,62 @@
+name: Release rollback
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release to point latest back to, for example v2.0.1
+        type: string
+        required: true
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+env:
+  IMAGE: docker.io/hydroshieldmkii/guardian
+
+jobs:
+  rollback:
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          TAG: ${{ inputs.tag }}
+        run: |
+          echo "$TAG" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$' \
+            || { echo "$TAG is not a stable vX.Y.Z tag" >&2; exit 1; }
+
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+          BASELINE: backend/src/migrations/20261026-baseline-schema.ts
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/contents/$BASELINE?ref=$TAG" --silent \
+            || { echo "$TAG predates migrations; its schema sync would undo newer migrations" >&2; exit 1; }
+
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - env:
+          TAG: ${{ inputs.tag }}
+        run: |
+          core="${TAG#v}"
+          docker buildx imagetools inspect "$IMAGE:$TAG" >/dev/null
+          docker buildx imagetools create \
+            --tag "$IMAGE:latest" \
+            --tag "$IMAGE:v${core%.*}" \
+            --tag "$IMAGE:v${core%%.*}" \
+            "$IMAGE:$TAG"
+          docker buildx imagetools inspect "$IMAGE:latest"
+          echo "latest now points to $TAG" >> "$GITHUB_STEP_SUMMARY"
+
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+        run: gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --latest

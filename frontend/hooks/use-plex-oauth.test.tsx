@@ -52,7 +52,7 @@ const setClosed = (target: Window, closed: boolean) =>
   });
 
 const makePopup = (): Window => {
-  const created: Window = Object.create(window);
+  const created = Object.create(window) as Window;
   setClosed(created, false);
   close = jest.fn();
   created.close = close;
@@ -171,7 +171,7 @@ describe("starting the flow", () => {
 
     expect(toast).toHaveBeenCalledWith(
       expect.objectContaining({
-        description: expect.stringContaining("Allow pop-ups"),
+        description: expect.stringContaining("Allow pop-ups") as unknown,
       }),
     );
     expect(screen.getByTestId("waiting")).toHaveTextContent("false");

@@ -4,7 +4,7 @@ import type { AppSetting } from "@/types";
 import { PlexSettings } from "@/components/settings/PlexSettings";
 import type { SettingsFormData } from "@/components/settings/settings-utils";
 
-const testPlexConnection = jest.fn();
+const testPlexConnection = jest.fn<Promise<unknown>, unknown[]>();
 jest.mock("@/lib/api", () => ({
   apiClient: {
     testPlexConnection: (...a: unknown[]) => testPlexConnection(...a),
@@ -162,7 +162,7 @@ describe("PlexSettings", () => {
       "enables the cert switch when SSL is %p",
       (value) => {
         const { container } = renderPanel({
-          formData: { USE_SSL: value as string | boolean },
+          formData: { USE_SSL: value },
         });
         expect(
           container.querySelector("#IGNORE_CERT_ERRORS"),
@@ -198,7 +198,7 @@ describe("PlexSettings", () => {
         const { container } = renderPanel({
           formData: {
             USE_SSL: true,
-            IGNORE_CERT_ERRORS: value as string | boolean,
+            IGNORE_CERT_ERRORS: value,
           },
         });
         expect(container.querySelector("#IGNORE_CERT_ERRORS")).toBeChecked();

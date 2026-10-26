@@ -36,7 +36,7 @@ export function GlobalVersionMismatchBanner() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={refreshVersionInfo}
+              onClick={() => void refreshVersionInfo()}
               className="text-white hover:bg-red-700 text-xs px-2 py-1 h-auto"
             >
               <RefreshCw className="h-3 w-3 mr-1" />

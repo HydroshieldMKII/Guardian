@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+set -euo pipefail
+msg_file="$1"
+if sed -e 's/^#.*$//' "$msg_file" | grep -Eiq \
+  -e '^[[:space:]]*co-authored-by:.*(claude|anthropic|opus|sonnet|fable|haiku|copilot|chatgpt|codex|gemini)' \
+  -e 'noreply@anthropic\.com' \
+  -e 'generated with.*(claude|anthropic)' \
+  -e 'signed-off-by:.*(claude|anthropic)' \
+  -e $'\xF0\x9F\xA4\x96'; then
+  echo "commit-msg hook: AI attribution is not allowed in commit messages (Co-Authored-By, 'Generated with', robot emoji)." >&2
+  echo "Remove the line(s) and commit again." >&2
+  exit 1
+fi

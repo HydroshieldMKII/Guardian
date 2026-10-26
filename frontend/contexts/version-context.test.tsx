@@ -29,6 +29,11 @@ const GITHUB_LATEST =
 
 const routes: Record<string, () => Response> = {};
 
+const urlString = (url: RequestInfo | URL) => {
+  if (typeof url === "string") return url;
+  return url instanceof URL ? url.href : url.url;
+};
+
 const release = (tag: string) => ({
   tag_name: tag,
   html_url: `https://github.com/HydroshieldMKII/Guardian/releases/${tag}`,
@@ -68,8 +73,8 @@ beforeEach(() => {
   routes[GITHUB_LATEST] = () => json(release("v1.4.0"));
 
   fetchMock.mockImplementation(async (url) => {
-    const handler = routes[String(url)];
-    if (!handler) throw new Error(`unmocked route ${String(url)}`);
+    const handler = routes[urlString(url)];
+    if (!handler) throw new Error(`unmocked route ${urlString(url)}`);
     return handler();
   });
 });
@@ -254,6 +259,30 @@ describe("checkForUpdatesIfEnabled", () => {
       json([{ key: "AUTO_CHECK_UPDATES", value: "true" }]);
   };
 
+  it("checks a second after the version loads, then periodically", async () => {
+    enableAutoCheck();
+    jest.useFakeTimers();
+    try {
+      await renderVersion();
+      const githubCalls = () =>
+        fetchMock.mock.calls.filter(([url]) => urlString(url) === GITHUB_LATEST)
+          .length;
+      expect(githubCalls()).toBe(0);
+
+      await act(async () => {
+        await jest.advanceTimersByTimeAsync(1000);
+      });
+      expect(githubCalls()).toBe(1);
+
+      await act(async () => {
+        await jest.advanceTimersByTimeAsync(30 * 60 * 1000);
+      });
+      expect(githubCalls()).toBe(2);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
   it("does nothing while auto-checking is disabled", async () => {
     const { result } = await renderVersion();
 
@@ -266,7 +295,7 @@ describe("checkForUpdatesIfEnabled", () => {
 
     expect(outcome).toBeNull();
     expect(
-      fetchMock.mock.calls.some(([url]) => String(url) === GITHUB_LATEST),
+      fetchMock.mock.calls.some(([url]) => urlString(url) === GITHUB_LATEST),
     ).toBe(false);
   });
 
@@ -294,7 +323,7 @@ describe("checkForUpdatesIfEnabled", () => {
     });
 
     const githubCalls = () =>
-      fetchMock.mock.calls.filter(([url]) => String(url) === GITHUB_LATEST)
+      fetchMock.mock.calls.filter(([url]) => urlString(url) === GITHUB_LATEST)
         .length;
     const before = githubCalls();
 
@@ -498,7 +527,30 @@ describe("version comparison", () => {
     ["1.2.9", false],
     ["1.3", false],
     ["1.3.5.1", true],
+    ["1.3.5-rc.1", false],
+    ["1.3.6-rc.1", true],
+    ["1.3.x", false],
   ])("treats %s against 1.3.5 as hasUpdate=%p", async (tag, expected) => {
+    routes[GITHUB_LATEST] = () => json(release(`v${tag}`));
+    const { result } = await renderVersion();
+
+    let outcome: Awaited<
+      ReturnType<typeof result.current.checkForUpdatesManually>
+    > | undefined;
+    await act(async () => {
+      outcome = await result.current.checkForUpdatesManually();
+    });
+
+    expect(outcome?.hasUpdate).toBe(expected);
+  });
+
+  it.each([
+    ["1.4.0", true],
+    ["1.4.0-rc.10", true],
+    ["1.4.0-rc.2", false],
+    ["1.3.9", false],
+  ])("treats %s against 1.4.0-rc.2 as hasUpdate=%p", async (tag, expected) => {
+    routes["/api/pg/config/version"] = () => json({ version: "1.4.0-rc.2" });
     routes[GITHUB_LATEST] = () => json(release(`v${tag}`));
     const { result } = await renderVersion();
 

@@ -43,7 +43,7 @@ export function GlobalUpdateBanner() {
                 onClick={() => setShowReleaseNotes(true)}
                 className="bg-blue-700 hover:bg-blue-800 text-white text-xs px-3 py-1 h-auto"
               >
-                See what's new
+                See what&apos;s new
               </Button>
               <Button
                 size="sm"

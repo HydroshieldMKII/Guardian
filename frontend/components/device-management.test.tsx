@@ -31,14 +31,6 @@ jest.mock("@/hooks/device-management/useUserPreferences", () => ({
   useUserPreferences: () => ({ updateUserPreference, updateUserIPPolicy }),
 }));
 
-const hasTemporaryAccess = jest.fn();
-jest.mock("@/hooks/device-management/useDeviceUtils", () => ({
-  useDeviceUtils: () => ({
-    hasTemporaryAccess,
-    getTemporaryAccessTimeLeft: () => "2h",
-  }),
-}));
-
 const getAllTimeRules = jest.fn();
 const fetchAllTimeRules = jest.fn();
 jest.mock("@/hooks/device-management/useTimeRules", () => ({
@@ -48,8 +40,8 @@ jest.mock("@/hooks/device-management/useTimeRules", () => ({
 const toast = jest.fn();
 jest.mock("@/hooks/use-toast", () => ({ useToast: () => ({ toast }) }));
 
-const toggleUserVisibility = jest.fn();
-const getHiddenUsers = jest.fn();
+const toggleUserVisibility = jest.fn<Promise<unknown>, unknown[]>();
+const getHiddenUsers = jest.fn<Promise<unknown>, unknown[]>();
 jest.mock("@/lib/api", () => ({
   apiClient: {
     toggleUserVisibility: (...a: unknown[]) => toggleUserVisibility(...a),
@@ -158,7 +150,7 @@ jest.mock("@/components/device-management/DeviceDetailsModal", () => ({
     <div>
       <span>{`details-modal:${isOpen}:${device?.id ?? "none"}`}</span>
       <button onClick={onClose}>close details</button>
-      <button onClick={() => onSetPending?.(device?.id ?? 0)}>
+      <button onClick={() => void onSetPending?.(device?.id ?? 0)}>
         set pending
       </button>
       <button onClick={() => onRename(device?.id ?? 0, "Renamed")}>
@@ -336,7 +328,6 @@ beforeEach(() => {
   jest.useRealTimers();
   localStorage.clear();
   consoleError = jest.spyOn(console, "error").mockImplementation(() => {});
-  hasTemporaryAccess.mockReturnValue(false);
   getAllTimeRules.mockResolvedValue([]);
   fetchAllTimeRules.mockResolvedValue(undefined);
   approveDevice.mockResolvedValue(true);

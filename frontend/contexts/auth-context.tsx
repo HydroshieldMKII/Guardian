@@ -2,6 +2,7 @@
 
 import React, {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useState,
@@ -41,6 +42,33 @@ export function isPlexUser(user: User | null): user is PlexUser {
 }
 
 export type UserType = "admin" | "plex_user";
+
+interface ErrorResponse {
+  message?: string;
+}
+
+interface SetupStatusResponse {
+  setupRequired: boolean;
+}
+
+interface PlexOAuthEnabledResponse {
+  enabled: boolean;
+}
+
+type CurrentUserResponse = Partial<AdminUser> & Partial<PlexUser>;
+
+interface AuthUserResponse {
+  user: User;
+}
+
+interface PlexLoginResponse extends AuthUserResponse {
+  userType: UserType;
+}
+
+type PlexLinkResponse = Pick<
+  AdminUser,
+  "plexUserId" | "plexUsername" | "plexEmail" | "plexThumb"
+>;
 
 export interface AuthContextType {
   user: User | null;
@@ -87,19 +115,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [backendError, setBackendError] = useState<string | null>(null);
   const [plexOAuthEnabled, setPlexOAuthEnabled] = useState(false);
 
-  const checkPlexOAuthEnabled = async () => {
+  const checkPlexOAuthEnabled = useCallback(async () => {
     try {
       const res = await fetch("/api/pg/auth/plex/enabled");
       if (res.ok) {
-        const data = await res.json();
+        const data = (await res.json()) as PlexOAuthEnabledResponse;
         setPlexOAuthEnabled(data.enabled);
       }
     } catch (error) {
       console.error("Failed to check Plex OAuth status:", error);
     }
-  };
+  }, []);
 
-  const initAuth = async () => {
+  const initAuth = useCallback(async () => {
     setIsLoading(true);
     setBackendError(null);
     try {
@@ -112,7 +140,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         );
       }
 
-      const setupData = await setupRes.json();
+      const setupData = (await setupRes.json()) as SetupStatusResponse;
       setSetupRequired(setupData.setupRequired);
 
       // Check Plex OAuth status
@@ -125,7 +153,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         });
 
         if (userRes.ok) {
-          const userData = await userRes.json();
+          const userData = (await userRes.json()) as CurrentUserResponse;
           // Determine user type from response
           if (userData.id) {
             // Admin user
@@ -178,12 +206,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [checkPlexOAuthEnabled]);
 
   // Check authentication and setup status on mount
   useEffect(() => {
-    initAuth();
-  }, []);
+    void initAuth();
+  }, [initAuth]);
 
   const login = async (username: string, password: string, captchaToken?: string) => {
     const response = await fetch("/api/pg/auth/login", {
@@ -196,11 +224,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     if (!response.ok) {
-      const error = await response.json();
+      const error = (await response.json()) as ErrorResponse;
       throw new Error(error.message || "Login failed");
     }
 
-    const data = await response.json();
+    const data = (await response.json()) as AuthUserResponse;
     setUser(data.user);
     setUserType("admin");
   };
@@ -216,11 +244,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     if (!response.ok) {
-      const error = await response.json();
+      const error = (await response.json()) as ErrorResponse;
       throw new Error(error.message || "Plex login failed");
     }
 
-    const data = await response.json();
+    const data = (await response.json()) as PlexLoginResponse;
     setUser(data.user);
     setUserType(data.userType);
   };
@@ -260,11 +288,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     if (!response.ok) {
-      const error = await response.json();
+      const error = (await response.json()) as ErrorResponse;
       throw new Error(error.message || "Failed to create admin");
     }
 
-    const data = await response.json();
+    const data = (await response.json()) as AuthUserResponse;
     setUser(data.user);
     setSetupRequired(false);
   };
@@ -272,7 +300,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const checkAuth = async () => {
     try {
       const setupRes = await fetch("/api/pg/auth/check-setup");
-      const setupData = await setupRes.json();
+      const setupData = (await setupRes.json()) as SetupStatusResponse;
       setSetupRequired(setupData.setupRequired);
 
       // Check Plex OAuth status
@@ -284,7 +312,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         });
 
         if (userRes.ok) {
-          const userData = await userRes.json();
+          const userData = (await userRes.json()) as CurrentUserResponse;
           // Determine user type from response
           if (userData.id) {
             setUser(userData as AdminUser);
@@ -353,11 +381,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     if (!response.ok) {
-      const error = await response.json();
+      const error = (await response.json()) as ErrorResponse;
       throw new Error(error.message || "Failed to link Plex account");
     }
 
-    const data = await response.json();
+    const data = (await response.json()) as PlexLinkResponse;
 
     // Update user with Plex info
     if (user && isAdminUser(user)) {
@@ -381,7 +409,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     if (!response.ok) {
-      const error = await response.json();
+      const error = (await response.json()) as ErrorResponse;
       throw new Error(error.message || "Failed to unlink Plex account");
     }
 

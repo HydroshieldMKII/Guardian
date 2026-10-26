@@ -2,10 +2,7 @@
 
 [![CI](https://github.com/HydroshieldMKII/Guardian/actions/workflows/ci.yml/badge.svg)](https://github.com/HydroshieldMKII/Guardian/actions/workflows/ci.yml)
 [![CD](https://github.com/HydroshieldMKII/Guardian/actions/workflows/cd.yml/badge.svg)](https://github.com/HydroshieldMKII/Guardian/actions/workflows/cd.yml)
-[![Frontend coverage](https://img.shields.io/codecov/c/github/HydroshieldMKII/Guardian/main?flag=frontend&label=frontend%20coverage)](https://codecov.io/gh/HydroshieldMKII/Guardian?flags[0]=frontend)
-[![Backend coverage](https://img.shields.io/codecov/c/github/HydroshieldMKII/Guardian/main?flag=backend&label=backend%20coverage)](https://codecov.io/gh/HydroshieldMKII/Guardian?flags[0]=backend)
 [![Docker Pulls](https://img.shields.io/docker/pulls/hydroshieldmkii/guardian.svg?label=pulls%20(v2))](https://hub.docker.com/r/hydroshieldmkii/guardian)
-[![Legacy Pulls](https://img.shields.io/docker/pulls/hydroshieldmkii/guardian-frontend.svg?label=pulls%20(v1))](https://hub.docker.com/r/hydroshieldmkii/guardian-frontend)
 [![Stars](https://img.shields.io/github/stars/HydroshieldMKII/Guardian.svg?style=flat)](https://github.com/HydroshieldMKII/Guardian/stargazers)
 
 ![Guardian Banner](https://github.com/user-attachments/assets/ff8b9bbc-f5d4-451a-bdc1-cb2354023c8b)
@@ -13,7 +10,7 @@
 Guardian is an access-control layer for Plex Media Server. It polls the Plex sessions API, matches each stream against per-user and per-device policy, and terminates the sessions that fail.
 
 > [!NOTE]
-> Guardian V2 is now out! If you are still running V1, please update your Compose file. See the [v2.0.0 release notes](https://github.com/HydroshieldMKII/Guardian/releases/tag/v2.0.0) for more information.
+> Still on V1? Update your Compose file: see the [v2.0.0 release notes](https://github.com/HydroshieldMKII/Guardian/releases/tag/v2.0.0).
 
 <img alt="Device management" src="docs/screenshots/device-management.webp" />
 
@@ -38,23 +35,15 @@ Guardian is an access-control layer for Plex Media Server. It polls the Plex ses
 
 ## Features
 
-| Area | Capabilities |
-| --- | --- |
-| Access control | Approve, reject or hold devices; global default plus per-user overrides; LAN/WAN and CIDR allowlists over IPv4 and IPv6; weekly time schedules; time-limited temporary grants |
-| Limits | Global and per-user concurrent stream caps, with an option to exclude devices on a temporary grant |
-| Monitoring | Live Plex and Plexamp sessions, device fingerprints, stream quality and progress, searchable session history |
-| Notifications | SMTP email, Apprise (100+ services) and in-app alerts for new devices, blocks, location changes and user notes |
-| Administration | Settings export/import, automatic cleanup of inactive devices, CLI recovery scripts |
-| User portal | Plex users sign in to see their own devices, the policies that apply to them, and to leave notes on rejected devices |
+- Approve, reject or hold devices, with per-user overrides, LAN/WAN and IP allowlists, schedules and temporary grants
+- Global and per-user concurrent stream limits
+- Live sessions, stream details and searchable history
+- Email, Apprise and in-app notifications
+- A portal where Plex users see their own devices and leave notes
 
-## Requirements
+## Install
 
-- A reachable Plex Media Server and a [Plex authentication token](https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/)
-- Docker with Compose, or Node.js to run from source
-
-## Installation
-
-### Docker
+Requires a reachable Plex Media Server and a [Plex token](https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/).
 
 ```bash
 mkdir -p guardian && cd guardian
@@ -62,79 +51,22 @@ curl -o docker-compose.yml https://raw.githubusercontent.com/HydroshieldMKII/Gua
 docker compose up -d
 ```
 
-The web UI listens on port 3000 by default
-
-### From source
-
-```bash
-git clone https://github.com/HydroshieldMKII/Guardian.git
-cd Guardian
-docker compose -f docker-compose.dev.yml up -d --build
-```
-
-### Unraid
-
-Under **Docker → Compose**, create a stack from `docker-compose.example.yml`, adjust the volume and port, and deploy.
-
-## Configuration
-
-| Variable | Default | Purpose |
-| --- | --- | --- |
-| `TRUST_PROXY_HOPS` | `1` | Number of proxies in front of Guardian. Determines which address in `X-Forwarded-For` is treated as the client. |
-| `APP_URL` | unset | Public address Guardian is reached on, for example `https://guardian.example.com`. Used to build password reset links. Required for password resets; ignored otherwise. |
-| `DATABASE_PATH` | `/app/data/plex-guard.db` | SQLite database file. |
-
+The web UI listens on port 3000. On Unraid, create a stack from `docker-compose.example.yml` under **Docker → Compose**.
 
 ## Updating
 
-> [!IMPORTANT]
-> Export your settings first: **Settings → Admin Tools → Export Settings**.
+Export your settings first (**Settings → Admin Tools → Export Settings**), then:
 
 ```bash
 docker compose pull && docker compose up -d
 ```
 
-## Troubleshooting
+Image tags and downgrades: see [Configuration](docs/CONFIGURATION.md#image-tags).
 
-**Lost admin access**
+## Documentation
 
-```bash
-docker compose exec guardian node backend/src/scripts/list-admins.js
-docker compose exec guardian node backend/src/scripts/update-admin.js "USERNAME" "NEW_PASSWORD"
-```
-
-**Locked out by captcha**
-
-```bash
-docker compose exec guardian node backend/src/scripts/disable-captcha.js
-```
-
-**Cannot connect to Plex** — check that the server is reachable from the container, the token is valid, and that SSL settings match the server.
-
-**Notifications not arriving** — use the test buttons in Settings, then check credentials and spam filtering.
-
-**Reset emails not arriving** — confirm SMTP works with the test button, confirm `APP_URL` is set, and confirm the admin account has an email address.
-
-Otherwise, open an [issue](https://github.com/HydroshieldMKII/Guardian/issues).
-
-## Development
-
-```bash
-cd backend  && npm ci && npm run start:dev   # port 3001
-cd frontend && npm ci && npm run dev         # port 3000
-```
-
-Run before opening a pull request:
-
-```bash
-(cd backend  && npm run lint:ci && npm run typecheck && npm run test:cov && npm run build)
-(cd frontend && npm run typecheck && npm run test:cov && npm run build)
-```
-
-## Contributing
-
-Open an issue with the bug or feature template, or a pull request with the checklist filled in. Report security issues through a [private advisory](https://github.com/HydroshieldMKII/Guardian/security/advisories/new), not a public issue.
+[Configuration](docs/CONFIGURATION.md) · [Troubleshooting](docs/TROUBLESHOOTING.md) · [Contributing](CONTRIBUTING.md) · [Releasing](docs/RELEASING.md) · [Security](SECURITY.md)
 
 ## License
 
-Released under the [PolyForm Noncommercial License 1.0.0](LICENSE.md).
+[PolyForm Noncommercial 1.0.0](LICENSE.md)

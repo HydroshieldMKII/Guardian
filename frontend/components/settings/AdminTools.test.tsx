@@ -8,12 +8,12 @@ import {
 import userEvent from "@testing-library/user-event";
 import { AdminTools } from "@/components/settings/AdminTools";
 
-const resetStreamCounts = jest.fn();
-const clearSessionHistory = jest.fn();
-const deleteAllDevices = jest.fn();
-const resetDatabase = jest.fn();
-const exportDatabase = jest.fn();
-const importDatabase = jest.fn();
+const resetStreamCounts = jest.fn<Promise<unknown>, unknown[]>();
+const clearSessionHistory = jest.fn<Promise<unknown>, unknown[]>();
+const deleteAllDevices = jest.fn<Promise<unknown>, unknown[]>();
+const resetDatabase = jest.fn<Promise<unknown>, unknown[]>();
+const exportDatabase = jest.fn<Promise<unknown>, unknown[]>();
+const importDatabase = jest.fn<Promise<unknown>, unknown[]>();
 
 jest.mock("@/lib/api", () => ({
   apiClient: {

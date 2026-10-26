@@ -176,7 +176,7 @@ export function NotificationMenu() {
         <Button
           variant="ghost"
           size="sm"
-          onClick={markAllAsRead}
+          onClick={() => void markAllAsRead()}
           className="flex h-auto items-center gap-1 p-1 text-xs text-muted-foreground hover:text-foreground"
           title="Mark all as read"
         >
@@ -187,7 +187,7 @@ export function NotificationMenu() {
       <Button
         variant="ghost"
         size="sm"
-        onClick={clearAll}
+        onClick={() => void clearAll()}
         className="h-auto p-1 text-xs text-muted-foreground hover:text-foreground"
       >
         Clear all
@@ -207,8 +207,8 @@ export function NotificationMenu() {
           <NotificationItem
             key={notification.id}
             notification={notification}
-            onMarkAsRead={markAsRead}
-            onRemove={removeNotification}
+            onMarkAsRead={(id) => void markAsRead(id)}
+            onRemove={(id) => void removeNotification(id)}
             onClick={handleSelect}
           />
         ))}

@@ -1,11 +1,4 @@
-import {
-  act,
-  cleanup,
-  render,
-  screen,
-  waitFor,
-  within,
-} from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { UserHistoryModal } from "@/components/device-management/UserHistoryModal";
 
@@ -54,7 +47,8 @@ const session = (overrides: Record<string, unknown> = {}) => ({
   ...overrides,
 });
 
-const fetchMock = jest.fn();
+type FetchReply = { ok: boolean; json?: () => Promise<unknown> };
+const fetchMock = jest.fn<Promise<FetchReply>, Parameters<typeof fetch>>();
 let consoleError: jest.SpyInstance;
 
 const renderModal = async (
@@ -92,7 +86,8 @@ beforeEach(() => {
   jest.useRealTimers();
   consoleError = jest.spyOn(console, "error").mockImplementation(() => {});
   fetchMock.mockImplementation(() => ok([session()]));
-  global.fetch = fetchMock as unknown as typeof fetch;
+  global.fetch = (...args: Parameters<typeof fetch>) =>
+    fetchMock(...args) as Promise<Response>;
 });
 
 afterEach(() => {
@@ -516,7 +511,7 @@ describe("UserHistoryModal searching", () => {
     user: ReturnType<typeof userEvent.setup>,
     term: string,
   ) => {
-    let release: (value: unknown) => void = () => {};
+    let release: (value: FetchReply) => void = () => {};
     const before = fetchMock.mock.calls.length;
     fetchMock.mockImplementation(
       () =>
@@ -853,7 +848,7 @@ describe("UserHistoryModal deletion", () => {
   });
 
   it("reports a refusal from the server", async () => {
-    fetchMock.mockImplementation((url: string, init?: RequestInit) =>
+    fetchMock.mockImplementation((_url, init) =>
       init?.method === "DELETE"
         ? Promise.resolve({ ok: false })
         : ok([session()]),
@@ -871,7 +866,7 @@ describe("UserHistoryModal deletion", () => {
   });
 
   it("reports a thrown failure", async () => {
-    fetchMock.mockImplementation((url: string, init?: RequestInit) =>
+    fetchMock.mockImplementation((_url, init) =>
       init?.method === "DELETE"
         ? Promise.reject(new Error("offline"))
         : ok([session()]),

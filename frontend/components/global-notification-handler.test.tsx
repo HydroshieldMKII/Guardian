@@ -3,8 +3,16 @@ import userEvent from "@testing-library/user-event";
 import type { Notification } from "@/types";
 import { GlobalNotificationHandler } from "@/components/global-notification-handler";
 
-const setNotificationClickHandler = jest.fn();
-const updateNotifications = jest.fn();
+type ReadState = Pick<Notification, "id" | "read">;
+
+const setNotificationClickHandler = jest.fn<
+  void,
+  [(notification: Notification) => void]
+>();
+const updateNotifications = jest.fn<
+  void,
+  [(prev: ReadState[]) => ReadState[]]
+>();
 const setNotifications = jest.fn();
 
 jest.mock("@/contexts/notification-context", () => ({
@@ -32,8 +40,8 @@ jest.mock("@/contexts/auth-context", () => ({
     Boolean(user && "id" in user),
 }));
 
-const getAllNotifications = jest.fn();
-const markNotificationAsReadAuto = jest.fn();
+const getAllNotifications = jest.fn<Promise<ReadState[]>, unknown[]>();
+const markNotificationAsReadAuto = jest.fn<Promise<void>, unknown[]>();
 jest.mock("@/lib/api", () => ({
   apiClient: {
     getAllNotifications: (...args: unknown[]) => getAllNotifications(...args),

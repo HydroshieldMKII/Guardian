@@ -104,7 +104,7 @@ export default function SettingsPage() {
         const currentValue = formData[setting.key];
         if (currentValue === undefined) return false;
 
-        const normalizeValue = (value: any) => {
+        const normalizeValue = (value: unknown) => {
           if (typeof value === "boolean") return String(value);
           if (typeof value === "string") return value;
           return String(value);
@@ -498,7 +498,9 @@ export default function SettingsPage() {
               )}
 
               {tab.id === "admin" && (
-                <AdminTools onSettingsRefresh={refreshSettings} />
+                <AdminTools
+                  onSettingsRefresh={() => void refreshSettings()}
+                />
               )}
             </TabsContent>
           ))}
@@ -533,7 +535,7 @@ export default function SettingsPage() {
                 Cancel
               </Button>
               <Button
-                onClick={handleSave}
+                onClick={() => void handleSave()}
                 disabled={isSaving}
                 size="sm"
                 className="flex-1 sm:flex-none"
@@ -562,7 +564,10 @@ export default function SettingsPage() {
           <Button variant="destructive" onClick={handleConfirmLeave}>
             Discard Changes
           </Button>
-          <Button onClick={handleSaveAndLeave} disabled={isSaving}>
+          <Button
+            onClick={() => void handleSaveAndLeave()}
+            disabled={isSaving}
+          >
             {isSaving && <Loader2 className="size-4 animate-spin" />}
             Save & Leave
           </Button>

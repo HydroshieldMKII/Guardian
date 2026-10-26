@@ -1,9 +1,10 @@
 import React from "react";
 import { getProgressPercentage } from "./SharedComponents";
 import { formatClock } from "@/lib/duration";
+import type { PlexSession } from "@/types";
 
 interface StreamProgressProps {
-  session: any;
+  session: Pick<PlexSession, "duration" | "viewOffset" | "Player">;
   hasArt?: boolean;
 }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useAuth, isPlexUser, isAdminUser } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
 import { useTheme } from "@/hooks/use-theme";
@@ -100,6 +100,15 @@ interface PortalSettings {
   allowRejectedRequests: boolean;
 }
 
+interface PortalRulesResponse {
+  enabled?: boolean;
+  rules?: UserPortalUserRules | null;
+}
+
+interface ErrorResponse {
+  message?: string;
+}
+
 const NETWORK_POLICY_LABEL: Record<string, string> = {
   both: "Local network and internet",
   lan: "Local network only",
@@ -196,7 +205,7 @@ const StatusBadge = ({
 };
 
 export default function UserPortalPage() {
-  const { user, userType, logout, isLoading: authLoading } = useAuth();
+  const { user, logout, isLoading: authLoading } = useAuth();
   const router = useRouter();
   const { theme, toggleTheme } = useTheme();
   const { toast } = useToast();
@@ -217,7 +226,7 @@ export default function UserPortalPage() {
   const [isRequesting, setIsRequesting] = useState(false);
 
   // Fetch user data
-  const fetchData = async (showRefreshing = false) => {
+  const fetchData = useCallback(async (showRefreshing = false) => {
     if (showRefreshing) {
       setIsRefreshing(true);
     }
@@ -228,7 +237,7 @@ export default function UserPortalPage() {
         credentials: "include",
       });
       if (devicesRes.ok) {
-        const devicesData = await devicesRes.json();
+        const devicesData = (await devicesRes.json()) as UserPortalDevice[];
         setDevices(devicesData);
       }
 
@@ -237,7 +246,7 @@ export default function UserPortalPage() {
         credentials: "include",
       });
       if (settingsRes.ok) {
-        const settingsData = await settingsRes.json();
+        const settingsData = (await settingsRes.json()) as PortalSettings;
         setSettings(settingsData);
 
         // Fetch user rules if showRules is enabled
@@ -246,7 +255,7 @@ export default function UserPortalPage() {
             credentials: "include",
           });
           if (rulesRes.ok) {
-            const rulesData = await rulesRes.json();
+            const rulesData = (await rulesRes.json()) as PortalRulesResponse;
             if (rulesData.enabled && rulesData.rules) {
               setUserRules(rulesData.rules);
             }
@@ -264,19 +273,19 @@ export default function UserPortalPage() {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  };
+  }, [toast]);
 
   useEffect(() => {
     if (!authLoading && user) {
-      fetchData();
+      void fetchData();
     }
-  }, [authLoading, user]);
+  }, [authLoading, user, fetchData]);
 
   const handleLogout = async () => {
     try {
       await logout();
       router.push("/login");
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to sign out",
@@ -309,7 +318,7 @@ export default function UserPortalPage() {
       );
 
       if (!response.ok) {
-        const error = await response.json();
+        const error = (await response.json()) as ErrorResponse;
         throw new Error(error.message || "Failed to submit request");
       }
 
@@ -324,7 +333,7 @@ export default function UserPortalPage() {
       setSelectedDevice(null);
       setRequestDescription("");
       // Refresh devices
-      fetchData();
+      void fetchData();
     } catch (error) {
       toast({
         title: "Error",
@@ -425,7 +434,7 @@ export default function UserPortalPage() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => fetchData(true)}
+              onClick={() => void fetchData(true)}
               disabled={isRefreshing}
               className="h-9 w-9"
               title="Refresh"
@@ -450,7 +459,7 @@ export default function UserPortalPage() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={handleLogout}
+              onClick={() => void handleLogout()}
               className="ml-2"
             >
               <LogOut className="h-4 w-4 sm:mr-2" />
@@ -977,7 +986,7 @@ export default function UserPortalPage() {
               Go Back
             </Button>
             <Button
-              onClick={submitApprovalRequest}
+              onClick={() => void submitApprovalRequest()}
               disabled={isRequesting}
               variant="default"
             >

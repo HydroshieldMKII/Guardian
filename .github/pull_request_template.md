@@ -14,9 +14,8 @@
 
 <!-- Commands run and what they covered. -->
 
-- [ ] `cd backend && npm test`
-- [ ] `cd frontend && npm test`
-- [ ] `cd backend && npm run typecheck` and `cd frontend && npx tsc --noEmit`
+- [ ] `cd backend && npm run lint:ci && npm run typecheck && npm run test:cov`
+- [ ] `cd frontend && npm run lint:ci && npm run typecheck && npm run test:cov`
 - [ ] Verified manually in a running instance
 
 ## Screenshots

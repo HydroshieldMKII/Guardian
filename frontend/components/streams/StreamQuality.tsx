@@ -1,10 +1,12 @@
 import React from "react";
-import { Video, Signal, Wifi, Headphones, HardDrive } from "lucide-react";
 import { getDetailedQuality } from "./SharedComponents";
 import { PillRow, StatusPill, type Tone } from "@/components/ui/entity";
+import type { PlexSession } from "@/types";
+
+type QualitySession = Pick<PlexSession, "type" | "Media" | "Session">;
 
 interface StreamQualityProps {
-  session: any;
+  session: QualitySession;
   inline?: boolean;
   hasArt?: boolean;
 }
@@ -99,7 +101,7 @@ export const StreamQuality: React.FC<StreamQualityProps> = ({
 };
 
 interface StreamQualityDetailsProps {
-  session: any;
+  session: QualitySession;
   hasArt?: boolean;
 }
 

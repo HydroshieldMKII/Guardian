@@ -19,7 +19,8 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "lint:ci": "eslint \"{src,apps,libs,test}/**/*.ts\" --no-fix",
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "migration:generate": "node -r ts-node/register -r tsconfig-paths/register node_modules/typeorm/cli.js migration:generate -d src/database/cli.data-source.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.2.1",
@@ -99,6 +100,7 @@
       "!main.ts",
       "!**/*.module.ts",
       "!migrations/**",
+      "!database/cli.data-source.ts",
       "!scripts/**",
       "!test-setup.ts",
       "!test-matchers.ts"

@@ -14,4 +14,4 @@
 Icon
 *.md
 docker-compose*.yml
-plex-guard.db
+**/plex-guard.db*

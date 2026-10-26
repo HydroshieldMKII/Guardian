@@ -8,7 +8,6 @@ import {
   Settings,
   Moon,
   Sun,
-  User,
   LogOut,
   Edit,
   AlertTriangle,
@@ -107,7 +106,7 @@ export function Navbar() {
           router.push(pendingNavigation);
         }
         setPendingNavigation(null);
-      } catch (error) {
+      } catch {
         toast({
           title: "Error",
           description: "Failed to save your changes",
@@ -128,7 +127,7 @@ export function Navbar() {
         variant: "success",
       });
       router.push("/login");
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to sign out",
@@ -300,7 +299,7 @@ export function Navbar() {
 
                   {/* Logout */}
                   <DropdownMenuItem
-                    onClick={handleLogout}
+                    onClick={() => void handleLogout()}
                     className="text-red-500 focus:text-red-600 cursor-pointer"
                   >
                     <LogOut className="mr-2 h-4 w-4" />
@@ -344,7 +343,7 @@ export function Navbar() {
               Stay on Page
             </Button>
             <Button
-              onClick={handleSaveAndLeave}
+              onClick={() => void handleSaveAndLeave()}
               disabled={isSaving}
               className="order-2 sm:order-2"
             >

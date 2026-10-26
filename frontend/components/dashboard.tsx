@@ -2,28 +2,14 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { StatTile } from "@/components/ui/entity";
-import { Button } from "@/components/ui/button";
-import { Users, AlertTriangle, CheckCircle } from "lucide-react";
 import StreamsList from "./streams-list";
 import { DeviceManagement } from "./device-management";
 import { DashboardTabs } from "./dashboard-tabs";
 import { PlexErrorHandler, ErrorHandler } from "./error-handler";
 import { ThreeDotLoader } from "./three-dot-loader";
 
-import {
-  DashboardStats,
-  UnifiedDashboardData,
-  PlexStatus,
-  Notification,
-} from "@/types";
+import { DashboardStats, UnifiedDashboardData, PlexStatus } from "@/types";
 import { apiClient } from "@/lib/api";
 import { config } from "@/lib/config";
 import { useVersion } from "@/contexts/version-context";
@@ -144,8 +130,8 @@ export function Dashboard() {
     if (setupRequired) {
       return;
     }
-    refreshDashboard();
-  }, [setupRequired]);
+    void refreshDashboard();
+  }, [setupRequired, refreshDashboard]);
 
   // Handle URL parameters for device navigation
   useEffect(() => {
@@ -162,14 +148,9 @@ export function Dashboard() {
     }
   }, [searchParams, router]);
 
-  // Check for updates automatically when dashboard loads
-  useEffect(() => {
-    checkForUpdatesIfEnabled();
-  }, []);
-
   useEffect(() => {
     if (versionInfo?.version) {
-      checkForUpdatesIfEnabled();
+      void checkForUpdatesIfEnabled();
     }
   }, [versionInfo?.version, checkForUpdatesIfEnabled]);
 
@@ -191,7 +172,7 @@ export function Dashboard() {
     if (liveConnected) return; // Updates arrive over the socket instead
 
     const interval = setInterval(
-      () => refreshDashboard(true),
+      () => void refreshDashboard(true),
       config.app.refreshInterval,
     );
     return () => clearInterval(interval);
@@ -200,7 +181,10 @@ export function Dashboard() {
   // Show error if backend is unavailable
   if (backendError) {
     return (
-      <ErrorHandler backendError={backendError} onRetry={retryConnection} />
+      <ErrorHandler
+        backendError={backendError}
+        onRetry={() => void retryConnection()}
+      />
     );
   }
 

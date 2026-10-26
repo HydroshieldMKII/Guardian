@@ -3,7 +3,12 @@ import userEvent from "@testing-library/user-event";
 import type { Notification } from "@/types";
 import { NotificationMenu } from "@/components/notification-menu";
 
-const updateNotifications = jest.fn();
+type NotificationPatch = Partial<Notification>;
+
+const updateNotifications = jest.fn<
+  void,
+  [(prev: NotificationPatch[]) => NotificationPatch[]]
+>();
 const onNotificationClick = jest.fn();
 let notifications: Notification[] = [];
 let unreadCount = 0;
@@ -17,10 +22,10 @@ jest.mock("@/contexts/notification-context", () => ({
   }),
 }));
 
-const markNotificationAsRead = jest.fn();
-const deleteNotification = jest.fn();
-const markAllNotificationsAsRead = jest.fn();
-const clearAllNotifications = jest.fn();
+const markNotificationAsRead = jest.fn<Promise<void>, unknown[]>();
+const deleteNotification = jest.fn<Promise<void>, unknown[]>();
+const markAllNotificationsAsRead = jest.fn<Promise<void>, unknown[]>();
+const clearAllNotifications = jest.fn<Promise<void>, unknown[]>();
 
 jest.mock("@/lib/api", () => ({
   apiClient: {
@@ -228,7 +233,7 @@ describe("NotificationMenu actions", () => {
     await user.click(screen.getByRole("button", { name: /Clear all/ }));
 
     await waitFor(() => expect(clearAllNotifications).toHaveBeenCalled());
-    expect(updateNotifications.mock.calls[0][0]()).toEqual([]);
+    expect(updateNotifications.mock.calls[0][0]([])).toEqual([]);
   });
 
   it.each([

@@ -28,11 +28,27 @@ import { ThreeDotLoader } from "@/components/three-dot-loader";
 import { ErrorHandler } from "@/components/error-handler";
 import { usePlexOAuth } from "@/hooks/use-plex-oauth";
 
+interface TurnstileRenderOptions {
+  sitekey: string;
+  theme?: "light" | "dark" | "auto";
+}
+
+interface TurnstileKeyResponse {
+  siteKey?: string;
+}
+
+interface PasswordResetStatusResponse {
+  enabled?: boolean;
+}
+
 // Extend window to include turnstile
 declare global {
   interface Window {
     turnstile?: {
-      render: (container: HTMLElement, options: any) => string;
+      render: (
+        container: HTMLElement,
+        options: TurnstileRenderOptions
+      ) => string;
       reset: (widgetId: string) => void;
       remove: (widgetId: string) => void;
       getResponse: (widgetId: string) => string;
@@ -65,7 +81,7 @@ export default function LoginPage() {
 
   // Cloudflare Turnstile state
   const [turnstileSiteKey, setTurnstileSiteKey] = useState<string>("");
-  const [turnstileWidgetId, setTurnstileWidgetId] = useState<string | null>(null);
+  const turnstileWidgetIdRef = useRef<string | null>(null);
   const turnstileRef = useRef<HTMLDivElement>(null);
 
   // Fetch Turnstile site key
@@ -74,7 +90,7 @@ export default function LoginPage() {
       try {
         const response = await fetch("/api/pg/auth/turnstile-key");
         if (response.ok) {
-          const data = await response.json();
+          const data = (await response.json()) as TurnstileKeyResponse;
           if (data.siteKey) {
             setTurnstileSiteKey(data.siteKey);
           }
@@ -84,7 +100,7 @@ export default function LoginPage() {
       }
     };
 
-    fetchTurnstileKey();
+    void fetchTurnstileKey();
   }, []);
 
   useEffect(() => {
@@ -92,7 +108,7 @@ export default function LoginPage() {
       try {
         const response = await fetch("/api/pg/auth/password-reset/status");
         if (response.ok) {
-          const data = await response.json();
+          const data = (await response.json()) as PasswordResetStatusResponse;
           setPasswordResetEnabled(Boolean(data.enabled));
         }
       } catch (error) {
@@ -100,7 +116,7 @@ export default function LoginPage() {
       }
     };
 
-    checkPasswordReset();
+    void checkPasswordReset();
   }, []);
 
   // Load Turnstile script and render widget
@@ -120,12 +136,16 @@ export default function LoginPage() {
     }
 
     const renderTurnstile = () => {
-      if (window.turnstile && turnstileRef.current && !turnstileWidgetId) {
+      if (
+        window.turnstile &&
+        turnstileRef.current &&
+        !turnstileWidgetIdRef.current
+      ) {
         const widgetId = window.turnstile.render(turnstileRef.current, {
           sitekey: turnstileSiteKey,
           theme: theme === "dark" ? "dark" : "light",
         });
-        setTurnstileWidgetId(widgetId);
+        turnstileWidgetIdRef.current = widgetId;
       }
     };
 
@@ -138,9 +158,11 @@ export default function LoginPage() {
     }
 
     return () => {
-      if (turnstileWidgetId && window.turnstile) {
-        window.turnstile.remove(turnstileWidgetId);
-        setTurnstileWidgetId(null);
+      script.removeEventListener("load", renderTurnstile);
+      const widgetId = turnstileWidgetIdRef.current;
+      if (widgetId && window.turnstile) {
+        window.turnstile.remove(widgetId);
+        turnstileWidgetIdRef.current = null;
       }
     };
   }, [turnstileSiteKey, theme]);
@@ -212,8 +234,9 @@ export default function LoginPage() {
     try {
       // Get captcha token if Turnstile is enabled
       let captchaToken: string | undefined;
-      if (turnstileWidgetId && window.turnstile) {
-        captchaToken = window.turnstile.getResponse(turnstileWidgetId);
+      const widgetId = turnstileWidgetIdRef.current;
+      if (widgetId && window.turnstile) {
+        captchaToken = window.turnstile.getResponse(widgetId);
       }
 
       await login(formData.username, formData.password, captchaToken);
@@ -221,8 +244,9 @@ export default function LoginPage() {
       // AuthGuard handle it once state updates
     } catch (error) {
       // Reset Turnstile widget on error
-      if (turnstileWidgetId && window.turnstile) {
-        window.turnstile.reset(turnstileWidgetId);
+      const widgetId = turnstileWidgetIdRef.current;
+      if (widgetId && window.turnstile) {
+        window.turnstile.reset(widgetId);
       }
 
       setLoginError(
@@ -245,7 +269,10 @@ export default function LoginPage() {
   // Show error if backend is unavailable
   if (backendError) {
     return (
-      <ErrorHandler backendError={backendError} onRetry={retryConnection} />
+      <ErrorHandler
+        backendError={backendError}
+        onRetry={() => void retryConnection()}
+      />
     );
   }
 
@@ -283,7 +310,10 @@ export default function LoginPage() {
         </CardHeader>
 
         <CardContent className="pb-6">
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form
+            onSubmit={(e) => void handleSubmit(e)}
+            className="space-y-4"
+          >
             {/* Username/Email */}
             <div className="space-y-2">
               <label
@@ -410,7 +440,7 @@ export default function LoginPage() {
                 type="button"
                 variant="outline"
                 disabled={isSubmitting || plexLoading}
-                onClick={handlePlexLogin}
+                onClick={() => void handlePlexLogin()}
                 className="w-full !bg-[#e5a00d] hover:!bg-[#cc8f0c] !text-black !border-[#e5a00d] hover:!border-[#cc8f0c]"
                 size="lg"
               >

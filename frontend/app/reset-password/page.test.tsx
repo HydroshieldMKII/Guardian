@@ -186,9 +186,11 @@ describe("ResetPasswordPage", () => {
 
   it("falls back to a generic message when the server says nothing", async () => {
     const { user } = await renderPage();
-    fetchMock.mockImplementation((url: string) =>
-      url.endsWith("/verify") ? json({ valid: true }) : Promise.reject("boom"),
-    );
+    const notAnError: unknown = "boom";
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url.endsWith("/verify")) return json({ valid: true });
+      throw notAnError;
+    });
 
     await fillForm(user, "BrandNewPass1!");
 

@@ -15,41 +15,15 @@ import { ServicesModule } from '@/services/services.module';
 import { UserPortalModule } from '@/modules/user-portal/user-portal.module';
 import { EventsModule } from '@/modules/events/events.module';
 import { SchedulerService } from '@/services/scheduler.service';
-import { UserDevice } from '@/entities/user-device.entity';
-import { SessionHistory } from '@/entities/session-history.entity';
-import { UserPreference } from '@/entities/user-preference.entity';
-import { AppSettings } from '@/entities/app-settings.entity';
-import { Notification } from '@/entities/notification.entity';
-import { UserTimeRule } from '@/entities/user-time-rule.entity';
-import { AdminUser } from '@/entities/admin-user.entity';
-import { Session } from '@/entities/session.entity';
-import { PasswordResetToken } from '@/entities/password-reset-token.entity';
-import { config } from '@/config/app.config';
-import * as path from 'path';
+import { databaseOptions, databasePath } from '@/database/database.options';
+import { initializeDatabase } from '@/database/initialize-database';
 
 @Module({
   imports: [
     ScheduleModule.forRoot(),
-    TypeOrmModule.forRoot({
-      type: 'sqlite',
-      database:
-        process.env.DATABASE_PATH ||
-        path.join(process.cwd(), config.database.path),
-      entities: [
-        UserDevice,
-        SessionHistory,
-        UserPreference,
-        AppSettings,
-        Notification,
-        UserTimeRule,
-        AdminUser,
-        Session,
-        PasswordResetToken,
-      ],
-      synchronize: true,
-      logging: config.database.logging,
-      migrations: [path.join(__dirname, 'migrations/*{.ts,.js}')],
-      migrationsRun: true,
+    TypeOrmModule.forRootAsync({
+      useFactory: () => databaseOptions(databasePath()),
+      dataSourceFactory: initializeDatabase,
     }),
     SessionsModule,
     DevicesModule,

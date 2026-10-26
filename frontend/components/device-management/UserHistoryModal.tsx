@@ -135,7 +135,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
       if (!response.ok) {
         throw new Error("Failed to fetch user history");
       }
-      const data = await response.json();
+      const data: unknown = await response.json();
       return (Array.isArray(data) ? data : []) as SessionHistoryEntry[];
     },
     [userId, activeSearch, showTerminatedOnly],
@@ -203,7 +203,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
 
   useEffect(() => {
     if (isOpen && userId) {
-      loadFirstPage();
+      void loadFirstPage();
     }
   }, [isOpen, userId, loadFirstPage]);
 
@@ -223,7 +223,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
     const hasActiveSessions = sessions.some((session) => !session.endedAt);
     if (!hasActiveSessions) return;
 
-    const intervalId = setInterval(() => refreshLoaded(false), 10000);
+    const intervalId = setInterval(() => void refreshLoaded(false), 10000);
     return () => clearInterval(intervalId);
   }, [isOpen, sessions, refreshLoaded]);
 
@@ -234,7 +234,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries.some((entry) => entry.isIntersecting)) {
-          loadMore();
+          void loadMore();
         }
       },
       { root: sessionsListRef.current },
@@ -320,7 +320,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
         deepLinkRef.current.pages < DEEP_LINK_MAX_PAGES
       ) {
         deepLinkRef.current.pages += 1;
-        loadMore();
+        void loadMore();
       }
       return;
     }
@@ -396,7 +396,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
           variant: "destructive",
         });
       }
-    } catch (error) {
+    } catch {
       toast({
         title: "Delete Failed",
         description: "Something went wrong while deleting that entry.",
@@ -458,7 +458,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => refreshLoaded(true)}
+                onClick={() => void refreshLoaded(true)}
                 disabled={loading || refreshing}
                 title="Refresh"
               >
@@ -561,7 +561,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
                 <Button
                   ref={loadMoreRef}
                   variant="outline"
-                  onClick={loadMore}
+                  onClick={() => void loadMore()}
                   disabled={loadingMore}
                   className="w-full"
                 >
@@ -596,7 +596,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
       <ConfirmationModal
         isOpen={!!sessionToDelete}
         onClose={cancelDelete}
-        onConfirm={confirmDelete}
+        onConfirm={() => void confirmDelete()}
         title="Delete Session History"
         description="Are you sure you want to delete this session history? This action cannot be undone."
         confirmText="Delete"

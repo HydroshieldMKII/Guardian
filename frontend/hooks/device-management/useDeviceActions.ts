@@ -132,7 +132,7 @@ export const useDeviceActions = () => {
     deviceIds: number[],
     durationMinutes: number,
     bypassPolicies?: boolean
-  ): Promise<{ success: boolean; results?: any }> => {
+  ): Promise<{ success: boolean; results?: unknown }> => {
     try {
       setActionLoading(deviceIds[0]); // Set loading for the first device as indicator
 
@@ -148,7 +148,7 @@ export const useDeviceActions = () => {
       );
 
       if (response.ok) {
-        const data = await response.json();
+        const data = (await response.json()) as { results?: unknown };
         return { success: true, results: data.results };
       } else {
         console.error(

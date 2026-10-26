@@ -17,18 +17,16 @@ const jsonResponse = (body: unknown, init: ResponseInit = {}) =>
     ...init,
   });
 
-const stream = (overrides: Partial<PlexSession> = {}): PlexSession =>
-  ({
-    sessionKey: "sk-1",
-    User: { id: "u1", title: "testuser" },
-    Player: { machineIdentifier: "dev-1", title: "Living Room TV" },
-    ...overrides,
-  }) as PlexSession;
+const stream = (overrides: Partial<PlexSession> = {}): PlexSession => ({
+  sessionKey: "sk-1",
+  User: { id: "u1", title: "testuser" },
+  Player: { machineIdentifier: "dev-1", title: "Living Room TV" },
+  ...overrides,
+});
 
-const payload = (...sessions: PlexSession[]): StreamsResponse =>
-  ({
-    MediaContainer: { size: sessions.length, Metadata: sessions },
-  }) as StreamsResponse;
+const payload = (...sessions: PlexSession[]): StreamsResponse => ({
+  MediaContainer: { size: sessions.length, Metadata: sessions },
+});
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -164,7 +162,7 @@ describe("useStreamsData", () => {
     act(() => {
       result.current.updateStreamsFromProps({
         MediaContainer: { size: 0 },
-      } as StreamsResponse);
+      });
     });
 
     expect(result.current.streams).toEqual([]);
@@ -230,7 +228,7 @@ describe("useStreamActions", () => {
         stream({
           User: { id: "u/1", title: "testuser" },
           Player: { machineIdentifier: "dev 1", title: "TV" },
-        } as Partial<PlexSession>),
+        }),
       );
     });
 
@@ -356,7 +354,7 @@ describe("useStreamActions", () => {
         stream({
           User: { id: "u1" },
           Player: { machineIdentifier: "dev-1" },
-        } as Partial<PlexSession>),
+        }),
       );
     });
 

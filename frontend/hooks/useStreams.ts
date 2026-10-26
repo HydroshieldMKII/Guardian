@@ -17,7 +17,7 @@ export const useStreamsData = () => {
     try {
       const response = await fetch(`${config.api.baseUrl}/sessions/active`);
       if (response.ok) {
-        const data: StreamsResponse = await response.json();
+        const data = (await response.json()) as StreamsResponse;
         setStreams(data.MediaContainer?.Metadata || []);
       } else {
         setError("Failed to fetch streams data");
@@ -88,8 +88,6 @@ export const useStreamActions = () => {
         );
 
         if (response.ok) {
-          const result = await response.json();
-
           toast({
             title: "Access Revoked",
             description: `Successfully revoked access for ${deviceName} (${userName}). The stream will be terminated shortly.`,
@@ -102,7 +100,9 @@ export const useStreamActions = () => {
 
           let errorMessage = "Failed to revoke device access.";
           try {
-            const errorResult = await response.json();
+            const errorResult = (await response.json()) as {
+              message?: string;
+            };
             if (errorResult.message) {
               errorMessage = errorResult.message;
             }

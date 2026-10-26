@@ -1,7 +1,10 @@
 import { render, screen } from "@testing-library/react";
 import { StreamProgress } from "@/components/streams/StreamProgress";
+import type { PlexSession } from "@/types";
 
-const session = (overrides: Record<string, unknown> = {}) => ({
+const session = (
+  overrides: Partial<PlexSession> = {},
+): Partial<PlexSession> => ({
   duration: 3_600_000,
   viewOffset: 900_000,
   Player: { state: "playing" },

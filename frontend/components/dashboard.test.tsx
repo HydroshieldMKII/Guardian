@@ -22,7 +22,7 @@ jest.mock("next/navigation", () => ({
   useSearchParams: () => searchParams,
 }));
 
-const getDashboardData = jest.fn();
+const getDashboardData = jest.fn<Promise<UnifiedDashboardData>, unknown[]>();
 jest.mock("@/lib/api", () => ({
   apiClient: {
     getDashboardData: (...args: unknown[]) => getDashboardData(...args),
@@ -109,8 +109,17 @@ jest.mock("@/components/device-management", () => ({
 }));
 
 jest.mock("@/components/error-handler", () => ({
-  ErrorHandler: ({ backendError }: { backendError: string }) => (
-    <div>backend-error:{backendError}</div>
+  ErrorHandler: ({
+    backendError,
+    onRetry,
+  }: {
+    backendError: string;
+    onRetry: () => void;
+  }) => (
+    <div>
+      <div>backend-error:{backendError}</div>
+      <button onClick={onRetry}>retry backend</button>
+    </div>
   ),
   PlexErrorHandler: ({
     plexStatus,
@@ -176,6 +185,16 @@ describe("Dashboard", () => {
 
     expect(screen.getByText("backend-error:offline")).toBeInTheDocument();
     expect(screen.queryByText("device-management")).toBeNull();
+  });
+
+  it("retries the backend connection from the error handler", async () => {
+    authState = { setupRequired: false, backendError: "offline" };
+    const user = userEvent.setup();
+    render(<Dashboard />);
+
+    await user.click(screen.getByRole("button", { name: "retry backend" }));
+
+    expect(retryConnection).toHaveBeenCalledTimes(1);
   });
 
   it("renders nothing and fetches nothing during setup", () => {
@@ -423,9 +442,15 @@ describe("Dashboard", () => {
   });
 
   describe("update checks", () => {
-    it("runs once on mount", async () => {
+    it("runs on mount when the version is known", async () => {
+      versionInfo = { version: "2.0.0" };
       await renderDashboard();
-      expect(checkForUpdatesIfEnabled).toHaveBeenCalled();
+      expect(checkForUpdatesIfEnabled).toHaveBeenCalledTimes(1);
+    });
+
+    it("waits for the version before checking", async () => {
+      await renderDashboard();
+      expect(checkForUpdatesIfEnabled).not.toHaveBeenCalled();
     });
 
     it("runs again when the version becomes known", async () => {

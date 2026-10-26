@@ -9,6 +9,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { AppSetting, UserDevice, UserPreference } from "@/types";
 import { DeviceManagement } from "@/components/device-management";
+import type { toast as showToast } from "@/hooks/use-toast";
 
 const approveDevice = jest.fn();
 const rejectDevice = jest.fn();
@@ -38,25 +39,17 @@ jest.mock("@/hooks/device-management/useUserPreferences", () => ({
   useUserPreferences: () => ({ updateUserPreference, updateUserIPPolicy }),
 }));
 
-const hasTemporaryAccess = jest.fn();
-jest.mock("@/hooks/device-management/useDeviceUtils", () => ({
-  useDeviceUtils: () => ({
-    hasTemporaryAccess,
-    getTemporaryAccessTimeLeft: () => "2h",
-  }),
-}));
-
 const hasTimeRules = jest.fn();
 const fetchAllTimeRules = jest.fn();
 jest.mock("@/hooks/device-management/useTimeRules", () => ({
   useTimeRules: () => ({ hasTimeRules, fetchAllTimeRules }),
 }));
 
-const toast = jest.fn();
+const toast = jest.fn<void, Parameters<typeof showToast>>();
 jest.mock("@/hooks/use-toast", () => ({ useToast: () => ({ toast }) }));
 
-const toggleUserVisibility = jest.fn();
-const getHiddenUsers = jest.fn();
+const toggleUserVisibility = jest.fn<Promise<unknown>, unknown[]>();
+const getHiddenUsers = jest.fn<Promise<unknown>, unknown[]>();
 jest.mock("@/lib/api", () => ({
   apiClient: {
     toggleUserVisibility: (...a: unknown[]) => toggleUserVisibility(...a),
@@ -162,7 +155,7 @@ jest.mock("@/components/device-management/DeviceDetailsModal", () => ({
       <button onClick={() => onRename(device?.id ?? 0, "Renamed")}>
         rename device
       </button>
-      <button onClick={() => onSetPending?.(device?.id ?? 0)}>
+      <button onClick={() => void onSetPending?.(device?.id ?? 0)}>
         set pending
       </button>
     </div>
@@ -333,7 +326,6 @@ beforeEach(() => {
   jest.useRealTimers();
   localStorage.clear();
   consoleError = jest.spyOn(console, "error").mockImplementation(() => {});
-  hasTemporaryAccess.mockReturnValue(false);
   hasTimeRules.mockResolvedValue(false);
   fetchAllTimeRules.mockResolvedValue(undefined);
   approveDevice.mockResolvedValue(true);
@@ -1089,7 +1081,7 @@ describe("grouping details", () => {
 
   it("groups a device that has never been seen", async () => {
     await renderPanel({
-      devices: [device({ lastSeen: undefined as unknown as string })],
+      devices: [device({ lastSeen: undefined })],
     });
 
     expect(screen.getByText("order:u-1")).toBeInTheDocument();

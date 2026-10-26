@@ -51,41 +51,43 @@ export function SystemInfo({
   const { toast } = useToast();
   const { versionInfo, checkForUpdatesManually } = useVersion();
 
-  // Fetch uptime information
-  const fetchUptimeInfo = async () => {
-    try {
-      const startTime = performance.now();
-      const data = await apiClient.getHealth<HealthResponse>();
-      const endTime = performance.now();
-      setLatency(Math.round(endTime - startTime));
-      if (data.uptime) {
-        setUptimeInfo(data.uptime);
-        setCurrentUptime(data.uptime.seconds);
-      }
-      setHealthStatus(data.status);
-    } catch (error) {
-      console.error("Failed to fetch uptime info:", error);
-      setHealthStatus("error");
-      setLatency(null);
-    }
-  };
-
   // Update uptime counter every second
   useEffect(() => {
-    fetchUptimeInfo();
+    const fetchUptimeInfo = async () => {
+      try {
+        const startTime = performance.now();
+        const data = await apiClient.getHealth<HealthResponse>();
+        const endTime = performance.now();
+        setLatency(Math.round(endTime - startTime));
+        if (data.uptime) {
+          setUptimeInfo(data.uptime);
+          setCurrentUptime(data.uptime.seconds);
+        }
+        setHealthStatus(data.status);
+      } catch (error) {
+        console.error("Failed to fetch uptime info:", error);
+        setHealthStatus("error");
+        setLatency(null);
+      }
+    };
+
+    void fetchUptimeInfo();
 
     const interval = setInterval(() => {
       setCurrentUptime((prev) => prev + 1);
     }, 1000);
 
     // Refresh uptime info every 5 minutes to stay accurate
-    const uptimeRefreshInterval = setInterval(fetchUptimeInfo, 5 * 60 * 1000);
+    const uptimeRefreshInterval = setInterval(
+      () => void fetchUptimeInfo(),
+      5 * 60 * 1000,
+    );
 
     return () => {
       clearInterval(interval);
       clearInterval(uptimeRefreshInterval);
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   const formatUptime = (seconds: number): string => {
     const days = Math.floor(seconds / (24 * 3600));
@@ -223,7 +225,7 @@ export function SystemInfo({
         description="Check for application updates."
         footer={
           <Button
-            onClick={() => checkForUpdates()}
+            onClick={() => void checkForUpdates()}
             disabled={checkingUpdates || !versionInfo?.version}
             className="w-full"
             variant="outline"

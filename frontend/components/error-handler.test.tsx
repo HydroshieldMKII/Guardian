@@ -4,13 +4,12 @@ import type { PlexStatus } from "@/types";
 import { ERROR_DISPLAY_CONFIG, PlexErrorCode } from "@/types/plex-errors";
 import { ErrorHandler, PlexErrorHandler } from "@/components/error-handler";
 
-const status = (overrides: Partial<PlexStatus> = {}): PlexStatus =>
-  ({
-    configured: true,
-    hasValidCredentials: true,
-    connectionStatus: "",
-    ...overrides,
-  }) as PlexStatus;
+const status = (overrides: Partial<PlexStatus> = {}): PlexStatus => ({
+  configured: true,
+  hasValidCredentials: true,
+  connectionStatus: "",
+  ...overrides,
+});
 
 describe("ErrorHandler", () => {
   it("is also exported under its legacy name", () => {

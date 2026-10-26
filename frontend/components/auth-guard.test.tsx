@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { AuthGuard } from "@/components/auth-guard";
 
 const push = jest.fn();
@@ -77,9 +77,9 @@ describe("AuthGuard", () => {
       auth.backendError = "offline";
       renderGuard();
 
-      expect(
-        screen.getByRole("button", { name: "Retry Connection" }),
-      ).toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: "Retry Connection" }));
+
+      expect(auth.retryConnection).toHaveBeenCalledTimes(1);
     });
 
     it("reports the failure on a public route too", () => {

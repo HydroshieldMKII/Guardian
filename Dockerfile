@@ -46,4 +46,7 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
     CMD wget -qO- http://127.0.0.1:3001/health >/dev/null || exit 1
 
+ARG GUARDIAN_VERSION=""
+ENV GUARDIAN_VERSION=${GUARDIAN_VERSION}
+
 ENTRYPOINT ["/sbin/tini", "--", "guardian-entrypoint"]

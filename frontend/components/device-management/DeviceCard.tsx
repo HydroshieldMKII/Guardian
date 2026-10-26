@@ -251,7 +251,7 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={handleMarkNoteAsRead}
+                onClick={() => void handleMarkNoteAsRead()}
                 disabled={markingAsRead}
                 className="shrink-0 text-xs text-amber-700 hover:bg-amber-500/15 dark:text-amber-300"
               >

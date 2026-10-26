@@ -65,7 +65,7 @@ export function PlexSettings({
       setTestingConnection(true);
       setConnectionStatus(null);
 
-      const result = await apiClient.testPlexConnection<any>();
+      const result = await apiClient.testPlexConnection<ConnectionStatus>();
 
       if (result.success) {
         setConnectionStatus({ success: true, message: result.message });
@@ -109,7 +109,7 @@ export function PlexSettings({
           )}
 
           <Button
-            onClick={testPlexConnection}
+            onClick={() => void testPlexConnection()}
             disabled={testingConnection || hasUnsavedChanges}
             className="w-full"
           >
