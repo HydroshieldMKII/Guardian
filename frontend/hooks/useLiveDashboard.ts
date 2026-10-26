@@ -26,7 +26,10 @@ export function useLiveEvent<T>(
   const [connected, setConnected] = useState(false);
   const [lastUpdate, setLastUpdate] = useState<T | null>(null);
   const handlerRef = useRef(onUpdate);
-  handlerRef.current = onUpdate;
+
+  useEffect(() => {
+    handlerRef.current = onUpdate;
+  }, [onUpdate]);
 
   useEffect(() => {
     if (!enabled || typeof EventSource === "undefined") {

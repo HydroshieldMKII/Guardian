@@ -4,9 +4,6 @@ import { BACKEND_URL } from "./lib/config";
 const nextConfig: NextConfig = {
   output: "standalone",
   trailingSlash: false,
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
   async rewrites() {
     return {
       beforeFiles: [

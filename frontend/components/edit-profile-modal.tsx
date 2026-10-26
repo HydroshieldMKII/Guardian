@@ -99,28 +99,6 @@ export function EditProfileModal({
     }
   }, [open, user]);
 
-  // Reset form when modal opens/closes
-  useEffect(() => {
-    if (open && user && isAdminUser(user)) {
-      setProfileData({
-        username: user.username || "",
-        email: user.email || "",
-        avatarUrl: user.avatarUrl || "",
-      });
-    }
-    if (!open) {
-      setPasswordData({
-        currentPassword: "",
-        newPassword: "",
-        confirmPassword: "",
-      });
-      setClearSessions(true);
-      setShowPasswordError(null);
-      setShowProfileError(null);
-      cancelPlexLinkRef.current();
-    }
-  }, [open, user]);
-
   const {
     loading: linkingPlex,
     waiting: waitingForPlex,
@@ -148,8 +126,26 @@ export function EditProfileModal({
     },
   });
 
-  const cancelPlexLinkRef = useRef(cancelPlexLink);
-  cancelPlexLinkRef.current = cancelPlexLink;
+  useEffect(() => {
+    if (open && user && isAdminUser(user)) {
+      setProfileData({
+        username: user.username || "",
+        email: user.email || "",
+        avatarUrl: user.avatarUrl || "",
+      });
+    }
+    if (!open) {
+      setPasswordData({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      });
+      setClearSessions(true);
+      setShowPasswordError(null);
+      setShowProfileError(null);
+      cancelPlexLink();
+    }
+  }, [open, user, cancelPlexLink]);
 
   const validateEmail = (email: string): { valid: boolean; error?: string } => {
     if (!email) {
