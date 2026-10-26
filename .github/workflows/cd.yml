@@ -77,8 +77,10 @@ jobs:
       matrix:
         include:
           - platform: linux/amd64
+            arch: amd64
             runner: ubuntu-latest
           - platform: linux/arm64
+            arch: arm64
             runner: ubuntu-24.04-arm
     runs-on: ${{ matrix.runner }}
     steps:
@@ -104,8 +106,10 @@ jobs:
             org.opencontainers.image.revision=${{ needs.resolve.outputs.revision }}
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
           outputs: type=image,name=${{ env.IMAGE }},push-by-digest=true,name-canonical=true,push=true
-          cache-from: type=gha,scope=guardian-${{ matrix.platform }}
-          cache-to: type=gha,scope=guardian-${{ matrix.platform }},mode=max
+          cache-from: |
+            type=registry,ref=${{ env.IMAGE }}:buildcache-${{ matrix.arch }}
+            type=gha,scope=guardian-${{ matrix.platform }}
+          cache-to: type=registry,ref=${{ env.IMAGE }}:buildcache-${{ matrix.arch }},mode=max
 
       - run: .github/scripts/smoke-test.sh "$IMAGE@$DIGEST"
         env:

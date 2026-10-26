@@ -154,8 +154,8 @@ jobs:
           push: false
           load: true
           tags: guardian:${{ github.sha }}
-          cache-from: type=gha,scope=guardian-build
-          cache-to: type=gha,scope=guardian-build,mode=max
+          cache-from: type=gha,scope=guardian-linux/amd64
+          cache-to: type=gha,scope=guardian-linux/amd64,mode=max
 
       - run: .github/scripts/smoke-test.sh guardian:${{ github.sha }}
 
