@@ -40,7 +40,7 @@
     "express-rate-limit": "^8.7.1",
     "helmet": "^8.3.0",
     "http-proxy": "^1.18.1",
-    "nodemailer": "^9.0.5",
+    "nodemailer": "^10.1.4",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "reflect-metadata": "^0.2.2",
