@@ -98,6 +98,7 @@ export function VersionProvider({ children }: { children: React.ReactNode }) {
   } = useAuth();
   const isAdmin = user && isAdminUser(user);
   const [versionInfo, setVersionInfo] = useState<VersionInfo | null>(null);
+  const installedVersion = versionInfo?.version;
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -144,7 +145,7 @@ export function VersionProvider({ children }: { children: React.ReactNode }) {
   }, [fetchVersionInfo]);
 
   const checkForUpdatesIfEnabled = useCallback(async () => {
-    if (setupRequired || !versionInfo?.version) {
+    if (setupRequired || !installedVersion) {
       return null;
     }
 
@@ -206,7 +207,7 @@ export function VersionProvider({ children }: { children: React.ReactNode }) {
 
       const release = (await response.json()) as GitHubRelease;
       const latestVersion = release.tag_name.replace(/^v/, ""); // Remove 'v' prefix if present
-      const currentVersion = versionInfo.version;
+      const currentVersion = installedVersion;
 
 
       // Compare versions
@@ -242,10 +243,10 @@ export function VersionProvider({ children }: { children: React.ReactNode }) {
       );
       return null;
     }
-  }, [setupRequired, versionInfo?.version, UPDATE_CHECK_COOLDOWN]);
+  }, [setupRequired, installedVersion, UPDATE_CHECK_COOLDOWN]);
 
   const checkForUpdatesManually = useCallback(async () => {
-    if (!versionInfo?.version) return null;
+    if (!installedVersion) return null;
 
     try {
       // Manual check bypasses the AUTO_CHECK_UPDATES setting
@@ -259,7 +260,7 @@ export function VersionProvider({ children }: { children: React.ReactNode }) {
 
       const release = (await response.json()) as GitHubRelease;
       const latestVersion = release.tag_name.replace(/^v/, ""); // Remove 'v' prefix if present
-      const currentVersion = versionInfo.version;
+      const currentVersion = installedVersion;
 
       // Compare versions
       const hasUpdate = isVersionNewer(latestVersion, currentVersion);
@@ -290,7 +291,7 @@ export function VersionProvider({ children }: { children: React.ReactNode }) {
       console.error("Failed to check for updates manually:", error);
       return null;
     }
-  }, [versionInfo?.version]);
+  }, [installedVersion]);
 
   const clearUpdateInfo = useCallback(() => {
     setUpdateInfo(null);

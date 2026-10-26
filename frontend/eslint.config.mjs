@@ -1,10 +1,8 @@
 // @ts-check
-import { FlatCompat } from '@eslint/eslintrc';
 import eslint from '@eslint/js';
+import nextCoreWebVitals from 'eslint-config-next/core-web-vitals';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
-
-const compat = new FlatCompat({ baseDirectory: import.meta.dirname });
 
 export default tseslint.config(
   {
@@ -19,7 +17,7 @@ export default tseslint.config(
   },
   eslint.configs.recommended,
   ...tseslint.configs.recommendedTypeChecked,
-  ...compat.extends('next/core-web-vitals'),
+  ...nextCoreWebVitals,
   {
     languageOptions: {
       globals: {
@@ -56,6 +54,8 @@ export default tseslint.config(
       '@typescript-eslint/no-misused-promises': 'error',
       'react-hooks/rules-of-hooks': 'error',
       'react-hooks/exhaustive-deps': 'error',
+      'react-hooks/set-state-in-effect': 'off',
+      'react-hooks/purity': 'off',
       '@next/next/no-img-element': 'off',
       'no-useless-escape': 'error',
     },

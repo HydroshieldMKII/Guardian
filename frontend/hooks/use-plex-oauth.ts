@@ -72,8 +72,10 @@ export const usePlexOAuth = ({
   const copyRef = useRef(copy);
   const onAuthenticatedRef = useRef(onAuthenticated);
 
-  copyRef.current = copy;
-  onAuthenticatedRef.current = onAuthenticated;
+  useEffect(() => {
+    copyRef.current = copy;
+    onAuthenticatedRef.current = onAuthenticated;
+  }, [copy, onAuthenticated]);
 
   const closePopup = useCallback(() => {
     const popup = popupRef.current;
