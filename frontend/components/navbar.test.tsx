@@ -163,11 +163,14 @@ describe("Navbar visibility", () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  it.each(["/login", "/setup"])("renders nothing on %s", (path) => {
-    pathname = path;
-    const { container } = render(<Navbar />);
-    expect(container).toBeEmptyDOMElement();
-  });
+  it.each(["/login", "/setup", "/forgot-password", "/reset-password"])(
+    "renders nothing on %s",
+    (path) => {
+      pathname = path;
+      const { container } = render(<Navbar />);
+      expect(container).toBeEmptyDOMElement();
+    },
+  );
 
   it("renders for a signed-in admin", () => {
     render(<Navbar />);
