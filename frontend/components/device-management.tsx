@@ -9,11 +9,11 @@ import React, {
   useMemo,
   useDeferredValue,
 } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 
 import { useDeviceDecisions } from "@/hooks/device-management/useDeviceDecisions";
-import { useUserPreferences } from "@/hooks/device-management/useUserPreferences";
+import { useUserPolicyUpdates } from "@/hooks/device-management/useUserPolicyUpdates";
+import { useUserVisibility } from "@/hooks/device-management/useUserVisibility";
 import { useTimeRulesForUsers } from "@/hooks/device-management/useTimeRules";
 import { useToast } from "@/hooks/use-toast";
 import { useStoredChoice } from "@/hooks/use-stored-choice";
@@ -24,9 +24,6 @@ import {
   canGrantTemporaryAccess,
   devicePolicyBadges,
 } from "@/lib/device-policies";
-
-import { apiClient } from "@/lib/api";
-import { queryKeys } from "@/lib/query-keys";
 
 import {
   UserDetail,
@@ -60,7 +57,6 @@ import {
 import { HIGHLIGHT_CLASSES } from "@/lib/highlight";
 
 const NO_TIME_RULES: TimeRulesByUser = {};
-const NO_USERS: UserPreference[] = [];
 const DEVICE_LOOKUP_ATTEMPTS = 20;
 const DEVICE_LOOKUP_RETRY_MS = 100;
 const USER_SORT_BY_KEY = "guardian-unified-sort-by";
@@ -127,7 +123,6 @@ const DeviceManagement = memo(
       userId: string;
       username?: string;
     } | null>(null);
-    const [hiddenUsersModalOpen, setHiddenUsersModalOpen] = useState(false);
     const [userHistoryModalOpen, setUserHistoryModalOpen] = useState(false);
     const [selectedHistoryUser, setSelectedHistoryUser] = useState<{
       userId: string;
@@ -142,32 +137,12 @@ const DeviceManagement = memo(
       username?: string;
       deviceIdentifier?: string;
     } | null>(null);
-    const [updatingUserPreference, setUpdatingUserPreference] = useState<
-      string | null
-    >(null);
-
-    const [hideUserConfirmation, setHideUserConfirmation] = useState<{
-      userId: string;
-      username: string;
-      isCurrentlyHidden: boolean;
-    } | null>(null);
-
-    const userPreferences = useUserPreferences();
     const { data: userTimeRules = NO_TIME_RULES } = useTimeRulesForUsers(
       userGroups.map((group) => group.user.userId),
     );
     const selectedUserIdRef = useRef(selectedUserId);
     const selectUserRef = useRef(selectUser);
     const { toast } = useToast();
-    const queryClient = useQueryClient();
-    const { data: hiddenUsers = NO_USERS, isLoading: loadingHiddenUsers } =
-      useQuery({
-        queryKey: queryKeys.hiddenUsers,
-        queryFn: () => apiClient.getHiddenUsers<UserPreference[]>(),
-        enabled: hiddenUsersModalOpen,
-      });
-    const refreshHiddenUsers = () =>
-      queryClient.invalidateQueries({ queryKey: queryKeys.hiddenUsers });
 
     useEffect(() => {
       selectedUserIdRef.current = selectedUserId;
@@ -281,6 +256,14 @@ const DeviceManagement = memo(
       onAccessGranted: () => setTemporaryAccessUser(null),
     });
     const { actionLoading } = decisions;
+    const policies = useUserPolicyUpdates(handleRefresh);
+    const visibility = useUserVisibility({
+      users: usersData,
+      refresh: handleRefresh,
+      onHidden: (userId) => {
+        if (selectedUserId === userId) selectUser(null);
+      },
+    });
 
     const visibleGroups = useMemo(
       () => userGroups.filter((group) => matchesFilter(group, filter)),
@@ -304,134 +287,6 @@ const DeviceManagement = memo(
         ),
       [visibleGroups, deferredSearchTerm, sortBy, sortOrder],
     );
-
-    const handleUpdateUserPreference = async (
-      userId: string,
-      defaultBlock: boolean | null,
-    ) => {
-      setUpdatingUserPreference(userId);
-      try {
-        const success = await userPreferences.updateUserPreference(
-          userId,
-          defaultBlock,
-        );
-        if (success) {
-          await handleRefresh();
-          toast({
-            title: "Default device policy updated",
-            description:
-              "New devices from this user will follow the policy you picked",
-            variant: "success",
-          });
-        } else {
-          toast({
-            title: "Update failed",
-            description: "Failed to update the New devices rule",
-            variant: "destructive",
-          });
-        }
-      } catch (error) {
-        console.error("Error updating user preference:", error);
-        toast({
-          title: "Update failed",
-          description: "Failed to update the New devices rule",
-          variant: "destructive",
-        });
-      } finally {
-        setUpdatingUserPreference(null);
-      }
-    };
-
-    const handleUpdateUserIPPolicy = async (
-      userId: string,
-      updates: Partial<UserPreference>,
-    ) => {
-      const success = await userPreferences.updateUserIPPolicy(userId, updates);
-      if (success) {
-        void handleRefresh();
-        toast({
-          title: "IP access updated",
-          description:
-            "The new network and IP rules apply to every device this user owns",
-          variant: "success",
-        });
-      } else {
-        toast({
-          title: "Update failed",
-          description: "Failed to update the IP access policies",
-          variant: "destructive",
-        });
-      }
-    };
-
-    const handleToggleUserVisibility = async (userId: string) => {
-      try {
-        const user =
-          usersData?.find((u) => u.userId === userId) ||
-          hiddenUsers.find((u) => u.userId === userId);
-        const isCurrentlyHidden = user?.hidden || false;
-        const username = user?.username || userId;
-
-        if (!isCurrentlyHidden) {
-          setHideUserConfirmation({ userId, username, isCurrentlyHidden });
-          return;
-        }
-
-        await apiClient.toggleUserVisibility(userId);
-
-        if (isCurrentlyHidden) {
-          toast({
-            title: "User shown",
-            description: `${username} is back in the main user list`,
-            variant: "success",
-          });
-        } else {
-          toast({
-            title: "User hidden",
-            description: `${username} is now under "Hidden users" at the bottom of the user list. Their policies still apply.`,
-            variant: "success",
-          });
-        }
-
-        void handleRefresh();
-        await refreshHiddenUsers();
-      } catch (error) {
-        console.error("Failed to toggle user visibility:", error);
-        toast({
-          title: "Error",
-          description: "Failed to update user visibility",
-          variant: "destructive",
-        });
-      }
-    };
-
-    const confirmHideUser = async () => {
-      if (!hideUserConfirmation) return;
-
-      try {
-        const { userId, username } = hideUserConfirmation;
-        await apiClient.toggleUserVisibility(userId);
-        if (selectedUserId === userId) selectUser(null);
-
-        toast({
-          title: "User hidden",
-          description: `${username} is now under "Hidden users" at the bottom of the user list. Their policies still apply.`,
-          variant: "success",
-        });
-
-        void handleRefresh();
-        await refreshHiddenUsers();
-      } catch (error) {
-        console.error("Failed to hide user:", error);
-        toast({
-          title: "Error",
-          description: "Failed to hide user",
-          variant: "destructive",
-        });
-      } finally {
-        setHideUserConfirmation(null);
-      }
-    };
 
     const handleShowHistory = (userId: string) => {
       const userGroup = userGroups.find(
@@ -562,7 +417,7 @@ const DeviceManagement = memo(
             onSortByChange={setSortBy}
             sortOrder={sortOrder}
             onSortOrderChange={setSortOrder}
-            onShowHidden={() => setHiddenUsersModalOpen(true)}
+            onShowHidden={() => visibility.setHiddenUsersOpen(true)}
             pendingCount={totalPending}
             refreshing={refreshing}
             onRefresh={() => void handleRefresh()}
@@ -581,17 +436,17 @@ const DeviceManagement = memo(
                 actionLoading={actionLoading}
                 timeRules={userTimeRules[selectedGroup.user.userId]}
                 deviceFocus={deviceFocus}
-                updatingUserPreference={updatingUserPreference}
+                updatingUserPreference={policies.updatingUserId}
                 onBack={() => selectUser(null)}
                 onUpdateUserPreference={(userId, defaultBlock) =>
-                  void handleUpdateUserPreference(userId, defaultBlock)
+                  void policies.updateDefaultPolicy(userId, defaultBlock)
                 }
                 onUpdateUserIPPolicy={(userId, updates) =>
-                  void handleUpdateUserIPPolicy(userId, updates)
+                  void policies.updateIPPolicy(userId, updates)
                 }
                 onUserPreferenceChange={handleUserPreferenceChange}
                 onToggleUserVisibility={(userId) =>
-                  void handleToggleUserVisibility(userId)
+                  void visibility.toggleVisibility(userId)
                 }
                 onShowHistory={handleShowHistory}
                 onGrantUserTemporaryAccess={handleGrantUserTemporaryAccess}
@@ -709,11 +564,11 @@ const DeviceManagement = memo(
         />
 
         <HiddenUsersDialog
-          open={hiddenUsersModalOpen}
-          onOpenChange={setHiddenUsersModalOpen}
-          users={hiddenUsers}
-          loading={loadingHiddenUsers}
-          onShow={(userId) => void handleToggleUserVisibility(userId)}
+          open={visibility.hiddenUsersOpen}
+          onOpenChange={visibility.setHiddenUsersOpen}
+          users={visibility.hiddenUsers}
+          loading={visibility.loadingHiddenUsers}
+          onShow={(userId) => void visibility.toggleVisibility(userId)}
         />
 
         <UserHistoryModal
@@ -738,9 +593,9 @@ const DeviceManagement = memo(
         />
 
         <HideUserDialog
-          username={hideUserConfirmation?.username ?? null}
-          onCancel={() => setHideUserConfirmation(null)}
-          onConfirm={() => void confirmHideUser()}
+          username={visibility.hideCandidate?.username ?? null}
+          onCancel={visibility.cancelHide}
+          onConfirm={() => void visibility.confirmHide()}
         />
       </>
     );
