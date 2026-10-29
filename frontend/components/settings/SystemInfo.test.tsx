@@ -268,9 +268,7 @@ describe("SystemInfo update checks", () => {
     expect(
       await screen.findByText("You are running the latest version."),
     ).toBeInTheDocument();
-    expect(toast).toHaveBeenCalledWith(
-      expect.objectContaining({ variant: "success" }),
-    );
+    expect(toast).not.toHaveBeenCalled();
   });
 
   it("announces a new version", async () => {
@@ -291,9 +289,7 @@ describe("SystemInfo update checks", () => {
       "href",
       "https://example.test",
     );
-    expect(toast).toHaveBeenCalledWith(
-      expect.objectContaining({ variant: "default" }),
-    );
+    expect(toast).not.toHaveBeenCalled();
   });
 
   it("still announces an update the server does not number", async () => {

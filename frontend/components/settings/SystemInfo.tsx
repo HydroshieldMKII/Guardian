@@ -137,12 +137,6 @@ export function SystemInfo({
         };
 
         setUpdateStatus(updateInfo);
-
-        toast({
-          title: "Update check complete",
-          description: updateInfo.message,
-          variant: updateInfo.available ? "default" : "success",
-        });
       } else {
         throw new Error("Failed to check for updates");
       }
