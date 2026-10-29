@@ -143,6 +143,13 @@ describe('PlexClient', () => {
         'Missing required Plex configuration',
       );
     });
+    it('refuses to dial when nothing is configured', async () => {
+      settings = {};
+
+      await expect(client.request('/')).rejects.toThrow(
+        'Missing required Plex configuration',
+      );
+    });
   });
 
   describe('request', () => {
@@ -272,6 +279,18 @@ describe('PlexClient', () => {
       const response = await pending;
       expect(response.json()).toEqual({});
       expect(response.text()).toBe('not json');
+    });
+
+    it('rejects a response that carries no status', async () => {
+      const pending = client.request('/');
+      await flush();
+      const listener =
+        callArgs<[unknown, (res: IncomingMessage) => void]>(mockHttpRequest)[1];
+      const res = fakeResponse(undefined);
+      listener(res);
+      res.push(null);
+
+      await expect(pending).rejects.toThrow('HTTP 0:  - ');
     });
 
     it.each([400, 401, 500])('rejects a %s response', async (status) => {
