@@ -423,7 +423,7 @@ export default function SettingsPage() {
             <TabsTrigger
               key={tab.id}
               value={tab.id}
-              className="relative -mb-px cursor-pointer rounded-none rounded-t-md px-3 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:bg-accent data-[state=active]:focus-visible:bg-accent dark:data-[state=active]:focus-visible:bg-accent pb-3 pt-1.5 text-muted-foreground transition-colors duration-200 after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:origin-center after:scale-x-0 after:rounded-full after:bg-foreground after:transition-transform after:duration-200 hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none data-[state=active]:ring-0 dark:data-[state=active]:bg-transparent data-[state=active]:after:scale-x-100 motion-reduce:after:transition-none"
+              className="relative -mb-px cursor-pointer rounded-none rounded-t-md px-3 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:bg-accent pb-3 pt-1.5 text-muted-foreground transition-colors duration-200 after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:origin-center after:scale-x-0 after:rounded-full after:bg-foreground after:transition-transform after:duration-200 hover:text-foreground data-[state=active]:bg-accent data-[state=active]:text-foreground data-[state=active]:shadow-none data-[state=active]:ring-0 dark:data-[state=active]:bg-accent data-[state=active]:after:scale-x-100 motion-reduce:after:transition-none"
             >
               {tab.label}
             </TabsTrigger>
