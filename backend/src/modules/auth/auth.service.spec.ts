@@ -169,6 +169,23 @@ describe('AuthService', () => {
       });
     });
 
+    it('matches the email whatever its case', async () => {
+      await service.login({ ...dto, username: ' Admin@Example.COM ' });
+      expect(adminRepo.findOne).toHaveBeenCalledWith({
+        where: [
+          { username: ' Admin@Example.COM ' },
+          { email: 'admin@example.com' },
+        ],
+      });
+    });
+
+    it('never matches an admin without an email on a blank name', async () => {
+      await service.login({ ...dto, username: '   ' }).catch(() => undefined);
+      expect(adminRepo.findOne).toHaveBeenCalledWith({
+        where: [{ username: '   ' }],
+      });
+    });
+
     it('issues a session on success', async () => {
       const result = await service.login(dto);
       expect(result.user.id).toBe('admin-1');

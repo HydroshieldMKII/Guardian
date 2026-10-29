@@ -8,6 +8,7 @@ import { PasswordResetToken } from '@/entities/password-reset-token.entity';
 import { ConfigService } from '@/modules/config/services/config.service';
 import { EmailService } from '@/modules/config/services/email.service';
 import { AuthSessionService } from '@/modules/auth/auth-session.service';
+import { normalizeEmail } from '@/modules/auth/email-address';
 import { ConfirmPasswordResetDto } from '@/modules/auth/dto/password-reset.dto';
 import { appUrl } from '@/config/app.config';
 import { serialTransaction } from '@/database/serial-transaction';
@@ -18,9 +19,6 @@ const TOKEN_BYTES = 48;
 
 const hashToken = (token: string) =>
   crypto.createHash('sha256').update(token).digest('hex');
-
-const normalizeAddress = (email: string | null) =>
-  (email ?? '').trim().toLowerCase();
 
 @Injectable()
 export class PasswordResetService {
@@ -53,7 +51,7 @@ export class PasswordResetService {
     );
     const appUrlConfigured = appUrl() !== null;
     const adminEmailConfigured = addressableAdmins.some(
-      (admin) => normalizeAddress(admin.email) !== '',
+      (admin) => normalizeEmail(admin.email) !== '',
     );
 
     return {
@@ -79,9 +77,9 @@ export class PasswordResetService {
       return;
     }
 
-    const wanted = normalizeAddress(email);
+    const wanted = normalizeEmail(email);
     const admin = (await this.listAdminAddresses()).find(
-      (candidate) => normalizeAddress(candidate.email) === wanted,
+      (candidate) => normalizeEmail(candidate.email) === wanted,
     );
 
     if (!admin) {

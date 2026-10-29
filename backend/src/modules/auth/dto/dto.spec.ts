@@ -34,6 +34,14 @@ describe('CreateAdminDto', () => {
     expect(errorsFor(CreateAdminDto, valid)).toEqual([]);
   });
 
+  it('stores the email trimmed and lowercased', () => {
+    const dto = plainToInstance(CreateAdminDto, {
+      ...valid,
+      email: ' Admin@Example.COM ',
+    });
+    expect(dto.email).toBe('admin@example.com');
+  });
+
   it('requires a username of at least three characters', () => {
     expect(
       propertiesFor(CreateAdminDto, { ...valid, username: 'ab' }),
@@ -180,6 +188,13 @@ describe('UpdateProfileDto', () => {
     expect(propertiesFor(UpdateProfileDto, { email: '   ' })).not.toContain(
       'email',
     );
+  });
+
+  it('stores the email trimmed and lowercased', () => {
+    const dto = plainToInstance(UpdateProfileDto, {
+      email: ' Admin@Example.COM ',
+    });
+    expect(dto.email).toBe('admin@example.com');
   });
 });
 
