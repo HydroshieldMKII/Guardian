@@ -1,12 +1,12 @@
 import {
   act,
   fireEvent,
-  render,
   screen,
   waitFor,
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { renderWithQuery } from "@/test-utils/query";
 import type { AppSetting, UserDevice, UserPreference } from "@/types";
 import { DeviceManagement } from "@/components/device-management";
 
@@ -18,6 +18,8 @@ const setPendingDevice = jest.fn();
 const grantTemporaryAccess = jest.fn();
 const grantBatchTemporaryAccess = jest.fn();
 const revokeTemporaryAccess = jest.fn();
+
+const render = renderWithQuery;
 
 jest.mock("@/hooks/device-management/useDeviceActions", () => ({
   useDeviceActions: () => ({
@@ -1199,7 +1201,11 @@ describe("DeviceManagement temporary access", () => {
 describe("DeviceManagement hidden users", () => {
   const openHidden = async (user: User) => {
     await user.click(screen.getByRole("button", { name: "Hidden users" }));
-    return screen.findByRole("dialog");
+    const dialog = await screen.findByRole("dialog");
+    await waitFor(() =>
+      expect(within(dialog).queryByText("Loading hidden users...")).toBeNull(),
+    );
+    return dialog;
   };
 
   it("asks before hiding a user", async () => {
@@ -1314,6 +1320,56 @@ describe("DeviceManagement hidden users", () => {
     );
   });
 
+  it("says the hidden users are loading", async () => {
+    getHiddenUsers.mockReturnValue(new Promise(() => {}));
+    const { user } = await renderPanel();
+
+    await user.click(screen.getByRole("button", { name: "Hidden users" }));
+
+    expect(
+      await screen.findByText("Loading hidden users..."),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("No hidden users found")).toBeNull();
+  });
+
+  it("drops a user from the list once they are shown again", async () => {
+    getHiddenUsers.mockResolvedValue([
+      preference({ userId: "u-9", username: "robin", hidden: true }),
+    ]);
+    const { user } = await renderPanel();
+    const dialog = await openHidden(user);
+    getHiddenUsers.mockResolvedValue([]);
+
+    await user.click(within(dialog).getByRole("button", { name: /Show$/ }));
+
+    expect(
+      await within(dialog).findByText("No hidden users found"),
+    ).toBeInTheDocument();
+    expect(getHiddenUsers).toHaveBeenCalledTimes(2);
+  });
+
+  it("only loads hidden users once the dialog is opened", async () => {
+    await renderPanel();
+
+    expect(getHiddenUsers).not.toHaveBeenCalled();
+  });
+
+  it("shows the last hidden users at once when the dialog reopens", async () => {
+    getHiddenUsers.mockResolvedValue([
+      preference({ userId: "u-9", username: "robin", hidden: true }),
+    ]);
+    const { user } = await renderPanel();
+    let dialog = await openHidden(user);
+    await user.click(within(dialog).getByRole("button", { name: "Close" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    getHiddenUsers.mockReturnValue(new Promise(() => {}));
+
+    await user.click(screen.getByRole("button", { name: "Hidden users" }));
+    dialog = await screen.findByRole("dialog");
+
+    expect(within(dialog).getByText("robin")).toBeInTheDocument();
+  });
+
   it("logs a failure loading hidden users", async () => {
     getHiddenUsers.mockRejectedValue(new Error("offline"));
     const { user } = await renderPanel();
@@ -1322,7 +1378,8 @@ describe("DeviceManagement hidden users", () => {
 
     await waitFor(() =>
       expect(consoleError).toHaveBeenCalledWith(
-        "Failed to load hidden users:",
+        "Request failed:",
+        ["users", "hidden"],
         expect.any(Error),
       ),
     );

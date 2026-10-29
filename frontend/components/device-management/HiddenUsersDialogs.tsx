@@ -15,11 +15,13 @@ export function HiddenUsersDialog({
   open,
   onOpenChange,
   users,
+  loading,
   onShow,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   users: UserPreference[];
+  loading: boolean;
   onShow: (userId: string) => void;
 }) {
   return (
@@ -37,7 +39,11 @@ export function HiddenUsersDialog({
         </DialogHeader>
 
         <div className="space-y-3">
-          {users.length === 0 ? (
+          {loading ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <p>Loading hidden users...</p>
+            </div>
+          ) : users.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <p>No hidden users found</p>
             </div>

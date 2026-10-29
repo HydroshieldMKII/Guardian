@@ -1,12 +1,12 @@
 import {
   act,
   fireEvent,
-  render,
   screen,
   waitFor,
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { renderWithQuery } from "@/test-utils/query";
 import type { AppSetting, UserDevice, UserPreference } from "@/types";
 import { DeviceManagement } from "@/components/device-management";
 import type { toast as showToast } from "@/hooks/use-toast";
@@ -19,6 +19,8 @@ const setPendingDevice = jest.fn();
 const grantTemporaryAccess = jest.fn();
 const grantBatchTemporaryAccess = jest.fn();
 const revokeTemporaryAccess = jest.fn();
+
+const render = renderWithQuery;
 
 jest.mock("@/hooks/device-management/useDeviceActions", () => ({
   useDeviceActions: () => ({
@@ -865,7 +867,8 @@ describe("hidden users", () => {
 
     await waitFor(() =>
       expect(consoleError).toHaveBeenCalledWith(
-        "Failed to load hidden users:",
+        "Request failed:",
+        ["users", "hidden"],
         expect.any(Error),
       ),
     );

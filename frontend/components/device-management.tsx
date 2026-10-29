@@ -9,6 +9,7 @@ import React, {
   useMemo,
   useDeferredValue,
 } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 
 import { useDeviceActions } from "@/hooks/device-management/useDeviceActions";
@@ -26,6 +27,7 @@ import {
 import { formatMinutes } from "@/lib/duration";
 
 import { apiClient } from "@/lib/api";
+import { queryKeys } from "@/lib/query-keys";
 
 import {
   UserDetail,
@@ -59,6 +61,7 @@ import {
 import { HIGHLIGHT_CLASSES } from "@/lib/highlight";
 
 const NO_TIME_RULES: TimeRulesByUser = {};
+const NO_USERS: UserPreference[] = [];
 const DEVICE_LOOKUP_ATTEMPTS = 20;
 const DEVICE_LOOKUP_RETRY_MS = 100;
 const USER_SORT_BY_KEY = "guardian-unified-sort-by";
@@ -156,7 +159,6 @@ const DeviceManagement = memo(
       username?: string;
     } | null>(null);
     const [hiddenUsersModalOpen, setHiddenUsersModalOpen] = useState(false);
-    const [hiddenUsers, setHiddenUsers] = useState<UserPreference[]>([]);
     const [userHistoryModalOpen, setUserHistoryModalOpen] = useState(false);
     const [selectedHistoryUser, setSelectedHistoryUser] = useState<{
       userId: string;
@@ -191,6 +193,15 @@ const DeviceManagement = memo(
     const selectedUserIdRef = useRef(selectedUserId);
     const selectUserRef = useRef(selectUser);
     const { toast } = useToast();
+    const queryClient = useQueryClient();
+    const { data: hiddenUsers = NO_USERS, isLoading: loadingHiddenUsers } =
+      useQuery({
+        queryKey: queryKeys.hiddenUsers,
+        queryFn: () => apiClient.getHiddenUsers<UserPreference[]>(),
+        enabled: hiddenUsersModalOpen,
+      });
+    const refreshHiddenUsers = () =>
+      queryClient.invalidateQueries({ queryKey: queryKeys.hiddenUsers });
 
     useEffect(() => {
       selectedUserIdRef.current = selectedUserId;
@@ -403,9 +414,7 @@ const DeviceManagement = memo(
         }
 
         void handleRefresh();
-        if (hiddenUsersModalOpen) {
-          await loadHiddenUsers();
-        }
+        await refreshHiddenUsers();
       } catch (error) {
         console.error("Failed to toggle user visibility:", error);
         toast({
@@ -431,9 +440,7 @@ const DeviceManagement = memo(
         });
 
         void handleRefresh();
-        if (hiddenUsersModalOpen) {
-          await loadHiddenUsers();
-        }
+        await refreshHiddenUsers();
       } catch (error) {
         console.error("Failed to hide user:", error);
         toast({
@@ -478,21 +485,6 @@ const DeviceManagement = memo(
           "The device may have been removed or is no longer available.",
         variant: "destructive",
       });
-    };
-
-    const loadHiddenUsers = async () => {
-      try {
-        const hiddenUsersData =
-          await apiClient.getHiddenUsers<UserPreference[]>();
-        setHiddenUsers(hiddenUsersData);
-      } catch (error) {
-        console.error("Failed to load hidden users:", error);
-      }
-    };
-
-    const openHiddenUsersModal = async () => {
-      await loadHiddenUsers();
-      setHiddenUsersModalOpen(true);
     };
 
     const handleApprove = async (deviceId: number) => {
@@ -824,7 +816,7 @@ const DeviceManagement = memo(
             onSortByChange={setSortBy}
             sortOrder={sortOrder}
             onSortOrderChange={setSortOrder}
-            onShowHidden={() => void openHiddenUsersModal()}
+            onShowHidden={() => setHiddenUsersModalOpen(true)}
             pendingCount={totalPending}
             refreshing={refreshing}
             onRefresh={() => void handleRefresh()}
@@ -972,6 +964,7 @@ const DeviceManagement = memo(
           open={hiddenUsersModalOpen}
           onOpenChange={setHiddenUsersModalOpen}
           users={hiddenUsers}
+          loading={loadingHiddenUsers}
           onShow={(userId) => void handleToggleUserVisibility(userId)}
         />
 
