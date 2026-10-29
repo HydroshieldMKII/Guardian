@@ -261,4 +261,25 @@ describe("leaving", () => {
     expect(updateConfig).toHaveBeenCalled();
     await waitFor(() => expect(push).toHaveBeenCalledWith("/"));
   });
+
+  it("stays on the page when saving before leaving fails", async () => {
+    updateConfig.mockRejectedValue(new Error("down"));
+    const consoleError = jest
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+    const ui = renderWorkspace();
+    await edit(ui);
+    await ui.click(screen.getByRole("button", { name: "Back to Dashboard" }));
+
+    await ui.click(screen.getByRole("button", { name: "Save & Leave" }));
+
+    await waitFor(() =>
+      expect(toast).toHaveBeenCalledWith(
+        expect.objectContaining({ title: "Error", description: "down" }),
+      ),
+    );
+    expect(push).not.toHaveBeenCalled();
+    expect(screen.getByLabelText("plex server")).toHaveValue("10.0.0.3");
+    consoleError.mockRestore();
+  });
 });

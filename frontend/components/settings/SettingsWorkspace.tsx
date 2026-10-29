@@ -48,10 +48,9 @@ export function SettingsWorkspace({
     leave();
   };
 
-  const saveAndLeave = async () => {
+  const saveAndLeave = () => {
     setConfirmingLeave(false);
-    await form.save();
-    leave();
+    void form.saveBeforeLeaving().then(leave, () => undefined);
   };
 
   return (
@@ -96,7 +95,7 @@ export function SettingsWorkspace({
         isSaving={form.isSaving}
         onStay={() => setConfirmingLeave(false)}
         onDiscard={discardAndLeave}
-        onSave={() => void saveAndLeave()}
+        onSave={saveAndLeave}
       />
     </div>
   );
