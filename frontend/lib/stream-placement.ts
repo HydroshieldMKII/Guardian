@@ -38,7 +38,8 @@ export function placeStreams(
   for (;;) {
     const left = countIn(order, columns, 0);
     const right = countIn(order, columns, 1);
-    if (Math.abs(left - right) < 2) break;
+    const leftEmptyBesideCards = left === 0 && right > 0;
+    if (Math.abs(left - right) < 2 && !leftEmptyBesideCards) break;
     const longer: StreamColumn = left > right ? 0 : 1;
     const movable = order.findLast(
       (key) => columns[key] === longer && key !== pinned,

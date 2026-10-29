@@ -47,6 +47,22 @@ describe("placeStreams", () => {
     expect(columnOf(next, 1)).toEqual(["e"]);
   });
 
+  it("moves the last card left when the left column empties", () => {
+    const first = placeStreams(["a", "b"], EMPTY_PLACEMENT);
+    const next = placeStreams(["b"], first);
+
+    expect(columnOf(next, 0)).toEqual(["b"]);
+    expect(columnOf(next, 1)).toEqual([]);
+  });
+
+  it("leaves a pinned card alone even when the left column empties", () => {
+    const first = placeStreams(["a", "b"], EMPTY_PLACEMENT);
+    const next = placeStreams(["b"], first, "b");
+
+    expect(columnOf(next, 0)).toEqual([]);
+    expect(columnOf(next, 1)).toEqual(["b"]);
+  });
+
   it("never moves the pinned card", () => {
     const first = placeStreams(["a", "b", "c", "d", "e"], EMPTY_PLACEMENT);
     const next = placeStreams(["a", "c", "e"], first, "e");
