@@ -25,6 +25,7 @@ export function Modal({
   size = "md",
   nested = false,
   focusDialogOnOpen = false,
+  onEscapeKeyDown,
   className,
   children,
 }: {
@@ -33,6 +34,7 @@ export function Modal({
   size?: ModalSize;
   nested?: boolean;
   focusDialogOnOpen?: boolean;
+  onEscapeKeyDown?: (event: KeyboardEvent) => void;
   className?: string;
   children: React.ReactNode;
 }) {
@@ -46,6 +48,7 @@ export function Modal({
       <DialogContent
         overlayClassName={nested ? "z-[999999] bg-black/70" : undefined}
         onOpenAutoFocus={focusDialogOnOpen ? focusDialog : undefined}
+        onEscapeKeyDown={onEscapeKeyDown}
         className={cn(
           "outline-none",
           "flex max-h-[90vh] flex-col gap-0 overflow-hidden p-0 pb-0 sm:max-h-[85vh] sm:gap-0 sm:p-0",

@@ -65,6 +65,12 @@ function DeviceDetails({
     onClose();
   };
 
+  const cancelRenameOnEscape = (event: KeyboardEvent) => {
+    if (!renaming) return;
+    event.preventDefault();
+    onCancelEdit();
+  };
+
   const note = useDeviceNote(device, onDeviceUpdate);
   const exclusion = useConcurrentLimitExclusion(device, onDeviceUpdate);
   const pending = useSetDevicePending({
@@ -75,7 +81,13 @@ function DeviceDetails({
   });
 
   return (
-    <Modal open={isOpen} onOpenChange={handleClose} size="lg" focusDialogOnOpen>
+    <Modal
+      open={isOpen}
+      onOpenChange={handleClose}
+      onEscapeKeyDown={cancelRenameOnEscape}
+      size="lg"
+      focusDialogOnOpen
+    >
       <DeviceNameHeader
         device={device}
         renaming={renaming}
