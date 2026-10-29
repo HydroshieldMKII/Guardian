@@ -1,6 +1,5 @@
 import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { UserDevice } from '@/entities/user-device.entity';
 import { UserPreference } from '@/entities/user-preference.entity';
 import { ConfigService } from '@/modules/config/services/config.service';
@@ -29,8 +28,8 @@ const sessionsResponse = (sessions: PlexSession[]): PlexSessionsResponse => ({
 
 describe('ConcurrentStreamService', () => {
   let service: ConcurrentStreamService;
-  let userDeviceRepository: jest.Mocked<Repository<UserDevice>>;
-  let userPreferenceRepository: jest.Mocked<Repository<UserPreference>>;
+  let userDeviceRepository: { find: jest.Mock };
+  let userPreferenceRepository: { findOne: jest.Mock };
   let configService: { getSetting: jest.Mock };
   let deviceTrackingService: { isTemporaryAccessValid: jest.Mock };
 
@@ -45,11 +44,11 @@ describe('ConcurrentStreamService', () => {
 
     userDeviceRepository = {
       find: jest.fn().mockResolvedValue([device()]),
-    } as unknown as jest.Mocked<Repository<UserDevice>>;
+    };
 
     userPreferenceRepository = {
       findOne: jest.fn().mockResolvedValue(null),
-    } as unknown as jest.Mocked<Repository<UserPreference>>;
+    };
 
     configService = {
       getSetting: jest.fn((key: string) => Promise.resolve(settings[key])),

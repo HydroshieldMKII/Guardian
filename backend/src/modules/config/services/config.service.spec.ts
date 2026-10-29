@@ -286,12 +286,7 @@ describe('ConfigService', () => {
       settingsRepo.find.mockResolvedValueOnce([nulled]);
       const fresh = await build();
 
-      const value = await fresh.getSetting('CUSTOM_PLEX_URL');
-      if (typeof expected === 'number') {
-        expect(Number.isNaN(value as unknown as number)).toBe(true);
-      } else {
-        expect(value).toBe(expected);
-      }
+      await expect(fresh.getSetting('CUSTOM_PLEX_URL')).resolves.toBe(expected);
     });
 
     it('reads a null json column as null', async () => {

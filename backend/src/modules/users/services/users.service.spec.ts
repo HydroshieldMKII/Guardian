@@ -1,11 +1,12 @@
 import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { UserPreference } from '@/entities/user-preference.entity';
 import { UserDevice } from '@/entities/user-device.entity';
 import { ConfigService } from '@/modules/config/services/config.service';
 import { PlexClient } from '@/modules/plex/services/plex-client';
 import { UsersService } from '@/modules/users/services/users.service';
+
+type IpPolicyField = 'networkPolicy' | 'ipAccessPolicy' | 'allowedIPs';
 
 const preference = (overrides: Partial<UserPreference> = {}): UserPreference =>
   Object.assign(new UserPreference(), {
@@ -19,8 +20,11 @@ const preference = (overrides: Partial<UserPreference> = {}): UserPreference =>
 
 describe('UsersService', () => {
   let service: UsersService;
-  let preferenceRepository: jest.Mocked<Repository<UserPreference>>;
-  let deviceRepository: jest.Mocked<Repository<UserDevice>>;
+  let preferenceRepository: Record<
+    'find' | 'findOne' | 'create' | 'save' | 'upsert',
+    jest.Mock
+  >;
+  let deviceRepository: { findOne: jest.Mock };
   let configService: { getSetting: jest.Mock };
   let plexClient: { getPlexUsers: jest.Mock };
 
@@ -31,11 +35,11 @@ describe('UsersService', () => {
       create: jest.fn((value: Partial<UserPreference>) => preference(value)),
       save: jest.fn((value: UserPreference) => Promise.resolve(value)),
       upsert: jest.fn().mockResolvedValue({ identifiers: [] }),
-    } as unknown as jest.Mocked<Repository<UserPreference>>;
+    };
 
     deviceRepository = {
       findOne: jest.fn().mockResolvedValue(null),
-    } as unknown as jest.Mocked<Repository<UserDevice>>;
+    };
 
     configService = { getSetting: jest.fn().mockResolvedValue(true) };
     plexClient = { getPlexUsers: jest.fn().mockResolvedValue(null) };
@@ -220,14 +224,13 @@ describe('UsersService', () => {
       expect(result.networkPolicy).toBe('wan');
     });
 
-    it.each([
-      ['networkPolicy', { ipAccessPolicy: 'all' as const, allowedIPs: [] }],
-      ['ipAccessPolicy', { networkPolicy: 'lan' as const, allowedIPs: [] }],
+    it.each<[IpPolicyField, Parameters<UsersService['updateUserIPPolicy']>[1]]>(
       [
-        'allowedIPs',
-        { networkPolicy: 'lan' as const, ipAccessPolicy: 'all' as const },
+        ['networkPolicy', { ipAccessPolicy: 'all', allowedIPs: [] }],
+        ['ipAccessPolicy', { networkPolicy: 'lan', allowedIPs: [] }],
+        ['allowedIPs', { networkPolicy: 'lan', ipAccessPolicy: 'all' }],
       ],
-    ])('leaves %s alone when the update omits it', async (field, updates) => {
+    )('leaves %s alone when the update omits it', async (field, updates) => {
       const stored = preference({
         networkPolicy: 'wan',
         ipAccessPolicy: 'restricted',
@@ -236,15 +239,13 @@ describe('UsersService', () => {
       preferenceRepository.findOne.mockResolvedValue(stored);
 
       const result = await service.updateUserIPPolicy('u1', updates);
-      const before = {
+      const before: Pick<UserPreference, IpPolicyField> = {
         networkPolicy: 'wan',
         ipAccessPolicy: 'restricted',
         allowedIPs: ['1.2.3.4'],
-      } as Record<string, unknown>;
+      };
 
-      expect((result as unknown as Record<string, unknown>)[field]).toEqual(
-        before[field],
-      );
+      expect(result[field]).toEqual(before[field]);
     });
 
     it('throws when the user has no preference row', async () => {

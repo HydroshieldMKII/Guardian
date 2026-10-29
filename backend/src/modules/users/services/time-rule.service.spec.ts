@@ -1,6 +1,6 @@
 import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { DataSource, IsNull, Repository } from 'typeorm';
+import { DataSource, IsNull } from 'typeorm';
 import { UserTimeRule } from '@/entities/user-time-rule.entity';
 import { TimeRuleService } from '@/modules/users/services/time-rule.service';
 
@@ -18,7 +18,10 @@ const rule = (overrides: Partial<UserTimeRule> = {}): UserTimeRule =>
 
 describe('TimeRuleService', () => {
   let service: TimeRuleService;
-  let repository: jest.Mocked<Repository<UserTimeRule>>;
+  let repository: Record<
+    'create' | 'save' | 'find' | 'findOne' | 'remove',
+    jest.Mock
+  >;
   let queryRunner: {
     connect: jest.Mock;
     startTransaction: jest.Mock;
@@ -55,11 +58,11 @@ describe('TimeRuleService', () => {
       find: jest.fn().mockResolvedValue([]),
       findOne: jest.fn().mockResolvedValue(null),
       remove: jest.fn().mockResolvedValue(undefined),
-    } as unknown as jest.Mocked<Repository<UserTimeRule>>;
+    };
 
     const dataSource = {
       createQueryRunner: jest.fn().mockReturnValue(queryRunner),
-    } as unknown as DataSource;
+    };
 
     const module = await Test.createTestingModule({
       providers: [

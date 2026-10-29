@@ -2,6 +2,7 @@ import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { EventEmitter } from 'events';
 import type { ClientRequest, IncomingMessage, RequestOptions } from 'http';
+import { Socket } from 'net';
 import { PlexClient } from './plex-client';
 import { ConfigService } from '@/modules/config/services/config.service';
 import { SessionHistory } from '@/entities/session-history.entity';
@@ -28,14 +29,18 @@ class FakeRequest extends EventEmitter {
   end = jest.fn();
 }
 
-class FakeResponse extends EventEmitter {
-  constructor(
-    public statusCode: number | undefined,
-    public statusMessage?: string,
-  ) {
-    super();
-  }
-}
+const { IncomingMessage: HttpIncomingMessage } =
+  jest.requireActual<typeof import('http')>('http');
+
+const fakeResponse = (
+  statusCode: number | undefined,
+  statusMessage?: string,
+): IncomingMessage => {
+  const res = new HttpIncomingMessage(new Socket());
+  res.statusCode = statusCode;
+  res.statusMessage = statusMessage;
+  return res;
+};
 
 describe('PlexClient', () => {
   let client: PlexClient;
@@ -56,10 +61,10 @@ describe('PlexClient', () => {
     await flush();
     const listener =
       callArgs<[unknown, (res: IncomingMessage) => void]>(mock)[1];
-    const res = new FakeResponse(status, statusMessage);
-    listener(res as unknown as IncomingMessage);
-    if (body) res.emit('data', body);
-    res.emit('end');
+    const res = fakeResponse(status, statusMessage);
+    listener(res);
+    if (body) res.push(body);
+    res.push(null);
   };
 
   const fail = async (error: NodeJS.ErrnoException) => {
@@ -311,14 +316,13 @@ describe('PlexClient', () => {
     it('collects the body into a buffer', async () => {
       const pending = media();
       await flush();
-      const listener = mockHttpRequest.mock.calls[0][1] as (
-        res: IncomingMessage,
-      ) => void;
-      const res = new FakeResponse(200);
-      listener(res as unknown as IncomingMessage);
-      res.emit('data', Buffer.from([1, 2]));
-      res.emit('data', Buffer.from([3]));
-      res.emit('end');
+      const listener =
+        callArgs<[unknown, (res: IncomingMessage) => void]>(mockHttpRequest)[1];
+      const res = fakeResponse(200);
+      listener(res);
+      res.push(Buffer.from([1, 2]));
+      res.push(Buffer.from([3]));
+      res.push(null);
 
       await expect(pending).resolves.toEqual(Buffer.from([1, 2, 3]));
     });

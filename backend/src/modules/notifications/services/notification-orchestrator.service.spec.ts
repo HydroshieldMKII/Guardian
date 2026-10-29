@@ -1,6 +1,5 @@
 import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { SessionHistory } from '@/entities/session-history.entity';
 import { UserDevice } from '@/entities/user-device.entity';
 import { NotificationsService } from '@/modules/notifications/services/notifications.service';
@@ -16,7 +15,7 @@ const history = (overrides: Partial<SessionHistory> = {}): SessionHistory =>
 
 describe('NotificationOrchestratorService', () => {
   let service: NotificationOrchestratorService;
-  let sessionHistoryRepository: jest.Mocked<Repository<SessionHistory>>;
+  let sessionHistoryRepository: { findOne: jest.Mock; save: jest.Mock };
   let notificationsService: {
     createNewDeviceNotification: jest.Mock;
     createStreamBlockedNotification: jest.Mock;
@@ -30,7 +29,7 @@ describe('NotificationOrchestratorService', () => {
     sessionHistoryRepository = {
       findOne: jest.fn().mockResolvedValue(null),
       save: jest.fn((value: SessionHistory) => Promise.resolve(value)),
-    } as unknown as jest.Mocked<Repository<SessionHistory>>;
+    };
 
     notificationsService = {
       createNewDeviceNotification: jest.fn().mockResolvedValue({ id: 1 }),

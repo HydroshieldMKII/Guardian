@@ -11,7 +11,10 @@ import { ConcurrentStreamService } from '@/modules/users/services/concurrent-str
 import { ConfigService } from '@/modules/config/services/config.service';
 import { DeviceTrackingService } from '@/modules/devices/services/device-tracking.service';
 import { PlexClient } from '@/modules/plex/services/plex-client';
-import { SessionTerminationService } from '@/modules/plex/services/session-termination.service';
+import {
+  SessionTerminationService,
+  StreamBlockedEvent,
+} from '@/modules/plex/services/session-termination.service';
 
 interface SessionOverrides {
   id?: string;
@@ -499,10 +502,8 @@ describe('SessionTerminationService', () => {
 
     it('substitutes placeholders for an unnamed session it terminates', async () => {
       concurrentStreamService.getEffectiveLimit.mockResolvedValue(1);
-      const events: Record<string, unknown>[] = [];
-      service.onStreamBlocked((event) =>
-        events.push(event as unknown as Record<string, unknown>),
-      );
+      const events: StreamBlockedEvent[] = [];
+      service.onStreamBlocked((event) => events.push(event));
 
       const bare = (id: string) => ({
         sessionKey: `sk-${id}`,
@@ -709,10 +710,8 @@ describe('SessionTerminationService', () => {
 
     it('substitutes placeholders when blocking an unnamed session', async () => {
       blocked();
-      const events: Record<string, unknown>[] = [];
-      service.onStreamBlocked((event) =>
-        events.push(event as unknown as Record<string, unknown>),
-      );
+      const events: StreamBlockedEvent[] = [];
+      service.onStreamBlocked((event) => events.push(event));
 
       await stop([
         sparse({

@@ -33,10 +33,10 @@ describe('PlexService', () => {
     MediaContainer: { size: metadata.length, Metadata: metadata },
   });
 
-  const firstSession = async () => {
+  const firstSession = async (): Promise<Record<string, unknown>> => {
     const result = await service.getActiveSessions();
-    const metadata = result.MediaContainer?.Metadata ?? [];
-    return metadata[0] as unknown as Record<string, unknown>;
+    const [first] = result.MediaContainer?.Metadata ?? [];
+    return { ...first };
   };
 
   beforeEach(async () => {

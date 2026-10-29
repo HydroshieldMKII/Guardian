@@ -5,6 +5,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import { Test } from '@nestjs/testing';
 import { Request } from 'express';
 import { AuthService } from '@/modules/auth/auth.service';
 import { ConfigService } from '@/modules/config/services/config.service';
@@ -46,17 +47,22 @@ describe('AuthGuard', () => {
     );
   };
 
-  beforeEach(() => {
+  beforeEach(async () => {
     request = { method: 'GET', cookies: { session_token: 'token-1' } };
     authService = { validateSession: jest.fn().mockResolvedValue(adminUser) };
     configService = { getSetting: jest.fn().mockResolvedValue(true) };
     reflector = { get: jest.fn().mockReturnValue(undefined) };
 
-    guard = new AuthGuard(
-      authService as unknown as AuthService,
-      configService as unknown as ConfigService,
-      reflector as unknown as Reflector,
-    );
+    const module = await Test.createTestingModule({
+      providers: [
+        AuthGuard,
+        { provide: AuthService, useValue: authService },
+        { provide: ConfigService, useValue: configService },
+        { provide: Reflector, useValue: reflector },
+      ],
+    }).compile();
+
+    guard = module.get(AuthGuard);
   });
 
   it('lets a CORS preflight through untouched', async () => {
