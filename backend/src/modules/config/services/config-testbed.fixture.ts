@@ -153,7 +153,11 @@ export const createConfigTestbed = (): ConfigTestbed => {
   };
 
   const databaseImportService = {
-    importDatabase: jest.fn().mockResolvedValue({ imported: 5, skipped: 1 }),
+    importDatabase: jest.fn().mockResolvedValue({
+      imported: 5,
+      skipped: 1,
+      changedSettings: [],
+    }),
   };
 
   const versionService = {

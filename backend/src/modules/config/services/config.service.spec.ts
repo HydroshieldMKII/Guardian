@@ -338,6 +338,59 @@ describe('ConfigService', () => {
     });
   });
 
+  describe('settings written outside the settings page', () => {
+    it('reloads the stored values and notifies their listeners', async () => {
+      const listener = jest.fn();
+      service.addConfigChangeListener('PLEXGUARD_REFRESH_INTERVAL', listener);
+      store.set(
+        'PLEXGUARD_REFRESH_INTERVAL',
+        row('PLEXGUARD_REFRESH_INTERVAL', '60', 'number'),
+      );
+
+      await service.applyStoredSettings([
+        'PLEXGUARD_REFRESH_INTERVAL',
+        'RETIRED_SETTING',
+      ]);
+
+      expect(listener).toHaveBeenCalledTimes(1);
+      await expect(
+        service.getSetting('PLEXGUARD_REFRESH_INTERVAL'),
+      ).resolves.toBe(60);
+    });
+
+    it('signs portal users out when the stored portal switch is off', async () => {
+      store.set(
+        'USER_PORTAL_ENABLED',
+        row('USER_PORTAL_ENABLED', 'false', 'boolean'),
+      );
+
+      await service.applyStoredSettings(['USER_PORTAL_ENABLED']);
+
+      expect(sessionRepo.delete).toHaveBeenCalledWith({
+        userType: 'plex_user',
+      });
+    });
+
+    it('keeps portal sessions when the portal switch was not part of the change', async () => {
+      store.set(
+        'USER_PORTAL_ENABLED',
+        row('USER_PORTAL_ENABLED', 'false', 'boolean'),
+      );
+
+      await service.applyStoredSettings(['DEFAULT_PAGE']);
+
+      expect(sessionRepo.delete).not.toHaveBeenCalled();
+    });
+
+    it('never runs a stored value back through the settings page checks', async () => {
+      store.set('APP_VERSION', row('APP_VERSION', '1.0.0'));
+
+      await expect(
+        service.applyStoredSettings(['APP_VERSION']),
+      ).resolves.toBeUndefined();
+    });
+  });
+
   describe('change listeners', () => {
     it('calls a listener registered for that key', async () => {
       const listener = jest.fn();

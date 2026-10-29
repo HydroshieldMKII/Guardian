@@ -66,6 +66,18 @@ export class ConfigService implements OnModuleInit {
     await this.loadCache();
   }
 
+  async applyStoredSettings(keys: readonly string[]): Promise<void> {
+    await this.loadCache();
+    const settingKeys = keys.filter(isSettingKey);
+    if (
+      settingKeys.includes('USER_PORTAL_ENABLED') &&
+      this.cache.get('USER_PORTAL_ENABLED') === false
+    ) {
+      await this.signOutPortalUsers();
+    }
+    settingKeys.forEach((key) => this.notifyConfigChange(key));
+  }
+
   async restoreDefaultSettings(): Promise<void> {
     this.cache.clear();
     await this.initializeDefaultSettings();
@@ -264,12 +276,7 @@ export class ConfigService implements OnModuleInit {
     }
 
     if (key === 'USER_PORTAL_ENABLED' && stringValue === 'false') {
-      const revokedCount = await this.revokeAllPlexUserSessions();
-      if (revokedCount > 0) {
-        this.logger.log(
-          `User portal disabled - revoked ${revokedCount} Plex user session(s)`,
-        );
-      }
+      await this.signOutPortalUsers();
     }
 
     this.notifyConfigChange(key);
@@ -293,6 +300,15 @@ export class ConfigService implements OnModuleInit {
         },
       )}`,
     );
+  }
+
+  private async signOutPortalUsers(): Promise<void> {
+    const revokedCount = await this.revokeAllPlexUserSessions();
+    if (revokedCount > 0) {
+      this.logger.log(
+        `User portal disabled - revoked ${revokedCount} Plex user session(s)`,
+      );
+    }
   }
 
   private async revokeAllPlexUserSessions(): Promise<number> {

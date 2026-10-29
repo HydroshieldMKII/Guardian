@@ -14,7 +14,6 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import type { Response } from 'express';
 import { DatabaseMaintenanceService } from '@/modules/config/services/database-maintenance.service';
 import { DatabaseService } from '@/modules/config/services/database.service';
-import type { ImportPayload } from '@/modules/config/services/database-import.service';
 import { AuthService } from '@/modules/auth/auth.service';
 import { ConfirmPasswordDto } from '@/modules/auth/dto/confirm-password.dto';
 import { CurrentUser } from '@/modules/auth/decorators/current-user.decorator';
@@ -28,12 +27,12 @@ interface UploadedDatabaseFile {
   buffer: Buffer;
 }
 
-const parseUpload = (file: UploadedDatabaseFile | undefined): ImportPayload => {
+const parseUpload = (file: UploadedDatabaseFile | undefined): unknown => {
   if (!file) {
     throw new HttpException('No file provided', HttpStatus.BAD_REQUEST);
   }
   try {
-    return JSON.parse(file.buffer.toString('utf8')) as ImportPayload;
+    return JSON.parse(file.buffer.toString('utf8'));
   } catch {
     throw new HttpException('Invalid JSON file', HttpStatus.BAD_REQUEST);
   }
