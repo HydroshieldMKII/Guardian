@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigController } from '@/modules/config/config.controller';
+import { DatabaseController } from '@/modules/config/database.controller';
 import { ConfigService } from '@/modules/config/services/config.service';
 import { EmailService } from '@/modules/config/services/email.service';
 import { EmailTemplateService } from '@/modules/config/services/email-template.service';
@@ -17,7 +18,7 @@ import { Session } from '@/entities/session.entity';
 
 @Module({
   imports: [TypeOrmModule.forFeature([AppSettings, Session])],
-  controllers: [ConfigController],
+  controllers: [ConfigController, DatabaseController],
   providers: [
     ConfigService,
     EmailService,
