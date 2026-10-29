@@ -10,6 +10,7 @@
 ## Rules
 
 - Existing installs must keep working after an update. Schema changes go through a migration.
+- Migrations use parameterized `queryRunner.query`, never entities or the query builder.
 - Keep changes small and focused, with tests.
 - Never commit, push, tag or merge unless asked. Never use `--no-verify`.
 - No AI attribution in commits or PRs. PR titles use Conventional Commits.

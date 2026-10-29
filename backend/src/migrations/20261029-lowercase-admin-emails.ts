@@ -1,4 +1,5 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
+import { selectRows } from '@/database/migration-rows';
 
 type StoredAdmin = { id: string; email: string | null };
 
@@ -10,11 +11,10 @@ export class LowercaseAdminEmails1793232000000 implements MigrationInterface {
       return;
     }
 
-    const admins = await queryRunner.manager
-      .createQueryBuilder()
-      .select(['admin.id AS id', 'admin.email AS email'])
-      .from('admin_users', 'admin')
-      .getRawMany<StoredAdmin>();
+    const admins = await selectRows<StoredAdmin>(
+      queryRunner,
+      `SELECT id, email FROM admin_users`,
+    );
     const owners = new Map<string, number>();
     for (const { email } of admins) {
       if (email !== null) {
@@ -28,12 +28,10 @@ export class LowercaseAdminEmails1793232000000 implements MigrationInterface {
       }
       const wanted = normalized(email);
       if (wanted !== email && owners.get(wanted) === 1) {
-        await queryRunner.manager
-          .createQueryBuilder()
-          .update('admin_users')
-          .set({ email: wanted })
-          .where({ id })
-          .execute();
+        await queryRunner.query(
+          `UPDATE admin_users SET email = ? WHERE id = ?`,
+          [wanted, id],
+        );
       }
     }
   }

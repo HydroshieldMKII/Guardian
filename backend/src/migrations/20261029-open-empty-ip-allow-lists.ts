@@ -1,4 +1,5 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
+import { selectRows } from '@/database/migration-rows';
 
 type StoredPreference = {
   id: number;
@@ -23,15 +24,10 @@ export class OpenEmptyIpAllowLists1793235600000 implements MigrationInterface {
       return;
     }
 
-    const preferences = await queryRunner.manager
-      .createQueryBuilder()
-      .select([
-        'preference.id AS id',
-        'preference.ip_access_policy AS ipAccessPolicy',
-        'preference.allowed_ips AS allowedIPs',
-      ])
-      .from('user_preferences', 'preference')
-      .getRawMany<StoredPreference>();
+    const preferences = await selectRows<StoredPreference>(
+      queryRunner,
+      `SELECT id, ip_access_policy AS ipAccessPolicy, allowed_ips AS allowedIPs FROM user_preferences`,
+    );
 
     for (const { id, ipAccessPolicy, allowedIPs } of preferences) {
       const allowList = readAllowList(allowedIPs);
