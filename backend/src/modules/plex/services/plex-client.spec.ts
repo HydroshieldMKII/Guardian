@@ -2,7 +2,8 @@ import { Logger } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { EventEmitter } from 'events';
-import type { ClientRequest, IncomingMessage, RequestOptions } from 'http';
+import { IncomingMessage } from 'http';
+import type { ClientRequest, RequestOptions } from 'http';
 import { Socket } from 'net';
 import { PlexClient } from './plex-client';
 import { ConfigService } from '@/modules/config/services/config.service';
@@ -12,33 +13,32 @@ import { SettingValues } from '@/modules/config/settings.catalog';
 import { PlexConfigurationError } from './plex-configuration-error';
 import { PlexErrorCode } from '@/types/plex-errors';
 import { callArgs } from '@/test-matchers';
+import type { Mock } from 'vitest';
 
-const mockHttpRequest = jest.fn<unknown, unknown[]>();
-const mockHttpsRequest = jest.fn<unknown, unknown[]>();
+const mockHttpRequest = vi.fn<(...args: unknown[]) => unknown>();
+const mockHttpsRequest = vi.fn<(...args: unknown[]) => unknown>();
 
-jest.mock('http', () => ({
+vi.mock('http', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('http')>()),
   request: (...args: unknown[]) => mockHttpRequest(...args),
 }));
 
-jest.mock('https', () => ({
+vi.mock('https', () => ({
   request: (...args: unknown[]) => mockHttpsRequest(...args),
 }));
 
 class FakeRequest extends EventEmitter {
-  destroy = jest.fn();
-  setTimeout = jest.fn();
-  write = jest.fn();
-  end = jest.fn();
+  destroy = vi.fn();
+  setTimeout = vi.fn();
+  write = vi.fn();
+  end = vi.fn();
 }
-
-const { IncomingMessage: HttpIncomingMessage } =
-  jest.requireActual<typeof import('http')>('http');
 
 const fakeResponse = (
   statusCode: number | undefined,
   statusMessage?: string,
 ): IncomingMessage => {
-  const res = new HttpIncomingMessage(new Socket());
+  const res = new IncomingMessage(new Socket());
   res.statusCode = statusCode;
   res.statusMessage = statusMessage;
   return res;
@@ -51,11 +51,11 @@ describe('PlexClient', () => {
 
   const flush = () => new Promise((resolve) => setImmediate(resolve));
 
-  const optionsOf = (mock: jest.Mock): RequestOptions =>
+  const optionsOf = (mock: Mock): RequestOptions =>
     callArgs<[RequestOptions]>(mock)[0];
 
   const reply = async (
-    mock: jest.Mock,
+    mock: Mock,
     status: number | undefined,
     body = '',
     statusMessage = 'OK',
@@ -78,7 +78,7 @@ describe('PlexClient', () => {
     Object.assign(new Error(message), { code });
 
   beforeEach(async () => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     request = new FakeRequest();
 
     const asClientRequest = () => {
@@ -112,7 +112,7 @@ describe('PlexClient', () => {
         {
           provide: ConfigService,
           useValue: {
-            getSetting: jest.fn((key: keyof SettingValues) =>
+            getSetting: vi.fn((key: keyof SettingValues) =>
               Promise.resolve(settings[key] ?? null),
             ),
           },
@@ -320,7 +320,9 @@ describe('PlexClient', () => {
     });
 
     it('keeps the token out of the failure logs', async () => {
-      const error = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+      const error = vi
+        .spyOn(Logger.prototype, 'error')
+        .mockImplementation(() => undefined);
       const pending = client.request('/');
       await reply(mockHttpRequest, 500, '', 'Server Error');
       await expect(pending).rejects.toThrow('HTTP 500');

@@ -1,5 +1,5 @@
 /**
- * Jest's asymmetric matchers are typed `any`, which trips
+ * Asymmetric matchers are typed `any`, which trips
  * @typescript-eslint/no-unsafe-assignment wherever they appear inside an
  * expected object. These wrappers narrow them once, here, instead of at
  * every call site.
@@ -13,10 +13,10 @@ export const anyDate = (): Date => expect.any(Date) as Date;
 export const anyValue = (): unknown => expect.anything() as unknown;
 
 export const arrayContaining = <T>(items: T[]): T[] =>
-  expect.arrayContaining(items) as T[];
+  expect.arrayContaining<unknown>(items) as T[];
 
 /**
- * `jest.Mock` defaults its generics to `any`, so reading recorded arguments
+ * `Mock` defaults its generics to `any`, so reading recorded arguments
  * trips no-unsafe-member-access. These accessors do the narrowing in one
  * place and hand back a typed tuple.
  */

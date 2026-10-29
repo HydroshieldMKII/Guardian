@@ -9,14 +9,15 @@ import { AppSettings } from '@/entities/app-settings.entity';
 import { NotificationDispatchService } from '@/modules/notifications/services/notification-dispatch.service';
 import { UserPortalService } from '@/modules/user-portal/services/user-portal.service';
 import { anyDate, anyValue } from '@/test-matchers';
+import type { Mock } from 'vitest';
 
 describe('UserPortalService', () => {
   let service: UserPortalService;
-  let deviceRepo: Record<string, jest.Mock>;
-  let timeRuleRepo: Record<string, jest.Mock>;
-  let preferenceRepo: { findOne: jest.Mock };
-  let settingsRepo: { findOne: jest.Mock };
-  let notificationDispatch: { createDeviceNoteNotification: jest.Mock };
+  let deviceRepo: Record<string, Mock>;
+  let timeRuleRepo: Record<string, Mock>;
+  let preferenceRepo: { findOne: Mock };
+  let settingsRepo: { findOne: Mock };
+  let notificationDispatch: { createDeviceNoteNotification: Mock };
 
   const settings = new Map<string, string>();
 
@@ -56,19 +57,19 @@ describe('UserPortalService', () => {
     settings.clear();
 
     deviceRepo = {
-      find: jest.fn().mockResolvedValue([]),
-      findOne: jest.fn().mockResolvedValue(device()),
-      update: jest.fn().mockResolvedValue({ affected: 1 }),
+      find: vi.fn().mockResolvedValue([]),
+      findOne: vi.fn().mockResolvedValue(device()),
+      update: vi.fn().mockResolvedValue({ affected: 1 }),
     };
 
     timeRuleRepo = {
-      find: jest.fn().mockResolvedValue([]),
+      find: vi.fn().mockResolvedValue([]),
     };
 
-    preferenceRepo = { findOne: jest.fn().mockResolvedValue(null) };
+    preferenceRepo = { findOne: vi.fn().mockResolvedValue(null) };
 
     settingsRepo = {
-      findOne: jest.fn(({ where }: { where: { key: string } }) =>
+      findOne: vi.fn(({ where }: { where: { key: string } }) =>
         Promise.resolve(
           settings.has(where.key)
             ? { key: where.key, value: settings.get(where.key) }
@@ -78,7 +79,7 @@ describe('UserPortalService', () => {
     };
 
     notificationDispatch = {
-      createDeviceNoteNotification: jest.fn().mockResolvedValue(null),
+      createDeviceNoteNotification: vi.fn().mockResolvedValue(null),
     };
 
     const module = await Test.createTestingModule({

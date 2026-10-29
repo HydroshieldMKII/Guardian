@@ -13,6 +13,7 @@ import { DatabaseService } from '@/modules/config/services/database.service';
 import { DatabaseImportService } from '@/modules/config/services/database-import.service';
 import { VersionService } from '@/modules/config/services/version.service';
 import { AppriseService } from '@/modules/config/services/apprise.service';
+import type { Mock } from 'vitest';
 
 export interface ConfigTestbed {
   store: Map<string, AppSettings>;
@@ -22,27 +23,24 @@ export interface ConfigTestbed {
     type?: string,
     isPrivate?: boolean,
   ) => AppSettings;
-  settingsRepo: Record<'find' | 'findOne' | 'save', jest.Mock> & {
-    manager: { transaction: jest.Mock; getRepository: jest.Mock };
+  settingsRepo: Record<'find' | 'findOne' | 'save', Mock> & {
+    manager: { transaction: Mock; getRepository: Mock };
   };
-  sessionRepo: { delete: jest.Mock };
-  emailService: { loadSmtpSettings: jest.Mock };
-  emailTemplateService: { generateSMTPTestEmail: jest.Mock };
-  plexConnectionService: { testConnection: jest.Mock };
-  timezoneService: Record<
-    'getCurrentTimeInTimezone' | 'formatTimestamp',
-    jest.Mock
-  >;
-  databaseService: Record<'exportDatabase' | 'resetDatabase', jest.Mock>;
-  databaseImportService: { importDatabase: jest.Mock };
+  sessionRepo: { delete: Mock };
+  emailService: { loadSmtpSettings: Mock };
+  emailTemplateService: { generateSMTPTestEmail: Mock };
+  plexConnectionService: { testConnection: Mock };
+  timezoneService: Record<'getCurrentTimeInTimezone' | 'formatTimestamp', Mock>;
+  databaseService: Record<'exportDatabase' | 'resetDatabase', Mock>;
+  databaseImportService: { importDatabase: Mock };
   versionService: Record<
     | 'getCurrentAppVersion'
     | 'compareVersions'
     | 'updateAppVersionIfNewer'
     | 'getVersionInfo',
-    jest.Mock
+    Mock
   >;
-  appriseService: { testAppriseConnection: jest.Mock };
+  appriseService: { testAppriseConnection: Mock };
   compile: () => Promise<TestingModule>;
   build: () => Promise<TestingModule>;
 }
@@ -80,8 +78,8 @@ export const createConfigTestbed = (): ConfigTestbed => {
   };
 
   const manager: ConfigTestbed['settingsRepo']['manager'] = {
-    getRepository: jest.fn(() => settingsRepo),
-    transaction: jest.fn(
+    getRepository: vi.fn(() => settingsRepo),
+    transaction: vi.fn(
       async (work: (entityManager: unknown) => Promise<unknown>) => {
         const snapshot = snapshotStore();
         try {
@@ -96,11 +94,11 @@ export const createConfigTestbed = (): ConfigTestbed => {
 
   const settingsRepo: ConfigTestbed['settingsRepo'] = {
     manager,
-    find: jest.fn(() => Promise.resolve([...store.values()])),
-    findOne: jest.fn(({ where }: { where: { key: string } }) =>
+    find: vi.fn(() => Promise.resolve([...store.values()])),
+    findOne: vi.fn(({ where }: { where: { key: string } }) =>
       Promise.resolve(store.get(where.key) ?? null),
     ),
-    save: jest.fn((entity: AppSettings) => {
+    save: vi.fn((entity: AppSettings) => {
       const existing = store.get(entity.key);
       const saved = Object.assign(
         existing ?? new AppSettings(),
@@ -113,11 +111,11 @@ export const createConfigTestbed = (): ConfigTestbed => {
   };
 
   const sessionRepo = {
-    delete: jest.fn().mockResolvedValue({ affected: 2 }),
+    delete: vi.fn().mockResolvedValue({ affected: 2 }),
   };
 
   const emailService = {
-    loadSmtpSettings: jest.fn().mockResolvedValue({
+    loadSmtpSettings: vi.fn().mockResolvedValue({
       SMTP_ENABLED: false,
       SMTP_HOST: 'smtp.example.com',
       SMTP_PORT: 465,
@@ -131,29 +129,29 @@ export const createConfigTestbed = (): ConfigTestbed => {
   };
 
   const emailTemplateService = {
-    generateSMTPTestEmail: jest.fn().mockReturnValue('<p>test</p>'),
+    generateSMTPTestEmail: vi.fn().mockReturnValue('<p>test</p>'),
   };
 
   const plexConnectionService = {
-    testConnection: jest
+    testConnection: vi
       .fn()
       .mockResolvedValue({ success: true, message: 'Connected' }),
   };
 
   const timezoneService = {
-    getCurrentTimeInTimezone: jest
+    getCurrentTimeInTimezone: vi
       .fn()
       .mockReturnValue(new Date('2026-08-21T12:00:00Z')),
-    formatTimestamp: jest.fn().mockReturnValue('2026-08-21 12:00:00'),
+    formatTimestamp: vi.fn().mockReturnValue('2026-08-21 12:00:00'),
   };
 
   const databaseService = {
-    exportDatabase: jest.fn().mockResolvedValue('{"settings":[]}'),
-    resetDatabase: jest.fn().mockResolvedValue(undefined),
+    exportDatabase: vi.fn().mockResolvedValue('{"settings":[]}'),
+    resetDatabase: vi.fn().mockResolvedValue(undefined),
   };
 
   const databaseImportService = {
-    importDatabase: jest.fn().mockResolvedValue({
+    importDatabase: vi.fn().mockResolvedValue({
       imported: 5,
       skipped: 1,
       changedSettings: [],
@@ -161,10 +159,10 @@ export const createConfigTestbed = (): ConfigTestbed => {
   };
 
   const versionService = {
-    getCurrentAppVersion: jest.fn().mockReturnValue('1.3.5'),
-    compareVersions: jest.fn().mockReturnValue(0),
-    updateAppVersionIfNewer: jest.fn().mockResolvedValue(undefined),
-    getVersionInfo: jest.fn().mockReturnValue({
+    getCurrentAppVersion: vi.fn().mockReturnValue('1.3.5'),
+    compareVersions: vi.fn().mockReturnValue(0),
+    updateAppVersionIfNewer: vi.fn().mockResolvedValue(undefined),
+    getVersionInfo: vi.fn().mockReturnValue({
       version: '1.3.5',
       databaseVersion: '1.3.5',
       codeVersion: '1.3.5',
@@ -173,7 +171,7 @@ export const createConfigTestbed = (): ConfigTestbed => {
   };
 
   const appriseService = {
-    testAppriseConnection: jest
+    testAppriseConnection: vi
       .fn()
       .mockResolvedValue({ success: true, message: 'ok' }),
   };

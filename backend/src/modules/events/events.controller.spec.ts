@@ -5,13 +5,14 @@ import { EventsController } from '@/modules/events/events.controller';
 import { LiveEventsService } from '@/modules/events/live-events.service';
 import { ADMIN_ONLY_KEY } from '@/modules/auth/decorators/admin-only.decorator';
 import { PUBLIC_KEY } from '@/modules/auth/decorators/public.decorator';
+import type { Mock } from 'vitest';
 
 describe('EventsController', () => {
   let controller: EventsController;
-  let liveEvents: { register: jest.Mock };
+  let liveEvents: { register: Mock };
 
   beforeEach(async () => {
-    liveEvents = { register: jest.fn() };
+    liveEvents = { register: vi.fn() };
 
     const module = await Test.createTestingModule({
       controllers: [EventsController],

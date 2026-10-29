@@ -14,23 +14,23 @@
     "start:prod": "node dist/main",
     "pretty": "prettier --write \"./**/*.{js,jsx,mjs,cjs,ts,tsx,json}\"",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:cov": "jest --coverage",
-    "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:cov": "vitest run --coverage",
+    "test:debug": "vitest run --inspect-brk --no-file-parallelism",
     "lint:ci": "eslint \"{src,apps,libs,test}/**/*.ts\" --no-fix",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "migration:generate": "node -r ts-node/register -r tsconfig-paths/register node_modules/typeorm/cli.js migration:generate -d src/database/cli.data-source.ts"
   },
   "dependencies": {
-    "@nestjs/common": "^11.2.1",
-    "@nestjs/core": "^11.2.1",
-    "@nestjs/jwt": "^11.0.2",
-    "@nestjs/mapped-types": "^2.1.1",
-    "@nestjs/passport": "^11.0.5",
-    "@nestjs/platform-express": "^11.2.1",
-    "@nestjs/schedule": "^6.1.3",
-    "@nestjs/typeorm": "^11.0.3",
+    "@nestjs/common": "^12.3.2",
+    "@nestjs/core": "^12.3.2",
+    "@nestjs/jwt": "^12.0.3",
+    "@nestjs/mapped-types": "^12.0.0",
+    "@nestjs/passport": "^12.0.0",
+    "@nestjs/platform-express": "^12.3.2",
+    "@nestjs/schedule": "^12.0.2",
+    "@nestjs/typeorm": "^12.0.2",
     "@types/nodemailer": "^8.0.1",
     "bcrypt": "^6.0.0",
     "class-transformer": "^0.5.1",
@@ -51,79 +51,33 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.7",
     "@eslint/js": "^9.18.0",
-    "@nestjs/cli": "^11.0.24",
-    "@nestjs/schematics": "^11.1.0",
-    "@nestjs/testing": "^11.2.1",
+    "@nestjs/cli": "^12.0.11",
+    "@nestjs/schematics": "^12.0.12",
+    "@nestjs/testing": "^12.3.2",
     "@types/bcrypt": "^6.0.0",
     "@types/cookie-parser": "^1.4.10",
     "@types/express": "^5.0.6",
-    "@types/jest": "^30.0.0",
     "@types/linkify-it": "^5.0.0",
     "@types/markdown-it": "^14.2.0",
     "@types/mdurl": "^2.0.0",
     "@types/node": "^26.6.5",
     "@types/supertest": "^7.2.1",
+    "@vitest/coverage-v8": "^4.1.12",
     "eslint": "^9.39.5",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.7",
     "globals": "^17.13.0",
-    "jest": "^30.5.2",
     "prettier": "^3.9.10",
     "source-map-support": "^0.5.21",
     "supertest": "^7.3.1",
-    "ts-jest": "^29.4.15",
     "ts-loader": "^9.6.2",
     "ts-node": "^10.9.2",
     "tsc-alias": "^1.9.9",
     "tsconfig-paths": "^4.2.0",
-    "typescript": "^5.7.3",
-    "typescript-eslint": "^8.72.0"
-  },
-  "jest": {
-    "moduleFileExtensions": [
-      "js",
-      "json",
-      "ts"
-    ],
-    "rootDir": "src",
-    "testRegex": ".*\\.spec\\.ts$",
-    "moduleNameMapper": {
-      "^@/(.*)$": "<rootDir>/$1"
-    },
-    "transform": {
-      "^.+\\.(t|j)s$": "ts-jest"
-    },
-    "collectCoverageFrom": [
-      "**/*.ts",
-      "!**/*.spec.ts",
-      "!**/*.d.ts",
-      "!main.ts",
-      "!**/*.module.ts",
-      "!migrations/**",
-      "!database/cli.data-source.ts",
-      "!scripts/**",
-      "!test-setup.ts",
-      "!test-matchers.ts",
-      "!**/*.fixture.ts"
-    ],
-    "coverageDirectory": "../coverage",
-    "coverageReporters": [
-      "text-summary",
-      "lcov",
-      "json-summary"
-    ],
-    "coverageThreshold": {
-      "global": {
-        "statements": 98,
-        "branches": 90,
-        "functions": 98,
-        "lines": 98
-      }
-    },
-    "testEnvironment": "node",
-    "setupFilesAfterEnv": [
-      "<rootDir>/test-setup.ts"
-    ]
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.72.0",
+    "vite": "^8.3.5",
+    "vitest": "^4.1.12"
   },
   "overrides": {
     "tar": "^7.5.3"

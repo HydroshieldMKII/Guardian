@@ -2,7 +2,7 @@ import { QueryRunner } from 'typeorm';
 import { selectRows } from '@/database/migration-rows';
 
 const runnerReturning = (result: unknown) => {
-  const query = jest.fn().mockResolvedValue(result);
+  const query = vi.fn().mockResolvedValue(result);
   return { queryRunner: { query } as Pick<QueryRunner, 'query'>, query };
 };
 

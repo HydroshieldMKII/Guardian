@@ -11,26 +11,29 @@ import { SchedulerService } from '@/services/scheduler.service';
 import { DashboardService } from '@/modules/dashboard/dashboard.service';
 import { LiveEventsService } from '@/modules/events/live-events.service';
 import { PlexConfigurationError } from '@/modules/plex/services/plex-configuration-error';
+import type { Mock } from 'vitest';
 
 describe('SchedulerService', () => {
   let service: SchedulerService;
-  let plexService: { updateActiveSessions: jest.Mock };
-  let configService: Record<string, jest.Mock>;
-  let deviceTrackingService: { cleanupStaleSessionKeys: jest.Mock };
+  let plexService: { updateActiveSessions: Mock };
+  let configService: Record<string, Mock>;
+  let deviceTrackingService: { cleanupStaleSessionKeys: Mock };
   let deviceMaintenanceService: Record<
     'cleanupInactiveDevices' | 'enforceStrictModeOnPendingDevices',
-    jest.Mock
+    Mock
   >;
-  let plexUserSync: { syncUsersFromPlexTV: jest.Mock };
-  let authSessions: { cleanupExpiredSessions: jest.Mock };
-  let schedulerRegistry: Record<string, jest.Mock>;
-  let dashboardService: { getDashboardData: jest.Mock };
-  let liveEvents: { hasListeners: jest.Mock; broadcastDashboard: jest.Mock };
+  let plexUserSync: { syncUsersFromPlexTV: Mock };
+  let authSessions: { cleanupExpiredSessions: Mock };
+  let schedulerRegistry: Record<string, Mock>;
+  let dashboardService: { getDashboardData: Mock };
+  let liveEvents: { hasListeners: Mock; broadcastDashboard: Mock };
   let listeners: Map<string, Array<() => Promise<void>>>;
 
   const settings = new Map<string, unknown>();
 
-  const tick = (seconds = 10) => jest.advanceTimersByTimeAsync(seconds * 1000);
+  const tick = async (seconds = 10) => {
+    await vi.advanceTimersByTimeAsync(seconds * 1000);
+  };
 
   const pollsWithin = async (seconds: number) => {
     plexService.updateActiveSessions.mockClear();
@@ -39,7 +42,7 @@ describe('SchedulerService', () => {
   };
 
   beforeEach(async () => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     settings.clear();
     settings.set('PLEX_SERVER_IP', '10.0.0.5');
     settings.set('PLEX_SERVER_PORT', '32400');
@@ -48,48 +51,48 @@ describe('SchedulerService', () => {
     listeners = new Map();
 
     plexService = {
-      updateActiveSessions: jest.fn().mockResolvedValue(undefined),
+      updateActiveSessions: vi.fn().mockResolvedValue(undefined),
     };
 
     configService = {
-      getSetting: jest.fn((key: string) =>
+      getSetting: vi.fn((key: string) =>
         Promise.resolve(settings.get(key) ?? null),
       ),
-      addConfigChangeListener: jest.fn(
+      addConfigChangeListener: vi.fn(
         (key: string, callback: () => Promise<void>) => {
           listeners.set(key, [...(listeners.get(key) ?? []), callback]);
         },
       ),
     };
 
-    deviceTrackingService = { cleanupStaleSessionKeys: jest.fn() };
+    deviceTrackingService = { cleanupStaleSessionKeys: vi.fn() };
     deviceMaintenanceService = {
-      cleanupInactiveDevices: jest
+      cleanupInactiveDevices: vi
         .fn()
         .mockResolvedValue({ deletedCount: 0, deletedDevices: [] }),
-      enforceStrictModeOnPendingDevices: jest.fn().mockResolvedValue(0),
+      enforceStrictModeOnPendingDevices: vi.fn().mockResolvedValue(0),
     };
 
     plexUserSync = {
-      syncUsersFromPlexTV: jest
+      syncUsersFromPlexTV: vi
         .fn()
         .mockResolvedValue({ created: 1, updated: 2, errors: 0 }),
     };
 
-    authSessions = { cleanupExpiredSessions: jest.fn().mockResolvedValue(3) };
+    authSessions = { cleanupExpiredSessions: vi.fn().mockResolvedValue(3) };
 
     dashboardService = {
-      getDashboardData: jest.fn().mockResolvedValue({ stats: { total: 1 } }),
+      getDashboardData: vi.fn().mockResolvedValue({ stats: { total: 1 } }),
     };
     liveEvents = {
-      hasListeners: jest.fn().mockReturnValue(true),
-      broadcastDashboard: jest.fn(),
+      hasListeners: vi.fn().mockReturnValue(true),
+      broadcastDashboard: vi.fn(),
     };
 
     schedulerRegistry = {
-      doesExist: jest.fn().mockReturnValue(false),
-      addInterval: jest.fn(),
-      deleteInterval: jest.fn(),
+      doesExist: vi.fn().mockReturnValue(false),
+      addInterval: vi.fn(),
+      deleteInterval: vi.fn(),
     };
 
     const module = await Test.createTestingModule({
@@ -111,12 +114,12 @@ describe('SchedulerService', () => {
     }).compile();
 
     service = module.get(SchedulerService);
-    jest.useFakeTimers();
+    vi.useFakeTimers();
   });
 
   afterEach(() => {
-    jest.clearAllTimers();
-    jest.useRealTimers();
+    vi.clearAllTimers();
+    vi.useRealTimers();
   });
 
   describe('onModuleInit', () => {
@@ -301,8 +304,12 @@ describe('SchedulerService', () => {
     });
 
     it('logs an invalid Plex address as a warning without a stack', async () => {
-      const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
-      const error = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+      const warn = vi
+        .spyOn(Logger.prototype, 'warn')
+        .mockImplementation(() => undefined);
+      const error = vi
+        .spyOn(Logger.prototype, 'error')
+        .mockImplementation(() => undefined);
       plexService.updateActiveSessions.mockRejectedValue(
         new PlexConfigurationError('Invalid Plex server address or port.'),
       );
@@ -324,7 +331,9 @@ describe('SchedulerService', () => {
       plexService.updateActiveSessions.mockRejectedValue(
         new PlexConfigurationError('Missing required Plex configuration'),
       );
-      const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+      const warn = vi
+        .spyOn(Logger.prototype, 'warn')
+        .mockImplementation(() => undefined);
       await expect(service.onModuleInit()).resolves.toBeUndefined();
       expect(warn).not.toHaveBeenCalled();
       warn.mockRestore();

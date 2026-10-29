@@ -10,15 +10,16 @@ import { PlexClient } from '@/modules/plex/services/plex-client';
 import { NotificationOrchestratorService } from '@/modules/notifications/services/notification-orchestrator.service';
 import { ActiveSessionService } from '@/modules/sessions/services/active-session.service';
 import { anyDate, callArgs } from '@/test-matchers';
+import type { Mock } from 'vitest';
 
 describe('ActiveSessionService', () => {
   let service: ActiveSessionService;
-  let historyRepo: Record<string, jest.Mock>;
-  let deviceRepo: { findOne: jest.Mock };
-  let preferenceRepo: Record<string, jest.Mock>;
-  let deviceTrackingService: { clearSessionKey: jest.Mock };
-  let plexClient: { getServerIdentity: jest.Mock };
-  let orchestrator: { linkOrphanedNotifications: jest.Mock };
+  let historyRepo: Record<string, Mock>;
+  let deviceRepo: { findOne: Mock };
+  let preferenceRepo: Record<string, Mock>;
+  let deviceTrackingService: { clearSessionKey: Mock };
+  let plexClient: { getServerIdentity: Mock };
+  let orchestrator: { linkOrphanedNotifications: Mock };
 
   const plexSession = (overrides: Record<string, unknown> = {}) => ({
     sessionKey: 'sk-1',
@@ -59,33 +60,33 @@ describe('ActiveSessionService', () => {
 
   beforeEach(async () => {
     historyRepo = {
-      find: jest.fn().mockResolvedValue([]),
-      findOne: jest.fn().mockResolvedValue(null),
-      update: jest.fn().mockResolvedValue({ affected: 1 }),
-      create: jest.fn((entity: Partial<SessionHistory>) =>
+      find: vi.fn().mockResolvedValue([]),
+      findOne: vi.fn().mockResolvedValue(null),
+      update: vi.fn().mockResolvedValue({ affected: 1 }),
+      create: vi.fn((entity: Partial<SessionHistory>) =>
         Object.assign(new SessionHistory(), entity),
       ),
-      save: jest.fn((entity: SessionHistory) => Promise.resolve(entity)),
+      save: vi.fn((entity: SessionHistory) => Promise.resolve(entity)),
     };
 
-    deviceRepo = { findOne: jest.fn().mockResolvedValue({ id: 7 }) };
+    deviceRepo = { findOne: vi.fn().mockResolvedValue({ id: 7 }) };
 
     preferenceRepo = {
-      findOne: jest.fn().mockResolvedValue({ id: 3, userId: 'u1' }),
-      create: jest.fn((entity: Partial<UserPreference>) =>
+      findOne: vi.fn().mockResolvedValue({ id: 3, userId: 'u1' }),
+      create: vi.fn((entity: Partial<UserPreference>) =>
         Object.assign(new UserPreference(), entity),
       ),
-      save: jest.fn((entity: UserPreference) => Promise.resolve(entity)),
+      save: vi.fn((entity: UserPreference) => Promise.resolve(entity)),
     };
 
     deviceTrackingService = {
-      clearSessionKey: jest.fn().mockResolvedValue(undefined),
+      clearSessionKey: vi.fn().mockResolvedValue(undefined),
     };
     plexClient = {
-      getServerIdentity: jest.fn().mockResolvedValue('server-uuid'),
+      getServerIdentity: vi.fn().mockResolvedValue('server-uuid'),
     };
     orchestrator = {
-      linkOrphanedNotifications: jest.fn().mockResolvedValue(undefined),
+      linkOrphanedNotifications: vi.fn().mockResolvedValue(undefined),
     };
 
     const module = await Test.createTestingModule({
@@ -513,7 +514,7 @@ describe('ActiveSessionService on a database', () => {
         },
         {
           provide: DeviceTrackingService,
-          useValue: { clearSessionKey: jest.fn() },
+          useValue: { clearSessionKey: vi.fn() },
         },
         { provide: PlexClient, useValue: {} },
         { provide: NotificationOrchestratorService, useValue: {} },

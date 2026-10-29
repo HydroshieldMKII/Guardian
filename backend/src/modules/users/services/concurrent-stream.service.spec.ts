@@ -6,6 +6,7 @@ import { ConfigService } from '@/modules/config/services/config.service';
 import { TemporaryAccessService } from '@/modules/devices/services/temporary-access.service';
 import { PlexSession, PlexSessionsResponse } from '@/types/plex.types';
 import { ConcurrentStreamService } from '@/modules/users/services/concurrent-stream.service';
+import type { Mock } from 'vitest';
 
 const device = (overrides: Partial<UserDevice> = {}): UserDevice =>
   Object.assign(new UserDevice(), {
@@ -28,10 +29,10 @@ const sessionsResponse = (sessions: PlexSession[]): PlexSessionsResponse => ({
 
 describe('ConcurrentStreamService', () => {
   let service: ConcurrentStreamService;
-  let userDeviceRepository: { find: jest.Mock };
-  let userPreferenceRepository: { findOne: jest.Mock };
-  let configService: { getSetting: jest.Mock };
-  let temporaryAccessService: { isTemporaryAccessValid: jest.Mock };
+  let userDeviceRepository: { find: Mock };
+  let userPreferenceRepository: { findOne: Mock };
+  let configService: { getSetting: Mock };
+  let temporaryAccessService: { isTemporaryAccessValid: Mock };
 
   const settings: Record<string, unknown> = {
     CONCURRENT_STREAM_LIMIT: 0,
@@ -43,19 +44,19 @@ describe('ConcurrentStreamService', () => {
     settings.CONCURRENT_LIMIT_INCLUDE_TEMP_ACCESS = false;
 
     userDeviceRepository = {
-      find: jest.fn().mockResolvedValue([device()]),
+      find: vi.fn().mockResolvedValue([device()]),
     };
 
     userPreferenceRepository = {
-      findOne: jest.fn().mockResolvedValue(null),
+      findOne: vi.fn().mockResolvedValue(null),
     };
 
     configService = {
-      getSetting: jest.fn((key: string) => Promise.resolve(settings[key])),
+      getSetting: vi.fn((key: string) => Promise.resolve(settings[key])),
     };
 
     temporaryAccessService = {
-      isTemporaryAccessValid: jest.fn().mockResolvedValue(false),
+      isTemporaryAccessValid: vi.fn().mockResolvedValue(false),
     };
 
     const module = await Test.createTestingModule({

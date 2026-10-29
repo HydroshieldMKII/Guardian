@@ -12,6 +12,7 @@ import {
   CreatePresetDto,
   TimeRuleService,
 } from '@/modules/users/services/time-rule.service';
+import type { Mock } from 'vitest';
 
 const rule = (overrides: Partial<UserTimeRule> = {}): UserTimeRule =>
   Object.assign(new UserTimeRule(), {
@@ -29,41 +30,41 @@ describe('TimeRuleService', () => {
   let service: TimeRuleService;
   let repository: Record<
     'create' | 'save' | 'find' | 'findOne' | 'remove',
-    jest.Mock
+    Mock
   >;
-  let configService: { getCurrentTimeInTimezone: jest.Mock };
-  let transaction: jest.Mock;
+  let configService: { getCurrentTimeInTimezone: Mock };
+  let transaction: Mock;
   let presetManager: {
-    delete: jest.Mock;
-    create: jest.Mock;
-    save: jest.Mock;
+    delete: Mock;
+    create: Mock;
+    save: Mock;
   };
 
   beforeEach(async () => {
     let nextId = 100;
     presetManager = {
-      delete: jest.fn().mockResolvedValue({ affected: 0 }),
-      create: jest.fn((_entity, value: Partial<UserTimeRule>) => rule(value)),
-      save: jest.fn((value: UserTimeRule) =>
+      delete: vi.fn().mockResolvedValue({ affected: 0 }),
+      create: vi.fn((_entity, value: Partial<UserTimeRule>) => rule(value)),
+      save: vi.fn((value: UserTimeRule) =>
         Promise.resolve(Object.assign(value, { id: nextId++ })),
       ),
     };
-    transaction = jest.fn(
+    transaction = vi.fn(
       (work: (manager: typeof presetManager) => Promise<unknown>) =>
         work(presetManager),
     );
 
     repository = {
-      create: jest.fn((value: Partial<UserTimeRule>) => rule(value)),
-      save: jest.fn((value: UserTimeRule) => Promise.resolve(value)),
-      find: jest.fn().mockResolvedValue([]),
-      findOne: jest.fn().mockResolvedValue(null),
-      remove: jest.fn().mockResolvedValue(undefined),
+      create: vi.fn((value: Partial<UserTimeRule>) => rule(value)),
+      save: vi.fn((value: UserTimeRule) => Promise.resolve(value)),
+      find: vi.fn().mockResolvedValue([]),
+      findOne: vi.fn().mockResolvedValue(null),
+      remove: vi.fn().mockResolvedValue(undefined),
     };
 
     const dataSource = { manager: { transaction } };
     configService = {
-      getCurrentTimeInTimezone: jest
+      getCurrentTimeInTimezone: vi
         .fn()
         .mockResolvedValue(new Date('2026-01-05T09:00:00Z')),
     };

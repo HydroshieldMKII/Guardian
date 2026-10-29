@@ -11,21 +11,22 @@ import {
   SessionHistoryQuery,
   SessionHistoryService,
 } from '@/modules/sessions/services/session-history.service';
+import type { Mock } from 'vitest';
 
 describe('SessionHistoryService', () => {
   let service: SessionHistoryService;
-  let historyRepo: Record<string, jest.Mock>;
-  let builders: Record<string, jest.Mock>[];
+  let historyRepo: Record<string, Mock>;
+  let builders: Record<string, Mock>[];
 
   const newBuilder = () => {
-    const builder: Record<string, jest.Mock> = {
-      leftJoinAndSelect: jest.fn(),
-      where: jest.fn(),
-      andWhere: jest.fn(),
-      orderBy: jest.fn(),
-      skip: jest.fn(),
-      take: jest.fn(),
-      getMany: jest.fn().mockResolvedValue([]),
+    const builder: Record<string, Mock> = {
+      leftJoinAndSelect: vi.fn(),
+      where: vi.fn(),
+      andWhere: vi.fn(),
+      orderBy: vi.fn(),
+      skip: vi.fn(),
+      take: vi.fn(),
+      getMany: vi.fn().mockResolvedValue([]),
     };
     for (const key of [
       'leftJoinAndSelect',
@@ -44,8 +45,8 @@ describe('SessionHistoryService', () => {
   beforeEach(async () => {
     builders = [];
     historyRepo = {
-      createQueryBuilder: jest.fn(() => newBuilder()),
-      delete: jest.fn().mockResolvedValue({ affected: 1 }),
+      createQueryBuilder: vi.fn(() => newBuilder()),
+      delete: vi.fn().mockResolvedValue({ affected: 1 }),
     };
 
     const module = await Test.createTestingModule({

@@ -182,22 +182,22 @@ describe('ConfigService', () => {
 
   describe('config change listeners', () => {
     it('does nothing when removing a listener that was never added', () => {
-      const listener = jest.fn();
+      const listener = vi.fn();
       service.addConfigChangeListener('TIMEZONE', listener);
 
       expect(() =>
-        service.removeConfigChangeListener('TIMEZONE', jest.fn()),
+        service.removeConfigChangeListener('TIMEZONE', vi.fn()),
       ).not.toThrow();
     });
 
     it('does nothing when removing from a key with no listeners', () => {
       expect(() =>
-        service.removeConfigChangeListener('DEFAULT_PAGE', jest.fn()),
+        service.removeConfigChangeListener('DEFAULT_PAGE', vi.fn()),
       ).not.toThrow();
     });
 
     it('removes a listener that was added', async () => {
-      const listener = jest.fn();
+      const listener = vi.fn();
       service.addConfigChangeListener('TIMEZONE', listener);
       service.removeConfigChangeListener('TIMEZONE', listener);
 
@@ -340,7 +340,7 @@ describe('ConfigService', () => {
 
   describe('settings written outside the settings page', () => {
     it('reloads the stored values and notifies their listeners', async () => {
-      const listener = jest.fn();
+      const listener = vi.fn();
       service.addConfigChangeListener('PLEXGUARD_REFRESH_INTERVAL', listener);
       store.set(
         'PLEXGUARD_REFRESH_INTERVAL',
@@ -393,7 +393,7 @@ describe('ConfigService', () => {
 
   describe('change listeners', () => {
     it('calls a listener registered for that key', async () => {
-      const listener = jest.fn();
+      const listener = vi.fn();
       service.addConfigChangeListener('DEFAULT_PAGE', listener);
 
       await service.updateSetting('DEFAULT_PAGE', 'streams');
@@ -401,8 +401,8 @@ describe('ConfigService', () => {
     });
 
     it('calls every listener registered for the key', async () => {
-      const first = jest.fn();
-      const second = jest.fn();
+      const first = vi.fn();
+      const second = vi.fn();
       service.addConfigChangeListener('DEFAULT_PAGE', first);
       service.addConfigChangeListener('DEFAULT_PAGE', second);
 
@@ -412,7 +412,7 @@ describe('ConfigService', () => {
     });
 
     it('ignores listeners registered for a different key', async () => {
-      const listener = jest.fn();
+      const listener = vi.fn();
       service.addConfigChangeListener('TIMEZONE', listener);
 
       await service.updateSetting('DEFAULT_PAGE', 'streams');
@@ -420,7 +420,7 @@ describe('ConfigService', () => {
     });
 
     it('stops calling a removed listener', async () => {
-      const listener = jest.fn();
+      const listener = vi.fn();
       service.addConfigChangeListener('DEFAULT_PAGE', listener);
       service.removeConfigChangeListener('DEFAULT_PAGE', listener);
 
@@ -430,12 +430,12 @@ describe('ConfigService', () => {
 
     it('tolerates removing a listener that was never added', () => {
       expect(() =>
-        service.removeConfigChangeListener('DEFAULT_PAGE', jest.fn()),
+        service.removeConfigChangeListener('DEFAULT_PAGE', vi.fn()),
       ).not.toThrow();
     });
 
     it('keeps notifying the others when one listener throws', async () => {
-      const survivor = jest.fn();
+      const survivor = vi.fn();
       service.addConfigChangeListener('DEFAULT_PAGE', () => {
         throw new Error('listener blew up');
       });
@@ -591,7 +591,7 @@ describe('ConfigService', () => {
     });
 
     it('does not notify listeners or cache anything from a rolled back batch', async () => {
-      const listener = jest.fn();
+      const listener = vi.fn();
       service.addConfigChangeListener('MSG_DEVICE_PENDING', listener);
       store.delete('CUSTOM_PLEX_URL');
 

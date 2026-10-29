@@ -105,7 +105,7 @@ describe('DatabaseMaintenanceService', () => {
     });
 
     it('notifies the listeners of every setting the import changed', async () => {
-      const listener = jest.fn();
+      const listener = vi.fn();
       const module = await testbed.build();
       const configService = module.get(ConfigService);
       const maintenance = module.get(DatabaseMaintenanceService);
@@ -140,7 +140,7 @@ describe('DatabaseMaintenanceService', () => {
 
     it('notifies listeners again when a reset restores the defaults', async () => {
       const module = await testbed.build();
-      const listener = jest.fn();
+      const listener = vi.fn();
       module
         .get(ConfigService)
         .addConfigChangeListener('PLEXGUARD_REFRESH_INTERVAL', listener);

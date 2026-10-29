@@ -3,6 +3,7 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { UserPreference } from '@/entities/user-preference.entity';
 import { PlexClient } from '@/modules/plex/services/plex-client';
 import { PlexUserSyncService } from '@/modules/users/services/plex-user-sync.service';
+import type { Mock } from 'vitest';
 
 const preference = (overrides: Partial<UserPreference> = {}): UserPreference =>
   Object.assign(new UserPreference(), {
@@ -15,15 +16,15 @@ const preference = (overrides: Partial<UserPreference> = {}): UserPreference =>
 
 describe('PlexUserSyncService', () => {
   let service: PlexUserSyncService;
-  let preferenceRepository: { findOne: jest.Mock; upsert: jest.Mock };
-  let plexClient: { getPlexUsers: jest.Mock };
+  let preferenceRepository: { findOne: Mock; upsert: Mock };
+  let plexClient: { getPlexUsers: Mock };
 
   beforeEach(async () => {
     preferenceRepository = {
-      findOne: jest.fn().mockResolvedValue(null),
-      upsert: jest.fn().mockResolvedValue({ identifiers: [] }),
+      findOne: vi.fn().mockResolvedValue(null),
+      upsert: vi.fn().mockResolvedValue({ identifiers: [] }),
     };
-    plexClient = { getPlexUsers: jest.fn().mockResolvedValue(null) };
+    plexClient = { getPlexUsers: vi.fn().mockResolvedValue(null) };
 
     const module = await Test.createTestingModule({
       providers: [

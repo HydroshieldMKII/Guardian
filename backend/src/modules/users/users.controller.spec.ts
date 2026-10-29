@@ -2,29 +2,30 @@ import { Test } from '@nestjs/testing';
 import { UsersController } from '@/modules/users/users.controller';
 import { UsersService } from '@/modules/users/services/users.service';
 import { ConcurrentStreamService } from '@/modules/users/services/concurrent-stream.service';
+import type { Mock } from 'vitest';
 
 describe('UsersController', () => {
   let controller: UsersController;
-  let usersService: Record<string, jest.Mock>;
-  let concurrentStreamService: { getEffectiveLimit: jest.Mock };
+  let usersService: Record<string, Mock>;
+  let concurrentStreamService: { getEffectiveLimit: Mock };
 
   const preference = { userId: 'u1', hidden: false, concurrentStreamLimit: 3 };
 
   beforeEach(async () => {
     usersService = {
-      getAllUsers: jest.fn().mockResolvedValue([{ id: 'u1' }]),
-      getHiddenUsers: jest.fn().mockResolvedValue([preference]),
-      getUserPreference: jest.fn().mockResolvedValue(preference),
-      updateUserPreference: jest.fn().mockResolvedValue(preference),
-      hideUser: jest.fn().mockResolvedValue({ ...preference, hidden: true }),
-      showUser: jest.fn().mockResolvedValue(preference),
-      toggleUserVisibility: jest.fn().mockResolvedValue(preference),
-      updateUserIPPolicy: jest.fn().mockResolvedValue(preference),
-      updateConcurrentStreamLimit: jest.fn().mockResolvedValue(preference),
+      getAllUsers: vi.fn().mockResolvedValue([{ id: 'u1' }]),
+      getHiddenUsers: vi.fn().mockResolvedValue([preference]),
+      getUserPreference: vi.fn().mockResolvedValue(preference),
+      updateUserPreference: vi.fn().mockResolvedValue(preference),
+      hideUser: vi.fn().mockResolvedValue({ ...preference, hidden: true }),
+      showUser: vi.fn().mockResolvedValue(preference),
+      toggleUserVisibility: vi.fn().mockResolvedValue(preference),
+      updateUserIPPolicy: vi.fn().mockResolvedValue(preference),
+      updateConcurrentStreamLimit: vi.fn().mockResolvedValue(preference),
     };
 
     concurrentStreamService = {
-      getEffectiveLimit: jest.fn().mockResolvedValue(3),
+      getEffectiveLimit: vi.fn().mockResolvedValue(3),
     };
 
     const module = await Test.createTestingModule({

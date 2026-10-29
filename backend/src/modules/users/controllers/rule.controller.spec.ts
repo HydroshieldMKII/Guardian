@@ -2,25 +2,26 @@ import { HttpStatus, NotFoundException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { RuleController } from '@/modules/users/controllers/rule.controller';
 import { TimeRuleService } from '@/modules/users/services/time-rule.service';
+import type { Mock } from 'vitest';
 
 describe('RuleController', () => {
   let controller: RuleController;
-  let timeRuleService: Record<string, jest.Mock>;
+  let timeRuleService: Record<string, Mock>;
 
   const rule = { id: 1, userId: 'u1', enabled: true };
 
   beforeEach(async () => {
     timeRuleService = {
-      getAllTimeRules: jest.fn().mockResolvedValue([rule]),
-      getTimeRules: jest.fn().mockResolvedValue([rule]),
-      createTimeRule: jest.fn().mockResolvedValue(rule),
-      updateTimeRule: jest.fn().mockResolvedValue(rule),
-      toggleTimeRule: jest.fn().mockResolvedValue({ ...rule, enabled: false }),
-      deleteTimeRule: jest.fn().mockResolvedValue(undefined),
-      checkStreamingAllowed: jest
+      getAllTimeRules: vi.fn().mockResolvedValue([rule]),
+      getTimeRules: vi.fn().mockResolvedValue([rule]),
+      createTimeRule: vi.fn().mockResolvedValue(rule),
+      updateTimeRule: vi.fn().mockResolvedValue(rule),
+      toggleTimeRule: vi.fn().mockResolvedValue({ ...rule, enabled: false }),
+      deleteTimeRule: vi.fn().mockResolvedValue(undefined),
+      checkStreamingAllowed: vi
         .fn()
         .mockResolvedValue({ allowed: true, reason: 'no rules' }),
-      createPreset: jest.fn().mockResolvedValue([rule]),
+      createPreset: vi.fn().mockResolvedValue([rule]),
     };
 
     const module = await Test.createTestingModule({

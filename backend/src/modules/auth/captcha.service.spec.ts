@@ -1,14 +1,15 @@
 import { Test } from '@nestjs/testing';
 import { ConfigService } from '@/modules/config/services/config.service';
 import { CaptchaService } from '@/modules/auth/captcha.service';
+import type { Mock } from 'vitest';
 
 describe('CaptchaService', () => {
   let service: CaptchaService;
-  let configService: { getSetting: jest.Mock };
-  const fetchMock = jest.fn();
+  let configService: { getSetting: Mock };
+  const fetchMock = vi.fn();
 
   beforeEach(async () => {
-    configService = { getSetting: jest.fn().mockResolvedValue('  secret  ') };
+    configService = { getSetting: vi.fn().mockResolvedValue('  secret  ') };
     globalThis.fetch = fetchMock;
     fetchMock.mockReset();
     fetchMock.mockImplementation(async () => ({

@@ -5,10 +5,11 @@ import { AdminUser } from '@/entities/admin-user.entity';
 import { UserPortalController } from '@/modules/user-portal/user-portal.controller';
 import { UserPortalService } from '@/modules/user-portal/services/user-portal.service';
 import { AuthGuard } from '@/modules/auth/guards/auth.guard';
+import type { Mock } from 'vitest';
 
 describe('UserPortalController', () => {
   let controller: UserPortalController;
-  let userPortalService: Record<string, jest.Mock>;
+  let userPortalService: Record<string, Mock>;
 
   const requestFor = (user: Request['user']) => {
     const stub: Pick<Request, 'user'> = { user };
@@ -43,10 +44,10 @@ describe('UserPortalController', () => {
 
   beforeEach(async () => {
     userPortalService = {
-      getUserDevices: jest.fn().mockResolvedValue([{ id: 1 }]),
-      getUserRules: jest.fn().mockResolvedValue({ networkPolicy: 'both' }),
-      requestDeviceApproval: jest.fn().mockResolvedValue(undefined),
-      getPortalSettings: jest
+      getUserDevices: vi.fn().mockResolvedValue([{ id: 1 }]),
+      getUserRules: vi.fn().mockResolvedValue({ networkPolicy: 'both' }),
+      requestDeviceApproval: vi.fn().mockResolvedValue(undefined),
+      getPortalSettings: vi
         .fn()
         .mockResolvedValue({ showRules: true, allowRejectedRequests: true }),
     };

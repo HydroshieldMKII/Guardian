@@ -3,17 +3,18 @@ import type { Response } from 'express';
 import { PlexController } from '@/modules/plex/controllers/plex.controller';
 import { PlexClient } from '@/modules/plex/services/plex-client';
 import { PlexService } from '@/modules/plex/services/plex.service';
+import type { Mock } from 'vitest';
 
 describe('PlexController', () => {
   let controller: PlexController;
-  let plexClient: { requestMedia: jest.Mock };
-  let plexService: { getPlexWebUrl: jest.Mock };
+  let plexClient: { requestMedia: Mock };
+  let plexService: { getPlexWebUrl: Mock };
 
   const responseStub = () => {
-    const json = jest.fn();
-    const status = jest.fn().mockReturnValue({ json });
-    const setHeader = jest.fn();
-    const send = jest.fn();
+    const json = vi.fn();
+    const status = vi.fn().mockReturnValue({ json });
+    const setHeader = vi.fn();
+    const send = vi.fn();
     const stub: Pick<Response, 'status' | 'setHeader' | 'send'> = {
       status,
       setHeader,
@@ -24,10 +25,10 @@ describe('PlexController', () => {
 
   beforeEach(async () => {
     plexClient = {
-      requestMedia: jest.fn().mockResolvedValue(Buffer.from('image-bytes')),
+      requestMedia: vi.fn().mockResolvedValue(Buffer.from('image-bytes')),
     };
     plexService = {
-      getPlexWebUrl: jest.fn().mockResolvedValue('https://app.plex.tv'),
+      getPlexWebUrl: vi.fn().mockResolvedValue('https://app.plex.tv'),
     };
 
     const module = await Test.createTestingModule({

@@ -7,20 +7,21 @@ import {
 } from '@nestjs/common';
 import { GlobalExceptionFilter } from '@/filters/global-exception.filter';
 import { callArgs } from '@/test-matchers';
+import type { Mock } from 'vitest';
 
 describe('GlobalExceptionFilter', () => {
   let filter: GlobalExceptionFilter;
-  let status: jest.Mock;
-  let json: jest.Mock;
+  let status: Mock;
+  let json: Mock;
   let host: ArgumentsHost;
 
   beforeEach(() => {
-    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
-    jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
 
     filter = new GlobalExceptionFilter();
-    json = jest.fn();
-    status = jest.fn().mockReturnValue({ json });
+    json = vi.fn();
+    status = vi.fn().mockReturnValue({ json });
 
     host = {
       switchToHttp: () => ({
@@ -31,7 +32,7 @@ describe('GlobalExceptionFilter', () => {
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   const captured = (): Record<string, unknown> =>
@@ -93,14 +94,14 @@ describe('GlobalExceptionFilter', () => {
   });
 
   it('logs a server failure as an error', () => {
-    const log = jest.spyOn(Logger.prototype, 'error');
+    const log = vi.spyOn(Logger.prototype, 'error');
     filter.catch(new Error('boom'), host);
     expect(log).toHaveBeenCalled();
   });
 
   it('logs a client error as a warning', () => {
-    const error = jest.spyOn(Logger.prototype, 'error');
-    const warn = jest.spyOn(Logger.prototype, 'warn');
+    const error = vi.spyOn(Logger.prototype, 'error');
+    const warn = vi.spyOn(Logger.prototype, 'warn');
     filter.catch(new BadRequestException('Validation failed'), host);
     expect(warn).toHaveBeenCalled();
     expect(error).not.toHaveBeenCalled();

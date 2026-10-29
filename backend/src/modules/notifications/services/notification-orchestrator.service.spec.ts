@@ -7,6 +7,7 @@ import {
   NotificationOrchestratorService,
   StreamBlockedNotificationData,
 } from '@/modules/notifications/services/notification-orchestrator.service';
+import type { Mock } from 'vitest';
 
 const history = (overrides: Partial<SessionHistory> = {}): SessionHistory =>
   Object.assign(new SessionHistory(), {
@@ -18,30 +19,30 @@ const history = (overrides: Partial<SessionHistory> = {}): SessionHistory =>
 
 describe('NotificationOrchestratorService', () => {
   let service: NotificationOrchestratorService;
-  let sessionHistoryRepository: { findOne: jest.Mock; save: jest.Mock };
+  let sessionHistoryRepository: { findOne: Mock; save: Mock };
   let notificationDispatch: {
-    createNewDeviceNotification: jest.Mock;
-    createStreamBlockedNotification: jest.Mock;
-    createLocationChangeNotification: jest.Mock;
+    createNewDeviceNotification: Mock;
+    createStreamBlockedNotification: Mock;
+    createLocationChangeNotification: Mock;
   };
-  let notificationsService: { linkNotificationToSessionHistory: jest.Mock };
+  let notificationsService: { linkNotificationToSessionHistory: Mock };
 
   beforeEach(async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
 
     sessionHistoryRepository = {
-      findOne: jest.fn().mockResolvedValue(null),
-      save: jest.fn((value: SessionHistory) => Promise.resolve(value)),
+      findOne: vi.fn().mockResolvedValue(null),
+      save: vi.fn((value: SessionHistory) => Promise.resolve(value)),
     };
 
     notificationDispatch = {
-      createNewDeviceNotification: jest.fn().mockResolvedValue({ id: 1 }),
-      createStreamBlockedNotification: jest.fn().mockResolvedValue({ id: 2 }),
-      createLocationChangeNotification: jest.fn().mockResolvedValue({ id: 3 }),
+      createNewDeviceNotification: vi.fn().mockResolvedValue({ id: 1 }),
+      createStreamBlockedNotification: vi.fn().mockResolvedValue({ id: 2 }),
+      createLocationChangeNotification: vi.fn().mockResolvedValue({ id: 3 }),
     };
 
     notificationsService = {
-      linkNotificationToSessionHistory: jest.fn().mockResolvedValue(undefined),
+      linkNotificationToSessionHistory: vi.fn().mockResolvedValue(undefined),
     };
 
     const module = await Test.createTestingModule({
@@ -63,7 +64,7 @@ describe('NotificationOrchestratorService', () => {
   });
 
   afterEach(() => {
-    jest.useRealTimers();
+    vi.useRealTimers();
   });
 
   describe('notifyNewDevice', () => {
@@ -189,7 +190,7 @@ describe('NotificationOrchestratorService', () => {
         ...data,
         sessionKey: 'session-1',
       });
-      await jest.advanceTimersByTimeAsync(1000);
+      await vi.advanceTimersByTimeAsync(1000);
       await pending;
 
       expect(sessionHistoryRepository.findOne).toHaveBeenCalledTimes(2);
@@ -205,7 +206,7 @@ describe('NotificationOrchestratorService', () => {
         ...data,
         sessionKey: 'session-1',
       });
-      await jest.advanceTimersByTimeAsync(1000);
+      await vi.advanceTimersByTimeAsync(1000);
       await pending;
 
       expect(

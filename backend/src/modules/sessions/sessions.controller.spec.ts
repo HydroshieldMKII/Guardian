@@ -3,21 +3,22 @@ import { Test } from '@nestjs/testing';
 import { SessionsController } from '@/modules/sessions/sessions.controller';
 import { ActiveSessionService } from '@/modules/sessions/services/active-session.service';
 import { SessionHistoryService } from '@/modules/sessions/services/session-history.service';
+import type { Mock } from 'vitest';
 
 describe('SessionsController', () => {
   let controller: SessionsController;
-  let activeSessionService: Record<string, jest.Mock>;
-  let sessionHistoryService: Record<string, jest.Mock>;
+  let activeSessionService: Record<string, Mock>;
+  let sessionHistoryService: Record<string, Mock>;
 
   beforeEach(async () => {
     activeSessionService = {
-      getActiveSessionsFormatted: jest
+      getActiveSessionsFormatted: vi
         .fn()
         .mockResolvedValue({ MediaContainer: { size: 0 } }),
     };
     sessionHistoryService = {
-      getUserSessionHistory: jest.fn().mockResolvedValue([{ id: 1 }]),
-      deleteSessionHistory: jest.fn().mockResolvedValue(undefined),
+      getUserSessionHistory: vi.fn().mockResolvedValue([{ id: 1 }]),
+      deleteSessionHistory: vi.fn().mockResolvedValue(undefined),
     };
 
     const module = await Test.createTestingModule({

@@ -14,9 +14,10 @@ type ResponseListener = (
   res: EventEmitter & { statusCode: number | undefined },
 ) => void;
 
-const mockHttpsRequest = jest.fn<unknown, [RequestOptions, ResponseListener]>();
+const mockHttpsRequest =
+  vi.fn<(...args: [RequestOptions, ResponseListener]) => unknown>();
 
-jest.mock('https', () => ({
+vi.mock('https', () => ({
   request: (options: RequestOptions, callback: ResponseListener) =>
     mockHttpsRequest(options, callback),
 }));
@@ -59,7 +60,7 @@ describe('PlexOAuthService', () => {
   });
 
   beforeEach(async () => {
-    jest.useFakeTimers({ doNotFake: ['nextTick'] });
+    vi.useFakeTimers();
     replies = [];
     sent = [];
 
@@ -83,7 +84,7 @@ describe('PlexOAuthService', () => {
           record.body += chunk;
           return true;
         },
-        destroy: jest.fn(),
+        destroy: vi.fn(),
         end() {
           process.nextTick(() => {
             const reply = replies.shift() ?? { statusCode: 200, body: '{}' };
@@ -125,7 +126,7 @@ describe('PlexOAuthService', () => {
   });
 
   afterEach(() => {
-    jest.useRealTimers();
+    vi.useRealTimers();
   });
 
   const createPin = async () => {
@@ -419,7 +420,7 @@ describe('PlexOAuthService', () => {
     it('forgets a pin that has aged past ten minutes', async () => {
       await createPin();
 
-      jest.advanceTimersByTime(16 * 60 * 1000);
+      vi.advanceTimersByTime(16 * 60 * 1000);
 
       await expect(service.checkPlexPin('client-1')).rejects.toThrow(
         'No pending authentication found',
@@ -429,7 +430,7 @@ describe('PlexOAuthService', () => {
     it('keeps a fresh, unexpired pin', async () => {
       await createPin();
 
-      jest.advanceTimersByTime(5 * 60 * 1000);
+      vi.advanceTimersByTime(5 * 60 * 1000);
       respondWith({ statusCode: 200, body: JSON.stringify({}) });
 
       await expect(service.checkPlexPin('client-1')).resolves.toBe(false);

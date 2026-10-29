@@ -127,25 +127,25 @@ describe('VersionService', () => {
 
   describe('updateAppVersionIfNewer', () => {
     it('writes the new version when the code is ahead', async () => {
-      const callback = jest.fn().mockResolvedValue(undefined);
+      const callback = vi.fn().mockResolvedValue(undefined);
       await service.updateAppVersionIfNewer(bump(current, -1), callback);
       expect(callback).toHaveBeenCalledWith(current);
     });
 
     it('does nothing when the versions match', async () => {
-      const callback = jest.fn().mockResolvedValue(undefined);
+      const callback = vi.fn().mockResolvedValue(undefined);
       await service.updateAppVersionIfNewer(current, callback);
       expect(callback).not.toHaveBeenCalled();
     });
 
     it('does nothing when the database is ahead', async () => {
-      const callback = jest.fn().mockResolvedValue(undefined);
+      const callback = vi.fn().mockResolvedValue(undefined);
       await service.updateAppVersionIfNewer(bump(current, 1), callback);
       expect(callback).not.toHaveBeenCalled();
     });
 
     it('swallows a failing callback', async () => {
-      const callback = jest.fn().mockRejectedValue(new Error('db down'));
+      const callback = vi.fn().mockRejectedValue(new Error('db down'));
       await expect(
         service.updateAppVersionIfNewer(bump(current, -1), callback),
       ).resolves.toBeUndefined();
