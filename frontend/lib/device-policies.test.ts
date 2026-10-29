@@ -9,7 +9,6 @@ import {
   countWaitingDevices,
   devicePolicies,
   devicePolicyBadges,
-  groupPolicyBadges,
   hasAllowList,
   hasIPPolicy,
   hasTemporaryAccess,
@@ -356,96 +355,6 @@ describe("devicePolicyBadges", () => {
     for (const badge of badges) {
       expect(badge.hint.length).toBeGreaterThan(0);
     }
-  });
-});
-
-describe("groupPolicyBadges", () => {
-  it("raises a badge that any one device earns", () => {
-    const badges = groupPolicyBadges(
-      [device({ id: 1 }), device({ id: 2, temporaryAccessUntil: inHours(1) })],
-      preference(),
-      [],
-    );
-
-    expect(badges.map((badge) => badge.label)).toEqual(["Temporary access"]);
-  });
-
-  it("shows each badge once however many devices earn it", () => {
-    const badges = groupPolicyBadges(
-      [
-        device({ id: 1, temporaryAccessUntil: inHours(1) }),
-        device({ id: 2, temporaryAccessUntil: inHours(3) }),
-      ],
-      preference({ networkPolicy: "lan" }),
-      [rule()],
-    );
-
-    expect(badges.map((badge) => badge.label)).toEqual([
-      "Temporary access",
-      "Time schedule",
-      "Network access",
-    ]);
-  });
-
-  it("speaks for the whole group rather than one device", () => {
-    const [badge] = groupPolicyBadges(
-      [device({ temporaryAccessUntil: inHours(2) })],
-      preference(),
-      [],
-    );
-
-    expect(badge.label).toBe("Temporary access");
-    expect(badge.hint).toBe("Temporary access on their only device");
-  });
-
-  it("counts how many devices each badge covers", () => {
-    const badges = groupPolicyBadges(
-      [
-        device({ id: 1, temporaryAccessUntil: inHours(1) }),
-        device({ id: 2, deviceIdentifier: "d-2" }),
-        device({ id: 3, deviceIdentifier: "d-3" }),
-      ],
-      preference({ networkPolicy: "lan" }),
-      [rule()],
-    );
-
-    expect(badges.map((badge) => badge.hint)).toEqual([
-      "Temporary access on 1 of 3 devices",
-      "Time schedule on all 3 devices",
-      "Network access rules on all 3 devices",
-    ]);
-  });
-
-  it("leaves Plexamp devices out of the covered count", () => {
-    const [badge] = groupPolicyBadges(
-      [
-        device({ id: 1 }),
-        device({ id: 2, deviceIdentifier: "d-2", deviceProduct: "Plexamp" }),
-      ],
-      preference({ networkPolicy: "lan" }),
-      [],
-    );
-
-    expect(badge.hint).toBe("Network access rules on 1 of 2 devices");
-  });
-
-  it("stays empty for a user with no devices", () => {
-    expect(groupPolicyBadges([], preference(), [])).toEqual([]);
-  });
-
-  it("keeps an IP policy off the row when the only device bypasses it", () => {
-    const badges = groupPolicyBadges(
-      [
-        device({
-          temporaryAccessUntil: inHours(1),
-          temporaryAccessBypassPolicies: true,
-        }),
-      ],
-      preference({ networkPolicy: "lan" }),
-      [rule()],
-    );
-
-    expect(badges.map((badge) => badge.label)).toEqual(["Temporary access"]);
   });
 });
 

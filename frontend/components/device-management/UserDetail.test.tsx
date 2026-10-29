@@ -277,7 +277,7 @@ describe("UserDetail header", () => {
     expect(handlers.onToggleUserVisibility).toHaveBeenCalledWith("u-1");
   });
 
-  it("pills the policies that reach any device", () => {
+  it("leaves the policies to the rules instead of repeating them", () => {
     renderDetail({
       group: group({
         devices: [device({ temporaryAccessUntil: FUTURE })],
@@ -285,15 +285,8 @@ describe("UserDetail header", () => {
       timeRules: [rule()],
     });
 
-    expect(screen.getAllByText("Temporary access")).toHaveLength(2);
-    expect(screen.getAllByText("Time schedule")).toHaveLength(2);
-  });
-
-  it("shows no policy pills when nothing applies", () => {
-    renderDetail();
-
+    expect(screen.getAllByText("Temporary access")).toHaveLength(1);
     expect(screen.getAllByText("Time schedule")).toHaveLength(1);
-    expect(screen.getAllByText("Network access")).toHaveLength(1);
   });
 });
 

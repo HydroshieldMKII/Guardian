@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { UserPreference, UserTimeRule } from "@/types";
-import { groupPolicyBadges } from "@/lib/device-policies";
 import { IPAccessModal } from "./IPAccessModal";
 import { ConcurrentStreamModal } from "./ConcurrentStreamModal";
 import type { DeviceFocus, UserDeviceGroup } from "./user-group";
@@ -63,7 +62,6 @@ export const UserDetail: React.FC<UserDetailProps> = ({
     <div className="space-y-8" data-user-id={userId}>
       <UserDetailHeader
         group={group}
-        policyBadges={groupPolicyBadges(group.devices, preference, timeRules)}
         onBack={onBack}
         onShowHistory={() => onShowHistory(userId)}
         onHide={() => onToggleUserVisibility(userId)}
