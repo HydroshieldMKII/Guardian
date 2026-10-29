@@ -13,8 +13,6 @@ import { VersionService } from '@/modules/config/services/version.service';
 import { AppriseService } from '@/modules/config/services/apprise.service';
 import { callArgs } from '@/test-matchers';
 
-const flush = () => new Promise((resolve) => setImmediate(resolve));
-
 describe('ConfigService', () => {
   let service: ConfigService;
   let store: Map<string, AppSettings>;
@@ -46,7 +44,7 @@ describe('ConfigService', () => {
       updatedAt: new Date('2026-01-01T00:00:00Z'),
     });
 
-  const build = async () => {
+  const compile = async () => {
     const module = await Test.createTestingModule({
       providers: [
         ConfigService,
@@ -62,8 +60,12 @@ describe('ConfigService', () => {
       ],
     }).compile();
 
-    const created = module.get(ConfigService);
-    await flush();
+    return module.get(ConfigService);
+  };
+
+  const build = async () => {
+    const created = await compile();
+    await created.onModuleInit();
     return created;
   };
 
@@ -159,6 +161,17 @@ describe('ConfigService', () => {
   });
 
   describe('default settings', () => {
+    it('waits for module initialization before touching the database', async () => {
+      settingsRepo.findOne.mockClear();
+      const created = await compile();
+
+      expect(settingsRepo.findOne).not.toHaveBeenCalled();
+
+      await created.onModuleInit();
+
+      expect(settingsRepo.findOne).toHaveBeenCalled();
+    });
+
     it('seeds the Plex, SMTP, Apprise and portal defaults', async () => {
       expect(store.has('PLEX_TOKEN')).toBe(true);
       expect(store.has('SMTP_HOST')).toBe(true);

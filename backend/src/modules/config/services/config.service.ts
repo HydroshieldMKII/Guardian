@@ -1,4 +1,10 @@
-import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  Inject,
+  OnModuleInit,
+  forwardRef,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AppSettings } from '@/entities/app-settings.entity';
@@ -34,7 +40,7 @@ export interface ConfigSettingDto {
 }
 
 @Injectable()
-export class ConfigService {
+export class ConfigService implements OnModuleInit {
   private readonly logger = new Logger(ConfigService.name);
   private cache = new Map<SettingKey, SettingValue>();
   private configChangeListeners = new Map<string, Array<() => void>>();
@@ -52,8 +58,10 @@ export class ConfigService {
     private readonly databaseService: DatabaseService,
     private readonly versionService: VersionService,
     private readonly appriseService: AppriseService,
-  ) {
-    void this.initializeDefaultSettings();
+  ) {}
+
+  async onModuleInit() {
+    await this.initializeDefaultSettings();
   }
 
   private async initializeDefaultSettings() {
