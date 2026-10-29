@@ -1,6 +1,9 @@
-import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { UserHistoryModal } from "@/components/device-management/UserHistoryModal";
+import { renderWithQuery } from "@/test-utils/query";
+
+const render = renderWithQuery;
 
 const push = jest.fn();
 const router = { push };
@@ -71,6 +74,9 @@ const renderModal = async (
     />,
   );
   await act(async () => {});
+  await waitFor(() =>
+    expect(screen.queryByText("Loading history...")).toBeNull(),
+  );
   return {
     ...view,
     onClose,
@@ -196,7 +202,8 @@ describe("UserHistoryModal loading", () => {
       screen.getByText("This user has not streamed anything yet"),
     ).toBeInTheDocument();
     expect(consoleError).toHaveBeenCalledWith(
-      "Error fetching user history:",
+      "Request failed:",
+      expect.arrayContaining(["sessionHistory", "u-1"]),
       expect.any(Error),
     );
   });
@@ -209,7 +216,8 @@ describe("UserHistoryModal loading", () => {
       screen.getByText("This user has not streamed anything yet"),
     ).toBeInTheDocument();
     expect(consoleError).toHaveBeenCalledWith(
-      "Error fetching user history:",
+      "Request failed:",
+      expect.arrayContaining(["sessionHistory", "u-1"]),
       expect.any(Error),
     );
   });
@@ -241,7 +249,8 @@ describe("UserHistoryModal loading", () => {
 
     await waitFor(() =>
       expect(consoleError).toHaveBeenCalledWith(
-        "Error refreshing user history:",
+        "Request failed:",
+        expect.arrayContaining(["sessionHistory", "u-1"]),
         expect.any(Error),
       ),
     );
@@ -677,7 +686,7 @@ describe("UserHistoryModal searching", () => {
     expect(await screen.findByText("Loading history...")).toBeInTheDocument();
   });
 
-  it("shows the full loader again after the modal is closed and reopened", async () => {
+  it("shows the sessions it already has when reopened, then refreshes them", async () => {
     const { rerender } = await renderModal();
 
     rerender(
@@ -699,11 +708,50 @@ describe("UserHistoryModal searching", () => {
       />,
     );
 
-    expect(await screen.findByText("Loading history...")).toBeInTheDocument();
+    expect(screen.getByText("Arrival")).toBeInTheDocument();
+    expect(screen.queryByText("Loading history...")).toBeNull();
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
   });
 });
 
+class TestIntersectionObserver implements IntersectionObserver {
+  static callbacks: IntersectionObserverCallback[] = [];
+  readonly root = null;
+  readonly rootMargin = "";
+  readonly thresholds: ReadonlyArray<number> = [];
+  constructor(callback: IntersectionObserverCallback) {
+    TestIntersectionObserver.callbacks.push(callback);
+  }
+  observe(): void {}
+  unobserve(): void {}
+  disconnect(): void {}
+  takeRecords(): IntersectionObserverEntry[] {
+    return [];
+  }
+}
+
+const scrollTrigger = async (isIntersecting: boolean) => {
+  const callback = TestIntersectionObserver.callbacks.at(-1);
+  await act(async () => {
+    callback?.(
+      [{ isIntersecting } as IntersectionObserverEntry],
+      new TestIntersectionObserver(() => {}),
+    );
+  });
+};
+
 describe("UserHistoryModal paging", () => {
+  const realObserver = global.IntersectionObserver;
+
+  beforeEach(() => {
+    TestIntersectionObserver.callbacks = [];
+    global.IntersectionObserver = TestIntersectionObserver;
+  });
+
+  afterEach(() => {
+    global.IntersectionObserver = realObserver;
+  });
+
   const fullPage = () =>
     Array.from({ length: 25 }, (_, index) =>
       session({ id: index + 1, contentTitle: `Session ${index + 1}` }),
@@ -772,7 +820,8 @@ describe("UserHistoryModal paging", () => {
 
     await waitFor(() =>
       expect(consoleError).toHaveBeenCalledWith(
-        "Error loading more user history:",
+        "Request failed:",
+        expect.arrayContaining(["sessionHistory", "u-1"]),
         expect.any(Error),
       ),
     );
@@ -782,89 +831,72 @@ describe("UserHistoryModal paging", () => {
   });
 
   it("loads the next page when the trigger scrolls into view", async () => {
-    class TestIntersectionObserver implements IntersectionObserver {
-      static callbacks: IntersectionObserverCallback[] = [];
-      readonly root = null;
-      readonly rootMargin = "";
-      readonly thresholds: ReadonlyArray<number> = [];
-      constructor(callback: IntersectionObserverCallback) {
-        TestIntersectionObserver.callbacks.push(callback);
-      }
-      observe(): void {}
-      unobserve(): void {}
-      disconnect(): void {}
-      takeRecords(): IntersectionObserverEntry[] {
-        return [];
-      }
-    }
-    const original = global.IntersectionObserver;
-    global.IntersectionObserver = TestIntersectionObserver;
-
     fetchMock.mockImplementationOnce(() => ok(fullPage()));
     fetchMock.mockImplementationOnce(() =>
       ok([session({ id: 99, contentTitle: "Much Older" })]),
     );
     await renderModal();
 
-    const observer = new TestIntersectionObserver(() => {});
-    const callback =
-      TestIntersectionObserver.callbacks[
-        TestIntersectionObserver.callbacks.length - 2
-      ];
-    await act(async () => {
-      callback(
-        [{ isIntersecting: true } as IntersectionObserverEntry],
-        observer,
-      );
-    });
+    await scrollTrigger(true);
 
     expect(await screen.findByText("Much Older")).toBeInTheDocument();
-    global.IntersectionObserver = original;
   });
 
   it("stays put while the trigger is out of view", async () => {
-    class TestIntersectionObserver implements IntersectionObserver {
-      static callbacks: IntersectionObserverCallback[] = [];
-      readonly root = null;
-      readonly rootMargin = "";
-      readonly thresholds: ReadonlyArray<number> = [];
-      constructor(callback: IntersectionObserverCallback) {
-        TestIntersectionObserver.callbacks.push(callback);
-      }
-      observe(): void {}
-      unobserve(): void {}
-      disconnect(): void {}
-      takeRecords(): IntersectionObserverEntry[] {
-        return [];
-      }
-    }
-    const original = global.IntersectionObserver;
-    global.IntersectionObserver = TestIntersectionObserver;
-
     fetchMock.mockImplementationOnce(() => ok(fullPage()));
     await renderModal();
     const callsBefore = fetchMock.mock.calls.length;
 
-    const observer = new TestIntersectionObserver(() => {});
-    const callback =
-      TestIntersectionObserver.callbacks[
-        TestIntersectionObserver.callbacks.length - 2
-      ];
-    await act(async () => {
-      callback(
-        [{ isIntersecting: false } as IntersectionObserverEntry],
-        observer,
-      );
-    });
+    await scrollTrigger(false);
 
     expect(fetchMock.mock.calls).toHaveLength(callsBefore);
-    global.IntersectionObserver = original;
+  });
+
+  it("asks for the next page once while it is still on its way", async () => {
+    let release: (reply: FetchReply) => void = () => {};
+    fetchMock.mockImplementationOnce(() => ok(fullPage()));
+    fetchMock.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          release = resolve;
+        }),
+    );
+    await renderModal();
+
+    await scrollTrigger(true);
+    await scrollTrigger(true);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    await act(async () => {
+      release({ ok: true, json: async () => [session({ id: 99 })] });
+    });
+  });
+
+  it("keeps one observer while older sessions load", async () => {
+    fetchMock.mockImplementationOnce(() => ok(fullPage()));
+    fetchMock.mockImplementationOnce(() =>
+      ok(
+        Array.from({ length: 25 }, (_, index) =>
+          session({ id: 100 + index, contentTitle: `Older ${index}` }),
+        ),
+      ),
+    );
+    await renderModal();
+    const observersBefore = TestIntersectionObserver.callbacks.length;
+
+    await scrollTrigger(true);
+    await screen.findByText("Older 0");
+
+    expect(TestIntersectionObserver.callbacks).toHaveLength(
+      observersBefore + 1,
+    );
   });
 
   it("refreshes every page it has already loaded", async () => {
-    fetchMock.mockImplementationOnce(() => ok(fullPage()));
-    fetchMock.mockImplementationOnce(() =>
-      ok([session({ id: 99, contentTitle: "Much Older" })]),
+    fetchMock.mockImplementation((url) =>
+      typeof url === "string" && url.includes("offset=0")
+        ? ok(fullPage())
+        : ok([session({ id: 99, contentTitle: "Much Older" })]),
     );
     const { user } = await renderModal();
     await user.click(
@@ -874,9 +906,9 @@ describe("UserHistoryModal paging", () => {
 
     await user.click(screen.getByRole("button", { name: /Refresh/ }));
 
-    await waitFor(() =>
-      expect(fetchMock.mock.calls[2][0]).toContain("limit=26"),
-    );
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(4));
+    expect(fetchMock.mock.calls[2][0]).toContain("offset=0");
+    expect(fetchMock.mock.calls[3][0]).toContain("offset=25");
   });
 });
 
@@ -1048,7 +1080,7 @@ describe("UserHistoryModal deep link", () => {
         scrollToSessionId={1}
       />,
     );
-    await act(async () => {});
+    await act(() => jest.advanceTimersByTimeAsync(0));
 
     const card = document.querySelector('[data-session-id="1"]') as HTMLElement;
     expect(card.className).toContain("ring-2");

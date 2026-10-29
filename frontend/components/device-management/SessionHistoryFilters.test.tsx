@@ -1,10 +1,8 @@
 import React from "react";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import {
-  SessionHistoryFilters,
-  type AppFilter,
-} from "@/components/device-management/SessionHistoryFilters";
+import { SessionHistoryFilters } from "@/components/device-management/SessionHistoryFilters";
+import type { AppFilter } from "@/lib/session-history";
 
 const renderFilters = (appFilter: AppFilter = "all") => {
   const props = {

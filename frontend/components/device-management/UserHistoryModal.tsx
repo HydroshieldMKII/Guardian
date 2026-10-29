@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/entity";
@@ -9,13 +9,14 @@ import {
   ModalHeader,
 } from "@/components/ui/modal";
 import { RefreshCw } from "lucide-react";
-import { config } from "@/lib/config";
 import { ConfirmationModal } from "@/components/ui/confirmation-modal";
 import { useToast } from "@/hooks/use-toast";
 import { HIGHLIGHT_CLASSES } from "@/lib/highlight";
-import type { SessionHistoryEntry } from "@/lib/session-history";
+import { useSessionHistory } from "@/hooks/device-management/useSessionHistory";
+import type { AppFilter, SessionHistoryEntry } from "@/lib/session-history";
+import { sessionHistoryApi } from "@/lib/session-history-api";
 import { SessionHistoryCard } from "./SessionHistoryCard";
-import { SessionHistoryFilters, type AppFilter } from "./SessionHistoryFilters";
+import { SessionHistoryFilters } from "./SessionHistoryFilters";
 
 interface UserHistoryModalProps {
   userId: string | null;
@@ -26,7 +27,6 @@ interface UserHistoryModalProps {
   scrollToSessionId?: number | null;
 }
 
-const PAGE_SIZE = 25;
 const SEARCH_DEBOUNCE_MS = 300;
 const DEEP_LINK_MAX_PAGES = 4;
 
@@ -39,12 +39,6 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
   scrollToSessionId,
 }) => {
   const router = useRouter();
-  const [sessions, setSessions] = useState<SessionHistoryEntry[]>([]);
-  const [hasMore, setHasMore] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [loaded, setLoaded] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-  const [loadingMore, setLoadingMore] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [activeSearch, setActiveSearch] = useState("");
   const [showTerminatedOnly, setShowTerminatedOnly] = useState(false);
@@ -56,14 +50,9 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
   const [deleteLoading, setDeleteLoading] = useState(false);
   const sessionsListRef = useRef<HTMLDivElement>(null);
   const loadMoreRef = useRef<HTMLButtonElement>(null);
-  const loadedCountRef = useRef(0);
   const scrolledToRef = useRef<number | null>(null);
   const deepLinkRef = useRef({ id: null as number | null, pages: 0 });
   const { toast } = useToast();
-
-  useEffect(() => {
-    loadedCountRef.current = sessions.length;
-  }, [sessions]);
 
   useEffect(() => {
     const timeout = setTimeout(
@@ -73,112 +62,26 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
     return () => clearTimeout(timeout);
   }, [searchTerm]);
 
-  const fetchPage = useCallback(
-    async (offset: number, limit: number) => {
-      const params = new URLSearchParams({
-        limit: String(limit),
-        offset: String(offset),
-        includeActive: "true",
-      });
-      if (activeSearch) {
-        params.set("search", activeSearch);
-      }
-      if (terminatedOnly) {
-        params.set("terminatedOnly", "true");
-      }
-      if (appFilter !== "all") {
-        params.set("app", appFilter);
-      }
-
-      const response = await fetch(
-        `${config.api.baseUrl}/sessions/history/${userId}?${params.toString()}`,
-      );
-      if (!response.ok) {
-        throw new Error("Failed to fetch user history");
-      }
-      const data: unknown = await response.json();
-      return (Array.isArray(data) ? data : []) as SessionHistoryEntry[];
-    },
-    [userId, activeSearch, terminatedOnly, appFilter],
+  const filter = useMemo(
+    () => ({ search: activeSearch, terminatedOnly, app: appFilter }),
+    [activeSearch, terminatedOnly, appFilter],
   );
-
-  const currentQueryRef = useRef(fetchPage);
-  useEffect(() => {
-    currentQueryRef.current = fetchPage;
-  }, [fetchPage]);
-
-  const loadFirstPage = useCallback(async () => {
-    if (!userId) return;
-
-    const isCurrent = () => currentQueryRef.current === fetchPage;
-    setLoading(true);
-    try {
-      const page = await fetchPage(0, PAGE_SIZE);
-      if (!isCurrent()) return;
-      setSessions(page);
-      setHasMore(page.length === PAGE_SIZE);
-    } catch (error) {
-      console.error("Error fetching user history:", error);
-      if (!isCurrent()) return;
-      setSessions([]);
-      setHasMore(false);
-    } finally {
-      if (isCurrent()) {
-        setLoading(false);
-        setLoaded(true);
-      }
-    }
-  }, [userId, fetchPage]);
-
-  const refreshLoaded = useCallback(
-    async (showIndicator: boolean) => {
-      if (!userId) return;
-
-      if (showIndicator) {
-        setRefreshing(true);
-      }
-      try {
-        const limit = Math.max(loadedCountRef.current, PAGE_SIZE);
-        const page = await fetchPage(0, limit);
-        if (currentQueryRef.current !== fetchPage) return;
-        setSessions(page);
-        setHasMore(page.length === limit);
-      } catch (error) {
-        console.error("Error refreshing user history:", error);
-      } finally {
-        if (showIndicator) {
-          setRefreshing(false);
-        }
-      }
-    },
-    [userId, fetchPage],
-  );
-
-  const loadMore = useCallback(async () => {
-    if (!userId) return;
-
-    setLoadingMore(true);
-    try {
-      const page = await fetchPage(loadedCountRef.current, PAGE_SIZE);
-      if (currentQueryRef.current !== fetchPage) return;
-      setSessions((prev) => {
-        const known = new Set(prev.map((session) => session.id));
-        return [...prev, ...page.filter((session) => !known.has(session.id))];
-      });
-      setHasMore(page.length === PAGE_SIZE);
-    } catch (error) {
-      console.error("Error loading more user history:", error);
-      setHasMore(false);
-    } finally {
-      setLoadingMore(false);
-    }
-  }, [userId, fetchPage]);
+  const {
+    sessions,
+    firstLoad,
+    switching,
+    hasMore,
+    loadingMore,
+    loadMore,
+    refreshing,
+    refresh,
+    removeSession,
+  } = useSessionHistory(userId, filter, isOpen);
+  const latestLoadMore = useRef(loadMore);
 
   useEffect(() => {
-    if (isOpen && userId) {
-      void loadFirstPage();
-    }
-  }, [isOpen, userId, loadFirstPage]);
+    latestLoadMore.current = loadMore;
+  });
 
   useEffect(() => {
     if (isOpen) return;
@@ -187,19 +90,8 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
     setActiveSearch("");
     setShowTerminatedOnly(false);
     setAppFilter("all");
-    setLoaded(false);
     scrolledToRef.current = null;
   }, [isOpen]);
-
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const hasActiveSessions = sessions.some((session) => !session.endedAt);
-    if (!hasActiveSessions) return;
-
-    const intervalId = setInterval(() => void refreshLoaded(false), 10000);
-    return () => clearInterval(intervalId);
-  }, [isOpen, sessions, refreshLoaded]);
 
   useEffect(() => {
     const trigger = loadMoreRef.current;
@@ -208,7 +100,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries.some((entry) => entry.isIntersecting)) {
-          void loadMore();
+          latestLoadMore.current();
         }
       },
       { root: sessionsListRef.current },
@@ -216,10 +108,10 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
     observer.observe(trigger);
 
     return () => observer.disconnect();
-  }, [loadMore, hasMore, loadingMore]);
+  }, [hasMore]);
 
   useEffect(() => {
-    if (!scrollToSessionId || loading || !sessionsListRef.current) return;
+    if (!scrollToSessionId || firstLoad || !sessionsListRef.current) return;
     if (scrolledToRef.current === scrollToSessionId) return;
 
     if (deepLinkRef.current.id !== scrollToSessionId) {
@@ -236,7 +128,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
         deepLinkRef.current.pages < DEEP_LINK_MAX_PAGES
       ) {
         deepLinkRef.current.pages += 1;
-        void loadMore();
+        loadMore();
       }
       return;
     }
@@ -259,7 +151,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
       2000,
     );
     return () => clearTimeout(timeout);
-  }, [scrollToSessionId, sessions, loading, hasMore, loadingMore, loadMore]);
+  }, [scrollToSessionId, sessions, firstLoad, hasMore, loadingMore, loadMore]);
 
   const handleDeviceClick = (session: SessionHistoryEntry) => {
     onClose();
@@ -282,15 +174,8 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
 
     setDeleteLoading(true);
     try {
-      const response = await fetch(
-        `${config.api.baseUrl}/sessions/history/${sessionToDelete.id}`,
-        {
-          method: "DELETE",
-        },
-      );
-
-      if (response.ok) {
-        setSessions((prev) => prev.filter((s) => s.id !== sessionToDelete.id));
+      if (await sessionHistoryApi.remove(sessionToDelete.id)) {
+        removeSession(sessionToDelete.id);
         setSessionToDelete(null);
         toast({
           title: "Session deleted",
@@ -342,8 +227,8 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
             searchTerm={searchTerm}
             onSearchChange={setSearchTerm}
             refreshing={refreshing}
-            refreshDisabled={loading}
-            onRefresh={() => void refreshLoaded(true)}
+            refreshDisabled={firstLoad || switching}
+            onRefresh={() => void refresh()}
             appFilter={appFilter}
             onAppFilterChange={setAppFilter}
             terminatedOnly={terminatedOnly}
@@ -352,7 +237,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
         </ModalHeader>
 
         <ModalBody className="min-h-96 space-y-3" ref={sessionsListRef}>
-          {loading && !loaded ? (
+          {firstLoad ? (
             <div className="flex min-h-80 items-center justify-center gap-2 text-sm text-muted-foreground">
               <RefreshCw className="size-5 animate-spin" />
               <span>Loading history...</span>
@@ -381,7 +266,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
                 <Button
                   ref={loadMoreRef}
                   variant="outline"
-                  onClick={() => void loadMore()}
+                  onClick={loadMore}
                   disabled={loadingMore}
                   className="w-full"
                 >
@@ -401,7 +286,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
 
         <ModalFooter className="flex-row items-center justify-between [&>button]:w-auto">
           <p className="text-xs text-muted-foreground">
-            {loading && !loaded
+            {firstLoad
               ? ""
               : `Showing ${sessions.length} session${
                   sessions.length === 1 ? "" : "s"

@@ -4,9 +4,8 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { SegmentedControl } from "@/components/ui/entity";
 import { RefreshButton } from "@/components/ui/refresh-button";
+import type { AppFilter } from "@/lib/session-history";
 import { cn } from "@/lib/utils";
-
-export type AppFilter = "all" | "plex" | "plexamp";
 
 const APP_FILTERS: { value: AppFilter; label: string }[] = [
   { value: "all", label: "All" },

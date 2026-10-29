@@ -1,6 +1,8 @@
 import type { Tone } from "@/components/ui/entity";
 import { formatElapsed } from "@/lib/duration";
 
+export type AppFilter = "all" | "plex" | "plexamp";
+
 export interface HistoryDevice {
   id: number;
   userId: string;
