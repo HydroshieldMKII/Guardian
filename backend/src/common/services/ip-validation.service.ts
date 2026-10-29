@@ -23,35 +23,24 @@ export interface NetworkPolicy {
   allowedIPs: string[];
 }
 
-/**
- * IP Validation Service
- *
- * Handles IP address validation, CIDR matching, and network policy enforcement.
- * Supports both IPv4 and IPv6 addresses.
- */
 @Injectable()
 export class IPValidationService {
-  /** Validates if an IPv4 address is in valid format (a leading zero is rejected as ambiguous) */
   isValidIPv4(ip: string): boolean {
     return IPV4.test(ip.trim());
   }
 
-  /** Validates if an IPv6 address is in valid format (zone index, e.g. "%eth0", is accepted) */
   isValidIPv6(ip: string): boolean {
     return net.isIPv6(ip.trim());
   }
 
-  /** Validates if an address is a valid IPv4 or IPv6 address */
   isValidIP(ip: string): boolean {
     return this.isValidIPv4(ip) || this.isValidIPv6(ip);
   }
 
-  /** Validates if a CIDR notation is in valid IPv4 format */
   isValidCIDR(cidr: string): boolean {
     return IPV4_CIDR.test(cidr.trim());
   }
 
-  /** Validates if a CIDR notation is in valid IPv6 format */
   isValidCIDRv6(cidr: string): boolean {
     const trimmed = cidr.trim();
     const slashIndex = trimmed.lastIndexOf('/');
@@ -65,12 +54,6 @@ export class IPValidationService {
     return prefix >= 0 && prefix <= 128 && this.isValidIPv6(address);
   }
 
-  /**
-   * Normalizes an IPv4-mapped IPv6 address (e.g. "::ffff:192.0.2.1") to its
-   * plain IPv4 form, so a dual-stack client is classified consistently
-   * regardless of which form it arrives in. Any other address (IPv4 or
-   * "real" IPv6) is returned trimmed and otherwise unchanged.
-   */
   normalizeIP(ip: string): string {
     const trimmed = ip.trim();
     if (!this.isValidIPv6(trimmed)) return trimmed;
@@ -84,7 +67,6 @@ export class IPValidationService {
     return octets.join('.');
   }
 
-  /** Checks if an IP address is in a private range (LAN) */
   isPrivateIP(ip: string): boolean {
     const normalized = this.normalizeIP(ip);
 
@@ -100,7 +82,6 @@ export class IPValidationService {
     }
 
     if (this.isValidIPv6(normalized)) {
-      // ::1/128 (loopback), fc00::/7 (unique local), fe80::/10 (link-local)
       return (
         this.isIPInCIDR(normalized, '::1/128') ||
         this.isIPInCIDR(normalized, 'fc00::/7') ||
@@ -111,13 +92,11 @@ export class IPValidationService {
     return false;
   }
 
-  /** Determines the network type (LAN/WAN) of an IP address */
   getNetworkType(ip: string): NetworkType {
     if (!this.isValidIP(ip)) return 'unknown';
     return this.isPrivateIP(ip) ? 'lan' : 'wan';
   }
 
-  /** Converts an IPv4 address to a numeric value for comparison */
   private ipToNumber(ip: string): number {
     return (
       ip.split('.').reduce((acc, octet) => (acc << 8) + parseInt(octet), 0) >>>
@@ -125,13 +104,11 @@ export class IPValidationService {
     );
   }
 
-  /** Strips the zone index (e.g. "%eth0") from an IPv6 address, if present */
   private stripZoneIndex(ip: string): string {
     const percentIndex = ip.indexOf('%');
     return percentIndex === -1 ? ip : ip.slice(0, percentIndex);
   }
 
-  /** Expands a trailing embedded IPv4 dotted-quad (e.g. "192.0.2.1") into two hex groups */
   private expandEmbeddedIPv4(groups: string[]): string[] {
     if (groups.length === 0) return groups;
     const last = groups[groups.length - 1];
@@ -143,7 +120,6 @@ export class IPValidationService {
     return [...groups.slice(0, -1), hi, lo];
   }
 
-  /** Converts a validated IPv6 address to its 128-bit numeric value */
   private ipv6ToBigInt(ip: string): bigint {
     const address = this.stripZoneIndex(ip.trim());
     const parts = address.split('::');
@@ -161,24 +137,21 @@ export class IPValidationService {
     }
 
     return groups.reduce(
-      (acc, group) => (acc << 16n) | BigInt(parseInt(group || '0', 16)),
+      (acc, group) => (acc << 16n) | BigInt(parseInt(group, 16)),
       0n,
     );
   }
 
-  /** Builds a 32-bit network mask for the given IPv4 CIDR prefix length */
   private prefixToMask(prefix: number): number {
     return prefix === 0 ? 0 : (0xffffffff << (32 - prefix)) >>> 0;
   }
 
-  /** Builds a 128-bit network mask for the given IPv6 CIDR prefix length */
   private ipv6Mask(prefixLength: number): bigint {
     const fullMask = (1n << 128n) - 1n;
     const hostBits = BigInt(128 - prefixLength);
     return fullMask ^ ((1n << hostBits) - 1n);
   }
 
-  /** Checks if an IP address is within a CIDR range (IPv4 or IPv6) */
   isIPInCIDR(ip: string, cidr: string): boolean {
     const normalizedIP = this.normalizeIP(ip);
     const trimmedCidr = cidr.trim();
@@ -207,7 +180,6 @@ export class IPValidationService {
     return false;
   }
 
-  /** Checks if client IP is in allowed list (supports IPv4/IPv6 addresses and CIDR ranges) */
   isIPInAllowedList(clientIP: string, allowedIPs: string[]): boolean {
     const normalizedClientIP = this.normalizeIP(clientIP);
     if (!this.isValidIP(normalizedClientIP)) return false;
@@ -224,7 +196,6 @@ export class IPValidationService {
     return false;
   }
 
-  /** Validates IP access based on network policy and allowed IP list */
   validateIPAccess(
     clientIP: string,
     policy: NetworkPolicy,
