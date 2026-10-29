@@ -43,4 +43,12 @@ describe("SessionHistoryFilters", () => {
       screen.getByTitle("Plexamp streams are never terminated"),
     ).toBeInTheDocument();
   });
+
+  it("lets the filter row wrap so the label is never clipped on a phone", () => {
+    renderFilters();
+
+    const row = screen.getByText("Terminated only").closest(".flex-wrap");
+
+    expect(row).not.toBeNull();
+  });
 });
