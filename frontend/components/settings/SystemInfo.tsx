@@ -31,6 +31,11 @@ interface HealthResponse {
   uptime?: UptimeInfo;
 }
 
+const newVersionMessage = (latestVersion?: string) =>
+  latestVersion
+    ? `Version ${latestVersion} is available.`
+    : "A new version is available.";
+
 export function SystemInfo({
   settings,
   formData,
@@ -111,7 +116,6 @@ export function SystemInfo({
   const checkForUpdates = async () => {
     try {
       setCheckingUpdates(true);
-      setUpdateStatus(null);
 
       if (!versionInfo?.version) {
         throw new Error(
@@ -127,7 +131,7 @@ export function SystemInfo({
           latestVersion: result.latestVersion,
           currentVersion: result.currentVersion,
           message: result.hasUpdate
-            ? `A new version (${result.latestVersion}) is available!`
+            ? newVersionMessage(result.latestVersion)
             : "You are running the latest version.",
           updateUrl: result.updateUrl,
         };
@@ -248,10 +252,18 @@ export function SystemInfo({
         {updateStatus ? (
           <Banner tone={updateStatus.available ? "info" : "positive"}>
             {updateStatus.message}
-            {updateStatus.available && updateStatus.latestVersion && (
-              <span className="mt-1 block text-xs text-muted-foreground">
-                Latest version: v{updateStatus.latestVersion}
-              </span>
+            {updateStatus.available && updateStatus.updateUrl && (
+              <>
+                {" "}
+                <a
+                  href={updateStatus.updateUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium underline underline-offset-2"
+                >
+                  View release
+                </a>
+              </>
             )}
           </Banner>
         ) : (
