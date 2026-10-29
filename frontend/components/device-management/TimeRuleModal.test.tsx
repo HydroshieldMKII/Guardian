@@ -359,6 +359,13 @@ describe("TimeRuleModal creating a rule", () => {
     );
   });
 
+  it("names the start and end time inputs", async () => {
+    await renderModal();
+
+    expect(screen.getByLabelText("Start time")).toHaveAttribute("type", "time");
+    expect(screen.getByLabelText("End time")).toHaveAttribute("type", "time");
+  });
+
   it("picks a different day", async () => {
     const { user } = await renderModal();
 
@@ -435,6 +442,14 @@ describe("TimeRuleModal editing a rule", () => {
         expect.objectContaining({ dayOfWeek: 4 }),
       ),
     );
+  });
+
+  it("names the start and end time inputs of the editor", async () => {
+    const { user } = await renderModal();
+    await startEditing(user);
+
+    expect(screen.getByLabelText("Rule start time")).toHaveValue("09:00");
+    expect(screen.getByLabelText("Rule end time")).toHaveValue("15:00");
   });
 
   it("edits the end of the window too", async () => {
