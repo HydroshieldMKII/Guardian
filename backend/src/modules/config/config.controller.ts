@@ -8,10 +8,10 @@ import {
   HttpException,
   HttpStatus,
 } from '@nestjs/common';
-import {
-  ConfigService,
-  ConfigSettingDto,
-} from '@/modules/config/services/config.service';
+import { ConfigService } from '@/modules/config/services/config.service';
+import { ConfigSettingDto } from '@/modules/config/dto/config-setting.dto';
+import { UpdateSettingDto } from '@/modules/config/dto/update-setting.dto';
+import { configSettingsPipe } from '@/modules/config/dto/config-settings.pipe';
 import { ConnectionTestService } from '@/modules/config/services/connection-test.service';
 import { isSettingKey } from '@/modules/config/settings.catalog';
 import { AdminOnly } from '@/modules/auth/decorators/admin-only.decorator';
@@ -49,14 +49,14 @@ export class ConfigController {
     return respondOrFail(async () => {
       if (!isSettingKey(key)) throw settingNotFound();
 
-      const value = await this.configService.getSetting(key);
-      if (value === null) throw settingNotFound();
-      return { key, value };
+      const setting = await this.configService.getPublicSetting(key);
+      if (!setting) throw settingNotFound();
+      return { key, value: setting.value };
     }, 'Failed to fetch setting');
   }
 
   @Put(':key')
-  updateSetting(@Param('key') key: string, @Body() body: { value: unknown }) {
+  updateSetting(@Param('key') key: string, @Body() body: UpdateSettingDto) {
     return respondOrFail(
       async () => {
         if (!isSettingKey(key)) throw settingNotFound();
@@ -70,7 +70,9 @@ export class ConfigController {
   }
 
   @Put()
-  updateMultipleSettings(@Body() settings: ConfigSettingDto[]) {
+  updateMultipleSettings(
+    @Body(configSettingsPipe) settings: ConfigSettingDto[],
+  ) {
     return respondOrFail(
       async () => ({
         message: 'Settings updated successfully',

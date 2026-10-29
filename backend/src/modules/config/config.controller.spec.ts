@@ -15,7 +15,9 @@ describe('ConfigController', () => {
     services = {
       getVersionInfo: jest.fn().mockResolvedValue({ current: '1.3.5' }),
       getPublicSettings: jest.fn().mockResolvedValue([{ key: 'TIMEZONE' }]),
-      getSetting: jest.fn().mockResolvedValue('UTC'),
+      getPublicSetting: jest
+        .fn()
+        .mockResolvedValue({ key: 'TIMEZONE', value: '+00:00' }),
       updateSetting: jest.fn().mockResolvedValue({ key: 'TIMEZONE' }),
       updateMultipleSettings: jest.fn().mockResolvedValue([{ key: 'A' }]),
       testPlexConnection: jest.fn().mockResolvedValue({ success: true }),
@@ -34,7 +36,7 @@ describe('ConfigController', () => {
           useValue: pick(
             'getVersionInfo',
             'getPublicSettings',
-            'getSetting',
+            'getPublicSetting',
             'updateSetting',
             'updateMultipleSettings',
           ),
@@ -96,27 +98,38 @@ describe('ConfigController', () => {
     it('returns the key and value', async () => {
       await expect(controller.getSetting('TIMEZONE')).resolves.toEqual({
         key: 'TIMEZONE',
-        value: 'UTC',
+        value: '+00:00',
+      });
+    });
+
+    it('returns the masked value the list shows', async () => {
+      services.getPublicSetting.mockResolvedValue({
+        key: 'PLEX_TOKEN',
+        value: '••••••••',
+      });
+      await expect(controller.getSetting('PLEX_TOKEN')).resolves.toEqual({
+        key: 'PLEX_TOKEN',
+        value: '••••••••',
       });
     });
 
     it('returns a 404 for an unknown key', async () => {
-      services.getSetting.mockResolvedValue(null);
+      services.getPublicSetting.mockResolvedValue(null);
       expect(await statusOf(controller.getSetting('NOPE'))).toBe(
         HttpStatus.NOT_FOUND,
       );
     });
 
     it('returns a 404 for a declared key that has no stored value', async () => {
-      services.getSetting.mockResolvedValue(null);
+      services.getPublicSetting.mockResolvedValue(null);
       expect(await statusOf(controller.getSetting('TIMEZONE'))).toBe(
         HttpStatus.NOT_FOUND,
       );
-      expect(services.getSetting).toHaveBeenCalledWith('TIMEZONE');
+      expect(services.getPublicSetting).toHaveBeenCalledWith('TIMEZONE');
     });
 
     it('maps an unexpected failure to a 500', async () => {
-      services.getSetting.mockRejectedValue(new Error('boom'));
+      services.getPublicSetting.mockRejectedValue(new Error('boom'));
       expect(await statusOf(controller.getSetting('TIMEZONE'))).toBe(
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
@@ -126,7 +139,7 @@ describe('ConfigController', () => {
       expect(await statusOf(controller.getSetting('NOT_A_SETTING'))).toBe(
         HttpStatus.NOT_FOUND,
       );
-      expect(services.getSetting).not.toHaveBeenCalled();
+      expect(services.getPublicSetting).not.toHaveBeenCalled();
     });
   });
 
