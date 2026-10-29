@@ -22,6 +22,8 @@ import { AdminOnly } from '@/modules/auth/decorators/admin-only.decorator';
 import type { AdminSessionUser } from '@/modules/auth/session-user.types';
 import { respondOrFail } from '@/common/utils/respond-or-fail';
 
+const MAX_IMPORT_FILE_BYTES = 8 * 1024 * 1024;
+
 interface UploadedDatabaseFile {
   buffer: Buffer;
 }
@@ -63,7 +65,9 @@ export class DatabaseController {
   }
 
   @Post('database/import')
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(
+    FileInterceptor('file', { limits: { fileSize: MAX_IMPORT_FILE_BYTES } }),
+  )
   importDatabase(@UploadedFile() file: UploadedDatabaseFile | undefined) {
     return respondOrFail(
       async () => ({
