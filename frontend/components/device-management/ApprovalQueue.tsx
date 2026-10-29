@@ -38,7 +38,7 @@ export function ApprovalQueue({
     return (
       <section
         className={cn(
-          "flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed px-6 py-6 text-center lg:py-20",
+          "flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-input px-6 py-6 text-center lg:py-20",
           className,
         )}
       >

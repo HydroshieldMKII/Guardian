@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 
 export function MissingUserNotice({ onBack }: { onBack: () => void }) {
   return (
-    <div className="space-y-3 rounded-2xl border border-dashed px-6 py-16 text-center">
+    <div className="space-y-3 rounded-2xl border border-dashed border-input px-6 py-16 text-center">
       <p className="text-[15px] font-semibold text-foreground">
         This user is not in the list
       </p>
