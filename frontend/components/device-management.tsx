@@ -10,15 +10,6 @@ import React, {
   useDeferredValue,
 } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Eye, EyeOff } from "lucide-react";
 
 import { useDeviceActions } from "@/hooks/device-management/useDeviceActions";
 import { useUserPreferences } from "@/hooks/device-management/useUserPreferences";
@@ -61,7 +52,10 @@ import { TemporaryAccessModal } from "@/components/device-management/TemporaryAc
 import { ConfirmationModal } from "@/components/device-management/ConfirmationModal";
 import { UserHistoryModal } from "@/components/device-management/UserHistoryModal";
 import { TimeRuleModal } from "@/components/device-management/TimeRuleModal";
-import { UserAvatar } from "@/components/device-management/SharedComponents";
+import {
+  HiddenUsersDialog,
+  HideUserDialog,
+} from "@/components/device-management/HiddenUsersDialogs";
 import { HIGHLIGHT_CLASSES } from "@/lib/highlight";
 
 const NO_TIME_RULES: TimeRulesByUser = {};
@@ -974,70 +968,12 @@ const DeviceManagement = memo(
           onCancel={() => setConfirmAction(null)}
         />
 
-        <Dialog
+        <HiddenUsersDialog
           open={hiddenUsersModalOpen}
           onOpenChange={setHiddenUsersModalOpen}
-        >
-          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="flex items-center">
-                <EyeOff className="w-5 h-5 mr-2" />
-                Hidden users
-              </DialogTitle>
-              <DialogDescription>
-                These users are hidden from the main list. Click
-                &quot;Show&quot; to make them visible again.
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="space-y-3">
-              {hiddenUsers.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <p>No hidden users found</p>
-                </div>
-              ) : (
-                hiddenUsers.map((user) => (
-                  <div
-                    key={user.userId}
-                    className="flex items-center justify-between p-3 border rounded-lg bg-muted/30"
-                  >
-                    <div className="flex items-center space-x-3">
-                      <UserAvatar
-                        userId={user.userId}
-                        username={user.username}
-                        avatarUrl={user.avatarUrl}
-                      />
-                      <div>
-                        <p className="font-medium">
-                          {user.username || "Unknown username"}
-                        </p>
-                      </div>
-                    </div>
-                    <Button
-                      size="sm"
-                      onClick={() =>
-                        void handleToggleUserVisibility(user.userId)
-                      }
-                      className="ml-4"
-                    >
-                      <Eye className="w-4 h-4 mr-1" />
-                      Show
-                    </Button>
-                  </div>
-                ))
-              )}
-            </div>
-
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setHiddenUsersModalOpen(false)}
-              >
-                Close
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+          users={hiddenUsers}
+          onShow={(userId) => void handleToggleUserVisibility(userId)}
+        />
 
         <UserHistoryModal
           userId={selectedHistoryUser?.userId || null}
@@ -1060,50 +996,11 @@ const DeviceManagement = memo(
           deviceIdentifier={selectedTimeRuleUser?.deviceIdentifier}
         />
 
-        <Dialog
-          open={!!hideUserConfirmation}
-          onOpenChange={(open) => !open && setHideUserConfirmation(null)}
-        >
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle className="flex items-center">
-                <EyeOff className="w-5 h-5 mr-2" />
-                Hide user?
-              </DialogTitle>
-              <DialogDescription className="pt-2">
-                Are you sure you want to hide{" "}
-                <span className="font-semibold text-foreground">
-                  {hideUserConfirmation?.username}
-                </span>{" "}
-                from the user list?
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-3 py-4">
-              <div className="bg-muted/50 p-3 rounded-md text-sm">
-                <p className="text-muted-foreground">
-                  You can show them again from &quot;Hidden users&quot; at the
-                  bottom of the user list.
-                </p>
-              </div>
-            </div>
-            <DialogFooter className="flex-col sm:flex-row gap-2">
-              <Button
-                variant="outline"
-                onClick={() => setHideUserConfirmation(null)}
-                className="w-full sm:w-auto"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={() => void confirmHideUser()}
-                className="w-full sm:w-auto"
-              >
-                <EyeOff className="w-4 h-4 mr-2" />
-                Hide user
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <HideUserDialog
+          username={hideUserConfirmation?.username ?? null}
+          onCancel={() => setHideUserConfirmation(null)}
+          onConfirm={() => void confirmHideUser()}
+        />
       </>
     );
   },
