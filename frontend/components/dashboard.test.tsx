@@ -1,8 +1,11 @@
-import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React from "react";
 import type { UnifiedDashboardData, UserDevice, UserPreference } from "@/types";
 import { Dashboard } from "@/components/dashboard";
+import { renderWithQuery } from "@/test-utils/query";
+
+const render = renderWithQuery;
 
 const push = jest.fn();
 const replace = jest.fn();
@@ -234,6 +237,34 @@ describe("Dashboard", () => {
     expect(await screen.findByText("device-management")).toBeInTheDocument();
   });
 
+  it("shows the last dashboard straight away when it is opened again", async () => {
+    const first = await renderDashboard();
+    first.unmount();
+    getDashboardData.mockReturnValue(new Promise(() => {}));
+
+    render(<Dashboard />, { client: first.client });
+
+    expect(screen.getByText("device-management")).toBeInTheDocument();
+  });
+
+  it("recovers from a failed refresh once the next one succeeds", async () => {
+    await renderDashboard();
+    getDashboardData.mockRejectedValueOnce(new Error("blip"));
+
+    await userEvent
+      .setup()
+      .click(screen.getByRole("button", { name: "refresh devices" }));
+    expect(
+      await screen.findByText(/plex-error:Backend connection error/),
+    ).toBeInTheDocument();
+
+    getDashboardData.mockResolvedValue(dashboardData());
+    await act(async () => {
+      pushLive?.(dashboardData());
+    });
+    expect(await screen.findByText("device-management")).toBeInTheDocument();
+  });
+
   it("prompts for configuration when Plex has no valid credentials", async () => {
     getDashboardData.mockResolvedValue(
       dashboardData({
@@ -261,7 +292,8 @@ describe("Dashboard", () => {
       await screen.findByText(/plex-error:Backend connection error/),
     ).toBeInTheDocument();
     expect(consoleError).toHaveBeenCalledWith(
-      "Failed to fetch dashboard stats:",
+      "Request failed:",
+      ["dashboard"],
       expect.any(Error),
     );
   });
@@ -514,11 +546,13 @@ describe("Dashboard", () => {
         );
       });
 
-      expect(publish).toHaveBeenLastCalledWith({
-        view: "users",
-        pendingDevices: 0,
-        activeStreams: 9,
-      });
+      await waitFor(() =>
+        expect(publish).toHaveBeenLastCalledWith({
+          view: "users",
+          pendingDevices: 0,
+          activeStreams: 9,
+        }),
+      );
       expect(getDashboardData).not.toHaveBeenCalled();
     });
 
@@ -533,7 +567,7 @@ describe("Dashboard", () => {
         pushLive?.(dashboardData());
       });
 
-      expect(screen.getByText("device-management")).toBeInTheDocument();
+      expect(await screen.findByText("device-management")).toBeInTheDocument();
     });
   });
 

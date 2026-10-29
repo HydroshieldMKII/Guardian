@@ -1,6 +1,8 @@
 "use client";
 
-import React, { Suspense } from "react";
+import React, { Suspense, useState } from "react";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { createQueryClient } from "@/lib/query-client";
 import { VersionProvider } from "@/contexts/version-context";
 import { NotificationProvider } from "@/contexts/notification-context";
 import { SettingsProvider } from "@/contexts/settings-context";
@@ -42,5 +44,11 @@ function AppProvidersContent({ children }: { children: React.ReactNode }) {
 }
 
 export function AppProviders({ children }: { children: React.ReactNode }) {
-  return <AppProvidersContent>{children}</AppProvidersContent>;
+  const [queryClient] = useState(createQueryClient);
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <AppProvidersContent>{children}</AppProvidersContent>
+    </QueryClientProvider>
+  );
 }

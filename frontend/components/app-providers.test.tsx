@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import { useQueryClient } from "@tanstack/react-query";
 import { AppProviders } from "@/components/app-providers";
 
 const useDisableScroll = jest.fn<void, []>();
@@ -72,6 +73,28 @@ describe("AppProviders", () => {
     ]) {
       expect(screen.getByText(name)).toBeInTheDocument();
     }
+  });
+
+  it("hands the same query client to every page it renders", () => {
+    const seen: unknown[] = [];
+    function Probe() {
+      seen.push(useQueryClient());
+      return null;
+    }
+
+    const { rerender } = render(
+      <AppProviders>
+        <Probe />
+      </AppProviders>,
+    );
+    rerender(
+      <AppProviders>
+        <Probe />
+      </AppProviders>,
+    );
+
+    expect(seen).toHaveLength(2);
+    expect(seen[0]).toBe(seen[1]);
   });
 
   it("disables scroll for the app shell", () => {
