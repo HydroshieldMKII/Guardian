@@ -23,7 +23,7 @@
     "migration:generate": "node -r ts-node/register -r tsconfig-paths/register node_modules/typeorm/cli.js migration:generate -d src/database/cli.data-source.ts"
   },
   "dependencies": {
-    "@nestjs/common": "^11.2.1",
+    "@nestjs/common": "^12.2.0",
     "@nestjs/core": "^11.2.1",
     "@nestjs/jwt": "^11.0.2",
     "@nestjs/mapped-types": "^2.1.1",
