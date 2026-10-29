@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { isAdminUser, useAuth } from "@/contexts/auth-context";
-import { usePasswordResetStatus } from "@/hooks/settings/usePasswordResetStatus";
+import { usePasswordResetStatus } from "@/hooks/usePasswordResetStatus";
 import type { AppSetting } from "@/types";
 import { Banner, SettingControl, isTruthy } from "../settings-ui";
 import type { SettingsFormData } from "../settings-utils";
