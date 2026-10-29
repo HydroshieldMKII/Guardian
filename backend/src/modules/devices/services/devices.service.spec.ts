@@ -1,3 +1,4 @@
+import { NotFoundException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { UserDevice } from '@/entities/user-device.entity';
@@ -161,6 +162,35 @@ describe('DevicesService', () => {
         requestSubmittedAt: null,
         requestNoteReadAt: null,
       });
+    });
+  });
+
+  describe('missing devices', () => {
+    beforeEach(() => {
+      deviceRepo.update.mockResolvedValue({ affected: 0 });
+    });
+
+    it.each([
+      ['approveDevice', (id: number) => service.approveDevice(id)],
+      ['rejectDevice', (id: number) => service.rejectDevice(id)],
+      ['setPendingDevice', (id: number) => service.setPendingDevice(id)],
+      ['renameDevice', (id: number) => service.renameDevice(id, 'Name')],
+      [
+        'updateExcludeFromConcurrentLimit',
+        (id: number) => service.updateExcludeFromConcurrentLimit(id, true),
+      ],
+      ['markNoteAsRead', (id: number) => service.markNoteAsRead(id)],
+      ['deleteNote', (id: number) => service.deleteNote(id)],
+    ])('%s answers 404 for an unknown id', async (_name, act) => {
+      await expect(act(999999)).rejects.toBeInstanceOf(NotFoundException);
+      expect(temporaryAccess.revokeTemporaryAccess).not.toHaveBeenCalled();
+    });
+
+    it('deleteDevice answers 404 for an unknown id', async () => {
+      transactionRepos.devices.delete.mockResolvedValue({ affected: 0 });
+      await expect(service.deleteDevice(999999)).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
     });
   });
 

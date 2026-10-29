@@ -12,6 +12,12 @@ import {
 } from '@nestjs/common';
 import { DevicesService } from '@/modules/devices/services/devices.service';
 import { TemporaryAccessService } from '@/modules/devices/services/temporary-access.service';
+import {
+  BatchTemporaryAccessDto,
+  TemporaryAccessDto,
+} from '@/modules/devices/dto/temporary-access.dto';
+import { RenameDeviceDto } from '@/modules/devices/dto/rename-device.dto';
+import { ExcludeFromConcurrentLimitDto } from '@/modules/devices/dto/exclude-from-concurrent-limit.dto';
 import { UserDevice } from '@/entities/user-device.entity';
 import { SessionTerminationService } from '@/modules/plex/services/session-termination.service';
 import { AdminOnly } from '@/modules/auth/decorators/admin-only.decorator';
@@ -50,54 +56,12 @@ export class DevicesController {
 
   @Post('batch/temporary-access')
   async grantBatchTemporaryAccess(
-    @Body()
-    body: {
-      deviceIds: number[];
-      durationMinutes: number;
-      bypassPolicies?: boolean;
-    },
+    @Body() body: BatchTemporaryAccessDto,
   ): Promise<{
     message: string;
     results: { deviceId: number; success: boolean; error?: string }[];
   }> {
     try {
-      // Validate request body
-      if (
-        !body ||
-        !Array.isArray(body.deviceIds) ||
-        body.deviceIds.length === 0
-      ) {
-        throw new HttpException(
-          'deviceIds must be a non-empty array',
-          HttpStatus.BAD_REQUEST,
-        );
-      }
-
-      if (
-        !body.durationMinutes ||
-        typeof body.durationMinutes !== 'number' ||
-        body.durationMinutes <= 0
-      ) {
-        throw new HttpException(
-          'durationMinutes must be a positive number',
-          HttpStatus.BAD_REQUEST,
-        );
-      }
-
-      // Validate that all deviceIds are numbers
-      for (const deviceId of body.deviceIds) {
-        if (
-          typeof deviceId !== 'number' ||
-          !Number.isInteger(deviceId) ||
-          deviceId <= 0
-        ) {
-          throw new HttpException(
-            `Invalid device ID: ${deviceId}. All device IDs must be positive integers.`,
-            HttpStatus.BAD_REQUEST,
-          );
-        }
-      }
-
       this.logger.log(
         `Granting temporary access to ${body.deviceIds.length} devices for ${body.durationMinutes} minutes`,
       );
@@ -162,7 +126,7 @@ export class DevicesController {
     @Param('id', ParseIntPipe) id: number,
   ): Promise<{ message: string }> {
     await this.devicesService.rejectDevice(id);
-    return { message: `Device ${id} rejected and deleted successfully` };
+    return { message: `Device ${id} rejected successfully` };
   }
 
   @Post(':id/set-pending')
@@ -176,7 +140,7 @@ export class DevicesController {
   @Post(':id/rename')
   async renameDevice(
     @Param('id', ParseIntPipe) id: number,
-    @Body() body: { newName: string },
+    @Body() body: RenameDeviceDto,
   ): Promise<{ message: string }> {
     await this.devicesService.renameDevice(id, body.newName);
     return { message: `Device ${id} renamed successfully` };
@@ -185,7 +149,7 @@ export class DevicesController {
   @Post(':id/temporary-access')
   async grantTemporaryAccess(
     @Param('id', ParseIntPipe) id: number,
-    @Body() body: { durationMinutes: number; bypassPolicies?: boolean },
+    @Body() body: TemporaryAccessDto,
   ): Promise<{ message: string }> {
     await this.temporaryAccessService.grantTemporaryAccess(
       id,
@@ -208,7 +172,7 @@ export class DevicesController {
   @Post(':id/exclude-from-concurrent-limit')
   async updateExcludeFromConcurrentLimit(
     @Param('id', ParseIntPipe) id: number,
-    @Body() body: { exclude: boolean },
+    @Body() body: ExcludeFromConcurrentLimitDto,
   ): Promise<{ message: string }> {
     await this.devicesService.updateExcludeFromConcurrentLimit(
       id,

@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UserDevice } from '@/entities/user-device.entity';
@@ -42,12 +42,15 @@ export class TemporaryAccessService {
       grantedAt.getTime() + durationMinutes * MINUTE_MS,
     );
 
-    await this.userDeviceRepository.update(deviceId, {
+    const result = await this.userDeviceRepository.update(deviceId, {
       temporaryAccessUntil: expiresAt,
       temporaryAccessGrantedAt: grantedAt,
       temporaryAccessDurationMinutes: durationMinutes,
       temporaryAccessBypassPolicies: bypassPolicies,
     });
+    if (!result.affected) {
+      throw new NotFoundException(`Device ${deviceId} not found`);
+    }
 
     const timezoneOffset = await this.configService.getTimezone();
     this.logger.log(

@@ -1,6 +1,12 @@
-import { Injectable, Logger } from '@nestjs/common';
+import {
+  HttpException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { QueryDeepPartialEntity } from 'typeorm/query-builder/QueryPartialEntity';
 import { UserDevice } from '@/entities/user-device.entity';
 import { SessionHistory } from '@/entities/session-history.entity';
 import { errorMessage } from '@/common/utils/error-types';
@@ -16,6 +22,16 @@ export class DevicesService {
     private userDeviceRepository: Repository<UserDevice>,
     private temporaryAccessService: TemporaryAccessService,
   ) {}
+
+  private async updateExisting(
+    deviceId: number,
+    changes: QueryDeepPartialEntity<UserDevice>,
+  ): Promise<void> {
+    const result = await this.userDeviceRepository.update(deviceId, changes);
+    if (!result.affected) {
+      throw new NotFoundException(`Device ${deviceId} not found`);
+    }
+  }
 
   async getAllDevices(): Promise<UserDevice[]> {
     return this.userDeviceRepository.find({
@@ -62,18 +78,18 @@ export class DevicesService {
   }
 
   async approveDevice(deviceId: number): Promise<void> {
-    await this.userDeviceRepository.update(deviceId, { status: 'approved' });
+    await this.updateExisting(deviceId, { status: 'approved' });
     await this.temporaryAccessService.revokeTemporaryAccess(deviceId);
     this.logger.log(`Device ${deviceId} has been approved`);
   }
 
   async rejectDevice(deviceId: number): Promise<void> {
-    await this.userDeviceRepository.update(deviceId, { status: 'rejected' });
+    await this.updateExisting(deviceId, { status: 'rejected' });
     this.logger.log(`Device ${deviceId} has been rejected`);
   }
 
   async setPendingDevice(deviceId: number): Promise<void> {
-    await this.userDeviceRepository.update(deviceId, { status: 'pending' });
+    await this.updateExisting(deviceId, { status: 'pending' });
     await this.temporaryAccessService.revokeTemporaryAccess(deviceId);
     this.logger.log(`Device ${deviceId} has been set to pending`);
   }
@@ -89,9 +105,12 @@ export class DevicesService {
 
           this.logger.debug(`Session history deleted for device ${deviceId}`);
 
-          await transactionalEntityManager
+          const result = await transactionalEntityManager
             .getRepository(UserDevice)
             .delete(deviceId);
+          if (!result.affected) {
+            throw new NotFoundException(`Device ${deviceId} not found`);
+          }
         },
       );
 
@@ -99,13 +118,14 @@ export class DevicesService {
         `Device ${deviceId} and its related data have been deleted`,
       );
     } catch (error) {
+      if (error instanceof HttpException) throw error;
       this.logger.error(`Failed to delete device ${deviceId}:`, error);
       throw new Error(`Device deletion failed: ${errorMessage(error)}`);
     }
   }
 
   async renameDevice(deviceId: number, newName: string): Promise<void> {
-    await this.userDeviceRepository.update(deviceId, { deviceName: newName });
+    await this.updateExisting(deviceId, { deviceName: newName });
     this.logger.log(`Device ${deviceId} has been renamed to "${newName}"`);
   }
 
@@ -113,7 +133,7 @@ export class DevicesService {
     deviceId: number,
     exclude: boolean,
   ): Promise<void> {
-    await this.userDeviceRepository.update(deviceId, {
+    await this.updateExisting(deviceId, {
       excludeFromConcurrentLimit: exclude,
     });
     this.logger.log(
@@ -122,14 +142,14 @@ export class DevicesService {
   }
 
   async markNoteAsRead(deviceId: number): Promise<void> {
-    await this.userDeviceRepository.update(deviceId, {
+    await this.updateExisting(deviceId, {
       requestNoteReadAt: new Date(),
     });
     this.logger.log(`Note marked as read for device ${deviceId}`);
   }
 
   async deleteNote(deviceId: number): Promise<void> {
-    await this.userDeviceRepository.update(deviceId, {
+    await this.updateExisting(deviceId, {
       requestDescription: null,
       requestSubmittedAt: null,
       requestNoteReadAt: null,

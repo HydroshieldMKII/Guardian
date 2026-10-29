@@ -70,11 +70,7 @@ describe('DevicesController', () => {
   describe.each([
     ['approveDevice', 'approveDevice', 'Device 5 approved successfully'],
     ['deleteDevice', 'deleteDevice', 'Device 5 deleted successfully'],
-    [
-      'rejectDevice',
-      'rejectDevice',
-      'Device 5 rejected and deleted successfully',
-    ],
+    ['rejectDevice', 'rejectDevice', 'Device 5 rejected successfully'],
     [
       'setPendingDevice',
       'setPendingDevice',
@@ -202,19 +198,6 @@ describe('DevicesController', () => {
       });
 
       expect(result.results[0].error).toBe('just a string');
-    });
-
-    it.each([
-      ['an empty device list', { deviceIds: [], durationMinutes: 5 }],
-      ['a missing duration', { deviceIds: [1], durationMinutes: 0 }],
-      ['a negative duration', { deviceIds: [1], durationMinutes: -5 }],
-      ['a non-integer device id', { deviceIds: [1.5], durationMinutes: 5 }],
-      ['a non-positive device id', { deviceIds: [0], durationMinutes: 5 }],
-    ])('rejects %s with a 400', async (_label, body) => {
-      await expect(
-        controller.grantBatchTemporaryAccess(body),
-      ).rejects.toMatchObject({ status: HttpStatus.BAD_REQUEST });
-      expect(temporaryAccess.grantTemporaryAccess).not.toHaveBeenCalled();
     });
   });
 
