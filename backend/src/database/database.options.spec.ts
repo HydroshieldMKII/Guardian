@@ -1,7 +1,9 @@
+import { readdirSync } from 'fs';
 import * as path from 'path';
 import { config } from '@/config/app.config';
 import {
   ENTITIES,
+  MIGRATIONS,
   databaseOptions,
   databasePath,
 } from '@/database/database.options';
@@ -33,7 +35,13 @@ describe('database options', () => {
       database: 'guardian.db',
       entities: ENTITIES,
       synchronize: false,
+      migrations: MIGRATIONS,
       migrationsRun: true,
     });
+  });
+
+  it('runs every migration in the migrations folder', () => {
+    const files = readdirSync(path.join(__dirname, '..', 'migrations'));
+    expect(MIGRATIONS).toHaveLength(files.length);
   });
 });
