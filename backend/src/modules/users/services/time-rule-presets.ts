@@ -1,4 +1,6 @@
-export type TimeRulePreset = 'weekdays-only' | 'weekends-only';
+export const TIME_RULE_PRESETS = ['weekdays-only', 'weekends-only'] as const;
+
+export type TimeRulePreset = (typeof TIME_RULE_PRESETS)[number];
 
 export interface PresetRule {
   dayOfWeek: number;

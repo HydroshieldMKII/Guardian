@@ -49,7 +49,6 @@ const rule = (overrides: Record<string, unknown> = {}) => ({
   userId: "u-1",
   ruleName: "School hours",
   enabled: true,
-  action: "block",
   dayOfWeek: 1,
   startTime: "09:00",
   endTime: "15:00",
@@ -245,7 +244,6 @@ describe("TimeRuleModal creating a rule", () => {
         "u-1",
         expect.objectContaining({
           ruleName: "Sleep time",
-          action: "block",
           startTime: "10:00",
           endTime: "15:00",
         }),

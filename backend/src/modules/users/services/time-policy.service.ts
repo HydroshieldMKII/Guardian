@@ -1,7 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { IsNull, Repository } from 'typeorm';
 import { UserTimeRule } from '@/entities/user-time-rule.entity';
+import { isScheduleActive, readClock } from '@/common/utils/time-of-day';
 import { ConfigService } from '@/modules/config/services/config.service';
 
 export interface CreateTimePolicyDto {
@@ -48,7 +49,7 @@ export class TimePolicyService {
       userId: createDto.userId,
       deviceIdentifier: createDto.deviceIdentifier || undefined,
       ruleName: createDto.policyName,
-      dayOfWeek: createDto.daysOfWeek[0] || 0, // Take first day or default to Sunday
+      dayOfWeek: createDto.daysOfWeek[0] || 0,
       startTime: createDto.startTime,
       endTime: createDto.endTime,
       enabled: true,
@@ -71,7 +72,7 @@ export class TimePolicyService {
     return this.timeRuleRepository.find({
       where: [
         { userId, deviceIdentifier },
-        { userId, deviceIdentifier: undefined }, // User-wide policies
+        { userId, deviceIdentifier: IsNull() },
       ],
       order: { createdAt: 'ASC' },
     });
@@ -103,9 +104,6 @@ export class TimePolicyService {
     return this.timeRuleRepository.save(policy);
   }
 
-  /**
-   * Check if a user/device is allowed to stream at the current time
-   */
   async isTimeScheduleAllowed(
     userId: string,
     deviceIdentifier?: string,
@@ -117,40 +115,16 @@ export class TimePolicyService {
     const enabledPolicies = policies.filter((policy) => policy.enabled);
 
     if (enabledPolicies.length === 0) {
-      return true; // No policies = allow by default
+      return true;
     }
 
-    const timezonedDate = await this.configService.getCurrentTimeInTimezone();
-    const currentDay = timezonedDate.getDay(); // 0=Sunday, 1=Monday, etc.
-    const currentTime = timezonedDate.toISOString().substring(11, 16); // Extract HH:MM from ISO string
+    const clock = readClock(
+      await this.configService.getCurrentTimeInTimezone(),
+    );
 
-    // Check each policy
-    for (const policy of enabledPolicies) {
-      const isActive = this.isPolicyActive(policy, currentDay, currentTime);
-      if (isActive) {
-        // All rules are blocking rules
-        return false;
-      }
-    }
-
-    return true; // No matching policy = allow by default
+    return !enabledPolicies.some((policy) => isScheduleActive(policy, clock));
   }
 
-  private isPolicyActive(
-    policy: UserTimeRule,
-    currentDay: number,
-    currentTime: string,
-  ): boolean {
-    if (policy.dayOfWeek !== currentDay) {
-      return false;
-    }
-
-    return currentTime >= policy.startTime && currentTime <= policy.endTime;
-  }
-
-  /**
-   * Get a descriptive summary of current time policies for a user/device
-   */
   async getPolicySummary(
     userId: string,
     deviceIdentifier?: string,

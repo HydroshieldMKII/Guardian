@@ -14,7 +14,6 @@ const rule = (overrides: Partial<UserTimeRule>): UserTimeRule => ({
   userId: "u-1",
   ruleName: "Rule",
   enabled: true,
-  action: "block",
   dayOfWeek: 1,
   startTime: "09:00",
   endTime: "10:00",

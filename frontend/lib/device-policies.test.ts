@@ -49,19 +49,18 @@ const preference = (
   ...overrides,
 });
 
-const rule = (overrides: Partial<UserTimeRule> = {}): UserTimeRule =>
-  ({
-    id: 1,
-    userId: "u-1",
-    ruleName: "Bedtime",
-    enabled: true,
-    dayOfWeek: 1,
-    startTime: "22:00",
-    endTime: "23:00",
-    createdAt: "2026-01-01T00:00:00Z",
-    updatedAt: "2026-01-01T00:00:00Z",
-    ...overrides,
-  }) as UserTimeRule;
+const rule = (overrides: Partial<UserTimeRule> = {}): UserTimeRule => ({
+  id: 1,
+  userId: "u-1",
+  ruleName: "Bedtime",
+  enabled: true,
+  dayOfWeek: 1,
+  startTime: "22:00",
+  endTime: "23:00",
+  createdAt: "2026-01-01T00:00:00Z",
+  updatedAt: "2026-01-01T00:00:00Z",
+  ...overrides,
+});
 
 const inHours = (hours: number) =>
   new Date(Date.now() + hours * 3600_000).toISOString();

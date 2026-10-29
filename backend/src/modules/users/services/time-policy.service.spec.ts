@@ -1,6 +1,7 @@
 import { Test } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { IsNull } from 'typeorm';
 import { UserTimeRule } from '@/entities/user-time-rule.entity';
 import { ConfigService } from '@/modules/config/services/config.service';
 import { TimePolicyService } from '@/modules/users/services/time-policy.service';
@@ -126,7 +127,7 @@ describe('TimePolicyService', () => {
       expect(repository.find).toHaveBeenCalledWith({
         where: [
           { userId: 'u1', deviceIdentifier: 'device-a' },
-          { userId: 'u1', deviceIdentifier: undefined },
+          { userId: 'u1', deviceIdentifier: IsNull() },
         ],
         order: { createdAt: 'ASC' },
       });
@@ -217,6 +218,26 @@ describe('TimePolicyService', () => {
     it('blocks on the inclusive window boundaries', async () => {
       repository.find.mockResolvedValue([
         rule({ dayOfWeek: 1, startTime: '23:00', endTime: '23:00' }),
+      ]);
+      await expect(service.isTimeScheduleAllowed('u1')).resolves.toBe(false);
+    });
+
+    it('compares times numerically for legacy unpadded values', async () => {
+      configService.getCurrentTimeInTimezone.mockResolvedValue(
+        new Date('2026-01-05T18:39:00.000Z'),
+      );
+      repository.find.mockResolvedValue([
+        rule({ dayOfWeek: 1, startTime: '9:05', endTime: '23:59' }),
+      ]);
+      await expect(service.isTimeScheduleAllowed('u1')).resolves.toBe(false);
+    });
+
+    it('reads the day and time from the shifted instant, not the process zone', async () => {
+      configService.getCurrentTimeInTimezone.mockResolvedValue(
+        new Date(Date.UTC(2026, 0, 6, 0, 10)),
+      );
+      repository.find.mockResolvedValue([
+        rule({ dayOfWeek: 2, startTime: '00:00', endTime: '00:30' }),
       ]);
       await expect(service.isTimeScheduleAllowed('u1')).resolves.toBe(false);
     });
