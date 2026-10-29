@@ -191,7 +191,7 @@ export default function StreamsList({
             </Button>
           </div>
         ) : filteredStreams.length === 0 ? (
-          <div className="flex flex-col items-center justify-center gap-1 rounded-2xl border border-dashed py-20 text-center">
+          <div className="flex flex-col items-center justify-center gap-1 rounded-2xl border border-dashed border-input py-20 text-center">
             <p className="text-sm font-medium text-foreground">
               {deferredSearchTerm
                 ? "No streams match your search"

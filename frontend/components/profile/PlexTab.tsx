@@ -49,7 +49,7 @@ function LinkedAccount({ plex }: { plex: LinkedPlex }) {
 function LinkAccount({ plex }: { plex: LinkedPlex }) {
   return (
     <>
-      <Card className="p-4 border-dashed">
+      <Card className="p-4 border-dashed border-input">
         <div className="flex flex-col items-center gap-2 text-center">
           <p className="text-sm text-muted-foreground">
             No Plex account linked
