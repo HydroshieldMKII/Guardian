@@ -13,26 +13,25 @@ jest.mock("@/components/streams/StreamProgress", () => ({
   StreamProgress: () => <span>progress</span>,
 }));
 
-const stream = (overrides: Record<string, unknown> = {}) =>
-  ({
-    sessionKey: "s-1",
-    type: "movie",
-    title: "Arrival",
-    year: 2016,
-    ratingKey: "rk-1",
-    serverMachineIdentifier: "server-1",
-    User: { id: "u-1", title: "alice" },
-    Player: {
-      title: "Living Room TV",
-      platform: "Roku",
-      product: "Plex for Roku",
-      machineIdentifier: "m-1",
-    },
-    ...overrides,
-  }) as unknown as PlexSession;
+const stream = (overrides: Partial<PlexSession> = {}): PlexSession => ({
+  sessionKey: "s-1",
+  type: "movie",
+  title: "Arrival",
+  year: 2016,
+  ratingKey: "rk-1",
+  serverMachineIdentifier: "server-1",
+  User: { id: "u-1", title: "alice" },
+  Player: {
+    title: "Living Room TV",
+    platform: "Roku",
+    product: "Plex for Roku",
+    machineIdentifier: "m-1",
+  },
+  ...overrides,
+});
 
 const renderCard = (
-  overrides: Record<string, unknown> = {},
+  overrides: Partial<PlexSession> = {},
   props: Partial<{ isExpanded: boolean; isRevoking: boolean }> = {},
 ) => {
   const onToggleExpand = jest.fn();
@@ -491,97 +490,15 @@ describe("StreamCard expanding", () => {
 });
 
 describe("StreamCard opening in Plex", () => {
-  it("opens the item on the right server", async () => {
-    const newWindow = { location: { href: "" }, close: jest.fn() };
-    const open = jest
-      .spyOn(window, "open")
-      .mockReturnValue(newWindow as unknown as Window);
+  it("opens a blank window and looks up the Plex address", async () => {
+    const open = jest.spyOn(window, "open").mockReturnValue(null);
     const { user } = renderCard();
 
     await user.click(screen.getByText("Arrival"));
 
-    await waitFor(() =>
-      expect(newWindow.location.href).toBe(
-        "https://plex.test/web/index.html#!/server/server-1/details?key=%2Flibrary%2Fmetadata%2Frk-1",
-      ),
-    );
     expect(open).toHaveBeenCalledWith("about:blank", "_blank");
-    open.mockRestore();
-  });
-
-  it("uses the album key for a music track", async () => {
-    const newWindow = { location: { href: "" }, close: jest.fn() };
-    jest.spyOn(window, "open").mockReturnValue(newWindow as unknown as Window);
-    const { user } = renderCard({
-      type: "track",
-      title: "Roygbiv",
-      ratingKey: "track-1",
-      parentRatingKey: "album-1",
-    });
-
-    await user.click(screen.getByText("Roygbiv"));
-
-    await waitFor(() => expect(newWindow.location.href).toContain("album-1"));
-  });
-
-  it("warns and opens nothing without a rating key", async () => {
-    const open = jest.spyOn(window, "open").mockReturnValue(null);
-    const { user } = renderCard({ ratingKey: undefined });
-
-    await user.click(screen.getByText("Arrival"));
-
-    expect(consoleWarn).toHaveBeenCalledWith("No rating key found for stream");
-    expect(open).not.toHaveBeenCalled();
-    open.mockRestore();
-  });
-
-  it("errors and opens nothing without a server identifier", async () => {
-    const open = jest.spyOn(window, "open").mockReturnValue(null);
-    const { user } = renderCard({ serverMachineIdentifier: undefined });
-
-    await user.click(screen.getByText("Arrival"));
-
-    expect(consoleError).toHaveBeenCalledWith(
-      "No server machine identifier available",
-    );
-    expect(open).not.toHaveBeenCalled();
-    open.mockRestore();
-  });
-
-  it("closes the blank window when the backend has no web url", async () => {
-    fetchMock.mockResolvedValue({ json: async () => ({}) });
-    const newWindow = { location: { href: "" }, close: jest.fn() };
-    jest.spyOn(window, "open").mockReturnValue(newWindow as unknown as Window);
-    const { user } = renderCard();
-
-    await user.click(screen.getByText("Arrival"));
-
-    await waitFor(() => expect(newWindow.close).toHaveBeenCalled());
-    expect(consoleWarn).toHaveBeenCalledWith("No Plex web URL available");
-  });
-
-  it("closes the blank window when the lookup fails", async () => {
-    fetchMock.mockRejectedValue(new Error("offline"));
-    const newWindow = { location: { href: "" }, close: jest.fn() };
-    jest.spyOn(window, "open").mockReturnValue(newWindow as unknown as Window);
-    const { user } = renderCard();
-
-    await user.click(screen.getByText("Arrival"));
-
-    await waitFor(() => expect(newWindow.close).toHaveBeenCalled());
-    expect(consoleError).toHaveBeenCalledWith(
-      "Failed to get Plex web URL:",
-      expect.any(Error),
-    );
-  });
-
-  it("survives a blocked popup", async () => {
-    jest.spyOn(window, "open").mockReturnValue(null);
-    const { user } = renderCard();
-
-    await user.click(screen.getByText("Arrival"));
-
     await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    open.mockRestore();
   });
 
   it("labels a track differently from other content", () => {

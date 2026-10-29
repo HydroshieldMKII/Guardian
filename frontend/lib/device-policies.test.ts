@@ -10,6 +10,7 @@ import {
   devicePolicies,
   devicePolicyBadges,
   groupPolicyBadges,
+  hasAllowList,
   hasIPPolicy,
   hasTemporaryAccess,
   hasTimeSchedule,
@@ -189,21 +190,20 @@ describe("hasIPPolicy", () => {
     expect(hasIPPolicy(preference(overrides))).toBe(true);
   });
 
-  it("tolerates an allow list stored as a string", () => {
-    expect(
-      hasIPPolicy(
-        preference({ allowedIPs: "10.0.0.0/8" as unknown as string[] }),
-      ),
-    ).toBe(true);
-    expect(
-      hasIPPolicy(preference({ allowedIPs: "   " as unknown as string[] })),
-    ).toBe(false);
-  });
-
   it("is off when the allow list is missing entirely", () => {
-    expect(
-      hasIPPolicy(preference({ allowedIPs: null as unknown as string[] })),
-    ).toBe(false);
+    expect(hasIPPolicy(preference({ allowedIPs: undefined }))).toBe(false);
+  });
+});
+
+describe("hasAllowList", () => {
+  it.each([
+    ["a populated list", ["10.0.0.1"], true],
+    ["an empty list", [], false],
+    ["a list stored as a string", "10.0.0.0/8", true],
+    ["a blank string", "   ", false],
+    ["a missing list", null, false],
+  ])("handles %s", (_label, allowed, expected) => {
+    expect(hasAllowList(allowed)).toBe(expected);
   });
 });
 

@@ -5,6 +5,15 @@ interface PlexWebUrlResponse {
   webUrl?: string;
 }
 
+export interface PlexWindow {
+  location: { href: string };
+  close: () => void;
+}
+
+export type OpenWindow = () => PlexWindow | null;
+
+const openBlankWindow: OpenWindow = () => window.open("about:blank", "_blank");
+
 const itemRatingKey = (stream: PlexSession) =>
   stream.type === "track" && stream.parentRatingKey
     ? stream.parentRatingKey
@@ -13,7 +22,10 @@ const itemRatingKey = (stream: PlexSession) =>
 const detailsUrl = (webUrl: string, server: string, ratingKey: string) =>
   `${webUrl}/web/index.html#!/server/${server}/details?key=%2Flibrary%2Fmetadata%2F${ratingKey}`;
 
-export async function openInPlex(stream: PlexSession) {
+export async function openInPlex(
+  stream: PlexSession,
+  openWindow: OpenWindow = openBlankWindow,
+) {
   const ratingKey = itemRatingKey(stream);
   if (!ratingKey) {
     console.warn("No rating key found for stream");
@@ -26,7 +38,7 @@ export async function openInPlex(stream: PlexSession) {
     return;
   }
 
-  const newWindow = window.open("about:blank", "_blank");
+  const newWindow = openWindow();
 
   try {
     const response = await fetch(`${config.api.baseUrl}/plex/web-url`);

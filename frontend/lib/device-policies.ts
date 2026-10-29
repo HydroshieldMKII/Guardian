@@ -96,15 +96,17 @@ export const temporaryAccessTimeLeft = (device: UserDevice): string | null =>
     ? formatTimeLeft(device.temporaryAccessUntil)
     : null;
 
+export const hasAllowList = (allowed: unknown): boolean =>
+  Array.isArray(allowed)
+    ? allowed.length > 0
+    : typeof allowed === "string" && allowed.trim() !== "";
+
 export const hasIPPolicy = (preference?: UserPreference | null): boolean => {
   if (!preference) return false;
-  const allowed = preference.allowedIPs;
   return (
     preference.networkPolicy !== "both" ||
     preference.ipAccessPolicy !== "all" ||
-    (Array.isArray(allowed)
-      ? allowed.length > 0
-      : String(allowed ?? "").trim() !== "")
+    hasAllowList(preference.allowedIPs)
   );
 };
 

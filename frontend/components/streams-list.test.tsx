@@ -79,15 +79,14 @@ jest.mock("@/components/streams", () => ({
   getDeviceIcon: () => null,
 }));
 
-const session = (overrides: Record<string, unknown> = {}) =>
-  ({
-    sessionKey: "s-1",
-    title: "Arrival",
-    grandparentTitle: "",
-    User: { title: "alice" },
-    Player: { title: "Living Room TV", platform: "Roku", product: "Plex" },
-    ...overrides,
-  }) as unknown as PlexSession;
+const session = (overrides: Partial<PlexSession> = {}): PlexSession => ({
+  sessionKey: "s-1",
+  title: "Arrival",
+  grandparentTitle: "",
+  User: { title: "alice" },
+  Player: { title: "Living Room TV", platform: "Roku", product: "Plex" },
+  ...overrides,
+});
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -218,7 +217,9 @@ describe("StreamsList", () => {
     });
 
     it("uses supplied sessions instead of fetching", () => {
-      const sessionsData = { sessions: [] } as unknown as StreamsResponse;
+      const sessionsData: StreamsResponse = {
+        MediaContainer: { size: 0, Metadata: [] },
+      };
       render(<StreamsList sessionsData={sessionsData} />);
 
       expect(updateStreamsFromProps).toHaveBeenCalledWith(sessionsData);

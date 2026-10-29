@@ -3,15 +3,15 @@ import userEvent from "@testing-library/user-event";
 import type { PlexSession } from "@/types";
 import { RemoveAccessModal } from "@/components/streams/RemoveAccessModal";
 
-const stream = (overrides: Record<string, unknown> = {}) =>
-  ({
-    type: "movie",
-    title: "Arrival",
-    year: 2016,
-    User: { title: "testuser" },
-    Player: { title: "Living Room TV", platform: "Roku" },
-    ...overrides,
-  }) as unknown as PlexSession;
+const stream = (overrides: Partial<PlexSession> = {}): PlexSession => ({
+  sessionKey: "s-1",
+  type: "movie",
+  title: "Arrival",
+  year: 2016,
+  User: { title: "testuser" },
+  Player: { title: "Living Room TV", platform: "Roku" },
+  ...overrides,
+});
 
 describe("RemoveAccessModal", () => {
   it("stays closed without a stream", () => {
