@@ -94,7 +94,6 @@ export interface UserDevice {
   requestNoteReadAt?: string;
 }
 
-// User Portal Types (for Plex user portal)
 export interface PortalTimeRule {
   id: number;
   dayOfWeek: number;
@@ -103,10 +102,6 @@ export interface PortalTimeRule {
   ruleName: string;
   enabled: boolean;
   deviceIdentifier?: string;
-}
-
-export interface PortalDeviceRules {
-  timeRules: PortalTimeRule[];
 }
 
 export interface PortalDevice {
@@ -118,12 +113,14 @@ export interface PortalDevice {
   status: DeviceStatus;
   firstSeen: string;
   lastSeen: string;
-  requestDescription?: string;
-  requestSubmittedAt?: string;
+  requestDescription?: string | null;
+  requestSubmittedAt?: string | null;
+  requestNoteReadAt?: string | null;
   hasTemporaryAccess: boolean;
-  temporaryAccessUntil?: string;
+  temporaryAccessUntil?: string | null;
+  temporaryAccessBypassPolicies?: boolean | null;
   excludeFromConcurrentLimit: boolean;
-  rules?: PortalDeviceRules;
+  rules?: { timeRules: PortalTimeRule[] };
 }
 
 export interface PortalUserRules {
@@ -131,8 +128,15 @@ export interface PortalUserRules {
   ipAccessPolicy: "all" | "restricted";
   allowedIPs?: string[];
   concurrentStreamLimit: number | null;
+  effectiveConcurrentStreamLimit: number;
   defaultBlock: boolean | null;
+  effectiveDefaultBlock: boolean;
   timeRules: PortalTimeRule[];
+}
+
+export interface PortalSettings {
+  showRules: boolean;
+  allowRejectedRequests: boolean;
 }
 
 export interface AppSetting {
