@@ -15,6 +15,7 @@ import { UpdateProfileDto } from '@/modules/auth/dto/update-profile.dto';
 import { UpdatePasswordDto } from '@/modules/auth/dto/update-password.dto';
 import { AuthSessionService } from '@/modules/auth/auth-session.service';
 import { CaptchaService } from '@/modules/auth/captcha.service';
+import { serialTransaction } from '@/database/serial-transaction';
 
 const BCRYPT_ROUNDS = 12;
 
@@ -51,7 +52,8 @@ export class AuthService {
     const passwordHash = await bcrypt.hash(dto.password, BCRYPT_ROUNDS);
 
     try {
-      const admin = await this.adminUserRepository.manager.transaction(
+      const admin = await serialTransaction(
+        this.adminUserRepository.manager,
         async (manager) => {
           const repository = manager.getRepository(AdminUser);
           if ((await repository.count()) > 0) {

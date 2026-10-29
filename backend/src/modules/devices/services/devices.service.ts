@@ -5,6 +5,7 @@ import { UserDevice } from '@/entities/user-device.entity';
 import { SessionHistory } from '@/entities/session-history.entity';
 import { errorMessage } from '@/common/utils/error-types';
 import { TemporaryAccessService } from '@/modules/devices/services/temporary-access.service';
+import { serialTransaction } from '@/database/serial-transaction';
 
 @Injectable()
 export class DevicesService {
@@ -79,7 +80,8 @@ export class DevicesService {
 
   async deleteDevice(deviceId: number): Promise<void> {
     try {
-      await this.userDeviceRepository.manager.transaction(
+      await serialTransaction(
+        this.userDeviceRepository.manager,
         async (transactionalEntityManager) => {
           await transactionalEntityManager
             .getRepository(SessionHistory)

@@ -4,6 +4,7 @@ import { Repository, DataSource, IsNull } from 'typeorm';
 import { UserTimeRule } from '@/entities/user-time-rule.entity';
 import { asHttpError, errorMessage } from '@/common/utils/error-types';
 import { isTimeInWindow } from '@/common/utils/time-of-day';
+import { serialTransaction } from '@/database/serial-transaction';
 import {
   TimeRulePreset,
   presetRules,
@@ -62,36 +63,38 @@ export class TimeRuleService {
       `Creating preset: ${createDto.presetType} for user ${createDto.userId}`,
     );
 
-    const queryRunner = this.dataSource.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
+    const rules = presetRules(createDto.presetType);
 
     try {
-      await queryRunner.manager.delete(UserTimeRule, {
-        userId: createDto.userId,
-        deviceIdentifier: createDto.deviceIdentifier || IsNull(),
-      });
-
-      const rules = presetRules(createDto.presetType);
       if (rules.length === 0) {
         throw new Error(`Invalid preset type: ${createDto.presetType}`);
       }
 
-      const createdRules: UserTimeRule[] = [];
-      for (const rule of rules) {
-        createdRules.push(
-          await queryRunner.manager.save(
-            queryRunner.manager.create(UserTimeRule, {
-              ...rule,
-              userId: createDto.userId,
-              deviceIdentifier: createDto.deviceIdentifier || undefined,
-              enabled: true,
-            }),
-          ),
-        );
-      }
+      const createdRules = await serialTransaction(
+        this.dataSource.manager,
+        async (manager) => {
+          await manager.delete(UserTimeRule, {
+            userId: createDto.userId,
+            deviceIdentifier: createDto.deviceIdentifier || IsNull(),
+          });
 
-      await queryRunner.commitTransaction();
+          const saved: UserTimeRule[] = [];
+          for (const rule of rules) {
+            saved.push(
+              await manager.save(
+                manager.create(UserTimeRule, {
+                  ...rule,
+                  userId: createDto.userId,
+                  deviceIdentifier: createDto.deviceIdentifier || undefined,
+                  enabled: true,
+                }),
+              ),
+            );
+          }
+          return saved;
+        },
+      );
+
       this.logger.log(
         `Successfully created ${createdRules.length} preset rules`,
       );
@@ -101,10 +104,7 @@ export class TimeRuleService {
         `Error creating preset: ${errorMessage(error)}`,
         asHttpError(error).stack,
       );
-      await queryRunner.rollbackTransaction();
       throw new Error(`Failed to create preset: ${errorMessage(error)}`);
-    } finally {
-      await queryRunner.release();
     }
   }
 
