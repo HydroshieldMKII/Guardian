@@ -181,6 +181,33 @@ export class SessionTerminationService {
     });
   }
 
+  async terminateDeviceSessions(
+    userId: string,
+    deviceIdentifier: string,
+  ): Promise<number> {
+    const sessionsData = await this.plexClient.getSessions();
+    const sessionIds = (sessionsData?.MediaContainer?.Metadata ?? [])
+      .filter(
+        (session) =>
+          session.Player?.machineIdentifier === deviceIdentifier &&
+          (session.User?.id || session.User?.uuid) === userId,
+      )
+      .map((session) => session.Session?.id)
+      .filter((sessionId): sessionId is string => !!sessionId);
+
+    if (sessionIds.length === 0) {
+      return 0;
+    }
+
+    const reason =
+      (await this.configService.getSetting('MSG_DEVICE_REJECTED')) ||
+      DEFAULT_BLOCK_MESSAGES.deviceRejected;
+    for (const sessionId of sessionIds) {
+      await this.terminateSession(sessionId, reason);
+    }
+    return sessionIds.length;
+  }
+
   async terminateSession(sessionKey: string, reason?: string): Promise<void> {
     try {
       const message =

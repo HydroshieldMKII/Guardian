@@ -3,13 +3,13 @@ import { Test } from '@nestjs/testing';
 import { DevicesController } from '@/modules/devices/devices.controller';
 import { DevicesService } from '@/modules/devices/services/devices.service';
 import { TemporaryAccessService } from '@/modules/devices/services/temporary-access.service';
-import { PlexClient } from '@/modules/plex/services/plex-client';
+import { SessionTerminationService } from '@/modules/plex/services/session-termination.service';
 
 describe('DevicesController', () => {
   let controller: DevicesController;
   let devices: Record<string, jest.Mock>;
   let temporaryAccess: Record<string, jest.Mock>;
-  let plexClient: { terminateSession: jest.Mock };
+  let sessionTermination: { terminateDeviceSessions: jest.Mock };
 
   beforeEach(async () => {
     devices = {
@@ -36,14 +36,16 @@ describe('DevicesController', () => {
       revokeTemporaryAccess: jest.fn().mockResolvedValue(undefined),
     };
 
-    plexClient = { terminateSession: jest.fn().mockResolvedValue(undefined) };
+    sessionTermination = {
+      terminateDeviceSessions: jest.fn().mockResolvedValue(1),
+    };
 
     const module = await Test.createTestingModule({
       controllers: [DevicesController],
       providers: [
         { provide: DevicesService, useValue: devices },
         { provide: TemporaryAccessService, useValue: temporaryAccess },
-        { provide: PlexClient, useValue: plexClient },
+        { provide: SessionTerminationService, useValue: sessionTermination },
       ],
     }).compile();
 
@@ -231,7 +233,10 @@ describe('DevicesController', () => {
 
       expect(temporaryAccess.revokeTemporaryAccess).toHaveBeenCalledWith(7);
       expect(devices.rejectDevice).toHaveBeenCalledWith(7);
-      expect(plexClient.terminateSession).toHaveBeenCalledWith('session-7');
+      expect(sessionTermination.terminateDeviceSessions).toHaveBeenCalledWith(
+        'u1',
+        'dev-1',
+      );
       expect(result.message).toBe('Device authorization revoked successfully');
     });
 
@@ -242,11 +247,11 @@ describe('DevicesController', () => {
       });
 
       await controller.revokeDeviceByIdentifier('u1', 'dev-1');
-      expect(plexClient.terminateSession).not.toHaveBeenCalled();
+      expect(sessionTermination.terminateDeviceSessions).not.toHaveBeenCalled();
     });
 
     it('treats a 404 from Plex as an already-ended session', async () => {
-      plexClient.terminateSession.mockRejectedValue(
+      sessionTermination.terminateDeviceSessions.mockRejectedValue(
         new Error('Request failed with status 404'),
       );
 
@@ -258,7 +263,7 @@ describe('DevicesController', () => {
     });
 
     it('surfaces any other termination failure as a 400', async () => {
-      plexClient.terminateSession.mockRejectedValue(
+      sessionTermination.terminateDeviceSessions.mockRejectedValue(
         new Error('502 bad gateway'),
       );
 

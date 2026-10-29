@@ -13,7 +13,7 @@ import {
 import { DevicesService } from '@/modules/devices/services/devices.service';
 import { TemporaryAccessService } from '@/modules/devices/services/temporary-access.service';
 import { UserDevice } from '@/entities/user-device.entity';
-import { PlexClient } from '@/modules/plex/services/plex-client';
+import { SessionTerminationService } from '@/modules/plex/services/session-termination.service';
 import { AdminOnly } from '@/modules/auth/decorators/admin-only.decorator';
 import { errorMessage } from '@/common/utils/error-types';
 
@@ -25,7 +25,7 @@ export class DevicesController {
   constructor(
     private readonly devicesService: DevicesService,
     private readonly temporaryAccessService: TemporaryAccessService,
-    private readonly plexClient: PlexClient,
+    private readonly sessionTermination: SessionTerminationService,
   ) {}
 
   @Get()
@@ -248,39 +248,43 @@ export class DevicesController {
       return { message: 'Device not found' };
     }
 
-    // Revoke any temporary access first
     await this.temporaryAccessService.revokeTemporaryAccess(device.id);
 
-    // Then reject the device
     await this.devicesService.rejectDevice(device.id);
 
-    const sessionKeyToTerminate = device.currentSessionKey;
-
-    if (sessionKeyToTerminate) {
-      try {
-        await this.plexClient.terminateSession(sessionKeyToTerminate);
-        this.logger.log(
-          `Successfully terminated session ${sessionKeyToTerminate} for device ${deviceIdentifier}`,
-        );
-      } catch (error) {
-        // Check if it's a 404 error (session already ended or not found)
-        if (errorMessage(error) && errorMessage(error).includes('404')) {
-          this.logger.warn(
-            `Session ${sessionKeyToTerminate} was already terminated or not found (404) - treating as success`,
-          );
-        } else {
-          this.logger.error(
-            `Failed to terminate session ${sessionKeyToTerminate} for device ${deviceIdentifier}: ${errorMessage(error)}`,
-          );
-          // Only throw error for non-404 errors
-          throw new HttpException(
-            `Failed to revoke device access: ${errorMessage(error)}`,
-            HttpStatus.BAD_REQUEST,
-          );
-        }
-      }
+    if (device.currentSessionKey) {
+      await this.terminateLiveSessions(userId, deviceIdentifier);
     }
 
     return { message: `Device authorization revoked successfully` };
+  }
+
+  private async terminateLiveSessions(
+    userId: string,
+    deviceIdentifier: string,
+  ): Promise<void> {
+    try {
+      const terminated = await this.sessionTermination.terminateDeviceSessions(
+        userId,
+        deviceIdentifier,
+      );
+      this.logger.log(
+        `Terminated ${terminated} live session(s) for device ${deviceIdentifier}`,
+      );
+    } catch (error) {
+      if (errorMessage(error).includes('404')) {
+        this.logger.warn(
+          `Session for device ${deviceIdentifier} had already ended (404) - treating as success`,
+        );
+        return;
+      }
+      this.logger.error(
+        `Failed to terminate the session for device ${deviceIdentifier}: ${errorMessage(error)}`,
+      );
+      throw new HttpException(
+        `Failed to revoke device access: ${errorMessage(error)}`,
+        HttpStatus.BAD_REQUEST,
+      );
+    }
   }
 }

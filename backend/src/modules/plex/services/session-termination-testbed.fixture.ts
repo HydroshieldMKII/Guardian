@@ -31,7 +31,7 @@ export interface SessionTerminationTestbed {
   deviceRepo: { findOne: jest.Mock };
   historyRepo: { findOne: jest.Mock };
   preferenceRepo: { findOne: jest.Mock };
-  plexClient: { terminateSession: jest.Mock };
+  plexClient: { terminateSession: jest.Mock; getSessions: jest.Mock };
   usersService: { getEffectiveDefaultBlock: jest.Mock };
   timePolicyService: Record<string, jest.Mock>;
   concurrentStreamService: Record<string, jest.Mock>;
@@ -82,6 +82,7 @@ export const createSessionTerminationTestbed =
     const preferenceRepo = { findOne: jest.fn().mockResolvedValue(null) };
     const plexClient = {
       terminateSession: jest.fn().mockResolvedValue(undefined),
+      getSessions: jest.fn().mockResolvedValue({}),
     };
     const usersService = {
       getEffectiveDefaultBlock: jest.fn().mockResolvedValue(true),

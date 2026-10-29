@@ -1,3 +1,4 @@
+import { PlexSession } from '@/types/plex.types';
 import { DEFAULT_BLOCK_MESSAGES } from '@/common/utils/block-messages';
 import {
   SessionTerminationService,
@@ -328,6 +329,80 @@ describe('SessionTerminationService', () => {
 
       expect(result.stoppedSessions).toEqual([]);
       expect(plexClient.terminateSession).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('terminateDeviceSessions', () => {
+    const live = (...sessions: PlexSession[]) =>
+      plexClient.getSessions.mockResolvedValue({
+        MediaContainer: { size: sessions.length, Metadata: sessions },
+      });
+
+    it('terminates the device stream by its Plex session id', async () => {
+      live(session({ id: 'plex-session-id', sessionKey: '42' }));
+
+      await expect(
+        service.terminateDeviceSessions('u1', 'dev-1'),
+      ).resolves.toBe(1);
+      expect(plexClient.terminateSession).toHaveBeenCalledWith(
+        'plex-session-id',
+        'msg:MSG_DEVICE_REJECTED',
+      );
+    });
+
+    it('terminates every stream the device is playing', async () => {
+      live(session({ id: 'a' }), session({ id: 'b', sessionKey: 'sk-2' }));
+
+      await expect(
+        service.terminateDeviceSessions('u1', 'dev-1'),
+      ).resolves.toBe(2);
+    });
+
+    it('leaves streams of other devices and users alone', async () => {
+      live(
+        session({ id: 'other-device', machineIdentifier: 'dev-2' }),
+        session({ id: 'other-user', userId: 'u2' }),
+      );
+
+      await expect(
+        service.terminateDeviceSessions('u1', 'dev-1'),
+      ).resolves.toBe(0);
+      expect(plexClient.terminateSession).not.toHaveBeenCalled();
+    });
+
+    it('matches a user Plex only identifies by uuid', async () => {
+      live({ ...session(), User: { uuid: 'uuid-1', title: 'testuser' } });
+
+      await expect(
+        service.terminateDeviceSessions('uuid-1', 'dev-1'),
+      ).resolves.toBe(1);
+    });
+
+    it('skips a stream Plex gave no session id for', async () => {
+      live({ ...session(), Session: {} });
+
+      await expect(
+        service.terminateDeviceSessions('u1', 'dev-1'),
+      ).resolves.toBe(0);
+    });
+
+    it('does nothing when Plex reports no sessions', async () => {
+      await expect(
+        service.terminateDeviceSessions('u1', 'dev-1'),
+      ).resolves.toBe(0);
+      expect(configService.getSetting).not.toHaveBeenCalled();
+    });
+
+    it('falls back to the default rejected message', async () => {
+      live(session());
+      configService.getSetting.mockResolvedValue(null);
+
+      await service.terminateDeviceSessions('u1', 'dev-1');
+
+      expect(plexClient.terminateSession).toHaveBeenCalledWith(
+        'session-1',
+        DEFAULT_BLOCK_MESSAGES.deviceRejected,
+      );
     });
   });
 
