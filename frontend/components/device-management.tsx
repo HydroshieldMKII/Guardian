@@ -12,7 +12,7 @@ import React, {
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 
-import { useDeviceActions } from "@/hooks/device-management/useDeviceActions";
+import { useDeviceDecisions } from "@/hooks/device-management/useDeviceDecisions";
 import { useUserPreferences } from "@/hooks/device-management/useUserPreferences";
 import { useTimeRulesForUsers } from "@/hooks/device-management/useTimeRules";
 import { useToast } from "@/hooks/use-toast";
@@ -24,7 +24,6 @@ import {
   canGrantTemporaryAccess,
   devicePolicyBadges,
 } from "@/lib/device-policies";
-import { formatMinutes } from "@/lib/duration";
 
 import { apiClient } from "@/lib/api";
 import { queryKeys } from "@/lib/query-keys";
@@ -86,35 +85,6 @@ interface DeviceManagementProps {
   onSelectUser?: (userId: string | null) => void;
 }
 
-interface ConfirmActionData {
-  device: UserDevice;
-  action: "approve" | "reject" | "delete" | "toggle" | "removeTemporaryAccess";
-  title: string;
-  description: string;
-}
-
-const CONFIRM_COPY = {
-  approve: {
-    title: "Approve device",
-    description: "This device will be able to stream from your Plex server.",
-  },
-  reject: {
-    title: "Reject device",
-    description:
-      "This device will be blocked from streaming from your Plex server.",
-  },
-  removeTemporaryAccess: {
-    title: "Remove temporary access",
-    description:
-      "The grant ends now instead of when it was due to expire. This device goes straight back under the user's usual policies, so it stops streaming if they block it.",
-  },
-  delete: {
-    title: "Delete device",
-    description:
-      "The record is removed for good. The device reappears as pending the next time it connects, and follows this user's New devices rule until then.",
-  },
-};
-
 const DeviceManagement = memo(
   ({
     devicesData,
@@ -129,7 +99,6 @@ const DeviceManagement = memo(
     const [userGroups, setUserGroups] = useState<UserDeviceGroup[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
-    const [actionLoading, setActionLoading] = useState<number | null>(null);
     const [deviceFocus, setDeviceFocus] = useState<DeviceFocus | null>(null);
     const [selectedDevice, setSelectedDevice] = useState<UserDevice | null>(
       null,
@@ -177,15 +146,12 @@ const DeviceManagement = memo(
       string | null
     >(null);
 
-    const [confirmAction, setConfirmAction] =
-      useState<ConfirmActionData | null>(null);
     const [hideUserConfirmation, setHideUserConfirmation] = useState<{
       userId: string;
       username: string;
       isCurrentlyHidden: boolean;
     } | null>(null);
 
-    const deviceActions = useDeviceActions();
     const userPreferences = useUserPreferences();
     const { data: userTimeRules = NO_TIME_RULES } = useTimeRulesForUsers(
       userGroups.map((group) => group.user.userId),
@@ -299,6 +265,22 @@ const DeviceManagement = memo(
         }
       }
     };
+
+    const decisions = useDeviceDecisions({
+      refresh: handleRefresh,
+      onPendingSet: () => setSelectedDevice(null),
+      onRenamed: (deviceId, newName) => {
+        setSelectedDevice((current) =>
+          current?.id === deviceId
+            ? { ...current, deviceName: newName }
+            : current,
+        );
+        setEditingDevice(null);
+        setNewDeviceName("");
+      },
+      onAccessGranted: () => setTemporaryAccessUser(null),
+    });
+    const { actionLoading } = decisions;
 
     const visibleGroups = useMemo(
       () => userGroups.filter((group) => matchesFilter(group, filter)),
@@ -487,110 +469,6 @@ const DeviceManagement = memo(
       });
     };
 
-    const handleApprove = async (deviceId: number) => {
-      try {
-        setActionLoading(deviceId);
-        const success = await deviceActions.approveDevice(deviceId);
-        if (success) {
-          setTimeout(() => void handleRefresh(), 100);
-          toast({
-            title: "Device approved",
-            description: "This device can now stream from your Plex server",
-            variant: "success",
-          });
-        }
-      } finally {
-        setActionLoading(null);
-        setConfirmAction(null);
-      }
-    };
-
-    const handleReject = async (deviceId: number) => {
-      try {
-        setActionLoading(deviceId);
-        const success = await deviceActions.rejectDevice(deviceId);
-        if (success) {
-          setTimeout(() => void handleRefresh(), 100);
-          toast({
-            title: "Device rejected",
-            description: "This device is now blocked from streaming",
-            variant: "success",
-          });
-        }
-      } finally {
-        setActionLoading(null);
-        setConfirmAction(null);
-      }
-    };
-
-    const handleSetPending = async (deviceId: number): Promise<boolean> => {
-      try {
-        setActionLoading(deviceId);
-        const success = await deviceActions.setPendingDevice(deviceId);
-        if (success) {
-          setTimeout(() => void handleRefresh(), 100);
-          toast({
-            title: "Device set to pending",
-            description:
-              "This device follows this user's New devices rule until you approve or reject it",
-            variant: "success",
-          });
-          setSelectedDevice(null);
-        }
-        return success;
-      } finally {
-        setActionLoading(null);
-      }
-    };
-
-    const handleDelete = async (deviceId: number) => {
-      try {
-        setActionLoading(deviceId);
-        const success = await deviceActions.deleteDevice(deviceId);
-        if (success) {
-          setTimeout(() => void handleRefresh(), 100);
-          toast({
-            title: "Device deleted",
-            description:
-              "The record is gone. The device reappears as pending the next time it connects.",
-            variant: "success",
-          });
-        }
-      } finally {
-        setActionLoading(null);
-        setConfirmAction(null);
-      }
-    };
-
-    const handleToggleApproval = async (device: UserDevice) => {
-      if (device.status === "approved") {
-        await handleReject(device.id);
-      } else {
-        await handleApprove(device.id);
-      }
-    };
-
-    const handleRename = async (deviceId: number, newName: string) => {
-      try {
-        setActionLoading(deviceId);
-        const success = await deviceActions.renameDevice(deviceId, newName);
-        if (success) {
-          if (selectedDevice && selectedDevice.id === deviceId) {
-            setSelectedDevice({
-              ...selectedDevice,
-              deviceName: newName,
-            });
-          }
-
-          setTimeout(() => void handleRefresh(), 100);
-          setEditingDevice(null);
-          setNewDeviceName("");
-        }
-      } finally {
-        setActionLoading(null);
-      }
-    };
-
     const handleDeviceUpdate = (updated: UserDevice) => {
       setUserGroups((groups) =>
         groups.map((group) =>
@@ -627,67 +505,6 @@ const DeviceManagement = memo(
       setNewDeviceName("");
     };
 
-    const handleGrantTemporaryAccess = async (
-      deviceIds: number[],
-      durationMinutes: number,
-      bypassPolicies?: boolean,
-    ) => {
-      try {
-        if (deviceIds.length === 1) {
-          setActionLoading(deviceIds[0]);
-          const success = await deviceActions.grantTemporaryAccess(
-            deviceIds[0],
-            durationMinutes,
-            bypassPolicies,
-          );
-          if (!success) {
-            toast({
-              title: "Error",
-              description: "Failed to grant temporary access",
-              variant: "destructive",
-            });
-            return;
-          }
-        } else {
-          setActionLoading(deviceIds[0]);
-          const result = await deviceActions.grantBatchTemporaryAccess(
-            deviceIds,
-            durationMinutes,
-            bypassPolicies,
-          );
-          if (!result.success) {
-            toast({
-              title: "Error",
-              description: "Failed to grant temporary access to these devices",
-              variant: "destructive",
-            });
-            return;
-          }
-
-          const batchResults = result.results as
-            { success: boolean }[] | undefined;
-          const failedDevices = batchResults?.filter((r) => !r.success) || [];
-          if (failedDevices.length > 0) {
-            toast({
-              title: "Some devices were not granted access",
-              description: `${deviceIds.length - failedDevices.length} of ${deviceIds.length} devices were granted temporary access. Try the remaining ${failedDevices.length} again.`,
-              variant: "destructive",
-            });
-          }
-        }
-
-        setTimeout(() => void handleRefresh(), 100);
-        setTemporaryAccessUser(null);
-        toast({
-          title: "Temporary access granted",
-          description: `Temporary access granted to ${deviceIds.length} device${deviceIds.length > 1 ? "s" : ""} for ${formatMinutes(durationMinutes)}`,
-          variant: "success",
-        });
-      } finally {
-        setActionLoading(null);
-      }
-    };
-
     const handleGrantUserTemporaryAccess = (userId: string) => {
       const userGroup = userGroups.find(
         (group) => group.user.userId === userId,
@@ -697,25 +514,6 @@ const DeviceManagement = memo(
           userId: userGroup.user.userId,
           username: userGroup.user.username,
         });
-      }
-    };
-
-    const handleRemoveTemporaryAccess = async (deviceId: number) => {
-      try {
-        setActionLoading(deviceId);
-        const success = await deviceActions.revokeTemporaryAccess(deviceId);
-        if (success) {
-          setTimeout(() => void handleRefresh(), 100);
-          toast({
-            title: "Temporary access removed",
-            description:
-              "The grant ended early. This device is back under the user's usual policies.",
-            variant: "success",
-          });
-        }
-      } finally {
-        setActionLoading(null);
-        setConfirmAction(null);
       }
     };
 
@@ -739,56 +537,6 @@ const DeviceManagement = memo(
     const handleTimeRuleModalClose = () => {
       setTimeRuleModalOpen(false);
       setSelectedTimeRuleUser(null);
-    };
-
-    const showApproveConfirmation = (device: UserDevice) => {
-      setConfirmAction({ device, action: "approve", ...CONFIRM_COPY.approve });
-    };
-
-    const showRejectConfirmation = (device: UserDevice) => {
-      setConfirmAction({ device, action: "reject", ...CONFIRM_COPY.reject });
-    };
-
-    const showDeleteConfirmation = (device: UserDevice) => {
-      setConfirmAction({ device, action: "delete", ...CONFIRM_COPY.delete });
-    };
-
-    const showRemoveTemporaryAccessConfirmation = (device: UserDevice) => {
-      setConfirmAction({
-        device,
-        action: "removeTemporaryAccess",
-        ...CONFIRM_COPY.removeTemporaryAccess,
-      });
-    };
-
-    const showToggleConfirmation = (device: UserDevice) => {
-      setConfirmAction({
-        device,
-        action: "toggle",
-        ...CONFIRM_COPY[device.status === "approved" ? "reject" : "approve"],
-      });
-    };
-
-    const handleConfirmAction = async () => {
-      if (!confirmAction) return;
-
-      switch (confirmAction.action) {
-        case "approve":
-          await handleApprove(confirmAction.device.id);
-          break;
-        case "reject":
-          await handleReject(confirmAction.device.id);
-          break;
-        case "delete":
-          await handleDelete(confirmAction.device.id);
-          break;
-        case "toggle":
-          await handleToggleApproval(confirmAction.device);
-          break;
-        case "removeTemporaryAccess":
-          await handleRemoveTemporaryAccess(confirmAction.device.id);
-          break;
-      }
     };
 
     const totalPending = queueItems.length;
@@ -850,11 +598,11 @@ const DeviceManagement = memo(
                 onShowHistory={handleShowHistory}
                 onGrantUserTemporaryAccess={handleGrantUserTemporaryAccess}
                 onShowTimePolicy={handleShowTimePolicy}
-                onApprove={showApproveConfirmation}
-                onReject={showRejectConfirmation}
-                onDelete={showDeleteConfirmation}
-                onToggleApproval={showToggleConfirmation}
-                onRemoveTemporaryAccess={showRemoveTemporaryAccessConfirmation}
+                onApprove={decisions.confirmApprove}
+                onReject={decisions.confirmReject}
+                onDelete={decisions.confirmDelete}
+                onToggleApproval={decisions.confirmToggle}
+                onRemoveTemporaryAccess={decisions.confirmRemoveTemporaryAccess}
                 onShowDetails={setSelectedDevice}
                 onDeviceUpdate={handleDeviceUpdate}
               />
@@ -882,8 +630,8 @@ const DeviceManagement = memo(
                   className="hidden lg:block"
                   items={queueItems}
                   actionLoading={actionLoading}
-                  onApprove={showApproveConfirmation}
-                  onReject={showRejectConfirmation}
+                  onApprove={decisions.confirmApprove}
+                  onReject={decisions.confirmReject}
                   onOpenDevice={focusDevice}
                 />
                 <ApprovalQueue
@@ -891,8 +639,8 @@ const DeviceManagement = memo(
                   className="lg:hidden"
                   items={queueItems}
                   actionLoading={actionLoading}
-                  onApprove={showApproveConfirmation}
-                  onReject={showRejectConfirmation}
+                  onApprove={decisions.confirmApprove}
+                  onReject={decisions.confirmReject}
                   onOpenDevice={focusDevice}
                 />
               </>
@@ -909,9 +657,11 @@ const DeviceManagement = memo(
           actionLoading={actionLoading}
           onEdit={startEditing}
           onCancelEdit={cancelEditing}
-          onRename={(deviceId, newName) => void handleRename(deviceId, newName)}
+          onRename={(deviceId, newName) =>
+            void decisions.rename(deviceId, newName)
+          }
           onNewDeviceNameChange={setNewDeviceName}
-          onSetPending={handleSetPending}
+          onSetPending={decisions.setPending}
           onDeviceUpdate={handleDeviceUpdate}
           settingsData={settingsData}
           policies={
@@ -937,7 +687,7 @@ const DeviceManagement = memo(
           isOpen={!!temporaryAccessUser}
           onClose={() => setTemporaryAccessUser(null)}
           onGrantAccess={(deviceIds, durationMinutes, bypassPolicies) =>
-            void handleGrantTemporaryAccess(
+            void decisions.grantTemporaryAccess(
               deviceIds,
               durationMinutes,
               bypassPolicies,
@@ -954,10 +704,10 @@ const DeviceManagement = memo(
         />
 
         <ConfirmationModal
-          confirmAction={confirmAction}
+          confirmAction={decisions.confirmAction}
           actionLoading={actionLoading}
-          onConfirm={() => void handleConfirmAction()}
-          onCancel={() => setConfirmAction(null)}
+          onConfirm={() => void decisions.runConfirmedAction()}
+          onCancel={decisions.cancelConfirmation}
         />
 
         <HiddenUsersDialog

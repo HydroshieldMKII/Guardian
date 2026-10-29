@@ -18,11 +18,11 @@ import {
 import { cn } from "@/lib/utils";
 import { UserDevice } from "@/types";
 
-type ConfirmAction =
+export type ConfirmAction =
   "approve" | "reject" | "delete" | "toggle" | "removeTemporaryAccess";
 type ResolvedAction = "approve" | "reject" | "delete" | "removeTemporaryAccess";
 
-interface ConfirmActionData {
+export interface ConfirmActionData {
   device: UserDevice;
   action: ConfirmAction;
   title: string;
