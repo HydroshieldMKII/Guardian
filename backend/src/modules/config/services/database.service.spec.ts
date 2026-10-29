@@ -419,11 +419,10 @@ describe('DatabaseService', () => {
     it('zeroes the counter and drops the current session key', async () => {
       await service.resetStreamCounts();
 
-      const [applied] = updateBuilder.set.mock.calls[0] as [
-        { sessionCount: number; currentSessionKey: () => string },
-      ];
-      expect(applied.sessionCount).toBe(0);
-      expect(applied.currentSessionKey()).toBe('NULL');
+      expect(updateBuilder.set).toHaveBeenCalledWith({
+        sessionCount: 0,
+        currentSessionKey: null,
+      });
     });
 
     it('leaves every other table alone', async () => {

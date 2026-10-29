@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource } from 'typeorm';
+import { Repository, DataSource, IsNull } from 'typeorm';
 import { UserTimeRule } from '@/entities/user-time-rule.entity';
 import { asHttpError, errorMessage } from '@/common/utils/error-types';
 
@@ -81,22 +81,10 @@ export class TimeRuleService {
     await queryRunner.startTransaction();
 
     try {
-      // First, delete all existing rules for this user/device in the transaction
-      const deleteQuery = queryRunner.manager
-        .createQueryBuilder()
-        .delete()
-        .from(UserTimeRule)
-        .where('userId = :userId', { userId: createDto.userId });
-
-      if (createDto.deviceIdentifier) {
-        deleteQuery.andWhere('deviceIdentifier = :deviceIdentifier', {
-          deviceIdentifier: createDto.deviceIdentifier,
-        });
-      } else {
-        deleteQuery.andWhere('deviceIdentifier IS NULL');
-      }
-
-      await deleteQuery.execute();
+      await queryRunner.manager.delete(UserTimeRule, {
+        userId: createDto.userId,
+        deviceIdentifier: createDto.deviceIdentifier || IsNull(),
+      });
 
       // Define preset rules based on type
       const presetRules = this.getPresetRules(createDto.presetType);
@@ -146,19 +134,12 @@ export class TimeRuleService {
       );
 
       // Verify the rules were actually saved by querying them back
-      const verifyQuery = this.timeRuleRepository
-        .createQueryBuilder('rule')
-        .where('rule.userId = :userId', { userId: createDto.userId });
-
-      if (createDto.deviceIdentifier) {
-        verifyQuery.andWhere('rule.deviceIdentifier = :deviceIdentifier', {
-          deviceIdentifier: createDto.deviceIdentifier,
-        });
-      } else {
-        verifyQuery.andWhere('rule.deviceIdentifier IS NULL');
-      }
-
-      const actualSavedRules = await verifyQuery.getMany();
+      const actualSavedRules = await this.timeRuleRepository.find({
+        where: {
+          userId: createDto.userId,
+          deviceIdentifier: createDto.deviceIdentifier || IsNull(),
+        },
+      });
       this.logger.log(
         `Verification: Found ${actualSavedRules.length} rules in database after commit`,
       );
@@ -238,22 +219,10 @@ export class TimeRuleService {
     userId: string,
     deviceIdentifier?: string,
   ): Promise<UserTimeRule[]> {
-    const queryBuilder = this.timeRuleRepository
-      .createQueryBuilder('rule')
-      .where('rule.userId = :userId', { userId });
-
-    if (deviceIdentifier) {
-      queryBuilder.andWhere('rule.deviceIdentifier = :deviceIdentifier', {
-        deviceIdentifier,
-      });
-    } else {
-      queryBuilder.andWhere('rule.deviceIdentifier IS NULL');
-    }
-
-    return await queryBuilder
-      .orderBy('rule.dayOfWeek', 'ASC')
-      .addOrderBy('rule.startTime', 'ASC')
-      .getMany();
+    return await this.timeRuleRepository.find({
+      where: { userId, deviceIdentifier: deviceIdentifier || IsNull() },
+      order: { dayOfWeek: 'ASC', startTime: 'ASC' },
+    });
   }
 
   async getAllTimeRules(userId: string): Promise<UserTimeRule[]> {

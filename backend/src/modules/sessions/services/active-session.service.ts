@@ -1,6 +1,14 @@
 import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FindOptionsWhere, ILike, IsNull, Not, Or, Repository } from 'typeorm';
+import {
+  FindOptionsWhere,
+  ILike,
+  In,
+  IsNull,
+  Not,
+  Or,
+  Repository,
+} from 'typeorm';
 import { SessionHistory } from '@/entities/session-history.entity';
 import { UserDevice } from '@/entities/user-device.entity';
 import { UserPreference } from '@/entities/user-preference.entity';
@@ -113,29 +121,18 @@ export class ActiveSessionService {
         .filter(Boolean);
 
       // Get sessions that are about to end (not in current sessions but exist in DB without endedAt)
-      const endingSessions = await this.sessionHistoryRepository
-        .createQueryBuilder('session')
-        .where('session.sessionKey NOT IN (:...sessionKeys)', {
-          sessionKeys: currentSessionKeys,
-        })
-        .andWhere('session.endedAt IS NULL')
-        .getMany();
+      const endingSessions = await this.sessionHistoryRepository.find({
+        where: { sessionKey: Not(In(currentSessionKeys)), endedAt: IsNull() },
+      });
 
       const endingSessionKeys = endingSessions.map((s) => s.sessionKey);
 
       // Mark ended sessions with endedAt timestamp and update player state
       if (endingSessionKeys.length > 0) {
-        await this.sessionHistoryRepository
-          .createQueryBuilder()
-          .update(SessionHistory)
-          .set({
-            endedAt: new Date(),
-            playerState: 'stopped',
-          })
-          .where('sessionKey IN (:...sessionKeys)', {
-            sessionKeys: endingSessionKeys,
-          })
-          .execute();
+        await this.sessionHistoryRepository.update(
+          { sessionKey: In(endingSessionKeys) },
+          { endedAt: new Date(), playerState: 'stopped' },
+        );
       }
 
       // Clear session keys from devices for ended sessions only
@@ -156,13 +153,11 @@ export class ActiveSessionService {
   }
 
   async getActiveSessions(): Promise<SessionHistory[]> {
-    return this.sessionHistoryRepository
-      .createQueryBuilder('session')
-      .leftJoinAndSelect('session.userDevice', 'device')
-      .leftJoinAndSelect('session.userPreference', 'userPreference')
-      .where('session.endedAt IS NULL') // Only get active sessions (no end date)
-      .orderBy('session.startedAt', 'DESC')
-      .getMany();
+    return this.sessionHistoryRepository.find({
+      where: { endedAt: IsNull() },
+      relations: { userDevice: true, userPreference: true },
+      order: { startedAt: 'DESC' },
+    });
   }
 
   private extractSessionsFromData(data: unknown): PlexSessionData[] {
@@ -193,13 +188,9 @@ export class ActiveSessionService {
       const session = sessionData.Session;
 
       // Check if session exists (active session = no endedAt)
-      let existingSession = await this.sessionHistoryRepository
-        .createQueryBuilder('session')
-        .where('session.sessionKey = :sessionKey', {
-          sessionKey: sessionData.sessionKey,
-        })
-        .andWhere('session.endedAt IS NULL')
-        .getOne();
+      let existingSession = await this.sessionHistoryRepository.findOne({
+        where: { sessionKey: sessionData.sessionKey, endedAt: IsNull() },
+      });
 
       // For Plexamp devices: if the track (ratingKey) changed, end the old session
       // and create a new one. This ensures each song appears as a separate entry in history.
@@ -211,15 +202,10 @@ export class ActiveSessionService {
         sessionData.ratingKey !== existingSession.ratingKey
       ) {
         // End the current session for the previous track
-        await this.sessionHistoryRepository
-          .createQueryBuilder()
-          .update(SessionHistory)
-          .set({
-            endedAt: new Date(),
-            playerState: 'stopped',
-          })
-          .where('id = :id', { id: existingSession.id })
-          .execute();
+        await this.sessionHistoryRepository.update(existingSession.id, {
+          endedAt: new Date(),
+          playerState: 'stopped',
+        });
 
         // Clear existingSession so a new one will be created below
         existingSession = null;
@@ -297,15 +283,10 @@ export class ActiveSessionService {
 
       if (existingSession) {
         // Update existing active session
-        await this.sessionHistoryRepository
-          .createQueryBuilder()
-          .update(SessionHistory)
-          .set(sessionData_partial)
-          .where('sessionKey = :sessionKey', {
-            sessionKey: sessionData.sessionKey,
-          })
-          .andWhere('endedAt IS NULL')
-          .execute();
+        await this.sessionHistoryRepository.update(
+          { sessionKey: sessionData.sessionKey, endedAt: IsNull() },
+          sessionData_partial,
+        );
       } else {
         // Create new session (startedAt will be auto-generated, no endedAt)
         await this.sessionHistoryRepository.save(
@@ -413,37 +394,35 @@ export class ActiveSessionService {
       const queryBuilder = this.sessionHistoryRepository
         .createQueryBuilder('session')
         .leftJoinAndSelect('session.userDevice', 'device')
-        .where('session.userId = :userId', { userId })
+        .where({ userId })
         .orderBy('session.startedAt', 'DESC')
         .skip(offset)
         .take(limit);
 
       // By default, only return completed sessions (with endedAt)
       if (!includeActive) {
-        queryBuilder.andWhere('session.endedAt IS NOT NULL');
+        queryBuilder.andWhere({ endedAt: Not(IsNull()) });
       }
 
       if (terminatedOnly) {
-        queryBuilder.andWhere('session.terminated = :terminated', {
-          terminated: true,
-        });
+        queryBuilder.andWhere({ terminated: true });
       }
 
       if (app) {
         queryBuilder.andWhere(SESSION_APP_FILTERS[app]);
       }
 
-      const term = search?.trim().toLowerCase();
+      const term = search?.trim();
       if (term) {
-        queryBuilder.andWhere(
-          '(LOWER(session.contentTitle) LIKE :term' +
-            ' OR LOWER(session.grandparentTitle) LIKE :term' +
-            ' OR LOWER(session.parentTitle) LIKE :term' +
-            ' OR LOWER(session.deviceAddress) LIKE :term' +
-            ' OR LOWER(device.deviceName) LIKE :term' +
-            ' OR LOWER(device.deviceProduct) LIKE :term)',
-          { term: `%${term}%` },
-        );
+        const matches = ILike(`%${term}%`);
+        queryBuilder.andWhere([
+          { contentTitle: matches },
+          { grandparentTitle: matches },
+          { parentTitle: matches },
+          { deviceAddress: matches },
+          { userDevice: { deviceName: matches } },
+          { userDevice: { deviceProduct: matches } },
+        ]);
       }
 
       return await queryBuilder.getMany();

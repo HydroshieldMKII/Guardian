@@ -341,7 +341,7 @@ export class DatabaseService {
         .update(UserDevice)
         .set({
           sessionCount: 0,
-          currentSessionKey: () => 'NULL',
+          currentSessionKey: null,
         })
         .execute();
 

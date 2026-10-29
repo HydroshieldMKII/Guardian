@@ -6,7 +6,7 @@ import {
   forwardRef,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { IsNull, Repository } from 'typeorm';
 import { UserDevice } from '@/entities/user-device.entity';
 import { UserTimeRule } from '@/entities/user-time-rule.entity';
 import { UserPreference } from '@/entities/user-preference.entity';
@@ -205,16 +205,13 @@ export class UserPortalService {
     });
 
     // Also get rules where deviceIdentifier is explicitly empty string or undefined
-    const allUserTimeRules = await this.userTimeRuleRepository
-      .createQueryBuilder('rule')
-      .where('rule.userId = :userId', { userId: plexUserId })
-      .andWhere(
-        '(rule.deviceIdentifier IS NULL OR rule.deviceIdentifier = :empty)',
-        { empty: '' },
-      )
-      .orderBy('rule.dayOfWeek', 'ASC')
-      .addOrderBy('rule.startTime', 'ASC')
-      .getMany();
+    const allUserTimeRules = await this.userTimeRuleRepository.find({
+      where: [
+        { userId: plexUserId, deviceIdentifier: IsNull() },
+        { userId: plexUserId, deviceIdentifier: '' },
+      ],
+      order: { dayOfWeek: 'ASC', startTime: 'ASC' },
+    });
 
     // Get the effective concurrent stream limit
     let effectiveConcurrentStreamLimit: number =

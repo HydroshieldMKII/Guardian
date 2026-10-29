@@ -2,6 +2,7 @@ import { EventEmitter } from 'events';
 import { BadRequestException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { IsNull, Not } from 'typeorm';
 import { AdminUser } from '@/entities/admin-user.entity';
 import { UserPreference } from '@/entities/user-preference.entity';
 import { PlexOAuthService } from '@/modules/auth/plex-oauth.service';
@@ -37,8 +38,6 @@ describe('PlexOAuthService', () => {
   let service: PlexOAuthService;
   let adminRepo: Record<string, jest.Mock>;
   let preferenceRepo: { findOne: jest.Mock };
-  let selectQueryBuilder: Record<string, jest.Mock>;
-  let updateQueryBuilder: Record<string, jest.Mock>;
 
   let replies: PlexReply[];
   let sent: SentRequest[];
@@ -118,29 +117,10 @@ describe('PlexOAuthService', () => {
       return req;
     });
 
-    selectQueryBuilder = {
-      where: jest.fn(),
-      getOne: jest.fn().mockResolvedValue(null),
-    };
-    selectQueryBuilder.where.mockReturnValue(selectQueryBuilder);
-
-    updateQueryBuilder = {
-      update: jest.fn(),
-      set: jest.fn(),
-      where: jest.fn(),
-      execute: jest.fn().mockResolvedValue({ affected: 1 }),
-    };
-    updateQueryBuilder.update.mockReturnValue(updateQueryBuilder);
-    updateQueryBuilder.set.mockReturnValue(updateQueryBuilder);
-    updateQueryBuilder.where.mockReturnValue(updateQueryBuilder);
-
     adminRepo = {
       findOne: jest.fn().mockResolvedValue(null),
       findOneOrFail: jest.fn().mockResolvedValue({ id: 'admin-1' }),
       update: jest.fn().mockResolvedValue({ affected: 1 }),
-      createQueryBuilder: jest.fn((alias?: string) =>
-        alias ? selectQueryBuilder : updateQueryBuilder,
-      ),
     };
 
     preferenceRepo = { findOne: jest.fn().mockResolvedValue(null) };
@@ -422,17 +402,17 @@ describe('PlexOAuthService', () => {
 
   describe('admin Plex links', () => {
     it('finds any admin with a linked Plex account', async () => {
-      selectQueryBuilder.getOne.mockResolvedValue({ id: 'admin-1' });
+      adminRepo.findOne.mockResolvedValue({ id: 'admin-1' });
       await expect(service.getAdminWithPlexLinked()).resolves.toEqual({
         id: 'admin-1',
       });
-      expect(selectQueryBuilder.where).toHaveBeenCalledWith(
-        'admin.plexUserId IS NOT NULL',
-      );
+      expect(adminRepo.findOne).toHaveBeenCalledWith({
+        where: { plexUserId: Not(IsNull()) },
+      });
     });
 
     it('reports Plex OAuth as enabled when a link exists', async () => {
-      selectQueryBuilder.getOne.mockResolvedValue({ id: 'admin-1' });
+      adminRepo.findOne.mockResolvedValue({ id: 'admin-1' });
       await expect(service.hasPlexOAuthEnabled()).resolves.toBe(true);
     });
 
@@ -484,14 +464,11 @@ describe('PlexOAuthService', () => {
       adminRepo.findOne.mockResolvedValue({ id: 'admin-1' });
       await service.unlinkPlexAccountFromAdmin('admin-1');
 
-      expect(updateQueryBuilder.set).toHaveBeenCalledWith({
+      expect(adminRepo.update).toHaveBeenCalledWith('admin-1', {
         plexUserId: null,
         plexUsername: null,
         plexEmail: null,
         plexThumb: null,
-      });
-      expect(updateQueryBuilder.where).toHaveBeenCalledWith('id = :id', {
-        id: 'admin-1',
       });
     });
 
@@ -506,7 +483,7 @@ describe('PlexOAuthService', () => {
       await expect(service.unlinkPlexAccountFromAdmin('ghost')).rejects.toThrow(
         'Admin not found',
       );
-      expect(updateQueryBuilder.execute).not.toHaveBeenCalled();
+      expect(adminRepo.update).not.toHaveBeenCalled();
     });
   });
 

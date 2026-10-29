@@ -24,14 +24,11 @@ describe('DeviceTrackingService', () => {
     save: jest.Mock;
     update: jest.Mock;
     delete: jest.Mock;
-    createQueryBuilder: jest.Mock;
     manager: { transaction: jest.Mock };
   };
   let historyRepo: Record<string, jest.Mock>;
   let usersService: Record<string, jest.Mock>;
   let configService: Record<string, jest.Mock>;
-  let deviceQueryBuilder: Record<string, jest.Mock>;
-  let historyQueryBuilder: Record<string, jest.Mock>;
   let transactionRepos: {
     history: { delete: jest.Mock };
     devices: { delete: jest.Mock };
@@ -78,27 +75,14 @@ describe('DeviceTrackingService', () => {
     MediaContainer: { size: metadata.length, Metadata: metadata },
   });
 
-  const chainable = (terminal: Record<string, jest.Mock>) => {
-    const builder: Record<string, jest.Mock> = {
-      update: jest.fn(),
-      set: jest.fn(),
-      where: jest.fn(),
-      ...terminal,
-    };
-    builder.update.mockReturnValue(builder);
-    builder.set.mockReturnValue(builder);
-    builder.where.mockReturnValue(builder);
-    return builder;
+  const revokedAccess = {
+    temporaryAccessUntil: null,
+    temporaryAccessGrantedAt: null,
+    temporaryAccessDurationMinutes: null,
+    temporaryAccessBypassPolicies: false,
   };
 
   beforeEach(async () => {
-    deviceQueryBuilder = chainable({
-      execute: jest.fn().mockResolvedValue({ affected: 1 }),
-    });
-    historyQueryBuilder = chainable({
-      execute: jest.fn().mockResolvedValue({ affected: 1 }),
-    });
-
     transactionRepos = {
       history: { delete: jest.fn().mockResolvedValue({ affected: 3 }) },
       devices: { delete: jest.fn().mockResolvedValue({ affected: 1 }) },
@@ -113,7 +97,6 @@ describe('DeviceTrackingService', () => {
       save: jest.fn((entity: UserDevice) => Promise.resolve(entity)),
       update: jest.fn().mockResolvedValue({ affected: 1 }),
       delete: jest.fn().mockResolvedValue({ affected: 1 }),
-      createQueryBuilder: jest.fn(() => deviceQueryBuilder),
       manager: {
         transaction: jest.fn(async (run: (manager: unknown) => Promise<void>) =>
           run({
@@ -128,7 +111,7 @@ describe('DeviceTrackingService', () => {
 
     historyRepo = {
       delete: jest.fn().mockResolvedValue({ affected: 2 }),
-      createQueryBuilder: jest.fn(() => historyQueryBuilder),
+      update: jest.fn().mockResolvedValue({ affected: 1 }),
     };
 
     usersService = {
@@ -703,23 +686,21 @@ describe('DeviceTrackingService', () => {
       await service.approveDevice(7);
 
       expect(deviceRepo.update).toHaveBeenCalledWith(7, { status: 'approved' });
-      expect(deviceQueryBuilder.where).toHaveBeenCalledWith('id = :deviceId', {
-        deviceId: 7,
-      });
+      expect(deviceRepo.update).toHaveBeenCalledWith(7, revokedAccess);
     });
 
     it('rejects a device without touching temporary access', async () => {
       await service.rejectDevice(7);
 
       expect(deviceRepo.update).toHaveBeenCalledWith(7, { status: 'rejected' });
-      expect(deviceRepo.createQueryBuilder).not.toHaveBeenCalled();
+      expect(deviceRepo.update).toHaveBeenCalledTimes(1);
     });
 
     it('sends a device back to pending and drops temporary access', async () => {
       await service.setPendingDevice(7);
 
       expect(deviceRepo.update).toHaveBeenCalledWith(7, { status: 'pending' });
-      expect(deviceQueryBuilder.execute).toHaveBeenCalled();
+      expect(deviceRepo.update).toHaveBeenCalledWith(7, revokedAccess);
     });
 
     it('renames a device', async () => {
@@ -754,21 +735,10 @@ describe('DeviceTrackingService', () => {
     it('clears every note column when deleting a note', async () => {
       await service.deleteNote(7);
 
-      const [columns] = deviceQueryBuilder.set.mock.calls[0] as [
-        Record<string, () => string>,
-      ];
-      expect(Object.keys(columns)).toEqual([
-        'requestDescription',
-        'requestSubmittedAt',
-        'requestNoteReadAt',
-      ]);
-      expect(Object.values(columns).map((toSql) => toSql())).toEqual([
-        'NULL',
-        'NULL',
-        'NULL',
-      ]);
-      expect(deviceQueryBuilder.where).toHaveBeenCalledWith('id = :id', {
-        id: 7,
+      expect(deviceRepo.update).toHaveBeenCalledWith(7, {
+        requestDescription: null,
+        requestSubmittedAt: null,
+        requestNoteReadAt: null,
       });
     });
   });
@@ -882,18 +852,7 @@ describe('DeviceTrackingService', () => {
     it('nulls every temporary access column when revoking', async () => {
       await service.revokeTemporaryAccess(7);
 
-      const [columns] = deviceQueryBuilder.set.mock.calls[0] as [
-        {
-          temporaryAccessUntil: () => string;
-          temporaryAccessGrantedAt: () => string;
-          temporaryAccessDurationMinutes: () => string;
-          temporaryAccessBypassPolicies: boolean;
-        },
-      ];
-      expect(columns.temporaryAccessBypassPolicies).toBe(false);
-      expect(columns.temporaryAccessUntil()).toBe('NULL');
-      expect(columns.temporaryAccessGrantedAt()).toBe('NULL');
-      expect(columns.temporaryAccessDurationMinutes()).toBe('NULL');
+      expect(deviceRepo.update).toHaveBeenCalledWith(7, revokedAccess);
     });
 
     it('accepts access that has not expired', async () => {
@@ -902,7 +861,7 @@ describe('DeviceTrackingService', () => {
       });
 
       await expect(service.isTemporaryAccessValid(active)).resolves.toBe(true);
-      expect(deviceRepo.createQueryBuilder).not.toHaveBeenCalled();
+      expect(deviceRepo.update).not.toHaveBeenCalled();
     });
 
     it('rejects and cleans up access that has lapsed', async () => {
@@ -911,14 +870,14 @@ describe('DeviceTrackingService', () => {
       });
 
       await expect(service.isTemporaryAccessValid(lapsed)).resolves.toBe(false);
-      expect(deviceQueryBuilder.execute).toHaveBeenCalled();
+      expect(deviceRepo.update).toHaveBeenCalledWith(1, revokedAccess);
     });
 
     it('rejects a device that never had temporary access', async () => {
       await expect(service.isTemporaryAccessValid(device())).resolves.toBe(
         false,
       );
-      expect(deviceRepo.createQueryBuilder).not.toHaveBeenCalled();
+      expect(deviceRepo.update).not.toHaveBeenCalled();
     });
 
     it('reports the remaining minutes, rounded up', async () => {
@@ -948,23 +907,14 @@ describe('DeviceTrackingService', () => {
 
       await service.clearSessionKey('sk-1');
 
-      expect(deviceQueryBuilder.where).toHaveBeenCalledWith(
-        'current_session_key = :sessionKey',
-        { sessionKey: 'sk-1' },
+      expect(deviceRepo.update).toHaveBeenCalledWith(
+        { currentSessionKey: 'sk-1' },
+        { currentSessionKey: null },
       );
-      expect(historyQueryBuilder.where).toHaveBeenCalledWith(
-        'session_key = :sessionKey',
+      expect(historyRepo.update).toHaveBeenCalledWith(
         { sessionKey: 'sk-1' },
+        { endedAt: anyDate() },
       );
-
-      const [deviceColumns] = deviceQueryBuilder.set.mock.calls[0] as [
-        { currentSessionKey: () => string },
-      ];
-      const [historyColumns] = historyQueryBuilder.set.mock.calls[0] as [
-        { endedAt: () => string },
-      ];
-      expect(deviceColumns.currentSessionKey()).toBe('NULL');
-      expect(historyColumns.endedAt()).toBe('CURRENT_TIMESTAMP');
     });
 
     it('lets the same session key be counted again afterwards', async () => {
@@ -992,7 +942,7 @@ describe('DeviceTrackingService', () => {
     });
 
     it('tolerates a driver that omits the affected count', async () => {
-      deviceQueryBuilder.execute.mockResolvedValue({});
+      deviceRepo.update.mockResolvedValue({});
       await expect(service.clearSessionKey('sk-1')).resolves.toBeUndefined();
     });
   });

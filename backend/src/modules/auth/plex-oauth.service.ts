@@ -1,6 +1,6 @@
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { IsNull, Not, Repository } from 'typeorm';
 import * as crypto from 'crypto';
 import * as https from 'https';
 import { AdminUser } from '@/entities/admin-user.entity';
@@ -313,10 +313,9 @@ export class PlexOAuthService {
    * Check if any admin has linked their Plex account
    */
   async getAdminWithPlexLinked(): Promise<AdminUser | null> {
-    return this.adminUserRepository
-      .createQueryBuilder('admin')
-      .where('admin.plexUserId IS NOT NULL')
-      .getOne();
+    return this.adminUserRepository.findOne({
+      where: { plexUserId: Not(IsNull()) },
+    });
   }
 
   /**
@@ -363,18 +362,12 @@ export class PlexOAuthService {
       throw new Error('Admin not found');
     }
 
-    // Clear the Plex fields using raw SQL update to properly set NULL
-    await this.adminUserRepository
-      .createQueryBuilder()
-      .update(AdminUser)
-      .set({
-        plexUserId: null,
-        plexUsername: null,
-        plexEmail: null,
-        plexThumb: null,
-      })
-      .where('id = :id', { id: adminId })
-      .execute();
+    await this.adminUserRepository.update(adminId, {
+      plexUserId: null,
+      plexUsername: null,
+      plexEmail: null,
+      plexThumb: null,
+    });
 
     // Fetch fresh from DB to confirm
     const freshAdmin = await this.adminUserRepository.findOneOrFail({

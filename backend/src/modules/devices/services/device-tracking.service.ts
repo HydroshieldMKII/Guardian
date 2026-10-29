@@ -589,16 +589,11 @@ export class DeviceTrackingService {
   }
 
   async deleteNote(deviceId: number): Promise<void> {
-    await this.userDeviceRepository
-      .createQueryBuilder()
-      .update()
-      .set({
-        requestDescription: () => 'NULL',
-        requestSubmittedAt: () => 'NULL',
-        requestNoteReadAt: () => 'NULL',
-      })
-      .where('id = :id', { id: deviceId })
-      .execute();
+    await this.userDeviceRepository.update(deviceId, {
+      requestDescription: null,
+      requestSubmittedAt: null,
+      requestNoteReadAt: null,
+    });
     this.logger.log(`Note deleted for device ${deviceId}`);
   }
 
@@ -666,17 +661,12 @@ export class DeviceTrackingService {
   }
 
   async revokeTemporaryAccess(deviceId: number): Promise<void> {
-    await this.userDeviceRepository
-      .createQueryBuilder()
-      .update(UserDevice)
-      .set({
-        temporaryAccessUntil: () => 'NULL',
-        temporaryAccessGrantedAt: () => 'NULL',
-        temporaryAccessDurationMinutes: () => 'NULL',
-        temporaryAccessBypassPolicies: false,
-      })
-      .where('id = :deviceId', { deviceId })
-      .execute();
+    await this.userDeviceRepository.update(deviceId, {
+      temporaryAccessUntil: null,
+      temporaryAccessGrantedAt: null,
+      temporaryAccessDurationMinutes: null,
+      temporaryAccessBypassPolicies: false,
+    });
 
     this.logger.log(`Revoked temporary access for device ${deviceId}`);
   }
@@ -734,20 +724,16 @@ export class DeviceTrackingService {
     }
 
     // Clear specific session key for device that stopped streaming
-    const result = await this.userDeviceRepository
-      .createQueryBuilder()
-      .update(UserDevice)
-      .set({ currentSessionKey: () => 'NULL' })
-      .where('current_session_key = :sessionKey', { sessionKey })
-      .execute();
+    const result = await this.userDeviceRepository.update(
+      { currentSessionKey: sessionKey },
+      { currentSessionKey: null },
+    );
 
     // Find in session history and mark terminated at true
-    await this.sessionHistoryRepository
-      .createQueryBuilder()
-      .update(SessionHistory)
-      .set({ endedAt: () => 'CURRENT_TIMESTAMP' })
-      .where('session_key = :sessionKey', { sessionKey })
-      .execute();
+    await this.sessionHistoryRepository.update(
+      { sessionKey },
+      { endedAt: new Date() },
+    );
 
     this.logger.debug(
       `Cleared session key for ${result.affected || 0} device(s) that stopped streaming (session: ${sessionKey})`,

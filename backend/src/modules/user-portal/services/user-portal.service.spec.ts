@@ -1,6 +1,7 @@
 import { ForbiddenException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { IsNull } from 'typeorm';
 import { UserDevice } from '@/entities/user-device.entity';
 import { UserTimeRule } from '@/entities/user-time-rule.entity';
 import { UserPreference } from '@/entities/user-preference.entity';
@@ -16,7 +17,6 @@ describe('UserPortalService', () => {
   let preferenceRepo: { findOne: jest.Mock };
   let settingsRepo: { findOne: jest.Mock };
   let notificationsService: { createDeviceNoteNotification: jest.Mock };
-  let queryBuilder: Record<string, jest.Mock>;
 
   const settings = new Map<string, string>();
 
@@ -55,17 +55,6 @@ describe('UserPortalService', () => {
   beforeEach(async () => {
     settings.clear();
 
-    queryBuilder = {
-      where: jest.fn(),
-      andWhere: jest.fn(),
-      orderBy: jest.fn(),
-      addOrderBy: jest.fn(),
-      getMany: jest.fn().mockResolvedValue([]),
-    };
-    for (const key of ['where', 'andWhere', 'orderBy', 'addOrderBy']) {
-      queryBuilder[key].mockReturnValue(queryBuilder);
-    }
-
     deviceRepo = {
       find: jest.fn().mockResolvedValue([]),
       findOne: jest.fn().mockResolvedValue(device()),
@@ -74,7 +63,6 @@ describe('UserPortalService', () => {
 
     timeRuleRepo = {
       find: jest.fn().mockResolvedValue([]),
-      createQueryBuilder: jest.fn(() => queryBuilder),
     };
 
     preferenceRepo = { findOne: jest.fn().mockResolvedValue(null) };
@@ -337,14 +325,17 @@ describe('UserPortalService', () => {
     it('lists only rules that are not tied to a device', async () => {
       await service.getUserRules('plex-9');
 
-      expect(queryBuilder.andWhere).toHaveBeenCalledWith(
-        '(rule.deviceIdentifier IS NULL OR rule.deviceIdentifier = :empty)',
-        { empty: '' },
-      );
+      expect(timeRuleRepo.find).toHaveBeenCalledWith({
+        where: [
+          { userId: 'plex-9', deviceIdentifier: IsNull() },
+          { userId: 'plex-9', deviceIdentifier: '' },
+        ],
+        order: { dayOfWeek: 'ASC', startTime: 'ASC' },
+      });
     });
 
     it('presents the user-wide time rules', async () => {
-      queryBuilder.getMany.mockResolvedValue([timeRule()]);
+      timeRuleRepo.find.mockResolvedValue([timeRule()]);
 
       const rules = await service.getUserRules('plex-9');
       expect(rules?.timeRules).toEqual([

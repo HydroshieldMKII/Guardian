@@ -1,6 +1,7 @@
 import { NotFoundException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { IsNull, MoreThan } from 'typeorm';
 import { Notification } from '@/entities/notification.entity';
 import { SessionHistory } from '@/entities/session-history.entity';
 import { UserDevice } from '@/entities/user-device.entity';
@@ -23,7 +24,6 @@ describe('NotificationsService', () => {
     hasListeners: jest.Mock;
     broadcastNotifications: jest.Mock;
   };
-  let queryBuilder: Record<string, jest.Mock>;
 
   const enabled = new Set<string>();
 
@@ -45,24 +45,6 @@ describe('NotificationsService', () => {
   beforeEach(async () => {
     enabled.clear();
 
-    queryBuilder = {
-      leftJoinAndSelect: jest.fn(),
-      where: jest.fn(),
-      andWhere: jest.fn(),
-      orderBy: jest.fn(),
-      limit: jest.fn(),
-      getMany: jest.fn().mockResolvedValue([]),
-    };
-    for (const key of [
-      'leftJoinAndSelect',
-      'where',
-      'andWhere',
-      'orderBy',
-      'limit',
-    ]) {
-      queryBuilder[key].mockReturnValue(queryBuilder);
-    }
-
     notificationRepo = {
       create: jest.fn((entity: Partial<Notification>) =>
         Object.assign(new Notification(), entity),
@@ -73,7 +55,7 @@ describe('NotificationsService', () => {
       update: jest.fn().mockResolvedValue({ affected: 1 }),
       count: jest.fn().mockResolvedValue(4),
       clear: jest.fn().mockResolvedValue(undefined),
-      createQueryBuilder: jest.fn(() => queryBuilder),
+      find: jest.fn().mockResolvedValue([]),
     };
 
     historyRepo = { findOne: jest.fn().mockResolvedValue(null) };
@@ -518,7 +500,7 @@ describe('NotificationsService', () => {
     } as Partial<Notification>);
 
     it('resolves the username and device name through the session history', async () => {
-      queryBuilder.getMany.mockResolvedValue([joined]);
+      notificationRepo.find.mockResolvedValue([joined]);
 
       await expect(service.getAllNotifications()).resolves.toEqual([
         expect.objectContaining({
@@ -529,7 +511,7 @@ describe('NotificationsService', () => {
     });
 
     it('falls back to placeholders when there is no session history', async () => {
-      queryBuilder.getMany.mockResolvedValue([notification()]);
+      notificationRepo.find.mockResolvedValue([notification()]);
 
       await expect(service.getAllNotifications()).resolves.toEqual([
         expect.objectContaining({
@@ -540,7 +522,7 @@ describe('NotificationsService', () => {
     });
 
     it('falls back to placeholders in a user listing too', async () => {
-      queryBuilder.getMany.mockResolvedValue([notification()]);
+      notificationRepo.find.mockResolvedValue([notification()]);
 
       await expect(service.getNotificationsForUser('u1')).resolves.toEqual([
         expect.objectContaining({
@@ -551,7 +533,7 @@ describe('NotificationsService', () => {
     });
 
     it('resolves names through session history in a user listing', async () => {
-      queryBuilder.getMany.mockResolvedValue([joined]);
+      notificationRepo.find.mockResolvedValue([joined]);
 
       await expect(service.getNotificationsForUser('u1')).resolves.toEqual([
         expect.objectContaining({
@@ -564,19 +546,23 @@ describe('NotificationsService', () => {
     it('scopes a user listing to that user, newest first', async () => {
       await service.getNotificationsForUser('u1');
 
-      expect(queryBuilder.where).toHaveBeenCalledWith(
-        'notification.userId = :userId',
-        { userId: 'u1' },
-      );
-      expect(queryBuilder.orderBy).toHaveBeenCalledWith(
-        'notification.createdAt',
-        'DESC',
-      );
+      expect(notificationRepo.find).toHaveBeenCalledWith({
+        where: { userId: 'u1' },
+        relations: {
+          sessionHistory: { userPreference: true, userDevice: true },
+        },
+        order: { createdAt: 'DESC' },
+      });
     });
 
     it('does not scope the global listing to a user', async () => {
       await service.getAllNotifications();
-      expect(queryBuilder.where).not.toHaveBeenCalled();
+      expect(notificationRepo.find).toHaveBeenCalledWith({
+        relations: {
+          sessionHistory: { userPreference: true, userDevice: true },
+        },
+        order: { createdAt: 'DESC' },
+      });
     });
   });
 
@@ -651,7 +637,7 @@ describe('NotificationsService', () => {
 
     it('links the recent new-device notification', async () => {
       historyRepo.findOne.mockResolvedValue(history);
-      queryBuilder.getMany.mockResolvedValue([
+      notificationRepo.find.mockResolvedValue([
         notification({ id: 3, text: 'Stream blocked for testuser' }),
         notification({ id: 4, text: 'New device detected for testuser' }),
       ]);
@@ -665,7 +651,7 @@ describe('NotificationsService', () => {
 
     it('links at most one notification', async () => {
       historyRepo.findOne.mockResolvedValue(history);
-      queryBuilder.getMany.mockResolvedValue([
+      notificationRepo.find.mockResolvedValue([
         notification({ id: 4, text: 'New device detected for testuser' }),
         notification({ id: 5, text: 'New device detected for testuser' }),
       ]);
@@ -676,17 +662,25 @@ describe('NotificationsService', () => {
 
     it('only considers notifications with no session link from the last five minutes', async () => {
       historyRepo.findOne.mockResolvedValue(history);
+      const now = new Date('2026-08-01T12:00:00Z');
+      const clock = jest.spyOn(Date, 'now').mockReturnValue(now.getTime());
       await service.linkNotificationToSessionHistory('sk-1');
+      clock.mockRestore();
 
-      expect(queryBuilder.andWhere).toHaveBeenCalledWith(
-        'notification.sessionHistoryId IS NULL',
-      );
-      expect(queryBuilder.limit).toHaveBeenCalledWith(5);
+      expect(notificationRepo.find).toHaveBeenCalledWith({
+        where: {
+          userId: 'u1',
+          sessionHistoryId: IsNull(),
+          createdAt: MoreThan(new Date('2026-08-01T11:55:00Z')),
+        },
+        order: { createdAt: 'DESC' },
+        take: 5,
+      });
     });
 
     it('leaves unrelated notifications alone', async () => {
       historyRepo.findOne.mockResolvedValue(history);
-      queryBuilder.getMany.mockResolvedValue([
+      notificationRepo.find.mockResolvedValue([
         notification({ id: 3, text: 'Stream blocked for testuser' }),
       ]);
 
@@ -710,7 +704,7 @@ describe('NotificationsService', () => {
 
     it('broadcasts the refreshed list after a notification is created', async () => {
       liveEvents.hasListeners.mockReturnValue(true);
-      queryBuilder.getMany.mockResolvedValue([notification()]);
+      notificationRepo.find.mockResolvedValue([notification()]);
 
       await service.createNotification({ userId: 'u1', text: 'hello' });
 
@@ -732,7 +726,7 @@ describe('NotificationsService', () => {
 
     it('survives a broadcast failure', async () => {
       liveEvents.hasListeners.mockReturnValue(true);
-      queryBuilder.getMany.mockRejectedValue(new Error('db down'));
+      notificationRepo.find.mockRejectedValue(new Error('db down'));
 
       await expect(
         service.createNotification({ userId: 'u1', text: 'hello' }),

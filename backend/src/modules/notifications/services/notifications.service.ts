@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { FindOptionsRelations, IsNull, MoreThan, Repository } from 'typeorm';
 import { Notification } from '@/entities/notification.entity';
 import { SessionHistory } from '@/entities/session-history.entity';
 import { UserDevice } from '@/entities/user-device.entity';
@@ -28,6 +28,10 @@ export interface NotificationResponseDto {
   createdAt: Date;
   sessionHistoryId?: number | null;
 }
+
+const NOTIFICATION_RELATIONS: FindOptionsRelations<Notification> = {
+  sessionHistory: { userPreference: true, userDevice: true },
+};
 
 @Injectable()
 export class NotificationsService {
@@ -452,14 +456,11 @@ export class NotificationsService {
   async getNotificationsForUser(
     userId: string,
   ): Promise<NotificationResponseDto[]> {
-    const notifications = await this.notificationRepository
-      .createQueryBuilder('notification')
-      .leftJoinAndSelect('notification.sessionHistory', 'sessionHistory')
-      .leftJoinAndSelect('sessionHistory.userPreference', 'userPreference')
-      .leftJoinAndSelect('sessionHistory.userDevice', 'userDevice')
-      .where('notification.userId = :userId', { userId })
-      .orderBy('notification.createdAt', 'DESC')
-      .getMany();
+    const notifications = await this.notificationRepository.find({
+      where: { userId },
+      relations: NOTIFICATION_RELATIONS,
+      order: { createdAt: 'DESC' },
+    });
 
     return notifications.map((notification) => ({
       id: notification.id,
@@ -477,13 +478,10 @@ export class NotificationsService {
   }
 
   async getAllNotifications(): Promise<NotificationResponseDto[]> {
-    const notifications = await this.notificationRepository
-      .createQueryBuilder('notification')
-      .leftJoinAndSelect('notification.sessionHistory', 'sessionHistory')
-      .leftJoinAndSelect('sessionHistory.userPreference', 'userPreference')
-      .leftJoinAndSelect('sessionHistory.userDevice', 'userDevice')
-      .orderBy('notification.createdAt', 'DESC')
-      .getMany();
+    const notifications = await this.notificationRepository.find({
+      relations: NOTIFICATION_RELATIONS,
+      order: { createdAt: 'DESC' },
+    });
 
     return notifications.map((notification) => ({
       id: notification.id,
@@ -578,18 +576,15 @@ export class NotificationsService {
       );
 
       // Find recent notifications for the same user that don't have a session history link
-      const recentNotifications = await this.notificationRepository
-        .createQueryBuilder('notification')
-        .where('notification.userId = :userId', {
+      const recentNotifications = await this.notificationRepository.find({
+        where: {
           userId: sessionHistory.userId,
-        })
-        .andWhere('notification.sessionHistoryId IS NULL')
-        .andWhere('notification.createdAt > :fiveMinutesAgo', {
-          fiveMinutesAgo: new Date(Date.now() - 5 * 60 * 1000),
-        })
-        .orderBy('notification.createdAt', 'DESC')
-        .limit(5)
-        .getMany();
+          sessionHistoryId: IsNull(),
+          createdAt: MoreThan(new Date(Date.now() - 5 * 60 * 1000)),
+        },
+        order: { createdAt: 'DESC' },
+        take: 5,
+      });
 
       this.logger.debug(
         `Found ${recentNotifications.length} orphaned notifications for user ${sessionHistory.userId}`,

@@ -5,7 +5,7 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, LessThan } from 'typeorm';
+import { Repository, LessThan, Not } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import { AdminUser } from '@/entities/admin-user.entity';
@@ -459,14 +459,10 @@ export class AuthService {
     try {
       if (currentSessionId) {
         // Delete all sessions except the current one
-        await this.sessionRepository
-          .createQueryBuilder()
-          .delete()
-          .where('userId = :userId AND id != :currentSessionId', {
-            userId,
-            currentSessionId,
-          })
-          .execute();
+        await this.sessionRepository.delete({
+          userId,
+          id: Not(currentSessionId),
+        });
       } else {
         await this.sessionRepository.delete({ userId });
       }

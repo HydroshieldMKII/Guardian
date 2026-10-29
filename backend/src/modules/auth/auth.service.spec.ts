@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { Not } from 'typeorm';
 import { AdminUser } from '@/entities/admin-user.entity';
 import { Session } from '@/entities/session.entity';
 import { AppSettings } from '@/entities/app-settings.entity';
@@ -31,7 +32,6 @@ describe('AuthService', () => {
   };
   let sessionRepo: Record<string, jest.Mock>;
   let settingsRepo: { findOne: jest.Mock };
-  let deleteQueryBuilder: Record<string, jest.Mock>;
 
   const admin = {
     id: 'admin-1',
@@ -60,14 +60,6 @@ describe('AuthService', () => {
     hash.mockResolvedValue('new-hash');
     compare.mockResolvedValue(true);
 
-    deleteQueryBuilder = {
-      delete: jest.fn(),
-      where: jest.fn(),
-      execute: jest.fn().mockResolvedValue({ affected: 2 }),
-    };
-    deleteQueryBuilder.delete.mockReturnValue(deleteQueryBuilder);
-    deleteQueryBuilder.where.mockReturnValue(deleteQueryBuilder);
-
     adminRepo = {
       count: jest.fn().mockResolvedValue(0),
       save: jest.fn().mockImplementation((entity: Record<string, unknown>) =>
@@ -94,7 +86,6 @@ describe('AuthService', () => {
       findOne: jest.fn().mockResolvedValue({ ...storedSession }),
       remove: jest.fn().mockResolvedValue(undefined),
       delete: jest.fn().mockResolvedValue({ affected: 3 }),
-      createQueryBuilder: jest.fn().mockReturnValue(deleteQueryBuilder),
     };
 
     settingsRepo = { findOne: jest.fn().mockResolvedValue(null) };
@@ -460,11 +451,11 @@ describe('AuthService', () => {
     it('spares the current session when one is given', async () => {
       await service.clearAllSessions('admin-1', 'session-1');
 
-      expect(deleteQueryBuilder.where).toHaveBeenCalledWith(
-        'userId = :userId AND id != :currentSessionId',
-        { userId: 'admin-1', currentSessionId: 'session-1' },
-      );
-      expect(sessionRepo.delete).not.toHaveBeenCalled();
+      expect(sessionRepo.delete).toHaveBeenCalledTimes(1);
+      expect(sessionRepo.delete).toHaveBeenCalledWith({
+        userId: 'admin-1',
+        id: Not('session-1'),
+      });
     });
 
     it('deletes every session when no current one is given', async () => {
@@ -587,7 +578,6 @@ describe('AuthService', () => {
     it('leaves other sessions alone by default', async () => {
       await service.updatePassword('admin-1', dto);
       expect(sessionRepo.delete).not.toHaveBeenCalled();
-      expect(sessionRepo.createQueryBuilder).not.toHaveBeenCalled();
     });
 
     it('clears the other sessions when asked, keeping the current one', async () => {
@@ -597,7 +587,10 @@ describe('AuthService', () => {
         'session-1',
       );
 
-      expect(deleteQueryBuilder.execute).toHaveBeenCalled();
+      expect(sessionRepo.delete).toHaveBeenCalledWith({
+        userId: 'admin-1',
+        id: Not('session-1'),
+      });
     });
 
     it('reports a save failure as a 500', async () => {

@@ -1,6 +1,6 @@
 import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { DataSource } from 'typeorm';
+import { DataSource, In, IsNull, Not } from 'typeorm';
 import { ENTITIES } from '@/database/database.options';
 import { SessionHistory } from '@/entities/session-history.entity';
 import { UserDevice } from '@/entities/user-device.entity';
@@ -8,8 +8,12 @@ import { UserPreference } from '@/entities/user-preference.entity';
 import { DeviceTrackingService } from '@/modules/devices/services/device-tracking.service';
 import { PlexClient } from '@/modules/plex/services/plex-client';
 import { NotificationOrchestratorService } from '@/modules/notifications/services/notification-orchestrator.service';
-import { ActiveSessionService } from '@/modules/sessions/services/active-session.service';
-import { callArgs } from '@/test-matchers';
+import {
+  ActiveSessionService,
+  SessionHistoryApp,
+  SessionHistoryQuery,
+} from '@/modules/sessions/services/active-session.service';
+import { anyDate, callArgs } from '@/test-matchers';
 
 describe('ActiveSessionService', () => {
   let service: ActiveSessionService;
@@ -29,11 +33,7 @@ describe('ActiveSessionService', () => {
       orderBy: jest.fn(),
       skip: jest.fn(),
       take: jest.fn(),
-      update: jest.fn(),
-      set: jest.fn(),
       getMany: jest.fn().mockResolvedValue([]),
-      getOne: jest.fn().mockResolvedValue(null),
-      execute: jest.fn().mockResolvedValue({ affected: 1 }),
     };
     for (const key of [
       'leftJoinAndSelect',
@@ -42,8 +42,6 @@ describe('ActiveSessionService', () => {
       'orderBy',
       'skip',
       'take',
-      'update',
-      'set',
     ]) {
       builder[key].mockReturnValue(builder);
     }
@@ -92,6 +90,9 @@ describe('ActiveSessionService', () => {
     builders = [];
 
     historyRepo = {
+      find: jest.fn().mockResolvedValue([]),
+      findOne: jest.fn().mockResolvedValue(null),
+      update: jest.fn().mockResolvedValue({ affected: 1 }),
       createQueryBuilder: jest.fn(() => newBuilder()),
       create: jest.fn((entity: Partial<SessionHistory>) =>
         Object.assign(new SessionHistory(), entity),
@@ -221,14 +222,18 @@ describe('ActiveSessionService', () => {
     });
 
     it('updates rather than recreates a session already running', async () => {
-      historyRepo.createQueryBuilder.mockImplementation(() => {
-        const builder = newBuilder();
-        builder.getOne.mockResolvedValue({ id: 1, ratingKey: '123' });
-        return builder;
-      });
+      historyRepo.findOne.mockResolvedValue({ id: 1, ratingKey: '123' });
 
       await service.updateActiveSessions(payload(plexSession()));
 
+      expect(historyRepo.findOne).toHaveBeenCalledWith({
+        where: { sessionKey: 'sk-1', endedAt: IsNull() },
+      });
+      expect(
+        callArgs<[Record<string, unknown>, Record<string, unknown>]>(
+          historyRepo.update,
+        )[0],
+      ).toEqual({ sessionKey: 'sk-1', endedAt: IsNull() });
       expect(historyRepo.save).not.toHaveBeenCalled();
       expect(orchestrator.linkOrphanedNotifications).not.toHaveBeenCalled();
     });
@@ -292,34 +297,30 @@ describe('ActiveSessionService', () => {
     });
 
     it('closes out sessions that are no longer running', async () => {
-      historyRepo.createQueryBuilder.mockImplementationOnce(() => {
-        const builder = newBuilder();
-        builder.getMany.mockResolvedValue([{ sessionKey: 'sk-old' }]);
-        return builder;
-      });
+      historyRepo.find.mockResolvedValueOnce([{ sessionKey: 'sk-old' }]);
 
       await service.updateActiveSessions(payload(plexSession()));
 
+      expect(historyRepo.find).toHaveBeenCalledWith({
+        where: { sessionKey: Not(In(['sk-1'])), endedAt: IsNull() },
+      });
+      expect(historyRepo.update).toHaveBeenCalledWith(
+        { sessionKey: In(['sk-old']) },
+        { endedAt: anyDate(), playerState: 'stopped' },
+      );
       expect(deviceTrackingService.clearSessionKey).toHaveBeenCalledWith(
         'sk-old',
-      );
-      const updateBuilder = builders[1];
-      expect(updateBuilder.set).toHaveBeenCalledWith(
-        expect.objectContaining({ playerState: 'stopped' }),
       );
     });
 
     it('runs no update when nothing has ended', async () => {
       await service.updateActiveSessions(payload(plexSession()));
+      expect(historyRepo.update).not.toHaveBeenCalled();
       expect(deviceTrackingService.clearSessionKey).not.toHaveBeenCalled();
     });
 
     it('rethrows when the sweep fails', async () => {
-      historyRepo.createQueryBuilder.mockImplementation(() => {
-        const builder = newBuilder();
-        builder.getMany.mockRejectedValue(new Error('db down'));
-        return builder;
-      });
+      historyRepo.find.mockRejectedValue(new Error('db down'));
 
       await expect(
         service.updateActiveSessions(payload(plexSession())),
@@ -356,17 +357,17 @@ describe('ActiveSessionService', () => {
       });
 
     const withExistingTrack = (ratingKey: string) => {
-      historyRepo.createQueryBuilder.mockImplementation(() => {
-        const builder = newBuilder();
-        builder.getOne.mockResolvedValue({ id: 1, ratingKey });
-        return builder;
-      });
+      historyRepo.findOne.mockResolvedValue({ id: 1, ratingKey });
     };
 
     it('starts a new history row when the track changes', async () => {
       withExistingTrack('111');
       await service.updateActiveSessions(payload(plexampSession('222')));
 
+      expect(historyRepo.update).toHaveBeenCalledWith(1, {
+        endedAt: anyDate(),
+        playerState: 'stopped',
+      });
       expect(historyRepo.save).toHaveBeenCalled();
       expect(savedSession().ratingKey).toBe('222');
     });
@@ -414,11 +415,7 @@ describe('ActiveSessionService', () => {
       });
 
     const listReturning = (...rows: SessionHistory[]) => {
-      historyRepo.createQueryBuilder.mockImplementation(() => {
-        const builder = newBuilder();
-        builder.getMany.mockResolvedValue(rows);
-        return builder;
-      });
+      historyRepo.find.mockResolvedValue(rows);
     };
 
     it('shapes the rows like a Plex sessions payload', async () => {
@@ -426,6 +423,11 @@ describe('ActiveSessionService', () => {
 
       const result = await service.getActiveSessionsFormatted();
 
+      expect(historyRepo.find).toHaveBeenCalledWith({
+        where: { endedAt: IsNull() },
+        relations: { userDevice: true, userPreference: true },
+        order: { startedAt: 'DESC' },
+      });
       expect(result.MediaContainer?.size).toBe(1);
       expect(result.MediaContainer?.Metadata?.[0]).toMatchObject({
         sessionKey: 'sk-1',
@@ -513,19 +515,6 @@ describe('ActiveSessionService', () => {
   });
 
   describe('getUserSessionHistory', () => {
-    it('returns only completed sessions by default', async () => {
-      await service.getUserSessionHistory('u1');
-
-      const builder = builders[0];
-      expect(builder.where).toHaveBeenCalledWith('session.userId = :userId', {
-        userId: 'u1',
-      });
-      expect(builder.andWhere).toHaveBeenCalledWith(
-        'session.endedAt IS NOT NULL',
-      );
-      expect(builder.take).toHaveBeenCalledWith(50);
-    });
-
     it('includes running sessions when asked', async () => {
       await service.getUserSessionHistory('u1', {
         limit: 10,
@@ -548,24 +537,7 @@ describe('ActiveSessionService', () => {
     it('starts at the first page by default', async () => {
       await service.getUserSessionHistory('u1');
       expect(builders[0].skip).toHaveBeenCalledWith(0);
-    });
-
-    it('narrows to terminated sessions when asked', async () => {
-      await service.getUserSessionHistory('u1', { terminatedOnly: true });
-
-      expect(builders[0].andWhere).toHaveBeenCalledWith(
-        'session.terminated = :terminated',
-        { terminated: true },
-      );
-    });
-
-    it('matches the search term against titles, addresses and devices', async () => {
-      await service.getUserSessionHistory('u1', { search: '  Ennemie ' });
-
-      expect(builders[0].andWhere).toHaveBeenCalledWith(
-        expect.stringContaining('LOWER(session.contentTitle) LIKE :term'),
-        { term: '%ennemie%' },
-      );
+      expect(builders[0].take).toHaveBeenCalledWith(50);
     });
 
     it('ignores a blank search term', async () => {
@@ -635,10 +607,12 @@ describe('ActiveSessionService history app filter', () => {
     });
   };
 
-  const keys = async (app: 'plex' | 'plexamp') =>
-    (await service.getUserSessionHistory('u1', { app }))
+  const historyKeys = async (query: SessionHistoryQuery = {}) =>
+    (await service.getUserSessionHistory('u1', query))
       .map((entry) => entry.sessionKey)
       .sort();
+
+  const keys = (app: SessionHistoryApp) => historyKeys({ app });
 
   beforeEach(async () => {
     dataSource = new DataSource({
@@ -707,5 +681,84 @@ describe('ActiveSessionService history app filter', () => {
 
   it('keeps sessions without a product or device when only Plex is asked for', async () => {
     expect(await keys('plex')).toEqual(['no-device', 'plex-web']);
+  });
+
+  describe('getUserSessionHistory', () => {
+    const history = (sessionKey: string, fields: Partial<SessionHistory>) =>
+      dataSource.getRepository(SessionHistory).save({
+        sessionKey,
+        userId: 'u1',
+        endedAt: new Date(),
+        ...fields,
+      });
+
+    beforeEach(async () => {
+      await dataSource.getRepository(UserPreference).save({ userId: 'u2' });
+    });
+
+    it('returns only completed sessions by default', async () => {
+      await history('running', { endedAt: null });
+      await history('other-user', { userId: 'u2' });
+
+      expect(await historyKeys()).toEqual([
+        'device-name',
+        'device-product',
+        'no-device',
+        'plex-web',
+        'session-product',
+      ]);
+    });
+
+    it('narrows to terminated sessions when asked', async () => {
+      await history('terminated', { terminated: true });
+      await history('terminated-running', { terminated: true, endedAt: null });
+      await history('other-user-terminated', {
+        userId: 'u2',
+        terminated: true,
+      });
+
+      expect(await historyKeys({ terminatedOnly: true })).toEqual([
+        'terminated',
+      ]);
+    });
+
+    it('matches the search term against titles, addresses and devices', async () => {
+      const namedDevice = await device({
+        deviceName: 'Matrix TV',
+        deviceProduct: 'Plex Web',
+      });
+      const productDevice = await device({
+        deviceName: 'Den',
+        deviceProduct: 'Matrix Player',
+      });
+
+      await history('by-title', { contentTitle: 'The Matrix' });
+      await history('by-grandparent', {
+        contentTitle: 'Pilot',
+        grandparentTitle: 'Matrix Stories',
+      });
+      await history('by-parent', { parentTitle: 'Matrix Season 1' });
+      await history('by-address', { deviceAddress: 'matrix.lan' });
+      await history('by-device-name', { userDeviceId: namedDevice.id });
+      await history('by-device-product', { userDeviceId: productDevice.id });
+      await history('unrelated', { contentTitle: 'Inception' });
+      await history('running-match', {
+        contentTitle: 'The Matrix',
+        endedAt: null,
+      });
+      await history('other-user-match', {
+        userId: 'u2',
+        contentTitle: 'The Matrix',
+      });
+
+      expect(await historyKeys({ search: '  mAtRiX ' })).toEqual([
+        'by-address',
+        'by-device-name',
+        'by-device-product',
+        'by-grandparent',
+        'by-parent',
+        'by-title',
+      ]);
+    });
   });
 });
