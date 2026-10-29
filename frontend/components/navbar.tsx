@@ -17,7 +17,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { useTheme } from "@/hooks/use-theme";
-import { useVersion } from "@/contexts/version-context";
+import { useVersionInfo } from "@/hooks/useVersionInfo";
 import { useAuth, isAdminUser, isPlexUser } from "@/contexts/auth-context";
 import { useUnsavedChanges } from "@/contexts/unsaved-changes-context";
 import { NotificationMenu } from "@/components/notification-menu";
@@ -52,7 +52,7 @@ export function Navbar() {
   const [editProfileOpen, setEditProfileOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const { theme, toggleTheme } = useTheme();
-  const { versionInfo } = useVersion();
+  const { versionInfo } = useVersionInfo();
   const { user, userType, logout, setupRequired, isAuthenticated } = useAuth();
   const {
     hasUnsavedChanges,

@@ -16,7 +16,7 @@ import {
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useSettings } from "@/hooks/useSettings";
-import { useVersion } from "@/contexts/version-context";
+import { useVersionInfo } from "@/hooks/useVersionInfo";
 import { useUnsavedChanges } from "@/contexts/unsaved-changes-context";
 import { apiClient } from "@/lib/api";
 
@@ -45,7 +45,7 @@ export default function SettingsPage() {
   const router = useRouter();
   const { toast } = useToast();
   const { settings, loading, refreshSettings, updateSettings } = useSettings();
-  const { versionInfo } = useVersion();
+  const { versionInfo } = useVersionInfo();
   const {
     setHasUnsavedChanges: setGlobalUnsavedChanges,
     setOnSaveAndLeave,

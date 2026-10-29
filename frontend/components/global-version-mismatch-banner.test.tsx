@@ -5,8 +5,8 @@ import { GlobalVersionMismatchBanner } from "@/components/global-version-mismatc
 const refreshVersionInfo = jest.fn();
 let versionInfo: Record<string, unknown> | null = null;
 
-jest.mock("@/contexts/version-context", () => ({
-  useVersion: () => ({ versionInfo, refreshVersionInfo }),
+jest.mock("@/hooks/useVersionInfo", () => ({
+  useVersionInfo: () => ({ versionInfo, refreshVersionInfo }),
 }));
 
 beforeEach(() => {

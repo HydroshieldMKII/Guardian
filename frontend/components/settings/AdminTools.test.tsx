@@ -30,8 +30,8 @@ const toast = jest.fn();
 jest.mock("@/hooks/use-toast", () => ({ useToast: () => ({ toast }) }));
 
 let versionInfo: Record<string, unknown> | null = null;
-jest.mock("@/contexts/version-context", () => ({
-  useVersion: () => ({ versionInfo }),
+jest.mock("@/hooks/useVersionInfo", () => ({
+  useVersionInfo: () => ({ versionInfo }),
 }));
 
 jest.mock("@/components/ui/confirmation-modal", () => ({

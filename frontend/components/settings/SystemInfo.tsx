@@ -7,7 +7,8 @@ import { Banner, SettingControl, SettingsCard } from "./settings-ui";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import { apiClient } from "@/lib/api";
-import { useVersion } from "@/contexts/version-context";
+import { useUpdateCheck } from "@/hooks/useUpdateCheck";
+import { useVersionInfo } from "@/hooks/useVersionInfo";
 import { AppSetting } from "@/types";
 import { SettingsFormData } from "./settings-utils";
 
@@ -49,7 +50,8 @@ export function SystemInfo({
   const [latency, setLatency] = useState<number | null>(null);
 
   const { toast } = useToast();
-  const { versionInfo, checkForUpdatesManually } = useVersion();
+  const { versionInfo } = useVersionInfo();
+  const { checkForUpdatesManually } = useUpdateCheck();
 
   // Update uptime counter every second
   useEffect(() => {

@@ -14,8 +14,11 @@ jest.mock("@/hooks/use-toast", () => ({ useToast: () => ({ toast }) }));
 
 const checkForUpdatesManually = jest.fn();
 let versionInfo: Record<string, unknown> | null = null;
-jest.mock("@/contexts/version-context", () => ({
-  useVersion: () => ({ versionInfo, checkForUpdatesManually }),
+jest.mock("@/hooks/useVersionInfo", () => ({
+  useVersionInfo: () => ({ versionInfo }),
+}));
+jest.mock("@/hooks/useUpdateCheck", () => ({
+  useUpdateCheck: () => ({ checkForUpdatesManually }),
 }));
 
 const health = (overrides: Record<string, unknown> = {}) => ({

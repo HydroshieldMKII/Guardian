@@ -9,7 +9,7 @@ import { Loader2 } from "lucide-react";
 import { apiClient } from "@/lib/api";
 import { ConfirmationModal } from "@/components/ui/confirmation-modal";
 import { PasswordConfirmationModal } from "@/components/ui/password-confirmation-modal";
-import { useVersion } from "@/contexts/version-context";
+import { useVersionInfo } from "@/hooks/useVersionInfo";
 import { VersionMismatchInfo } from "./settings-utils";
 
 interface AdminToolsProps {
@@ -18,7 +18,7 @@ interface AdminToolsProps {
 
 export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
   const { toast } = useToast();
-  const { versionInfo } = useVersion();
+  const { versionInfo } = useVersionInfo();
 
   // State for various operations
   const [resettingStreamCounts, setResettingStreamCounts] = useState(false);

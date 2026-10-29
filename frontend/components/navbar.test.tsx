@@ -52,8 +52,8 @@ jest.mock("@/hooks/use-theme", () => ({
 }));
 
 let versionInfo: { isVersionMismatch?: boolean } | null = null;
-jest.mock("@/contexts/version-context", () => ({
-  useVersion: () => ({ versionInfo }),
+jest.mock("@/hooks/useVersionInfo", () => ({
+  useVersionInfo: () => ({ versionInfo }),
 }));
 
 const logout = jest.fn();

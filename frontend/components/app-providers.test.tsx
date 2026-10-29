@@ -19,9 +19,6 @@ function mockProvider(name: string) {
   return MockProvider;
 }
 
-jest.mock("@/contexts/version-context", () => ({
-  VersionProvider: mockProvider("version-provider"),
-}));
 jest.mock("@/contexts/unsaved-changes-context", () => ({
   UnsavedChangesProvider: mockProvider("unsaved-provider"),
 }));
@@ -50,7 +47,6 @@ describe("AppProviders", () => {
     );
 
     for (const name of [
-      "version-provider",
       "unsaved-provider",
       "error-boundary",
       "version-banner",

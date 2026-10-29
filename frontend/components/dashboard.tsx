@@ -8,7 +8,6 @@ import { PlexErrorHandler, ErrorHandler } from "./error-handler";
 import { PageLoader } from "./three-dot-loader";
 
 import type { PlexStatus } from "@/types";
-import { useVersion } from "@/contexts/version-context";
 import { useAuth } from "@/contexts/auth-context";
 import { useDashboardQuery } from "@/hooks/useDashboardQuery";
 import { dashboardHref, resolveDashboardView } from "@/lib/dashboard-view";
@@ -28,7 +27,6 @@ const usersHref = (userId?: string | null) =>
 export function Dashboard() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { versionInfo, checkForUpdatesIfEnabled } = useVersion();
   const { setupRequired, backendError, retryConnection } = useAuth();
 
   const {
@@ -79,12 +77,6 @@ export function Dashboard() {
       router.replace(usersHref(userId), { scroll: false });
     }
   }, [searchParams, router]);
-
-  useEffect(() => {
-    if (versionInfo?.version) {
-      void checkForUpdatesIfEnabled();
-    }
-  }, [versionInfo?.version, checkForUpdatesIfEnabled]);
 
   if (backendError) {
     return (

@@ -21,4 +21,8 @@ export const queryKeys = {
     forUser: (userId: string) => ["timeRules", "user", userId] as const,
     forUsers: (userIds: string[]) => ["timeRules", "users", userIds] as const,
   },
+  version: {
+    info: ["version", "info"] as const,
+    latestRelease: ["version", "latestRelease"] as const,
+  },
 };

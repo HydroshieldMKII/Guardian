@@ -26,12 +26,6 @@ jest.mock("@/lib/api", () => ({
   },
 }));
 
-const checkForUpdatesIfEnabled = jest.fn();
-let versionInfo: { version?: string } | null = null;
-jest.mock("@/contexts/version-context", () => ({
-  useVersion: () => ({ versionInfo, checkForUpdatesIfEnabled }),
-}));
-
 const retryConnection = jest.fn();
 let authState = { setupRequired: false, backendError: null as string | null };
 jest.mock("@/contexts/auth-context", () => ({
@@ -153,7 +147,6 @@ beforeEach(() => {
   jest.useRealTimers();
   consoleError = jest.spyOn(console, "error").mockImplementation(() => {});
   authState = { setupRequired: false, backendError: null };
-  versionInfo = null;
   liveConnected = false;
   liveEnabled = true;
   pushLive = null;
@@ -519,32 +512,6 @@ describe("Dashboard", () => {
     });
   });
 
-  describe("update checks", () => {
-    it("runs on mount when the version is known", async () => {
-      versionInfo = { version: "2.0.0" };
-      await renderDashboard();
-      expect(checkForUpdatesIfEnabled).toHaveBeenCalledTimes(1);
-    });
-
-    it("waits for the version before checking", async () => {
-      await renderDashboard();
-      expect(checkForUpdatesIfEnabled).not.toHaveBeenCalled();
-    });
-
-    it("runs again when the version becomes known", async () => {
-      const { rerender } = await renderDashboard();
-      const initial = checkForUpdatesIfEnabled.mock.calls.length;
-
-      versionInfo = { version: "2.0.0" };
-      await act(async () => {
-        rerender(<Dashboard />);
-      });
-
-      expect(checkForUpdatesIfEnabled.mock.calls.length).toBeGreaterThan(
-        initial,
-      );
-    });
-  });
   describe("navigation handed up from the views", () => {
     it("opens settings from the configuration prompt", async () => {
       const user = userEvent.setup();

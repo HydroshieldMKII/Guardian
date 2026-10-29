@@ -3,13 +3,12 @@
 import { AlertTriangle, RefreshCw, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
-import { useVersion } from "@/contexts/version-context";
+import { useVersionInfo } from "@/hooks/useVersionInfo";
 
 export function GlobalVersionMismatchBanner() {
-  const { versionInfo, refreshVersionInfo } = useVersion();
+  const { versionInfo, refreshVersionInfo } = useVersionInfo();
   const [dismissed, setDismissed] = useState(false);
 
-  // Don't show if no version mismatch, no version info, or dismissed
   if (!versionInfo?.isVersionMismatch || dismissed) {
     return null;
   }

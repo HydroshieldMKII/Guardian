@@ -2,21 +2,15 @@
 
 import { Download, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useState, useCallback } from "react";
-import { useVersion } from "@/contexts/version-context";
+import { useState } from "react";
+import { useUpdateCheck } from "@/hooks/useUpdateCheck";
 import { ReleaseNotesModal } from "@/components/ui/release-notes-modal";
 
 export function GlobalUpdateBanner() {
-  const { updateInfo, clearUpdateInfo } = useVersion();
+  const { updateInfo } = useUpdateCheck();
   const [dismissed, setDismissed] = useState(false);
   const [showReleaseNotes, setShowReleaseNotes] = useState(false);
 
-  const handleDismiss = useCallback(() => {
-    setDismissed(true);
-    clearUpdateInfo();
-  }, [clearUpdateInfo]);
-
-  // Don't show if no update available, no update info, or dismissed
   if (!updateInfo?.hasUpdate || dismissed) {
     return null;
   }
@@ -61,7 +55,7 @@ export function GlobalUpdateBanner() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={handleDismiss}
+                onClick={() => setDismissed(true)}
                 className="text-white hover:bg-blue-700 p-1 h-auto"
                 title="Hide this update notice"
               >
@@ -72,16 +66,14 @@ export function GlobalUpdateBanner() {
         </div>
       </div>
 
-      {updateInfo && (
-        <ReleaseNotesModal
-          isOpen={showReleaseNotes}
-          onClose={() => setShowReleaseNotes(false)}
-          latestVersion={updateInfo.latestVersion}
-          currentVersion={updateInfo.currentVersion}
-          releaseNotes={updateInfo.releaseNotes || ""}
-          updateUrl={updateInfo.updateUrl}
-        />
-      )}
+      <ReleaseNotesModal
+        isOpen={showReleaseNotes}
+        onClose={() => setShowReleaseNotes(false)}
+        latestVersion={updateInfo.latestVersion}
+        currentVersion={updateInfo.currentVersion}
+        releaseNotes={updateInfo.releaseNotes}
+        updateUrl={updateInfo.updateUrl}
+      />
     </>
   );
 }
