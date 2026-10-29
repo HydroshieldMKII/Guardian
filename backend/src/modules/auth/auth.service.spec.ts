@@ -147,6 +147,16 @@ describe('AuthService', () => {
         InternalServerErrorException,
       );
     });
+
+    it.each([undefined, null])(
+      'stores an empty email when it is %p',
+      async (email) => {
+        await service.createAdmin({ ...dto, email });
+        expect(adminRepo.save).toHaveBeenCalledWith(
+          expect.objectContaining({ email: '' }),
+        );
+      },
+    );
   });
 
   describe('login', () => {
@@ -172,6 +182,16 @@ describe('AuthService', () => {
       adminRepo.findOne.mockResolvedValue({ ...admin });
       compare.mockResolvedValue(false);
       await expect(service.login(dto)).rejects.toThrow('Invalid credentials');
+    });
+
+    it('still runs a password comparison for an unknown user', async () => {
+      adminRepo.findOne.mockResolvedValue(null);
+
+      await expect(service.login(dto)).rejects.toThrow('Invalid credentials');
+      expect(compare).toHaveBeenCalledWith(
+        'hunter2hunter2',
+        expect.stringMatching(/^\$2b\$12\$/),
+      );
     });
 
     it('compares against the stored hash', async () => {
@@ -234,6 +254,11 @@ describe('AuthService', () => {
       ).rejects.toThrow('Email already exists');
     });
 
+    it('stores an empty email when it is cleared with null', async () => {
+      const result = await service.updateProfile('admin-1', { email: null });
+      expect(result.email).toBe('');
+    });
+
     it('lets the avatar be cleared', async () => {
       const result = await service.updateProfile('admin-1', { avatarUrl: '' });
       expect(result.avatarUrl).toBe('');
@@ -291,6 +316,18 @@ describe('AuthService', () => {
           confirmPassword: 'typo',
         }),
       ).rejects.toThrow('New passwords do not match');
+    });
+
+    it('rejects a new password equal to the current one', async () => {
+      await expect(
+        service.updatePassword('admin-1', {
+          ...dto,
+          currentPassword: dto.newPassword,
+        }),
+      ).rejects.toThrow(
+        'New password must be different from the current password',
+      );
+      expect(adminRepo.save).not.toHaveBeenCalled();
     });
 
     it('leaves other sessions alone by default', async () => {

@@ -7,7 +7,6 @@ import {
   Res,
   Req,
   Param,
-  BadRequestException,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { PlexOAuthService } from '@/modules/auth/plex-oauth.service';
@@ -19,6 +18,7 @@ import { AdminOnly } from '@/modules/auth/decorators/admin-only.decorator';
 import { AdminUser } from '@/entities/admin-user.entity';
 import { setSessionCookie } from '@/modules/auth/session-cookie';
 import { rethrowAsBadRequest } from '@/modules/auth/rethrow-as-bad-request';
+import { PlexTokenDto } from '@/modules/auth/dto/plex-token.dto';
 
 @Controller('auth/plex')
 export class PlexAuthController {
@@ -78,14 +78,10 @@ export class PlexAuthController {
   @Public()
   @Post('login')
   async plexLogin(
-    @Body() body: { authToken: string },
+    @Body() body: PlexTokenDto,
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
-    if (!body.authToken) {
-      throw new BadRequestException('Auth token is required');
-    }
-
     try {
       const login = await this.plexLoginService.login(body.authToken);
       setSessionCookie(req, res, login.token);
@@ -99,12 +95,8 @@ export class PlexAuthController {
   @Post('link')
   async linkPlexAccount(
     @CurrentUser() user: AdminUser,
-    @Body() body: { authToken: string },
+    @Body() body: PlexTokenDto,
   ) {
-    if (!body.authToken) {
-      throw new BadRequestException('Plex auth token is required');
-    }
-
     try {
       const plexUser = await this.plexOAuthService.getPlexUserFromToken(
         body.authToken,

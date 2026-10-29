@@ -119,16 +119,6 @@ describe('PlexAuthController', () => {
   });
 
   describe('plexLogin', () => {
-    it('requires an auth token', async () => {
-      await expect(
-        controller.plexLogin(
-          { authToken: '' },
-          requestStub(),
-          responseStub().res,
-        ),
-      ).rejects.toThrow('Auth token is required');
-    });
-
     it('issues an admin session for a linked Plex account', async () => {
       authService.findAdminByPlexUserId.mockResolvedValue({ id: 'admin-1' });
       const { res, cookie } = responseStub();
@@ -231,12 +221,6 @@ describe('PlexAuthController', () => {
   });
 
   describe('linkPlexAccount', () => {
-    it('requires an auth token', async () => {
-      await expect(
-        controller.linkPlexAccount(adminUser, { authToken: '' }),
-      ).rejects.toThrow('Plex auth token is required');
-    });
-
     it('links the resolved Plex user to the caller', async () => {
       const result = await controller.linkPlexAccount(adminUser, {
         authToken: 'tok',

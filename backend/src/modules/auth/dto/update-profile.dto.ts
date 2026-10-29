@@ -1,25 +1,18 @@
+import { IsOptional } from 'class-validator';
 import {
-  IsString,
-  IsEmail,
-  IsOptional,
-  MinLength,
-  ValidateIf,
-} from 'class-validator';
+  AccountUsername,
+  OptionalAccountEmail,
+  OptionalAvatarSource,
+} from '@/modules/auth/dto/account-fields.decorator';
 
 export class UpdateProfileDto {
   @IsOptional()
-  @IsString()
-  @MinLength(3)
+  @AccountUsername()
   username?: string;
 
-  @ValidateIf(
-    (o: UpdateProfileDto) =>
-      o.email !== undefined && o.email !== null && o.email !== '',
-  )
-  @IsEmail()
-  email?: string;
+  @OptionalAccountEmail('email')
+  email?: string | null;
 
-  @IsOptional()
-  @IsString()
-  avatarUrl?: string;
+  @OptionalAvatarSource('avatarUrl')
+  avatarUrl?: string | null;
 }
