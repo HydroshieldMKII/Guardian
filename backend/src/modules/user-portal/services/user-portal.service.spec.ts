@@ -431,11 +431,18 @@ describe('UserPortalService', () => {
       );
     });
 
-    it('refuses a device belonging to someone else', async () => {
-      deviceRepo.findOne.mockResolvedValue(device({ userId: 'plex-other' }));
+    it('only looks up devices owned by the caller', async () => {
+      await service.requestDeviceApproval('plex-9', 1);
+      expect(deviceRepo.findOne).toHaveBeenCalledWith({
+        where: { id: 1, userId: 'plex-9' },
+      });
+    });
+
+    it('answers a device belonging to someone else like a missing one', async () => {
+      deviceRepo.findOne.mockResolvedValue(null);
 
       await expect(service.requestDeviceApproval('plex-9', 1)).rejects.toThrow(
-        'Access denied to this device',
+        'Device not found',
       );
       expect(deviceRepo.update).not.toHaveBeenCalled();
     });
