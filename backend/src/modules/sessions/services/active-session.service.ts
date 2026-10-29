@@ -1,14 +1,6 @@
 import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import {
-  FindOptionsWhere,
-  ILike,
-  In,
-  IsNull,
-  Not,
-  Or,
-  Repository,
-} from 'typeorm';
+import { In, IsNull, Not, Repository } from 'typeorm';
 import { SessionHistory } from '@/entities/session-history.entity';
 import { UserDevice } from '@/entities/user-device.entity';
 import { UserPreference } from '@/entities/user-preference.entity';
@@ -19,76 +11,12 @@ import {
   EnrichedPlexSessionsResponse,
   PlexSessionsResponse,
 } from '@/types/plex.types';
-
-export type SessionHistoryApp = 'plex' | 'plexamp';
-
-const PLEXAMP = ILike('%plexamp%');
-const NOT_PLEXAMP = Or(IsNull(), Not(PLEXAMP));
-
-const SESSION_APP_FILTERS: Record<
-  SessionHistoryApp,
-  FindOptionsWhere<SessionHistory> | FindOptionsWhere<SessionHistory>[]
-> = {
-  plexamp: [
-    { product: PLEXAMP },
-    { userDevice: { deviceProduct: PLEXAMP } },
-    { userDevice: { deviceName: PLEXAMP } },
-  ],
-  plex: {
-    product: NOT_PLEXAMP,
-    userDevice: { deviceProduct: NOT_PLEXAMP, deviceName: NOT_PLEXAMP },
-  },
-};
-
-export interface SessionHistoryQuery {
-  limit?: number;
-  offset?: number;
-  includeActive?: boolean;
-  search?: string;
-  terminatedOnly?: boolean;
-  app?: SessionHistoryApp;
-}
-
-interface PlexSessionData {
-  sessionKey: string;
-  User?: {
-    id?: string;
-    title?: string;
-  };
-  Player?: {
-    machineIdentifier?: string;
-    platform?: string;
-    product?: string;
-    title?: string;
-    device?: string;
-    address?: string;
-    state?: string;
-  };
-  Media?: Array<{
-    videoResolution?: string;
-    bitrate?: number;
-    container?: string;
-    videoCodec?: string;
-    audioCodec?: string;
-  }>;
-  Session?: {
-    id?: string;
-    bandwidth?: number;
-    location?: string;
-  };
-  title?: string;
-  grandparentTitle?: string;
-  parentTitle?: string;
-  year?: number;
-  duration?: number;
-  viewOffset?: number;
-  type?: string;
-  thumb?: string;
-  art?: string;
-  ratingKey?: string;
-  parentRatingKey?: string;
-  parentYear?: number;
-}
+import {
+  PlexSessionData,
+  sessionsFromPlexData,
+  toSessionRecord,
+} from '@/modules/sessions/services/plex-session-record';
+import { toEnrichedSession } from '@/modules/sessions/services/enriched-session';
 
 @Injectable()
 export class ActiveSessionService {
@@ -108,26 +36,20 @@ export class ActiveSessionService {
     private notificationOrchestrator: NotificationOrchestratorService,
   ) {}
 
-  // Update active sessions in the database based on the latest sessions data from Plex
   async updateActiveSessions(
     sessionsData: PlexSessionsResponse | null | undefined,
   ): Promise<void> {
     try {
-      const sessions = this.extractSessionsFromData(sessionsData);
-
-      // Current session keys
+      const sessions = sessionsFromPlexData(sessionsData);
       const currentSessionKeys = sessions
         .map((s) => s.sessionKey)
         .filter(Boolean);
 
-      // Get sessions that are about to end (not in current sessions but exist in DB without endedAt)
       const endingSessions = await this.sessionHistoryRepository.find({
         where: { sessionKey: Not(In(currentSessionKeys)), endedAt: IsNull() },
       });
-
       const endingSessionKeys = endingSessions.map((s) => s.sessionKey);
 
-      // Mark ended sessions with endedAt timestamp and update player state
       if (endingSessionKeys.length > 0) {
         await this.sessionHistoryRepository.update(
           { sessionKey: In(endingSessionKeys), endedAt: IsNull() },
@@ -135,17 +57,13 @@ export class ActiveSessionService {
         );
       }
 
-      // Clear session keys from devices for ended sessions only
       for (const sessionKey of endingSessionKeys) {
         await this.deviceTrackingService.clearSessionKey(sessionKey);
       }
 
-      // Update or create sessions
       for (const sessionData of sessions) {
         await this.upsertSession(sessionData);
       }
-
-      // this.logger.log(`Updated ${sessions.length} active sessions in database`);
     } catch (error) {
       this.logger.error('Error updating active sessions', error);
       throw error;
@@ -160,15 +78,21 @@ export class ActiveSessionService {
     });
   }
 
-  private extractSessionsFromData(data: unknown): PlexSessionData[] {
-    if (!data || typeof data !== 'object' || !('MediaContainer' in data)) {
-      return [];
-    }
+  async getActiveSessionsFormatted(): Promise<EnrichedPlexSessionsResponse> {
+    try {
+      const sessions = await this.getActiveSessions();
+      const serverIdentifier = await this.plexClient.getServerIdentity();
+      const metadata = sessions.map((session) =>
+        toEnrichedSession(session, serverIdentifier),
+      );
 
-    const container = (
-      data as { MediaContainer?: { Metadata?: PlexSessionData[] } }
-    ).MediaContainer;
-    return container?.Metadata || [];
+      return {
+        MediaContainer: { size: metadata.length, Metadata: metadata },
+      };
+    } catch (error) {
+      this.logger.error('Error getting active sessions formatted', error);
+      throw error;
+    }
   }
 
   private isPlexampDevice(product?: string): boolean {
@@ -182,122 +106,26 @@ export class ActiveSessionService {
         return;
       }
 
-      const media = sessionData.Media?.[0];
-      const user = sessionData.User;
-      const player = sessionData.Player;
-      const session = sessionData.Session;
+      const existingSession = await this.currentSessionFor(sessionData);
+      const userDevice = await this.findUserDevice(sessionData);
+      await this.ensureUserPreference(sessionData);
 
-      // Check if session exists (active session = no endedAt)
-      let existingSession = await this.sessionHistoryRepository.findOne({
-        where: { sessionKey: sessionData.sessionKey, endedAt: IsNull() },
-      });
-
-      // For Plexamp devices: if the track (ratingKey) changed, end the old session
-      // and create a new one. This ensures each song appears as a separate entry in history.
-      if (
-        existingSession &&
-        this.isPlexampDevice(player?.product) &&
-        sessionData.ratingKey &&
-        existingSession.ratingKey &&
-        sessionData.ratingKey !== existingSession.ratingKey
-      ) {
-        // End the current session for the previous track
-        await this.sessionHistoryRepository.update(existingSession.id, {
-          endedAt: new Date(),
-          playerState: 'stopped',
-        });
-
-        // Clear existingSession so a new one will be created below
-        existingSession = null;
-      }
-
-      // Find the UserDevice to get the foreign key
-      let userDevice: UserDevice | null = null;
-      if (user?.id && player?.machineIdentifier) {
-        userDevice = await this.userDeviceRepository.findOne({
-          where: {
-            userId: user.id,
-            deviceIdentifier: player.machineIdentifier,
-          },
-        });
-      }
-
-      // Find or create UserPreference to get the foreign key
-      let userPreference: UserPreference | null = null;
-      if (user?.id) {
-        userPreference = await this.userPreferenceRepository.findOne({
-          where: { userId: user.id },
-        });
-
-        // If no UserPreference exists for this user, create one
-        if (!userPreference && user.title) {
-          userPreference = await this.userPreferenceRepository.save(
-            this.userPreferenceRepository.create({
-              userId: user.id,
-              username: user.title,
-              defaultBlock: null, // null means use global default
-              hidden: false,
-            }),
-          );
-        }
-      }
-
-      const sessionData_partial = {
-        sessionKey: sessionData.sessionKey,
-        ...(user?.id && { userId: user.id }),
-        ...(userDevice?.id && { userDeviceId: userDevice.id }),
-        ...(player?.address && { deviceAddress: player.address }),
-        ...(player?.state && { playerState: player.state }),
-        ...(player?.product && { product: player.product }),
-        ...(sessionData.title && { contentTitle: sessionData.title }),
-        ...(sessionData.type && { contentType: sessionData.type }),
-        ...(sessionData.grandparentTitle && {
-          grandparentTitle: sessionData.grandparentTitle,
-        }),
-        ...(sessionData.parentTitle && {
-          parentTitle: sessionData.parentTitle,
-        }),
-        ...((sessionData.year || sessionData.parentYear) && {
-          year: sessionData.year || sessionData.parentYear,
-        }),
-        ...(sessionData.duration && { duration: sessionData.duration }),
-        ...(sessionData.viewOffset !== undefined && {
-          viewOffset: sessionData.viewOffset,
-        }),
-        ...(sessionData.thumb && { thumb: sessionData.thumb }),
-        ...(sessionData.art && { art: sessionData.art }),
-        ...(sessionData.ratingKey && { ratingKey: sessionData.ratingKey }),
-        ...(sessionData.parentRatingKey && {
-          parentRatingKey: sessionData.parentRatingKey,
-        }),
-        ...(media?.videoResolution && {
-          videoResolution: media.videoResolution,
-        }),
-        ...(media?.bitrate && { bitrate: media.bitrate }),
-        ...(media?.container && { container: media.container }),
-        ...(media?.videoCodec && { videoCodec: media.videoCodec }),
-        ...(media?.audioCodec && { audioCodec: media.audioCodec }),
-        ...(session?.location && { sessionLocation: session.location }),
-        ...(session?.bandwidth && { bandwidth: session.bandwidth }),
-      };
+      const record = toSessionRecord(sessionData, userDevice?.id);
 
       if (existingSession) {
-        // Update existing active session
         await this.sessionHistoryRepository.update(
           { sessionKey: sessionData.sessionKey, endedAt: IsNull() },
-          sessionData_partial,
+          record,
         );
-      } else {
-        // Create new session (startedAt will be auto-generated, no endedAt)
-        await this.sessionHistoryRepository.save(
-          this.sessionHistoryRepository.create(sessionData_partial),
-        );
-
-        // Link any orphaned notifications to this newly created session
-        await this.notificationOrchestrator.linkOrphanedNotifications(
-          sessionData.sessionKey,
-        );
+        return;
       }
+
+      await this.sessionHistoryRepository.save(
+        this.sessionHistoryRepository.create(record),
+      );
+      await this.notificationOrchestrator.linkOrphanedNotifications(
+        sessionData.sessionKey,
+      );
     } catch (error) {
       this.logger.error(
         `Error upserting session ${sessionData.sessionKey}`,
@@ -306,150 +134,67 @@ export class ActiveSessionService {
     }
   }
 
-  async getActiveSessionsFormatted(): Promise<EnrichedPlexSessionsResponse> {
-    try {
-      const sessions = await this.getActiveSessions();
-      const serverIdentifier = await this.plexClient.getServerIdentity();
+  private async currentSessionFor(
+    sessionData: PlexSessionData,
+  ): Promise<SessionHistory | null> {
+    const existingSession = await this.sessionHistoryRepository.findOne({
+      where: { sessionKey: sessionData.sessionKey, endedAt: IsNull() },
+    });
 
-      const transformedSessions = sessions.map((session) => {
-        const device = session.userDevice;
+    const trackChanged =
+      existingSession &&
+      this.isPlexampDevice(sessionData.Player?.product) &&
+      sessionData.ratingKey &&
+      existingSession.ratingKey &&
+      sessionData.ratingKey !== existingSession.ratingKey;
 
-        return {
-          sessionKey: session.sessionKey,
-          User: {
-            id: session.userId,
-            title: session.userPreference?.username || 'Unknown User',
-          },
-          Player: {
-            machineIdentifier: device?.deviceIdentifier || 'Unknown',
-            platform: device?.devicePlatform || 'Unknown',
-            product: device?.deviceProduct || 'Unknown',
-            title:
-              device?.deviceName || device?.deviceProduct || 'Unknown Device',
-            device: device?.deviceName || 'Unknown',
-            address: session.deviceAddress,
-            state: session.playerState as 'playing' | 'paused' | 'buffering',
-            originalTitle:
-              device?.deviceName || device?.deviceProduct || 'Unknown',
-          },
-          Media:
-            session.videoResolution || session.bitrate || session.container
-              ? [
-                  {
-                    videoResolution: session.videoResolution,
-                    bitrate: session.bitrate,
-                    container: session.container,
-                    videoCodec: session.videoCodec,
-                    audioCodec: session.audioCodec,
-                  },
-                ]
-              : [],
-          Session: {
-            id: session.sessionKey,
-            bandwidth: session.bandwidth,
-            location: session.sessionLocation as 'lan' | 'wan',
-            sessionCount: device?.sessionCount || 0,
-          },
-          title: session.contentTitle,
-          grandparentTitle: session.grandparentTitle,
-          parentTitle: session.parentTitle,
-          year: session.year,
-          duration: session.duration,
-          viewOffset: session.viewOffset,
-          type: session.contentType,
-          thumb: session.thumb,
-          art: session.art,
-          ratingKey: session.ratingKey,
-          parentRatingKey: session.parentRatingKey,
-          serverMachineIdentifier: serverIdentifier,
-        };
-      });
-
-      return {
-        MediaContainer: {
-          size: transformedSessions.length,
-          Metadata: transformedSessions,
-        },
-      };
-    } catch (error) {
-      this.logger.error('Error getting active sessions formatted', error);
-      throw error;
+    if (!trackChanged) {
+      return existingSession;
     }
+
+    await this.sessionHistoryRepository.update(existingSession.id, {
+      endedAt: new Date(),
+      playerState: 'stopped',
+    });
+    return null;
   }
 
-  async getUserSessionHistory(
-    userId: string,
-    query: SessionHistoryQuery = {},
-  ): Promise<SessionHistory[]> {
-    const {
-      limit = 50,
-      offset = 0,
-      includeActive = false,
-      search,
-      terminatedOnly = false,
-      app,
-    } = query;
-
-    try {
-      const queryBuilder = this.sessionHistoryRepository
-        .createQueryBuilder('session')
-        .leftJoinAndSelect('session.userDevice', 'device')
-        .where({ userId })
-        .orderBy('session.startedAt', 'DESC')
-        .skip(offset)
-        .take(limit);
-
-      // By default, only return completed sessions (with endedAt)
-      if (!includeActive) {
-        queryBuilder.andWhere({ endedAt: Not(IsNull()) });
-      }
-
-      if (terminatedOnly) {
-        queryBuilder.andWhere({ terminated: true });
-      }
-
-      if (app) {
-        queryBuilder.andWhere(SESSION_APP_FILTERS[app]);
-      }
-
-      const term = search?.trim();
-      if (term) {
-        const matches = ILike(`%${term}%`);
-        queryBuilder.andWhere([
-          { contentTitle: matches },
-          { grandparentTitle: matches },
-          { parentTitle: matches },
-          { deviceAddress: matches },
-          { userDevice: { deviceName: matches } },
-          { userDevice: { deviceProduct: matches } },
-        ]);
-      }
-
-      return await queryBuilder.getMany();
-    } catch (error) {
-      this.logger.error(
-        `Failed to get session history for user ${userId}:`,
-        error,
-      );
-      throw error;
+  private async findUserDevice(
+    sessionData: PlexSessionData,
+  ): Promise<UserDevice | null> {
+    const userId = sessionData.User?.id;
+    const deviceIdentifier = sessionData.Player?.machineIdentifier;
+    if (!userId || !deviceIdentifier) {
+      return null;
     }
+
+    return this.userDeviceRepository.findOne({
+      where: { userId, deviceIdentifier },
+    });
   }
 
-  async deleteSessionHistory(sessionId: number): Promise<void> {
-    try {
-      const result = await this.sessionHistoryRepository.delete(sessionId);
-
-      if (result.affected === 0) {
-        throw new Error(`Session history with ID ${sessionId} not found`);
-      }
-
-      this.logger.log(`Deleted session history with ID: ${sessionId}`);
-    } catch (error) {
-      this.logger.error(
-        `Failed to delete session history ${sessionId}:`,
-        error,
-      );
-      throw error;
+  private async ensureUserPreference(
+    sessionData: PlexSessionData,
+  ): Promise<void> {
+    const user = sessionData.User;
+    if (!user?.id) {
+      return;
     }
+
+    const existing = await this.userPreferenceRepository.findOne({
+      where: { userId: user.id },
+    });
+    if (existing || !user.title) {
+      return;
+    }
+
+    await this.userPreferenceRepository.save(
+      this.userPreferenceRepository.create({
+        userId: user.id,
+        username: user.title,
+        defaultBlock: null,
+        hidden: false,
+      }),
+    );
   }
 }

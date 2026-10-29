@@ -16,6 +16,7 @@ export interface PlexSession {
     device?: string | null;
     userAgent?: string | null;
     address?: string | null;
+    originalTitle?: string | null;
     state?: 'playing' | 'paused' | 'buffering';
   };
   Session?: {

@@ -8,11 +8,7 @@ import { UserPreference } from '@/entities/user-preference.entity';
 import { DeviceTrackingService } from '@/modules/devices/services/device-tracking.service';
 import { PlexClient } from '@/modules/plex/services/plex-client';
 import { NotificationOrchestratorService } from '@/modules/notifications/services/notification-orchestrator.service';
-import {
-  ActiveSessionService,
-  SessionHistoryApp,
-  SessionHistoryQuery,
-} from '@/modules/sessions/services/active-session.service';
+import { ActiveSessionService } from '@/modules/sessions/services/active-session.service';
 import { anyDate, callArgs } from '@/test-matchers';
 
 describe('ActiveSessionService', () => {
@@ -23,31 +19,6 @@ describe('ActiveSessionService', () => {
   let deviceTrackingService: { clearSessionKey: jest.Mock };
   let plexClient: { getServerIdentity: jest.Mock };
   let orchestrator: { linkOrphanedNotifications: jest.Mock };
-  let builders: Record<string, jest.Mock>[];
-
-  const newBuilder = () => {
-    const builder: Record<string, jest.Mock> = {
-      leftJoinAndSelect: jest.fn(),
-      where: jest.fn(),
-      andWhere: jest.fn(),
-      orderBy: jest.fn(),
-      skip: jest.fn(),
-      take: jest.fn(),
-      getMany: jest.fn().mockResolvedValue([]),
-    };
-    for (const key of [
-      'leftJoinAndSelect',
-      'where',
-      'andWhere',
-      'orderBy',
-      'skip',
-      'take',
-    ]) {
-      builder[key].mockReturnValue(builder);
-    }
-    builders.push(builder);
-    return builder;
-  };
 
   const plexSession = (overrides: Record<string, unknown> = {}) => ({
     sessionKey: 'sk-1',
@@ -87,18 +58,14 @@ describe('ActiveSessionService', () => {
     callArgs<[Record<string, unknown>]>(historyRepo.create, call)[0];
 
   beforeEach(async () => {
-    builders = [];
-
     historyRepo = {
       find: jest.fn().mockResolvedValue([]),
       findOne: jest.fn().mockResolvedValue(null),
       update: jest.fn().mockResolvedValue({ affected: 1 }),
-      createQueryBuilder: jest.fn(() => newBuilder()),
       create: jest.fn((entity: Partial<SessionHistory>) =>
         Object.assign(new SessionHistory(), entity),
       ),
       save: jest.fn((entity: SessionHistory) => Promise.resolve(entity)),
-      delete: jest.fn().mockResolvedValue({ affected: 1 }),
     };
 
     deviceRepo = { findOne: jest.fn().mockResolvedValue({ id: 7 }) };
@@ -513,106 +480,11 @@ describe('ActiveSessionService', () => {
       );
     });
   });
-
-  describe('getUserSessionHistory', () => {
-    it('includes running sessions when asked', async () => {
-      await service.getUserSessionHistory('u1', {
-        limit: 10,
-        includeActive: true,
-      });
-
-      const builder = builders[0];
-      expect(builder.andWhere).not.toHaveBeenCalled();
-      expect(builder.take).toHaveBeenCalledWith(10);
-    });
-
-    it('pages from the requested offset', async () => {
-      await service.getUserSessionHistory('u1', { limit: 25, offset: 50 });
-
-      const builder = builders[0];
-      expect(builder.skip).toHaveBeenCalledWith(50);
-      expect(builder.take).toHaveBeenCalledWith(25);
-    });
-
-    it('starts at the first page by default', async () => {
-      await service.getUserSessionHistory('u1');
-      expect(builders[0].skip).toHaveBeenCalledWith(0);
-      expect(builders[0].take).toHaveBeenCalledWith(50);
-    });
-
-    it('ignores a blank search term', async () => {
-      await service.getUserSessionHistory('u1', {
-        includeActive: true,
-        search: '   ',
-      });
-
-      expect(builders[0].andWhere).not.toHaveBeenCalled();
-    });
-
-    it('propagates a query failure', async () => {
-      historyRepo.createQueryBuilder.mockImplementation(() => {
-        const builder = newBuilder();
-        builder.getMany.mockRejectedValue(new Error('db down'));
-        return builder;
-      });
-
-      await expect(service.getUserSessionHistory('u1')).rejects.toThrow(
-        'db down',
-      );
-    });
-  });
-
-  describe('deleteSessionHistory', () => {
-    it('deletes the row', async () => {
-      await expect(service.deleteSessionHistory(4)).resolves.toBeUndefined();
-      expect(historyRepo.delete).toHaveBeenCalledWith(4);
-    });
-
-    it('refuses when there is no such row', async () => {
-      historyRepo.delete.mockResolvedValue({ affected: 0 });
-      await expect(service.deleteSessionHistory(4)).rejects.toThrow(
-        'Session history with ID 4 not found',
-      );
-    });
-
-    it('propagates a delete failure', async () => {
-      historyRepo.delete.mockRejectedValue(new Error('locked'));
-      await expect(service.deleteSessionHistory(4)).rejects.toThrow('locked');
-    });
-  });
 });
 
 describe('ActiveSessionService on a database', () => {
   let dataSource: DataSource;
   let service: ActiveSessionService;
-
-  const device = (fields: Partial<UserDevice>) =>
-    dataSource.getRepository(UserDevice).save({
-      userId: 'u1',
-      deviceIdentifier: `dev-${fields.deviceName}`,
-      ...fields,
-    });
-
-  const session = async (
-    sessionKey: string,
-    product: string | null,
-    userDevice?: UserDevice,
-  ) => {
-    await dataSource.getRepository(SessionHistory).save({
-      sessionKey,
-      userId: 'u1',
-      product,
-      userDeviceId: userDevice?.id ?? null,
-      endedAt: new Date(),
-    });
-  };
-
-  const historyKeys = async (query: SessionHistoryQuery = {}) =>
-    (await service.getUserSessionHistory('u1', query))
-      .map((entry) => entry.sessionKey)
-      .sort();
-
-  const keys = (app: SessionHistoryApp) => historyKeys({ app });
 
   beforeEach(async () => {
     dataSource = new DataSource({
@@ -649,41 +521,10 @@ describe('ActiveSessionService on a database', () => {
     }).compile();
 
     service = module.get(ActiveSessionService);
-
-    const plexWeb = await device({
-      deviceName: 'Chrome',
-      deviceProduct: 'Plex Web',
-    });
-    const plexampProduct = await device({
-      deviceName: 'Phone',
-      deviceProduct: 'Plexamp',
-    });
-    const plexampName = await device({
-      deviceName: 'PLEXAMP kitchen',
-      deviceProduct: null,
-    });
-
-    await session('session-product', 'Plexamp');
-    await session('device-product', null, plexampProduct);
-    await session('device-name', 'Plex for Android', plexampName);
-    await session('plex-web', 'Plex Web', plexWeb);
-    await session('no-device', null);
   });
 
   afterEach(async () => {
     await dataSource.destroy();
-  });
-
-  it('matches Plexamp on the session product, device product or device name', async () => {
-    expect(await keys('plexamp')).toEqual([
-      'device-name',
-      'device-product',
-      'session-product',
-    ]);
-  });
-
-  it('keeps sessions without a product or device when only Plex is asked for', async () => {
-    expect(await keys('plex')).toEqual(['no-device', 'plex-web']);
   });
 
   describe('updateActiveSessions', () => {
@@ -715,85 +556,6 @@ describe('ActiveSessionService on a database', () => {
       expect(earlierAfter.playerState).toBe('paused');
       expect(currentAfter.endedAt).toBeInstanceOf(Date);
       expect(currentAfter.playerState).toBe('stopped');
-    });
-  });
-
-  describe('getUserSessionHistory', () => {
-    const history = (sessionKey: string, fields: Partial<SessionHistory>) =>
-      dataSource.getRepository(SessionHistory).save({
-        sessionKey,
-        userId: 'u1',
-        endedAt: new Date(),
-        ...fields,
-      });
-
-    beforeEach(async () => {
-      await dataSource.getRepository(UserPreference).save({ userId: 'u2' });
-    });
-
-    it('returns only completed sessions by default', async () => {
-      await history('running', { endedAt: null });
-      await history('other-user', { userId: 'u2' });
-
-      expect(await historyKeys()).toEqual([
-        'device-name',
-        'device-product',
-        'no-device',
-        'plex-web',
-        'session-product',
-      ]);
-    });
-
-    it('narrows to terminated sessions when asked', async () => {
-      await history('terminated', { terminated: true });
-      await history('terminated-running', { terminated: true, endedAt: null });
-      await history('other-user-terminated', {
-        userId: 'u2',
-        terminated: true,
-      });
-
-      expect(await historyKeys({ terminatedOnly: true })).toEqual([
-        'terminated',
-      ]);
-    });
-
-    it('matches the search term against titles, addresses and devices', async () => {
-      const namedDevice = await device({
-        deviceName: 'Matrix TV',
-        deviceProduct: 'Plex Web',
-      });
-      const productDevice = await device({
-        deviceName: 'Den',
-        deviceProduct: 'Matrix Player',
-      });
-
-      await history('by-title', { contentTitle: 'The Matrix' });
-      await history('by-grandparent', {
-        contentTitle: 'Pilot',
-        grandparentTitle: 'Matrix Stories',
-      });
-      await history('by-parent', { parentTitle: 'Matrix Season 1' });
-      await history('by-address', { deviceAddress: 'matrix.lan' });
-      await history('by-device-name', { userDeviceId: namedDevice.id });
-      await history('by-device-product', { userDeviceId: productDevice.id });
-      await history('unrelated', { contentTitle: 'Inception' });
-      await history('running-match', {
-        contentTitle: 'The Matrix',
-        endedAt: null,
-      });
-      await history('other-user-match', {
-        userId: 'u2',
-        contentTitle: 'The Matrix',
-      });
-
-      expect(await historyKeys({ search: '  mAtRiX ' })).toEqual([
-        'by-address',
-        'by-device-name',
-        'by-device-product',
-        'by-grandparent',
-        'by-parent',
-        'by-title',
-      ]);
     });
   });
 });
