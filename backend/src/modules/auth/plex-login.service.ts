@@ -1,7 +1,6 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { AuthService } from '@/modules/auth/auth.service';
 import { AuthSessionService } from '@/modules/auth/auth-session.service';
-import { PlexOAuthService } from '@/modules/auth/plex-oauth.service';
 import { PlexAccountService } from '@/modules/auth/plex-account.service';
 import { PlexUser } from '@/modules/auth/plex-tv.client';
 import { ConfigService } from '@/modules/config/services/config.service';
@@ -29,7 +28,6 @@ export class PlexLoginService {
   constructor(
     private readonly authService: AuthService,
     private readonly authSessions: AuthSessionService,
-    private readonly plexOAuthService: PlexOAuthService,
     private readonly plexAccounts: PlexAccountService,
     private readonly configService: ConfigService,
   ) {}
@@ -41,9 +39,7 @@ export class PlexLoginService {
     return (await this.portalEnabled()) === true;
   }
 
-  async login(authToken: string): Promise<PlexLogin> {
-    const plexUser =
-      await this.plexOAuthService.getPlexUserFromToken(authToken);
+  async login(plexUser: PlexUser): Promise<PlexLogin> {
     const admin = await this.authService.findAdminByPlexUserId(
       String(plexUser.id),
     );

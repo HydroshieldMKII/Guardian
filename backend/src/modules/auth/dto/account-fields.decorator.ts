@@ -8,6 +8,7 @@ import {
   MinLength,
   ValidateIf,
 } from 'class-validator';
+import { normalizeEmail } from '@/modules/auth/email-address';
 
 const FIELD_MAX_LENGTH = 255;
 
@@ -30,7 +31,7 @@ export const AccountUsername = () =>
 export const OptionalAccountEmail = (property: string) =>
   applyDecorators(
     Transform(({ value }: { value: unknown }) =>
-      typeof value === 'string' ? value.trim() : value,
+      typeof value === 'string' ? normalizeEmail(value) : value,
     ),
     ValidateIf((dto: Record<string, unknown>) => isFilled(dto[property])),
     IsEmail(),

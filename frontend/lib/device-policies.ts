@@ -28,20 +28,6 @@ const POLICY_LABEL: Record<DevicePolicy, string> = {
   ip: "Network access",
 };
 
-const POLICY_ORDER: DevicePolicy[] = ["temporary", "schedule", "ip"];
-
-const GROUP_HINT: Record<DevicePolicy, string> = {
-  temporary: "Temporary access on",
-  schedule: "Time schedule on",
-  ip: "Network access rules on",
-};
-
-const deviceCoverage = (count: number, total: number): string => {
-  if (total === 1) return "their only device";
-  if (count === total) return `all ${total} devices`;
-  return `${count} of ${total} devices`;
-};
-
 const DEVICE_HINT: Record<Exclude<DevicePolicy, "temporary">, string> = {
   schedule:
     "A time schedule blocks streaming from this device during set hours",
@@ -166,24 +152,4 @@ export function devicePolicyBadges(
       hint: DEVICE_HINT[policy],
     };
   });
-}
-
-export function groupPolicyBadges(
-  devices: UserDevice[],
-  preference?: UserPreference | null,
-  rules?: UserTimeRule[],
-): PolicyBadge[] {
-  const counts = new Map<DevicePolicy, number>();
-  for (const device of devices) {
-    for (const policy of devicePolicies(device, preference, rules)) {
-      counts.set(policy, (counts.get(policy) ?? 0) + 1);
-    }
-  }
-
-  return POLICY_ORDER.filter((policy) => counts.has(policy)).map((policy) => ({
-    policy,
-    label: POLICY_LABEL[policy],
-    tone: POLICY_TONE[policy],
-    hint: `${GROUP_HINT[policy]} ${deviceCoverage(counts.get(policy) ?? 0, devices.length)}`,
-  }));
 }

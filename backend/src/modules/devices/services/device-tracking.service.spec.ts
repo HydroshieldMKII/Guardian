@@ -187,7 +187,7 @@ describe('DeviceTrackingService', () => {
     });
 
     it.each([
-      ['a Plexamp product', { product: 'Plexamp' }, 'approved'],
+      ['a Plexamp product', { product: 'Plexamp' }, 'rejected'],
       [
         'only a Plexamp-like name',
         { product: 'Plex Web', device: 'Kitchen PlexAmp' },

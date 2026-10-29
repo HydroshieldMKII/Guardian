@@ -13,7 +13,7 @@ describe("PortalRules", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("Allowed straight away")).toBeInTheDocument();
     expect(screen.getByText("Unlimited")).toBeInTheDocument();
-    expect(screen.queryByText("Schedule")).toBeNull();
+    expect(screen.queryByText("Time schedule")).toBeNull();
   });
 
   it("summarises a restricted account", () => {
@@ -48,7 +48,7 @@ describe("PortalRules", () => {
     expect(screen.getByText("10.0.0.2")).toBeInTheDocument();
     expect(screen.getByText("Blocked until approved")).toBeInTheDocument();
     expect(screen.getByText("2 streams")).toBeInTheDocument();
-    expect(screen.getByText("Schedule")).toBeInTheDocument();
+    expect(screen.getByText("Time schedule")).toBeInTheDocument();
     expect(screen.getByText("Sunday")).toBeInTheDocument();
   });
 

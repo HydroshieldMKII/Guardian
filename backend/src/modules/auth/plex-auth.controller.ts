@@ -18,7 +18,7 @@ import { AdminOnly } from '@/modules/auth/decorators/admin-only.decorator';
 import { AdminUser } from '@/entities/admin-user.entity';
 import { setSessionCookie } from '@/modules/auth/session-cookie';
 import { rethrowAsBadRequest } from '@/modules/auth/rethrow-as-bad-request';
-import { PlexTokenDto } from '@/modules/auth/dto/plex-token.dto';
+import { PlexPinDto } from '@/modules/auth/dto/plex-pin.dto';
 
 @Controller('auth/plex')
 export class PlexAuthController {
@@ -55,14 +55,9 @@ export class PlexAuthController {
   @Get('pin/:clientId')
   async checkPlexPin(@Param('clientId') clientId: string) {
     try {
-      const plexUser = await this.plexOAuthService.checkPlexPin(clientId);
-      if (plexUser) {
-        return {
-          authenticated: true,
-          authToken: plexUser.authToken,
-        };
-      }
-      return { authenticated: false };
+      return {
+        authenticated: await this.plexOAuthService.checkPlexPin(clientId),
+      };
     } catch (error) {
       rethrowAsBadRequest(error, 'Failed to check Plex PIN');
     }
@@ -78,12 +73,14 @@ export class PlexAuthController {
   @Public()
   @Post('login')
   async plexLogin(
-    @Body() body: PlexTokenDto,
+    @Body() body: PlexPinDto,
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
     try {
-      const login = await this.plexLoginService.login(body.authToken);
+      const login = await this.plexLoginService.login(
+        this.plexOAuthService.claimPlexUser(body.clientId),
+      );
       setSessionCookie(req, res, login.token);
       return login.body;
     } catch (error) {
@@ -95,12 +92,10 @@ export class PlexAuthController {
   @Post('link')
   async linkPlexAccount(
     @CurrentUser() user: AdminUser,
-    @Body() body: PlexTokenDto,
+    @Body() body: PlexPinDto,
   ) {
     try {
-      const plexUser = await this.plexOAuthService.getPlexUserFromToken(
-        body.authToken,
-      );
+      const plexUser = this.plexOAuthService.claimPlexUser(body.clientId);
       const result = await this.plexAccounts.linkPlexAccountToAdmin(
         user.id,
         plexUser,

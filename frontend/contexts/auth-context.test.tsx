@@ -1,11 +1,6 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
-import {
-  AuthProvider,
-  isAdminUser,
-  isPlexUser,
-  useAuth,
-} from "./auth-context";
+import { AuthProvider, isAdminUser, isPlexUser, useAuth } from "./auth-context";
 
 const updateProfile = jest.fn<Promise<unknown>, unknown[]>();
 const updatePassword = jest.fn<Promise<unknown>, unknown[]>();
@@ -17,7 +12,10 @@ jest.mock("@/lib/api", () => ({
   },
 }));
 
-const fetchMock = jest.fn<Promise<Response>, [RequestInfo | URL, RequestInit?]>();
+const fetchMock = jest.fn<
+  Promise<Response>,
+  [RequestInfo | URL, RequestInit?]
+>();
 
 const json = (body: unknown, init: ResponseInit = {}) =>
   new Response(JSON.stringify(body), {
@@ -117,6 +115,23 @@ describe("initial load", () => {
     expect(result.current.user).toEqual(plexUser);
   });
 
+  it("sends the pin's client id rather than a Plex token", async () => {
+    const { result } = await renderAuth();
+    routes["/api/pg/auth/plex/login"] = () =>
+      json({ user: plexUser, userType: "plex_user" });
+
+    await act(async () => {
+      await result.current.loginWithPlex("client-1");
+    });
+
+    const call = fetchMock.mock.calls.find(
+      ([url]) => route(url) === "/api/pg/auth/plex/login",
+    );
+    expect(JSON.parse(call![1]!.body as string)).toEqual({
+      clientId: "client-1",
+    });
+  });
+
   it("leaves the visitor signed out when the session has expired", async () => {
     routes["/api/pg/auth/me"] = () => json({}, { status: 401 });
 
@@ -190,7 +205,9 @@ describe("initial load", () => {
 
     const { result } = await renderAuth();
 
-    expect(result.current.backendError).toContain("Unable to reach the backend");
+    expect(result.current.backendError).toContain(
+      "Unable to reach the backend",
+    );
   });
 
   it("clears the error on a successful retry", async () => {
@@ -272,7 +289,7 @@ describe("loginWithPlex", () => {
       json({ user: plexUser, userType: "plex_user" });
 
     await act(async () => {
-      await result.current.loginWithPlex("plex-token");
+      await result.current.loginWithPlex("client-1");
     });
 
     expect(result.current.userType).toBe("plex_user");
@@ -286,7 +303,7 @@ describe("loginWithPlex", () => {
 
     await expect(
       act(async () => {
-        await result.current.loginWithPlex("plex-token");
+        await result.current.loginWithPlex("client-1");
       }),
     ).rejects.toThrow("no access to this server");
   });
@@ -297,7 +314,7 @@ describe("loginWithPlex", () => {
 
     await expect(
       act(async () => {
-        await result.current.loginWithPlex("plex-token");
+        await result.current.loginWithPlex("client-1");
       }),
     ).rejects.toThrow("Plex login failed");
   });
@@ -543,7 +560,7 @@ describe("linking a Plex account", () => {
     routes["/api/pg/auth/plex/link"] = () => json(linked);
 
     await act(async () => {
-      await result.current.linkPlexAccount("plex-token");
+      await result.current.linkPlexAccount("client-1");
     });
 
     expect(result.current.user).toMatchObject(linked);
@@ -555,7 +572,7 @@ describe("linking a Plex account", () => {
     routes["/api/pg/auth/plex/enabled"] = () => json({ enabled: true });
 
     await act(async () => {
-      await result.current.linkPlexAccount("plex-token");
+      await result.current.linkPlexAccount("client-1");
     });
 
     expect(result.current.plexOAuthEnabled).toBe(true);
@@ -567,7 +584,7 @@ describe("linking a Plex account", () => {
     routes["/api/pg/auth/plex/link"] = () => json(linked);
 
     await act(async () => {
-      await result.current.linkPlexAccount("plex-token");
+      await result.current.linkPlexAccount("client-1");
     });
 
     expect(result.current.user).toEqual(plexUser);
@@ -580,7 +597,7 @@ describe("linking a Plex account", () => {
 
     await expect(
       act(async () => {
-        await result.current.linkPlexAccount("plex-token");
+        await result.current.linkPlexAccount("client-1");
       }),
     ).rejects.toThrow("already linked elsewhere");
   });
@@ -591,7 +608,7 @@ describe("linking a Plex account", () => {
 
     await expect(
       act(async () => {
-        await result.current.linkPlexAccount("plex-token");
+        await result.current.linkPlexAccount("client-1");
       }),
     ).rejects.toThrow("Failed to link Plex account");
   });

@@ -93,13 +93,10 @@ describe('PlexAuthController', () => {
       });
     });
 
-    it('returns the auth token once claimed', async () => {
-      plexOAuthService.checkPlexPin.mockResolvedValue({
-        authToken: 'plex-token',
-      });
+    it('reports a signed-in pin without revealing the Plex token', async () => {
+      plexOAuthService.checkPlexPin.mockResolvedValue(true);
       await expect(controller.checkPlexPin('client-1')).resolves.toEqual({
         authenticated: true,
-        authToken: 'plex-token',
       });
     });
 
@@ -124,7 +121,7 @@ describe('PlexAuthController', () => {
       const { res, cookie } = responseStub();
 
       const result = await controller.plexLogin(
-        { authToken: 'tok' },
+        { clientId: 'client-1' },
         requestStub(),
         res,
       );
@@ -141,7 +138,7 @@ describe('PlexAuthController', () => {
     it('issues a scoped portal session for a server user', async () => {
       const { res, cookie } = responseStub();
       const result = await controller.plexLogin(
-        { authToken: 'tok' },
+        { clientId: 'client-1' },
         requestStub(),
         res,
       );
@@ -163,7 +160,7 @@ describe('PlexAuthController', () => {
       plexAccounts.isPlexUserOnServer.mockResolvedValue(false);
       await expect(
         controller.plexLogin(
-          { authToken: 'tok' },
+          { clientId: 'client-1' },
           requestStub(),
           responseStub().res,
         ),
@@ -176,7 +173,7 @@ describe('PlexAuthController', () => {
       configService.getSetting.mockResolvedValue(false);
       await expect(
         controller.plexLogin(
-          { authToken: 'tok' },
+          { clientId: 'client-1' },
           requestStub(),
           responseStub().res,
         ),
@@ -188,31 +185,41 @@ describe('PlexAuthController', () => {
       authService.findAdminByPlexUserId.mockResolvedValue({ id: 'admin-1' });
 
       const result = await controller.plexLogin(
-        { authToken: 'tok' },
+        { clientId: 'client-1' },
         requestStub(),
         responseStub().res,
       );
       expect(result.userType).toBe('admin');
     });
 
-    it('maps a Plex lookup failure to a 400', async () => {
-      plexOAuthService.getPlexUserFromToken.mockRejectedValue(
-        new Error('invalid token'),
+    it('signs in the Plex user of the given pin', async () => {
+      await controller.plexLogin(
+        { clientId: 'client-1' },
+        requestStub(),
+        responseStub().res,
       );
+
+      expect(plexOAuthService.claimPlexUser).toHaveBeenCalledWith('client-1');
+    });
+
+    it('maps a pin that is not signed in to a 400', async () => {
+      plexOAuthService.claimPlexUser.mockImplementation(() => {
+        throw new Error('Sign in with Plex first');
+      });
       await expect(
         controller.plexLogin(
-          { authToken: 'tok' },
+          { clientId: 'client-1' },
           requestStub(),
           responseStub().res,
         ),
-      ).rejects.toThrow('invalid token');
+      ).rejects.toThrow('Sign in with Plex first');
     });
 
     it('falls back to a generic message for a non-Error rejection', async () => {
-      plexOAuthService.getPlexUserFromToken.mockRejectedValue('boom');
+      authService.findAdminByPlexUserId.mockRejectedValue('boom');
       await expect(
         controller.plexLogin(
-          { authToken: 'tok' },
+          { clientId: 'client-1' },
           requestStub(),
           responseStub().res,
         ),
@@ -223,7 +230,7 @@ describe('PlexAuthController', () => {
   describe('linkPlexAccount', () => {
     it('links the resolved Plex user to the caller', async () => {
       const result = await controller.linkPlexAccount(adminUser, {
-        authToken: 'tok',
+        clientId: 'client-1',
       });
 
       expect(plexAccounts.linkPlexAccountToAdmin).toHaveBeenCalledWith(
@@ -238,14 +245,20 @@ describe('PlexAuthController', () => {
         new Error('already linked'),
       );
       await expect(
-        controller.linkPlexAccount(adminUser, { authToken: 'tok' }),
+        controller.linkPlexAccount(adminUser, { clientId: 'client-1' }),
       ).rejects.toThrow('already linked');
     });
 
+    it('links the Plex user of the given pin', async () => {
+      await controller.linkPlexAccount(adminUser, { clientId: 'client-1' });
+
+      expect(plexOAuthService.claimPlexUser).toHaveBeenCalledWith('client-1');
+    });
+
     it('falls back to a generic message for a non-Error rejection', async () => {
-      plexOAuthService.getPlexUserFromToken.mockRejectedValue('boom');
+      plexAccounts.linkPlexAccountToAdmin.mockRejectedValue('boom');
       await expect(
-        controller.linkPlexAccount(adminUser, { authToken: 'tok' }),
+        controller.linkPlexAccount(adminUser, { clientId: 'client-1' }),
       ).rejects.toThrow('Failed to link Plex account');
     });
   });

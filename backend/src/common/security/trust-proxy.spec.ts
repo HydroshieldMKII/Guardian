@@ -15,6 +15,7 @@ class ClientIpController {
 
 const CLIENT = '203.0.113.5';
 const EDGE_PROXY = '198.51.100.7';
+const SPOOFED = '192.0.2.99';
 const LOOPBACK = /^(::ffff:)?127\.0\.0\.1$/;
 
 describe('trust proxy wiring', () => {
@@ -55,34 +56,34 @@ describe('trust proxy wiring', () => {
     }
   });
 
-  it('reads the client through the bundled web proxy by default', async () => {
+  it('reads the client behind one reverse proxy by default', async () => {
     await bootWith(undefined);
 
-    expect(await clientIpFor(`${CLIENT}, ${EDGE_PROXY}`)).toBe(EDGE_PROXY);
+    expect(await clientIpFor(`${SPOOFED}, ${CLIENT}, ${EDGE_PROXY}`)).toBe(
+      CLIENT,
+    );
   });
 
-  it('reads the client through one proxy by default', async () => {
-    await bootWith(undefined);
-
-    expect(await clientIpFor(CLIENT)).toBe(CLIENT);
-  });
-
-  it('reads past a second proxy when two hops are trusted', async () => {
-    await bootWith('2');
-
-    expect(await clientIpFor(`${CLIENT}, ${EDGE_PROXY}`)).toBe(CLIENT);
-  });
-
-  it('ignores the forwarded header when nothing is trusted', async () => {
+  it('reads the client the bundled web proxy saw when browsers connect directly', async () => {
     await bootWith('0');
 
-    expect(await clientIpFor(`${CLIENT}, ${EDGE_PROXY}`)).toMatch(LOOPBACK);
+    expect(await clientIpFor(`${SPOOFED}, ${CLIENT}`)).toBe(CLIENT);
   });
 
-  it('falls back to one hop when the setting is nonsense', async () => {
+  it('reads past a second reverse proxy when two are configured', async () => {
+    await bootWith('2');
+
+    expect(
+      await clientIpFor(`${SPOOFED}, ${CLIENT}, ${EDGE_PROXY}, ${EDGE_PROXY}`),
+    ).toBe(CLIENT);
+  });
+
+  it('falls back to one reverse proxy when the setting is nonsense', async () => {
     await bootWith('many');
 
-    expect(await clientIpFor(`${CLIENT}, ${EDGE_PROXY}`)).toBe(EDGE_PROXY);
+    expect(await clientIpFor(`${SPOOFED}, ${CLIENT}, ${EDGE_PROXY}`)).toBe(
+      CLIENT,
+    );
   });
 
   it('uses the socket address when no proxy forwards a header', async () => {

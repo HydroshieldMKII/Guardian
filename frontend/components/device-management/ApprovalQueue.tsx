@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import type { UserDevice } from "@/types";
 import { UserAvatar } from "./SharedComponents";
 import { groupName, type UserDeviceGroup } from "./user-group";
+import { PANEL_HEIGHT } from "./panel-height";
 
 export interface QueueItem {
   device: UserDevice;
@@ -38,7 +39,8 @@ export function ApprovalQueue({
     return (
       <section
         className={cn(
-          "flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-input px-6 py-6 text-center lg:py-20",
+          "flex flex-col items-center justify-center gap-3 rounded-2xl border bg-card px-6 py-6 text-center shadow-[0_1px_2px_rgb(0_0_0/0.03)]",
+          PANEL_HEIGHT,
           className,
         )}
       >

@@ -303,6 +303,22 @@ describe("browser navigation", () => {
     expect(updateConfig).toHaveBeenCalled();
   });
 
+  it.each(["Cancel", "Save now"])(
+    "lets the next Back leave the page after %s",
+    async (button) => {
+      const back = jest
+        .spyOn(window.history, "back")
+        .mockImplementation(() => undefined);
+      const ui = renderWorkspace();
+      await edit(ui);
+
+      await ui.click(screen.getByRole("button", { name: button }));
+
+      await waitFor(() => expect(back).toHaveBeenCalledTimes(1));
+      back.mockRestore();
+    },
+  );
+
   it("lets Back through when nothing changed", () => {
     const onPop = jest.fn();
     renderWorkspace();

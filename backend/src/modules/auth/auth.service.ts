@@ -15,6 +15,7 @@ import { UpdateProfileDto } from '@/modules/auth/dto/update-profile.dto';
 import { UpdatePasswordDto } from '@/modules/auth/dto/update-password.dto';
 import { AuthSessionService } from '@/modules/auth/auth-session.service';
 import { CaptchaService } from '@/modules/auth/captcha.service';
+import { normalizeEmail } from '@/modules/auth/email-address';
 import { serialTransaction } from '@/database/serial-transaction';
 
 const BCRYPT_ROUNDS = 12;
@@ -86,8 +87,9 @@ export class AuthService {
   async login(dto: LoginDto): Promise<AuthResponseDto> {
     await this.captcha.verify(dto.captchaToken);
 
+    const email = normalizeEmail(dto.username);
     const admin = await this.adminUserRepository.findOne({
-      where: [{ username: dto.username }, { email: dto.username }],
+      where: [{ username: dto.username }, ...(email ? [{ email }] : [])],
     });
 
     const passwordValid = await bcrypt.compare(

@@ -59,14 +59,20 @@ export class TemporaryAccessService {
   }
 
   async revokeTemporaryAccess(deviceId: number): Promise<void> {
-    await this.userDeviceRepository.update(deviceId, {
+    if (!(await this.clearTemporaryAccess(deviceId))) {
+      throw new NotFoundException(`Device ${deviceId} not found`);
+    }
+    this.logger.log(`Revoked temporary access for device ${deviceId}`);
+  }
+
+  private async clearTemporaryAccess(deviceId: number): Promise<boolean> {
+    const result = await this.userDeviceRepository.update(deviceId, {
       temporaryAccessUntil: null,
       temporaryAccessGrantedAt: null,
       temporaryAccessDurationMinutes: null,
       temporaryAccessBypassPolicies: false,
     });
-
-    this.logger.log(`Revoked temporary access for device ${deviceId}`);
+    return !!result.affected;
   }
 
   async isTemporaryAccessValid(device: UserDevice): Promise<boolean> {
@@ -77,7 +83,7 @@ export class TemporaryAccessService {
     const isValid = device.temporaryAccessUntil > new Date();
 
     if (!isValid) {
-      await this.revokeTemporaryAccess(device.id);
+      await this.clearTemporaryAccess(device.id);
       this.logger.log(
         `Temporary access expired for device ${device.id}, cleaned up`,
       );

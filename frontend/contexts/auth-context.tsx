@@ -69,7 +69,7 @@ export interface AuthContextType {
     password: string,
     captchaToken?: string,
   ) => Promise<void>;
-  loginWithPlex: (authToken: string) => Promise<void>;
+  loginWithPlex: (clientId: string) => Promise<void>;
   logout: () => Promise<void>;
   createAdmin: (
     username: string,
@@ -90,7 +90,7 @@ export interface AuthContextType {
     confirmPassword: string;
     clearSessions?: boolean;
   }) => Promise<void>;
-  linkPlexAccount: (authToken: string) => Promise<void>;
+  linkPlexAccount: (clientId: string) => Promise<void>;
   unlinkPlexAccount: () => Promise<void>;
   refreshPlexOAuthStatus: () => Promise<void>;
 }
@@ -171,10 +171,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     applySession({ user: data.user, userType: "admin" });
   };
 
-  const loginWithPlex = async (authToken: string) => {
+  const loginWithPlex = async (clientId: string) => {
     const data = await authJson<PlexLoginResponse>(
       "/api/pg/auth/plex/login",
-      { method: "POST", body: { authToken } },
+      { method: "POST", body: { clientId } },
       "Plex login failed",
     );
     applySession(data);
@@ -243,10 +243,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const linkPlexAccount = async (authToken: string) => {
+  const linkPlexAccount = async (clientId: string) => {
     const data = await authJson<PlexLinkResponse>(
       "/api/pg/auth/plex/link",
-      { method: "POST", body: { authToken } },
+      { method: "POST", body: { clientId } },
       "Failed to link Plex account",
     );
     applyPlexLink({

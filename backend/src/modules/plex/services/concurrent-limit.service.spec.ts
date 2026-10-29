@@ -117,15 +117,26 @@ describe('ConcurrentLimitService', () => {
     );
   });
 
-  it('excludes Plexamp sessions from the count', async () => {
+  it('excludes Plexamp music from the count', async () => {
     concurrentStreamService.getEffectiveLimit.mockResolvedValue(1);
 
     await expect(
       excessIds([
         session({ id: 'session-1' }),
-        session({ id: 'session-2', product: 'Plexamp' }),
+        session({ id: 'session-2', product: 'Plexamp', type: 'track' }),
       ]),
     ).resolves.toEqual([]);
+  });
+
+  it('counts video from a player calling itself Plexamp', async () => {
+    concurrentStreamService.getEffectiveLimit.mockResolvedValue(1);
+
+    await expect(
+      excessIds([
+        session({ id: 'session-1' }),
+        session({ id: 'session-2', product: 'Plexamp', type: 'movie' }),
+      ]),
+    ).resolves.toHaveLength(1);
   });
 
   it('honours devices the limit filter excludes', async () => {

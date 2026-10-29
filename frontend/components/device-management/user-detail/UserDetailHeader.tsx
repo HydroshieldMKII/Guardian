@@ -6,9 +6,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { PillRow, StatusPill } from "@/components/ui/entity";
 import { formatAgo, pluralize } from "@/lib/duration";
-import type { PolicyBadge } from "@/lib/device-policies";
 import { UserAvatar } from "../SharedComponents";
 import { groupName, type UserDeviceGroup } from "../user-group";
 
@@ -23,13 +21,11 @@ const summaryOf = (group: UserDeviceGroup) =>
 
 export function UserDetailHeader({
   group,
-  policyBadges,
   onBack,
   onShowHistory,
   onHide,
 }: {
   group: UserDeviceGroup;
-  policyBadges: PolicyBadge[];
   onBack: () => void;
   onShowHistory: () => void;
   onHide: () => void;
@@ -89,16 +85,6 @@ export function UserDetailHeader({
           </DropdownMenu>
         </div>
       </div>
-
-      {policyBadges.length > 0 && (
-        <PillRow>
-          {policyBadges.map(({ policy, label, tone, hint }) => (
-            <StatusPill key={policy} tone={tone} hint={hint}>
-              {label}
-            </StatusPill>
-          ))}
-        </PillRow>
-      )}
     </div>
   );
 }

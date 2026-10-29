@@ -123,26 +123,26 @@ describe('trustProxyHops', () => {
     }
   });
 
-  it('trusts the bundled web proxy by default', () => {
+  it('trusts the bundled web proxy and one reverse proxy by default', () => {
     delete process.env.TRUST_PROXY_HOPS;
-    expect(trustProxyHops()).toBe(1);
-  });
-
-  it('honours an extra reverse proxy in front', () => {
-    process.env.TRUST_PROXY_HOPS = '2';
     expect(trustProxyHops()).toBe(2);
   });
 
-  it('allows trusting nothing at all', () => {
+  it('adds every configured reverse proxy to the bundled web proxy', () => {
+    process.env.TRUST_PROXY_HOPS = '2';
+    expect(trustProxyHops()).toBe(3);
+  });
+
+  it('trusts only the bundled web proxy when browsers connect directly', () => {
     process.env.TRUST_PROXY_HOPS = '0';
-    expect(trustProxyHops()).toBe(0);
+    expect(trustProxyHops()).toBe(1);
   });
 
   it.each(['', 'many', '-1', '1.5'])(
-    'falls back to one hop for %p',
+    'falls back to one reverse proxy for %p',
     (value) => {
       process.env.TRUST_PROXY_HOPS = value;
-      expect(trustProxyHops()).toBe(1);
+      expect(trustProxyHops()).toBe(2);
     },
   );
 });

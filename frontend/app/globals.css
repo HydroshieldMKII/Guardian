@@ -257,6 +257,23 @@
 }
 
 /* Hide scrollbar utility */
+.auth-glow {
+  background: radial-gradient(
+    ellipse 55% 50% at 50% 45%,
+    var(--card),
+    transparent
+  );
+}
+
+.auth-dots {
+  background-image: radial-gradient(
+    color-mix(in oklab, var(--muted-foreground) 35%, transparent) 1px,
+    transparent 1px
+  );
+  background-size: 22px 22px;
+  mask-image: radial-gradient(ellipse 70% 65% at 50% 45%, black, transparent);
+}
+
 .scrollbar-hide {
   /* Firefox */
   scrollbar-width: none;

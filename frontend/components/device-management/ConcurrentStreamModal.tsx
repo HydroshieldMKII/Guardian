@@ -145,7 +145,7 @@ export const ConcurrentStreamModal: React.FC<ConcurrentStreamModalProps> = ({
   return (
     <Modal open={isOpen} onOpenChange={onClose} size="md">
       <ModalHeader
-        title="Concurrent stream limit"
+        title="Streams at once"
         description={
           <>
             Set the maximum number of simultaneous streams for{" "}

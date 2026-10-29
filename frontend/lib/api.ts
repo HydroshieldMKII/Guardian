@@ -1,4 +1,5 @@
 import { config } from "./config";
+import { loginPathReturningToCurrentPage } from "./auth/return-to";
 
 export class ApiError extends Error {
   constructor(
@@ -38,7 +39,7 @@ class ApiClient {
     // Handle 401 Unauthorized - redirect to login silently
     if (response.status === 401) {
       if (typeof window !== "undefined") {
-        window.location.href = "/login";
+        window.location.href = loginPathReturningToCurrentPage();
         return {} as T; // Return empty object
       }
       throw new ApiError(response.status, "Unauthorized", response);

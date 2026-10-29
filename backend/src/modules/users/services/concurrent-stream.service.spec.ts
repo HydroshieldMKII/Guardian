@@ -140,13 +140,24 @@ describe('ConcurrentStreamService', () => {
       expect(result).toHaveLength(0);
     });
 
-    it('drops Plexamp sessions', async () => {
+    it('drops Plexamp music', async () => {
       const result = await service.filterCountableSessions('u1', [
         session({
+          type: 'track',
           Player: { machineIdentifier: 'device-a', product: 'Plexamp' },
         }),
       ]);
       expect(result).toHaveLength(0);
+    });
+
+    it('keeps video from a player calling itself Plexamp', async () => {
+      const result = await service.filterCountableSessions('u1', [
+        session({
+          type: 'movie',
+          Player: { machineIdentifier: 'device-a', product: 'Plexamp' },
+        }),
+      ]);
+      expect(result).toHaveLength(1);
     });
 
     it('drops devices flagged as excluded', async () => {

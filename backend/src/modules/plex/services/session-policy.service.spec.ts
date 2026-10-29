@@ -144,15 +144,25 @@ describe('SessionPolicyService', () => {
       expect(decision.stopCode).toBe('DEVICE_REJECTED');
     });
 
-    it('never touches a Plexamp session', async () => {
+    it('never touches Plexamp music', async () => {
       deviceRepo.findOne.mockResolvedValue(
         approvedDevice({ status: 'rejected' }),
       );
 
-      await expect(evaluate(session({ product: 'Plexamp' }))).resolves.toEqual({
-        shouldStop: false,
-      });
+      await expect(
+        evaluate(session({ product: 'Plexamp', type: 'track' })),
+      ).resolves.toEqual({ shouldStop: false });
       expect(deviceRepo.findOne).not.toHaveBeenCalled();
+    });
+
+    it('applies the rules to video from a player calling itself Plexamp', async () => {
+      deviceRepo.findOne.mockResolvedValue(
+        approvedDevice({ status: 'rejected' }),
+      );
+
+      await expect(
+        evaluate(session({ product: 'Plexamp', type: 'movie' })),
+      ).resolves.toMatchObject({ shouldStop: true });
     });
 
     it('leaves a session with no user or device identifier alone', async () => {

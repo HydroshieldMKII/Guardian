@@ -144,6 +144,13 @@ const readDevice = (
   return { ...fields, userId, deviceIdentifier };
 };
 
+const openEmptyAllowList = (
+  preference: ImportedPreference,
+): ImportedPreference =>
+  preference.ipAccessPolicy === 'restricted' && !preference.allowedIPs?.length
+    ? { ...preference, ipAccessPolicy: 'all' }
+    : preference;
+
 const readPreference = (
   record: Record<string, unknown>,
   label: string,
@@ -154,7 +161,7 @@ const readPreference = (
   const { userId } = fields;
   if (userId === undefined) problems.push(`${label}.userId is required`);
   if (problems.length > before || !userId) return null;
-  return { ...fields, userId };
+  return openEmptyAllowList({ ...fields, userId });
 };
 
 const reportDuplicates = <T>(

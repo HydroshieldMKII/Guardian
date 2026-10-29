@@ -277,7 +277,7 @@ describe("UserDetail header", () => {
     expect(handlers.onToggleUserVisibility).toHaveBeenCalledWith("u-1");
   });
 
-  it("pills the policies that reach any device", () => {
+  it("leaves the policies to the rules instead of repeating them", () => {
     renderDetail({
       group: group({
         devices: [device({ temporaryAccessUntil: FUTURE })],
@@ -285,15 +285,8 @@ describe("UserDetail header", () => {
       timeRules: [rule()],
     });
 
-    expect(screen.getAllByText("Temporary access")).toHaveLength(2);
-    expect(screen.getByText("Time schedule")).toBeInTheDocument();
-  });
-
-  it("shows no policy pills when nothing applies", () => {
-    renderDetail();
-
-    expect(screen.queryByText("Time schedule")).toBeNull();
-    expect(screen.queryByText("Network access")).toBeNull();
+    expect(screen.getAllByText("Temporary access")).toHaveLength(1);
+    expect(screen.getAllByText("Time schedule")).toHaveLength(1);
   });
 });
 
@@ -331,6 +324,16 @@ describe("UserDetail devices", () => {
         "No devices yet. They appear here the first time this user streams.",
       ),
     ).toBeInTheDocument();
+  });
+
+  it("lists the devices below the rules", () => {
+    renderDetail();
+
+    expect(
+      screen
+        .getAllByRole("heading", { level: 3 })
+        .map((heading) => heading.textContent),
+    ).toEqual(["Rules", "Devices"]);
   });
 });
 
@@ -438,7 +441,7 @@ describe("UserDetail rules", () => {
     renderDetail({ group: group({ user: { userId: "u-1" } }) });
 
     expect(ruleValue("Streams at once")).toBe("Global default");
-    expect(ruleValue("Networks")).toBe("Anywhere");
+    expect(ruleValue("Network access")).toBe("Anywhere");
   });
 
   it("counts devices left out of the stream limit", () => {
@@ -509,18 +512,18 @@ describe("UserDetail rules", () => {
   ])("counts enabled schedule rules %#", (rules, label) => {
     renderDetail({ timeRules: rules });
 
-    expect(ruleValue("Schedule")).toBe(label);
+    expect(ruleValue("Time schedule")).toBe(label);
   });
 
   it("reads no schedule when rules have not loaded", () => {
     renderDetail();
-    expect(ruleValue("Schedule")).toBe("None");
+    expect(ruleValue("Time schedule")).toBe("None");
   });
 
   it("opens the schedule", async () => {
     const { user, handlers } = renderDetail();
 
-    await user.click(screen.getByText("Schedule"));
+    await user.click(screen.getByText("Time schedule"));
 
     expect(handlers.onShowTimePolicy).toHaveBeenCalledWith("u-1");
   });
@@ -544,14 +547,14 @@ describe("UserDetail rules", () => {
   ])("labels networks %p as %s", (overrides, label) => {
     renderDetail({ group: withPreference(overrides) });
 
-    expect(ruleValue("Networks")).toBe(label);
+    expect(ruleValue("Network access")).toBe(label);
   });
 
   it("opens the network modal and saves through it", async () => {
     const { user, handlers } = renderDetail();
     expect(screen.getByText("ip-modal:false")).toBeInTheDocument();
 
-    await user.click(screen.getByText("Networks"));
+    await user.click(screen.getByText("Network access"));
     expect(screen.getByText("ip-modal:true")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "save ip" }));

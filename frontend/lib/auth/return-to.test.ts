@@ -1,6 +1,7 @@
 import {
   AUTH_ROUTES,
   loginPathReturningTo,
+  loginPathReturningToCurrentPage,
   returnPathFrom,
   safeReturnPath,
 } from "@/lib/auth/return-to";
@@ -54,6 +55,27 @@ describe("loginPathReturningTo", () => {
     expect(loginPathReturningTo("/")).toBe("/login");
     expect(loginPathReturningTo("//evil.example.com")).toBe("/login");
   });
+});
+
+describe("loginPathReturningToCurrentPage", () => {
+  afterEach(() => window.history.replaceState(null, "", "/"));
+
+  it("returns to the page, its query and its hash after signing in", () => {
+    window.history.replaceState(null, "", "/settings?tab=plex#token");
+
+    expect(loginPathReturningToCurrentPage()).toBe(
+      `/login?returnTo=${encodeURIComponent("/settings?tab=plex#token")}`,
+    );
+  });
+
+  it.each(["/", "/login?returnTo=%2Fsettings"])(
+    "sends %s to the plain login page",
+    (path) => {
+      window.history.replaceState(null, "", path);
+
+      expect(loginPathReturningToCurrentPage()).toBe("/login");
+    },
+  );
 });
 
 describe("returnPathFrom", () => {

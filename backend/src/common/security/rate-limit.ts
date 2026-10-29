@@ -47,12 +47,21 @@ export const apiLimiter = (): RateLimitRequestHandler =>
     message: 'Too many requests. Try again shortly.',
   });
 
+const BUNDLED_WEB_PROXY_HOPS = 1;
+const DEFAULT_REVERSE_PROXY_HOPS = 1;
+
 export function trustProxyHops(): number {
+  return BUNDLED_WEB_PROXY_HOPS + reverseProxyHops();
+}
+
+function reverseProxyHops(): number {
   const raw = process.env.TRUST_PROXY_HOPS?.trim();
   if (!raw) {
-    return 1;
+    return DEFAULT_REVERSE_PROXY_HOPS;
   }
 
   const configured = Number(raw);
-  return Number.isInteger(configured) && configured >= 0 ? configured : 1;
+  return Number.isInteger(configured) && configured >= 0
+    ? configured
+    : DEFAULT_REVERSE_PROXY_HOPS;
 }

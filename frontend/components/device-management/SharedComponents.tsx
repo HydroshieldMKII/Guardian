@@ -46,7 +46,7 @@ const NotManageableBadge = () => (
 );
 
 export const DeviceStatus = ({ device }: { device: UserDevice }) => {
-  if (isPlexampDevice(device) && device.status === "pending") {
+  if (isPlexampDevice(device)) {
     return <NotManageableBadge />;
   }
 

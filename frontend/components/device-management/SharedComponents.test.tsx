@@ -136,14 +136,15 @@ describe("DeviceStatus", () => {
     },
   );
 
-  it("still reports an approved Plexamp device as approved", () => {
-    render(
-      <DeviceStatus
-        device={device({ status: "approved", deviceProduct: "Plexamp" })}
-      />,
-    );
-    expect(screen.getByText("Approved")).toBeInTheDocument();
-  });
+  it.each(["approved", "rejected"] as const)(
+    "shows a %s Plexamp device as not manageable",
+    (status) => {
+      render(
+        <DeviceStatus device={device({ status, deviceProduct: "Plexamp" })} />,
+      );
+      expect(screen.getByText("Not manageable")).toBeInTheDocument();
+    },
+  );
 
   it("keeps the unmanageable tooltip shut until asked", () => {
     render(<DeviceStatus device={device({ deviceProduct: "Plexamp" })} />);

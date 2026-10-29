@@ -1,8 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { Moon, Sun } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -10,7 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { useTheme } from "@/hooks/use-theme";
+import { AuthLayout } from "@/components/auth-form/AuthLayout";
 
 export function AuthShell({
   title,
@@ -23,25 +21,9 @@ export function AuthShell({
   footer?: React.ReactNode;
   children?: React.ReactNode;
 }) {
-  const { theme, toggleTheme } = useTheme();
-
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-b from-background to-muted p-4">
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={toggleTheme}
-        className="absolute right-4 top-4 z-10 size-9 p-0 hover:bg-accent/50"
-      >
-        {theme === "dark" ? (
-          <Sun className="size-4" />
-        ) : (
-          <Moon className="size-4" />
-        )}
-        <span className="sr-only">Toggle theme</span>
-      </Button>
-
-      <Card className="max-h-[90vh] w-full max-w-md overflow-y-auto shadow-xl">
+    <AuthLayout>
+      <Card className="w-full max-w-md shadow-xl">
         <CardHeader className="space-y-1 pb-4 pt-8 text-center">
           <CardTitle className="text-3xl font-bold">{title}</CardTitle>
           <CardDescription className="text-sm">{description}</CardDescription>
@@ -57,6 +39,6 @@ export function AuthShell({
           )}
         </CardContent>
       </Card>
-    </div>
+    </AuthLayout>
   );
 }

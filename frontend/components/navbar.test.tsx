@@ -280,6 +280,53 @@ describe("Navbar sections", () => {
     linksNamed(/^Users/).forEach((link) => expect(link).toHaveTextContent("4"));
   });
 
+  it("offers only settings and no tab bar until Plex is configured", () => {
+    dashboard = dashboardData({
+      plexStatus: {
+        configured: false,
+        hasValidCredentials: false,
+        connectionStatus: "Not configured",
+      },
+    });
+    render(<Navbar />);
+    expect(screen.queryByRole("link", { name: /^Users/ })).toBeNull();
+    expect(screen.queryByRole("link", { name: /^Streams/ })).toBeNull();
+    expect(linksNamed(/^Settings/)).toHaveLength(1);
+    expect(screen.queryByRole("navigation", { name: "Sections" })).toBeNull();
+  });
+
+  it("keeps every section while Plex is configured but unreachable", () => {
+    dashboard = dashboardData({
+      plexStatus: {
+        configured: true,
+        hasValidCredentials: false,
+        connectionStatus: "Unauthorized",
+      },
+    });
+    render(<Navbar />);
+    expect(linksNamed(/^Users/)).toHaveLength(2);
+    expect(linksNamed(/^Streams/)).toHaveLength(2);
+  });
+
+  it("keeps every section before the dashboard data arrives", () => {
+    render(<Navbar />);
+    expect(linksNamed(/^Users/)).toHaveLength(2);
+    expect(
+      screen.getByRole("navigation", { name: "Sections" }),
+    ).toBeInTheDocument();
+  });
+
+  it("keeps room for a two-digit count on the counted sections only", () => {
+    render(<Navbar />);
+    const reserved = (name: RegExp) =>
+      linksNamed(name).some((link) =>
+        link.querySelector("[data-width-reserve]"),
+      );
+    expect(reserved(/^Streams/)).toBe(true);
+    expect(reserved(/^Users/)).toBe(true);
+    expect(reserved(/^Settings/)).toBe(false);
+  });
+
   it("reads the dashboard data the dashboard already keeps current", () => {
     render(<Navbar />);
     expect(useDashboardQuery).toHaveBeenCalledWith(false);

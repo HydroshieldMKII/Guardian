@@ -31,7 +31,7 @@ export interface PlexOAuthCopy {
 
 interface UsePlexOAuthOptions {
   copy: PlexOAuthCopy;
-  onAuthenticated: (authToken: string) => Promise<void>;
+  onAuthenticated: (clientId: string) => Promise<void>;
   redirectWhenPopupIsUnavailable?: boolean;
 }
 
@@ -115,8 +115,8 @@ export const usePlexOAuth = ({
         const response = await fetch(`/api/pg/auth/plex/pin/${pin.clientId}`);
         if (!response.ok) return;
 
-        const data = (await response.json()) as { authToken?: string };
-        if (!data.authToken || settled) return;
+        const data = (await response.json()) as { authenticated?: boolean };
+        if (data.authenticated !== true || settled) return;
 
         settled = true;
         closePopup();
@@ -125,7 +125,7 @@ export const usePlexOAuth = ({
         setLoading(true);
 
         try {
-          await onAuthenticatedRef.current(data.authToken);
+          await onAuthenticatedRef.current(pin.clientId);
           toast({ ...copyRef.current.success, variant: "success" });
         } catch (error) {
           toast({

@@ -483,6 +483,36 @@ describe('DatabaseImportService', () => {
       );
     });
 
+    it.each([[], null, undefined])(
+      'opens a restricted policy whose allowed list is %p',
+      async (allowedIPs) => {
+        await importPreferences([
+          { userId: 'u1', ipAccessPolicy: 'restricted', allowedIPs },
+        ]);
+
+        expect(preferenceRepo.create).toHaveBeenCalledWith(
+          expect.objectContaining({ ipAccessPolicy: 'all' }),
+        );
+      },
+    );
+
+    it('keeps a restricted policy that lists addresses', async () => {
+      await importPreferences([
+        {
+          userId: 'u1',
+          ipAccessPolicy: 'restricted',
+          allowedIPs: ['10.0.0.0/8'],
+        },
+      ]);
+
+      expect(preferenceRepo.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          ipAccessPolicy: 'restricted',
+          allowedIPs: ['10.0.0.0/8'],
+        }),
+      );
+    });
+
     it('overwrites the block policy on an existing preference', async () => {
       preferenceRepo.findOne.mockResolvedValue({
         userId: 'u1',

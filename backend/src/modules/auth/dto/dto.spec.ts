@@ -5,7 +5,7 @@ import { UpdateProfileDto } from './update-profile.dto';
 import { UpdatePasswordDto } from './update-password.dto';
 import { LoginDto } from './login.dto';
 import { ConfirmPasswordDto } from './confirm-password.dto';
-import { PlexTokenDto } from './plex-token.dto';
+import { PlexPinDto } from './plex-pin.dto';
 
 const errorsFor = <T extends object>(
   cls: new () => T,
@@ -32,6 +32,14 @@ describe('CreateAdminDto', () => {
 
   it('accepts a well formed payload', () => {
     expect(errorsFor(CreateAdminDto, valid)).toEqual([]);
+  });
+
+  it('stores the email trimmed and lowercased', () => {
+    const dto = plainToInstance(CreateAdminDto, {
+      ...valid,
+      email: ' Admin@Example.COM ',
+    });
+    expect(dto.email).toBe('admin@example.com');
   });
 
   it('requires a username of at least three characters', () => {
@@ -181,6 +189,13 @@ describe('UpdateProfileDto', () => {
       'email',
     );
   });
+
+  it('stores the email trimmed and lowercased', () => {
+    const dto = plainToInstance(UpdateProfileDto, {
+      email: ' Admin@Example.COM ',
+    });
+    expect(dto.email).toBe('admin@example.com');
+  });
 });
 
 describe('UpdatePasswordDto', () => {
@@ -260,14 +275,17 @@ describe('LoginDto', () => {
   });
 });
 
-describe('PlexTokenDto', () => {
-  it('accepts a token', () => {
-    expect(errorsFor(PlexTokenDto, { authToken: 'tok' })).toEqual([]);
+describe('PlexPinDto', () => {
+  it('accepts a client id', () => {
+    expect(errorsFor(PlexPinDto, { clientId: 'client-1' })).toEqual([]);
   });
 
-  it.each([undefined, '', ['tok'], 42])('rejects the token %p', (authToken) => {
-    expect(propertiesFor(PlexTokenDto, { authToken })).toContain('authToken');
-  });
+  it.each([undefined, '', ['client-1'], 42, 'x'.repeat(129)])(
+    'rejects the client id %p',
+    (clientId) => {
+      expect(propertiesFor(PlexPinDto, { clientId })).toContain('clientId');
+    },
+  );
 });
 
 describe('ConfirmPasswordDto', () => {

@@ -204,7 +204,7 @@ export class DeviceTrackingService {
     );
     const isStrictMode = await isStrictModeEnabled(this.configService);
     const initialStatus = isStrictMode
-      ? strictModeStatus(deviceInfo, defaultBlock)
+      ? strictModeStatus(defaultBlock)
       : 'pending';
 
     this.logger.log('New device detected', {

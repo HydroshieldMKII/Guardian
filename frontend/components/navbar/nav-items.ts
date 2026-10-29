@@ -26,12 +26,14 @@ export function navItems({
   pendingDevices,
   activeStreams,
   versionMismatch,
+  plexConfigured,
 }: {
   pendingDevices: number;
   activeStreams: number;
   versionMismatch: boolean;
+  plexConfigured: boolean;
 }): NavItem[] {
-  return [
+  const sections: NavItem[] = [
     {
       key: "users",
       label: "Users",
@@ -48,6 +50,9 @@ export function navItems({
       count: activeStreams,
       countTone: "info",
     },
+  ];
+  return [
+    ...(plexConfigured ? sections : []),
     {
       key: "settings",
       label: "Settings",

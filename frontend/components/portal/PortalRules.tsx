@@ -49,7 +49,7 @@ export function PortalRules({ rules }: { rules: PortalUserRules }) {
 
       <div className="divide-y divide-border/70 rounded-2xl border bg-card shadow-[0_1px_2px_rgb(0_0_0/0.03)]">
         <RuleItem
-          title="Networks"
+          title="Network access"
           description="Where you are allowed to stream from"
           value={
             <StatusPill>{networkPolicyLabel(rules.networkPolicy)}</StatusPill>
@@ -103,7 +103,7 @@ export function PortalRules({ rules }: { rules: PortalUserRules }) {
         />
         {rules.timeRules.length > 0 && (
           <RuleItem
-            title="Schedule"
+            title="Time schedule"
             description="The hours you cannot stream, on any of your devices"
           >
             <ScheduleList rules={rules.timeRules} />

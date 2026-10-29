@@ -179,12 +179,12 @@ describe("starting the flow", () => {
 });
 
 describe("finishing the flow", () => {
-  it("closes the Plex window the moment the token arrives", async () => {
-    pinResponse({ ok: true, json: async () => ({ authToken: "tok" }) });
+  it("closes the Plex window the moment Plex confirms the sign-in", async () => {
+    pinResponse({ ok: true, json: async () => ({ authenticated: true }) });
     await startFlow();
 
     expect(close).toHaveBeenCalled();
-    expect(onAuthenticated).toHaveBeenCalledWith("tok");
+    expect(onAuthenticated).toHaveBeenCalledWith("c-1");
     expect(toast).toHaveBeenCalledWith(
       expect.objectContaining({ title: "Linked", variant: "success" }),
     );
@@ -192,17 +192,17 @@ describe("finishing the flow", () => {
   });
 
   it("leaves an already closed window alone", async () => {
-    pinResponse({ ok: true, json: async () => ({ authToken: "tok" }) });
+    pinResponse({ ok: true, json: async () => ({ authenticated: true }) });
     setClosed(popup, true);
     await startFlow();
 
     expect(close).not.toHaveBeenCalled();
-    expect(onAuthenticated).toHaveBeenCalledWith("tok");
+    expect(onAuthenticated).toHaveBeenCalledWith("c-1");
   });
 
   it("reports a sign-in the server refuses", async () => {
     onAuthenticated.mockRejectedValue(new Error("already linked"));
-    pinResponse({ ok: true, json: async () => ({ authToken: "tok" }) });
+    pinResponse({ ok: true, json: async () => ({ authenticated: true }) });
     await startFlow();
 
     expect(toast).toHaveBeenCalledWith(
@@ -216,7 +216,7 @@ describe("finishing the flow", () => {
 
   it("falls back to the generic message for a non-Error rejection", async () => {
     onAuthenticated.mockRejectedValue("nope");
-    pinResponse({ ok: true, json: async () => ({ authToken: "tok" }) });
+    pinResponse({ ok: true, json: async () => ({ authenticated: true }) });
     await startFlow();
 
     expect(toast).toHaveBeenCalledWith(
@@ -312,12 +312,12 @@ describe("cancelling", () => {
 
   it("takes one last look before treating a closed window as cancelled", async () => {
     await startFlow();
-    pinResponse({ ok: true, json: async () => ({ authToken: "tok" }) });
+    pinResponse({ ok: true, json: async () => ({ authenticated: true }) });
 
     setClosed(popup, true);
     await tick(500);
 
-    expect(onAuthenticated).toHaveBeenCalledWith("tok");
+    expect(onAuthenticated).toHaveBeenCalledWith("c-1");
     expect(toast).not.toHaveBeenCalledWith(
       expect.objectContaining({ title: "Cancelled" }),
     );
@@ -375,12 +375,12 @@ describe("the mobile redirect", () => {
         expiresAt: expiry(),
       }),
     );
-    pinResponse({ ok: true, json: async () => ({ authToken: "tok" }) });
+    pinResponse({ ok: true, json: async () => ({ authenticated: true }) });
 
     renderHarness({ redirectWhenPopupIsUnavailable: true });
     await flush();
 
-    expect(onAuthenticated).toHaveBeenCalledWith("tok");
+    expect(onAuthenticated).toHaveBeenCalledWith("c-1");
     expect(sessionStorage.getItem("plexPin")).toBeNull();
   });
 
