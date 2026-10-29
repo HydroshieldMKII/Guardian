@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In } from 'typeorm';
+import { Repository, IsNull } from 'typeorm';
 import { UserDevice } from '@/entities/user-device.entity';
 import { SessionHistory } from '@/entities/session-history.entity';
 import { UsersService } from '@/modules/users/services/users.service';
@@ -10,49 +10,18 @@ import {
   DeviceInfo,
   PlexSessionsResponse,
 } from '@/types/plex.types';
-import { errorMessage } from '@/common/utils/error-types';
+import { isPlexampDevice } from '@/common/utils/plexamp.utils';
+import { DeviceEventsService } from '@/modules/devices/services/device-events.service';
+import { SessionKeyRegistry } from '@/modules/devices/services/session-key-registry';
+import {
+  isStrictModeEnabled,
+  strictModeStatus,
+} from '@/modules/devices/services/strict-mode';
 
-export interface NewDeviceDetectedEvent {
-  userId: string;
-  username: string;
-  deviceName: string;
-  deviceIdentifier: string;
-  ipAddress: string;
-  platform: string;
-  sessionKey?: string;
-}
-
-export interface DeviceLocationChangedEvent {
-  userId: string;
-  username: string | null;
-  deviceName: string | null;
-  deviceIdentifier: string;
-  oldIpAddress: string | null;
-  newIpAddress: string | null;
-  sessionKey?: string | null;
-}
-
-/**
- * Device Tracking Service
- *
- * Tracks device information from Plex sessions.
- * Manages device records, approval status, and temporary access.
- */
 @Injectable()
 export class DeviceTrackingService {
   private readonly logger = new Logger(DeviceTrackingService.name);
-  private newDeviceCallbacks: Array<(event: NewDeviceDetectedEvent) => void> =
-    [];
-  private locationChangeCallbacks: Array<
-    (event: DeviceLocationChangedEvent) => void
-  > = [];
-  // Track known session keys in memory to avoid counting the same session multiple times
-  // Key: `${userId}:${deviceIdentifier}`, Value: Set of known session keys
-  private knownSessionKeys: Map<string, Set<string>> = new Map();
-  // Track last activity time for each device key to allow cleanup of stale entries
-  private deviceKeyLastActivity: Map<string, number> = new Map();
-  // Cleanup stale entries after 24 hours of inactivity
-  private readonly STALE_ENTRY_THRESHOLD_MS = 24 * 60 * 60 * 1000;
+  private readonly sessionKeys = new SessionKeyRegistry();
 
   constructor(
     @InjectRepository(UserDevice)
@@ -61,62 +30,81 @@ export class DeviceTrackingService {
     private sessionHistoryRepository: Repository<SessionHistory>,
     private usersService: UsersService,
     private configService: ConfigService,
+    private deviceEvents: DeviceEventsService,
   ) {}
 
-  // Function to process sessions and track devices
   async processSessionsForDeviceTracking(
     sessionsData: PlexSessionsResponse,
   ): Promise<void> {
-    const sessions = this.extractSessionsFromData(sessionsData);
-
-    if (!sessions || sessions.length === 0) {
-      // this.logger.debug('No active sessions found for device tracking');
-      return;
-    }
+    const sessions = sessionsData?.MediaContainer?.Metadata ?? [];
 
     for (const session of sessions) {
-      try {
-        await this.processSession(session);
-      } catch (error) {
-        this.logger.error(
-          'Error processing sessions for device tracking:',
-          error,
-        );
-      }
+      await this.processSession(session);
     }
   }
 
-  private extractSessionsFromData(data: PlexSessionsResponse): PlexSession[] {
-    if (!data || !data.MediaContainer) {
-      return [];
+  cleanupStaleSessionKeys(): void {
+    const cleanedCount = this.sessionKeys.pruneStale();
+    if (cleanedCount > 0) {
+      this.logger.debug(
+        `Cleaned up ${cleanedCount} stale session key entries from memory`,
+      );
+    }
+  }
+
+  async clearSessionKey(sessionKey: string): Promise<void> {
+    this.logger.debug(`Attempting to clear session key: ${sessionKey}`);
+
+    const devicesWithSession = await this.userDeviceRepository.find({
+      where: { currentSessionKey: sessionKey },
+      select: ['id', 'deviceIdentifier', 'currentSessionKey', 'userId'],
+    });
+
+    this.logger.debug(
+      `Found ${devicesWithSession.length} device(s) with session key ${sessionKey}`,
+    );
+
+    for (const device of devicesWithSession) {
+      this.sessionKeys.forget(device, sessionKey);
     }
 
-    return data.MediaContainer.Metadata || [];
+    const result = await this.userDeviceRepository.update(
+      { currentSessionKey: sessionKey },
+      { currentSessionKey: null },
+    );
+
+    await this.sessionHistoryRepository.update(
+      { sessionKey, endedAt: IsNull() },
+      { endedAt: new Date() },
+    );
+
+    this.logger.debug(
+      `Cleared session key for ${result.affected || 0} device(s) that stopped streaming (session: ${sessionKey})`,
+    );
   }
 
   private async processSession(session: PlexSession): Promise<void> {
     try {
       const deviceInfo = this.extractDeviceInfo(session);
 
-      if (!deviceInfo.userId || !deviceInfo.deviceIdentifier) {
-        this.logger.warn(
-          'Session missing required user ID or device identifier',
-          {
-            userId: deviceInfo.userId,
-            deviceIdentifier: deviceInfo.deviceIdentifier,
-          },
-        );
-        return;
-      }
-
-      // Update user info directly from session data
       await this.usersService.updateUserFromSessionData(
         deviceInfo.userId,
         deviceInfo.username,
-        deviceInfo.avatarUrl,
       );
 
-      await this.trackDevice(deviceInfo);
+      const existingDevice = await this.userDeviceRepository.findOne({
+        where: {
+          userId: deviceInfo.userId,
+          deviceIdentifier: deviceInfo.deviceIdentifier,
+        },
+      });
+
+      if (existingDevice) {
+        await this.updateExistingDevice(existingDevice, deviceInfo);
+      } else {
+        this.logger.debug(`Device not found, creating new device entry...`);
+        await this.createNewDevice(deviceInfo);
+      }
     } catch (error) {
       this.logger.error('Error processing session', error);
     }
@@ -126,7 +114,6 @@ export class DeviceTrackingService {
     return {
       userId: session.User?.id || session.User?.uuid || 'unknown',
       username: session.User?.title,
-      avatarUrl: session.User?.thumb,
       deviceIdentifier: session.Player?.machineIdentifier || 'unknown',
       sessionKey: session.sessionKey,
       deviceName: session.Player?.device || session.Player?.title,
@@ -137,152 +124,88 @@ export class DeviceTrackingService {
     };
   }
 
-  // Function to track or update device info in the database
-  private async trackDevice(deviceInfo: DeviceInfo): Promise<void> {
-    try {
-      // this.logger.debug(`Tracking device: ${deviceInfo.deviceIdentifier} for user: ${deviceInfo.userId} with session: ${deviceInfo.sessionKey}`);
-
-      // Check if device already exists
-      const existingDevice = await this.userDeviceRepository.findOne({
-        where: {
-          userId: deviceInfo.userId,
-          deviceIdentifier: deviceInfo.deviceIdentifier,
-        },
-      });
-
-      if (existingDevice) {
-        // this.logger.debug(`Found existing device ${existingDevice.id}, updating...`);
-        // Update existing device
-        await this.updateExistingDevice(existingDevice, deviceInfo);
-      } else {
-        this.logger.debug(`Device not found, creating new device entry...`);
-        // Create new device entry
-        await this.createNewDevice(deviceInfo);
-      }
-    } catch (error) {
-      this.logger.error('Error tracking device', error);
-      throw error;
-    }
-  }
-
   private async updateExistingDevice(
     existingDevice: UserDevice,
     deviceInfo: DeviceInfo,
   ): Promise<void> {
     existingDevice.lastSeen = new Date();
+    this.countNewSession(existingDevice, deviceInfo);
+    this.fillMissingDetails(existingDevice, deviceInfo);
+    this.updateIpAddress(existingDevice, deviceInfo);
+    await this.userDeviceRepository.save(existingDevice);
+  }
 
-    // Only increment session count if this is a truly new session we haven't seen before
-    if (deviceInfo.sessionKey) {
-      const deviceKey = `${deviceInfo.userId}:${deviceInfo.deviceIdentifier}`;
-
-      // Get or create the set of known session keys for this device
-      if (!this.knownSessionKeys.has(deviceKey)) {
-        this.knownSessionKeys.set(deviceKey, new Set());
-        // If this is a fresh start, add the current session key from DB if it exists
-        if (existingDevice.currentSessionKey) {
-          this.knownSessionKeys
-            .get(deviceKey)!
-            .add(existingDevice.currentSessionKey);
-        }
-      }
-
-      // Update last activity time for this device key
-      this.deviceKeyLastActivity.set(deviceKey, Date.now());
-
-      const knownKeys = this.knownSessionKeys.get(deviceKey)!;
-
-      // Only count as new session if we've never seen this session key before
-      if (!knownKeys.has(deviceInfo.sessionKey)) {
-        knownKeys.add(deviceInfo.sessionKey);
-        existingDevice.sessionCount += 1;
-        existingDevice.currentSessionKey = deviceInfo.sessionKey;
-        this.logger.debug(
-          `New session started for device ${deviceInfo.deviceIdentifier}. Session count: ${existingDevice.sessionCount}`,
-        );
-      }
+  private countNewSession(device: UserDevice, deviceInfo: DeviceInfo): void {
+    if (!deviceInfo.sessionKey) {
+      return;
     }
 
-    // Update device info if it has changed or was null
-    if (deviceInfo.deviceName && !existingDevice.deviceName) {
-      existingDevice.deviceName = deviceInfo.deviceName;
+    const isNewSession = this.sessionKeys.recordSession(
+      deviceInfo,
+      deviceInfo.sessionKey,
+      device.currentSessionKey,
+    );
+    if (!isNewSession) {
+      return;
     }
-    if (deviceInfo.devicePlatform && !existingDevice.devicePlatform) {
-      existingDevice.devicePlatform = deviceInfo.devicePlatform;
+
+    device.sessionCount += 1;
+    device.currentSessionKey = deviceInfo.sessionKey;
+    this.logger.debug(
+      `New session started for device ${deviceInfo.deviceIdentifier}. Session count: ${device.sessionCount}`,
+    );
+  }
+
+  private fillMissingDetails(device: UserDevice, deviceInfo: DeviceInfo): void {
+    if (deviceInfo.deviceName && !device.deviceName) {
+      device.deviceName = deviceInfo.deviceName;
     }
-    if (deviceInfo.deviceProduct && !existingDevice.deviceProduct) {
-      existingDevice.deviceProduct = deviceInfo.deviceProduct;
+    if (deviceInfo.devicePlatform && !device.devicePlatform) {
+      device.devicePlatform = deviceInfo.devicePlatform;
+    }
+    if (deviceInfo.deviceProduct && !device.deviceProduct) {
+      device.deviceProduct = deviceInfo.deviceProduct;
     }
     if (deviceInfo.deviceVersion) {
-      existingDevice.deviceVersion = deviceInfo.deviceVersion;
+      device.deviceVersion = deviceInfo.deviceVersion;
+    }
+    if (deviceInfo.username && !device.username) {
+      device.username = deviceInfo.username;
+    }
+  }
+
+  private updateIpAddress(device: UserDevice, deviceInfo: DeviceInfo): void {
+    if (!deviceInfo.ipAddress || deviceInfo.ipAddress === device.ipAddress) {
+      return;
     }
 
-    // Detect IP address change and emit event
-    if (deviceInfo.ipAddress && existingDevice.ipAddress) {
-      if (deviceInfo.ipAddress !== existingDevice.ipAddress) {
-        this.logger.log(
-          `Device location changed for ${deviceInfo.deviceIdentifier}: ${existingDevice.ipAddress} -> ${deviceInfo.ipAddress}`,
-        );
-
-        // Emit location change event
-        this.emitLocationChangeEvent({
-          userId: deviceInfo.userId,
-          username: deviceInfo.username || existingDevice.username || 'Unknown',
-          deviceName:
-            deviceInfo.deviceName ||
-            existingDevice.deviceName ||
-            'Unknown Device',
-          deviceIdentifier: deviceInfo.deviceIdentifier,
-          oldIpAddress: existingDevice.ipAddress,
-          newIpAddress: deviceInfo.ipAddress,
-          sessionKey: deviceInfo.sessionKey,
-        });
-
-        // Update IP address after emitting event
-        existingDevice.ipAddress = deviceInfo.ipAddress;
-      }
-    } else if (deviceInfo.ipAddress) {
-      // First time setting IP address (no change event)
-      existingDevice.ipAddress = deviceInfo.ipAddress;
+    if (device.ipAddress) {
+      this.logger.log(
+        `Device location changed for ${deviceInfo.deviceIdentifier}: ${device.ipAddress} -> ${deviceInfo.ipAddress}`,
+      );
+      this.deviceEvents.emitLocationChange({
+        userId: deviceInfo.userId,
+        username: deviceInfo.username || device.username || 'Unknown',
+        deviceName:
+          deviceInfo.deviceName || device.deviceName || 'Unknown Device',
+        deviceIdentifier: deviceInfo.deviceIdentifier,
+        oldIpAddress: device.ipAddress,
+        newIpAddress: deviceInfo.ipAddress,
+        sessionKey: deviceInfo.sessionKey,
+      });
     }
 
-    if (deviceInfo.username && !existingDevice.username) {
-      existingDevice.username = deviceInfo.username;
-    }
-
-    await this.userDeviceRepository.save(existingDevice);
-    // this.logger.debug(
-    //   `Updated existing device for user ${deviceInfo.userId}: ${deviceInfo.deviceIdentifier}`,
-    // );
+    device.ipAddress = deviceInfo.ipAddress;
   }
 
   private async createNewDevice(deviceInfo: DeviceInfo): Promise<void> {
     const defaultBlock = await this.usersService.getEffectiveDefaultBlock(
       deviceInfo.userId,
-    ); // User wont have a preference yet, so this will return app default
-
-    // Check for strict mode
-    const strictMode = await this.configService.getSetting(
-      'PLEX_GUARD_STRICT_MODE',
     );
-
-    const isStrictMode = strictMode === true;
-
-    // Check if this is a Plexamp device (they are always allowed)
-    const isPlexampDevice =
-      deviceInfo.deviceProduct?.toLowerCase().includes('plexamp') ||
-      deviceInfo.deviceName?.toLowerCase().includes('plexamp');
-
-    // Determine initial status based on strict mode
-    let initialStatus: 'pending' | 'approved' | 'rejected' = 'pending';
-    if (isStrictMode) {
-      if (isPlexampDevice) {
-        // Plexamp devices are always approved in strict mode
-        initialStatus = 'approved';
-      } else {
-        // Apply default block policy immediately
-        initialStatus = defaultBlock ? 'rejected' : 'approved';
-      }
-    }
+    const isStrictMode = await isStrictModeEnabled(this.configService);
+    const initialStatus = isStrictMode
+      ? strictModeStatus(deviceInfo, defaultBlock)
+      : 'pending';
 
     this.logger.log('New device detected', {
       userId: deviceInfo.userId,
@@ -291,7 +214,7 @@ export class DeviceTrackingService {
       deviceIdentifier: deviceInfo.deviceIdentifier,
       platform: deviceInfo.devicePlatform,
       strictMode: isStrictMode,
-      isPlexampDevice,
+      isPlexampDevice: isPlexampDevice(deviceInfo),
       initialStatus,
     });
 
@@ -319,7 +242,7 @@ export class DeviceTrackingService {
       `NEW DEVICE DETECTED! User: ${deviceInfo.username || deviceInfo.userId}, IP: ${deviceInfo.ipAddress || 'Unknown IP'}, Device: ${deviceInfo.deviceName || deviceInfo.deviceIdentifier}, Platform: ${deviceInfo.devicePlatform || 'Unknown'}, ${statusMessage}`,
     );
 
-    this.emitNewDeviceEvent({
+    this.deviceEvents.emitNewDevice({
       userId: deviceInfo.userId,
       username: deviceInfo.username || 'Unknown User',
       deviceName: deviceInfo.deviceName || 'Unknown Device',
@@ -328,492 +251,5 @@ export class DeviceTrackingService {
       platform: deviceInfo.devicePlatform || 'Unknown',
       sessionKey: deviceInfo.sessionKey ?? undefined,
     });
-  }
-
-  /** Cleanup stale session key entries to prevent memory leak */
-  cleanupStaleSessionKeys(): void {
-    const now = Date.now();
-    let cleanedCount = 0;
-
-    for (const [
-      deviceKey,
-      lastActivity,
-    ] of this.deviceKeyLastActivity.entries()) {
-      if (now - lastActivity > this.STALE_ENTRY_THRESHOLD_MS) {
-        this.knownSessionKeys.delete(deviceKey);
-        this.deviceKeyLastActivity.delete(deviceKey);
-        cleanedCount++;
-      }
-    }
-
-    if (cleanedCount > 0) {
-      this.logger.debug(
-        `Cleaned up ${cleanedCount} stale session key entries from memory`,
-      );
-    }
-  }
-
-  /** Register callback for new device events */
-  onNewDeviceDetected(callback: (event: NewDeviceDetectedEvent) => void): void {
-    this.newDeviceCallbacks.push(callback);
-  }
-
-  /** Emit new device event to all registered callbacks */
-  private emitNewDeviceEvent(event: NewDeviceDetectedEvent): void {
-    for (const callback of this.newDeviceCallbacks) {
-      try {
-        callback(event);
-      } catch (error) {
-        this.logger.error('Error in new device callback', error);
-      }
-    }
-  }
-
-  /** Register callback for device location change events */
-  onDeviceLocationChanged(
-    callback: (event: DeviceLocationChangedEvent) => void,
-  ): void {
-    this.locationChangeCallbacks.push(callback);
-  }
-
-  /** Emit device location change event to all registered callbacks */
-  private emitLocationChangeEvent(event: DeviceLocationChangedEvent): void {
-    for (const callback of this.locationChangeCallbacks) {
-      try {
-        callback(event);
-      } catch (error) {
-        this.logger.error('Error in location change callback', error);
-      }
-    }
-  }
-
-  async getAllDevices(): Promise<UserDevice[]> {
-    return this.userDeviceRepository.find({
-      order: { lastSeen: 'DESC' },
-    });
-  }
-
-  async getPendingDevices(): Promise<UserDevice[]> {
-    return this.userDeviceRepository.find({
-      where: { status: 'pending' },
-      order: { firstSeen: 'DESC' },
-    });
-  }
-
-  /**
-   * Enforce strict mode on all pending devices.
-   * When strict mode is enabled, pending devices are automatically approved or rejected
-   * based on the user's default block policy. Plexamp devices are always approved.
-   * @returns The number of devices that were processed
-   */
-  async enforceStrictModeOnPendingDevices(): Promise<number> {
-    const strictMode = await this.configService.getSetting(
-      'PLEX_GUARD_STRICT_MODE',
-    );
-    // getSetting returns the parsed boolean value directly
-    const isStrictMode = strictMode === true;
-
-    if (!isStrictMode) {
-      return 0;
-    }
-
-    const pendingDevices = await this.getPendingDevices();
-
-    if (pendingDevices.length === 0) {
-      return 0;
-    }
-
-    this.logger.log(
-      `Strict mode enabled: Processing ${pendingDevices.length} pending device(s)`,
-    );
-
-    let processedCount = 0;
-
-    for (const device of pendingDevices) {
-      try {
-        // Check if this is a Plexamp device (they are always allowed)
-        const isPlexampDevice =
-          device.deviceProduct?.toLowerCase().includes('plexamp') ||
-          device.deviceName?.toLowerCase().includes('plexamp');
-
-        // Get user's effective default block setting
-        const defaultBlock = await this.usersService.getEffectiveDefaultBlock(
-          device.userId,
-        );
-
-        // Determine new status
-        let newStatus: 'approved' | 'rejected';
-        if (isPlexampDevice) {
-          newStatus = 'approved';
-        } else {
-          newStatus = defaultBlock ? 'rejected' : 'approved';
-        }
-
-        // Update device status
-        device.status = newStatus;
-        await this.userDeviceRepository.save(device);
-
-        this.logger.log(
-          `Strict mode: Device "${device.deviceName || device.deviceIdentifier}" for user "${device.username || device.userId}" -> ${newStatus}${isPlexampDevice ? ' (Plexamp)' : ''}`,
-        );
-
-        processedCount++;
-      } catch (error) {
-        this.logger.error(
-          `Error processing device ${device.deviceIdentifier} in strict mode:`,
-          error,
-        );
-      }
-    }
-
-    if (processedCount > 0) {
-      this.logger.log(
-        `Strict mode enforcement complete: ${processedCount} device(s) processed`,
-      );
-    }
-
-    return processedCount;
-  }
-
-  async getProcessedDevices(): Promise<UserDevice[]> {
-    return this.userDeviceRepository.find({
-      where: [{ status: 'approved' }, { status: 'rejected' }],
-      order: { lastSeen: 'DESC' },
-    });
-  }
-
-  async getApprovedDevices(): Promise<UserDevice[]> {
-    return this.userDeviceRepository.find({
-      where: { status: 'approved' },
-      order: { lastSeen: 'DESC' },
-    });
-  }
-
-  async findDeviceByUserAndIdentifier(
-    userId: string,
-    deviceIdentifier: string,
-  ): Promise<UserDevice | null> {
-    return this.userDeviceRepository.findOne({
-      where: { userId, deviceIdentifier },
-    });
-  }
-
-  async findDeviceByIdentifier(
-    deviceIdentifier: string,
-  ): Promise<UserDevice | null> {
-    return this.userDeviceRepository.findOne({
-      where: { deviceIdentifier },
-    });
-  }
-
-  async approveDevice(deviceId: number): Promise<void> {
-    // First update the status to approved
-    await this.userDeviceRepository.update(deviceId, {
-      status: 'approved',
-    });
-
-    // Then revoke any temporary access
-    await this.revokeTemporaryAccess(deviceId);
-
-    this.logger.log(`Device ${deviceId} has been approved`);
-  }
-
-  async rejectDevice(deviceId: number): Promise<void> {
-    await this.userDeviceRepository.update(deviceId, {
-      status: 'rejected',
-    });
-    this.logger.log(`Device ${deviceId} has been rejected`);
-  }
-
-  async setPendingDevice(deviceId: number): Promise<void> {
-    // First update the status to pending
-    await this.userDeviceRepository.update(deviceId, {
-      status: 'pending',
-    });
-
-    // Then revoke any temporary access
-    await this.revokeTemporaryAccess(deviceId);
-
-    this.logger.log(`Device ${deviceId} has been set to pending`);
-  }
-
-  async deleteDevice(deviceId: number): Promise<void> {
-    try {
-      await this.userDeviceRepository.manager.transaction(
-        async (transactionalEntityManager) => {
-          await transactionalEntityManager
-            .getRepository(SessionHistory)
-            .delete({ userDeviceId: deviceId });
-
-          this.logger.debug(`Session history deleted for device ${deviceId}`);
-
-          await transactionalEntityManager
-            .getRepository(UserDevice)
-            .delete(deviceId);
-        },
-      );
-
-      this.logger.log(
-        `Device ${deviceId} and its related data have been deleted`,
-      );
-    } catch (error) {
-      this.logger.error(`Failed to delete device ${deviceId}:`, error);
-      throw new Error(`Device deletion failed: ${errorMessage(error)}`);
-    }
-  }
-
-  async renameDevice(deviceId: number, newName: string): Promise<void> {
-    await this.userDeviceRepository.update(deviceId, {
-      deviceName: newName,
-    });
-    this.logger.log(`Device ${deviceId} has been renamed to "${newName}"`);
-  }
-
-  async updateExcludeFromConcurrentLimit(
-    deviceId: number,
-    exclude: boolean,
-  ): Promise<void> {
-    await this.userDeviceRepository.update(deviceId, {
-      excludeFromConcurrentLimit: exclude,
-    });
-    this.logger.log(
-      `Device ${deviceId} ${exclude ? 'excluded from' : 'included in'} concurrent stream limit`,
-    );
-  }
-
-  async markNoteAsRead(deviceId: number): Promise<void> {
-    await this.userDeviceRepository.update(deviceId, {
-      requestNoteReadAt: new Date(),
-    });
-    this.logger.log(`Note marked as read for device ${deviceId}`);
-  }
-
-  async deleteNote(deviceId: number): Promise<void> {
-    await this.userDeviceRepository
-      .createQueryBuilder()
-      .update()
-      .set({
-        requestDescription: () => 'NULL',
-        requestSubmittedAt: () => 'NULL',
-        requestNoteReadAt: () => 'NULL',
-      })
-      .where('id = :id', { id: deviceId })
-      .execute();
-    this.logger.log(`Note deleted for device ${deviceId}`);
-  }
-
-  async grantTemporaryAccess(
-    deviceId: number,
-    durationMinutes: number,
-    bypassPolicies: boolean = false,
-  ): Promise<void> {
-    // Work with pure UTC - get actual current UTC time
-    const nowUTC = new Date();
-    const expiresAtUTC = new Date(
-      nowUTC.getTime() + durationMinutes * 60 * 1000,
-    );
-
-    await this.userDeviceRepository.update(deviceId, {
-      temporaryAccessUntil: expiresAtUTC,
-      temporaryAccessGrantedAt: nowUTC,
-      temporaryAccessDurationMinutes: durationMinutes,
-      temporaryAccessBypassPolicies: bypassPolicies,
-    });
-
-    // Get configured timezone for display purposes only
-    const timezoneOffset = await this.configService.getTimezone();
-    const offsetMatch = timezoneOffset.match(/^([+-])(\d{2}):(\d{2})$/);
-
-    if (offsetMatch) {
-      const sign = offsetMatch[1] === '+' ? 1 : -1;
-      const hours = parseInt(offsetMatch[2], 10);
-      const minutes = parseInt(offsetMatch[3], 10);
-      const offsetMs = sign * (hours * 60 + minutes) * 60 * 1000;
-
-      // Convert to true UTC first (remove system timezone), then apply configured timezone
-      const trueUTC =
-        expiresAtUTC.getTime() + expiresAtUTC.getTimezoneOffset() * 60000;
-      const expiresAtInTimezone = new Date(trueUTC + offsetMs);
-
-      // Format manually using UTC methods (the Date object now has TZ time, but we use getUTC* methods)
-      const year = expiresAtInTimezone.getUTCFullYear();
-      const month = String(expiresAtInTimezone.getUTCMonth() + 1).padStart(
-        2,
-        '0',
-      );
-      const day = String(expiresAtInTimezone.getUTCDate()).padStart(2, '0');
-      const hour = String(expiresAtInTimezone.getUTCHours()).padStart(2, '0');
-      const minute = String(expiresAtInTimezone.getUTCMinutes()).padStart(
-        2,
-        '0',
-      );
-      const second = String(expiresAtInTimezone.getUTCSeconds()).padStart(
-        2,
-        '0',
-      );
-
-      const formattedExpiry = `${year}-${month}-${day} ${hour}:${minute}:${second}`;
-
-      this.logger.log(
-        `Granted temporary access to device ${deviceId} for ${durationMinutes} minutes (expires at ${formattedExpiry} ${timezoneOffset})`,
-      );
-    } else {
-      // Fallback to UTC if timezone format is invalid
-      this.logger.log(
-        `Granted temporary access to device ${deviceId} for ${durationMinutes} minutes (expires at ${expiresAtUTC.toISOString()})`,
-      );
-    }
-  }
-
-  async revokeTemporaryAccess(deviceId: number): Promise<void> {
-    await this.userDeviceRepository
-      .createQueryBuilder()
-      .update(UserDevice)
-      .set({
-        temporaryAccessUntil: () => 'NULL',
-        temporaryAccessGrantedAt: () => 'NULL',
-        temporaryAccessDurationMinutes: () => 'NULL',
-        temporaryAccessBypassPolicies: false,
-      })
-      .where('id = :deviceId', { deviceId })
-      .execute();
-
-    this.logger.log(`Revoked temporary access for device ${deviceId}`);
-  }
-
-  async isTemporaryAccessValid(device: UserDevice): Promise<boolean> {
-    if (!device.temporaryAccessUntil) {
-      return false;
-    }
-
-    const now = new Date();
-    const isValid = device.temporaryAccessUntil > now;
-
-    if (!isValid) {
-      // Temporary access has expired, clean it up
-      await this.revokeTemporaryAccess(device.id);
-      this.logger.log(
-        `Temporary access expired for device ${device.id}, cleaned up`,
-      );
-    }
-
-    return isValid;
-  }
-
-  getTemporaryAccessTimeLeft(device: UserDevice): number | null {
-    if (!device.temporaryAccessUntil) {
-      return null;
-    }
-
-    const now = new Date();
-    const timeLeft = device.temporaryAccessUntil.getTime() - now.getTime();
-
-    return timeLeft > 0 ? Math.ceil(timeLeft / (60 * 1000)) : 0; // Return minutes left
-  }
-
-  async clearSessionKey(sessionKey: string): Promise<void> {
-    this.logger.debug(`Attempting to clear session key: ${sessionKey}`);
-
-    // Find devices with this session key first
-    const devicesWithSession = await this.userDeviceRepository.find({
-      where: { currentSessionKey: sessionKey },
-      select: ['id', 'deviceIdentifier', 'currentSessionKey', 'userId'],
-    });
-
-    this.logger.debug(
-      `Found ${devicesWithSession.length} device(s) with session key ${sessionKey}`,
-    );
-
-    // Remove from in-memory tracking
-    for (const device of devicesWithSession) {
-      const deviceKey = `${device.userId}:${device.deviceIdentifier}`;
-      const knownKeys = this.knownSessionKeys.get(deviceKey);
-      if (knownKeys) {
-        knownKeys.delete(sessionKey);
-      }
-    }
-
-    // Clear specific session key for device that stopped streaming
-    const result = await this.userDeviceRepository
-      .createQueryBuilder()
-      .update(UserDevice)
-      .set({ currentSessionKey: () => 'NULL' })
-      .where('current_session_key = :sessionKey', { sessionKey })
-      .execute();
-
-    // Find in session history and mark terminated at true
-    await this.sessionHistoryRepository
-      .createQueryBuilder()
-      .update(SessionHistory)
-      .set({ endedAt: () => 'CURRENT_TIMESTAMP' })
-      .where('session_key = :sessionKey', { sessionKey })
-      .execute();
-
-    this.logger.debug(
-      `Cleared session key for ${result.affected || 0} device(s) that stopped streaming (session: ${sessionKey})`,
-    );
-  }
-
-  async cleanupInactiveDevices(
-    inactiveDays: number,
-  ): Promise<{ deletedCount: number; deletedDevices: UserDevice[] }> {
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - inactiveDays);
-
-    const allDevices = await this.userDeviceRepository.find();
-
-    if (allDevices.length === 0) {
-      this.logger.log('No devices found in the database, skipping cleanup.');
-      return { deletedCount: 0, deletedDevices: [] };
-    }
-
-    const inactiveDevices: UserDevice[] = [];
-
-    for (const device of allDevices) {
-      if (!device.lastSeen) {
-        this.logger.warn(
-          `Device ${device.id} has no lastSeen date, skipping...`,
-        );
-        continue;
-      }
-
-      if (new Date(device.lastSeen) < cutoffDate) {
-        inactiveDevices.push(device);
-      }
-    }
-
-    this.logger.log(
-      `Found ${inactiveDevices.length} inactive device(s) older than ${inactiveDays} days`,
-    );
-
-    // Log which devices will be deleted
-    for (const device of inactiveDevices) {
-      this.logger.log(
-        `Removing inactive device: ${device.deviceName || device.deviceIdentifier} ` +
-          `(User: ${device.username || device.userId}, Last seen: ${device.lastSeen.toISOString()})`,
-      );
-    }
-
-    // Delete session history for inactive devices
-    const inactiveDeviceIds = inactiveDevices.map((device) => device.id);
-    await this.sessionHistoryRepository.delete({
-      userDeviceId: In(inactiveDeviceIds),
-    });
-    this.logger.log(
-      `Deleted session history for ${inactiveDevices.length} inactive device(s)`,
-    );
-
-    // Delete the inactive devices
-    const deviceIds = inactiveDevices.map((device) => device.id);
-    await this.userDeviceRepository.delete({ id: In(deviceIds) });
-
-    this.logger.log(
-      `Successfully removed ${inactiveDevices.length} inactive device(s)`,
-    );
-
-    return {
-      deletedCount: inactiveDevices.length,
-      deletedDevices: inactiveDevices,
-    };
   }
 }

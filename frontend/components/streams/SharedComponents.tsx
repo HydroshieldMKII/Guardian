@@ -15,6 +15,40 @@ type ContentTitleSource = Pick<
   "type" | "title" | "grandparentTitle" | "parentTitle" | "year" | "parentYear"
 >;
 
+export interface ContentLines {
+  primary: string;
+  secondary?: string;
+}
+
+const joinParts = (...parts: (string | number | undefined)[]) =>
+  parts.filter(Boolean).join(" · ") || undefined;
+
+export const getContentLines = (session: ContentTitleSource): ContentLines => {
+  if (session.type === "episode" && session.grandparentTitle) {
+    return {
+      primary: session.grandparentTitle,
+      secondary: joinParts(session.parentTitle, session.title),
+    };
+  }
+  if (session.type === "movie") {
+    return {
+      primary: session.title || "Unknown title",
+      secondary: joinParts(session.year),
+    };
+  }
+  if (session.type === "track") {
+    const album =
+      session.parentTitle && session.parentYear
+        ? `${session.parentTitle} (${session.parentYear})`
+        : session.parentTitle;
+    return {
+      primary: session.title || "Unknown title",
+      secondary: joinParts(session.grandparentTitle, album),
+    };
+  }
+  return { primary: session.title || "Unknown title" };
+};
+
 type QualitySource = Pick<PlexSession, "Media" | "Session">;
 
 export const getContentTitle = (session: ContentTitleSource) => {
@@ -35,7 +69,13 @@ export const getContentTitle = (session: ContentTitleSource) => {
 
     return title;
   }
-  return session.title || "Unknown Title";
+  return session.title || "Unknown title";
+};
+
+export const formatBitrate = (kbps: number) => {
+  if (kbps < 1000) return `${Math.round(kbps)} kbps`;
+  const mbps = kbps / 1000;
+  return `${mbps < 10 ? Number(mbps.toFixed(1)) : Math.round(mbps)} Mbps`;
 };
 
 export const getDetailedQuality = (session: QualitySource) => {
@@ -44,14 +84,12 @@ export const getDetailedQuality = (session: QualitySource) => {
 
   return {
     resolution: media.videoResolution?.toUpperCase() || "Unknown",
-    bitrate: media.bitrate
-      ? `${Math.round(media.bitrate / 1000)} Mbps`
-      : "Unknown",
+    bitrate: media.bitrate ? formatBitrate(media.bitrate) : "Unknown",
     videoCodec: media.videoCodec?.toUpperCase() || "Unknown",
     audioCodec: media.audioCodec?.toUpperCase() || "Unknown",
     container: media.container?.toUpperCase() || "Unknown",
     bandwidth: session.Session?.bandwidth
-      ? `${Math.round(session.Session.bandwidth / 1000)} Mbps`
+      ? formatBitrate(session.Session.bandwidth)
       : "Unknown",
   };
 };

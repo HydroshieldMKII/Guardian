@@ -15,7 +15,7 @@ describe("StreamDeviceInfo", () => {
   it("labels every field it reads", () => {
     render(<StreamDeviceInfo session={session()} />);
 
-    expect(screen.getByText("Device Information")).toBeInTheDocument();
+    expect(screen.getByText("Device information")).toBeInTheDocument();
     expect(screen.getByText("Roku")).toBeInTheDocument();
     expect(screen.getByText("192.168.1.10")).toBeInTheDocument();
     expect(screen.getByText("Plex for Roku")).toBeInTheDocument();

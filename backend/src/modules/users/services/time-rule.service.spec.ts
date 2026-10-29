@@ -1,8 +1,11 @@
 import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, IsNull } from 'typeorm';
 import { UserTimeRule } from '@/entities/user-time-rule.entity';
-import { TimeRuleService } from '@/modules/users/services/time-rule.service';
+import {
+  CreatePresetDto,
+  TimeRuleService,
+} from '@/modules/users/services/time-rule.service';
 
 const rule = (overrides: Partial<UserTimeRule> = {}): UserTimeRule =>
   Object.assign(new UserTimeRule(), {
@@ -18,14 +21,10 @@ const rule = (overrides: Partial<UserTimeRule> = {}): UserTimeRule =>
 
 describe('TimeRuleService', () => {
   let service: TimeRuleService;
-  let repository: jest.Mocked<Repository<UserTimeRule>>;
-  let queryBuilder: {
-    where: jest.Mock;
-    andWhere: jest.Mock;
-    orderBy: jest.Mock;
-    addOrderBy: jest.Mock;
-    getMany: jest.Mock;
-  };
+  let repository: Record<
+    'create' | 'save' | 'find' | 'findOne' | 'remove',
+    jest.Mock
+  >;
   let queryRunner: {
     connect: jest.Mock;
     startTransaction: jest.Mock;
@@ -33,29 +32,13 @@ describe('TimeRuleService', () => {
     rollbackTransaction: jest.Mock;
     release: jest.Mock;
     manager: {
-      createQueryBuilder: jest.Mock;
+      delete: jest.Mock;
       create: jest.Mock;
       save: jest.Mock;
     };
   };
 
   beforeEach(async () => {
-    queryBuilder = {
-      where: jest.fn().mockReturnThis(),
-      andWhere: jest.fn().mockReturnThis(),
-      orderBy: jest.fn().mockReturnThis(),
-      addOrderBy: jest.fn().mockReturnThis(),
-      getMany: jest.fn().mockResolvedValue([]),
-    };
-
-    const deleteBuilder = {
-      delete: jest.fn().mockReturnThis(),
-      from: jest.fn().mockReturnThis(),
-      where: jest.fn().mockReturnThis(),
-      andWhere: jest.fn().mockReturnThis(),
-      execute: jest.fn().mockResolvedValue({ affected: 0 }),
-    };
-
     let nextId = 100;
     queryRunner = {
       connect: jest.fn().mockResolvedValue(undefined),
@@ -64,7 +47,7 @@ describe('TimeRuleService', () => {
       rollbackTransaction: jest.fn().mockResolvedValue(undefined),
       release: jest.fn().mockResolvedValue(undefined),
       manager: {
-        createQueryBuilder: jest.fn().mockReturnValue(deleteBuilder),
+        delete: jest.fn().mockResolvedValue({ affected: 0 }),
         create: jest.fn((_entity, value: Partial<UserTimeRule>) => rule(value)),
         save: jest.fn((value: UserTimeRule) =>
           Promise.resolve(Object.assign(value, { id: nextId++ })),
@@ -78,12 +61,11 @@ describe('TimeRuleService', () => {
       find: jest.fn().mockResolvedValue([]),
       findOne: jest.fn().mockResolvedValue(null),
       remove: jest.fn().mockResolvedValue(undefined),
-      createQueryBuilder: jest.fn().mockReturnValue(queryBuilder),
-    } as unknown as jest.Mocked<Repository<UserTimeRule>>;
+    };
 
     const dataSource = {
       createQueryRunner: jest.fn().mockReturnValue(queryRunner),
-    } as unknown as DataSource;
+    };
 
     const module = await Test.createTestingModule({
       providers: [
@@ -172,6 +154,10 @@ describe('TimeRuleService', () => {
       expect(created).toHaveLength(2);
       expect(created.map((r) => r.dayOfWeek).sort()).toEqual([0, 6]);
       expect(queryRunner.commitTransaction).toHaveBeenCalled();
+      expect(queryRunner.manager.delete).toHaveBeenCalledWith(UserTimeRule, {
+        userId: 'u1',
+        deviceIdentifier: IsNull(),
+      });
     });
 
     it('creates the five weekday-blocking rules', async () => {
@@ -192,6 +178,10 @@ describe('TimeRuleService', () => {
       });
 
       expect(created[0].deviceIdentifier).toBe('device-a');
+      expect(queryRunner.manager.delete).toHaveBeenCalledWith(UserTimeRule, {
+        userId: 'u1',
+        deviceIdentifier: 'device-a',
+      });
     });
 
     it('rolls back and rethrows on failure', async () => {
@@ -204,6 +194,18 @@ describe('TimeRuleService', () => {
       expect(queryRunner.rollbackTransaction).toHaveBeenCalled();
     });
 
+    it('rolls back an unknown preset type', async () => {
+      await expect(
+        service.createPreset({
+          userId: 'u1',
+          presetType: 'fortnightly' as CreatePresetDto['presetType'],
+        }),
+      ).rejects.toThrow('Failed to create preset: Invalid preset type');
+
+      expect(queryRunner.manager.save).not.toHaveBeenCalled();
+      expect(queryRunner.rollbackTransaction).toHaveBeenCalled();
+    });
+
     it('always releases the query runner', async () => {
       await service.createPreset({ userId: 'u1', presetType: 'weekdays-only' });
       expect(queryRunner.release).toHaveBeenCalled();
@@ -213,17 +215,18 @@ describe('TimeRuleService', () => {
   describe('getTimeRules', () => {
     it('restricts to user-wide rules when no device is given', async () => {
       await service.getTimeRules('u1');
-      expect(queryBuilder.andWhere).toHaveBeenCalledWith(
-        'rule.deviceIdentifier IS NULL',
-      );
+      expect(repository.find).toHaveBeenCalledWith({
+        where: { userId: 'u1', deviceIdentifier: IsNull() },
+        order: { dayOfWeek: 'ASC', startTime: 'ASC' },
+      });
     });
 
     it('restricts to a device when one is given', async () => {
       await service.getTimeRules('u1', 'device-a');
-      expect(queryBuilder.andWhere).toHaveBeenCalledWith(
-        'rule.deviceIdentifier = :deviceIdentifier',
-        { deviceIdentifier: 'device-a' },
-      );
+      expect(repository.find).toHaveBeenCalledWith({
+        where: { userId: 'u1', deviceIdentifier: 'device-a' },
+        order: { dayOfWeek: 'ASC', startTime: 'ASC' },
+      });
     });
   });
 
@@ -353,7 +356,7 @@ describe('TimeRuleService', () => {
     const monday9am = new Date('2026-01-05T09:00:00');
 
     it('allows when no rules match', async () => {
-      queryBuilder.getMany.mockResolvedValue([]);
+      repository.find.mockResolvedValue([]);
       await expect(
         service.checkStreamingAllowed('u1', undefined, monday9am),
       ).resolves.toEqual({
@@ -363,7 +366,7 @@ describe('TimeRuleService', () => {
     });
 
     it('blocks inside a matching window', async () => {
-      queryBuilder.getMany.mockResolvedValue([
+      repository.find.mockResolvedValue([
         rule({ dayOfWeek: 1, startTime: '08:00', endTime: '10:00' }),
       ]);
 
@@ -376,7 +379,7 @@ describe('TimeRuleService', () => {
     });
 
     it('ignores rules for another day', async () => {
-      queryBuilder.getMany.mockResolvedValue([
+      repository.find.mockResolvedValue([
         rule({ dayOfWeek: 3, startTime: '08:00', endTime: '10:00' }),
       ]);
 
@@ -389,7 +392,7 @@ describe('TimeRuleService', () => {
     });
 
     it('ignores disabled rules', async () => {
-      queryBuilder.getMany.mockResolvedValue([
+      repository.find.mockResolvedValue([
         rule({
           dayOfWeek: 1,
           startTime: '08:00',
@@ -407,7 +410,7 @@ describe('TimeRuleService', () => {
     });
 
     it('treats the window end as exclusive', async () => {
-      queryBuilder.getMany.mockResolvedValue([
+      repository.find.mockResolvedValue([
         rule({ dayOfWeek: 1, startTime: '08:00', endTime: '09:00' }),
       ]);
 
@@ -420,7 +423,7 @@ describe('TimeRuleService', () => {
     });
 
     it('treats the window start as inclusive', async () => {
-      queryBuilder.getMany.mockResolvedValue([
+      repository.find.mockResolvedValue([
         rule({ dayOfWeek: 1, startTime: '09:00', endTime: '10:00' }),
       ]);
 
@@ -433,9 +436,17 @@ describe('TimeRuleService', () => {
     });
 
     it('also consults device rules when a device is given', async () => {
-      queryBuilder.getMany.mockResolvedValue([]);
+      repository.find.mockResolvedValue([]);
       await service.checkStreamingAllowed('u1', 'device-a', monday9am);
-      expect(repository.createQueryBuilder).toHaveBeenCalledTimes(2);
+      expect(repository.find).toHaveBeenCalledTimes(2);
+      expect(repository.find).toHaveBeenCalledWith({
+        where: { userId: 'u1', deviceIdentifier: 'device-a' },
+        order: { dayOfWeek: 'ASC', startTime: 'ASC' },
+      });
+      expect(repository.find).toHaveBeenCalledWith({
+        where: { userId: 'u1', deviceIdentifier: IsNull() },
+        order: { dayOfWeek: 'ASC', startTime: 'ASC' },
+      });
     });
   });
 });

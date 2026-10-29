@@ -1,13 +1,12 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { GlobalUpdateBanner } from "@/components/global-update-banner";
+import type { UpdateInfo } from "@/lib/version";
 
-const checkForUpdatesManually = jest.fn();
-const clearUpdateInfo = jest.fn();
-let updateInfo: Record<string, unknown> | null = null;
+let updateInfo: UpdateInfo | null = null;
 
-jest.mock("@/contexts/version-context", () => ({
-  useVersion: () => ({ updateInfo, checkForUpdatesManually, clearUpdateInfo }),
+jest.mock("@/hooks/useUpdateCheck", () => ({
+  useUpdateCheck: () => ({ updateInfo }),
 }));
 
 jest.mock("@/components/ui/release-notes-modal", () => ({
@@ -49,7 +48,7 @@ describe("GlobalUpdateBanner", () => {
   });
 
   it("stays hidden when there is no update", () => {
-    updateInfo = { hasUpdate: false };
+    updateInfo = updateInfo && { ...updateInfo, hasUpdate: false };
     const { container } = render(<GlobalUpdateBanner />);
     expect(container).toBeEmptyDOMElement();
   });
@@ -57,9 +56,7 @@ describe("GlobalUpdateBanner", () => {
   it("names both versions", () => {
     render(<GlobalUpdateBanner />);
 
-    expect(
-      screen.getByText("Update Available: v2.0.0"),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Update Available: v2.0.0")).toBeInTheDocument();
     expect(screen.getByText(/1\.3\.5/)).toBeInTheDocument();
   });
 
@@ -76,22 +73,12 @@ describe("GlobalUpdateBanner", () => {
     expect(screen.queryByText(/^notes:/)).toBeNull();
   });
 
-  it("passes an empty string when there are no release notes", async () => {
-    updateInfo = { ...updateInfo, releaseNotes: undefined };
-    const user = userEvent.setup();
-    render(<GlobalUpdateBanner />);
-
-    await user.click(screen.getByRole("button", { name: /See what's new/ }));
-
-    expect(screen.getByText("notes:2.0.0:")).toBeInTheDocument();
-  });
-
   it("opens the updating instructions in a new tab", async () => {
     const open = jest.spyOn(window, "open").mockImplementation(() => null);
     const user = userEvent.setup();
     render(<GlobalUpdateBanner />);
 
-    await user.click(screen.getByRole("button", { name: /How to Update/ }));
+    await user.click(screen.getByRole("button", { name: /How to update/ }));
 
     expect(open).toHaveBeenCalledWith(
       "https://github.com/HydroshieldMKII/Guardian?tab=readme-ov-file#updating",
@@ -100,7 +87,7 @@ describe("GlobalUpdateBanner", () => {
     open.mockRestore();
   });
 
-  it("clears the update on dismiss and stays hidden", async () => {
+  it("stays hidden once dismissed", async () => {
     const user = userEvent.setup();
     const { container } = render(<GlobalUpdateBanner />);
 
@@ -108,7 +95,6 @@ describe("GlobalUpdateBanner", () => {
       screen.getByRole("button", { name: "Hide this update notice" }),
     );
 
-    expect(clearUpdateInfo).toHaveBeenCalled();
     expect(container).toBeEmptyDOMElement();
   });
 });

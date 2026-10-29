@@ -20,7 +20,7 @@ import { Loader2 } from "lucide-react";
 import { UserPreference } from "@/types";
 import { apiClient } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
-import { useSettings } from "@/contexts/settings-context";
+import { useSettings } from "@/hooks/useSettings";
 
 interface ConcurrentStreamInfo {
   limit: number | null;
@@ -91,7 +91,7 @@ export const ConcurrentStreamModal: React.FC<ConcurrentStreamModalProps> = ({
       await apiClient.updateUserConcurrentStreamLimit(userId, newLimit);
 
       toast({
-        title: "Stream Limit Updated",
+        title: "Stream limit updated",
         description: "The concurrent stream limit for this user has been saved",
         variant: "success",
       });
@@ -103,7 +103,7 @@ export const ConcurrentStreamModal: React.FC<ConcurrentStreamModalProps> = ({
       onClose();
     } catch (error) {
       toast({
-        title: "Update Failed",
+        title: "Update failed",
         description:
           error instanceof Error
             ? error.message
@@ -136,7 +136,7 @@ export const ConcurrentStreamModal: React.FC<ConcurrentStreamModalProps> = ({
   return (
     <Modal open={isOpen} onOpenChange={onClose} size="md">
       <ModalHeader
-        title="Concurrent Stream Limit"
+        title="Concurrent stream limit"
         description={
           <>
             Set the maximum number of simultaneous streams for{" "}

@@ -16,6 +16,7 @@ export interface PlexSession {
     device?: string | null;
     userAgent?: string | null;
     address?: string | null;
+    originalTitle?: string | null;
     state?: 'playing' | 'paused' | 'buffering';
   };
   Session?: {
@@ -41,20 +42,6 @@ export interface PlexSession {
   art?: string | null;
   ratingKey?: string | null;
   parentRatingKey?: string | null;
-}
-
-/**
- * Check if a session or player product is Plexamp.
- * Plexamp is a dedicated music player that is excluded from most policy checks.
- */
-export function isPlexampSession(
-  sessionOrProduct: PlexSession | string | undefined,
-): boolean {
-  if (!sessionOrProduct) return false;
-  if (typeof sessionOrProduct === 'string') {
-    return sessionOrProduct === 'Plexamp';
-  }
-  return sessionOrProduct.Player?.product === 'Plexamp';
 }
 
 export interface EnrichedPlexSession extends Omit<PlexSession, 'Session'> {
@@ -88,7 +75,6 @@ export interface DeviceInfo {
   deviceVersion?: string | null;
   ipAddress?: string | null;
   username?: string | null;
-  avatarUrl?: string | null;
 }
 
 export interface SessionTerminationResult {

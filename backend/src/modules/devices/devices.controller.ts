@@ -10,9 +10,10 @@ import {
   HttpException,
   HttpStatus,
 } from '@nestjs/common';
-import { DeviceTrackingService } from '@/modules/devices/services/device-tracking.service';
+import { DevicesService } from '@/modules/devices/services/devices.service';
+import { TemporaryAccessService } from '@/modules/devices/services/temporary-access.service';
 import { UserDevice } from '@/entities/user-device.entity';
-import { PlexClient } from '@/modules/plex/services/plex-client';
+import { SessionTerminationService } from '@/modules/plex/services/session-termination.service';
 import { AdminOnly } from '@/modules/auth/decorators/admin-only.decorator';
 import { errorMessage } from '@/common/utils/error-types';
 
@@ -22,28 +23,29 @@ export class DevicesController {
   private readonly logger = new Logger(DevicesController.name);
 
   constructor(
-    private readonly deviceTrackingService: DeviceTrackingService,
-    private readonly plexClient: PlexClient,
+    private readonly devicesService: DevicesService,
+    private readonly temporaryAccessService: TemporaryAccessService,
+    private readonly sessionTermination: SessionTerminationService,
   ) {}
 
   @Get()
   async getAllDevices(): Promise<UserDevice[]> {
-    return this.deviceTrackingService.getAllDevices();
+    return this.devicesService.getAllDevices();
   }
 
   @Get('pending')
   async getPendingDevices(): Promise<UserDevice[]> {
-    return this.deviceTrackingService.getPendingDevices();
+    return this.devicesService.getPendingDevices();
   }
 
   @Get('processed')
   async getProcessedDevices(): Promise<UserDevice[]> {
-    return this.deviceTrackingService.getProcessedDevices();
+    return this.devicesService.getProcessedDevices();
   }
 
   @Get('approved')
   async getApprovedDevices(): Promise<UserDevice[]> {
-    return this.deviceTrackingService.getApprovedDevices();
+    return this.devicesService.getApprovedDevices();
   }
 
   @Post('batch/temporary-access')
@@ -105,7 +107,7 @@ export class DevicesController {
 
       for (const deviceId of body.deviceIds) {
         try {
-          await this.deviceTrackingService.grantTemporaryAccess(
+          await this.temporaryAccessService.grantTemporaryAccess(
             deviceId,
             body.durationMinutes,
             body.bypassPolicies ?? false,
@@ -143,7 +145,7 @@ export class DevicesController {
   async approveDevice(
     @Param('id', ParseIntPipe) id: number,
   ): Promise<{ message: string }> {
-    await this.deviceTrackingService.approveDevice(id);
+    await this.devicesService.approveDevice(id);
     return { message: `Device ${id} approved successfully` };
   }
 
@@ -151,7 +153,7 @@ export class DevicesController {
   async deleteDevice(
     @Param('id', ParseIntPipe) id: number,
   ): Promise<{ message: string }> {
-    await this.deviceTrackingService.deleteDevice(id);
+    await this.devicesService.deleteDevice(id);
     return { message: `Device ${id} deleted successfully` };
   }
 
@@ -159,7 +161,7 @@ export class DevicesController {
   async rejectDevice(
     @Param('id', ParseIntPipe) id: number,
   ): Promise<{ message: string }> {
-    await this.deviceTrackingService.rejectDevice(id);
+    await this.devicesService.rejectDevice(id);
     return { message: `Device ${id} rejected and deleted successfully` };
   }
 
@@ -167,7 +169,7 @@ export class DevicesController {
   async setPendingDevice(
     @Param('id', ParseIntPipe) id: number,
   ): Promise<{ message: string }> {
-    await this.deviceTrackingService.setPendingDevice(id);
+    await this.devicesService.setPendingDevice(id);
     return { message: `Device ${id} set to pending successfully` };
   }
 
@@ -176,7 +178,7 @@ export class DevicesController {
     @Param('id', ParseIntPipe) id: number,
     @Body() body: { newName: string },
   ): Promise<{ message: string }> {
-    await this.deviceTrackingService.renameDevice(id, body.newName);
+    await this.devicesService.renameDevice(id, body.newName);
     return { message: `Device ${id} renamed successfully` };
   }
 
@@ -185,7 +187,7 @@ export class DevicesController {
     @Param('id', ParseIntPipe) id: number,
     @Body() body: { durationMinutes: number; bypassPolicies?: boolean },
   ): Promise<{ message: string }> {
-    await this.deviceTrackingService.grantTemporaryAccess(
+    await this.temporaryAccessService.grantTemporaryAccess(
       id,
       body.durationMinutes,
       body.bypassPolicies ?? false,
@@ -199,7 +201,7 @@ export class DevicesController {
   async revokeTemporaryAccess(
     @Param('id', ParseIntPipe) id: number,
   ): Promise<{ message: string }> {
-    await this.deviceTrackingService.revokeTemporaryAccess(id);
+    await this.temporaryAccessService.revokeTemporaryAccess(id);
     return { message: `Temporary access revoked for device ${id}` };
   }
 
@@ -208,7 +210,7 @@ export class DevicesController {
     @Param('id', ParseIntPipe) id: number,
     @Body() body: { exclude: boolean },
   ): Promise<{ message: string }> {
-    await this.deviceTrackingService.updateExcludeFromConcurrentLimit(
+    await this.devicesService.updateExcludeFromConcurrentLimit(
       id,
       body.exclude,
     );
@@ -221,7 +223,7 @@ export class DevicesController {
   async markNoteAsRead(
     @Param('id', ParseIntPipe) id: number,
   ): Promise<{ message: string }> {
-    await this.deviceTrackingService.markNoteAsRead(id);
+    await this.devicesService.markNoteAsRead(id);
     return { message: `Note marked as read for device ${id}` };
   }
 
@@ -229,7 +231,7 @@ export class DevicesController {
   async deleteNote(
     @Param('id', ParseIntPipe) id: number,
   ): Promise<{ message: string }> {
-    await this.deviceTrackingService.deleteNote(id);
+    await this.devicesService.deleteNote(id);
     return { message: `Note deleted for device ${id}` };
   }
 
@@ -238,48 +240,51 @@ export class DevicesController {
     @Param('userId') userId: string,
     @Param('deviceIdentifier') deviceIdentifier: string,
   ): Promise<{ message: string }> {
-    const device =
-      await this.deviceTrackingService.findDeviceByUserAndIdentifier(
-        userId,
-        deviceIdentifier,
-      );
+    const device = await this.devicesService.findDeviceByUserAndIdentifier(
+      userId,
+      deviceIdentifier,
+    );
     if (!device) {
       return { message: 'Device not found' };
     }
 
-    // Revoke any temporary access first
-    await this.deviceTrackingService.revokeTemporaryAccess(device.id);
+    await this.temporaryAccessService.revokeTemporaryAccess(device.id);
 
-    // Then reject the device
-    await this.deviceTrackingService.rejectDevice(device.id);
+    await this.devicesService.rejectDevice(device.id);
 
-    const sessionKeyToTerminate = device.currentSessionKey;
-
-    if (sessionKeyToTerminate) {
-      try {
-        await this.plexClient.terminateSession(sessionKeyToTerminate);
-        this.logger.log(
-          `Successfully terminated session ${sessionKeyToTerminate} for device ${deviceIdentifier}`,
-        );
-      } catch (error) {
-        // Check if it's a 404 error (session already ended or not found)
-        if (errorMessage(error) && errorMessage(error).includes('404')) {
-          this.logger.warn(
-            `Session ${sessionKeyToTerminate} was already terminated or not found (404) - treating as success`,
-          );
-        } else {
-          this.logger.error(
-            `Failed to terminate session ${sessionKeyToTerminate} for device ${deviceIdentifier}: ${errorMessage(error)}`,
-          );
-          // Only throw error for non-404 errors
-          throw new HttpException(
-            `Failed to revoke device access: ${errorMessage(error)}`,
-            HttpStatus.BAD_REQUEST,
-          );
-        }
-      }
+    if (device.currentSessionKey) {
+      await this.terminateLiveSessions(userId, deviceIdentifier);
     }
 
     return { message: `Device authorization revoked successfully` };
+  }
+
+  private async terminateLiveSessions(
+    userId: string,
+    deviceIdentifier: string,
+  ): Promise<void> {
+    try {
+      const terminated = await this.sessionTermination.terminateDeviceSessions(
+        userId,
+        deviceIdentifier,
+      );
+      this.logger.log(
+        `Terminated ${terminated} live session(s) for device ${deviceIdentifier}`,
+      );
+    } catch (error) {
+      if (errorMessage(error).includes('404')) {
+        this.logger.warn(
+          `Session for device ${deviceIdentifier} had already ended (404) - treating as success`,
+        );
+        return;
+      }
+      this.logger.error(
+        `Failed to terminate the session for device ${deviceIdentifier}: ${errorMessage(error)}`,
+      );
+      throw new HttpException(
+        `Failed to revoke device access: ${errorMessage(error)}`,
+        HttpStatus.BAD_REQUEST,
+      );
+    }
   }
 }

@@ -103,8 +103,9 @@ export function SMTPSettings({
 
   return (
     <SettingsCard
-      title="Email Notifications (SMTP)"
+      title="Email notifications (SMTP)"
       description="Send notifications by email through your own SMTP server."
+      divided
       footer={
         <div className="space-y-3">
           {hasUnsavedChanges && (
@@ -125,7 +126,7 @@ export function SMTPSettings({
             className="w-full"
           >
             {testingConnection && <Loader2 className="size-4 animate-spin" />}
-            {testingConnection ? "Sending..." : "Send Test Email"}
+            {testingConnection ? "Sending..." : "Send test email"}
           </Button>
 
           {!isSmtpEnabled && !hasUnsavedChanges && (
@@ -137,18 +138,14 @@ export function SMTPSettings({
       }
     >
       {smtpEnabledSetting && (
-        <div className="space-y-3">
+        <div className="space-y-4">
           <SettingControl
             setting={smtpEnabledSetting}
             formData={formData}
             onChange={handleInputChange}
           />
           {notifySettings.length > 0 && (
-            <div
-              className={`space-y-3 border-l-2 pl-4 transition-opacity duration-200 sm:ml-2 ${
-                isSmtpEnabled ? "" : "opacity-50"
-              }`}
-            >
+            <div className="space-y-4 border-l-2 pl-4 sm:ml-1">
               {notifySettings.map((setting) => (
                 <SettingControl
                   key={setting.key}

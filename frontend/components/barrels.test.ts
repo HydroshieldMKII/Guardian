@@ -4,8 +4,10 @@ import * as streams from "@/components/streams/index";
 
 describe("barrel exports", () => {
   it.each([
-    "UserGroupCard",
-    "DeviceCard",
+    "UserList",
+    "UserDetail",
+    "DeviceRow",
+    "ApprovalQueue",
     "DeviceDetailsModal",
     "TemporaryAccessModal",
     "ConfirmationModal",
@@ -37,8 +39,8 @@ describe("barrel exports", () => {
     "ClickableIP",
     "getProgressPercentage",
     "getContentTitle",
+    "getContentLines",
     "getDetailedQuality",
-    "StreamQuality",
     "StreamQualityDetails",
     "StreamDeviceInfo",
     "StreamProgress",

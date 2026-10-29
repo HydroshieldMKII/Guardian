@@ -7,6 +7,8 @@ import {
   Index,
 } from 'typeorm';
 
+export type DeviceStatus = 'pending' | 'approved' | 'rejected';
+
 @Entity('user_devices')
 @Index(['userId', 'deviceIdentifier'], { unique: true })
 export class UserDevice {
@@ -38,7 +40,7 @@ export class UserDevice {
   deviceVersion: string | null;
 
   @Column({ name: 'status', default: 'pending' })
-  status: 'pending' | 'approved' | 'rejected';
+  status: DeviceStatus;
 
   @CreateDateColumn({ name: 'first_seen' })
   firstSeen: Date;

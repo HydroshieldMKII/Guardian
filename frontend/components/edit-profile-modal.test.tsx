@@ -57,7 +57,7 @@ const renderModal = async (open = true) => {
   const view = render(
     <EditProfileModal open={open} onOpenChange={onOpenChange} />,
   );
-  if (open) await screen.findByText("Edit Profile");
+  if (open) await screen.findByText("Edit profile");
   return { ...view, onOpenChange, ui: userEvent.setup() };
 };
 
@@ -85,7 +85,7 @@ afterEach(() => {
 describe("EditProfileModal", () => {
   it("stays closed", async () => {
     await renderModal(false);
-    expect(screen.queryByText("Edit Profile")).toBeNull();
+    expect(screen.queryByText("Edit profile")).toBeNull();
   });
 
   it("closes the Plex tab from its footer button", async () => {
@@ -158,7 +158,7 @@ describe("EditProfileModal", () => {
 
       await ui.clear(screen.getByLabelText("Username"));
       await ui.type(screen.getByLabelText("Username"), "renamed");
-      await ui.click(screen.getByRole("button", { name: /Save Changes/ }));
+      await ui.click(screen.getByRole("button", { name: /Save changes/ }));
 
       await waitFor(() =>
         expect(updateProfile).toHaveBeenCalledWith({ username: "renamed" }),
@@ -174,7 +174,7 @@ describe("EditProfileModal", () => {
 
       await ui.clear(screen.getByLabelText(/Email/));
       await ui.type(screen.getByLabelText(/Email/), "someone@localhost");
-      await ui.click(screen.getByRole("button", { name: /Save Changes/ }));
+      await ui.click(screen.getByRole("button", { name: /Save changes/ }));
 
       expect(
         await screen.findByText("Please enter a valid email address"),
@@ -186,7 +186,7 @@ describe("EditProfileModal", () => {
       const { ui } = await renderModal();
 
       await ui.clear(screen.getByLabelText(/Email/));
-      await ui.click(screen.getByRole("button", { name: /Save Changes/ }));
+      await ui.click(screen.getByRole("button", { name: /Save changes/ }));
 
       await waitFor(() =>
         expect(updateProfile).toHaveBeenCalledWith({ email: "" }),
@@ -199,7 +199,7 @@ describe("EditProfileModal", () => {
 
       await ui.clear(screen.getByLabelText("Username"));
       await ui.type(screen.getByLabelText("Username"), "renamed");
-      await ui.click(screen.getByRole("button", { name: /Save Changes/ }));
+      await ui.click(screen.getByRole("button", { name: /Save changes/ }));
 
       await waitFor(() =>
         expect(toast).toHaveBeenCalledWith(
@@ -217,7 +217,7 @@ describe("EditProfileModal", () => {
       const { ui } = await renderModal();
 
       await ui.type(screen.getByLabelText("Username"), "x");
-      await ui.click(screen.getByRole("button", { name: /Save Changes/ }));
+      await ui.click(screen.getByRole("button", { name: /Save changes/ }));
 
       await waitFor(() =>
         expect(toast).toHaveBeenCalledWith(
@@ -231,7 +231,7 @@ describe("EditProfileModal", () => {
     it("cannot be saved when nothing has changed", async () => {
       await renderModal();
       expect(
-        screen.getByRole("button", { name: /Save Changes/ }),
+        screen.getByRole("button", { name: /Save changes/ }),
       ).toBeDisabled();
     });
   });
@@ -253,7 +253,7 @@ describe("EditProfileModal", () => {
       ) as HTMLInputElement;
       const click = jest.spyOn(input, "click").mockImplementation(() => {});
 
-      await ui.click(screen.getByRole("button", { name: /Upload Avatar/ }));
+      await ui.click(screen.getByRole("button", { name: /Upload avatar/ }));
 
       expect(click).toHaveBeenCalled();
       click.mockRestore();
@@ -324,11 +324,11 @@ describe("EditProfileModal", () => {
       confirm: string,
     ) => {
       if (current)
-        await ui.type(screen.getByLabelText("Current Password"), current);
-      if (next) await ui.type(screen.getByLabelText("New Password"), next);
+        await ui.type(screen.getByLabelText("Current password"), current);
+      if (next) await ui.type(screen.getByLabelText("New password"), next);
       if (confirm)
-        await ui.type(screen.getByLabelText("Confirm Password"), confirm);
-      await ui.click(screen.getByRole("button", { name: /Update Password/ }));
+        await ui.type(screen.getByLabelText("Confirm password"), confirm);
+      await ui.click(screen.getByRole("button", { name: /Update password/ }));
     };
 
     it("requires the current password", async () => {
@@ -454,7 +454,7 @@ describe("EditProfileModal", () => {
       await openTab(ui, "Plex");
 
       expect(
-        screen.getByRole("button", { name: /Link Plex Account/ }),
+        screen.getByRole("button", { name: /Link Plex account/ }),
       ).toBeInTheDocument();
     });
 
@@ -464,7 +464,7 @@ describe("EditProfileModal", () => {
       await openTab(ui, "Plex");
 
       expect(
-        screen.getByRole("button", { name: /Link Plex Account/ }),
+        screen.getByRole("button", { name: /Link Plex account/ }),
       ).toBeInTheDocument();
     });
 
@@ -476,7 +476,7 @@ describe("EditProfileModal", () => {
       const { ui } = await renderModal();
       await openTab(ui, "Plex");
 
-      expect((await screen.findAllByText("Plex User")).length).toBeGreaterThan(
+      expect((await screen.findAllByText("Plex user")).length).toBeGreaterThan(
         0,
       );
     });
@@ -496,7 +496,7 @@ describe("EditProfileModal", () => {
       expect(await screen.findByText("plexperson")).toBeInTheDocument();
 
       await ui.click(
-        screen.getByRole("button", { name: /Unlink Plex Account/ }),
+        screen.getByRole("button", { name: /Unlink Plex account/ }),
       );
 
       await waitFor(() => expect(unlinkPlexAccount).toHaveBeenCalled());
@@ -515,12 +515,12 @@ describe("EditProfileModal", () => {
       await openTab(ui, "Plex");
 
       await ui.click(
-        await screen.findByRole("button", { name: /Unlink Plex Account/ }),
+        await screen.findByRole("button", { name: /Unlink Plex account/ }),
       );
 
       await waitFor(() =>
         expect(toast).toHaveBeenCalledWith(
-          expect.objectContaining({ title: "Unlink Failed" }),
+          expect.objectContaining({ title: "Unlink failed" }),
         ),
       );
     });
@@ -543,7 +543,7 @@ describe("EditProfileModal", () => {
       const { ui } = await renderModal();
       await openTab(ui, "Plex");
 
-      await ui.click(screen.getByRole("button", { name: /Link Plex Account/ }));
+      await ui.click(screen.getByRole("button", { name: /Link Plex account/ }));
 
       await waitFor(() => expect(open).toHaveBeenCalled());
       expect(open.mock.calls[0][0]).toContain("clientID=c-1");
@@ -559,12 +559,12 @@ describe("EditProfileModal", () => {
       const { ui } = await renderModal();
       await openTab(ui, "Plex");
 
-      await ui.click(screen.getByRole("button", { name: /Link Plex Account/ }));
+      await ui.click(screen.getByRole("button", { name: /Link Plex account/ }));
 
       await waitFor(() =>
         expect(toast).toHaveBeenCalledWith(
           expect.objectContaining({
-            title: "Plex Link Failed",
+            title: "Plex link failed",
             description: "Could not reach Plex. Try again in a moment.",
           }),
         ),
@@ -588,7 +588,7 @@ describe("EditProfileModal", () => {
       const { ui } = await renderModal();
       await openTab(ui, "Plex");
 
-      await ui.click(screen.getByRole("button", { name: /Link Plex Account/ }));
+      await ui.click(screen.getByRole("button", { name: /Link Plex account/ }));
 
       await waitFor(() => expect(fetchMock).toHaveBeenCalled());
     });
@@ -629,7 +629,7 @@ describe("EditProfileModal Plex PIN polling", () => {
     fireEvent.click(tab);
     await flush();
 
-    fireEvent.click(screen.getByRole("button", { name: /Link Plex Account/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Link Plex account/ }));
     await flush();
     expect(window.open).toHaveBeenCalled();
   };
@@ -725,7 +725,7 @@ describe("EditProfileModal Plex PIN polling", () => {
 
     expect(toast).toHaveBeenCalledWith(
       expect.objectContaining({
-        title: "Plex Link Failed",
+        title: "Plex link failed",
         description: "already linked",
       }),
     );
@@ -753,7 +753,7 @@ describe("EditProfileModal Plex PIN polling", () => {
 
     expect(toast).toHaveBeenCalledWith(
       expect.objectContaining({
-        title: "Plex Link Expired",
+        title: "Plex link expired",
         description: "The Plex window timed out. Start again to retry.",
       }),
     );
@@ -776,7 +776,7 @@ describe("EditProfileModal remaining edges", () => {
     const { ui } = await renderModal();
 
     await ui.click(screen.getByRole("button", { name: /Delete/ }));
-    await ui.click(screen.getByRole("button", { name: "Save Changes" }));
+    await ui.click(screen.getByRole("button", { name: "Save changes" }));
 
     await waitFor(() =>
       expect(updateProfile).toHaveBeenCalledWith({ avatarUrl: "" }),
@@ -795,7 +795,7 @@ describe("EditProfileModal remaining edges", () => {
     const { ui } = await renderModal();
     await openTab(ui, "Plex");
 
-    await ui.click(screen.getByRole("button", { name: /Link Plex Account/ }));
+    await ui.click(screen.getByRole("button", { name: /Link Plex account/ }));
 
     await waitFor(() =>
       expect(toast).toHaveBeenCalledWith(
@@ -816,7 +816,7 @@ describe("EditProfileModal remaining edges", () => {
     await openTab(ui, "Plex");
 
     await ui.click(
-      await screen.findByRole("button", { name: /Unlink Plex Account/ }),
+      await screen.findByRole("button", { name: /Unlink Plex account/ }),
     );
 
     await waitFor(() =>

@@ -31,7 +31,7 @@ export const RemoveAccessModal: React.FC<RemoveAccessModalProps> = ({
       size="md"
     >
       <ModalHeader
-        title="Remove Device Access"
+        title="Remove device access"
         description="Are you sure you want to remove access for this device? This will immediately stop the current stream and prevent future access until the device is manually re-approved."
       />
 
@@ -42,9 +42,9 @@ export const RemoveAccessModal: React.FC<RemoveAccessModalProps> = ({
               {getContentTitle(stream)}
             </p>
             <MetaGrid className="mt-4 sm:grid-cols-2">
-              <Meta label="User">{stream.User?.title || "Unknown User"}</Meta>
+              <Meta label="User">{stream.User?.title || "Unknown user"}</Meta>
               <Meta label="Device">
-                {stream.Player?.title || "Unknown Device"}
+                {stream.Player?.title || "Unknown device"}
               </Meta>
             </MetaGrid>
           </Panel>
@@ -70,7 +70,7 @@ export const RemoveAccessModal: React.FC<RemoveAccessModalProps> = ({
               Removing...
             </>
           ) : (
-            "Remove Access"
+            "Remove access"
           )}
         </Button>
       </ModalFooter>

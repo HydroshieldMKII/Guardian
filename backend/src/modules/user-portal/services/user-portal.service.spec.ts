@@ -1,11 +1,12 @@
 import { ForbiddenException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { IsNull } from 'typeorm';
 import { UserDevice } from '@/entities/user-device.entity';
 import { UserTimeRule } from '@/entities/user-time-rule.entity';
 import { UserPreference } from '@/entities/user-preference.entity';
 import { AppSettings } from '@/entities/app-settings.entity';
-import { NotificationsService } from '@/modules/notifications/services/notifications.service';
+import { NotificationDispatchService } from '@/modules/notifications/services/notification-dispatch.service';
 import { UserPortalService } from '@/modules/user-portal/services/user-portal.service';
 import { anyDate, anyValue } from '@/test-matchers';
 
@@ -15,8 +16,7 @@ describe('UserPortalService', () => {
   let timeRuleRepo: Record<string, jest.Mock>;
   let preferenceRepo: { findOne: jest.Mock };
   let settingsRepo: { findOne: jest.Mock };
-  let notificationsService: { createDeviceNoteNotification: jest.Mock };
-  let queryBuilder: Record<string, jest.Mock>;
+  let notificationDispatch: { createDeviceNoteNotification: jest.Mock };
 
   const settings = new Map<string, string>();
 
@@ -55,17 +55,6 @@ describe('UserPortalService', () => {
   beforeEach(async () => {
     settings.clear();
 
-    queryBuilder = {
-      where: jest.fn(),
-      andWhere: jest.fn(),
-      orderBy: jest.fn(),
-      addOrderBy: jest.fn(),
-      getMany: jest.fn().mockResolvedValue([]),
-    };
-    for (const key of ['where', 'andWhere', 'orderBy', 'addOrderBy']) {
-      queryBuilder[key].mockReturnValue(queryBuilder);
-    }
-
     deviceRepo = {
       find: jest.fn().mockResolvedValue([]),
       findOne: jest.fn().mockResolvedValue(device()),
@@ -74,7 +63,6 @@ describe('UserPortalService', () => {
 
     timeRuleRepo = {
       find: jest.fn().mockResolvedValue([]),
-      createQueryBuilder: jest.fn(() => queryBuilder),
     };
 
     preferenceRepo = { findOne: jest.fn().mockResolvedValue(null) };
@@ -89,7 +77,7 @@ describe('UserPortalService', () => {
       ),
     };
 
-    notificationsService = {
+    notificationDispatch = {
       createDeviceNoteNotification: jest.fn().mockResolvedValue(null),
     };
 
@@ -103,7 +91,10 @@ describe('UserPortalService', () => {
           useValue: preferenceRepo,
         },
         { provide: getRepositoryToken(AppSettings), useValue: settingsRepo },
-        { provide: NotificationsService, useValue: notificationsService },
+        {
+          provide: NotificationDispatchService,
+          useValue: notificationDispatch,
+        },
       ],
     }).compile();
 
@@ -165,6 +156,19 @@ describe('UserPortalService', () => {
 
       const [presented] = await service.getUserDevices('plex-9');
       expect(presented.status).toBe('approved');
+    });
+
+    it('shows the stored status of a device only named like Plexamp', async () => {
+      deviceRepo.find.mockResolvedValue([
+        device({
+          status: 'rejected',
+          deviceProduct: 'Plex Web',
+          deviceName: 'Kitchen PlexAmp',
+        }),
+      ]);
+
+      const [presented] = await service.getUserDevices('plex-9');
+      expect(presented.status).toBe('rejected');
     });
 
     it('surfaces live temporary access', async () => {
@@ -337,14 +341,17 @@ describe('UserPortalService', () => {
     it('lists only rules that are not tied to a device', async () => {
       await service.getUserRules('plex-9');
 
-      expect(queryBuilder.andWhere).toHaveBeenCalledWith(
-        '(rule.deviceIdentifier IS NULL OR rule.deviceIdentifier = :empty)',
-        { empty: '' },
-      );
+      expect(timeRuleRepo.find).toHaveBeenCalledWith({
+        where: [
+          { userId: 'plex-9', deviceIdentifier: IsNull() },
+          { userId: 'plex-9', deviceIdentifier: '' },
+        ],
+        order: { dayOfWeek: 'ASC', startTime: 'ASC' },
+      });
     });
 
     it('presents the user-wide time rules', async () => {
-      queryBuilder.getMany.mockResolvedValue([timeRule()]);
+      timeRuleRepo.find.mockResolvedValue([timeRule()]);
 
       const rules = await service.getUserRules('plex-9');
       expect(rules?.timeRules).toEqual([
@@ -379,7 +386,7 @@ describe('UserPortalService', () => {
         requestSubmittedAt: anyDate(),
       });
       expect(
-        notificationsService.createDeviceNoteNotification,
+        notificationDispatch.createDeviceNoteNotification,
       ).not.toHaveBeenCalled();
     });
 
@@ -389,7 +396,7 @@ describe('UserPortalService', () => {
       await service.requestDeviceApproval('plex-9', 1, 'my new tablet');
 
       expect(
-        notificationsService.createDeviceNoteNotification,
+        notificationDispatch.createDeviceNoteNotification,
       ).toHaveBeenCalledWith(
         'plex-9',
         'guest',
@@ -402,12 +409,12 @@ describe('UserPortalService', () => {
       await service.requestDeviceApproval('plex-9', 1, 'note');
 
       expect(
-        notificationsService.createDeviceNoteNotification,
+        notificationDispatch.createDeviceNoteNotification,
       ).toHaveBeenCalledWith('plex-9', 'Unknown User', anyValue(), 'note');
     });
 
     it('still records the note when the notification fails', async () => {
-      notificationsService.createDeviceNoteNotification.mockRejectedValue(
+      notificationDispatch.createDeviceNoteNotification.mockRejectedValue(
         new Error('no relay'),
       );
 

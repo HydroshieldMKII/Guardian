@@ -66,7 +66,7 @@ describe("AuthGuard", () => {
       renderGuard();
 
       expect(shown()).toBe(false);
-      expect(screen.getByText("Cannot Reach the Backend")).toBeInTheDocument();
+      expect(screen.getByText("Cannot reach the backend")).toBeInTheDocument();
       expect(
         screen.getByText("The backend service encountered an error."),
       ).toBeInTheDocument();
@@ -77,7 +77,7 @@ describe("AuthGuard", () => {
       auth.backendError = "offline";
       renderGuard();
 
-      fireEvent.click(screen.getByRole("button", { name: "Retry Connection" }));
+      fireEvent.click(screen.getByRole("button", { name: "Retry connection" }));
 
       expect(auth.retryConnection).toHaveBeenCalledTimes(1);
     });
@@ -89,7 +89,7 @@ describe("AuthGuard", () => {
       renderGuard();
 
       expect(shown()).toBe(false);
-      expect(screen.getByText("Cannot Reach the Backend")).toBeInTheDocument();
+      expect(screen.getByText("Cannot reach the backend")).toBeInTheDocument();
     });
 
     it("reports the failure before setup has ever run", () => {
@@ -99,7 +99,7 @@ describe("AuthGuard", () => {
       renderGuard();
 
       expect(shown()).toBe(false);
-      expect(screen.getByText("Cannot Reach the Backend")).toBeInTheDocument();
+      expect(screen.getByText("Cannot reach the backend")).toBeInTheDocument();
       expect(push).not.toHaveBeenCalled();
     });
   });

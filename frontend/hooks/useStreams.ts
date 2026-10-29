@@ -70,8 +70,8 @@ export const useStreamActions = () => {
 
       const userId = stream.User.id;
       const deviceIdentifier = stream.Player.machineIdentifier;
-      const deviceName = stream.Player?.title || "Unknown Device";
-      const userName = stream.User?.title || "Unknown User";
+      const deviceName = stream.Player?.title || "Unknown device";
+      const userName = stream.User?.title || "Unknown user";
 
       try {
         setRevokingAuth(stream.sessionKey);
@@ -89,7 +89,7 @@ export const useStreamActions = () => {
 
         if (response.ok) {
           toast({
-            title: "Access Revoked",
+            title: "Access revoked",
             description: `Successfully revoked access for ${deviceName} (${userName}). The stream will be terminated shortly.`,
             variant: "success",
           });
@@ -111,7 +111,7 @@ export const useStreamActions = () => {
           }
 
           toast({
-            title: "Revocation Failed",
+            title: "Revocation failed",
             description: errorMessage,
             variant: "destructive",
           });
@@ -122,7 +122,7 @@ export const useStreamActions = () => {
         console.error("Error revoking device authorization:", error);
 
         toast({
-          title: "Network Error",
+          title: "Network error",
           description:
             "Unable to connect to the server. Please check your connection and try again.",
           variant: "destructive",

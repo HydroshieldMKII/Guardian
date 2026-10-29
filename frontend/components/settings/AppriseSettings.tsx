@@ -109,13 +109,14 @@ export function AppriseSettings({
 
   return (
     <SettingsCard
-      title="Apprise Notifications"
+      title="Apprise notifications"
       description="Send notifications on to Discord, Slack, Telegram, Pushover and many others."
+      divided
       footer={
         <div className="space-y-3">
           <div className="space-y-1">
             <p className="text-sm font-medium text-foreground">
-              Test Apprise Connection
+              Test Apprise connection
             </p>
             <p className="text-xs text-muted-foreground">
               Send a test notification to every service URL above
@@ -143,7 +144,7 @@ export function AppriseSettings({
             className="w-full"
           >
             {testingConnection && <Loader2 className="size-4 animate-spin" />}
-            {testingConnection ? "Testing..." : "Send Test Notification"}
+            {testingConnection ? "Testing..." : "Send test notification"}
           </Button>
 
           {!isAppriseEnabled && !hasUnsavedChanges && (
@@ -154,33 +155,31 @@ export function AppriseSettings({
         </div>
       }
     >
-      <Banner tone="info">
-        Apprise forwards notifications to over a hundred services. Each one has
-        its own URL format.{" "}
-        <a
-          href="https://github.com/caronc/apprise/wiki"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="underline underline-offset-2"
-        >
-          See the Apprise documentation
-        </a>{" "}
-        for the URL your service expects.
-      </Banner>
+      <div>
+        <Banner tone="info">
+          Apprise forwards notifications to over a hundred services. Each one
+          has its own URL format.{" "}
+          <a
+            href="https://github.com/caronc/apprise/wiki"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline underline-offset-2"
+          >
+            See the Apprise documentation
+          </a>{" "}
+          for the URL your service expects.
+        </Banner>
+      </div>
 
       {enabledSetting && (
-        <div className="space-y-3">
+        <div className="space-y-4">
           <SettingControl
             setting={enabledSetting}
             formData={formData}
             onChange={toggle}
           />
           {childSettings.length > 0 && (
-            <div
-              className={`space-y-3 border-l-2 pl-4 transition-opacity duration-200 sm:ml-2 ${
-                isAppriseEnabled ? "" : "opacity-50"
-              }`}
-            >
+            <div className="space-y-4 border-l-2 pl-4 sm:ml-1">
               {childSettings.map((setting) => (
                 <SettingControl
                   key={setting.key}

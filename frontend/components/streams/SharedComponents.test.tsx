@@ -3,6 +3,8 @@ import userEvent from "@testing-library/user-event";
 import {
   ClickableIP,
   getContentTitle,
+  getContentLines,
+  formatBitrate,
   getDetailedQuality,
   getProgressPercentage,
 } from "@/components/streams/SharedComponents";
@@ -112,7 +114,90 @@ describe("getContentTitle", () => {
   });
 
   it("falls back to a placeholder for an unknown shape", () => {
-    expect(getContentTitle({ type: "clip" })).toBe("Unknown Title");
+    expect(getContentTitle({ type: "clip" })).toBe("Unknown title");
+  });
+});
+
+describe("getContentLines", () => {
+  it("leads with the show and follows with season and episode", () => {
+    expect(
+      getContentLines({
+        type: "episode",
+        grandparentTitle: "Severance",
+        parentTitle: "Season 1",
+        title: "Good News About Hell",
+      }),
+    ).toEqual({
+      primary: "Severance",
+      secondary: "Season 1 · Good News About Hell",
+    });
+  });
+
+  it("treats an episode without a show as a plain title", () => {
+    expect(getContentLines({ type: "episode", title: "Orphan" })).toEqual({
+      primary: "Orphan",
+    });
+  });
+
+  it("puts the year under a movie", () => {
+    expect(
+      getContentLines({ type: "movie", title: "Arrival", year: 2016 }),
+    ).toEqual({ primary: "Arrival", secondary: "2016" });
+  });
+
+  it("leaves the second line out of a movie without a year", () => {
+    expect(getContentLines({ type: "movie" })).toEqual({
+      primary: "Unknown title",
+      secondary: undefined,
+    });
+  });
+
+  it("puts artist and album under a track", () => {
+    expect(
+      getContentLines({
+        type: "track",
+        title: "Roygbiv",
+        grandparentTitle: "Boards of Canada",
+        parentTitle: "Music Has the Right to Children",
+        parentYear: 1998,
+      }),
+    ).toEqual({
+      primary: "Roygbiv",
+      secondary: "Boards of Canada · Music Has the Right to Children (1998)",
+    });
+  });
+
+  it("keeps an album without a year", () => {
+    expect(
+      getContentLines({
+        type: "track",
+        title: "Roygbiv",
+        parentTitle: "Album",
+      }),
+    ).toEqual({ primary: "Roygbiv", secondary: "Album" });
+  });
+
+  it("falls back to a placeholder", () => {
+    expect(getContentLines({ type: "track" })).toEqual({
+      primary: "Unknown title",
+      secondary: undefined,
+    });
+    expect(getContentLines({ type: "clip" })).toEqual({
+      primary: "Unknown title",
+    });
+  });
+});
+
+describe("formatBitrate", () => {
+  it.each([
+    [320, "320 kbps"],
+    [1000, "1 Mbps"],
+    [1411, "1.4 Mbps"],
+    [8000, "8 Mbps"],
+    [9960, "10 Mbps"],
+    [42400, "42 Mbps"],
+  ])("formats %d kbps as %s", (kbps, expected) => {
+    expect(formatBitrate(kbps)).toBe(expected);
   });
 });
 

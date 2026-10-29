@@ -1,4 +1,4 @@
-import type { CookieOptions, Request } from 'express';
+import type { CookieOptions, Request, Response } from 'express';
 
 export const SESSION_COOKIE_NAME = 'session_token';
 export const SESSION_DURATION_MS = 7 * 24 * 60 * 60 * 1000;
@@ -27,4 +27,12 @@ export function sessionCookieOptions(req: Request): CookieOptions {
 export function extractSessionToken(req: Request): string | null {
   const cookies = req.cookies as Record<string, string> | undefined;
   return cookies?.[SESSION_COOKIE_NAME] ?? null;
+}
+
+export function setSessionCookie(
+  req: Request,
+  res: Response,
+  token: string,
+): void {
+  res.cookie(SESSION_COOKIE_NAME, token, sessionCookieOptions(req));
 }

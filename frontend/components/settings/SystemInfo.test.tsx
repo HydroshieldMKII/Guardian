@@ -14,8 +14,11 @@ jest.mock("@/hooks/use-toast", () => ({ useToast: () => ({ toast }) }));
 
 const checkForUpdatesManually = jest.fn();
 let versionInfo: Record<string, unknown> | null = null;
-jest.mock("@/contexts/version-context", () => ({
-  useVersion: () => ({ versionInfo, checkForUpdatesManually }),
+jest.mock("@/hooks/useVersionInfo", () => ({
+  useVersionInfo: () => ({ versionInfo }),
+}));
+jest.mock("@/hooks/useUpdateCheck", () => ({
+  useUpdateCheck: () => ({ checkForUpdatesManually }),
 }));
 
 const health = (overrides: Record<string, unknown> = {}) => ({
@@ -92,7 +95,7 @@ describe("SystemInfo versions", () => {
     versionInfo = { ...versionInfo, isVersionMismatch: true };
     await renderPanel();
 
-    expect(screen.getByText(/Version Mismatch:/)).toBeInTheDocument();
+    expect(screen.getByText(/Version mismatch:/)).toBeInTheDocument();
   });
 });
 
@@ -260,12 +263,10 @@ describe("SystemInfo update checks", () => {
   it("reports that the app is current", async () => {
     const { user } = await renderPanel();
 
-    await user.click(screen.getByRole("button", { name: /Check for Updates/ }));
+    await user.click(screen.getByRole("button", { name: /Check for updates/ }));
 
     expect(
-      await screen.findByText(
-        "You are running the latest version.",
-      ),
+      await screen.findByText("You are running the latest version."),
     ).toBeInTheDocument();
     expect(toast).toHaveBeenCalledWith(
       expect.objectContaining({ variant: "success" }),
@@ -281,7 +282,7 @@ describe("SystemInfo update checks", () => {
     });
     const { user } = await renderPanel();
 
-    await user.click(screen.getByRole("button", { name: /Check for Updates/ }));
+    await user.click(screen.getByRole("button", { name: /Check for updates/ }));
 
     expect(
       await screen.findByText("A new version (2.1.0) is available!"),
@@ -299,7 +300,7 @@ describe("SystemInfo update checks", () => {
     });
     const { user } = await renderPanel();
 
-    await user.click(screen.getByRole("button", { name: /Check for Updates/ }));
+    await user.click(screen.getByRole("button", { name: /Check for updates/ }));
 
     await waitFor(() =>
       expect(screen.queryByText(/Latest version: v/)).toBeNull(),
@@ -310,7 +311,7 @@ describe("SystemInfo update checks", () => {
     checkForUpdatesManually.mockResolvedValue(null);
     const { user } = await renderPanel();
 
-    await user.click(screen.getByRole("button", { name: /Check for Updates/ }));
+    await user.click(screen.getByRole("button", { name: /Check for updates/ }));
 
     expect(
       await screen.findByText(
@@ -326,7 +327,7 @@ describe("SystemInfo update checks", () => {
     checkForUpdatesManually.mockRejectedValue(new Error("rate limited"));
     const { user } = await renderPanel();
 
-    await user.click(screen.getByRole("button", { name: /Check for Updates/ }));
+    await user.click(screen.getByRole("button", { name: /Check for updates/ }));
 
     expect(
       await screen.findByText(
@@ -340,7 +341,7 @@ describe("SystemInfo update checks", () => {
     await renderPanel();
 
     expect(
-      screen.getByRole("button", { name: /Check for Updates/ }),
+      screen.getByRole("button", { name: /Check for updates/ }),
     ).toBeDisabled();
   });
 
@@ -348,7 +349,7 @@ describe("SystemInfo update checks", () => {
     checkForUpdatesManually.mockReturnValue(new Promise(() => {}));
     const { user } = await renderPanel();
 
-    await user.click(screen.getByRole("button", { name: /Check for Updates/ }));
+    await user.click(screen.getByRole("button", { name: /Check for updates/ }));
 
     expect(screen.getByText("Checking for Updates...")).toBeInTheDocument();
   });

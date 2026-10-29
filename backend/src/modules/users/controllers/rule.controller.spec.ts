@@ -1,4 +1,4 @@
-import { HttpStatus } from '@nestjs/common';
+import { HttpStatus, NotFoundException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { RuleController } from '@/modules/users/controllers/rule.controller';
 import { TimeRuleService } from '@/modules/users/services/time-rule.service';
@@ -142,6 +142,30 @@ describe('RuleController', () => {
       ).rejects.toMatchObject({
         status: HttpStatus.BAD_REQUEST,
         message: 'unknown preset',
+      });
+    });
+
+    it('falls back to a generic message when the failure has none', async () => {
+      timeRuleService.createPreset.mockRejectedValue(new Error(''));
+
+      await expect(
+        controller.createPreset('u1', { presetType: 'weekends-only' }),
+      ).rejects.toMatchObject({
+        status: HttpStatus.BAD_REQUEST,
+        message: 'Failed to create preset',
+      });
+    });
+
+    it('keeps the status of a failure that already carries one', async () => {
+      timeRuleService.createPreset.mockRejectedValue(
+        new NotFoundException('User not found'),
+      );
+
+      await expect(
+        controller.createPreset('u1', { presetType: 'weekends-only' }),
+      ).rejects.toMatchObject({
+        status: HttpStatus.NOT_FOUND,
+        message: 'User not found',
       });
     });
   });

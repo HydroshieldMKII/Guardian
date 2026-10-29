@@ -1,27 +1,33 @@
 import { Injectable, OnModuleInit, Inject, forwardRef } from '@nestjs/common';
 import { Cron, SchedulerRegistry } from '@nestjs/schedule';
-import { CronJob } from 'cron';
 import { PlexService } from '@/modules/plex/services/plex.service';
 import { ConfigService } from '@/modules/config/services/config.service';
+import { MIN_REFRESH_INTERVAL_SECONDS } from '@/modules/config/services/setting-validation';
 import { DeviceTrackingService } from '@/modules/devices/services/device-tracking.service';
-import { UsersService } from '@/modules/users/services/users.service';
-import { AuthService } from '@/modules/auth/auth.service';
+import { DeviceMaintenanceService } from '@/modules/devices/services/device-maintenance.service';
+import { PlexUserSyncService } from '@/modules/users/services/plex-user-sync.service';
+import { AuthSessionService } from '@/modules/auth/auth-session.service';
 import { Logger } from '@nestjs/common';
 import { errorMessage } from '@/common/utils/error-types';
 import { DashboardService } from '@/modules/dashboard/dashboard.service';
 import { LiveEventsService } from '@/modules/events/live-events.service';
 
+const SESSION_UPDATES_JOB = 'sessionUpdates';
+const DEFAULT_REFRESH_SECONDS = 10;
+
 @Injectable()
 export class SchedulerService implements OnModuleInit {
   private readonly logger = new Logger(SchedulerService.name);
+  private sessionUpdateRunning = false;
 
   constructor(
     private readonly plexService: PlexService,
     @Inject(forwardRef(() => ConfigService))
     private readonly configService: ConfigService,
     private readonly deviceTrackingService: DeviceTrackingService,
-    private readonly usersService: UsersService,
-    private readonly authService: AuthService,
+    private readonly deviceMaintenanceService: DeviceMaintenanceService,
+    private readonly plexUserSync: PlexUserSyncService,
+    private readonly authSessions: AuthSessionService,
     private readonly schedulerRegistry: SchedulerRegistry,
     private readonly dashboardService: DashboardService,
     private readonly liveEvents: LiveEventsService,
@@ -29,20 +35,16 @@ export class SchedulerService implements OnModuleInit {
 
   async onModuleInit() {
     this.logger.log('Scheduler service initialized with cron jobs');
-    await this.setupDynamicSessionUpdatesCron();
+    await this.scheduleSessionUpdates();
 
-    // Set up config change listener to update cron expression when interval changes
     this.configService.addConfigChangeListener(
       'PLEXGUARD_REFRESH_INTERVAL',
       () => {
-        this.logger.log(
-          'Refresh interval changed, updating cron expression...',
-        );
-        void this.setupDynamicSessionUpdatesCron();
+        this.logger.log('Refresh interval changed, rescheduling updates...');
+        void this.scheduleSessionUpdates();
       },
     );
 
-    // Set up config change listener for strict mode - when enabled, process pending devices
     this.configService.addConfigChangeListener('PLEX_GUARD_STRICT_MODE', () => {
       this.logger.log(
         'Strict mode setting changed, checking pending devices...',
@@ -50,78 +52,55 @@ export class SchedulerService implements OnModuleInit {
       void this.enforceStrictMode();
     });
 
-    // Perform tasks on startup
     await this.handleSessionUpdates();
     await this.performDeviceCleanup();
     await this.syncPlexUsers();
     await this.enforceStrictMode();
   }
 
-  private async setupDynamicSessionUpdatesCron() {
+  private async scheduleSessionUpdates(): Promise<void> {
     try {
-      // Get the current refresh interval from config
-      const refreshInterval = await this.configService.getSetting(
-        'PLEXGUARD_REFRESH_INTERVAL',
-      );
-      const intervalSeconds = refreshInterval || 10;
+      const seconds = await this.refreshIntervalSeconds();
 
-      // Convert seconds to cron expression
-      const cronExpression = this.secondsToCronExpression(intervalSeconds);
-
-      // Remove existing job if it exists (e.g when interval changes)
-      try {
-        this.schedulerRegistry.deleteCronJob('sessionUpdates');
-      } catch {
-        // Job doesn't exist yet, which is fine
+      if (this.schedulerRegistry.doesExist('interval', SESSION_UPDATES_JOB)) {
+        this.schedulerRegistry.deleteInterval(SESSION_UPDATES_JOB);
       }
-
-      // Create new cron job with dynamic expression
-      const job = new CronJob(cronExpression, async () => {
-        await this.handleSessionUpdates();
-      });
-
-      // Add job to scheduler registry
-      this.schedulerRegistry.addCronJob('sessionUpdates', job);
-      job.start();
-
-      this.logger.log(
-        `Session updates scheduled with ${intervalSeconds}s interval (${cronExpression})`,
+      this.schedulerRegistry.addInterval(
+        SESSION_UPDATES_JOB,
+        setInterval(
+          () => void this.runScheduledSessionUpdate(),
+          seconds * 1000,
+        ),
       );
+
+      this.logger.log(`Session updates scheduled every ${seconds}s`);
     } catch (error) {
-      this.logger.error(
-        'Error setting up dynamic session updates cron:',
-        error,
-      );
+      this.logger.error('Error scheduling session updates:', error);
     }
   }
 
-  private secondsToCronExpression(seconds: number): string {
-    if (seconds < 60) {
-      // For intervals less than 60 seconds, use second-based cron
-      return `*/${seconds} * * * * *`;
-    } else if (seconds % 60 === 0) {
-      // For minute intervals
-      const minutes = seconds / 60;
-      if (minutes < 60) {
-        return `0 */${minutes} * * * *`;
-      } else if (minutes % 60 === 0) {
-        // For hour intervals
-        const hours = minutes / 60;
-        return `0 0 */${hours} * * *`;
-      }
-    }
-
-    // Default to every 10 seconds if invalid input
-    this.logger.warn(
-      `Invalid refresh interval (${seconds}s), defaulting to 10s`,
+  private async refreshIntervalSeconds(): Promise<number> {
+    const stored = await this.configService.getSetting(
+      'PLEXGUARD_REFRESH_INTERVAL',
     );
-    return '*/10 * * * * *';
+    const seconds =
+      Number.isInteger(stored) && stored ? stored : DEFAULT_REFRESH_SECONDS;
+    return Math.max(seconds, MIN_REFRESH_INTERVAL_SECONDS);
   }
 
-  /**
-   * Push the freshly computed dashboard to connected clients so they stop polling.
-   * Skipped when nobody is listening, and never allowed to fail the tick.
-   */
+  private async runScheduledSessionUpdate(): Promise<void> {
+    if (this.sessionUpdateRunning) {
+      this.logger.debug('Skipping session update - previous one still running');
+      return;
+    }
+    this.sessionUpdateRunning = true;
+    try {
+      await this.handleSessionUpdates();
+    } finally {
+      this.sessionUpdateRunning = false;
+    }
+  }
+
   private async broadcastDashboard(): Promise<void> {
     if (!this.liveEvents.hasListeners()) {
       return;
@@ -137,7 +116,6 @@ export class SchedulerService implements OnModuleInit {
 
   private async handleSessionUpdates() {
     try {
-      // Check if Plex is properly configured before attempting to update sessions
       const [ip, port, token] = await Promise.all([
         this.configService.getSetting('PLEX_SERVER_IP'),
         this.configService.getSetting('PLEX_SERVER_PORT'),
@@ -151,16 +129,12 @@ export class SchedulerService implements OnModuleInit {
 
       await this.plexService.updateActiveSessions();
     } catch (error) {
-      // Only log errors that are not configuration-related
       if (
         !errorMessage(error).includes('Missing required Plex configuration')
       ) {
         this.logger.error('Error during scheduled session update:', error);
       }
     } finally {
-      // Clients stop polling once connected, so every tick must publish -
-      // including the ticks where Plex was unreachable or unconfigured,
-      // since the payload carries the connection status they need to see.
       await this.broadcastDashboard();
     }
   }
@@ -183,7 +157,7 @@ export class SchedulerService implements OnModuleInit {
       this.logger.log(
         `Running device cleanup for devices inactive for ${intervalDays} days...`,
       );
-      await this.deviceTrackingService.cleanupInactiveDevices(intervalDays);
+      await this.deviceMaintenanceService.cleanupInactiveDevices(intervalDays);
     } catch (error) {
       this.logger.error('Error during device cleanup:', error);
     }
@@ -192,7 +166,7 @@ export class SchedulerService implements OnModuleInit {
   private async enforceStrictMode(): Promise<void> {
     try {
       const processedCount =
-        await this.deviceTrackingService.enforceStrictModeOnPendingDevices();
+        await this.deviceMaintenanceService.enforceStrictModeOnPendingDevices();
       if (processedCount > 0) {
         this.logger.log(
           `Strict mode enforcement: ${processedCount} pending device(s) processed`,
@@ -203,7 +177,6 @@ export class SchedulerService implements OnModuleInit {
     }
   }
 
-  // Clean up inactive devices daily at 2 AM
   @Cron('0 0 2 * * *', {
     name: 'deviceCleanup',
   })
@@ -228,7 +201,6 @@ export class SchedulerService implements OnModuleInit {
     }
   }
 
-  // Sync Plex users every hour
   @Cron('0 0 * * * *', {
     name: 'syncPlexUsers',
   })
@@ -236,14 +208,13 @@ export class SchedulerService implements OnModuleInit {
     await this.syncPlexUsers();
   }
 
-  // Clean up expired sessions every hour
   @Cron('0 0 * * * *', {
     name: 'sessionCleanup',
   })
   async handleSessionCleanup() {
     try {
       this.logger.log('Running scheduled session cleanup...');
-      const deletedCount = await this.authService.cleanupExpiredSessions();
+      const deletedCount = await this.authSessions.cleanupExpiredSessions();
       this.logger.log(
         `Session cleanup completed: ${deletedCount} expired sessions removed`,
       );
@@ -252,7 +223,6 @@ export class SchedulerService implements OnModuleInit {
     }
   }
 
-  // Clean up stale in-memory session key tracking every hour
   @Cron('0 0 * * * *', {
     name: 'sessionKeyMemoryCleanup',
   })
@@ -262,7 +232,6 @@ export class SchedulerService implements OnModuleInit {
 
   private async syncPlexUsers() {
     try {
-      // Check if Plex is configured before attempting sync
       const token = await this.configService.getSetting('PLEX_TOKEN');
 
       if (!token) {
@@ -273,7 +242,7 @@ export class SchedulerService implements OnModuleInit {
       }
 
       this.logger.log('Syncing Plex Home users from Plex.tv...');
-      const result = await this.usersService.syncUsersFromPlexTV();
+      const result = await this.plexUserSync.syncUsersFromPlexTV();
       this.logger.log(
         `Plex users sync completed: ${result.created} created, ${result.updated} updated, ${result.errors} errors`,
       );

@@ -3,13 +3,12 @@
 import { AlertTriangle, RefreshCw, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
-import { useVersion } from "@/contexts/version-context";
+import { useVersionInfo } from "@/hooks/useVersionInfo";
 
 export function GlobalVersionMismatchBanner() {
-  const { versionInfo, refreshVersionInfo } = useVersion();
+  const { versionInfo, refreshVersionInfo } = useVersionInfo();
   const [dismissed, setDismissed] = useState(false);
 
-  // Don't show if no version mismatch, no version info, or dismissed
   if (!versionInfo?.isVersionMismatch || dismissed) {
     return null;
   }
@@ -22,7 +21,7 @@ export function GlobalVersionMismatchBanner() {
             <AlertTriangle className="h-5 w-5 shrink-0 mt-0.5 sm:mt-0" />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium">
-                Critical Version Mismatch Detected
+                Critical version mismatch detected
               </p>
               <p className="text-xs text-red-100 break-words sm:truncate">
                 Database version ({versionInfo.databaseVersion}) is newer than

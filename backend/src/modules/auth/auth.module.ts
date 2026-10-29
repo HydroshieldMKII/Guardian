@@ -3,13 +3,19 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { APP_GUARD } from '@nestjs/core';
 import { AdminUser } from '@/entities/admin-user.entity';
 import { Session } from '@/entities/session.entity';
-import { AppSettings } from '@/entities/app-settings.entity';
 import { UserPreference } from '@/entities/user-preference.entity';
 import { PasswordResetToken } from '@/entities/password-reset-token.entity';
 import { AuthService } from '@/modules/auth/auth.service';
+import { AuthSessionService } from '@/modules/auth/auth-session.service';
+import { CaptchaService } from '@/modules/auth/captcha.service';
 import { PlexOAuthService } from '@/modules/auth/plex-oauth.service';
 import { PasswordResetService } from '@/modules/auth/password-reset.service';
 import { AuthController } from '@/modules/auth/auth.controller';
+import { PasswordResetController } from '@/modules/auth/password-reset.controller';
+import { PlexAuthController } from '@/modules/auth/plex-auth.controller';
+import { PlexLoginService } from '@/modules/auth/plex-login.service';
+import { PlexAccountService } from '@/modules/auth/plex-account.service';
+import { PlexTvClient } from '@/modules/auth/plex-tv.client';
 import { AuthGuard } from '@/modules/auth/guards/auth.guard';
 import { ConfigModule } from '@/modules/config/config.module';
 
@@ -19,7 +25,6 @@ import { ConfigModule } from '@/modules/config/config.module';
     TypeOrmModule.forFeature([
       AdminUser,
       Session,
-      AppSettings,
       UserPreference,
       PasswordResetToken,
     ]),
@@ -27,14 +32,24 @@ import { ConfigModule } from '@/modules/config/config.module';
   ],
   providers: [
     AuthService,
+    AuthSessionService,
+    CaptchaService,
     PlexOAuthService,
     PasswordResetService,
+    PlexLoginService,
+    PlexAccountService,
+    PlexTvClient,
     {
       provide: APP_GUARD,
       useClass: AuthGuard,
     },
   ],
-  controllers: [AuthController],
-  exports: [AuthService, PlexOAuthService, PasswordResetService],
+  controllers: [AuthController, PasswordResetController, PlexAuthController],
+  exports: [
+    AuthService,
+    AuthSessionService,
+    PlexOAuthService,
+    PasswordResetService,
+  ],
 })
 export class AuthModule {}

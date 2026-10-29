@@ -1,6 +1,7 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { SessionsController } from '@/modules/sessions/sessions.controller';
 import { ActiveSessionService } from '@/modules/sessions/services/active-session.service';
+import { SessionHistoryService } from '@/modules/sessions/services/session-history.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { SessionHistory } from '@/entities/session-history.entity';
 import { UserDevice } from '@/entities/user-device.entity';
@@ -17,7 +18,7 @@ import { NotificationsModule } from '@/modules/notifications/notifications.modul
     forwardRef(() => NotificationsModule),
   ],
   controllers: [SessionsController],
-  providers: [ActiveSessionService],
+  providers: [ActiveSessionService, SessionHistoryService],
   exports: [ActiveSessionService],
 })
 export class SessionsModule {}

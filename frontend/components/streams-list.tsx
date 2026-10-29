@@ -1,54 +1,38 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useDeferredValue } from "react";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { useState, useEffect, useMemo, useDeferredValue } from "react";
 import { Button } from "@/components/ui/button";
-import { RefreshCw } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Search } from "lucide-react";
+import { RefreshButton } from "@/components/ui/refresh-button";
 
 import { PlexSession, StreamsResponse } from "@/types";
 import { useSwipeToRefresh } from "../hooks/useSwipeToRefresh";
+import { useIsMobile } from "../hooks/use-is-mobile";
 import { useStreamsData, useStreamActions } from "../hooks/useStreams";
+import {
+  EMPTY_PLACEMENT,
+  placeStreams,
+  samePlacement,
+} from "@/lib/stream-placement";
 
 import { RemoveAccessModal, StreamCard } from "./streams";
 
-const StreamCardPlaceholder = () => (
-  <div
-    aria-hidden
-    className="hidden rounded-xl border border-dashed bg-muted/20 xl:block"
-  >
-    <div className="space-y-5 p-4 opacity-40 sm:space-y-6 sm:p-6">
-      <div className="flex gap-4">
-        <div className="hidden h-24 w-16 shrink-0 rounded-lg bg-muted sm:block" />
-        <div className="min-w-0 flex-1 space-y-3">
-          <div className="h-5 w-2/3 rounded bg-muted" />
-          <div className="h-4 w-1/2 rounded bg-muted" />
-        </div>
-      </div>
-      <div className="h-2 w-full rounded-full bg-muted" />
-    </div>
-  </div>
-);
-
-const AUTO_REFRESH_ON = "Refreshing on its own. Click to stop.";
-const AUTO_REFRESH_OFF =
-  "Refreshing only when you ask. Click to refresh on its own.";
-
 interface StreamsListProps {
-  tabs?: React.ReactNode;
   sessionsData?: StreamsResponse;
   onRefresh?: () => void | Promise<void>;
-  autoRefresh?: boolean;
-  onAutoRefreshChange?: (value: boolean) => void;
   onNavigateToDevice?: (userId: string, deviceIdentifier: string) => void;
   onNavigateToUser?: (userId: string) => void;
 }
 
+const TWO_COLUMN_MIN_WIDTH = 1280;
+
+const streamKey = (stream: PlexSession, index: number) =>
+  stream.sessionKey || `#${index}`;
+
 export default function StreamsList({
-  tabs,
   sessionsData,
   onRefresh = () => {},
-  autoRefresh = false,
-  onAutoRefreshChange = () => {},
   onNavigateToDevice,
   onNavigateToUser,
 }: StreamsListProps) {
@@ -91,18 +75,22 @@ export default function StreamsList({
     }
   }, [sessionsData, fetchStreamsData, updateStreamsFromProps]);
 
-  // Handle auto-refresh toggle
-  const handleAutoRefreshToggle = () => {
-    onAutoRefreshChange(!autoRefresh);
-  };
-
   // Filter streams based on search term
+  const keyedStreams = useMemo(
+    () =>
+      streams.map((stream, index) => ({
+        stream,
+        key: streamKey(stream, index),
+      })),
+    [streams],
+  );
+
   const filteredStreams = useMemo(() => {
-    if (!deferredSearchTerm) return streams;
+    if (!deferredSearchTerm) return keyedStreams;
 
     const searchLower = deferredSearchTerm.toLowerCase();
-    return streams.filter(
-      (stream) =>
+    return keyedStreams.filter(
+      ({ stream }) =>
         (stream.User?.title || "").toLowerCase().includes(searchLower) ||
         (stream.Player?.title || "").toLowerCase().includes(searchLower) ||
         (stream.Player?.platform || "").toLowerCase().includes(searchLower) ||
@@ -110,7 +98,40 @@ export default function StreamsList({
         (stream.grandparentTitle || "").toLowerCase().includes(searchLower) ||
         (stream.Player?.product || "").toLowerCase().includes(searchLower),
     );
-  }, [streams, deferredSearchTerm]);
+  }, [keyedStreams, deferredSearchTerm]);
+
+  const streamKeys = useMemo(
+    () => keyedStreams.map(({ key }) => key),
+    [keyedStreams],
+  );
+  const [placement, setPlacement] = useState(EMPTY_PLACEMENT);
+  const nextPlacement = placeStreams(streamKeys, placement, expandedStream);
+  const settled = samePlacement(nextPlacement, placement);
+  if (!settled) setPlacement(nextPlacement);
+  const activePlacement = settled ? placement : nextPlacement;
+
+  const singleColumn = useIsMobile(TWO_COLUMN_MIN_WIDTH);
+  const columns = useMemo(() => {
+    const position = new Map(
+      activePlacement.order.map((key, index) => [key, index]),
+    );
+    const placed = filteredStreams
+      .map(({ stream, key }, index) => ({
+        stream,
+        key,
+        index: position.get(key) ?? index,
+      }))
+      .sort((a, b) => a.index - b.index);
+    if (singleColumn) return [placed];
+    if (deferredSearchTerm) {
+      return [0, 1].map((column) =>
+        placed.filter((_, rank) => rank % 2 === column),
+      );
+    }
+    return [0, 1].map((column) =>
+      placed.filter(({ key }) => activePlacement.columns[key] === column),
+    );
+  }, [filteredStreams, singleColumn, deferredSearchTerm, activePlacement]);
 
   const handleRevokeAuthorization = async (stream: PlexSession) => {
     const success = await revokeDeviceAuthorization(stream);
@@ -128,62 +149,37 @@ export default function StreamsList({
   };
 
   return (
-    <Card {...swipeHandlers}>
-      <CardHeader className="py-4">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="min-w-0 flex-1">{tabs}</div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleAutoRefreshToggle}
-              title={autoRefresh ? AUTO_REFRESH_ON : AUTO_REFRESH_OFF}
-              className={
-                autoRefresh
-                  ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
-                  : ""
-              }
-            >
-              {autoRefresh ? "Live" : "Manual"}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => void handleRefresh()}
-              disabled={refreshing}
-            >
-              <RefreshCw
-                className={`w-4 h-4 mr-2 ${refreshing ? "animate-spin" : ""}`}
-              />
-              <span>Refresh</span>
-            </Button>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent>
-        {/* Search input */}
+    <div {...swipeHandlers}>
+      <h1 className="sr-only">Streams</h1>
+      <div>
         <div className="mb-6">
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="Search by user, device, title or app"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="h-10 w-full rounded-md border border-input bg-background px-4 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+          <div className="flex max-w-md gap-2">
+            <div className="relative flex-1">
+              <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                type="search"
+                placeholder="Search by user, device, title or app"
+                aria-label="Search by user, device, title or app"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            <RefreshButton
+              refreshing={refreshing}
+              onRefresh={() => void handleRefresh()}
             />
           </div>
           {deferredSearchTerm && (
-            <p className="text-xs text-muted-foreground mt-2">
+            <p className="mt-2 text-xs text-muted-foreground">
               Showing {filteredStreams.length} of {streams.length} streams
             </p>
           )}
         </div>
 
         {error ? (
-          <div className="flex flex-col items-center justify-center py-16 text-red-600 dark:text-red-700 text-center">
-            <p className="text-sm font-medium mb-1">
-              Cannot reach the server
-            </p>
+          <div className="flex flex-col items-center justify-center py-16 text-center text-blocked">
+            <p className="text-sm font-medium mb-1">Cannot reach the server</p>
             <p className="text-xs text-muted-foreground px-4">{error}</p>
             <Button
               variant="outline"
@@ -191,11 +187,11 @@ export default function StreamsList({
               onClick={() => void handleRefresh()}
               className="mt-3"
             >
-              Try Again
+              Try again
             </Button>
           </div>
         ) : filteredStreams.length === 0 ? (
-          <div className="flex flex-col items-center justify-center gap-1 py-20 text-center">
+          <div className="flex flex-col items-center justify-center gap-1 rounded-2xl border border-dashed py-20 text-center">
             <p className="text-sm font-medium text-foreground">
               {deferredSearchTerm
                 ? "No streams match your search"
@@ -208,38 +204,40 @@ export default function StreamsList({
             </p>
           </div>
         ) : (
-          <div className="mb-4 grid grid-cols-1 items-start gap-4 xl:grid-cols-2">
-            {filteredStreams.map((stream, index) => (
-              <StreamCard
-                key={stream.sessionKey || index}
-                stream={stream}
-                index={index}
-                isExpanded={expandedStream === stream.sessionKey}
-                isRevoking={revokingAuth === stream.sessionKey}
-                onToggleExpand={() =>
-                  setExpandedStream(
-                    expandedStream === stream.sessionKey
-                      ? null
-                      : stream.sessionKey,
-                  )
-                }
-                onRemoveAccess={() => setConfirmRemoveStream(stream)}
-                onNavigateToDevice={onNavigateToDevice}
-                onNavigateToUser={onNavigateToUser}
-              />
+          <div className="mb-4 flex flex-col gap-4 xl:grid xl:grid-cols-2 xl:items-start">
+            {columns.map((column, columnIndex) => (
+              <div
+                key={columnIndex}
+                data-testid="stream-column"
+                className="contents xl:flex xl:flex-col xl:gap-4"
+              >
+                {column.map(({ stream, key, index }) => (
+                  <div key={key} style={{ order: index }}>
+                    <StreamCard
+                      stream={stream}
+                      isExpanded={expandedStream === key}
+                      isRevoking={revokingAuth === stream.sessionKey}
+                      onToggleExpand={() =>
+                        setExpandedStream(expandedStream === key ? null : key)
+                      }
+                      onRemoveAccess={() => setConfirmRemoveStream(stream)}
+                      onNavigateToDevice={onNavigateToDevice}
+                      onNavigateToUser={onNavigateToUser}
+                    />
+                  </div>
+                ))}
+              </div>
             ))}
-            {filteredStreams.length % 2 === 1 && <StreamCardPlaceholder />}
           </div>
         )}
-      </CardContent>
+      </div>
 
-      {/* Remove Access Confirmation Modal */}
       <RemoveAccessModal
         stream={confirmRemoveStream}
         onConfirm={handleConfirmRemoveAccess}
         onCancel={() => setConfirmRemoveStream(null)}
         isRemoving={revokingAuth !== null}
       />
-    </Card>
+    </div>
   );
 }

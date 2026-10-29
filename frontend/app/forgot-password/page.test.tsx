@@ -71,7 +71,7 @@ describe("ForgotPasswordPage", () => {
     const { user } = await renderPage();
 
     await user.type(screen.getByLabelText("Email"), "  owner@example.com  ");
-    await user.click(screen.getByRole("button", { name: "Send Reset Link" }));
+    await user.click(screen.getByRole("button", { name: "Send reset link" }));
 
     await waitFor(() =>
       expect(fetchMock).toHaveBeenCalledWith(
@@ -88,9 +88,9 @@ describe("ForgotPasswordPage", () => {
     const { user } = await renderPage();
 
     await user.type(screen.getByLabelText("Email"), "stranger@example.com");
-    await user.click(screen.getByRole("button", { name: "Send Reset Link" }));
+    await user.click(screen.getByRole("button", { name: "Send reset link" }));
 
-    expect(await screen.findByText("Check Your Email")).toBeInTheDocument();
+    expect(await screen.findByText("Check your email")).toBeInTheDocument();
     expect(
       screen.getByText(
         /A reset link is on its way if the address is registered/,
@@ -101,7 +101,7 @@ describe("ForgotPasswordPage", () => {
   it("refuses to submit an empty address", async () => {
     const { user } = await renderPage();
 
-    await user.click(screen.getByRole("button", { name: "Send Reset Link" }));
+    await user.click(screen.getByRole("button", { name: "Send reset link" }));
 
     expect(
       screen.getByText("Enter the email address on your account"),
@@ -116,12 +116,12 @@ describe("ForgotPasswordPage", () => {
     );
 
     await user.type(screen.getByLabelText("Email"), "owner@example.com");
-    await user.click(screen.getByRole("button", { name: "Send Reset Link" }));
+    await user.click(screen.getByRole("button", { name: "Send reset link" }));
 
     expect(
       await screen.findByText("Too many password reset requests."),
     ).toBeInTheDocument();
-    expect(screen.queryByText("Check Your Email")).toBeNull();
+    expect(screen.queryByText("Check your email")).toBeNull();
   });
 
   it("falls back to a generic message when the server says nothing", async () => {
@@ -129,7 +129,7 @@ describe("ForgotPasswordPage", () => {
     fetchMock.mockRejectedValue("boom");
 
     await user.type(screen.getByLabelText("Email"), "owner@example.com");
-    await user.click(screen.getByRole("button", { name: "Send Reset Link" }));
+    await user.click(screen.getByRole("button", { name: "Send reset link" }));
 
     expect(
       await screen.findByText("Could not send the email"),

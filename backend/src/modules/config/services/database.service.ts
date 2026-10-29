@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { EntityTarget, ObjectLiteral, Repository } from 'typeorm';
 import { AppSettings } from '@/entities/app-settings.entity';
 import { UserDevice } from '@/entities/user-device.entity';
 import { UserPreference } from '@/entities/user-preference.entity';
@@ -17,26 +17,42 @@ export interface ExportData {
   };
 }
 
-export interface ImportResult {
-  imported: number;
-  skipped: number;
-}
-
-interface ImportedSetting {
-  key: string;
-  value: string;
-}
-
-export interface ImportPayload {
-  data?: {
-    settings?: ImportedSetting[];
-    userDevices?: Partial<UserDevice>[];
-    userPreferences?: Partial<UserPreference>[];
-  };
-}
-
 const describeError = (error: unknown): string =>
   error instanceof Error ? error.message : String(error);
+
+interface ClearableTable {
+  target: EntityTarget<ObjectLiteral>;
+  label: string;
+}
+
+const SESSION_HISTORY_TABLE: ClearableTable = {
+  target: SessionHistory,
+  label: 'Session history',
+};
+const NOTIFICATIONS_TABLE: ClearableTable = {
+  target: Notification,
+  label: 'Notifications',
+};
+const USER_DEVICES_TABLE: ClearableTable = {
+  target: UserDevice,
+  label: 'User devices',
+};
+
+const ALL_TABLES: ClearableTable[] = [
+  SESSION_HISTORY_TABLE,
+  NOTIFICATIONS_TABLE,
+  { target: UserPreference, label: 'User preferences' },
+  USER_DEVICES_TABLE,
+  { target: AppSettings, label: 'App settings' },
+  { target: 'sessions', label: 'Sessions' },
+  { target: 'admin_users', label: 'Admin users' },
+];
+
+const DEVICE_TABLES: ClearableTable[] = [
+  SESSION_HISTORY_TABLE,
+  NOTIFICATIONS_TABLE,
+  USER_DEVICES_TABLE,
+];
 
 @Injectable()
 export class DatabaseService {
@@ -78,246 +94,10 @@ export class DatabaseService {
     }
   }
 
-  async importDatabase(
-    importData: ImportPayload | null | undefined,
-    currentAppVersion: string,
-    compareVersions: (v1: string, v2: string) => number,
-  ): Promise<ImportResult> {
-    try {
-      this.logger.log('Starting database import...');
-
-      if (!importData?.data) {
-        throw new Error('Invalid import data format');
-      }
-
-      const { data } = importData;
-      let imported = 0;
-      let skipped = 0;
-
-      this.logger.debug('Import data contains:', {
-        settings: data.settings?.length || 0,
-        userDevices: data.userDevices?.length || 0,
-        userPreferences: data.userPreferences?.length || 0,
-      });
-
-      // Import settings
-      if (data.settings && Array.isArray(data.settings)) {
-        const settingsResult = await this.importSettings(
-          data.settings,
-          currentAppVersion,
-          compareVersions,
-        );
-        imported += settingsResult.imported;
-        skipped += settingsResult.skipped;
-      }
-
-      // Import user devices
-      if (data.userDevices && Array.isArray(data.userDevices)) {
-        const devicesResult = await this.importUserDevices(data.userDevices);
-        imported += devicesResult.imported;
-        skipped += devicesResult.skipped;
-      }
-
-      // Import user preferences
-      if (data.userPreferences && Array.isArray(data.userPreferences)) {
-        const preferencesResult = await this.importUserPreferences(
-          data.userPreferences,
-        );
-        imported += preferencesResult.imported;
-        skipped += preferencesResult.skipped;
-      }
-
-      this.logger.log(
-        `Database import completed: ${imported} items imported, ${skipped} items skipped`,
-      );
-
-      return { imported, skipped };
-    } catch (error) {
-      this.logger.error('Error importing database:', error);
-      throw new Error(`Failed to import database: ${describeError(error)}`);
-    }
-  }
-
-  private async importSettings(
-    settings: ImportedSetting[],
-    currentAppVersion: string,
-    compareVersions: (v1: string, v2: string) => number,
-  ): Promise<ImportResult> {
-    let imported = 0;
-    let skipped = 0;
-
-    for (const setting of settings) {
-      try {
-        const existing = await this.settingsRepository.findOne({
-          where: { key: setting.key },
-        });
-
-        // Skip importing APP_VERSION if the import file has an older version than the current code
-        if (
-          setting.key === 'APP_VERSION' &&
-          compareVersions(setting.value, currentAppVersion) < 0
-        ) {
-          this.logger.log(
-            `Skipping import of APP_VERSION (${setting.value}) to avoid downgrading from current version (${currentAppVersion})`,
-          );
-          skipped++;
-          continue;
-        }
-
-        this.logger.debug(
-          'Importing setting:',
-          setting.key,
-          'Existing:',
-          !!existing,
-        );
-
-        if (existing) {
-          existing.value = setting.value;
-          await this.settingsRepository.save(existing);
-          imported++;
-        } else {
-          this.logger.warn(`Skipping unknown setting ${setting.key}`);
-          skipped++;
-        }
-      } catch (error) {
-        this.logger.warn(`Failed to import setting ${setting.key}:`, error);
-        skipped++;
-      }
-    }
-
-    return { imported, skipped };
-  }
-
-  private async importUserDevices(
-    devices: Partial<UserDevice>[],
-  ): Promise<ImportResult> {
-    let imported = 0;
-    let skipped = 0;
-
-    const deviceRepo =
-      this.settingsRepository.manager.getRepository(UserDevice);
-
-    for (const device of devices) {
-      try {
-        const existing = await deviceRepo.findOne({
-          where: {
-            userId: device.userId,
-            deviceIdentifier: device.deviceIdentifier,
-          },
-        });
-
-        this.logger.debug(
-          `Importing device ${device.deviceIdentifier} for user ${device.userId}, existing:`,
-          !!existing,
-        );
-
-        if (!existing) {
-          const newDevice = deviceRepo.create(device);
-          await deviceRepo.save(newDevice);
-          imported++;
-          this.logger.debug(`Created new device: ${device.deviceIdentifier}`);
-        } else {
-          // Update existing device with new data
-          Object.assign(existing, device);
-          await deviceRepo.save(existing);
-          imported++;
-          this.logger.debug(
-            `Updated existing device: ${device.deviceIdentifier}`,
-          );
-        }
-      } catch (error) {
-        this.logger.warn(
-          `Failed to import device ${device.deviceIdentifier}:`,
-          error,
-        );
-        skipped++;
-      }
-    }
-
-    return { imported, skipped };
-  }
-
-  private async importUserPreferences(
-    preferences: Partial<UserPreference>[],
-  ): Promise<ImportResult> {
-    let imported = 0;
-    let skipped = 0;
-
-    const prefRepo =
-      this.settingsRepository.manager.getRepository(UserPreference);
-
-    for (const pref of preferences) {
-      try {
-        const existing = await prefRepo.findOne({
-          where: { userId: pref.userId },
-        });
-
-        this.logger.debug(
-          `Importing preference for user ${pref.userId}, existing:`,
-          !!existing,
-        );
-
-        if (!existing) {
-          const newPref = prefRepo.create(pref);
-          await prefRepo.save(newPref);
-          imported++;
-          this.logger.debug(`Created new preference for user: ${pref.userId}`);
-        } else {
-          // Update existing preference
-          existing.defaultBlock = pref.defaultBlock ?? null;
-          existing.username = pref.username || existing.username;
-          await prefRepo.save(existing);
-          imported++;
-          this.logger.debug(
-            `Updated existing preference for user: ${pref.userId}`,
-          );
-        }
-      } catch (error) {
-        this.logger.warn(
-          `Failed to import preference for user ${pref.userId}:`,
-          error,
-        );
-        skipped++;
-      }
-    }
-
-    return { imported, skipped };
-  }
-
   async resetDatabase(): Promise<void> {
     try {
       this.logger.warn('RESETTING ALL DATABASE TABLES');
-
-      await this.settingsRepository.manager.transaction(
-        async (transactionalEntityManager) => {
-          await transactionalEntityManager
-            .getRepository(SessionHistory)
-            .clear();
-          this.logger.debug('Session history table cleared');
-
-          await transactionalEntityManager.getRepository(Notification).clear();
-          this.logger.debug('Notifications table cleared');
-
-          await transactionalEntityManager
-            .getRepository(UserPreference)
-            .clear();
-          this.logger.debug('User preferences table cleared');
-
-          await transactionalEntityManager.getRepository(UserDevice).clear();
-          this.logger.debug('User devices table cleared');
-
-          await transactionalEntityManager.getRepository(AppSettings).clear();
-          this.logger.debug('App settings table cleared');
-
-          //clear sessions and admin users
-          await transactionalEntityManager.getRepository('sessions').clear();
-          this.logger.debug('Sessions table cleared');
-
-          await transactionalEntityManager.getRepository('admin_users').clear();
-          this.logger.debug('Admin users table cleared');
-        },
-      );
-
+      await this.clearTables(ALL_TABLES);
       this.logger.warn(
         'Database reset completed - all data has been deleted and default settings restored',
       );
@@ -337,7 +117,7 @@ export class DatabaseService {
         .update(UserDevice)
         .set({
           sessionCount: 0,
-          currentSessionKey: () => 'NULL',
+          currentSessionKey: null,
         })
         .execute();
 
@@ -357,21 +137,7 @@ export class DatabaseService {
       const deviceCount = await this.settingsRepository.manager
         .getRepository(UserDevice)
         .count();
-
-      await this.settingsRepository.manager.transaction(
-        async (transactionalEntityManager) => {
-          await transactionalEntityManager
-            .getRepository(SessionHistory)
-            .clear();
-          this.logger.debug('Session history cleared');
-
-          await transactionalEntityManager.getRepository(Notification).clear();
-          this.logger.debug('Notifications cleared');
-
-          await transactionalEntityManager.getRepository(UserDevice).clear();
-          this.logger.debug('User devices cleared');
-        },
-      );
+      await this.clearTables(DEVICE_TABLES);
 
       this.logger.warn(
         `All ${deviceCount} devices and related data have been deleted`,
@@ -389,15 +155,7 @@ export class DatabaseService {
       const sessionCount = await this.settingsRepository.manager
         .getRepository(SessionHistory)
         .count();
-
-      await this.settingsRepository.manager.transaction(
-        async (transactionalEntityManager) => {
-          await transactionalEntityManager
-            .getRepository(SessionHistory)
-            .clear();
-          this.logger.debug('Session history cleared');
-        },
-      );
+      await this.clearTables([SESSION_HISTORY_TABLE]);
 
       this.logger.warn(
         `All ${sessionCount} session history records have been cleared`,
@@ -408,5 +166,14 @@ export class DatabaseService {
         `Session history clearing failed: ${describeError(error)}`,
       );
     }
+  }
+
+  private async clearTables(tables: ClearableTable[]): Promise<void> {
+    await this.settingsRepository.manager.transaction(async (manager) => {
+      for (const { target, label } of tables) {
+        await manager.getRepository(target).clear();
+        this.logger.debug(`${label} table cleared`);
+      }
+    });
   }
 }

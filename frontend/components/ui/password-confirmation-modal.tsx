@@ -65,7 +65,7 @@ export function PasswordConfirmationModal({
       <ModalHeader title={title} description={description} />
 
       <ModalBody>
-        <Field label="Current Password" htmlFor="password">
+        <Field label="Current password" htmlFor="password">
           <div className="relative">
             <Input
               id="password"

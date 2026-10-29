@@ -29,6 +29,7 @@ const defaultSettings = [
   setting("IGNORE_CERT_ERRORS", "false", "boolean"),
   setting("CUSTOM_PLEX_URL", ""),
   setting("PLEX_GUARD_DEFAULT_BLOCK", "true", "boolean"),
+  setting("PLEX_GUARD_STRICT_MODE", "false", "boolean"),
   setting("SMTP_HOST", "mail.example.com"),
 ];
 
@@ -104,10 +105,13 @@ describe("PlexSettings", () => {
     expect(ids).toHaveLength(3);
   });
 
-  it("excludes the default-block setting despite its prefix", () => {
-    const { container } = renderPanel();
-    expect(container.querySelector("#PLEX_GUARD_DEFAULT_BLOCK")).toBeNull();
-  });
+  it.each(["PLEX_GUARD_DEFAULT_BLOCK", "PLEX_GUARD_STRICT_MODE"])(
+    "leaves %s to the Guardian tab despite its prefix",
+    (key) => {
+      const { container } = renderPanel();
+      expect(container.querySelector(`#${key}`)).toBeNull();
+    },
+  );
 
   it("masks the token field", () => {
     const { container } = renderPanel();
@@ -211,7 +215,7 @@ describe("PlexSettings", () => {
       const { user } = renderPanel();
 
       await user.click(
-        screen.getByRole("button", { name: /Test Plex Connection/ }),
+        screen.getByRole("button", { name: /Test Plex connection/ }),
       );
 
       expect(await screen.findByText("Connected")).toBeInTheDocument();
@@ -225,7 +229,7 @@ describe("PlexSettings", () => {
       const { user } = renderPanel();
 
       await user.click(
-        screen.getByRole("button", { name: /Test Plex Connection/ }),
+        screen.getByRole("button", { name: /Test Plex connection/ }),
       );
 
       expect(await screen.findByText("Token rejected")).toBeInTheDocument();
@@ -236,7 +240,7 @@ describe("PlexSettings", () => {
       const { user } = renderPanel();
 
       await user.click(
-        screen.getByRole("button", { name: /Test Plex Connection/ }),
+        screen.getByRole("button", { name: /Test Plex connection/ }),
       );
 
       expect(await screen.findByText("Connection failed")).toBeInTheDocument();
@@ -247,7 +251,7 @@ describe("PlexSettings", () => {
       const { user } = renderPanel();
 
       await user.click(
-        screen.getByRole("button", { name: /Test Plex Connection/ }),
+        screen.getByRole("button", { name: /Test Plex connection/ }),
       );
 
       expect(await screen.findByText("offline")).toBeInTheDocument();
@@ -258,7 +262,7 @@ describe("PlexSettings", () => {
       const { user } = renderPanel();
 
       await user.click(
-        screen.getByRole("button", { name: /Test Plex Connection/ }),
+        screen.getByRole("button", { name: /Test Plex connection/ }),
       );
 
       expect(
@@ -270,7 +274,7 @@ describe("PlexSettings", () => {
       renderPanel({ hasUnsavedChanges: true });
 
       expect(
-        screen.getByRole("button", { name: /Test Plex Connection/ }),
+        screen.getByRole("button", { name: /Test Plex connection/ }),
       ).toBeDisabled();
       expect(
         screen.getByText("Save your changes before testing the connection."),
@@ -281,7 +285,7 @@ describe("PlexSettings", () => {
       const { user, rerender } = renderPanel();
 
       await user.click(
-        screen.getByRole("button", { name: /Test Plex Connection/ }),
+        screen.getByRole("button", { name: /Test Plex connection/ }),
       );
       expect(await screen.findByText("Connected")).toBeInTheDocument();
 
@@ -310,7 +314,7 @@ describe("PlexSettings", () => {
       );
 
       await user.click(
-        screen.getByRole("button", { name: /Test Plex Connection/ }),
+        screen.getByRole("button", { name: /Test Plex connection/ }),
       );
       expect(await screen.findByText("Connected")).toBeInTheDocument();
     });
@@ -325,7 +329,7 @@ describe("PlexSettings", () => {
       const { user } = renderPanel();
 
       await user.click(
-        screen.getByRole("button", { name: /Test Plex Connection/ }),
+        screen.getByRole("button", { name: /Test Plex connection/ }),
       );
       expect(screen.getByText("Testing...")).toBeInTheDocument();
 

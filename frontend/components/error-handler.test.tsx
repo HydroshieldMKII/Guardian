@@ -25,7 +25,7 @@ describe("ErrorHandler", () => {
         />,
       );
 
-      expect(screen.getByText("Cannot Reach the Backend")).toBeInTheDocument();
+      expect(screen.getByText("Cannot reach the backend")).toBeInTheDocument();
       expect(screen.getByText("Connection refused")).toBeInTheDocument();
     });
 
@@ -35,7 +35,7 @@ describe("ErrorHandler", () => {
       render(<ErrorHandler backendError="down" onRetry={onRetry} />);
 
       await user.click(
-        screen.getByRole("button", { name: /Retry Connection/ }),
+        screen.getByRole("button", { name: /Retry connection/ }),
       );
 
       expect(onRetry).toHaveBeenCalled();
@@ -66,7 +66,7 @@ describe("ErrorHandler", () => {
     ])("recognises %p reported through the Plex status", (connectionStatus) => {
       render(<ErrorHandler plexStatus={status({ connectionStatus })} />);
 
-      expect(screen.getByText("Cannot Reach the Backend")).toBeInTheDocument();
+      expect(screen.getByText("Cannot reach the backend")).toBeInTheDocument();
       expect(
         screen.getByText(/The backend is not answering/),
       ).toBeInTheDocument();
@@ -83,7 +83,7 @@ describe("ErrorHandler", () => {
       );
 
       expect(
-        screen.queryByRole("button", { name: /Retry Connection/ }),
+        screen.queryByRole("button", { name: /Retry connection/ }),
       ).toBeNull();
     });
   });
@@ -96,9 +96,9 @@ describe("ErrorHandler", () => {
         ERROR_DISPLAY_CONFIG[PlexErrorCode.NOT_CONFIGURED].title,
       ),
     ).toBeInTheDocument();
-    expect(screen.getByText("Plex Server IP Address")).toBeInTheDocument();
-    expect(screen.getByText("Plex Server Port")).toBeInTheDocument();
-    expect(screen.getByText("Plex Authentication Token")).toBeInTheDocument();
+    expect(screen.getByText("Plex server IP address")).toBeInTheDocument();
+    expect(screen.getByText("Plex server port")).toBeInTheDocument();
+    expect(screen.getByText("Plex authentication token")).toBeInTheDocument();
   });
 
   it("treats a missing status as unconfigured", () => {
@@ -138,7 +138,7 @@ describe("ErrorHandler", () => {
         <ErrorHandler plexStatus={status({ connectionStatus: "who knows" })} />,
       );
 
-      expect(screen.getByText("Something Went Wrong")).toBeInTheDocument();
+      expect(screen.getByText("Something went wrong")).toBeInTheDocument();
       expect(screen.getByText(/who knows/)).toBeInTheDocument();
     });
 
@@ -179,7 +179,7 @@ describe("ErrorHandler", () => {
         />,
       );
 
-      expect(screen.queryByText("Connection Status")).toBeNull();
+      expect(screen.queryByText("Connection status")).toBeNull();
       expect(screen.queryByText("PLEX_SERVER_ERROR: 500")).toBeNull();
     });
 

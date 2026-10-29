@@ -1,0 +1,28 @@
+import type { SessionHistoryFilter } from "@/lib/session-history-api";
+
+export const queryKeys = {
+  dashboard: ["dashboard"] as const,
+  hiddenUsers: ["users", "hidden"] as const,
+  notifications: ["notifications"] as const,
+  portal: {
+    all: ["portal"] as const,
+    devices: ["portal", "devices"] as const,
+    settings: ["portal", "settings"] as const,
+    rules: ["portal", "rules"] as const,
+  },
+  settings: ["settings"] as const,
+  sessionHistory: {
+    all: ["sessionHistory"] as const,
+    forUser: (userId: string, filter: SessionHistoryFilter) =>
+      ["sessionHistory", userId, filter] as const,
+  },
+  timeRules: {
+    all: ["timeRules"] as const,
+    forUser: (userId: string) => ["timeRules", "user", userId] as const,
+    forUsers: (userIds: string[]) => ["timeRules", "users", userIds] as const,
+  },
+  version: {
+    info: ["version", "info"] as const,
+    latestRelease: ["version", "latestRelease"] as const,
+  },
+};

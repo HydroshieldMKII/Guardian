@@ -4,7 +4,7 @@ export class ApiError extends Error {
   constructor(
     public status: number,
     message: string,
-    public response?: Response
+    public response?: Response,
   ) {
     super(message);
     this.name = "ApiError";
@@ -20,7 +20,7 @@ class ApiClient {
 
   private async request<T>(
     endpoint: string,
-    options: RequestInit = {}
+    options: RequestInit = {},
   ): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
 
@@ -64,7 +64,8 @@ class ApiClient {
       throw new ApiError(response.status, errorMessage, response);
     }
 
-    return response.json() as Promise<T>;
+    const body = await response.text();
+    return (body ? JSON.parse(body) : undefined) as T;
   }
 
   async get<T>(endpoint: string): Promise<T> {
@@ -74,6 +75,13 @@ class ApiClient {
   async post<T>(endpoint: string, data?: unknown): Promise<T> {
     return this.request<T>(endpoint, {
       method: "POST",
+      body: data ? JSON.stringify(data) : undefined,
+    });
+  }
+
+  async put<T>(endpoint: string, data?: unknown): Promise<T> {
+    return this.request<T>(endpoint, {
+      method: "PUT",
       body: data ? JSON.stringify(data) : undefined,
     });
   }
@@ -116,7 +124,7 @@ class ApiClient {
 
   async updateUserConcurrentStreamLimit<T>(
     userId: string,
-    concurrentStreamLimit: number | null
+    concurrentStreamLimit: number | null,
   ): Promise<T> {
     return this.post<T>(`/users/${userId}/concurrent-stream-limit`, {
       concurrentStreamLimit,
@@ -129,7 +137,7 @@ class ApiClient {
 
   async updateDeviceExcludeFromConcurrentLimit<T>(
     deviceId: number,
-    exclude: boolean
+    exclude: boolean,
   ): Promise<T> {
     return this.post<T>(`/devices/${deviceId}/exclude-from-concurrent-limit`, {
       exclude,

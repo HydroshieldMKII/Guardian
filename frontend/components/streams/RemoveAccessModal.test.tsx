@@ -3,15 +3,15 @@ import userEvent from "@testing-library/user-event";
 import type { PlexSession } from "@/types";
 import { RemoveAccessModal } from "@/components/streams/RemoveAccessModal";
 
-const stream = (overrides: Record<string, unknown> = {}) =>
-  ({
-    type: "movie",
-    title: "Arrival",
-    year: 2016,
-    User: { title: "testuser" },
-    Player: { title: "Living Room TV", platform: "Roku" },
-    ...overrides,
-  }) as unknown as PlexSession;
+const stream = (overrides: Partial<PlexSession> = {}): PlexSession => ({
+  sessionKey: "s-1",
+  type: "movie",
+  title: "Arrival",
+  year: 2016,
+  User: { title: "testuser" },
+  Player: { title: "Living Room TV", platform: "Roku" },
+  ...overrides,
+});
 
 describe("RemoveAccessModal", () => {
   it("stays closed without a stream", () => {
@@ -23,7 +23,7 @@ describe("RemoveAccessModal", () => {
         onCancel={jest.fn()}
       />,
     );
-    expect(screen.queryByText("Remove Device Access")).toBeNull();
+    expect(screen.queryByText("Remove device access")).toBeNull();
   });
 
   it("summarises the content, user and device", () => {
@@ -36,7 +36,7 @@ describe("RemoveAccessModal", () => {
       />,
     );
 
-    expect(screen.getByText("Remove Device Access")).toBeInTheDocument();
+    expect(screen.getByText("Remove device access")).toBeInTheDocument();
     expect(screen.getByText("Arrival (2016)")).toBeInTheDocument();
     expect(screen.getByText("testuser")).toBeInTheDocument();
     expect(screen.getByText("Living Room TV")).toBeInTheDocument();
@@ -52,8 +52,8 @@ describe("RemoveAccessModal", () => {
       />,
     );
 
-    expect(screen.getByText("Unknown User")).toBeInTheDocument();
-    expect(screen.getByText("Unknown Device")).toBeInTheDocument();
+    expect(screen.getByText("Unknown user")).toBeInTheDocument();
+    expect(screen.getByText("Unknown device")).toBeInTheDocument();
   });
 
   it("confirms and cancels", async () => {
@@ -70,7 +70,7 @@ describe("RemoveAccessModal", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: /Remove Access/ }));
+    await user.click(screen.getByRole("button", { name: /Remove access/ }));
     expect(onConfirm).toHaveBeenCalled();
 
     await user.click(screen.getByRole("button", { name: "Cancel" }));
@@ -91,7 +91,7 @@ describe("RemoveAccessModal", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: /Remove Access/ }));
+    await user.click(screen.getByRole("button", { name: /Remove access/ }));
     expect(onConfirm).toHaveBeenCalledWith();
 
     await user.click(screen.getByRole("button", { name: "Cancel" }));

@@ -1,8 +1,7 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ConfirmationModal } from "@/components/ui/confirmation-modal";
 import { PasswordConfirmationModal } from "@/components/ui/password-confirmation-modal";
-import { ReleaseNotesModal } from "@/components/ui/release-notes-modal";
 
 const setup = () => userEvent.setup({ pointerEventsCheck: 0 });
 
@@ -65,7 +64,7 @@ describe("ConfirmationModal", () => {
     renderModal({ variant: "destructive", confirmText: "Delete" });
 
     expect(screen.getByRole("button", { name: "Delete" }).className).toContain(
-      "border-rose-500/40",
+      "border-blocked/35",
     );
   });
 
@@ -74,7 +73,7 @@ describe("ConfirmationModal", () => {
 
     expect(
       screen.getByRole("button", { name: "Delete" }).className,
-    ).not.toContain("border-rose-500/40");
+    ).not.toContain("border-blocked/35");
   });
 
   it("confirms and cancels", async () => {
@@ -154,7 +153,7 @@ describe("PasswordConfirmationModal", () => {
 
     expect(confirm).toBeDisabled();
 
-    await user.type(screen.getByLabelText("Current Password"), "hunter2");
+    await user.type(screen.getByLabelText("Current password"), "hunter2");
     expect(confirm).not.toBeDisabled();
 
     await user.click(confirm);
@@ -164,7 +163,7 @@ describe("PasswordConfirmationModal", () => {
   it("ignores a whitespace-only password", async () => {
     const { user, onConfirm } = renderModal();
 
-    await user.type(screen.getByLabelText("Current Password"), "   ");
+    await user.type(screen.getByLabelText("Current password"), "   ");
 
     expect(screen.getByRole("button", { name: "Confirm" })).toBeDisabled();
     expect(onConfirm).not.toHaveBeenCalled();
@@ -174,7 +173,7 @@ describe("PasswordConfirmationModal", () => {
     const { user, onConfirm } = renderModal();
 
     await user.type(
-      screen.getByLabelText("Current Password"),
+      screen.getByLabelText("Current password"),
       "hunter2{Enter}",
     );
 
@@ -184,7 +183,7 @@ describe("PasswordConfirmationModal", () => {
   it("does not confirm on Enter with an empty field", async () => {
     const { user, onConfirm } = renderModal();
 
-    await user.click(screen.getByLabelText("Current Password"));
+    await user.click(screen.getByLabelText("Current password"));
     await user.keyboard("{Enter}");
 
     expect(onConfirm).not.toHaveBeenCalled();
@@ -193,7 +192,7 @@ describe("PasswordConfirmationModal", () => {
   it("does not confirm on Enter while loading", async () => {
     const { user, onConfirm, rerender } = renderModal();
 
-    await user.type(screen.getByLabelText("Current Password"), "hunter2");
+    await user.type(screen.getByLabelText("Current password"), "hunter2");
     rerender(
       <PasswordConfirmationModal
         isOpen
@@ -212,7 +211,7 @@ describe("PasswordConfirmationModal", () => {
 
   it("toggles password visibility", async () => {
     const { user } = renderModal();
-    const field = screen.getByLabelText("Current Password");
+    const field = screen.getByLabelText("Current password");
 
     expect(field).toHaveAttribute("type", "password");
 
@@ -241,7 +240,7 @@ describe("PasswordConfirmationModal", () => {
   it("cancels and clears the field", async () => {
     const { user, onClose } = renderModal();
 
-    await user.type(screen.getByLabelText("Current Password"), "hunter2");
+    await user.type(screen.getByLabelText("Current password"), "hunter2");
     await user.click(screen.getByRole("button", { name: "Cancel" }));
 
     expect(onClose).toHaveBeenCalled();
@@ -249,7 +248,7 @@ describe("PasswordConfirmationModal", () => {
 
   it("clears the field when it reopens", async () => {
     const { user, rerender } = renderModal();
-    await user.type(screen.getByLabelText("Current Password"), "hunter2");
+    await user.type(screen.getByLabelText("Current password"), "hunter2");
 
     const props = (isOpen: boolean) => (
       <PasswordConfirmationModal
@@ -263,127 +262,16 @@ describe("PasswordConfirmationModal", () => {
     rerender(props(false));
     rerender(props(true));
 
-    expect(screen.getByLabelText("Current Password")).toHaveValue("");
+    expect(screen.getByLabelText("Current password")).toHaveValue("");
   });
 
   it("locks everything while loading", () => {
     renderModal({ isLoading: true });
 
-    expect(screen.getByLabelText("Current Password")).toBeDisabled();
+    expect(screen.getByLabelText("Current password")).toBeDisabled();
     expect(screen.getByRole("button", { name: "Cancel" })).toBeDisabled();
     expect(
       screen.getByRole("button", { name: "Confirming..." }),
     ).toBeDisabled();
-  });
-});
-
-describe("ReleaseNotesModal", () => {
-  const renderModal = (props: Record<string, unknown> = {}) => {
-    const onClose = jest.fn();
-    const view = render(
-      <ReleaseNotesModal
-        isOpen
-        onClose={onClose}
-        latestVersion="2.0.0"
-        releaseNotes="## Highlights\n* One\n* Two"
-        updateUrl="https://example.test/release"
-        {...props}
-      />,
-    );
-    return { ...view, onClose, user: setup() };
-  };
-
-  it("stays closed", () => {
-    render(
-      <ReleaseNotesModal
-        isOpen={false}
-        onClose={jest.fn()}
-        latestVersion="2.0.0"
-        releaseNotes=""
-        updateUrl="https://example.test"
-      />,
-    );
-    expect(screen.queryByText(/What's New/)).toBeNull();
-  });
-
-  it("names the version", () => {
-    renderModal();
-    expect(
-      screen.getByText("What's New in v2.0.0"),
-    ).toBeInTheDocument();
-  });
-
-  it("says when there are no notes", () => {
-    renderModal({ releaseNotes: "" });
-    expect(screen.getByText("No release notes available.")).toBeInTheDocument();
-  });
-
-  it.each([
-    ["# Title", "h1"],
-    ["## Title", "h2"],
-    ["### Title", "h3"],
-  ])("renders %p as %s", (notes, tag) => {
-    renderModal({ releaseNotes: notes });
-    expect(document.querySelector(tag)).not.toBeNull();
-  });
-
-  it.each(["* Item one\n* Item two", "- Item one\n- Item two"])(
-    "renders a list from %p",
-    (notes) => {
-      renderModal({ releaseNotes: notes });
-      expect(document.querySelectorAll("li").length).toBe(2);
-      expect(document.querySelector("ul")).not.toBeNull();
-    },
-  );
-
-  it("renders bold text", () => {
-    renderModal({ releaseNotes: "Some **bold** text" });
-    expect(document.querySelector("strong")).toHaveTextContent("bold");
-  });
-
-  it("renders links", () => {
-    renderModal({
-      releaseNotes: "See [the docs](https://example.test/docs)",
-    });
-    const link = document.querySelector("a");
-
-    expect(link).toHaveAttribute("href", "https://example.test/docs");
-    expect(link).toHaveAttribute("target", "_blank");
-  });
-
-  it("turns newlines into breaks", () => {
-    renderModal({ releaseNotes: "one\ntwo" });
-    expect(document.querySelectorAll("br").length).toBeGreaterThan(0);
-  });
-
-  it("opens the release on GitHub", async () => {
-    const open = jest.spyOn(window, "open").mockImplementation(() => null);
-    const { user } = renderModal();
-
-    await user.click(screen.getByRole("button", { name: /View on Github/ }));
-
-    expect(open).toHaveBeenCalledWith("https://example.test/release", "_blank");
-    open.mockRestore();
-  });
-
-  it("opens the updating instructions", async () => {
-    const open = jest.spyOn(window, "open").mockImplementation(() => null);
-    const { user } = renderModal();
-
-    await user.click(screen.getByRole("button", { name: /How to Update/ }));
-
-    expect(open).toHaveBeenCalledWith(
-      "https://github.com/HydroshieldMKII/Guardian?tab=readme-ov-file#updating",
-      "_blank",
-    );
-    open.mockRestore();
-  });
-
-  it("closes on escape", async () => {
-    const { user, onClose } = renderModal();
-
-    await user.keyboard("{Escape}");
-
-    await waitFor(() => expect(onClose).toHaveBeenCalled());
   });
 });

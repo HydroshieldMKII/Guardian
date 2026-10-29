@@ -1,5 +1,7 @@
 import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { DataSource, In, IsNull, Not } from 'typeorm';
+import { ENTITIES } from '@/database/database.options';
 import { SessionHistory } from '@/entities/session-history.entity';
 import { UserDevice } from '@/entities/user-device.entity';
 import { UserPreference } from '@/entities/user-preference.entity';
@@ -7,7 +9,7 @@ import { DeviceTrackingService } from '@/modules/devices/services/device-trackin
 import { PlexClient } from '@/modules/plex/services/plex-client';
 import { NotificationOrchestratorService } from '@/modules/notifications/services/notification-orchestrator.service';
 import { ActiveSessionService } from '@/modules/sessions/services/active-session.service';
-import { callArgs } from '@/test-matchers';
+import { anyDate, callArgs } from '@/test-matchers';
 
 describe('ActiveSessionService', () => {
   let service: ActiveSessionService;
@@ -17,37 +19,6 @@ describe('ActiveSessionService', () => {
   let deviceTrackingService: { clearSessionKey: jest.Mock };
   let plexClient: { getServerIdentity: jest.Mock };
   let orchestrator: { linkOrphanedNotifications: jest.Mock };
-  let builders: Record<string, jest.Mock>[];
-
-  const newBuilder = () => {
-    const builder: Record<string, jest.Mock> = {
-      leftJoinAndSelect: jest.fn(),
-      where: jest.fn(),
-      andWhere: jest.fn(),
-      orderBy: jest.fn(),
-      skip: jest.fn(),
-      take: jest.fn(),
-      update: jest.fn(),
-      set: jest.fn(),
-      getMany: jest.fn().mockResolvedValue([]),
-      getOne: jest.fn().mockResolvedValue(null),
-      execute: jest.fn().mockResolvedValue({ affected: 1 }),
-    };
-    for (const key of [
-      'leftJoinAndSelect',
-      'where',
-      'andWhere',
-      'orderBy',
-      'skip',
-      'take',
-      'update',
-      'set',
-    ]) {
-      builder[key].mockReturnValue(builder);
-    }
-    builders.push(builder);
-    return builder;
-  };
 
   const plexSession = (overrides: Record<string, unknown> = {}) => ({
     sessionKey: 'sk-1',
@@ -87,15 +58,14 @@ describe('ActiveSessionService', () => {
     callArgs<[Record<string, unknown>]>(historyRepo.create, call)[0];
 
   beforeEach(async () => {
-    builders = [];
-
     historyRepo = {
-      createQueryBuilder: jest.fn(() => newBuilder()),
+      find: jest.fn().mockResolvedValue([]),
+      findOne: jest.fn().mockResolvedValue(null),
+      update: jest.fn().mockResolvedValue({ affected: 1 }),
       create: jest.fn((entity: Partial<SessionHistory>) =>
         Object.assign(new SessionHistory(), entity),
       ),
       save: jest.fn((entity: SessionHistory) => Promise.resolve(entity)),
-      delete: jest.fn().mockResolvedValue({ affected: 1 }),
     };
 
     deviceRepo = { findOne: jest.fn().mockResolvedValue({ id: 7 }) };
@@ -219,14 +189,18 @@ describe('ActiveSessionService', () => {
     });
 
     it('updates rather than recreates a session already running', async () => {
-      historyRepo.createQueryBuilder.mockImplementation(() => {
-        const builder = newBuilder();
-        builder.getOne.mockResolvedValue({ id: 1, ratingKey: '123' });
-        return builder;
-      });
+      historyRepo.findOne.mockResolvedValue({ id: 1, ratingKey: '123' });
 
       await service.updateActiveSessions(payload(plexSession()));
 
+      expect(historyRepo.findOne).toHaveBeenCalledWith({
+        where: { sessionKey: 'sk-1', endedAt: IsNull() },
+      });
+      expect(
+        callArgs<[Record<string, unknown>, Record<string, unknown>]>(
+          historyRepo.update,
+        )[0],
+      ).toEqual({ sessionKey: 'sk-1', endedAt: IsNull() });
       expect(historyRepo.save).not.toHaveBeenCalled();
       expect(orchestrator.linkOrphanedNotifications).not.toHaveBeenCalled();
     });
@@ -290,34 +264,30 @@ describe('ActiveSessionService', () => {
     });
 
     it('closes out sessions that are no longer running', async () => {
-      historyRepo.createQueryBuilder.mockImplementationOnce(() => {
-        const builder = newBuilder();
-        builder.getMany.mockResolvedValue([{ sessionKey: 'sk-old' }]);
-        return builder;
-      });
+      historyRepo.find.mockResolvedValueOnce([{ sessionKey: 'sk-old' }]);
 
       await service.updateActiveSessions(payload(plexSession()));
 
+      expect(historyRepo.find).toHaveBeenCalledWith({
+        where: { sessionKey: Not(In(['sk-1'])), endedAt: IsNull() },
+      });
+      expect(historyRepo.update).toHaveBeenCalledWith(
+        { sessionKey: In(['sk-old']), endedAt: IsNull() },
+        { endedAt: anyDate(), playerState: 'stopped' },
+      );
       expect(deviceTrackingService.clearSessionKey).toHaveBeenCalledWith(
         'sk-old',
-      );
-      const updateBuilder = builders[1];
-      expect(updateBuilder.set).toHaveBeenCalledWith(
-        expect.objectContaining({ playerState: 'stopped' }),
       );
     });
 
     it('runs no update when nothing has ended', async () => {
       await service.updateActiveSessions(payload(plexSession()));
+      expect(historyRepo.update).not.toHaveBeenCalled();
       expect(deviceTrackingService.clearSessionKey).not.toHaveBeenCalled();
     });
 
     it('rethrows when the sweep fails', async () => {
-      historyRepo.createQueryBuilder.mockImplementation(() => {
-        const builder = newBuilder();
-        builder.getMany.mockRejectedValue(new Error('db down'));
-        return builder;
-      });
+      historyRepo.find.mockRejectedValue(new Error('db down'));
 
       await expect(
         service.updateActiveSessions(payload(plexSession())),
@@ -354,17 +324,17 @@ describe('ActiveSessionService', () => {
       });
 
     const withExistingTrack = (ratingKey: string) => {
-      historyRepo.createQueryBuilder.mockImplementation(() => {
-        const builder = newBuilder();
-        builder.getOne.mockResolvedValue({ id: 1, ratingKey });
-        return builder;
-      });
+      historyRepo.findOne.mockResolvedValue({ id: 1, ratingKey });
     };
 
     it('starts a new history row when the track changes', async () => {
       withExistingTrack('111');
       await service.updateActiveSessions(payload(plexampSession('222')));
 
+      expect(historyRepo.update).toHaveBeenCalledWith(1, {
+        endedAt: anyDate(),
+        playerState: 'stopped',
+      });
       expect(historyRepo.save).toHaveBeenCalled();
       expect(savedSession().ratingKey).toBe('222');
     });
@@ -412,11 +382,7 @@ describe('ActiveSessionService', () => {
       });
 
     const listReturning = (...rows: SessionHistory[]) => {
-      historyRepo.createQueryBuilder.mockImplementation(() => {
-        const builder = newBuilder();
-        builder.getMany.mockResolvedValue(rows);
-        return builder;
-      });
+      historyRepo.find.mockResolvedValue(rows);
     };
 
     it('shapes the rows like a Plex sessions payload', async () => {
@@ -424,6 +390,11 @@ describe('ActiveSessionService', () => {
 
       const result = await service.getActiveSessionsFormatted();
 
+      expect(historyRepo.find).toHaveBeenCalledWith({
+        where: { endedAt: IsNull() },
+        relations: { userDevice: true, userPreference: true },
+        order: { startedAt: 'DESC' },
+      });
       expect(result.MediaContainer?.size).toBe(1);
       expect(result.MediaContainer?.Metadata?.[0]).toMatchObject({
         sessionKey: 'sk-1',
@@ -509,101 +480,82 @@ describe('ActiveSessionService', () => {
       );
     });
   });
+});
 
-  describe('getUserSessionHistory', () => {
-    it('returns only completed sessions by default', async () => {
-      await service.getUserSessionHistory('u1');
+describe('ActiveSessionService on a database', () => {
+  let dataSource: DataSource;
+  let service: ActiveSessionService;
 
-      const builder = builders[0];
-      expect(builder.where).toHaveBeenCalledWith('session.userId = :userId', {
-        userId: 'u1',
-      });
-      expect(builder.andWhere).toHaveBeenCalledWith(
-        'session.endedAt IS NOT NULL',
-      );
-      expect(builder.take).toHaveBeenCalledWith(50);
+  beforeEach(async () => {
+    dataSource = new DataSource({
+      type: 'sqlite',
+      database: ':memory:',
+      entities: ENTITIES,
+      synchronize: true,
     });
+    await dataSource.initialize();
+    await dataSource.getRepository(UserPreference).save({ userId: 'u1' });
 
-    it('includes running sessions when asked', async () => {
-      await service.getUserSessionHistory('u1', {
-        limit: 10,
-        includeActive: true,
-      });
+    const module = await Test.createTestingModule({
+      providers: [
+        ActiveSessionService,
+        {
+          provide: getRepositoryToken(SessionHistory),
+          useValue: dataSource.getRepository(SessionHistory),
+        },
+        {
+          provide: getRepositoryToken(UserDevice),
+          useValue: dataSource.getRepository(UserDevice),
+        },
+        {
+          provide: getRepositoryToken(UserPreference),
+          useValue: dataSource.getRepository(UserPreference),
+        },
+        {
+          provide: DeviceTrackingService,
+          useValue: { clearSessionKey: jest.fn() },
+        },
+        { provide: PlexClient, useValue: {} },
+        { provide: NotificationOrchestratorService, useValue: {} },
+      ],
+    }).compile();
 
-      const builder = builders[0];
-      expect(builder.andWhere).not.toHaveBeenCalled();
-      expect(builder.take).toHaveBeenCalledWith(10);
-    });
-
-    it('pages from the requested offset', async () => {
-      await service.getUserSessionHistory('u1', { limit: 25, offset: 50 });
-
-      const builder = builders[0];
-      expect(builder.skip).toHaveBeenCalledWith(50);
-      expect(builder.take).toHaveBeenCalledWith(25);
-    });
-
-    it('starts at the first page by default', async () => {
-      await service.getUserSessionHistory('u1');
-      expect(builders[0].skip).toHaveBeenCalledWith(0);
-    });
-
-    it('narrows to terminated sessions when asked', async () => {
-      await service.getUserSessionHistory('u1', { terminatedOnly: true });
-
-      expect(builders[0].andWhere).toHaveBeenCalledWith(
-        'session.terminated = :terminated',
-        { terminated: true },
-      );
-    });
-
-    it('matches the search term against titles, addresses and devices', async () => {
-      await service.getUserSessionHistory('u1', { search: '  Ennemie ' });
-
-      expect(builders[0].andWhere).toHaveBeenCalledWith(
-        expect.stringContaining('LOWER(session.contentTitle) LIKE :term'),
-        { term: '%ennemie%' },
-      );
-    });
-
-    it('ignores a blank search term', async () => {
-      await service.getUserSessionHistory('u1', {
-        includeActive: true,
-        search: '   ',
-      });
-
-      expect(builders[0].andWhere).not.toHaveBeenCalled();
-    });
-
-    it('propagates a query failure', async () => {
-      historyRepo.createQueryBuilder.mockImplementation(() => {
-        const builder = newBuilder();
-        builder.getMany.mockRejectedValue(new Error('db down'));
-        return builder;
-      });
-
-      await expect(service.getUserSessionHistory('u1')).rejects.toThrow(
-        'db down',
-      );
-    });
+    service = module.get(ActiveSessionService);
   });
 
-  describe('deleteSessionHistory', () => {
-    it('deletes the row', async () => {
-      await expect(service.deleteSessionHistory(4)).resolves.toBeUndefined();
-      expect(historyRepo.delete).toHaveBeenCalledWith(4);
-    });
+  afterEach(async () => {
+    await dataSource.destroy();
+  });
 
-    it('refuses when there is no such row', async () => {
-      historyRepo.delete.mockResolvedValue({ affected: 0 });
-      await expect(service.deleteSessionHistory(4)).rejects.toThrow(
-        'Session history with ID 4 not found',
-      );
-    });
+  describe('updateActiveSessions', () => {
+    it('leaves an earlier session that reused the key as it ended', async () => {
+      const repository = dataSource.getRepository(SessionHistory);
+      const earlierEnd = new Date('2026-01-01T10:00:00Z');
+      const earlier = await repository.save({
+        sessionKey: '7',
+        userId: 'u1',
+        endedAt: earlierEnd,
+        playerState: 'paused',
+      });
+      const current = await repository.save({
+        sessionKey: '7',
+        userId: 'u1',
+        endedAt: null,
+        playerState: 'playing',
+      });
 
-    it('propagates a delete failure', async () => {
-      historyRepo.delete.mockRejectedValue(new Error('locked'));
-      await expect(service.deleteSessionHistory(4)).rejects.toThrow('locked');
+      await service.updateActiveSessions({
+        MediaContainer: { size: 0, Metadata: [] },
+      });
+
+      const [earlierAfter, currentAfter] = await Promise.all([
+        repository.findOneByOrFail({ id: earlier.id }),
+        repository.findOneByOrFail({ id: current.id }),
+      ]);
+      expect(earlierAfter.endedAt).toEqual(earlierEnd);
+      expect(earlierAfter.playerState).toBe('paused');
+      expect(currentAfter.endedAt).toBeInstanceOf(Date);
+      expect(currentAfter.playerState).toBe('stopped');
     });
   });
 });

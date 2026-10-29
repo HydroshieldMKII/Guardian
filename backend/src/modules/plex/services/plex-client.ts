@@ -2,35 +2,32 @@ import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import * as http from 'http';
 import * as https from 'https';
 import { ConfigService } from '@/modules/config/services/config.service';
-import {
-  PlexErrorCode,
-  PlexResponse,
-  createPlexError,
-  createPlexSuccess,
-} from '@/types/plex-errors';
-
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { SessionHistory } from '@/entities/session-history.entity';
-
-import { UserDevice } from '@/entities/user-device.entity';
+import { PlexResponse, createPlexSuccess } from '@/types/plex-errors';
 import { PlexSessionsResponse } from '@/types/plex.types';
+import {
+  PLEX_CLIENT_IDENTIFIER,
+  PlexHttpError,
+  PlexHttpResponse,
+  describeFailedReply,
+  dispatchPlexRequest,
+  isSuccessStatus,
+  toPlexHttpResponse,
+  withPlexToken,
+} from '@/modules/plex/services/plex-http';
+import { plexConnectionFailure } from '@/modules/plex/services/plex-connection-failure';
 
-export interface PlexHttpResponse<T = unknown> {
-  ok: boolean;
-  status: number;
-  json: () => T;
-  text: () => string;
-}
+const REQUEST_TIMEOUT_MS = 15000;
+const MEDIA_TIMEOUT_MS = 10000;
+const TRANSIENT_NETWORK_CODES = new Set([
+  'EHOSTUNREACH',
+  'ECONNREFUSED',
+  'ETIMEDOUT',
+]);
 
-export class PlexHttpError extends Error {
-  constructor(
-    message: string,
-    readonly statusCode?: number,
-  ) {
-    super(message);
-    this.name = 'PlexHttpError';
-  }
+interface PlexRequestOptions {
+  method?: string;
+  body?: string;
+  headers?: Record<string, string>;
 }
 
 @Injectable()
@@ -40,10 +37,6 @@ export class PlexClient {
   constructor(
     @Inject(forwardRef(() => ConfigService))
     private configService: ConfigService,
-    @InjectRepository(SessionHistory)
-    private sessionHistoryRepository: Repository<SessionHistory>,
-    @InjectRepository(UserDevice)
-    private userDeviceRepository: Repository<UserDevice>,
   ) {}
 
   private async getConfig() {
@@ -64,189 +57,102 @@ export class PlexClient {
     };
   }
 
-  private async validateConfiguration() {
-    const { ip, port, token } = await this.getConfig();
-
-    if (!ip || !port || !token) {
+  private async serverTarget(endpoint: string) {
+    const config = await this.getConfig();
+    if (!config.ip || !config.port || !config.token) {
       throw new Error(
         'Missing required Plex configuration. Please configure PLEX_SERVER_IP, PLEX_SERVER_PORT, and PLEX_TOKEN in settings.',
       );
     }
+
+    const scheme = config.useSSL ? 'https' : 'http';
+    const url = new URL(
+      `${scheme}://${config.ip}:${config.port}/${withPlexToken(endpoint, config.token)}`,
+    );
+
+    return {
+      config,
+      url,
+      send: config.useSSL ? https.request : http.request,
+      options: {
+        hostname: url.hostname,
+        port: url.port,
+        path: url.pathname + url.search,
+        rejectUnauthorized: !config.ignoreCertErrors,
+      },
+    };
   }
 
   async request(
     endpoint: string,
-    options: {
-      method?: string;
-      body?: string;
-      headers?: Record<string, string>;
-    } = {},
+    options: PlexRequestOptions = {},
   ): Promise<PlexHttpResponse> {
-    await this.validateConfiguration();
-    const { ip, port, token, useSSL, ignoreCertErrors } =
-      await this.getConfig();
-    const baseUrl = `${useSSL ? 'https' : 'http'}://${ip}:${port}`;
+    const target = await this.serverTarget(endpoint);
 
-    return new Promise<PlexHttpResponse>((resolve, reject) => {
-      const cleanEndpoint = endpoint.startsWith('/')
-        ? endpoint.slice(1)
-        : endpoint;
-      const hasQuery = cleanEndpoint.includes('?');
-      const tokenParam = `X-Plex-Token=${encodeURIComponent(token)}`;
-      const fullEndpoint = hasQuery
-        ? `${cleanEndpoint}&${tokenParam}`
-        : `${cleanEndpoint}?${tokenParam}`;
-
-      const fullUrl = `${baseUrl}/${fullEndpoint}`;
-      const urlObj = new URL(fullUrl);
-
-      const requestOptions = {
-        hostname: urlObj.hostname,
-        port: urlObj.port,
-        path: urlObj.pathname + urlObj.search,
-        method: options.method || 'GET',
-        headers: {
-          Accept: 'application/json',
-          'X-Plex-Client-Identifier': 'Guardian',
-          ...options.headers,
+    try {
+      const reply = await dispatchPlexRequest({
+        send: target.send,
+        options: {
+          ...target.options,
+          method: options.method || 'GET',
+          headers: {
+            Accept: 'application/json',
+            'X-Plex-Client-Identifier': PLEX_CLIENT_IDENTIFIER,
+            ...options.headers,
+          },
         },
-        rejectUnauthorized: !ignoreCertErrors,
-      };
-
-      // this.logger.debug(`Making request to: ${fullUrl}`);
-
-      const httpModule = useSSL ? https : http;
-
-      const req = httpModule.request(requestOptions, (res) => {
-        let data = '';
-
-        res.on('data', (chunk) => {
-          data += chunk;
-        });
-
-        res.on('end', () => {
-          if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
-            try {
-              const jsonData: unknown = data ? JSON.parse(data) : {};
-              resolve({
-                ok: true,
-                status: res.statusCode,
-                json: () => jsonData,
-                text: () => data,
-              });
-            } catch {
-              resolve({
-                ok: true,
-                status: res.statusCode,
-                json: () => ({}),
-                text: () => data,
-              });
-            }
-          } else {
-            const error = new Error(
-              `HTTP ${res.statusCode}: ${res.statusMessage} - ${data}`,
-            );
-            this.logger.error(`Request failed for ${fullUrl}:`, error);
-            reject(error);
-          }
-        });
+        body: options.body,
+        timeoutMs: REQUEST_TIMEOUT_MS,
+        timeoutMessage: 'Request timeout',
       });
 
-      req.on('error', (error: NodeJS.ErrnoException) => {
-        // Only log as error for unexpected failures, use warn for transient network issues
-        if (
-          error.code === 'EHOSTUNREACH' ||
-          error.code === 'ECONNREFUSED' ||
-          error.code === 'ETIMEDOUT'
-        ) {
-          this.logger.warn(
-            `Plex server unreachable (${error.code}): ${ip}:${port}`,
-          );
-        } else {
-          this.logger.error(`Request failed for ${fullUrl}:`, error);
-        }
-        reject(error);
-      });
-
-      // Set timeout
-      req.setTimeout(15000, () => {
-        req.destroy();
-        reject(new Error('Request timeout'));
-      });
-
-      if (options.body) {
-        req.write(options.body);
+      if (!isSuccessStatus(reply.statusCode)) {
+        const error = new Error(describeFailedReply(reply));
+        this.logger.error(`Request failed for ${target.url.href}:`, error);
+        throw error;
       }
 
-      req.end();
-    });
+      return toPlexHttpResponse(reply);
+    } catch (caught) {
+      const error = caught as NodeJS.ErrnoException;
+      if (error.code && TRANSIENT_NETWORK_CODES.has(error.code)) {
+        this.logger.warn(
+          `Plex server unreachable (${error.code}): ${target.config.ip}:${target.config.port}`,
+        );
+      } else if (error.code) {
+        this.logger.error(`Request failed for ${target.url.href}:`, error);
+      }
+      throw error;
+    }
   }
 
   async requestMedia(endpoint: string): Promise<Buffer | null> {
-    await this.validateConfiguration();
-    const { ip, port, token, useSSL, ignoreCertErrors } =
-      await this.getConfig();
-    const baseUrl = `${useSSL ? 'https' : 'http'}://${ip}:${port}`;
+    const target = await this.serverTarget(endpoint);
 
-    return new Promise((resolve) => {
-      const cleanEndpoint = endpoint.startsWith('/')
-        ? endpoint.slice(1)
-        : endpoint;
-      const hasQuery = cleanEndpoint.includes('?');
-      const tokenParam = `X-Plex-Token=${encodeURIComponent(token)}`;
-      const fullEndpoint = hasQuery
-        ? `${cleanEndpoint}&${tokenParam}`
-        : `${cleanEndpoint}?${tokenParam}`;
-
-      const fullUrl = `${baseUrl}/${fullEndpoint}`;
-      const urlObj = new URL(fullUrl);
-
-      const requestOptions = {
-        hostname: urlObj.hostname,
-        port: urlObj.port,
-        path: urlObj.pathname + urlObj.search,
-        method: 'GET',
-        headers: {
-          'X-Plex-Client-Identifier': 'Guardian',
+    try {
+      const reply = await dispatchPlexRequest({
+        send: target.send,
+        options: {
+          ...target.options,
+          method: 'GET',
+          headers: { 'X-Plex-Client-Identifier': PLEX_CLIENT_IDENTIFIER },
         },
-        rejectUnauthorized: !ignoreCertErrors,
-      };
-
-      const httpModule = useSSL ? https : http;
-
-      const req = httpModule.request(requestOptions, (res) => {
-        if (res.statusCode !== 200) {
-          this.logger.warn(
-            `Media request failed with status ${res.statusCode} for ${endpoint}`,
-          );
-          return resolve(null);
-        }
-
-        const chunks: Buffer[] = [];
-
-        res.on('data', (chunk: Buffer) => {
-          chunks.push(chunk);
-        });
-
-        res.on('end', () => {
-          const buffer = Buffer.concat(chunks);
-          resolve(buffer);
-        });
+        timeoutMs: MEDIA_TIMEOUT_MS,
+        timeoutMessage: `Timeout requesting media ${endpoint}`,
       });
 
-      req.on('error', (error) => {
-        this.logger.error(`Error requesting media ${endpoint}:`, error);
-        resolve(null);
-      });
+      if (reply.statusCode !== 200) {
+        this.logger.warn(
+          `Media request failed with status ${reply.statusCode} for ${endpoint}`,
+        );
+        return null;
+      }
 
-      req.setTimeout(10000, () => {
-        this.logger.warn(`Timeout requesting media ${endpoint}`);
-        req.destroy();
-        resolve(null);
-      });
-
-      req.end();
-    });
+      return reply.body;
+    } catch (error) {
+      this.logger.error(`Error requesting media ${endpoint}:`, error);
+      return null;
+    }
   }
 
   async getServerIdentity(): Promise<string | null> {
@@ -267,100 +173,37 @@ export class PlexClient {
     return response.json() as PlexSessionsResponse;
   }
 
-  private async externalRequest(
-    url: string,
-    options: {
-      method?: string;
-      body?: string;
-      headers?: Record<string, string>;
-    } = {},
-  ): Promise<PlexHttpResponse> {
-    return new Promise<PlexHttpResponse>((resolve, reject) => {
-      const urlObj = new URL(url);
-
-      const requestOptions = {
-        hostname: urlObj.hostname,
-        port: urlObj.port || 443,
-        path: urlObj.pathname + urlObj.search,
-        method: options.method || 'GET',
-        headers: {
-          Accept: 'application/json',
-          'X-Plex-Client-Identifier': 'Guardian',
-          ...options.headers,
-        },
-      };
-
-      const req = https.request(requestOptions, (res) => {
-        let data = '';
-
-        res.on('data', (chunk) => {
-          data += chunk;
-        });
-
-        res.on('end', () => {
-          if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
-            try {
-              const jsonData: unknown = data ? JSON.parse(data) : {};
-              resolve({
-                ok: true,
-                status: res.statusCode,
-                json: () => jsonData,
-                text: () => data,
-              });
-            } catch {
-              resolve({
-                ok: true,
-                status: res.statusCode,
-                json: () => ({}),
-                text: () => data,
-              });
-            }
-          } else {
-            reject(
-              new PlexHttpError(
-                `HTTP ${res.statusCode}: ${res.statusMessage} - ${data}`,
-                res.statusCode,
-              ),
-            );
-          }
-        });
-      });
-
-      req.on('error', (error) => {
-        this.logger.error(`External request failed for ${url}:`, error);
-        reject(error);
-      });
-
-      req.setTimeout(15000, () => {
-        req.destroy();
-        reject(new Error('External request timeout'));
-      });
-
-      if (options.body) {
-        req.write(options.body);
-      }
-
-      req.end();
-    });
-  }
-
   async getPlexUsers(): Promise<string> {
-    try {
-      const { token } = await this.getConfig();
+    const { token } = await this.getConfig();
+    if (!token) {
+      throw new Error('Plex token is required to fetch users');
+    }
 
-      if (!token) {
-        throw new Error('Plex token is required to fetch users');
+    this.logger.debug('Fetching Plex users from Plex.tv API');
+
+    try {
+      const reply = await dispatchPlexRequest({
+        send: https.request,
+        options: {
+          hostname: 'plex.tv',
+          port: 443,
+          path: `/api/users?X-Plex-Token=${encodeURIComponent(token)}`,
+          method: 'GET',
+          headers: {
+            Accept: 'application/json',
+            'X-Plex-Client-Identifier': PLEX_CLIENT_IDENTIFIER,
+          },
+        },
+        timeoutMs: REQUEST_TIMEOUT_MS,
+        timeoutMessage: 'External request timeout',
+      });
+
+      if (!isSuccessStatus(reply.statusCode)) {
+        throw new PlexHttpError(describeFailedReply(reply), reply.statusCode);
       }
 
-      const url = `https://plex.tv/api/users?X-Plex-Token=${encodeURIComponent(token)}`;
-
-      this.logger.debug('Fetching Plex users from Plex.tv API');
-
-      const response = await this.externalRequest(url);
-
-      const responseText = response.text();
       this.logger.debug('Successfully fetched Plex users');
-      return responseText;
+      return reply.body.toString();
     } catch (error) {
       this.logger.error('Error in getPlexUsers:', error);
       throw error;
@@ -395,79 +238,12 @@ export class PlexClient {
 
   async testConnection(): Promise<PlexResponse> {
     try {
-      await this.validateConfiguration();
-      const response = await this.request('/');
-
-      if (response.ok) {
-        return createPlexSuccess('Connection successful');
-      } else {
-        return createPlexError(
-          PlexErrorCode.SERVER_ERROR,
-          `Plex server returned error: ${response.status}`,
-          `HTTP ${response.status}`,
-        );
-      }
+      await this.request('/');
+      return createPlexSuccess('Connection successful');
     } catch (caught) {
       const error = caught as NodeJS.ErrnoException;
       this.logger.error('Connection test failed:', error);
-
-      // Handle specific SSL/TLS errors
-      if (error.code === 'ERR_TLS_CERT_ALTNAME_INVALID') {
-        return createPlexError(
-          PlexErrorCode.CERT_ERROR,
-          'SSL certificate error: Hostname/IP does not match certificate',
-          'Enable "Ignore SSL certificate errors" or use HTTP instead',
-        );
-      }
-
-      if (error.code?.startsWith('ERR_TLS_')) {
-        return createPlexError(
-          PlexErrorCode.SSL_ERROR,
-          'SSL/TLS connection error',
-          'Consider enabling "Ignore SSL certificate errors" or using HTTP',
-        );
-      }
-
-      // Handle connection refused/unreachable - normalize EHOSTUNREACH to same as ECONNREFUSED
-      if (error.code === 'ECONNREFUSED' || error.code === 'EHOSTUNREACH') {
-        return createPlexError(
-          PlexErrorCode.CONNECTION_REFUSED,
-          'Plex server is unreachable',
-          'Check if Plex server is running and accessible',
-        );
-      }
-
-      // Handle timeout errors - normalize all timeout types
-      if (
-        error.code === 'ECONNRESET' ||
-        error.code === 'ETIMEDOUT' ||
-        error.message?.includes('timeout') ||
-        error.message === 'Request timeout'
-      ) {
-        return createPlexError(
-          PlexErrorCode.CONNECTION_TIMEOUT,
-          'Connection timeout',
-          'Check server address, port and network settings',
-        );
-      }
-
-      // Handle authentication errors
-      if (
-        error.message?.includes('401') ||
-        error.message?.includes('Unauthorized')
-      ) {
-        return createPlexError(
-          PlexErrorCode.AUTH_FAILED,
-          'Authentication failed',
-          'Check your Plex token',
-        );
-      }
-
-      return createPlexError(
-        PlexErrorCode.NETWORK_ERROR,
-        'Connection failed',
-        error.message,
-      );
+      return plexConnectionFailure(error);
     }
   }
 }

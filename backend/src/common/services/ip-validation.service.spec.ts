@@ -137,6 +137,15 @@ describe('IPValidationService', () => {
     it('rejects a plain address without a prefix', () => {
       expect(service.isValidCIDRv6('2001:db8::1')).toBe(false);
     });
+
+    it.each([
+      '2001:db8::/',
+      '2001:db8::/abc',
+      '2001:db8::/-1',
+      '2001:db8::/3.5',
+    ])('rejects %p, whose prefix is not a plain number', (cidr) => {
+      expect(service.isValidCIDRv6(cidr)).toBe(false);
+    });
   });
 
   describe('normalizeIP', () => {
@@ -162,7 +171,6 @@ describe('IPValidationService', () => {
   });
 
   describe('isPrivateIP', () => {
-    // --- IPv4 (pre-existing behaviour, must stay unchanged) ---
     it('treats 10.0.0.0/8 as private', () => {
       expect(service.isPrivateIP('10.1.2.3')).toBe(true);
     });
@@ -185,7 +193,6 @@ describe('IPValidationService', () => {
       expect(service.isPrivateIP('8.8.8.8')).toBe(false);
     });
 
-    // --- IPv6 ---
     it('treats ::1 (loopback) as private', () => {
       expect(service.isPrivateIP('::1')).toBe(true);
     });
@@ -206,7 +213,6 @@ describe('IPValidationService', () => {
       expect(service.isPrivateIP('2001:db8::1')).toBe(false);
     });
 
-    // --- IPv4-mapped IPv6 must classify exactly like its IPv4 form ---
     it('treats an IPv4-mapped private address as private', () => {
       expect(service.isPrivateIP('::ffff:192.168.1.1')).toBe(true);
     });
@@ -265,7 +271,20 @@ describe('IPValidationService', () => {
       expect(service.isIPInCIDR('10.0.0.1', 'bad')).toBe(false);
     });
 
-    // --- IPv4 (pre-existing behaviour) ---
+    it('matches an address that ends in a compressed run of zeros', () => {
+      expect(service.isIPInCIDR('2001:db8::', '2001:db8::/32')).toBe(true);
+      expect(service.isIPInCIDR('2001:db9::', '2001:db8::/32')).toBe(false);
+    });
+
+    it('matches an address written out in full', () => {
+      expect(service.isIPInCIDR('2001:0db8:0:0:0:0:0:1', '2001:db8::/32')).toBe(
+        true,
+      );
+      expect(service.isIPInCIDR('2001:0db9:0:0:0:0:0:1', '2001:db8::/32')).toBe(
+        false,
+      );
+    });
+
     it('matches an IPv4 address inside the range', () => {
       expect(service.isIPInCIDR('192.168.1.42', '192.168.1.0/24')).toBe(true);
     });
@@ -274,7 +293,6 @@ describe('IPValidationService', () => {
       expect(service.isIPInCIDR('192.168.2.42', '192.168.1.0/24')).toBe(false);
     });
 
-    // --- IPv6 ---
     it('matches an IPv6 address inside the range', () => {
       expect(service.isIPInCIDR('2001:db8:1234::5', '2001:db8::/32')).toBe(
         true,
@@ -290,7 +308,6 @@ describe('IPValidationService', () => {
       expect(service.isIPInCIDR('::2', '::1/128')).toBe(false);
     });
 
-    // --- cross-family: must never match ---
     it('does not match an IPv4 address against an IPv6 CIDR', () => {
       expect(service.isIPInCIDR('192.168.1.1', '2001:db8::/32')).toBe(false);
     });
@@ -482,7 +499,6 @@ describe('IPValidationService', () => {
       expect(result.reason).toBe('Invalid or missing client IP address');
     });
 
-    // --- this is the regression test for the reported bug ---
     it('no longer rejects a well-formed IPv6 client under a permissive policy', () => {
       const result = service.validateIPAccess('2001:db8::1', policy());
       expect(result.allowed).toBe(true);
@@ -525,9 +541,6 @@ describe('IPValidationService', () => {
     });
 
     it('does not silently reclassify a real IPv6 WAN client as lan', () => {
-      // Guards against a naive "treat every IPv6 address as WAN" or
-      // "treat every IPv6 address as unclassified/lan" implementation,
-      // which would change the meaning of an existing lan-only policy.
       const rule = policy({ networkPolicy: 'lan' });
       const result = service.validateIPAccess('2001:db8::1', rule);
       expect(result.allowed).toBe(false);
