@@ -10,6 +10,7 @@ import {
   type Tone,
 } from "@/components/ui/entity";
 import { cn } from "@/lib/utils";
+import { settingError } from "./setting-validation";
 import { getSettingInfo, SettingsFormData } from "./settings-utils";
 import type { AppSetting } from "@/types";
 
@@ -108,6 +109,7 @@ export function SettingControl({
 }) {
   const { label, description, optional } = getSettingInfo(setting);
   const value = formData[setting.key] ?? setting.value;
+  const error = settingError(setting.key, value);
 
   if (setting.type === "boolean") {
     return (
@@ -132,12 +134,14 @@ export function SettingControl({
       action={
         optional ? <StatusPill tone="neutral">Optional</StatusPill> : undefined
       }
+      error={error}
       className={className}
     >
       <SecretInput
         setting={setting}
         value={typeof value === "string" ? value : String(value)}
         placeholder={`Enter ${label.toLowerCase()}`}
+        invalid={Boolean(error)}
         type={
           setting.key.includes("PASSWORD") || setting.key.includes("TOKEN")
             ? "password"

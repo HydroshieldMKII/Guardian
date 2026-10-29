@@ -5,9 +5,19 @@ export function useRegisterUnsavedChanges(
   hasUnsavedChanges: boolean,
   saveAndLeave: () => Promise<void>,
   discard: () => void,
+  saveBlocked = false,
 ) {
-  const { setHasUnsavedChanges, setOnSaveAndLeave, setOnDiscardChanges } =
-    useUnsavedChanges();
+  const {
+    setHasUnsavedChanges,
+    setSaveBlocked,
+    setOnSaveAndLeave,
+    setOnDiscardChanges,
+  } = useUnsavedChanges();
+
+  useEffect(() => {
+    setSaveBlocked(saveBlocked);
+    return () => setSaveBlocked(false);
+  }, [saveBlocked, setSaveBlocked]);
 
   useEffect(() => {
     setHasUnsavedChanges(hasUnsavedChanges);

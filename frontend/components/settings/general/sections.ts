@@ -108,9 +108,3 @@ export const SECTIONS: Record<string, SettingGroup[]> = {
     },
   ],
 };
-
-export const NUMBER_MIN: Record<string, number> = {
-  CONCURRENT_STREAM_LIMIT: 0,
-  PLEXGUARD_REFRESH_INTERVAL: 5,
-  DEVICE_CLEANUP_INTERVAL_DAYS: 1,
-};

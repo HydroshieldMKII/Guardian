@@ -92,6 +92,7 @@ export function Navbar() {
       <UnsavedChangesDialog
         open={navigation.warningOpen}
         isSaving={navigation.isSaving}
+        saveBlocked={navigation.saveBlocked}
         onStay={navigation.stay}
         onSave={() => void navigation.saveAndLeave()}
         onDiscard={navigation.discard}

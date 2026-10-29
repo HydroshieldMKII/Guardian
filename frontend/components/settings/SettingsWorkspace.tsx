@@ -34,6 +34,7 @@ export function SettingsWorkspace({
     form.hasUnsavedChanges,
     form.saveBeforeLeaving,
     form.discard,
+    form.hasErrors,
   );
 
   const leave = () => router.push("/");
@@ -85,6 +86,7 @@ export function SettingsWorkspace({
       {form.hasUnsavedChanges && (
         <UnsavedChangesBar
           isSaving={form.isSaving}
+          saveBlocked={form.hasErrors}
           onCancel={form.discard}
           onSave={() => void form.save()}
         />
@@ -93,6 +95,7 @@ export function SettingsWorkspace({
       <LeaveSettingsModal
         open={confirmingLeave}
         isSaving={form.isSaving}
+        saveBlocked={form.hasErrors}
         onStay={() => setConfirmingLeave(false)}
         onDiscard={discardAndLeave}
         onSave={saveAndLeave}

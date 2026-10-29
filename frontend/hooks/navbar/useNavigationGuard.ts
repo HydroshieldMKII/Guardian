@@ -10,6 +10,7 @@ export function useNavigationGuard(pathname: string) {
   const {
     hasUnsavedChanges,
     showUnsavedWarning,
+    saveBlocked,
     setShowUnsavedWarning,
     pendingNavigation,
     setPendingNavigation,
@@ -71,6 +72,7 @@ export function useNavigationGuard(pathname: string) {
     guard,
     warningOpen: showUnsavedWarning,
     isSaving,
+    saveBlocked,
     stay,
     discard,
     saveAndLeave,

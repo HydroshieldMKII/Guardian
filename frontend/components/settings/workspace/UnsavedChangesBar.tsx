@@ -3,12 +3,14 @@ import { Button } from "@/components/ui/button";
 
 interface UnsavedChangesBarProps {
   isSaving: boolean;
+  saveBlocked: boolean;
   onCancel: () => void;
   onSave: () => void;
 }
 
 export function UnsavedChangesBar({
   isSaving,
+  saveBlocked,
   onCancel,
   onSave,
 }: UnsavedChangesBarProps) {
@@ -25,7 +27,9 @@ export function UnsavedChangesBar({
               You have unsaved changes
             </p>
             <p className="text-xs text-muted-foreground">
-              Save them to apply the new configuration.
+              {saveBlocked
+                ? "Fix the highlighted settings to save."
+                : "Save them to apply the new configuration."}
             </p>
           </div>
         </div>
@@ -41,7 +45,7 @@ export function UnsavedChangesBar({
           </Button>
           <Button
             onClick={onSave}
-            disabled={isSaving}
+            disabled={isSaving || saveBlocked}
             size="sm"
             className="flex-1 sm:flex-none"
           >

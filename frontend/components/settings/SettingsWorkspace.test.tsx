@@ -9,6 +9,8 @@ jest.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
 
 const updateConfig = jest.fn<Promise<void>, [unknown]>();
 jest.mock("@/lib/api", () => ({
+  ApiError:
+    jest.requireActual<typeof import("@/lib/api")>("@/lib/api").ApiError,
   apiClient: { updateConfig: (changes: unknown) => updateConfig(changes) },
 }));
 
@@ -21,9 +23,11 @@ jest.mock("@/hooks/useVersionInfo", () => ({
 }));
 
 const setHasUnsavedChanges = jest.fn<void, [boolean]>();
+const setSaveBlocked = jest.fn<void, [boolean]>();
 jest.mock("@/contexts/unsaved-changes-context", () => ({
   useUnsavedChanges: () => ({
     setHasUnsavedChanges,
+    setSaveBlocked,
     setOnSaveAndLeave: jest.fn(),
     setOnDiscardChanges: jest.fn(),
   }),
@@ -204,6 +208,32 @@ describe("unsaved changes", () => {
     await waitFor(() =>
       expect(screen.queryByText("You have unsaved changes")).toBeNull(),
     );
+  });
+});
+
+describe("invalid edits", () => {
+  const editInvalid = async (ui: ReturnType<typeof userEvent.setup>) => {
+    const input = screen.getByLabelText("plex server");
+    await ui.clear(input);
+    await ui.type(input, "bad host");
+  };
+
+  it("blocks Save now and tells the page saving is blocked", async () => {
+    const ui = renderWorkspace();
+
+    await editInvalid(ui);
+
+    expect(screen.getByRole("button", { name: "Save now" })).toBeDisabled();
+    expect(setSaveBlocked).toHaveBeenLastCalledWith(true);
+  });
+
+  it("blocks Save & Leave in the leave dialog", async () => {
+    const ui = renderWorkspace();
+    await editInvalid(ui);
+    await ui.click(screen.getByRole("button", { name: "Back to Dashboard" }));
+
+    expect(screen.getByRole("button", { name: "Save & Leave" })).toBeDisabled();
+    expect(updateConfig).not.toHaveBeenCalled();
   });
 });
 

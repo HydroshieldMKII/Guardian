@@ -328,3 +328,40 @@ describe("SMTPSettings clearing a stored secret", () => {
     ).toBeInTheDocument();
   });
 });
+
+describe("SMTPSettings validation", () => {
+  it.each([
+    ["SMTP_PORT", "99999999", "SMTP port must be between 1 and 65535"],
+    [
+      "SMTP_PORT",
+      "1.5",
+      "SMTP port must be a whole number between 1 and 65535",
+    ],
+    [
+      "SMTP_HOST",
+      "not a host !!",
+      "SMTP host must be a hostname or IP address without spaces, scheme or path",
+    ],
+    [
+      "SMTP_FROM_EMAIL",
+      "notanemail",
+      "From email must be a valid email address",
+    ],
+  ])("shows an inline error for %s = %p", (key, value, message) => {
+    renderPanel({
+      settings: [...defaultSettings, setting("SMTP_FROM_EMAIL", "")],
+      formData: { [key]: value },
+    });
+
+    expect(screen.getByRole("alert")).toHaveTextContent(message);
+  });
+
+  it("shows no error for valid values", () => {
+    renderPanel({
+      settings: [...defaultSettings, setting("SMTP_FROM_EMAIL", "")],
+      formData: { SMTP_PORT: "465", SMTP_FROM_EMAIL: "user@example.com" },
+    });
+
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+});

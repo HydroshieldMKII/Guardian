@@ -1,10 +1,13 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
+import { ApiError } from "@/lib/api";
 import { useSettingsForm } from "@/hooks/settings/useSettingsForm";
 import { appSetting } from "@/test-utils/dashboard";
 import type { AppSetting } from "@/types";
 
 const updateConfig = jest.fn<Promise<void>, [unknown]>();
 jest.mock("@/lib/api", () => ({
+  ApiError:
+    jest.requireActual<typeof import("@/lib/api")>("@/lib/api").ApiError,
   apiClient: {
     updateConfig: (changes: unknown) => updateConfig(changes),
   },
@@ -198,5 +201,56 @@ describe("saving before leaving", () => {
     await act(() =>
       expect(result.current.saveBeforeLeaving()).rejects.toThrow("down"),
     );
+  });
+});
+
+describe("rejected saves", () => {
+  it("does not log an expected client error", async () => {
+    updateConfig.mockRejectedValue(new ApiError(400, "Invalid port"));
+    const { result } = renderForm();
+    act(() => result.current.change({ PLEX_SERVER_IP: "10.0.0.3" }));
+
+    await act(() => result.current.save());
+
+    expect(consoleError).not.toHaveBeenCalled();
+    expect(toast).toHaveBeenCalledWith(
+      expect.objectContaining({ description: "Invalid port" }),
+    );
+  });
+
+  it("still logs a server failure", async () => {
+    const error = new ApiError(500, "Boom");
+    updateConfig.mockRejectedValue(error);
+    const { result } = renderForm();
+    act(() => result.current.change({ PLEX_SERVER_IP: "10.0.0.3" }));
+
+    await act(() => result.current.save());
+
+    expect(consoleError).toHaveBeenCalledWith("Error saving settings:", error);
+  });
+});
+
+describe("validation", () => {
+  it("flags an out-of-range edit and refuses to save it", async () => {
+    const { result } = renderForm();
+
+    act(() => result.current.change({ PLEX_SERVER_PORT: "99999999" }));
+
+    expect(result.current.hasErrors).toBe(true);
+    await act(async () => {
+      await result.current.saveBeforeLeaving().catch(() => undefined);
+      await result.current.save();
+    });
+    expect(updateConfig).not.toHaveBeenCalled();
+  });
+
+  it("clears the flag once the value is valid", () => {
+    const { result } = renderForm();
+
+    act(() => result.current.change({ PLEX_SERVER_PORT: "0" }));
+    expect(result.current.hasErrors).toBe(true);
+
+    act(() => result.current.change({ PLEX_SERVER_PORT: "32401" }));
+    expect(result.current.hasErrors).toBe(false);
   });
 });
