@@ -1,6 +1,15 @@
 import { useCallback, useEffect, useRef } from "react";
 
-export const HISTORY_STEPS_TO_LEAVE = -2;
+const HISTORY_STEPS_TO_LEAVE = -2;
+const HISTORY_STEPS_WITHOUT_HOLD = -1;
+const HELD_ENTRY_MARKER = "guardianLeaveGuard";
+
+const isHeldEntry = (): boolean => {
+  const state: unknown = window.history.state;
+  return (
+    typeof state === "object" && state !== null && HELD_ENTRY_MARKER in state
+  );
+};
 
 export function useBrowserLeaveGuard(
   active: boolean,
@@ -8,6 +17,7 @@ export function useBrowserLeaveGuard(
 ) {
   const onBackAttemptRef = useRef(onBackAttempt);
   const releaseRef = useRef<() => void>(() => undefined);
+  const holdingRef = useRef(false);
 
   useEffect(() => {
     onBackAttemptRef.current = onBackAttempt;
@@ -16,8 +26,18 @@ export function useBrowserLeaveGuard(
   useEffect(() => {
     if (!active) return;
 
-    const holdPosition = () =>
-      window.history.pushState(window.history.state, "", window.location.href);
+    const holdPosition = () => {
+      const state: unknown = window.history.state;
+      window.history.pushState(
+        {
+          ...(typeof state === "object" ? state : {}),
+          [HELD_ENTRY_MARKER]: true,
+        },
+        "",
+        window.location.href,
+      );
+      holdingRef.current = true;
+    };
 
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
       event.preventDefault();
@@ -44,9 +64,21 @@ export function useBrowserLeaveGuard(
     };
   }, [active]);
 
+  useEffect(() => {
+    if (active || !holdingRef.current) return;
+    holdingRef.current = false;
+    if (isHeldEntry()) {
+      window.history.back();
+    }
+  }, [active]);
+
   const leaveHistory = useCallback(() => {
     releaseRef.current();
-    window.history.go(HISTORY_STEPS_TO_LEAVE);
+    const steps = holdingRef.current
+      ? HISTORY_STEPS_TO_LEAVE
+      : HISTORY_STEPS_WITHOUT_HOLD;
+    holdingRef.current = false;
+    window.history.go(steps);
   }, []);
 
   return { leaveHistory };
