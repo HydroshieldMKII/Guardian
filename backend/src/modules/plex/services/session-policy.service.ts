@@ -13,6 +13,7 @@ import {
 } from '@/common/services/ip-validation.service';
 import { PlexSession, isPlexampSession } from '@/types/plex.types';
 import { StopCode } from '@/common/utils/stop-codes';
+import { DEFAULT_BLOCK_MESSAGES } from '@/common/utils/block-messages';
 
 export interface PolicyDecision {
   shouldStop: boolean;
@@ -96,7 +97,7 @@ export class SessionPolicyService {
           shouldStop: true,
           reason:
             (await this.configService.getSetting('MSG_DEVICE_REJECTED')) ||
-            'You are not authorized to use this device. Please contact the server administrator for more information.',
+            DEFAULT_BLOCK_MESSAGES.deviceRejected,
           stopCode: 'DEVICE_REJECTED',
         };
       }
@@ -118,7 +119,7 @@ export class SessionPolicyService {
       shouldStop: true,
       reason:
         (await this.configService.getSetting('MSG_DEVICE_PENDING')) ||
-        'Device pending approval. The server owner must approve this device before it can be used.',
+        DEFAULT_BLOCK_MESSAGES.devicePending,
       stopCode: 'DEVICE_PENDING',
     };
   }
@@ -147,7 +148,7 @@ export class SessionPolicyService {
       shouldStop: true,
       reason:
         (await this.configService.getSetting('MSG_TIME_RESTRICTED')) ||
-        `Streaming is not allowed at this time due to time restrictions (Policy: ${timePolicySummary})`,
+        DEFAULT_BLOCK_MESSAGES.timeRestricted,
       stopCode: 'TIME_RESTRICTED',
     };
   }
@@ -202,11 +203,9 @@ export class SessionPolicyService {
           allowedIPs: userPreference.allowedIPs || [],
         },
         {
-          lanOnly: msgLanOnly || 'Only LAN access is allowed',
-          wanOnly: msgWanOnly || 'Only WAN access is allowed',
-          notAllowed:
-            msgNotAllowed ||
-            'Your current IP address is not in the allowed list',
+          lanOnly: msgLanOnly ?? undefined,
+          wanOnly: msgWanOnly ?? undefined,
+          notAllowed: msgNotAllowed ?? undefined,
         },
       );
     } catch (error) {

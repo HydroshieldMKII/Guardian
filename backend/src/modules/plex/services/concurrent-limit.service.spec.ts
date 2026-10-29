@@ -1,3 +1,4 @@
+import { DEFAULT_BLOCK_MESSAGES } from '@/common/utils/block-messages';
 import { ConcurrentLimitService } from '@/modules/plex/services/concurrent-limit.service';
 import {
   createSessionTerminationTestbed,
@@ -79,13 +80,13 @@ describe('ConcurrentLimitService', () => {
     });
   });
 
-  it('falls back to a built-in message when none is configured', async () => {
+  it('falls back to the default message when none is configured', async () => {
     concurrentStreamService.getEffectiveLimit.mockResolvedValue(1);
     configService.getSetting.mockResolvedValue('');
 
     const { excess } = await limits.findExcessStreams(twoSessions());
 
-    expect(excess[0].reason).toContain('concurrent stream limit');
+    expect(excess[0].reason).toBe(DEFAULT_BLOCK_MESSAGES.concurrentLimit);
   });
 
   it('checks each user against their own limit', async () => {

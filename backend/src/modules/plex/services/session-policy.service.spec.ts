@@ -1,3 +1,4 @@
+import { DEFAULT_BLOCK_MESSAGES } from '@/common/utils/block-messages';
 import { PlexSession } from '@/types/plex.types';
 import { SessionPolicyService } from '@/modules/plex/services/session-policy.service';
 import {
@@ -50,14 +51,14 @@ describe('SessionPolicyService', () => {
       });
     });
 
-    it('uses a built-in message when the rejected text is unset', async () => {
+    it('uses the default message when the rejected text is unset', async () => {
       deviceRepo.findOne.mockResolvedValue(
         approvedDevice({ status: 'rejected' }),
       );
       configService.getSetting.mockResolvedValue(null);
 
       const decision = await evaluate();
-      expect(decision.reason).toContain('not authorized to use this device');
+      expect(decision.reason).toBe(DEFAULT_BLOCK_MESSAGES.deviceRejected);
     });
 
     it('blocks a pending device when the user default is block', async () => {
@@ -181,12 +182,12 @@ describe('SessionPolicyService', () => {
       });
     });
 
-    it('falls back to a message naming the policy when none is configured', async () => {
+    it('falls back to the default message when none is configured', async () => {
       timePolicyService.isTimeScheduleAllowed.mockResolvedValue(false);
       configService.getSetting.mockResolvedValue('');
 
       const decision = await evaluate();
-      expect(decision.reason).toContain('always allowed');
+      expect(decision.reason).toBe(DEFAULT_BLOCK_MESSAGES.timeRestricted);
     });
 
     it('checks the schedule for the device being played', async () => {
@@ -242,7 +243,7 @@ describe('SessionPolicyService', () => {
       );
     });
 
-    it('uses built-in messages when none are configured', async () => {
+    it('leaves unset texts to the validator defaults', async () => {
       preferenceRepo.findOne.mockResolvedValue({ userId: 'u1' });
       configService.getSetting.mockResolvedValue(null);
 
@@ -251,11 +252,7 @@ describe('SessionPolicyService', () => {
       expect(ipValidationService.validateIPAccess).toHaveBeenCalledWith(
         '10.0.0.5',
         expect.anything(),
-        {
-          lanOnly: 'Only LAN access is allowed',
-          wanOnly: 'Only WAN access is allowed',
-          notAllowed: 'Your current IP address is not in the allowed list',
-        },
+        { lanOnly: undefined, wanOnly: undefined, notAllowed: undefined },
       );
     });
 
@@ -316,16 +313,14 @@ describe('SessionPolicyService', () => {
   });
 
   describe('message fallbacks', () => {
-    it('uses a built-in message when the pending text is unset', async () => {
+    it('uses the default message when the pending text is unset', async () => {
       deviceRepo.findOne.mockResolvedValue(
         approvedDevice({ status: 'pending' }),
       );
       configService.getSetting.mockResolvedValue(null);
 
       const decision = await evaluate();
-      expect(decision.reason).toBe(
-        'Device pending approval. The server owner must approve this device before it can be used.',
-      );
+      expect(decision.reason).toBe(DEFAULT_BLOCK_MESSAGES.devicePending);
     });
   });
 });

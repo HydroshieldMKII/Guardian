@@ -1,3 +1,4 @@
+import { DEFAULT_BLOCK_MESSAGES } from '@/common/utils/block-messages';
 import {
   SessionTerminationService,
   StreamBlockedEvent,
@@ -347,13 +348,13 @@ describe('SessionTerminationService', () => {
       );
     });
 
-    it('falls back to a built-in message when none is configured', async () => {
+    it('falls back to the default pending message when none is configured', async () => {
       configService.getSetting.mockResolvedValue('');
       await service.terminateSession('session-1');
 
       expect(plexClient.terminateSession).toHaveBeenCalledWith(
         'session-1',
-        expect.stringContaining('must be approved by the server owner'),
+        DEFAULT_BLOCK_MESSAGES.devicePending,
       );
     });
 

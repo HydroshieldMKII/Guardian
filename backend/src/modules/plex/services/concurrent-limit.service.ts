@@ -6,6 +6,7 @@ import { ConcurrentStreamService } from '@/modules/users/services/concurrent-str
 import { ConfigService } from '@/modules/config/services/config.service';
 import { PlexSession, isPlexampSession } from '@/types/plex.types';
 import { errorMessage } from '@/common/utils/error-types';
+import { DEFAULT_BLOCK_MESSAGES } from '@/common/utils/block-messages';
 
 export interface ExcessStream {
   userId: string;
@@ -82,7 +83,7 @@ export class ConcurrentLimitService {
     const newestFirst = await this.sortNewestFirst(countableSessions);
     const reason =
       (await this.configService.getSetting('MSG_CONCURRENT_LIMIT')) ||
-      'You have reached your concurrent stream limit. Please stop another stream before starting a new one.';
+      DEFAULT_BLOCK_MESSAGES.concurrentLimit;
 
     this.logger.warn(
       `User ${userId} has ${countableSessions.length}/${limit} streams, terminating the newest`,

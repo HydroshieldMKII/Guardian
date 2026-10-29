@@ -13,6 +13,7 @@ import {
 } from '@/types/plex.types';
 import { errorMessage } from '@/common/utils/error-types';
 import { StopCode } from '@/common/utils/stop-codes';
+import { DEFAULT_BLOCK_MESSAGES } from '@/common/utils/block-messages';
 
 export interface StreamBlockedEvent {
   userId: string;
@@ -185,7 +186,7 @@ export class SessionTerminationService {
       const message =
         reason ||
         (await this.configService.getSetting('MSG_DEVICE_PENDING')) ||
-        'This device must be approved by the server owner. Please contact the server administrator for more information.';
+        DEFAULT_BLOCK_MESSAGES.devicePending;
 
       this.logger.log(
         `Terminating session ${sessionKey} with reason: ${message}`,
