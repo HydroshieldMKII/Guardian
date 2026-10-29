@@ -18,6 +18,9 @@ const TOKEN_BYTES = 48;
 const hashToken = (token: string) =>
   crypto.createHash('sha256').update(token).digest('hex');
 
+const normalizeAddress = (email: string | null) =>
+  (email ?? '').trim().toLowerCase();
+
 @Injectable()
 export class PasswordResetService {
   private readonly logger = new Logger(PasswordResetService.name);
@@ -41,17 +44,16 @@ export class PasswordResetService {
     const [toggled, smtp, addressableAdmins] = await Promise.all([
       this.configService.getSetting('PASSWORD_RESET_ENABLED'),
       this.emailService.loadSmtpSettings(),
-      this.adminUserRepository
-        .createQueryBuilder('admin')
-        .where("TRIM(COALESCE(admin.email, '')) <> ''")
-        .getCount(),
+      this.listAdminAddresses(),
     ]);
 
     const emailConfigured = Boolean(
       smtp.SMTP_ENABLED && smtp.SMTP_HOST && smtp.SMTP_FROM_EMAIL,
     );
     const appUrlConfigured = appUrl() !== null;
-    const adminEmailConfigured = addressableAdmins > 0;
+    const adminEmailConfigured = addressableAdmins.some(
+      (admin) => normalizeAddress(admin.email) !== '',
+    );
 
     return {
       enabled:
@@ -76,10 +78,10 @@ export class PasswordResetService {
       return;
     }
 
-    const admin = await this.adminUserRepository
-      .createQueryBuilder('admin')
-      .where('LOWER(admin.email) = LOWER(:email)', { email })
-      .getOne();
+    const wanted = normalizeAddress(email);
+    const admin = (await this.listAdminAddresses()).find(
+      (candidate) => normalizeAddress(candidate.email) === wanted,
+    );
 
     if (!admin) {
       return;
@@ -147,6 +149,12 @@ export class PasswordResetService {
     });
 
     return stored && stored.expiresAt > new Date() ? stored : null;
+  }
+
+  private listAdminAddresses(): Promise<AdminUser[]> {
+    return this.adminUserRepository.find({
+      select: { id: true, username: true, email: true },
+    });
   }
 
   private async purgeExpired(): Promise<void> {
