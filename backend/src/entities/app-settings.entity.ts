@@ -11,7 +11,7 @@ export class AppSettings {
   @Column({ type: 'text', nullable: true })
   value: string | null;
 
-  @Column({ default: 'string' })
+  @Column({ type: 'varchar', default: 'string' })
   type: 'string' | 'number' | 'boolean' | 'json';
 
   @Column({ default: false })
