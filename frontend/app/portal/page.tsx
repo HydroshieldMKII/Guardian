@@ -28,6 +28,7 @@ import { HintTooltip } from "@/components/ui/hint-tooltip";
 import { RefreshButton } from "@/components/ui/refresh-button";
 import { BYPASSED_BY_TEMPORARY_ACCESS } from "@/lib/device-policies";
 import { formatTimeLeft } from "@/lib/duration";
+import type { DeviceStatus } from "@/types";
 import { cn } from "@/lib/utils";
 import {
   Sun,
@@ -63,7 +64,7 @@ interface UserPortalDevice {
   deviceName: string;
   devicePlatform: string;
   deviceProduct: string;
-  status: "pending" | "approved" | "rejected";
+  status: DeviceStatus;
   firstSeen: string;
   lastSeen: string;
   requestDescription?: string;

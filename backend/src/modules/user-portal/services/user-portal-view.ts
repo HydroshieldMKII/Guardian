@@ -1,4 +1,4 @@
-import { UserDevice } from '@/entities/user-device.entity';
+import { DeviceStatus, UserDevice } from '@/entities/user-device.entity';
 import { UserTimeRule } from '@/entities/user-time-rule.entity';
 
 export interface UserPortalTimeRule {
@@ -17,7 +17,7 @@ export interface UserPortalDevice {
   deviceName: string;
   devicePlatform: string;
   deviceProduct: string;
-  status: 'pending' | 'approved' | 'rejected';
+  status: DeviceStatus;
   firstSeen: Date;
   lastSeen: Date;
   requestDescription?: string | null;

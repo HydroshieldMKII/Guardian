@@ -1,3 +1,5 @@
+export type DeviceStatus = "pending" | "approved" | "rejected";
+
 export interface PlexSession {
   sessionKey: string;
   User?: {
@@ -78,7 +80,7 @@ export interface UserDevice {
   deviceVersion?: string;
   ipAddress?: string;
   approved: boolean;
-  status: "pending" | "approved" | "rejected";
+  status: DeviceStatus;
   firstSeen: string;
   lastSeen: string;
   sessionCount: number;
@@ -113,7 +115,7 @@ export interface PortalDevice {
   deviceName: string;
   devicePlatform: string;
   deviceProduct: string;
-  status: "pending" | "approved" | "rejected";
+  status: DeviceStatus;
   firstSeen: string;
   lastSeen: string;
   requestDescription?: string;

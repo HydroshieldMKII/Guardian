@@ -1,7 +1,8 @@
 import { ConfigService } from '@/modules/config/services/config.service';
 import { isPlexampDevice } from '@/common/utils/plexamp.utils';
+import type { DeviceStatus } from '@/entities/user-device.entity';
 
-export type StrictModeStatus = 'approved' | 'rejected';
+export type StrictModeStatus = Exclude<DeviceStatus, 'pending'>;
 
 export const isStrictModeEnabled = async (
   configService: ConfigService,
