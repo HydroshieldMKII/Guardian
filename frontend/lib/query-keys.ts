@@ -3,6 +3,7 @@ import type { SessionHistoryFilter } from "@/lib/session-history-api";
 export const queryKeys = {
   dashboard: ["dashboard"] as const,
   hiddenUsers: ["users", "hidden"] as const,
+  notifications: ["notifications"] as const,
   portal: {
     all: ["portal"] as const,
     devices: ["portal", "devices"] as const,

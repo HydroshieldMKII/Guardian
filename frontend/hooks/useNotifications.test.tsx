@@ -1,189 +1,315 @@
-import { act, renderHook, waitFor } from "@testing-library/react";
-import { Notification } from "@/types";
-import { apiClient } from "@/lib/api";
-import { useNotifications } from "./useNotifications";
+import { act, waitFor } from "@testing-library/react";
+import {
+  NOTIFICATION_POLL_MS,
+  useNotifications,
+} from "@/hooks/useNotifications";
+import { createQueryClient } from "@/lib/query-client";
+import { queryKeys } from "@/lib/query-keys";
+import { renderHookWithQuery } from "@/test-utils/query";
+import type { Notification } from "@/types";
+
+type WireNotification = Omit<Notification, "createdAt"> & {
+  createdAt: string;
+};
+
+const getAllNotifications = jest.fn<Promise<WireNotification[]>, []>();
+const markNotificationAsRead = jest.fn<Promise<void>, [number]>();
+const deleteNotification = jest.fn<Promise<void>, [number]>();
+const markAllNotificationsAsRead = jest.fn<Promise<void>, []>();
+const clearAllNotifications = jest.fn<Promise<void>, []>();
+const markNotificationAsReadAuto = jest.fn<Promise<void>, [number]>();
 
 jest.mock("@/lib/api", () => ({
   apiClient: {
-    getAllNotifications: jest.fn(),
-    markNotificationAsRead: jest.fn(),
-    deleteNotification: jest.fn(),
-    markAllNotificationsAsRead: jest.fn(),
-    clearAllNotifications: jest.fn(),
+    getAllNotifications: () => getAllNotifications(),
+    markNotificationAsRead: (id: number) => markNotificationAsRead(id),
+    deleteNotification: (id: number) => deleteNotification(id),
+    markAllNotificationsAsRead: () => markAllNotificationsAsRead(),
+    clearAllNotifications: () => clearAllNotifications(),
+    markNotificationAsReadAuto: (id: number) => markNotificationAsReadAuto(id),
   },
 }));
 
-const api = jest.mocked(apiClient);
+let connected = false;
+const useLiveEvent = jest.fn<
+  { connected: boolean },
+  [string, (payload: WireNotification[]) => void, boolean]
+>(() => ({ connected }));
+jest.mock("@/hooks/useLiveDashboard", () => ({
+  NOTIFICATIONS_EVENT: "notifications",
+  useLiveEvent: (
+    eventName: string,
+    onUpdate: (payload: WireNotification[]) => void,
+    enabled: boolean,
+  ) => useLiveEvent(eventName, onUpdate, enabled),
+}));
 
-const notification = (id: number, read = false): Notification => ({
+const CREATED_AT = "2026-01-01T00:00:00.000Z";
+
+const wire = (id: number, read = false): WireNotification => ({
   id,
   read,
-  userId: "u1",
-  username: "alice",
+  userId: "u-1",
+  username: "testuser",
   deviceName: "Living Room TV",
-  text: "Stream blocked",
-  type: "block",
-  createdAt: new Date("2026-01-01T00:00:00.000Z"),
+  text: `Notification ${id}`,
+  type: "info",
+  createdAt: CREATED_AT,
 });
+
+const readStates = (notifications: Notification[]) =>
+  notifications.map(({ id, read }) => ({ id, read }));
+
+const pushLive = (payload: WireNotification[]) => {
+  const onUpdate = useLiveEvent.mock.calls.at(-1)?.[1];
+  act(() => onUpdate?.(payload));
+};
+
+const renderLoaded = async () => {
+  const rendered = renderHookWithQuery(() => useNotifications(true));
+  await waitFor(() =>
+    expect(rendered.result.current.notifications).toHaveLength(2),
+  );
+  return rendered;
+};
+
+let consoleError: jest.SpyInstance;
 
 beforeEach(() => {
   jest.clearAllMocks();
-  jest.spyOn(console, "error").mockImplementation(() => {});
-  api.getAllNotifications.mockResolvedValue([notification(1), notification(2, true)]);
+  connected = false;
+  consoleError = jest.spyOn(console, "error").mockImplementation(() => {});
+  getAllNotifications.mockResolvedValue([wire(1), wire(2, true)]);
+  markNotificationAsRead.mockResolvedValue(undefined);
+  deleteNotification.mockResolvedValue(undefined);
+  markAllNotificationsAsRead.mockResolvedValue(undefined);
+  clearAllNotifications.mockResolvedValue(undefined);
+  markNotificationAsReadAuto.mockResolvedValue(undefined);
 });
 
 afterEach(() => {
-  jest.restoreAllMocks();
+  consoleError.mockRestore();
+  jest.useRealTimers();
 });
 
-describe("initial load", () => {
-  it("fetches notifications when no initial data is supplied", async () => {
-    const { result } = renderHook(() => useNotifications());
+describe("loading", () => {
+  it("loads the notifications with real dates and counts the unread ones", async () => {
+    const { result } = await renderLoaded();
 
-    await waitFor(() => expect(result.current.isLoading).toBe(false));
-    expect(api.getAllNotifications).toHaveBeenCalledTimes(1);
-    expect(result.current.notifications).toHaveLength(2);
-  });
-
-  it("parses createdAt into a Date", async () => {
-    const { result } = renderHook(() => useNotifications());
-
-    await waitFor(() => expect(result.current.isLoading).toBe(false));
-    expect(result.current.notifications[0].createdAt).toBeInstanceOf(Date);
-  });
-
-  it("derives the unread count", async () => {
-    const { result } = renderHook(() => useNotifications());
-
-    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.notifications[0].createdAt).toEqual(
+      new Date(CREATED_AT),
+    );
     expect(result.current.unreadCount).toBe(1);
   });
 
-  it("skips the fetch when initial data is supplied", async () => {
-    const { result } = renderHook(() =>
-      useNotifications({
-        initialData: { data: [notification(9)], unreadCount: 1 },
-      }),
+  it("fetches and listens to nothing while disabled", () => {
+    const { result } = renderHookWithQuery(() => useNotifications(false));
+
+    expect(result.current.notifications).toEqual([]);
+    expect(result.current.unreadCount).toBe(0);
+    expect(getAllNotifications).not.toHaveBeenCalled();
+    expect(useLiveEvent).toHaveBeenLastCalledWith(
+      "notifications",
+      expect.any(Function),
+      false,
+    );
+  });
+
+  it("logs a failed fetch and shows nothing", async () => {
+    getAllNotifications.mockRejectedValue(new Error("down"));
+    const { result } = renderHookWithQuery(() => useNotifications(true));
+
+    await waitFor(() =>
+      expect(consoleError).toHaveBeenCalledWith(
+        "Request failed:",
+        queryKeys.notifications,
+        expect.any(Error),
+      ),
+    );
+    expect(result.current.notifications).toEqual([]);
+  });
+});
+
+describe("staying current", () => {
+  it("polls while the live stream is down", async () => {
+    jest.useFakeTimers();
+    renderHookWithQuery(() => useNotifications(true));
+    await act(async () => {
+      await jest.advanceTimersByTimeAsync(0);
+    });
+    expect(getAllNotifications).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      await jest.advanceTimersByTimeAsync(NOTIFICATION_POLL_MS);
+    });
+
+    expect(getAllNotifications).toHaveBeenCalledTimes(2);
+  });
+
+  it("stops polling once the live stream is up", async () => {
+    connected = true;
+    jest.useFakeTimers();
+    renderHookWithQuery(() => useNotifications(true));
+    await act(async () => {
+      await jest.advanceTimersByTimeAsync(NOTIFICATION_POLL_MS * 3);
+    });
+
+    expect(getAllNotifications).toHaveBeenCalledTimes(1);
+  });
+
+  it("replaces the list with what the server pushes", async () => {
+    const { result, client } = await renderLoaded();
+
+    pushLive([wire(3), wire(4), wire(5, true)]);
+
+    await waitFor(() =>
+      expect(readStates(result.current.notifications)).toEqual([
+        { id: 3, read: false },
+        { id: 4, read: false },
+        { id: 5, read: true },
+      ]),
+    );
+    expect(result.current.notifications[0].createdAt).toEqual(
+      new Date(CREATED_AT),
+    );
+    expect(result.current.unreadCount).toBe(2);
+    expect(client.getQueryData(queryKeys.notifications)).toHaveLength(3);
+  });
+});
+
+describe("actions", () => {
+  it("marks one as read", async () => {
+    const { result } = await renderLoaded();
+
+    await act(() => result.current.markAsRead(1));
+
+    expect(markNotificationAsRead).toHaveBeenCalledWith(1);
+    await waitFor(() => expect(result.current.unreadCount).toBe(0));
+  });
+
+  it("removes one", async () => {
+    const { result } = await renderLoaded();
+
+    await act(() => result.current.remove(1));
+
+    expect(deleteNotification).toHaveBeenCalledWith(1);
+    await waitFor(() =>
+      expect(readStates(result.current.notifications)).toEqual([
+        { id: 2, read: true },
+      ]),
+    );
+  });
+
+  it("marks every one as read", async () => {
+    getAllNotifications.mockResolvedValue([wire(1), wire(2)]);
+    const { result } = await renderLoaded();
+
+    await act(() => result.current.markAllAsRead());
+
+    expect(markAllNotificationsAsRead).toHaveBeenCalled();
+    await waitFor(() => expect(result.current.unreadCount).toBe(0));
+  });
+
+  it("clears every one", async () => {
+    const { result } = await renderLoaded();
+
+    await act(() => result.current.clearAll());
+
+    expect(clearAllNotifications).toHaveBeenCalled();
+    await waitFor(() => expect(result.current.notifications).toEqual([]));
+  });
+
+  it.each([
+    [
+      "marking one as read",
+      () => markNotificationAsRead,
+      (hook: ReturnType<typeof useNotifications>) => hook.markAsRead(1),
+      "Failed to mark notification as read:",
+    ],
+    [
+      "removing one",
+      () => deleteNotification,
+      (hook: ReturnType<typeof useNotifications>) => hook.remove(1),
+      "Failed to delete notification:",
+    ],
+    [
+      "marking all as read",
+      () => markAllNotificationsAsRead,
+      (hook: ReturnType<typeof useNotifications>) => hook.markAllAsRead(),
+      "Failed to mark all notifications as read:",
+    ],
+    [
+      "clearing all",
+      () => clearAllNotifications,
+      (hook: ReturnType<typeof useNotifications>) => hook.clearAll(),
+      "Failed to clear all notifications:",
+    ],
+  ])(
+    "logs a failure when %s and keeps the list",
+    async (_label, getMock, run, message) => {
+      getMock().mockRejectedValue(new Error("nope"));
+      const { result } = await renderLoaded();
+
+      await act(() => run(result.current));
+
+      expect(consoleError).toHaveBeenCalledWith(message, expect.any(Error));
+      expect(readStates(result.current.notifications)).toEqual([
+        { id: 1, read: false },
+        { id: 2, read: true },
+      ]);
+    },
+  );
+
+  it("leaves an empty cache alone", async () => {
+    const client = createQueryClient();
+    const { result } = renderHookWithQuery(
+      () => useNotifications(false),
+      client,
     );
 
-    await waitFor(() => expect(result.current.isLoading).toBe(false));
-    expect(api.getAllNotifications).not.toHaveBeenCalled();
-    expect(result.current.notifications).toHaveLength(1);
-  });
+    await act(() => result.current.markAsRead(1));
 
-  it("surfaces an error and empties the list when the fetch fails", async () => {
-    api.getAllNotifications.mockRejectedValue(new Error("boom"));
-    const { result } = renderHook(() => useNotifications());
-
-    await waitFor(() => expect(result.current.isLoading).toBe(false));
-    expect(result.current.error).toBe("Failed to load notifications");
-    expect(result.current.notifications).toEqual([]);
+    expect(client.getQueryData(queryKeys.notifications)).toBeUndefined();
   });
 });
 
-describe("mutations", () => {
-  const setup = async () => {
-    const hook = renderHook(() => useNotifications());
-    await waitFor(() => expect(hook.result.current.isLoading).toBe(false));
-    return hook;
-  };
+describe("marking read automatically", () => {
+  it("marks it read before the server answers", async () => {
+    let answer: () => void = () => {};
+    markNotificationAsReadAuto.mockReturnValue(
+      new Promise<void>((resolve) => {
+        answer = resolve;
+      }),
+    );
+    const { result } = await renderLoaded();
 
-  it("marks a single notification as read", async () => {
-    const { result } = await setup();
-
-    await act(async () => {
-      await result.current.markAsRead(1);
+    let pending: Promise<void> = Promise.resolve();
+    act(() => {
+      pending = result.current.markReadAutomatically(1);
     });
 
-    expect(api.markNotificationAsRead).toHaveBeenCalledWith(1);
-    expect(result.current.notifications.find((n) => n.id === 1)?.read).toBe(true);
+    await waitFor(() => expect(result.current.unreadCount).toBe(0));
+    expect(markNotificationAsReadAuto).toHaveBeenCalledWith(1);
+    await act(async () => {
+      answer();
+      await pending;
+    });
     expect(result.current.unreadCount).toBe(0);
   });
 
-  it("leaves state untouched when marking as read fails", async () => {
-    api.markNotificationAsRead.mockRejectedValue(new Error("boom"));
-    const { result } = await setup();
+  it("puts it back to unread when the server refuses", async () => {
+    markNotificationAsReadAuto.mockRejectedValue(new Error("nope"));
+    const { result } = await renderLoaded();
 
-    await act(async () => {
-      await result.current.markAsRead(1);
-    });
+    await act(() => result.current.markReadAutomatically(1));
 
-    expect(result.current.notifications.find((n) => n.id === 1)?.read).toBe(false);
-  });
-
-  it("removes a notification", async () => {
-    const { result } = await setup();
-
-    await act(async () => {
-      await result.current.removeNotification(1);
-    });
-
-    expect(api.deleteNotification).toHaveBeenCalledWith(1);
-    expect(result.current.notifications.map((n) => n.id)).toEqual([2]);
-  });
-
-  it("keeps the notification when deletion fails", async () => {
-    api.deleteNotification.mockRejectedValue(new Error("boom"));
-    const { result } = await setup();
-
-    await act(async () => {
-      await result.current.removeNotification(1);
-    });
-
-    expect(result.current.notifications).toHaveLength(2);
-  });
-
-  it("marks every notification as read", async () => {
-    const { result } = await setup();
-
-    await act(async () => {
-      await result.current.markAllAsRead();
-    });
-
-    expect(api.markAllNotificationsAsRead).toHaveBeenCalled();
-    expect(result.current.unreadCount).toBe(0);
-  });
-
-  it("keeps unread state when marking all fails", async () => {
-    api.markAllNotificationsAsRead.mockRejectedValue(new Error("boom"));
-    const { result } = await setup();
-
-    await act(async () => {
-      await result.current.markAllAsRead();
-    });
-
-    expect(result.current.unreadCount).toBe(1);
-  });
-
-  it("clears every notification", async () => {
-    const { result } = await setup();
-
-    await act(async () => {
-      await result.current.clearAll();
-    });
-
-    expect(api.clearAllNotifications).toHaveBeenCalled();
-    expect(result.current.notifications).toEqual([]);
-  });
-
-  it("keeps notifications when clearing fails", async () => {
-    api.clearAllNotifications.mockRejectedValue(new Error("boom"));
-    const { result } = await setup();
-
-    await act(async () => {
-      await result.current.clearAll();
-    });
-
-    expect(result.current.notifications).toHaveLength(2);
-  });
-
-  it("refetches on refresh", async () => {
-    const { result } = await setup();
-
-    await act(async () => {
-      result.current.refreshNotifications();
-    });
-
-    expect(api.getAllNotifications).toHaveBeenCalledTimes(2);
+    expect(consoleError).toHaveBeenCalledWith(
+      "Failed to mark notification as read:",
+      expect.any(Error),
+    );
+    expect(readStates(result.current.notifications)).toEqual([
+      { id: 1, read: false },
+      { id: 2, read: true },
+    ]);
   });
 });

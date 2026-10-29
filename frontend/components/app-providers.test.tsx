@@ -22,9 +22,6 @@ function mockProvider(name: string) {
 jest.mock("@/contexts/version-context", () => ({
   VersionProvider: mockProvider("version-provider"),
 }));
-jest.mock("@/contexts/notification-context", () => ({
-  NotificationProvider: mockProvider("notification-provider"),
-}));
 jest.mock("@/contexts/settings-context", () => ({
   SettingsProvider: mockProvider("settings-provider"),
 }));
@@ -43,9 +40,6 @@ jest.mock("@/components/global-update-banner", () => ({
 jest.mock("@/components/navbar", () => ({
   Navbar: () => <span>navbar</span>,
 }));
-jest.mock("@/components/global-notification-handler", () => ({
-  GlobalNotificationHandler: () => <span>notification-handler</span>,
-}));
 jest.mock("@/components/ui/toaster", () => ({
   Toaster: () => <span>toaster</span>,
 }));
@@ -60,14 +54,12 @@ describe("AppProviders", () => {
 
     for (const name of [
       "version-provider",
-      "notification-provider",
       "settings-provider",
       "unsaved-provider",
       "error-boundary",
       "version-banner",
       "update-banner",
       "navbar",
-      "notification-handler",
       "toaster",
       "page content",
     ]) {

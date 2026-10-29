@@ -14,72 +14,52 @@ import {
   ModalFooter,
   ModalHeader,
 } from "@/components/ui/modal";
+import { UserHistoryModal } from "@/components/device-management/UserHistoryModal";
 import { NotificationItem } from "@/components/notifications/NotificationItem";
+import { isAdminUser, useAuth } from "@/contexts/auth-context";
+import { useSettings } from "@/contexts/settings-context";
 import { useIsMobile } from "@/hooks/use-is-mobile";
-import { useNotificationContext } from "@/contexts/notification-context";
-import { Notification } from "@/types";
-import { apiClient } from "@/lib/api";
+import { useNotifications } from "@/hooks/useNotifications";
+import type { Notification } from "@/types";
+
+interface HistoryTarget {
+  userId: string;
+  username?: string;
+  sessionId: number;
+}
 
 export function NotificationMenu() {
+  const { setupRequired, isAuthenticated, user } = useAuth();
+  const { getSetting } = useSettings();
   const {
     notifications,
     unreadCount,
-    updateNotifications,
-    onNotificationClick,
-  } = useNotificationContext();
+    markAsRead,
+    remove,
+    markAllAsRead,
+    clearAll,
+    markReadAutomatically,
+  } = useNotifications(!setupRequired && isAuthenticated && isAdminUser(user));
   const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
+  const [history, setHistory] = useState<HistoryTarget | null>(null);
   const headingId = useId();
-
-  const markAsRead = async (id: number) => {
-    try {
-      await apiClient.markNotificationAsRead(id);
-      updateNotifications((prev) =>
-        prev.map((notification) =>
-          notification.id === id
-            ? { ...notification, read: true }
-            : notification,
-        ),
-      );
-    } catch (err) {
-      console.error("Failed to mark notification as read:", err);
-    }
-  };
-
-  const removeNotification = async (id: number) => {
-    try {
-      await apiClient.deleteNotification(id);
-      updateNotifications((prev) =>
-        prev.filter((notification) => notification.id !== id),
-      );
-    } catch (err) {
-      console.error("Failed to delete notification:", err);
-    }
-  };
-
-  const markAllAsRead = async () => {
-    try {
-      await apiClient.markAllNotificationsAsRead();
-      updateNotifications((prev) =>
-        prev.map((notification) => ({ ...notification, read: true })),
-      );
-    } catch (err) {
-      console.error("Failed to mark all notifications as read:", err);
-    }
-  };
-
-  const clearAll = async () => {
-    try {
-      await apiClient.clearAllNotifications();
-      updateNotifications(() => []);
-    } catch (err) {
-      console.error("Failed to clear all notifications:", err);
-    }
-  };
 
   const handleSelect = (notification: Notification) => {
     setOpen(false);
-    onNotificationClick?.(notification);
+    if (!notification.sessionHistoryId || !notification.userId) return;
+
+    setHistory({
+      userId: notification.userId,
+      username: notification.username,
+      sessionId: notification.sessionHistoryId,
+    });
+    if (
+      getSetting("AUTO_MARK_NOTIFICATION_READ") === "true" &&
+      !notification.read
+    ) {
+      void markReadAutomatically(notification.id);
+    }
   };
 
   const hasNotifications = notifications.length > 0;
@@ -116,7 +96,7 @@ export function NotificationMenu() {
           key={notification.id}
           notification={notification}
           onMarkAsRead={(id) => void markAsRead(id)}
-          onRemove={(id) => void removeNotification(id)}
+          onRemove={(id) => void remove(id)}
           onClick={handleSelect}
         />
       ))}
@@ -154,28 +134,22 @@ export function NotificationMenu() {
     </Button>
   );
 
-  if (isMobile) {
-    return (
-      <>
-        {trigger}
-        <Modal open={open} onOpenChange={setOpen} size="sm">
-          <ModalHeader title="Notifications" description={summary} />
-          <ModalBody className="space-y-0 px-0 py-0 sm:px-0">{list}</ModalBody>
-          <ModalFooter className="flex-row items-center [&>button]:w-auto">
-            {clearAllButton}
-            <div className="ml-auto flex items-center gap-1">
-              {markAllButton}
-            </div>
-            <Button variant="outline" onClick={() => setOpen(false)}>
-              Close
-            </Button>
-          </ModalFooter>
-        </Modal>
-      </>
-    );
-  }
-
-  return (
+  const panel = isMobile ? (
+    <>
+      {trigger}
+      <Modal open={open} onOpenChange={setOpen} size="sm">
+        <ModalHeader title="Notifications" description={summary} />
+        <ModalBody className="space-y-0 px-0 py-0 sm:px-0">{list}</ModalBody>
+        <ModalFooter className="flex-row items-center [&>button]:w-auto">
+          {clearAllButton}
+          <div className="ml-auto flex items-center gap-1">{markAllButton}</div>
+          <Button variant="outline" onClick={() => setOpen(false)}>
+            Close
+          </Button>
+        </ModalFooter>
+      </Modal>
+    </>
+  ) : (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>{trigger}</PopoverTrigger>
       <PopoverContent
@@ -201,5 +175,18 @@ export function NotificationMenu() {
         </div>
       </PopoverContent>
     </Popover>
+  );
+
+  return (
+    <>
+      {panel}
+      <UserHistoryModal
+        userId={history?.userId ?? null}
+        username={history?.username}
+        isOpen={history !== null}
+        onClose={() => setHistory(null)}
+        scrollToSessionId={history?.sessionId ?? null}
+      />
+    </>
   );
 }
