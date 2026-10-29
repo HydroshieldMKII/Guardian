@@ -3,6 +3,7 @@
 import { useId, useState } from "react";
 import { Bell, X, CheckCheck, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { formatAgoShort } from "@/lib/duration";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -27,24 +28,6 @@ interface NotificationItemProps {
   onClick?: (notification: Notification) => void;
 }
 
-const formatDate = (date: Date) => {
-  const now = new Date();
-  const diff = now.getTime() - date.getTime();
-  const minutes = Math.floor(diff / 60000);
-  const hours = Math.floor(diff / 3600000);
-  const days = Math.floor(diff / 86400000);
-
-  if (minutes < 2) {
-    return "now";
-  } else if (minutes < 60) {
-    return `${minutes}m ago`;
-  } else if (hours < 24) {
-    return `${hours}h ago`;
-  } else {
-    return `${days}d ago`;
-  }
-};
-
 function NotificationItem({
   notification,
   onMarkAsRead,
@@ -63,7 +46,7 @@ function NotificationItem({
         {notification.text}
       </p>
       <p className="mt-1 text-xs tabular-nums text-muted-foreground">
-        {formatDate(notification.createdAt)}
+        {formatAgoShort(notification.createdAt)}
       </p>
     </>
   );

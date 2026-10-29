@@ -1,5 +1,6 @@
 import {
   formatAgo,
+  formatAgoShort,
   formatClock,
   formatElapsed,
   formatMinutes,
@@ -144,6 +145,28 @@ describe("formatClock", () => {
 
   it("never runs backwards", () => {
     expect(formatClock(-5000)).toBe("0:00");
+  });
+});
+
+describe("formatAgoShort", () => {
+  const now = Date.parse("2026-06-01T12:00:00Z");
+  const minutesAgo = (minutes: number) => new Date(now - minutes * 60_000);
+
+  it.each([
+    [0, "now"],
+    [1, "now"],
+    [2, "2m ago"],
+    [59, "59m ago"],
+    [60, "1h ago"],
+    [60 * 24 - 1, "23h ago"],
+    [60 * 24, "1d ago"],
+    [60 * 24 * 40, "40d ago"],
+  ])("reads %p minutes as %s", (minutes, expected) => {
+    expect(formatAgoShort(minutesAgo(minutes), now)).toBe(expected);
+  });
+
+  it("reads a broken date as unknown", () => {
+    expect(formatAgoShort("not a date", now)).toBe("Unknown");
   });
 });
 

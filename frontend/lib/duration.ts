@@ -101,3 +101,17 @@ export const formatAgo = (date: string | Date, now = Date.now()): string => {
   }
   return `${formatMinutes(Math.floor(elapsed / 60_000), 1)} ago`;
 };
+
+export const formatAgoShort = (
+  date: string | Date,
+  now = Date.now(),
+): string => {
+  const minutes = Math.floor((now - new Date(date).getTime()) / 60_000);
+  if (!Number.isFinite(minutes)) return "Unknown";
+  if (minutes < 2) return "now";
+  if (minutes < MINUTES_IN.hours) return `${minutes}m ago`;
+  if (minutes < MINUTES_IN.days) {
+    return `${Math.floor(minutes / MINUTES_IN.hours)}h ago`;
+  }
+  return `${Math.floor(minutes / MINUTES_IN.days)}d ago`;
+};
