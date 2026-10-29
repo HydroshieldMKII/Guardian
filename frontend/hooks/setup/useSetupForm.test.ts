@@ -122,7 +122,7 @@ describe("useSetupForm", () => {
     );
     expect(toast).toHaveBeenCalledWith({
       title: "Account created",
-      description: "You can sign in with it now",
+      description: "You are signed in as the administrator",
       variant: "success",
     });
     expect(result.current.isSubmitting).toBe(false);
