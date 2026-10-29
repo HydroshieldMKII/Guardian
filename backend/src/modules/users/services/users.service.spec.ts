@@ -1,3 +1,4 @@
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { UserPreference } from '@/entities/user-preference.entity';
@@ -180,15 +181,14 @@ describe('UsersService', () => {
       expect(result.defaultBlock).toBe(false);
     });
 
-    it('tolerates having no device to source a username from', async () => {
+    it('rejects a user with neither a preference nor a device', async () => {
       preferenceRepository.findOne.mockResolvedValue(null);
       deviceRepository.findOne.mockResolvedValue(null);
 
-      await service.updateUserPreference('u2', null);
-
-      expect(preferenceRepository.create).toHaveBeenCalledWith(
-        expect.objectContaining({ username: undefined }),
-      );
+      await expect(
+        service.updateUserPreference('u2', null),
+      ).rejects.toBeInstanceOf(NotFoundException);
+      expect(preferenceRepository.save).not.toHaveBeenCalled();
     });
   });
 
@@ -222,7 +222,7 @@ describe('UsersService', () => {
     it.each<[IpPolicyField, Parameters<UsersService['updateUserIPPolicy']>[1]]>(
       [
         ['networkPolicy', { ipAccessPolicy: 'all', allowedIPs: [] }],
-        ['ipAccessPolicy', { networkPolicy: 'lan', allowedIPs: [] }],
+        ['ipAccessPolicy', { networkPolicy: 'lan', allowedIPs: ['5.6.7.8'] }],
         ['allowedIPs', { networkPolicy: 'lan', ipAccessPolicy: 'all' }],
       ],
     )('leaves %s alone when the update omits it', async (field, updates) => {
@@ -245,9 +245,52 @@ describe('UsersService', () => {
 
     it('throws when the user has no preference row', async () => {
       preferenceRepository.findOne.mockResolvedValue(null);
-      await expect(service.updateUserIPPolicy('u1', {})).rejects.toThrow(
-        'User preference not found',
+      await expect(service.updateUserIPPolicy('u1', {})).rejects.toBeInstanceOf(
+        NotFoundException,
       );
+    });
+
+    it.each<[string, Parameters<UsersService['updateUserIPPolicy']>[1]]>([
+      ['an empty list', { ipAccessPolicy: 'restricted', allowedIPs: [] }],
+      ['no list', { ipAccessPolicy: 'restricted' }],
+    ])('rejects restricted access with %s', async (_label, updates) => {
+      preferenceRepository.findOne.mockResolvedValue(
+        preference({ ipAccessPolicy: 'all', allowedIPs: [] }),
+      );
+      await expect(
+        service.updateUserIPPolicy('u1', updates),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(preferenceRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('rejects emptying the list of a restricted user', async () => {
+      preferenceRepository.findOne.mockResolvedValue(
+        preference({ ipAccessPolicy: 'restricted', allowedIPs: ['1.2.3.4'] }),
+      );
+      await expect(
+        service.updateUserIPPolicy('u1', { allowedIPs: [] }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('still lets an unrelated change through for legacy restricted-empty data', async () => {
+      preferenceRepository.findOne.mockResolvedValue(
+        preference({ ipAccessPolicy: 'restricted', allowedIPs: [] }),
+      );
+      const result = await service.updateUserIPPolicy('u1', {
+        networkPolicy: 'lan',
+      });
+      expect(result.networkPolicy).toBe('lan');
+    });
+
+    it('allows clearing the list when switching back to all', async () => {
+      preferenceRepository.findOne.mockResolvedValue(
+        preference({ ipAccessPolicy: 'restricted', allowedIPs: ['1.2.3.4'] }),
+      );
+      const result = await service.updateUserIPPolicy('u1', {
+        ipAccessPolicy: 'all',
+        allowedIPs: [],
+      });
+      expect(result.allowedIPs).toEqual([]);
     });
   });
 

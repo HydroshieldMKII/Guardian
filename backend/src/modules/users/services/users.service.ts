@@ -1,4 +1,11 @@
-import { Injectable, Inject, Logger, forwardRef } from '@nestjs/common';
+import {
+  Injectable,
+  Inject,
+  Logger,
+  NotFoundException,
+  BadRequestException,
+  forwardRef,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UserPreference } from '@/entities/user-preference.entity';
@@ -112,12 +119,15 @@ export class UsersService {
       return await this.userPreferenceRepository.save(preference);
     }
 
-    this.logger.warn(
-      `No existing preference for user ${userId}, creating new entry`,
-    );
     const device = await this.userDeviceRepository.findOne({
       where: { userId },
     });
+    if (!device) {
+      throw new NotFoundException('User not found');
+    }
+    this.logger.warn(
+      `No existing preference for user ${userId}, creating new entry`,
+    );
     return await this.userPreferenceRepository.save(
       this.userPreferenceRepository.create({
         userId,
@@ -132,6 +142,20 @@ export class UsersService {
     updates: IpPolicyUpdate,
   ): Promise<UserPreference> {
     const preference = await this.requirePreference(userId);
+
+    const changesAllowList =
+      updates.ipAccessPolicy !== undefined || updates.allowedIPs !== undefined;
+    const effectivePolicy = updates.ipAccessPolicy ?? preference.ipAccessPolicy;
+    const effectiveIPs = updates.allowedIPs ?? preference.allowedIPs ?? [];
+    if (
+      changesAllowList &&
+      effectivePolicy === 'restricted' &&
+      effectiveIPs.length === 0
+    ) {
+      throw new BadRequestException(
+        'A restricted IP access policy needs at least one allowed address',
+      );
+    }
 
     if (updates.networkPolicy !== undefined) {
       preference.networkPolicy = updates.networkPolicy;
@@ -182,7 +206,7 @@ export class UsersService {
   ): Promise<UserPreference> {
     const preference = await this.getUserPreference(userId);
     if (!preference) {
-      throw new Error(missingMessage);
+      throw new NotFoundException(missingMessage);
     }
     return preference;
   }
