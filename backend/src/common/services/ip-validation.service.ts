@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import * as net from 'net';
 import { DEFAULT_BLOCK_MESSAGES } from '@/common/utils/block-messages';
 
@@ -30,8 +30,6 @@ export interface NetworkPolicy {
  */
 @Injectable()
 export class IPValidationService {
-  private readonly logger = new Logger(IPValidationService.name);
-
   /** Validates if an IPv4 address is in valid format (a leading zero is rejected as ambiguous) */
   isValidIPv4(ip: string): boolean {
     return IPV4.test(ip.trim());

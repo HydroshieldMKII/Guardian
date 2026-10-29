@@ -3,7 +3,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Notification } from '@/entities/notification.entity';
 import { SessionHistory } from '@/entities/session-history.entity';
-import { UserDevice } from '@/entities/user-device.entity';
 import { NotificationsService } from '@/modules/notifications/services/notifications.service';
 
 export interface NewDeviceNotificationData {
@@ -49,8 +48,6 @@ export class NotificationOrchestratorService {
   constructor(
     @InjectRepository(SessionHistory)
     private sessionHistoryRepository: Repository<SessionHistory>,
-    @InjectRepository(UserDevice)
-    private userDeviceRepository: Repository<UserDevice>,
     private notificationsService: NotificationsService,
   ) {}
 

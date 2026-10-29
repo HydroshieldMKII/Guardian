@@ -1,6 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PlexClient } from '@/modules/plex/services/plex-client';
-import { SessionTerminationService } from '@/modules/plex/services/session-termination.service';
 import {
   EnrichedPlexSession,
   EnrichedPlexSessionsResponse,
@@ -21,7 +20,6 @@ export class PlexService {
 
   constructor(
     private readonly plexClient: PlexClient,
-    private readonly sessionTerminationService: SessionTerminationService,
     private readonly deviceTrackingService: DeviceTrackingService,
     private readonly activeSessionService: ActiveSessionService,
     private readonly configService: ConfigService,

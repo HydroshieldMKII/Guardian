@@ -9,11 +9,6 @@ import {
   createPlexSuccess,
 } from '@/types/plex-errors';
 
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { SessionHistory } from '@/entities/session-history.entity';
-
-import { UserDevice } from '@/entities/user-device.entity';
 import { PlexSessionsResponse } from '@/types/plex.types';
 
 export interface PlexHttpResponse<T = unknown> {
@@ -40,10 +35,6 @@ export class PlexClient {
   constructor(
     @Inject(forwardRef(() => ConfigService))
     private configService: ConfigService,
-    @InjectRepository(SessionHistory)
-    private sessionHistoryRepository: Repository<SessionHistory>,
-    @InjectRepository(UserDevice)
-    private userDeviceRepository: Repository<UserDevice>,
   ) {}
 
   private async getConfig() {

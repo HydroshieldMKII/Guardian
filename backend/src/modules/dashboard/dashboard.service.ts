@@ -1,5 +1,4 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ActiveSessionService } from '@/modules/sessions/services/active-session.service';
 import { DeviceTrackingService } from '@/modules/devices/services/device-tracking.service';
 import { ConfigService } from '@/modules/config/services/config.service';
 import { UsersService } from '@/modules/users/services/users.service';
@@ -39,7 +38,6 @@ export class DashboardService {
   private readonly logger = new Logger(DashboardService.name);
 
   constructor(
-    private readonly activeSessionService: ActiveSessionService,
     private readonly deviceTrackingService: DeviceTrackingService,
     private readonly configService: ConfigService,
     private readonly usersService: UsersService,

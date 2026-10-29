@@ -18,7 +18,6 @@ import {
   ConfigService,
   ConfigSettingDto,
 } from '@/modules/config/services/config.service';
-import { AppriseService } from '@/modules/config/services/apprise.service';
 import { isSettingKey } from '@/modules/config/settings.catalog';
 import { AuthService } from '@/modules/auth/auth.service';
 import { ConfirmPasswordDto } from '@/modules/auth/dto/confirm-password.dto';
@@ -37,7 +36,6 @@ interface UploadedDatabaseFile {
 export class ConfigController {
   constructor(
     private readonly configService: ConfigService,
-    private readonly appriseService: AppriseService,
     private readonly authService: AuthService,
   ) {}
 

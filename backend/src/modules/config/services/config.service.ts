@@ -11,7 +11,6 @@ import { AppSettings } from '@/entities/app-settings.entity';
 import { Session } from '@/entities/session.entity';
 import { PlexResponse, PlexErrorCode } from '@/types/plex-errors';
 import { EmailService } from '@/modules/config/services/email.service';
-import { EmailTemplateService } from '@/modules/config/services/email-template.service';
 import { PlexConnectionService } from '@/modules/config/services/plex-connection.service';
 import { TimezoneService } from '@/modules/config/services/timezone.service';
 import {
@@ -52,7 +51,6 @@ export class ConfigService implements OnModuleInit {
     private sessionRepository: Repository<Session>,
     @Inject(forwardRef(() => EmailService))
     private readonly emailService: EmailService,
-    private readonly emailTemplateService: EmailTemplateService,
     private readonly plexConnectionService: PlexConnectionService,
     private readonly timezoneService: TimezoneService,
     private readonly databaseService: DatabaseService,

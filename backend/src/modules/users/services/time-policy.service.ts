@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UserTimeRule } from '@/entities/user-time-rule.entity';
@@ -25,16 +25,6 @@ export interface UpdateTimePolicyDto {
 
 @Injectable()
 export class TimePolicyService {
-  private readonly logger = new Logger(TimePolicyService.name);
-  private readonly DAY_NAMES = [
-    'Sunday',
-    'Monday',
-    'Tuesday',
-    'Wednesday',
-    'Thursday',
-    'Friday',
-    'Saturday',
-  ];
   private readonly DAY_NAMES_SHORT = [
     'Sun',
     'Mon',
