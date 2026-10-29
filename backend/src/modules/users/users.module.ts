@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { UsersController } from '@/modules/users/users.controller';
 import { RuleController } from '@/modules/users/controllers/rule.controller';
 import { UsersService } from '@/modules/users/services/users.service';
+import { PlexUserSyncService } from '@/modules/users/services/plex-user-sync.service';
 import { TimeRuleService } from '@/modules/users/services/time-rule.service';
 import { TimePolicyService } from '@/modules/users/services/time-policy.service';
 import { ConcurrentStreamService } from '@/modules/users/services/concurrent-stream.service';
@@ -23,12 +24,14 @@ import { DeviceTrackingModule } from '@/modules/devices/services/device-tracking
   controllers: [UsersController, RuleController],
   providers: [
     UsersService,
+    PlexUserSyncService,
     TimeRuleService,
     TimePolicyService,
     ConcurrentStreamService,
   ],
   exports: [
     UsersService,
+    PlexUserSyncService,
     TimeRuleService,
     TimePolicyService,
     ConcurrentStreamService,

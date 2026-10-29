@@ -6,7 +6,7 @@ import { ConfigService } from '@/modules/config/services/config.service';
 import { MIN_REFRESH_INTERVAL_SECONDS } from '@/modules/config/services/setting-validation';
 import { DeviceTrackingService } from '@/modules/devices/services/device-tracking.service';
 import { DeviceMaintenanceService } from '@/modules/devices/services/device-maintenance.service';
-import { UsersService } from '@/modules/users/services/users.service';
+import { PlexUserSyncService } from '@/modules/users/services/plex-user-sync.service';
 import { AuthSessionService } from '@/modules/auth/auth-session.service';
 import { Logger } from '@nestjs/common';
 import { errorMessage } from '@/common/utils/error-types';
@@ -23,7 +23,7 @@ export class SchedulerService implements OnModuleInit {
     private readonly configService: ConfigService,
     private readonly deviceTrackingService: DeviceTrackingService,
     private readonly deviceMaintenanceService: DeviceMaintenanceService,
-    private readonly usersService: UsersService,
+    private readonly plexUserSync: PlexUserSyncService,
     private readonly authSessions: AuthSessionService,
     private readonly schedulerRegistry: SchedulerRegistry,
     private readonly dashboardService: DashboardService,
@@ -270,7 +270,6 @@ export class SchedulerService implements OnModuleInit {
 
   private async syncPlexUsers() {
     try {
-      // Check if Plex is configured before attempting sync
       const token = await this.configService.getSetting('PLEX_TOKEN');
 
       if (!token) {
@@ -281,7 +280,7 @@ export class SchedulerService implements OnModuleInit {
       }
 
       this.logger.log('Syncing Plex Home users from Plex.tv...');
-      const result = await this.usersService.syncUsersFromPlexTV();
+      const result = await this.plexUserSync.syncUsersFromPlexTV();
       this.logger.log(
         `Plex users sync completed: ${result.created} created, ${result.updated} updated, ${result.errors} errors`,
       );

@@ -90,7 +90,6 @@ export class DeviceTrackingService {
       await this.usersService.updateUserFromSessionData(
         deviceInfo.userId,
         deviceInfo.username,
-        deviceInfo.avatarUrl,
       );
 
       const existingDevice = await this.userDeviceRepository.findOne({
@@ -115,7 +114,6 @@ export class DeviceTrackingService {
     return {
       userId: session.User?.id || session.User?.uuid || 'unknown',
       username: session.User?.title,
-      avatarUrl: session.User?.thumb,
       deviceIdentifier: session.Player?.machineIdentifier || 'unknown',
       sessionKey: session.sessionKey,
       deviceName: session.Player?.device || session.Player?.title,

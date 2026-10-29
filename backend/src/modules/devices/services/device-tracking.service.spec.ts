@@ -106,7 +106,6 @@ describe('DeviceTrackingService', () => {
       expect(usersService.updateUserFromSessionData).toHaveBeenCalledWith(
         'u1',
         'testuser',
-        'avatar.png',
       );
     });
 
@@ -131,7 +130,6 @@ describe('DeviceTrackingService', () => {
       expect(usersService.updateUserFromSessionData).toHaveBeenCalledWith(
         'uuid-1',
         'testuser',
-        undefined,
       );
     });
 

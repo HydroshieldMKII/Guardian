@@ -89,7 +89,6 @@ export interface DeviceInfo {
   deviceVersion?: string | null;
   ipAddress?: string | null;
   username?: string | null;
-  avatarUrl?: string | null;
 }
 
 export interface SessionTerminationResult {

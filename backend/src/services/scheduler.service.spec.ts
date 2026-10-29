@@ -4,7 +4,7 @@ import { PlexService } from '@/modules/plex/services/plex.service';
 import { ConfigService } from '@/modules/config/services/config.service';
 import { DeviceTrackingService } from '@/modules/devices/services/device-tracking.service';
 import { DeviceMaintenanceService } from '@/modules/devices/services/device-maintenance.service';
-import { UsersService } from '@/modules/users/services/users.service';
+import { PlexUserSyncService } from '@/modules/users/services/plex-user-sync.service';
 import { AuthSessionService } from '@/modules/auth/auth-session.service';
 import { SchedulerService } from '@/services/scheduler.service';
 import { DashboardService } from '@/modules/dashboard/dashboard.service';
@@ -38,7 +38,7 @@ describe('SchedulerService', () => {
     'cleanupInactiveDevices' | 'enforceStrictModeOnPendingDevices',
     jest.Mock
   >;
-  let usersService: { syncUsersFromPlexTV: jest.Mock };
+  let plexUserSync: { syncUsersFromPlexTV: jest.Mock };
   let authSessions: { cleanupExpiredSessions: jest.Mock };
   let schedulerRegistry: Record<string, jest.Mock>;
   let dashboardService: { getDashboardData: jest.Mock };
@@ -84,7 +84,7 @@ describe('SchedulerService', () => {
       enforceStrictModeOnPendingDevices: jest.fn().mockResolvedValue(0),
     };
 
-    usersService = {
+    plexUserSync = {
       syncUsersFromPlexTV: jest
         .fn()
         .mockResolvedValue({ created: 1, updated: 2, errors: 0 }),
@@ -115,7 +115,7 @@ describe('SchedulerService', () => {
           provide: DeviceMaintenanceService,
           useValue: deviceMaintenanceService,
         },
-        { provide: UsersService, useValue: usersService },
+        { provide: PlexUserSyncService, useValue: plexUserSync },
         { provide: AuthSessionService, useValue: authSessions },
         { provide: SchedulerRegistry, useValue: schedulerRegistry },
         { provide: DashboardService, useValue: dashboardService },
@@ -141,7 +141,7 @@ describe('SchedulerService', () => {
       await service.onModuleInit();
 
       expect(plexService.updateActiveSessions).toHaveBeenCalledTimes(1);
-      expect(usersService.syncUsersFromPlexTV).toHaveBeenCalledTimes(1);
+      expect(plexUserSync.syncUsersFromPlexTV).toHaveBeenCalledTimes(1);
       expect(
         deviceMaintenanceService.enforceStrictModeOnPendingDevices,
       ).toHaveBeenCalledTimes(1);
@@ -330,17 +330,17 @@ describe('SchedulerService', () => {
   describe('hourly jobs', () => {
     it('syncs Plex users when a token is configured', async () => {
       await service.handlePlexUserSync();
-      expect(usersService.syncUsersFromPlexTV).toHaveBeenCalled();
+      expect(plexUserSync.syncUsersFromPlexTV).toHaveBeenCalled();
     });
 
     it('skips the sync with no token', async () => {
       settings.delete('PLEX_TOKEN');
       await service.handlePlexUserSync();
-      expect(usersService.syncUsersFromPlexTV).not.toHaveBeenCalled();
+      expect(plexUserSync.syncUsersFromPlexTV).not.toHaveBeenCalled();
     });
 
     it('swallows a sync failure', async () => {
-      usersService.syncUsersFromPlexTV.mockRejectedValue(
+      plexUserSync.syncUsersFromPlexTV.mockRejectedValue(
         new Error('plex.tv down'),
       );
       await expect(service.handlePlexUserSync()).resolves.toBeUndefined();
