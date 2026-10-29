@@ -9,53 +9,32 @@ import React, {
   ReactNode,
 } from "react";
 import { apiClient } from "@/lib/api";
+import {
+  authJson,
+  authRequest,
+  fetchCurrentSession,
+  fetchPlexOAuthEnabled,
+  logoutRequest,
+  type SetupStatusResponse,
+} from "@/lib/auth/api";
+import { backendErrorMessage } from "@/lib/auth/backend-error";
+import {
+  isAdminUser,
+  SIGNED_OUT,
+  type AdminUser,
+  type Session,
+  type User,
+  type UserType,
+} from "@/lib/auth/user";
 
-// Admin user type
-export interface AdminUser {
-  id: string;
-  username: string;
-  email: string;
-  avatarUrl?: string;
-  plexUserId?: string;
-  plexUsername?: string;
-  plexEmail?: string;
-  plexThumb?: string;
-}
-
-// Plex user type (non-admin)
-export interface PlexUser {
-  plexUserId: string;
-  plexUsername: string;
-  plexThumb?: string;
-}
-
-// Combined user type
-export type User = AdminUser | PlexUser;
-
-// Type guards
-export function isAdminUser(user: User | null): user is AdminUser {
-  return user !== null && "id" in user && "username" in user;
-}
-
-export function isPlexUser(user: User | null): user is PlexUser {
-  return user !== null && "plexUserId" in user && !("id" in user);
-}
-
-export type UserType = "admin" | "plex_user";
-
-interface ErrorResponse {
-  message?: string;
-}
-
-interface SetupStatusResponse {
-  setupRequired: boolean;
-}
-
-interface PlexOAuthEnabledResponse {
-  enabled: boolean;
-}
-
-type CurrentUserResponse = Partial<AdminUser> & Partial<PlexUser>;
+export {
+  isAdminUser,
+  isPlexUser,
+  type AdminUser,
+  type PlexUser,
+  type User,
+  type UserType,
+} from "@/lib/auth/user";
 
 interface AuthUserResponse {
   user: User;
@@ -70,6 +49,13 @@ type PlexLinkResponse = Pick<
   "plexUserId" | "plexUsername" | "plexEmail" | "plexThumb"
 >;
 
+const NO_PLEX_LINK: PlexLinkResponse = {
+  plexUserId: undefined,
+  plexUsername: undefined,
+  plexEmail: undefined,
+  plexThumb: undefined,
+};
+
 export interface AuthContextType {
   user: User | null;
   userType: UserType | null;
@@ -78,14 +64,18 @@ export interface AuthContextType {
   setupRequired: boolean;
   backendError: string | null;
   plexOAuthEnabled: boolean;
-  login: (username: string, password: string, captchaToken?: string) => Promise<void>;
+  login: (
+    username: string,
+    password: string,
+    captchaToken?: string,
+  ) => Promise<void>;
   loginWithPlex: (authToken: string) => Promise<void>;
   logout: () => Promise<void>;
   createAdmin: (
     username: string,
     email: string,
     password: string,
-    confirmPassword: string
+    confirmPassword: string,
   ) => Promise<void>;
   checkAuth: () => Promise<void>;
   retryConnection: () => Promise<void>;
@@ -107,6 +97,9 @@ export interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const asError = (error: unknown, fallback: string) =>
+  error instanceof Error ? error : new Error(fallback);
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [userType, setUserType] = useState<UserType | null>(null);
@@ -115,229 +108,108 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [backendError, setBackendError] = useState<string | null>(null);
   const [plexOAuthEnabled, setPlexOAuthEnabled] = useState(false);
 
+  const applySession = useCallback((session: Session) => {
+    setUser(session.user);
+    setUserType(session.userType);
+  }, []);
+
   const checkPlexOAuthEnabled = useCallback(async () => {
     try {
-      const res = await fetch("/api/pg/auth/plex/enabled");
-      if (res.ok) {
-        const data = (await res.json()) as PlexOAuthEnabledResponse;
-        setPlexOAuthEnabled(data.enabled);
-      }
+      const enabled = await fetchPlexOAuthEnabled();
+      if (enabled !== undefined) setPlexOAuthEnabled(enabled);
     } catch (error) {
       console.error("Failed to check Plex OAuth status:", error);
     }
   }, []);
 
+  const loadSession = useCallback(
+    async (setupResponse: Response) => {
+      const setupData = (await setupResponse.json()) as SetupStatusResponse;
+      setSetupRequired(setupData.setupRequired);
+      await checkPlexOAuthEnabled();
+      if (!setupData.setupRequired) {
+        applySession(await fetchCurrentSession());
+      }
+    },
+    [applySession, checkPlexOAuthEnabled],
+  );
+
   const initAuth = useCallback(async () => {
     setIsLoading(true);
     setBackendError(null);
     try {
-      // Check setup status
-      const setupRes = await fetch("/api/pg/auth/check-setup");
-
-      if (!setupRes.ok) {
+      const setupResponse = await fetch("/api/pg/auth/check-setup");
+      if (!setupResponse.ok) {
         throw new Error(
-          `Backend returned ${setupRes.status}: ${setupRes.statusText}`
+          `Backend returned ${setupResponse.status}: ${setupResponse.statusText}`,
         );
       }
-
-      const setupData = (await setupRes.json()) as SetupStatusResponse;
-      setSetupRequired(setupData.setupRequired);
-
-      // Check Plex OAuth status
-      await checkPlexOAuthEnabled();
-
-      // Get current user if authenticated
-      if (!setupData.setupRequired) {
-        const userRes = await fetch("/api/pg/auth/me", {
-          credentials: "include",
-        });
-
-        if (userRes.ok) {
-          const userData = (await userRes.json()) as CurrentUserResponse;
-          // Determine user type from response
-          if (userData.id) {
-            // Admin user
-            setUser(userData as AdminUser);
-            setUserType("admin");
-          } else if (userData.plexUserId) {
-            // Plex user
-            setUser(userData as PlexUser);
-            setUserType("plex_user");
-          } else {
-            setUser(null);
-            setUserType(null);
-          }
-        } else {
-          setUser(null);
-          setUserType(null);
-        }
-      }
+      await loadSession(setupResponse);
     } catch (error) {
       console.error("Failed to initialize auth:", error);
-      setUser(null);
-      setUserType(null);
-
-      // Distinguish between network errors and server errors
-      let errorMessage = "Unable to connect to the backend service.";
-
-      if (error instanceof TypeError) {
-        // Network/connection errors
-        errorMessage =
-          "Unable to reach the backend service. Please ensure the service is running and accessible.";
-      } else if (error instanceof Error) {
-        // Server errors with specific codes
-        const msg = error.message;
-        if (msg.includes("500")) {
-          errorMessage =
-            "The backend service encountered an internal error.";
-        } else if (msg.includes("502") || msg.includes("503")) {
-          errorMessage =
-            "The backend service is temporarily unavailable. Please try again shortly.";
-        } else if (msg.includes("404")) {
-          errorMessage =
-            "The backend service is not properly configured. Please check your setup.";
-        } else {
-          errorMessage =
-            "The backend service is not responding correctly. Please try again.";
-        }
-      }
-
-      setBackendError(errorMessage);
+      applySession(SIGNED_OUT);
+      setBackendError(backendErrorMessage(error));
     } finally {
       setIsLoading(false);
     }
-  }, [checkPlexOAuthEnabled]);
+  }, [applySession, loadSession]);
 
-  // Check authentication and setup status on mount
   useEffect(() => {
     void initAuth();
   }, [initAuth]);
 
-  const login = async (username: string, password: string, captchaToken?: string) => {
-    const response = await fetch("/api/pg/auth/login", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      credentials: "include",
-      body: JSON.stringify({ username, password, captchaToken }),
-    });
-
-    if (!response.ok) {
-      const error = (await response.json()) as ErrorResponse;
-      throw new Error(error.message || "Login failed");
-    }
-
-    const data = (await response.json()) as AuthUserResponse;
-    setUser(data.user);
-    setUserType("admin");
+  const login = async (
+    username: string,
+    password: string,
+    captchaToken?: string,
+  ) => {
+    const data = await authJson<AuthUserResponse>(
+      "/api/pg/auth/login",
+      { method: "POST", body: { username, password, captchaToken } },
+      "Login failed",
+    );
+    applySession({ user: data.user, userType: "admin" });
   };
 
   const loginWithPlex = async (authToken: string) => {
-    const response = await fetch("/api/pg/auth/plex/login", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      credentials: "include",
-      body: JSON.stringify({ authToken }),
-    });
-
-    if (!response.ok) {
-      const error = (await response.json()) as ErrorResponse;
-      throw new Error(error.message || "Plex login failed");
-    }
-
-    const data = (await response.json()) as PlexLoginResponse;
-    setUser(data.user);
-    setUserType(data.userType);
+    const data = await authJson<PlexLoginResponse>(
+      "/api/pg/auth/plex/login",
+      { method: "POST", body: { authToken } },
+      "Plex login failed",
+    );
+    applySession(data);
   };
 
   const logout = async () => {
-    const response = await fetch("/api/pg/auth/logout", {
-      method: "POST",
-      credentials: "include",
-    });
-
-    if (response.ok) {
-      setUser(null);
-      setUserType(null);
-    } else {
-      throw new Error("Logout failed");
-    }
+    await logoutRequest();
+    applySession(SIGNED_OUT);
   };
 
   const createAdmin = async (
     username: string,
     email: string,
     password: string,
-    confirmPassword: string
+    confirmPassword: string,
   ) => {
-    const response = await fetch("/api/pg/auth/create-admin", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
+    const data = await authJson<AuthUserResponse>(
+      "/api/pg/auth/create-admin",
+      {
+        method: "POST",
+        body: { username, email, password, confirmPassword },
       },
-      credentials: "include",
-      body: JSON.stringify({
-        username,
-        email,
-        password,
-        confirmPassword,
-      }),
-    });
-
-    if (!response.ok) {
-      const error = (await response.json()) as ErrorResponse;
-      throw new Error(error.message || "Failed to create admin");
-    }
-
-    const data = (await response.json()) as AuthUserResponse;
+      "Failed to create admin",
+    );
     setUser(data.user);
     setSetupRequired(false);
   };
 
   const checkAuth = async () => {
     try {
-      const setupRes = await fetch("/api/pg/auth/check-setup");
-      const setupData = (await setupRes.json()) as SetupStatusResponse;
-      setSetupRequired(setupData.setupRequired);
-
-      // Check Plex OAuth status
-      await checkPlexOAuthEnabled();
-
-      if (!setupData.setupRequired) {
-        const userRes = await fetch("/api/pg/auth/me", {
-          credentials: "include",
-        });
-
-        if (userRes.ok) {
-          const userData = (await userRes.json()) as CurrentUserResponse;
-          // Determine user type from response
-          if (userData.id) {
-            setUser(userData as AdminUser);
-            setUserType("admin");
-          } else if (userData.plexUserId) {
-            setUser(userData as PlexUser);
-            setUserType("plex_user");
-          } else {
-            setUser(null);
-            setUserType(null);
-          }
-        } else {
-          setUser(null);
-          setUserType(null);
-        }
-      }
+      await loadSession(await fetch("/api/pg/auth/check-setup"));
     } catch (error) {
       console.error("Failed to check auth:", error);
-      setUser(null);
-      setUserType(null);
+      applySession(SIGNED_OUT);
     }
-  };
-
-  const retryConnection = async () => {
-    await initAuth();
   };
 
   const updateProfile = async (data: {
@@ -346,12 +218,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     avatarUrl?: string;
   }) => {
     try {
-      const updatedUser = await apiClient.updateProfile(data);
-      setUser(updatedUser as User);
+      setUser(await apiClient.updateProfile<User>(data));
     } catch (error) {
-      throw error instanceof Error
-        ? error
-        : new Error("Failed to update profile");
+      throw asError(error, "Failed to update profile");
     }
   };
 
@@ -364,71 +233,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await apiClient.updatePassword(data);
     } catch (error) {
-      throw error instanceof Error
-        ? error
-        : new Error("Failed to update password");
+      throw asError(error, "Failed to update password");
+    }
+  };
+
+  const applyPlexLink = (link: PlexLinkResponse) => {
+    if (isAdminUser(user)) {
+      setUser({ ...user, ...link });
     }
   };
 
   const linkPlexAccount = async (authToken: string) => {
-    const response = await fetch("/api/pg/auth/plex/link", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      credentials: "include",
-      body: JSON.stringify({ authToken }),
+    const data = await authJson<PlexLinkResponse>(
+      "/api/pg/auth/plex/link",
+      { method: "POST", body: { authToken } },
+      "Failed to link Plex account",
+    );
+    applyPlexLink({
+      plexUserId: data.plexUserId,
+      plexUsername: data.plexUsername,
+      plexEmail: data.plexEmail,
+      plexThumb: data.plexThumb,
     });
-
-    if (!response.ok) {
-      const error = (await response.json()) as ErrorResponse;
-      throw new Error(error.message || "Failed to link Plex account");
-    }
-
-    const data = (await response.json()) as PlexLinkResponse;
-
-    // Update user with Plex info
-    if (user && isAdminUser(user)) {
-      setUser({
-        ...user,
-        plexUserId: data.plexUserId,
-        plexUsername: data.plexUsername,
-        plexEmail: data.plexEmail,
-        plexThumb: data.plexThumb,
-      });
-    }
-
-    // Refresh Plex OAuth status since an admin linked their account
     await checkPlexOAuthEnabled();
   };
 
   const unlinkPlexAccount = async () => {
-    const response = await fetch("/api/pg/auth/plex/link", {
-      method: "DELETE",
-      credentials: "include",
-    });
-
-    if (!response.ok) {
-      const error = (await response.json()) as ErrorResponse;
-      throw new Error(error.message || "Failed to unlink Plex account");
-    }
-
-    // Update user to remove Plex info
-    if (user && isAdminUser(user)) {
-      setUser({
-        ...user,
-        plexUserId: undefined,
-        plexUsername: undefined,
-        plexEmail: undefined,
-        plexThumb: undefined,
-      });
-    }
-
-    // Refresh Plex OAuth status
-    await checkPlexOAuthEnabled();
-  };
-
-  const refreshPlexOAuthStatus = async () => {
+    await authRequest(
+      "/api/pg/auth/plex/link",
+      { method: "DELETE" },
+      "Failed to unlink Plex account",
+    );
+    applyPlexLink(NO_PLEX_LINK);
     await checkPlexOAuthEnabled();
   };
 
@@ -447,12 +283,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         logout,
         createAdmin,
         checkAuth,
-        retryConnection,
+        retryConnection: initAuth,
         updateProfile,
         updatePassword,
         linkPlexAccount,
         unlinkPlexAccount,
-        refreshPlexOAuthStatus,
+        refreshPlexOAuthStatus: checkPlexOAuthEnabled,
       }}
     >
       {children}
