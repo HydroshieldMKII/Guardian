@@ -1,10 +1,11 @@
+import { Logger } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { UserDevice } from '@/entities/user-device.entity';
 import { ConfigService } from '@/modules/config/services/config.service';
 import { TemporaryAccessService } from '@/modules/devices/services/temporary-access.service';
 import { userDevice } from '@/modules/devices/services/user-device.fixture';
-import { callArgs } from '@/test-matchers';
+import { callArgs, containing } from '@/test-matchers';
 
 interface TemporaryAccessPatch {
   temporaryAccessDurationMinutes: number;
@@ -70,6 +71,32 @@ describe('TemporaryAccessService', () => {
         await expect(
           service.grantTemporaryAccess(7, 30),
         ).resolves.toBeUndefined();
+      },
+    );
+
+    it.each([
+      ['+05:30', '2026-03-01 06:00:00 +05:30'],
+      ['-08:00', '2026-02-28 16:30:00 -08:00'],
+      ['not-an-offset', '2026-03-01T00:30:00.000Z'],
+    ])(
+      'logs the expiry in the configured timezone %s whatever the host timezone',
+      async (timezone, expiry) => {
+        jest.useFakeTimers({ now: new Date('2026-03-01T00:00:00Z') });
+        const hostOffset = jest
+          .spyOn(Date.prototype, 'getTimezoneOffset')
+          .mockReturnValue(240);
+        configService.getTimezone.mockResolvedValue(timezone);
+
+        try {
+          await service.grantTemporaryAccess(7, 30);
+        } finally {
+          hostOffset.mockRestore();
+          jest.useRealTimers();
+        }
+
+        expect(Logger.prototype.log).toHaveBeenCalledWith(
+          containing(`(expires at ${expiry})`),
+        );
       },
     );
 

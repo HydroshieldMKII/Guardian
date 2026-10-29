@@ -18,9 +18,7 @@ const formatInOffset = (date: Date, offset: string): string => {
     (sign === '+' ? 1 : -1) *
     (Number(hours) * 60 + Number(minutes)) *
     MINUTE_MS;
-  const shifted = new Date(
-    date.getTime() + date.getTimezoneOffset() * MINUTE_MS + offsetMs,
-  );
+  const shifted = new Date(date.getTime() + offsetMs);
   return `${shifted.toISOString().slice(0, 19).replace('T', ' ')} ${offset}`;
 };
 
