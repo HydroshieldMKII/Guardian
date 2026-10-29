@@ -179,7 +179,7 @@ describe("unsaved changes", () => {
 
     expect(screen.getByText("You have unsaved changes")).toBeInTheDocument();
     expect(screen.getByTestId("plex")).toHaveTextContent("plex:dirty");
-    expect(setHasUnsavedChanges).toHaveBeenCalledWith(true);
+    expect(setHasUnsavedChanges).toHaveBeenLastCalledWith(true);
   });
 
   it("drops the edits on cancel", async () => {

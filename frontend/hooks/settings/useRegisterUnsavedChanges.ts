@@ -11,21 +11,15 @@ export function useRegisterUnsavedChanges(
 
   useEffect(() => {
     setHasUnsavedChanges(hasUnsavedChanges);
+    return () => setHasUnsavedChanges(false);
   }, [hasUnsavedChanges, setHasUnsavedChanges]);
 
   useEffect(() => {
     setOnSaveAndLeave(saveAndLeave);
     setOnDiscardChanges(discard);
     return () => {
-      setHasUnsavedChanges(false);
       setOnSaveAndLeave(null);
       setOnDiscardChanges(null);
     };
-  }, [
-    saveAndLeave,
-    discard,
-    setOnSaveAndLeave,
-    setOnDiscardChanges,
-    setHasUnsavedChanges,
-  ]);
+  }, [saveAndLeave, discard, setOnSaveAndLeave, setOnDiscardChanges]);
 }

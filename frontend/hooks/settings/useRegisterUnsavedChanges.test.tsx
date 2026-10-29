@@ -31,6 +31,17 @@ describe("useRegisterUnsavedChanges", () => {
     expect(setOnDiscardChanges).toHaveBeenCalledWith(discard);
   });
 
+  it("keeps the unsaved state when the handlers change during an edit", () => {
+    const { rerender } = renderHook(
+      ({ handler }) => useRegisterUnsavedChanges(true, handler, discard),
+      { initialProps: { handler: save } },
+    );
+
+    rerender({ handler: () => Promise.resolve() });
+
+    expect(setHasUnsavedChanges).toHaveBeenLastCalledWith(true);
+  });
+
   it("clears everything once unmounted", () => {
     const { unmount } = renderHook(() =>
       useRegisterUnsavedChanges(true, save, discard),
