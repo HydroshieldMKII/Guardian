@@ -45,6 +45,7 @@ export function Navbar() {
   const items = navItems({
     ...dashboardCounts(dashboardData),
     versionMismatch: Boolean(versionInfo?.isVersionMismatch),
+    plexConfigured: dashboardData?.plexStatus.configured !== false,
   });
   const activeKey: NavKey | null =
     pathname === "/settings"
@@ -78,11 +79,13 @@ export function Navbar() {
         </div>
       </nav>
 
-      <MobileTabBar
-        items={items}
-        activeKey={activeKey}
-        onNavigate={navigation.guard}
-      />
+      {items.length > 1 && (
+        <MobileTabBar
+          items={items}
+          activeKey={activeKey}
+          onNavigate={navigation.guard}
+        />
+      )}
 
       <EditProfileModal
         open={editProfileOpen}
