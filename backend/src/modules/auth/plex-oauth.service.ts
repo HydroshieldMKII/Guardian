@@ -12,20 +12,25 @@ const PLEX_CLIENT_IDENTIFIER = 'Guardian-Plex-Manager';
 const PIN_CLEANUP_INTERVAL_MS = 5 * 60 * 1000;
 const PIN_MAX_AGE_MS = 10 * 60 * 1000;
 
+const CLIENT_ID_BYTES = 16;
+
+interface PendingPin {
+  pin: PlexAuthPin;
+  createdAt: number;
+  plexUser?: PlexUser;
+}
+
 @Injectable()
 export class PlexOAuthService {
   private readonly logger = new Logger(PlexOAuthService.name);
-  private pendingPins = new Map<
-    string,
-    { pin: PlexAuthPin; createdAt: number }
-  >();
+  private pendingPins = new Map<string, PendingPin>();
 
   constructor(private readonly plexTv: PlexTvClient) {
     setInterval(() => this.cleanupExpiredPins(), PIN_CLEANUP_INTERVAL_MS);
   }
 
   generateClientId(): string {
-    return `${PLEX_CLIENT_IDENTIFIER}-${crypto.randomBytes(8).toString('hex')}`;
+    return `${PLEX_CLIENT_IDENTIFIER}-${crypto.randomBytes(CLIENT_ID_BYTES).toString('hex')}`;
   }
 
   async createPlexPin(
@@ -39,10 +44,13 @@ export class PlexOAuthService {
     return { pin, authUrl };
   }
 
-  async checkPlexPin(clientId: string): Promise<PlexUser | null> {
+  async checkPlexPin(clientId: string): Promise<boolean> {
     const pending = this.pendingPins.get(clientId);
     if (!pending) {
       throw new BadRequestException('No pending authentication found');
+    }
+    if (pending.plexUser) {
+      return true;
     }
 
     const { pin } = pending;
@@ -53,25 +61,29 @@ export class PlexOAuthService {
 
     const authToken = await this.plexTv.getPinAuthToken(pin.id, clientId);
     if (!authToken) {
-      return null;
+      return false;
     }
 
     try {
-      const user = await this.plexTv.getUser(authToken, clientId);
-      this.pendingPins.delete(clientId);
-      return user;
+      pending.plexUser = await this.plexTv.getUser(authToken, clientId);
+      return true;
     } catch (error) {
       this.logger.error('Failed to get Plex user info:', error);
       throw error;
     }
   }
 
-  cancelPlexPin(clientId: string): void {
+  claimPlexUser(clientId: string): PlexUser {
+    const plexUser = this.pendingPins.get(clientId)?.plexUser;
+    if (!plexUser) {
+      throw new BadRequestException('Sign in with Plex first');
+    }
     this.pendingPins.delete(clientId);
+    return plexUser;
   }
 
-  async getPlexUserFromToken(authToken: string): Promise<PlexUser> {
-    return this.plexTv.getUser(authToken, this.generateClientId());
+  cancelPlexPin(clientId: string): void {
+    this.pendingPins.delete(clientId);
   }
 
   private cleanupExpiredPins(): void {

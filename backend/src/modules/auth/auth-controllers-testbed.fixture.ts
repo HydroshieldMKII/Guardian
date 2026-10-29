@@ -103,9 +103,9 @@ export const createAuthControllersTestbed =
           expiresAt: new Date('2026-08-21T12:00:00Z'),
         },
       }),
-      checkPlexPin: jest.fn().mockResolvedValue(null),
+      checkPlexPin: jest.fn().mockResolvedValue(false),
       cancelPlexPin: jest.fn(),
-      getPlexUserFromToken: jest.fn().mockResolvedValue({
+      claimPlexUser: jest.fn().mockReturnValue({
         id: 9,
         username: 'guest',
         thumb: 'thumb.png',

@@ -133,10 +133,19 @@ describe('PlexOAuthService', () => {
     return service.createPlexPin('client-1');
   };
 
+  const signIn = async () => {
+    await createPin();
+    respondWith(
+      { statusCode: 200, body: JSON.stringify({ authToken: 'plex-token' }) },
+      { statusCode: 200, body: userResponse },
+    );
+    await service.checkPlexPin('client-1');
+  };
+
   describe('generateClientId', () => {
-    it('namespaces the id and appends 16 hex characters', () => {
+    it('namespaces the id and appends 32 hex characters', () => {
       expect(service.generateClientId()).toMatch(
-        /^Guardian-Plex-Manager-[0-9a-f]{16}$/,
+        /^Guardian-Plex-Manager-[0-9a-f]{32}$/,
       );
     });
 
@@ -248,37 +257,24 @@ describe('PlexOAuthService', () => {
         body: JSON.stringify({ authToken: null }),
       });
 
-      await expect(service.checkPlexPin('client-1')).resolves.toBeNull();
+      await expect(service.checkPlexPin('client-1')).resolves.toBe(false);
     });
 
-    it('resolves the Plex user once the pin is claimed', async () => {
+    it('reports the pin as signed in once Plex hands over a token', async () => {
       await createPin();
       respondWith(
         { statusCode: 200, body: JSON.stringify({ authToken: 'plex-token' }) },
         { statusCode: 200, body: userResponse },
       );
 
-      await expect(service.checkPlexPin('client-1')).resolves.toEqual({
-        id: 9,
-        uuid: 'uuid-9',
-        username: 'guest',
-        email: 'guest@example.com',
-        thumb: 'https://plex.tv/thumb.png',
-        authToken: 'plex-token',
-      });
+      await expect(service.checkPlexPin('client-1')).resolves.toBe(true);
     });
 
-    it('forgets the pin once it has been redeemed', async () => {
-      await createPin();
-      respondWith(
-        { statusCode: 200, body: JSON.stringify({ authToken: 'plex-token' }) },
-        { statusCode: 200, body: userResponse },
-      );
-      await service.checkPlexPin('client-1');
+    it('keeps reporting a signed-in pin without asking Plex again', async () => {
+      await signIn();
 
-      await expect(service.checkPlexPin('client-1')).rejects.toThrow(
-        'No pending authentication found',
-      );
+      await expect(service.checkPlexPin('client-1')).resolves.toBe(true);
+      expect(sent).toHaveLength(3);
     });
 
     it('queries the pin by its Plex id', async () => {
@@ -295,25 +291,25 @@ describe('PlexOAuthService', () => {
     it('treats a non-200 as not-yet-claimed', async () => {
       await createPin();
       respondWith({ statusCode: 500, body: '' });
-      await expect(service.checkPlexPin('client-1')).resolves.toBeNull();
+      await expect(service.checkPlexPin('client-1')).resolves.toBe(false);
     });
 
     it('treats an unparseable response as not-yet-claimed', async () => {
       await createPin();
       respondWith({ statusCode: 200, body: 'not json' });
-      await expect(service.checkPlexPin('client-1')).resolves.toBeNull();
+      await expect(service.checkPlexPin('client-1')).resolves.toBe(false);
     });
 
     it('treats a connection failure as not-yet-claimed', async () => {
       await createPin();
       respondWith({ error: new Error('ECONNRESET') });
-      await expect(service.checkPlexPin('client-1')).resolves.toBeNull();
+      await expect(service.checkPlexPin('client-1')).resolves.toBe(false);
     });
 
     it('treats a timeout as not-yet-claimed', async () => {
       await createPin();
       respondWith({ timeout: true });
-      await expect(service.checkPlexPin('client-1')).resolves.toBeNull();
+      await expect(service.checkPlexPin('client-1')).resolves.toBe(false);
     });
 
     it('propagates a failure to load the claimed user', async () => {
@@ -329,46 +325,75 @@ describe('PlexOAuthService', () => {
     });
   });
 
-  describe('getPlexUserFromToken', () => {
-    it('sends the token as an X-Plex-Token header', async () => {
-      respondWith({ statusCode: 200, body: userResponse });
-      await service.getPlexUserFromToken('plex-token');
+  describe('claimPlexUser', () => {
+    it('hands over the signed-in Plex user', async () => {
+      await signIn();
 
-      expect(sent[0].options.path).toBe('/api/v2/user');
-      expect(sent[0].options.headers['X-Plex-Token']).toBe('plex-token');
+      expect(service.claimPlexUser('client-1')).toEqual({
+        id: 9,
+        uuid: 'uuid-9',
+        username: 'guest',
+        email: 'guest@example.com',
+        thumb: 'https://plex.tv/thumb.png',
+        authToken: 'plex-token',
+      });
     });
 
-    it('returns the user carrying the token back', async () => {
-      respondWith({ statusCode: 200, body: userResponse });
-      await expect(
-        service.getPlexUserFromToken('plex-token'),
-      ).resolves.toMatchObject({ username: 'guest', authToken: 'plex-token' });
+    it('looks the user up with the token Plex handed over', async () => {
+      await signIn();
+
+      expect(sent[2].options.path).toBe('/api/v2/user');
+      expect(sent[2].options.headers['X-Plex-Token']).toBe('plex-token');
     });
 
-    it('rejects an unauthorised token', async () => {
-      respondWith({ statusCode: 401, body: '' });
-      await expect(service.getPlexUserFromToken('bad')).rejects.toThrow(
-        'Failed to get Plex user info',
+    it('hands the user over only once', async () => {
+      await signIn();
+      service.claimPlexUser('client-1');
+
+      expect(() => service.claimPlexUser('client-1')).toThrow(
+        'Sign in with Plex first',
       );
     });
+
+    it('refuses a pin that is not signed in yet', async () => {
+      await createPin();
+
+      expect(() => service.claimPlexUser('client-1')).toThrow(
+        'Sign in with Plex first',
+      );
+    });
+
+    it('refuses a client id it never issued', () => {
+      expect(() => service.claimPlexUser('unknown')).toThrow(
+        'Sign in with Plex first',
+      );
+    });
+  });
+
+  describe('loading the signed-in Plex user', () => {
+    const signInWithUserResponse = async (response: PlexReply) => {
+      await createPin();
+      respondWith(
+        { statusCode: 200, body: JSON.stringify({ authToken: 'plex-token' }) },
+        response,
+      );
+      return service.checkPlexPin('client-1');
+    };
 
     it('rejects an unparseable response', async () => {
-      respondWith({ statusCode: 200, body: 'not json' });
-      await expect(service.getPlexUserFromToken('tok')).rejects.toThrow(
-        'Failed to parse Plex user info',
-      );
+      await expect(
+        signInWithUserResponse({ statusCode: 200, body: 'not json' }),
+      ).rejects.toThrow('Failed to parse Plex user info');
     });
 
     it('rejects a connection failure', async () => {
-      respondWith({ error: new Error('ENOTFOUND') });
-      await expect(service.getPlexUserFromToken('tok')).rejects.toThrow(
-        'Failed to connect to Plex',
-      );
+      await expect(
+        signInWithUserResponse({ error: new Error('ENOTFOUND') }),
+      ).rejects.toThrow('Failed to connect to Plex');
     });
 
     it('rejects a timeout', async () => {
-      respondWith({ timeout: true });
-      await expect(service.getPlexUserFromToken('tok')).rejects.toThrow(
+      await expect(signInWithUserResponse({ timeout: true })).rejects.toThrow(
         'Plex request timeout',
       );
     });
@@ -407,7 +432,7 @@ describe('PlexOAuthService', () => {
       jest.advanceTimersByTime(5 * 60 * 1000);
       respondWith({ statusCode: 200, body: JSON.stringify({}) });
 
-      await expect(service.checkPlexPin('client-1')).resolves.toBeNull();
+      await expect(service.checkPlexPin('client-1')).resolves.toBe(false);
     });
   });
 });

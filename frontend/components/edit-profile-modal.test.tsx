@@ -699,12 +699,12 @@ describe("EditProfileModal Plex PIN polling", () => {
   });
 
   it("links the account once Plex hands back a token", async () => {
-    wirePinFetch({ ok: true, json: async () => ({ authToken: "tok" }) });
+    wirePinFetch({ ok: true, json: async () => ({ authenticated: true }) });
     await startLinking();
 
     await tick(2000);
 
-    expect(linkPlexAccount).toHaveBeenCalledWith("tok");
+    expect(linkPlexAccount).toHaveBeenCalledWith("c-1");
     expect(toast).toHaveBeenCalledWith(
       expect.objectContaining({
         description: "You can now sign in with Plex",
@@ -758,7 +758,7 @@ describe("EditProfileModal Plex PIN polling", () => {
 
   it("reports a link that the server refuses", async () => {
     linkPlexAccount.mockRejectedValue(new Error("already linked"));
-    wirePinFetch({ ok: true, json: async () => ({ authToken: "tok" }) });
+    wirePinFetch({ ok: true, json: async () => ({ authenticated: true }) });
     await startLinking();
 
     await tick(2000);
@@ -773,7 +773,7 @@ describe("EditProfileModal Plex PIN polling", () => {
 
   it("falls back to a generic message when the link failure carries none", async () => {
     linkPlexAccount.mockRejectedValue("nope");
-    wirePinFetch({ ok: true, json: async () => ({ authToken: "tok" }) });
+    wirePinFetch({ ok: true, json: async () => ({ authenticated: true }) });
     await startLinking();
 
     await tick(2000);
