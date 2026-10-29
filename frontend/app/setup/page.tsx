@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { PageLoader } from "@/components/three-dot-loader";
 import { ErrorHandler } from "@/components/error-handler";
+import { EMAIL_PATTERN } from "@/lib/profile-validation";
 
 export default function SetupPage() {
   const {
@@ -69,9 +70,7 @@ export default function SetupPage() {
       newErrors.username = "Username must be at least 3 characters";
     }
 
-    // Email is optional, but if provided must be valid
-    const emailRegex = /^[a-zA-Z0-9._%-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-    if (formData.email && !emailRegex.test(formData.email)) {
+    if (formData.email && !EMAIL_PATTERN.test(formData.email)) {
       newErrors.email = "Enter a valid email address";
     }
 
