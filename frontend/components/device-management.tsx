@@ -212,7 +212,7 @@ const DeviceManagement = memo(
         <div className="grid items-start gap-6 lg:grid-cols-[minmax(300px,360px)_1fr]">
           <UserList
             className={cn(
-              "lg:sticky lg:top-24 lg:max-h-[calc(100dvh-8rem)]",
+              "lg:sticky lg:top-24 lg:h-[calc(100dvh-8rem)]",
               selectedUserId && "hidden lg:flex",
             )}
             {...listControls}

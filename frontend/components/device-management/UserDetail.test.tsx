@@ -332,6 +332,16 @@ describe("UserDetail devices", () => {
       ),
     ).toBeInTheDocument();
   });
+
+  it("lists the devices below the rules", () => {
+    renderDetail();
+
+    expect(
+      screen
+        .getAllByRole("heading", { level: 3 })
+        .map((heading) => heading.textContent),
+    ).toEqual(["Rules", "Devices"]);
+  });
 });
 
 describe("UserDetail device updates", () => {

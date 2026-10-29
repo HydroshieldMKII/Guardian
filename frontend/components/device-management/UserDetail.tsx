@@ -69,15 +69,6 @@ export const UserDetail: React.FC<UserDetailProps> = ({
         onHide={() => onToggleUserVisibility(userId)}
       />
 
-      <UserDevicesGroup
-        devices={group.devices}
-        preference={preference}
-        timeRules={timeRules}
-        deviceFocus={deviceFocus}
-        actionLoading={actionLoading}
-        actions={deviceActions}
-      />
-
       <UserRulesGroup
         group={group}
         timeRules={timeRules}
@@ -87,6 +78,15 @@ export const UserDetail: React.FC<UserDetailProps> = ({
         onEditSchedule={() => onShowTimePolicy(userId)}
         onEditNetworks={() => setShowIPModal(true)}
         onGrantTemporaryAccess={() => onGrantUserTemporaryAccess(userId)}
+      />
+
+      <UserDevicesGroup
+        devices={group.devices}
+        preference={preference}
+        timeRules={timeRules}
+        deviceFocus={deviceFocus}
+        actionLoading={actionLoading}
+        actions={deviceActions}
       />
 
       <IPAccessModal
