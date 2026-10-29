@@ -9,7 +9,7 @@ import { UsersService } from '@/modules/users/services/users.service';
 import { TimePolicyService } from '@/modules/users/services/time-policy.service';
 import { ConcurrentStreamService } from '@/modules/users/services/concurrent-stream.service';
 import { ConfigService } from '@/modules/config/services/config.service';
-import { DeviceTrackingService } from '@/modules/devices/services/device-tracking.service';
+import { TemporaryAccessService } from '@/modules/devices/services/temporary-access.service';
 import {
   PlexSession,
   PlexSessionsResponse,
@@ -55,8 +55,8 @@ export class SessionTerminationService {
     private concurrentStreamService: ConcurrentStreamService,
     @Inject(forwardRef(() => ConfigService))
     private configService: ConfigService,
-    @Inject(forwardRef(() => DeviceTrackingService))
-    private deviceTrackingService: DeviceTrackingService,
+    @Inject(forwardRef(() => TemporaryAccessService))
+    private temporaryAccessService: TemporaryAccessService,
     private ipValidationService: IPValidationService,
   ) {}
 
@@ -397,7 +397,7 @@ export class SessionTerminationService {
 
       if (
         device &&
-        (await this.deviceTrackingService.isTemporaryAccessValid(device))
+        (await this.temporaryAccessService.isTemporaryAccessValid(device))
       ) {
         if (device.temporaryAccessBypassPolicies) {
           this.logger.log(
@@ -448,7 +448,7 @@ export class SessionTerminationService {
         // Check if device has valid temporary access (without bypass)
         if (
           device &&
-          (await this.deviceTrackingService.isTemporaryAccessValid(device))
+          (await this.temporaryAccessService.isTemporaryAccessValid(device))
         ) {
           return { shouldStop: false };
         }
@@ -468,7 +468,7 @@ export class SessionTerminationService {
       }
 
       if (device.status === 'rejected') {
-        if (await this.deviceTrackingService.isTemporaryAccessValid(device)) {
+        if (await this.temporaryAccessService.isTemporaryAccessValid(device)) {
           return { shouldStop: false };
         }
 

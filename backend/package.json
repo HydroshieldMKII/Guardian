@@ -103,7 +103,8 @@
       "!database/cli.data-source.ts",
       "!scripts/**",
       "!test-setup.ts",
-      "!test-matchers.ts"
+      "!test-matchers.ts",
+      "!**/*.fixture.ts"
     ],
     "coverageDirectory": "../coverage",
     "coverageReporters": [

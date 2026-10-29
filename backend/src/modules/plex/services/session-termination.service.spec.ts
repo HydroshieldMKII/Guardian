@@ -9,7 +9,7 @@ import { UsersService } from '@/modules/users/services/users.service';
 import { TimePolicyService } from '@/modules/users/services/time-policy.service';
 import { ConcurrentStreamService } from '@/modules/users/services/concurrent-stream.service';
 import { ConfigService } from '@/modules/config/services/config.service';
-import { DeviceTrackingService } from '@/modules/devices/services/device-tracking.service';
+import { TemporaryAccessService } from '@/modules/devices/services/temporary-access.service';
 import { PlexClient } from '@/modules/plex/services/plex-client';
 import {
   SessionTerminationService,
@@ -37,7 +37,7 @@ describe('SessionTerminationService', () => {
   let timePolicyService: Record<string, jest.Mock>;
   let concurrentStreamService: Record<string, jest.Mock>;
   let configService: { getSetting: jest.Mock };
-  let deviceTrackingService: { isTemporaryAccessValid: jest.Mock };
+  let temporaryAccessService: { isTemporaryAccessValid: jest.Mock };
   let ipValidationService: { validateIPAccess: jest.Mock };
 
   const session = ({
@@ -94,7 +94,7 @@ describe('SessionTerminationService', () => {
     configService = {
       getSetting: jest.fn((key: string) => Promise.resolve(`msg:${key}`)),
     };
-    deviceTrackingService = {
+    temporaryAccessService = {
       isTemporaryAccessValid: jest.fn().mockResolvedValue(false),
     };
     ipValidationService = {
@@ -118,7 +118,7 @@ describe('SessionTerminationService', () => {
           useValue: concurrentStreamService,
         },
         { provide: ConfigService, useValue: configService },
-        { provide: DeviceTrackingService, useValue: deviceTrackingService },
+        { provide: TemporaryAccessService, useValue: temporaryAccessService },
         { provide: IPValidationService, useValue: ipValidationService },
       ],
     }).compile();
@@ -283,7 +283,7 @@ describe('SessionTerminationService', () => {
       deviceRepo.findOne.mockResolvedValue(
         approvedDevice({ status: 'pending' }),
       );
-      deviceTrackingService.isTemporaryAccessValid.mockResolvedValue(true);
+      temporaryAccessService.isTemporaryAccessValid.mockResolvedValue(true);
 
       const result = await service.stopUnapprovedSessions(payload(session()));
       expect(result.stoppedSessions).toEqual([]);
@@ -293,7 +293,7 @@ describe('SessionTerminationService', () => {
       deviceRepo.findOne.mockResolvedValue(
         approvedDevice({ status: 'rejected' }),
       );
-      deviceTrackingService.isTemporaryAccessValid.mockResolvedValue(true);
+      temporaryAccessService.isTemporaryAccessValid.mockResolvedValue(true);
 
       const result = await service.stopUnapprovedSessions(payload(session()));
       expect(result.stoppedSessions).toEqual([]);
@@ -306,7 +306,7 @@ describe('SessionTerminationService', () => {
           temporaryAccessBypassPolicies: true,
         }),
       );
-      deviceTrackingService.isTemporaryAccessValid.mockResolvedValue(true);
+      temporaryAccessService.isTemporaryAccessValid.mockResolvedValue(true);
       timePolicyService.isTimeScheduleAllowed.mockResolvedValue(false);
 
       const result = await service.stopUnapprovedSessions(payload(session()));

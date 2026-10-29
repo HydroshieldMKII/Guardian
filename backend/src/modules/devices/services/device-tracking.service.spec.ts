@@ -1,59 +1,29 @@
 import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { In, IsNull } from 'typeorm';
+import { IsNull } from 'typeorm';
 import { UserDevice } from '@/entities/user-device.entity';
 import { SessionHistory } from '@/entities/session-history.entity';
 import { UsersService } from '@/modules/users/services/users.service';
 import { ConfigService } from '@/modules/config/services/config.service';
 import { PlexSession, PlexSessionsResponse } from '@/types/plex.types';
 import { DeviceTrackingService } from '@/modules/devices/services/device-tracking.service';
+import {
+  DeviceEventsService,
+  DeviceLocationChangedEvent,
+} from '@/modules/devices/services/device-events.service';
+import { userDevice } from '@/modules/devices/services/user-device.fixture';
 import { anyDate, callArgs } from '@/test-matchers';
-
-interface TemporaryAccessPatch {
-  temporaryAccessDurationMinutes: number;
-  temporaryAccessBypassPolicies: boolean;
-  temporaryAccessUntil: Date;
-}
 
 describe('DeviceTrackingService', () => {
   let service: DeviceTrackingService;
-  let deviceRepo: {
-    find: jest.Mock;
-    findOne: jest.Mock;
-    create: jest.Mock;
-    save: jest.Mock;
-    update: jest.Mock;
-    delete: jest.Mock;
-    manager: { transaction: jest.Mock };
-  };
-  let historyRepo: Record<string, jest.Mock>;
+  let deviceEvents: DeviceEventsService;
+  let deviceRepo: Record<
+    'find' | 'findOne' | 'create' | 'save' | 'update',
+    jest.Mock
+  >;
+  let historyRepo: { update: jest.Mock };
   let usersService: Record<string, jest.Mock>;
-  let configService: Record<string, jest.Mock>;
-  let transactionRepos: {
-    history: { delete: jest.Mock };
-    devices: { delete: jest.Mock };
-  };
-
-  const device = (overrides: Partial<UserDevice> = {}): UserDevice =>
-    Object.assign(new UserDevice(), {
-      id: 1,
-      userId: 'u1',
-      username: 'testuser',
-      deviceIdentifier: 'dev-1',
-      deviceName: 'Living Room TV',
-      devicePlatform: 'Android',
-      deviceProduct: 'Plex for Android',
-      deviceVersion: '10.0',
-      status: 'pending',
-      sessionCount: 1,
-      currentSessionKey: null,
-      ipAddress: '10.0.0.5',
-      firstSeen: new Date('2026-01-01T00:00:00Z'),
-      lastSeen: new Date('2026-08-01T00:00:00Z'),
-      excludeFromConcurrentLimit: false,
-      temporaryAccessUntil: null,
-      ...overrides,
-    });
+  let configService: { getSetting: jest.Mock };
 
   const session = (overrides: Partial<PlexSession> = {}): PlexSession => ({
     sessionKey: 'sk-1',
@@ -75,19 +45,7 @@ describe('DeviceTrackingService', () => {
     MediaContainer: { size: metadata.length, Metadata: metadata },
   });
 
-  const revokedAccess = {
-    temporaryAccessUntil: null,
-    temporaryAccessGrantedAt: null,
-    temporaryAccessDurationMinutes: null,
-    temporaryAccessBypassPolicies: false,
-  };
-
   beforeEach(async () => {
-    transactionRepos = {
-      history: { delete: jest.fn().mockResolvedValue({ affected: 3 }) },
-      devices: { delete: jest.fn().mockResolvedValue({ affected: 1 }) },
-    };
-
     deviceRepo = {
       find: jest.fn().mockResolvedValue([]),
       findOne: jest.fn().mockResolvedValue(null),
@@ -96,37 +54,18 @@ describe('DeviceTrackingService', () => {
       ),
       save: jest.fn((entity: UserDevice) => Promise.resolve(entity)),
       update: jest.fn().mockResolvedValue({ affected: 1 }),
-      delete: jest.fn().mockResolvedValue({ affected: 1 }),
-      manager: {
-        transaction: jest.fn(async (run: (manager: unknown) => Promise<void>) =>
-          run({
-            getRepository: (entity: unknown) =>
-              entity === SessionHistory
-                ? transactionRepos.history
-                : transactionRepos.devices,
-          }),
-        ),
-      },
     };
-
-    historyRepo = {
-      delete: jest.fn().mockResolvedValue({ affected: 2 }),
-      update: jest.fn().mockResolvedValue({ affected: 1 }),
-    };
-
+    historyRepo = { update: jest.fn().mockResolvedValue({ affected: 1 }) };
     usersService = {
       updateUserFromSessionData: jest.fn().mockResolvedValue(undefined),
       getEffectiveDefaultBlock: jest.fn().mockResolvedValue(true),
     };
-
-    configService = {
-      getSetting: jest.fn().mockResolvedValue(false),
-      getTimezone: jest.fn().mockResolvedValue('+00:00'),
-    };
+    configService = { getSetting: jest.fn().mockResolvedValue(false) };
 
     const module = await Test.createTestingModule({
       providers: [
         DeviceTrackingService,
+        DeviceEventsService,
         { provide: getRepositoryToken(UserDevice), useValue: deviceRepo },
         { provide: getRepositoryToken(SessionHistory), useValue: historyRepo },
         { provide: UsersService, useValue: usersService },
@@ -135,6 +74,7 @@ describe('DeviceTrackingService', () => {
     }).compile();
 
     service = module.get(DeviceTrackingService);
+    deviceEvents = module.get(DeviceEventsService);
   });
 
   const savedDevice = (call = 0): UserDevice =>
@@ -270,7 +210,7 @@ describe('DeviceTrackingService', () => {
 
     it('notifies listeners with the device details', async () => {
       const listener = jest.fn();
-      service.onNewDeviceDetected(listener);
+      deviceEvents.onNewDeviceDetected(listener);
 
       await service.processSessionsForDeviceTracking(
         sessionsResponse(session()),
@@ -289,7 +229,7 @@ describe('DeviceTrackingService', () => {
 
     it('substitutes placeholders for details Plex did not send', async () => {
       const listener = jest.fn();
-      service.onNewDeviceDetected(listener);
+      deviceEvents.onNewDeviceDetected(listener);
 
       await service.processSessionsForDeviceTracking(
         sessionsResponse(
@@ -312,10 +252,10 @@ describe('DeviceTrackingService', () => {
 
     it('keeps notifying the other listeners when one throws', async () => {
       const survivor = jest.fn();
-      service.onNewDeviceDetected(() => {
+      deviceEvents.onNewDeviceDetected(() => {
         throw new Error('listener blew up');
       });
-      service.onNewDeviceDetected(survivor);
+      deviceEvents.onNewDeviceDetected(survivor);
 
       await service.processSessionsForDeviceTracking(
         sessionsResponse(session()),
@@ -327,7 +267,9 @@ describe('DeviceTrackingService', () => {
 
   describe('existing devices', () => {
     it('refreshes the last-seen timestamp', async () => {
-      const existing = device({ lastSeen: new Date('2020-01-01T00:00:00Z') });
+      const existing = userDevice({
+        lastSeen: new Date('2020-01-01T00:00:00Z'),
+      });
       deviceRepo.findOne.mockResolvedValue(existing);
       const before = Date.now();
 
@@ -339,7 +281,7 @@ describe('DeviceTrackingService', () => {
     });
 
     it('counts a session key it has never seen', async () => {
-      deviceRepo.findOne.mockResolvedValue(device({ sessionCount: 4 }));
+      deviceRepo.findOne.mockResolvedValue(userDevice({ sessionCount: 4 }));
 
       await service.processSessionsForDeviceTracking(
         sessionsResponse(session()),
@@ -352,7 +294,7 @@ describe('DeviceTrackingService', () => {
     });
 
     it('does not double-count a session key seen on the previous poll', async () => {
-      deviceRepo.findOne.mockResolvedValue(device({ sessionCount: 4 }));
+      deviceRepo.findOne.mockResolvedValue(userDevice({ sessionCount: 4 }));
 
       await service.processSessionsForDeviceTracking(
         sessionsResponse(session()),
@@ -366,7 +308,7 @@ describe('DeviceTrackingService', () => {
 
     it('does not re-count the session key already stored on the device', async () => {
       deviceRepo.findOne.mockResolvedValue(
-        device({ sessionCount: 4, currentSessionKey: 'sk-1' }),
+        userDevice({ sessionCount: 4, currentSessionKey: 'sk-1' }),
       );
 
       await service.processSessionsForDeviceTracking(
@@ -377,7 +319,7 @@ describe('DeviceTrackingService', () => {
     });
 
     it('counts a genuinely new session on the same device', async () => {
-      deviceRepo.findOne.mockResolvedValue(device({ sessionCount: 4 }));
+      deviceRepo.findOne.mockResolvedValue(userDevice({ sessionCount: 4 }));
 
       await service.processSessionsForDeviceTracking(
         sessionsResponse(session()),
@@ -390,7 +332,7 @@ describe('DeviceTrackingService', () => {
     });
 
     it('leaves the session count alone when Plex sends no session key', async () => {
-      deviceRepo.findOne.mockResolvedValue(device({ sessionCount: 4 }));
+      deviceRepo.findOne.mockResolvedValue(userDevice({ sessionCount: 4 }));
 
       await service.processSessionsForDeviceTracking(
         sessionsResponse(session({ sessionKey: undefined })),
@@ -401,7 +343,7 @@ describe('DeviceTrackingService', () => {
 
     it('fills in the platform and product when the row has neither', async () => {
       deviceRepo.findOne.mockResolvedValue(
-        device({ devicePlatform: null, deviceProduct: null }),
+        userDevice({ devicePlatform: null, deviceProduct: null }),
       );
 
       await service.processSessionsForDeviceTracking(
@@ -424,7 +366,7 @@ describe('DeviceTrackingService', () => {
 
     it('fills in details that were missing, without overwriting known ones', async () => {
       deviceRepo.findOne.mockResolvedValue(
-        device({
+        userDevice({
           deviceName: null,
           devicePlatform: 'Android',
           deviceProduct: null,
@@ -455,7 +397,9 @@ describe('DeviceTrackingService', () => {
     });
 
     it('always takes the newest client version', async () => {
-      deviceRepo.findOne.mockResolvedValue(device({ deviceVersion: '9.0' }));
+      deviceRepo.findOne.mockResolvedValue(
+        userDevice({ deviceVersion: '9.0' }),
+      );
 
       await service.processSessionsForDeviceTracking(
         sessionsResponse(session()),
@@ -466,8 +410,8 @@ describe('DeviceTrackingService', () => {
 
     it('records the first IP address without raising a location change', async () => {
       const listener = jest.fn();
-      service.onDeviceLocationChanged(listener);
-      deviceRepo.findOne.mockResolvedValue(device({ ipAddress: null }));
+      deviceEvents.onDeviceLocationChanged(listener);
+      deviceRepo.findOne.mockResolvedValue(userDevice({ ipAddress: null }));
 
       await service.processSessionsForDeviceTracking(
         sessionsResponse(session()),
@@ -479,8 +423,10 @@ describe('DeviceTrackingService', () => {
 
     it('raises a location change when the IP moves', async () => {
       const listener = jest.fn();
-      service.onDeviceLocationChanged(listener);
-      deviceRepo.findOne.mockResolvedValue(device({ ipAddress: '10.0.0.5' }));
+      deviceEvents.onDeviceLocationChanged(listener);
+      deviceRepo.findOne.mockResolvedValue(
+        userDevice({ ipAddress: '10.0.0.5' }),
+      );
 
       await service.processSessionsForDeviceTracking(
         sessionsResponse(
@@ -501,8 +447,8 @@ describe('DeviceTrackingService', () => {
 
     it('stays quiet when the IP is unchanged', async () => {
       const listener = jest.fn();
-      service.onDeviceLocationChanged(listener);
-      deviceRepo.findOne.mockResolvedValue(device());
+      deviceEvents.onDeviceLocationChanged(listener);
+      deviceRepo.findOne.mockResolvedValue(userDevice());
 
       await service.processSessionsForDeviceTracking(
         sessionsResponse(session()),
@@ -513,11 +459,13 @@ describe('DeviceTrackingService', () => {
 
     it('keeps notifying the other location listeners when one throws', async () => {
       const survivor = jest.fn();
-      service.onDeviceLocationChanged(() => {
+      deviceEvents.onDeviceLocationChanged(() => {
         throw new Error('listener blew up');
       });
-      service.onDeviceLocationChanged(survivor);
-      deviceRepo.findOne.mockResolvedValue(device({ ipAddress: '10.0.0.5' }));
+      deviceEvents.onDeviceLocationChanged(survivor);
+      deviceRepo.findOne.mockResolvedValue(
+        userDevice({ ipAddress: '10.0.0.5' }),
+      );
 
       await service.processSessionsForDeviceTracking(
         sessionsResponse(
@@ -533,7 +481,7 @@ describe('DeviceTrackingService', () => {
 
   describe('cleanupStaleSessionKeys', () => {
     it('forgets a device key that has been idle for over a day', async () => {
-      deviceRepo.findOne.mockResolvedValue(device({ sessionCount: 4 }));
+      deviceRepo.findOne.mockResolvedValue(userDevice({ sessionCount: 4 }));
       await service.processSessionsForDeviceTracking(
         sessionsResponse(session()),
       );
@@ -550,7 +498,7 @@ describe('DeviceTrackingService', () => {
     });
 
     it('keeps a device key that is still active', async () => {
-      deviceRepo.findOne.mockResolvedValue(device({ sessionCount: 4 }));
+      deviceRepo.findOne.mockResolvedValue(userDevice({ sessionCount: 4 }));
       await service.processSessionsForDeviceTracking(
         sessionsResponse(session()),
       );
@@ -565,193 +513,13 @@ describe('DeviceTrackingService', () => {
     });
   });
 
-  describe('queries', () => {
-    it('lists all devices newest-seen first', async () => {
-      await service.getAllDevices();
-      expect(deviceRepo.find).toHaveBeenCalledWith({
-        order: { lastSeen: 'DESC' },
-      });
-    });
-
-    it('lists pending devices newest-first', async () => {
-      await service.getPendingDevices();
-      expect(deviceRepo.find).toHaveBeenCalledWith({
-        where: { status: 'pending' },
-        order: { firstSeen: 'DESC' },
-      });
-    });
-
-    it('treats both approved and rejected devices as processed', async () => {
-      await service.getProcessedDevices();
-      expect(deviceRepo.find).toHaveBeenCalledWith({
-        where: [{ status: 'approved' }, { status: 'rejected' }],
-        order: { lastSeen: 'DESC' },
-      });
-    });
-
-    it('lists approved devices', async () => {
-      await service.getApprovedDevices();
-      expect(deviceRepo.find).toHaveBeenCalledWith({
-        where: { status: 'approved' },
-        order: { lastSeen: 'DESC' },
-      });
-    });
-
-    it('finds a device by user and identifier', async () => {
-      await service.findDeviceByUserAndIdentifier('u1', 'dev-1');
-      expect(deviceRepo.findOne).toHaveBeenCalledWith({
-        where: { userId: 'u1', deviceIdentifier: 'dev-1' },
-      });
-    });
-
-    it('finds a device by identifier alone', async () => {
-      await service.findDeviceByIdentifier('dev-1');
-      expect(deviceRepo.findOne).toHaveBeenCalledWith({
-        where: { deviceIdentifier: 'dev-1' },
-      });
-    });
-  });
-
-  describe('enforceStrictModeOnPendingDevices', () => {
-    it('does nothing when strict mode is off', async () => {
-      await expect(service.enforceStrictModeOnPendingDevices()).resolves.toBe(
-        0,
-      );
-      expect(deviceRepo.find).not.toHaveBeenCalled();
-    });
-
-    it('does nothing when there is nothing pending', async () => {
-      configService.getSetting.mockResolvedValue(true);
-      await expect(service.enforceStrictModeOnPendingDevices()).resolves.toBe(
-        0,
-      );
-      expect(deviceRepo.save).not.toHaveBeenCalled();
-    });
-
-    it('applies the block policy to each pending device', async () => {
-      configService.getSetting.mockResolvedValue(true);
-      deviceRepo.find.mockResolvedValue([device({ id: 1 }), device({ id: 2 })]);
-
-      await expect(service.enforceStrictModeOnPendingDevices()).resolves.toBe(
-        2,
-      );
-      expect(savedDevice(0).status).toBe('rejected');
-      expect(savedDevice(1).status).toBe('rejected');
-    });
-
-    it('approves when the user default is allow', async () => {
-      configService.getSetting.mockResolvedValue(true);
-      usersService.getEffectiveDefaultBlock.mockResolvedValue(false);
-      deviceRepo.find.mockResolvedValue([device()]);
-
-      await service.enforceStrictModeOnPendingDevices();
-      expect(savedDevice().status).toBe('approved');
-    });
-
-    it('still applies the policy to a device with no name', async () => {
-      configService.getSetting.mockResolvedValue(true);
-      deviceRepo.find.mockResolvedValue([
-        device({ deviceName: null, username: null }),
-      ]);
-
-      await expect(service.enforceStrictModeOnPendingDevices()).resolves.toBe(
-        1,
-      );
-      expect(savedDevice().status).toBe('rejected');
-    });
-
-    it('always approves Plexamp devices', async () => {
-      configService.getSetting.mockResolvedValue(true);
-      deviceRepo.find.mockResolvedValue([device({ deviceProduct: 'Plexamp' })]);
-
-      await service.enforceStrictModeOnPendingDevices();
-      expect(savedDevice().status).toBe('approved');
-    });
-
-    it('counts only the devices it managed to update', async () => {
-      configService.getSetting.mockResolvedValue(true);
-      deviceRepo.find.mockResolvedValue([device({ id: 1 }), device({ id: 2 })]);
-      deviceRepo.save
-        .mockRejectedValueOnce(new Error('locked'))
-        .mockImplementation((entity: UserDevice) => Promise.resolve(entity));
-
-      await expect(service.enforceStrictModeOnPendingDevices()).resolves.toBe(
-        1,
-      );
-    });
-  });
-
-  describe('status changes', () => {
-    it('approves a device and drops any temporary access', async () => {
-      await service.approveDevice(7);
-
-      expect(deviceRepo.update).toHaveBeenCalledWith(7, { status: 'approved' });
-      expect(deviceRepo.update).toHaveBeenCalledWith(7, revokedAccess);
-    });
-
-    it('rejects a device without touching temporary access', async () => {
-      await service.rejectDevice(7);
-
-      expect(deviceRepo.update).toHaveBeenCalledWith(7, { status: 'rejected' });
-      expect(deviceRepo.update).toHaveBeenCalledTimes(1);
-    });
-
-    it('sends a device back to pending and drops temporary access', async () => {
-      await service.setPendingDevice(7);
-
-      expect(deviceRepo.update).toHaveBeenCalledWith(7, { status: 'pending' });
-      expect(deviceRepo.update).toHaveBeenCalledWith(7, revokedAccess);
-    });
-
-    it('renames a device', async () => {
-      await service.renameDevice(7, 'Attic TV');
-      expect(deviceRepo.update).toHaveBeenCalledWith(7, {
-        deviceName: 'Attic TV',
-      });
-    });
-
-    it('excludes a device from the concurrent limit', async () => {
-      await service.updateExcludeFromConcurrentLimit(7, true);
-      expect(deviceRepo.update).toHaveBeenCalledWith(7, {
-        excludeFromConcurrentLimit: true,
-      });
-    });
-
-    it('includes a device back in the concurrent limit', async () => {
-      await service.updateExcludeFromConcurrentLimit(7, false);
-      expect(deviceRepo.update).toHaveBeenCalledWith(7, {
-        excludeFromConcurrentLimit: false,
-      });
-    });
-
-    it('marks a request note as read', async () => {
-      await service.markNoteAsRead(7);
-      expect(deviceRepo.update).toHaveBeenCalledWith(
-        7,
-        expect.objectContaining({ requestNoteReadAt: anyDate() }),
-      );
-    });
-
-    it('clears every note column when deleting a note', async () => {
-      await service.deleteNote(7);
-
-      expect(deviceRepo.update).toHaveBeenCalledWith(7, {
-        requestDescription: null,
-        requestSubmittedAt: null,
-        requestNoteReadAt: null,
-      });
-    });
-  });
-
   describe('placeholders in log and event text', () => {
     it('falls back to the stored username on a location change', async () => {
       deviceRepo.findOne.mockResolvedValue(
-        device({ ipAddress: '10.0.0.1', username: 'stored-name' }),
+        userDevice({ ipAddress: '10.0.0.1', username: 'stored-name' }),
       );
-      const events: Record<string, unknown>[] = [];
-      service.onDeviceLocationChanged((event) =>
-        events.push(event as unknown as Record<string, unknown>),
-      );
+      const events: DeviceLocationChangedEvent[] = [];
+      deviceEvents.onDeviceLocationChanged((event) => events.push(event));
 
       await service.processSessionsForDeviceTracking(
         sessionsResponse(
@@ -767,16 +535,14 @@ describe('DeviceTrackingService', () => {
 
     it('falls back to placeholders when neither side has a name', async () => {
       deviceRepo.findOne.mockResolvedValue(
-        device({
+        userDevice({
           ipAddress: '10.0.0.1',
           username: null,
           deviceName: null,
         }),
       );
-      const events: Record<string, unknown>[] = [];
-      service.onDeviceLocationChanged((event) =>
-        events.push(event as unknown as Record<string, unknown>),
-      );
+      const events: DeviceLocationChangedEvent[] = [];
+      deviceEvents.onDeviceLocationChanged((event) => events.push(event));
 
       await service.processSessionsForDeviceTracking(
         sessionsResponse(
@@ -794,115 +560,10 @@ describe('DeviceTrackingService', () => {
     });
   });
 
-  describe('deleteDevice', () => {
-    it('removes the session history and the device in one transaction', async () => {
-      await service.deleteDevice(7);
-
-      expect(transactionRepos.history.delete).toHaveBeenCalledWith({
-        userDeviceId: 7,
-      });
-      expect(transactionRepos.devices.delete).toHaveBeenCalledWith(7);
-    });
-
-    it('reports a transaction failure with context', async () => {
-      transactionRepos.devices.delete.mockRejectedValue(
-        new Error('foreign key'),
-      );
-
-      await expect(service.deleteDevice(7)).rejects.toThrow(
-        'Device deletion failed: foreign key',
-      );
-    });
-  });
-
-  describe('temporary access', () => {
-    it('stores the expiry, duration and bypass flag', async () => {
-      const before = Date.now();
-      await service.grantTemporaryAccess(7, 30, true);
-
-      const [id, patch] = callArgs<[number, TemporaryAccessPatch]>(
-        deviceRepo.update,
-      );
-      expect(id).toBe(7);
-      expect(patch.temporaryAccessDurationMinutes).toBe(30);
-      expect(patch.temporaryAccessBypassPolicies).toBe(true);
-      expect(patch.temporaryAccessUntil.getTime()).toBeGreaterThanOrEqual(
-        before + 30 * 60 * 1000,
-      );
-    });
-
-    it('defaults to not bypassing policies', async () => {
-      await service.grantTemporaryAccess(7, 30);
-      expect(
-        callArgs<[number, TemporaryAccessPatch]>(deviceRepo.update)[1]
-          .temporaryAccessBypassPolicies,
-      ).toBe(false);
-    });
-
-    it.each(['+05:30', '-08:00', 'not-an-offset'])(
-      'grants access regardless of the configured timezone %s',
-      async (timezone) => {
-        configService.getTimezone.mockResolvedValue(timezone);
-        await expect(
-          service.grantTemporaryAccess(7, 30),
-        ).resolves.toBeUndefined();
-      },
-    );
-
-    it('nulls every temporary access column when revoking', async () => {
-      await service.revokeTemporaryAccess(7);
-
-      expect(deviceRepo.update).toHaveBeenCalledWith(7, revokedAccess);
-    });
-
-    it('accepts access that has not expired', async () => {
-      const active = device({
-        temporaryAccessUntil: new Date(Date.now() + 60_000),
-      });
-
-      await expect(service.isTemporaryAccessValid(active)).resolves.toBe(true);
-      expect(deviceRepo.update).not.toHaveBeenCalled();
-    });
-
-    it('rejects and cleans up access that has lapsed', async () => {
-      const lapsed = device({
-        temporaryAccessUntil: new Date(Date.now() - 60_000),
-      });
-
-      await expect(service.isTemporaryAccessValid(lapsed)).resolves.toBe(false);
-      expect(deviceRepo.update).toHaveBeenCalledWith(1, revokedAccess);
-    });
-
-    it('rejects a device that never had temporary access', async () => {
-      await expect(service.isTemporaryAccessValid(device())).resolves.toBe(
-        false,
-      );
-      expect(deviceRepo.update).not.toHaveBeenCalled();
-    });
-
-    it('reports the remaining minutes, rounded up', async () => {
-      const active = device({
-        temporaryAccessUntil: new Date(Date.now() + 90_000),
-      });
-      expect(service.getTemporaryAccessTimeLeft(active)).toBe(2);
-    });
-
-    it('reports zero once the window has passed', async () => {
-      const lapsed = device({
-        temporaryAccessUntil: new Date(Date.now() - 60_000),
-      });
-      expect(service.getTemporaryAccessTimeLeft(lapsed)).toBe(0);
-    });
-
-    it('reports null for a device with no temporary access', () => {
-      expect(service.getTemporaryAccessTimeLeft(device())).toBeNull();
-    });
-  });
-
   describe('clearSessionKey', () => {
     it('clears the key on the device and closes the history row', async () => {
       deviceRepo.find.mockResolvedValue([
-        device({ currentSessionKey: 'sk-1' }),
+        userDevice({ currentSessionKey: 'sk-1' }),
       ]);
 
       await service.clearSessionKey('sk-1');
@@ -918,13 +579,13 @@ describe('DeviceTrackingService', () => {
     });
 
     it('lets the same session key be counted again afterwards', async () => {
-      deviceRepo.findOne.mockResolvedValue(device({ sessionCount: 4 }));
+      deviceRepo.findOne.mockResolvedValue(userDevice({ sessionCount: 4 }));
       await service.processSessionsForDeviceTracking(
         sessionsResponse(session()),
       );
 
       deviceRepo.find.mockResolvedValue([
-        device({ currentSessionKey: 'sk-1' }),
+        userDevice({ currentSessionKey: 'sk-1' }),
       ]);
       await service.clearSessionKey('sk-1');
 
@@ -944,65 +605,6 @@ describe('DeviceTrackingService', () => {
     it('tolerates a driver that omits the affected count', async () => {
       deviceRepo.update.mockResolvedValue({});
       await expect(service.clearSessionKey('sk-1')).resolves.toBeUndefined();
-    });
-  });
-
-  describe('cleanupInactiveDevices', () => {
-    it('reports nothing to do on an empty database', async () => {
-      await expect(service.cleanupInactiveDevices(30)).resolves.toEqual({
-        deletedCount: 0,
-        deletedDevices: [],
-      });
-      expect(deviceRepo.delete).not.toHaveBeenCalled();
-    });
-
-    it('deletes devices last seen before the cutoff', async () => {
-      const stale = device({
-        id: 1,
-        lastSeen: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000),
-      });
-      const active = device({ id: 2, lastSeen: new Date() });
-      deviceRepo.find.mockResolvedValue([stale, active]);
-
-      const result = await service.cleanupInactiveDevices(30);
-
-      expect(result.deletedCount).toBe(1);
-      expect(result.deletedDevices).toEqual([stale]);
-      expect(deviceRepo.delete).toHaveBeenCalledWith({ id: In([1]) });
-      expect(historyRepo.delete).toHaveBeenCalledWith({
-        userDeviceId: In([1]),
-      });
-    });
-
-    it('names a device by its identifier when it has no name', async () => {
-      deviceRepo.find.mockResolvedValue([
-        device({
-          id: 1,
-          deviceName: null,
-          username: null,
-          lastSeen: new Date('2026-01-01T00:00:00Z'),
-        }),
-      ]);
-
-      const result = await service.cleanupInactiveDevices(30);
-      expect(result.deletedCount).toBe(1);
-    });
-
-    it('skips a device with no last-seen date', async () => {
-      deviceRepo.find.mockResolvedValue([
-        device({ id: 1, lastSeen: undefined }),
-      ]);
-
-      const result = await service.cleanupInactiveDevices(30);
-      expect(result.deletedCount).toBe(0);
-    });
-
-    it('keeps every device when none are stale', async () => {
-      deviceRepo.find.mockResolvedValue([device({ lastSeen: new Date() })]);
-
-      const result = await service.cleanupInactiveDevices(30);
-      expect(result.deletedCount).toBe(0);
-      expect(deviceRepo.delete).toHaveBeenCalledWith({ id: In([]) });
     });
   });
 });

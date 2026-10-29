@@ -7,6 +7,7 @@ import {
   MIN_REFRESH_INTERVAL_SECONDS,
 } from '@/modules/config/services/config.service';
 import { DeviceTrackingService } from '@/modules/devices/services/device-tracking.service';
+import { DeviceMaintenanceService } from '@/modules/devices/services/device-maintenance.service';
 import { UsersService } from '@/modules/users/services/users.service';
 import { AuthService } from '@/modules/auth/auth.service';
 import { Logger } from '@nestjs/common';
@@ -23,6 +24,7 @@ export class SchedulerService implements OnModuleInit {
     @Inject(forwardRef(() => ConfigService))
     private readonly configService: ConfigService,
     private readonly deviceTrackingService: DeviceTrackingService,
+    private readonly deviceMaintenanceService: DeviceMaintenanceService,
     private readonly usersService: UsersService,
     private readonly authService: AuthService,
     private readonly schedulerRegistry: SchedulerRegistry,
@@ -191,7 +193,7 @@ export class SchedulerService implements OnModuleInit {
       this.logger.log(
         `Running device cleanup for devices inactive for ${intervalDays} days...`,
       );
-      await this.deviceTrackingService.cleanupInactiveDevices(intervalDays);
+      await this.deviceMaintenanceService.cleanupInactiveDevices(intervalDays);
     } catch (error) {
       this.logger.error('Error during device cleanup:', error);
     }
@@ -200,7 +202,7 @@ export class SchedulerService implements OnModuleInit {
   private async enforceStrictMode(): Promise<void> {
     try {
       const processedCount =
-        await this.deviceTrackingService.enforceStrictModeOnPendingDevices();
+        await this.deviceMaintenanceService.enforceStrictModeOnPendingDevices();
       if (processedCount > 0) {
         this.logger.log(
           `Strict mode enforcement: ${processedCount} pending device(s) processed`,

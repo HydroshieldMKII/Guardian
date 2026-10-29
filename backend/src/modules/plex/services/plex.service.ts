@@ -6,7 +6,7 @@ import {
   PlexSession,
   PlexSessionsResponse,
 } from '@/types/plex.types';
-import { DeviceTrackingService } from '@/modules/devices/services/device-tracking.service';
+import { DevicesService } from '@/modules/devices/services/devices.service';
 import { ActiveSessionService } from '@/modules/sessions/services/active-session.service';
 import { ConfigService } from '@/modules/config/services/config.service';
 import { SessionOrchestratorService } from '@/services/session-orchestrator.service';
@@ -20,7 +20,7 @@ export class PlexService {
 
   constructor(
     private readonly plexClient: PlexClient,
-    private readonly deviceTrackingService: DeviceTrackingService,
+    private readonly devicesService: DevicesService,
     private readonly activeSessionService: ActiveSessionService,
     private readonly configService: ConfigService,
     private readonly sessionOrchestratorService: SessionOrchestratorService,
@@ -74,10 +74,9 @@ export class PlexService {
 
             if (session.Player?.machineIdentifier) {
               try {
-                const device =
-                  await this.deviceTrackingService.findDeviceByIdentifier(
-                    session.Player.machineIdentifier,
-                  );
+                const device = await this.devicesService.findDeviceByIdentifier(
+                  session.Player.machineIdentifier,
+                );
                 sessionCount = device?.sessionCount || 0;
               } catch (error) {
                 this.logger.warn(

@@ -3,6 +3,7 @@ import { Test } from '@nestjs/testing';
 import { PlexService } from '@/modules/plex/services/plex.service';
 import { ConfigService } from '@/modules/config/services/config.service';
 import { DeviceTrackingService } from '@/modules/devices/services/device-tracking.service';
+import { DeviceMaintenanceService } from '@/modules/devices/services/device-maintenance.service';
 import { UsersService } from '@/modules/users/services/users.service';
 import { AuthService } from '@/modules/auth/auth.service';
 import { SchedulerService } from '@/services/scheduler.service';
@@ -32,7 +33,11 @@ describe('SchedulerService', () => {
   let service: SchedulerService;
   let plexService: { updateActiveSessions: jest.Mock };
   let configService: Record<string, jest.Mock>;
-  let deviceTrackingService: Record<string, jest.Mock>;
+  let deviceTrackingService: { cleanupStaleSessionKeys: jest.Mock };
+  let deviceMaintenanceService: Record<
+    'cleanupInactiveDevices' | 'enforceStrictModeOnPendingDevices',
+    jest.Mock
+  >;
   let usersService: { syncUsersFromPlexTV: jest.Mock };
   let authService: { cleanupExpiredSessions: jest.Mock };
   let schedulerRegistry: Record<string, jest.Mock>;
@@ -71,12 +76,12 @@ describe('SchedulerService', () => {
       ),
     };
 
-    deviceTrackingService = {
+    deviceTrackingService = { cleanupStaleSessionKeys: jest.fn() };
+    deviceMaintenanceService = {
       cleanupInactiveDevices: jest
         .fn()
         .mockResolvedValue({ deletedCount: 0, deletedDevices: [] }),
       enforceStrictModeOnPendingDevices: jest.fn().mockResolvedValue(0),
-      cleanupStaleSessionKeys: jest.fn(),
     };
 
     usersService = {
@@ -106,6 +111,10 @@ describe('SchedulerService', () => {
         { provide: PlexService, useValue: plexService },
         { provide: ConfigService, useValue: configService },
         { provide: DeviceTrackingService, useValue: deviceTrackingService },
+        {
+          provide: DeviceMaintenanceService,
+          useValue: deviceMaintenanceService,
+        },
         { provide: UsersService, useValue: usersService },
         { provide: AuthService, useValue: authService },
         { provide: SchedulerRegistry, useValue: schedulerRegistry },
@@ -134,7 +143,7 @@ describe('SchedulerService', () => {
       expect(plexService.updateActiveSessions).toHaveBeenCalledTimes(1);
       expect(usersService.syncUsersFromPlexTV).toHaveBeenCalledTimes(1);
       expect(
-        deviceTrackingService.enforceStrictModeOnPendingDevices,
+        deviceMaintenanceService.enforceStrictModeOnPendingDevices,
       ).toHaveBeenCalledTimes(1);
     });
 
@@ -160,12 +169,12 @@ describe('SchedulerService', () => {
 
     it('re-runs strict mode enforcement when the setting changes', async () => {
       await service.onModuleInit();
-      deviceTrackingService.enforceStrictModeOnPendingDevices.mockClear();
+      deviceMaintenanceService.enforceStrictModeOnPendingDevices.mockClear();
 
       await listeners.get('PLEX_GUARD_STRICT_MODE')![0]();
 
       expect(
-        deviceTrackingService.enforceStrictModeOnPendingDevices,
+        deviceMaintenanceService.enforceStrictModeOnPendingDevices,
       ).toHaveBeenCalled();
     });
 
@@ -269,7 +278,7 @@ describe('SchedulerService', () => {
     it('does nothing while cleanup is disabled', async () => {
       await service.onModuleInit();
       expect(
-        deviceTrackingService.cleanupInactiveDevices,
+        deviceMaintenanceService.cleanupInactiveDevices,
       ).not.toHaveBeenCalled();
     });
 
@@ -279,15 +288,15 @@ describe('SchedulerService', () => {
 
       await service.onModuleInit();
 
-      expect(deviceTrackingService.cleanupInactiveDevices).toHaveBeenCalledWith(
-        45,
-      );
+      expect(
+        deviceMaintenanceService.cleanupInactiveDevices,
+      ).toHaveBeenCalledWith(45);
     });
 
     it('skips the nightly run while cleanup is disabled', async () => {
       await service.handleDeviceCleanup();
       expect(
-        deviceTrackingService.cleanupInactiveDevices,
+        deviceMaintenanceService.cleanupInactiveDevices,
       ).not.toHaveBeenCalled();
     });
 
@@ -297,15 +306,15 @@ describe('SchedulerService', () => {
 
       await service.handleDeviceCleanup();
 
-      expect(deviceTrackingService.cleanupInactiveDevices).toHaveBeenCalledWith(
-        30,
-      );
+      expect(
+        deviceMaintenanceService.cleanupInactiveDevices,
+      ).toHaveBeenCalledWith(30);
     });
 
     it('swallows a cleanup failure', async () => {
       settings.set('DEVICE_CLEANUP_ENABLED', true);
       settings.set('DEVICE_CLEANUP_INTERVAL_DAYS', 30);
-      deviceTrackingService.cleanupInactiveDevices.mockRejectedValue(
+      deviceMaintenanceService.cleanupInactiveDevices.mockRejectedValue(
         new Error('locked'),
       );
 
@@ -357,14 +366,14 @@ describe('SchedulerService', () => {
 
   describe('strict mode enforcement', () => {
     it('swallows an enforcement failure', async () => {
-      deviceTrackingService.enforceStrictModeOnPendingDevices.mockRejectedValue(
+      deviceMaintenanceService.enforceStrictModeOnPendingDevices.mockRejectedValue(
         new Error('db down'),
       );
       await expect(service.onModuleInit()).resolves.toBeUndefined();
     });
 
     it('reports the devices it processed', async () => {
-      deviceTrackingService.enforceStrictModeOnPendingDevices.mockResolvedValue(
+      deviceMaintenanceService.enforceStrictModeOnPendingDevices.mockResolvedValue(
         3,
       );
       await expect(service.onModuleInit()).resolves.toBeUndefined();

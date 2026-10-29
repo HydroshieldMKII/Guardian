@@ -1,6 +1,5 @@
 import { Test } from '@nestjs/testing';
-import { ActiveSessionService } from '@/modules/sessions/services/active-session.service';
-import { DeviceTrackingService } from '@/modules/devices/services/device-tracking.service';
+import { DevicesService } from '@/modules/devices/services/devices.service';
 import { ConfigService } from '@/modules/config/services/config.service';
 import { UsersService } from '@/modules/users/services/users.service';
 import { PlexService } from '@/modules/plex/services/plex.service';
@@ -19,7 +18,7 @@ describe('DashboardService', () => {
     getPublicSettings: jest.Mock;
   };
   let plexService: { getActiveSessionsWithMediaUrls: jest.Mock };
-  let deviceTrackingService: {
+  let devicesService: {
     getAllDevices: jest.Mock;
     getPendingDevices: jest.Mock;
     getApprovedDevices: jest.Mock;
@@ -39,7 +38,7 @@ describe('DashboardService', () => {
         .mockResolvedValue({ MediaContainer: { size: 2, Metadata: [{}, {}] } }),
     };
 
-    deviceTrackingService = {
+    devicesService = {
       getAllDevices: jest.fn().mockResolvedValue([{ id: 1 }, { id: 2 }]),
       getPendingDevices: jest.fn().mockResolvedValue([{ id: 2 }]),
       getApprovedDevices: jest.fn().mockResolvedValue([{ id: 1 }]),
@@ -53,9 +52,8 @@ describe('DashboardService', () => {
         DashboardService,
         { provide: ConfigService, useValue: configService },
         { provide: PlexService, useValue: plexService },
-        { provide: DeviceTrackingService, useValue: deviceTrackingService },
+        { provide: DevicesService, useValue: devicesService },
         { provide: UsersService, useValue: usersService },
-        { provide: ActiveSessionService, useValue: {} },
       ],
     }).compile();
 
@@ -89,7 +87,7 @@ describe('DashboardService', () => {
     });
 
     it('excludes Plexamp devices from the pending count by product', async () => {
-      deviceTrackingService.getPendingDevices.mockResolvedValue([
+      devicesService.getPendingDevices.mockResolvedValue([
         { id: 2, deviceProduct: 'Plexamp' },
         { id: 3, deviceProduct: 'Plex Web' },
       ]);
@@ -99,7 +97,7 @@ describe('DashboardService', () => {
     });
 
     it('excludes Plexamp devices from the pending count by name', async () => {
-      deviceTrackingService.getPendingDevices.mockResolvedValue([
+      devicesService.getPendingDevices.mockResolvedValue([
         { id: 2, deviceName: 'Kitchen PlexAmp' },
       ]);
 
@@ -108,7 +106,7 @@ describe('DashboardService', () => {
     });
 
     it('still lists Plexamp devices under pending devices', async () => {
-      deviceTrackingService.getPendingDevices.mockResolvedValue([
+      devicesService.getPendingDevices.mockResolvedValue([
         { id: 2, deviceProduct: 'Plexamp' },
       ]);
 
@@ -165,9 +163,7 @@ describe('DashboardService', () => {
 
   describe('failures', () => {
     it('propagates an error from a downstream service', async () => {
-      deviceTrackingService.getAllDevices.mockRejectedValue(
-        new Error('db down'),
-      );
+      devicesService.getAllDevices.mockRejectedValue(new Error('db down'));
       await expect(service.getDashboardData()).rejects.toThrow('db down');
     });
 
@@ -180,7 +176,7 @@ describe('DashboardService', () => {
 
     it('logs a failure that carries no stack', async () => {
       const bare = { message: 'no stack here' };
-      deviceTrackingService.getAllDevices.mockRejectedValue(bare);
+      devicesService.getAllDevices.mockRejectedValue(bare);
 
       await expect(service.getDashboardData()).rejects.toBe(bare);
     });

@@ -3,7 +3,7 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { UserDevice } from '@/entities/user-device.entity';
 import { UserPreference } from '@/entities/user-preference.entity';
 import { ConfigService } from '@/modules/config/services/config.service';
-import { DeviceTrackingService } from '@/modules/devices/services/device-tracking.service';
+import { TemporaryAccessService } from '@/modules/devices/services/temporary-access.service';
 import { PlexSession, PlexSessionsResponse } from '@/types/plex.types';
 import { ConcurrentStreamService } from '@/modules/users/services/concurrent-stream.service';
 
@@ -31,7 +31,7 @@ describe('ConcurrentStreamService', () => {
   let userDeviceRepository: { find: jest.Mock };
   let userPreferenceRepository: { findOne: jest.Mock };
   let configService: { getSetting: jest.Mock };
-  let deviceTrackingService: { isTemporaryAccessValid: jest.Mock };
+  let temporaryAccessService: { isTemporaryAccessValid: jest.Mock };
 
   const settings: Record<string, unknown> = {
     CONCURRENT_STREAM_LIMIT: 0,
@@ -54,7 +54,7 @@ describe('ConcurrentStreamService', () => {
       getSetting: jest.fn((key: string) => Promise.resolve(settings[key])),
     };
 
-    deviceTrackingService = {
+    temporaryAccessService = {
       isTemporaryAccessValid: jest.fn().mockResolvedValue(false),
     };
 
@@ -70,7 +70,7 @@ describe('ConcurrentStreamService', () => {
           useValue: userPreferenceRepository,
         },
         { provide: ConfigService, useValue: configService },
-        { provide: DeviceTrackingService, useValue: deviceTrackingService },
+        { provide: TemporaryAccessService, useValue: temporaryAccessService },
       ],
     }).compile();
 
@@ -158,14 +158,14 @@ describe('ConcurrentStreamService', () => {
     });
 
     it('drops temporary-access devices by default', async () => {
-      deviceTrackingService.isTemporaryAccessValid.mockResolvedValue(true);
+      temporaryAccessService.isTemporaryAccessValid.mockResolvedValue(true);
       const result = await service.filterCountableSessions('u1', [session()]);
       expect(result).toHaveLength(0);
     });
 
     it('keeps temporary-access devices when configured to include them', async () => {
       settings.CONCURRENT_LIMIT_INCLUDE_TEMP_ACCESS = true;
-      deviceTrackingService.isTemporaryAccessValid.mockResolvedValue(true);
+      temporaryAccessService.isTemporaryAccessValid.mockResolvedValue(true);
       const result = await service.filterCountableSessions('u1', [session()]);
       expect(result).toHaveLength(1);
     });

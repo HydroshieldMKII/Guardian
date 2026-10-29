@@ -4,7 +4,7 @@ import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from '@/app.module';
 import { GlobalExceptionFilter } from '@/filters/global-exception.filter';
 import { config, isDevelopment } from '@/config/app.config';
-import { DeviceTrackingService } from '@/modules/devices/services/device-tracking.service';
+import { DeviceEventsService } from '@/modules/devices/services/device-events.service';
 import { SessionTerminationService } from '@/modules/plex/services/session-termination.service';
 import { NotificationOrchestratorService } from '@/modules/notifications/services/notification-orchestrator.service';
 import * as dotenv from 'dotenv';
@@ -55,15 +55,15 @@ async function bootstrap() {
   );
 
   // Event listeners
-  const deviceTrackingService = app.get(DeviceTrackingService);
+  const deviceEvents = app.get(DeviceEventsService);
   const sessionTerminationService = app.get(SessionTerminationService);
   const notificationOrchestrator = app.get(NotificationOrchestratorService);
 
-  deviceTrackingService.onNewDeviceDetected((event) => {
+  deviceEvents.onNewDeviceDetected((event) => {
     void notificationOrchestrator.notifyNewDevice(event);
   });
 
-  deviceTrackingService.onDeviceLocationChanged((event) => {
+  deviceEvents.onDeviceLocationChanged((event) => {
     void notificationOrchestrator.notifyLocationChange(event);
   });
 
