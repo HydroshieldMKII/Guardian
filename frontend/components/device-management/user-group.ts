@@ -2,6 +2,10 @@ import type { UserSort } from "@/components/device-management/UserList";
 import { isPlexampDevice, isWaitingDevice } from "@/lib/device-policies";
 import type { UserDevice, UserPreference } from "@/types";
 
+export interface DeviceFocus {
+  deviceIdentifier: string;
+}
+
 export interface UserDeviceGroup {
   user: {
     userId: string;

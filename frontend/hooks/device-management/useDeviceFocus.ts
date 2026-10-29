@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { DeviceFocus } from "@/components/device-management/UserDetail";
+import type { DeviceFocus } from "@/components/device-management/user-group";
 import { HIGHLIGHT_CLASSES } from "@/lib/highlight";
 
 const DEVICE_LOOKUP_ATTEMPTS = 20;
