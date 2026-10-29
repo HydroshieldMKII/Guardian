@@ -5,6 +5,7 @@ import { UpdateProfileDto } from './update-profile.dto';
 import { UpdatePasswordDto } from './update-password.dto';
 import { LoginDto } from './login.dto';
 import { ConfirmPasswordDto } from './confirm-password.dto';
+import { PlexPinDto } from './plex-pin.dto';
 
 const errorsFor = <T extends object>(
   cls: new () => T,
@@ -33,6 +34,14 @@ describe('CreateAdminDto', () => {
     expect(errorsFor(CreateAdminDto, valid)).toEqual([]);
   });
 
+  it('stores the email trimmed and lowercased', () => {
+    const dto = plainToInstance(CreateAdminDto, {
+      ...valid,
+      email: ' Admin@Example.COM ',
+    });
+    expect(dto.email).toBe('admin@example.com');
+  });
+
   it('requires a username of at least three characters', () => {
     expect(
       propertiesFor(CreateAdminDto, { ...valid, username: 'ab' }),
@@ -54,6 +63,27 @@ describe('CreateAdminDto', () => {
     expect(
       propertiesFor(CreateAdminDto, { ...valid, email: 'nope' }),
     ).toContain('email');
+  });
+
+  it('rejects a username longer than 255 characters', () => {
+    expect(
+      propertiesFor(CreateAdminDto, { ...valid, username: 'a'.repeat(256) }),
+    ).toContain('username');
+  });
+
+  it('rejects an email longer than 255 characters', () => {
+    expect(
+      propertiesFor(CreateAdminDto, {
+        ...valid,
+        email: `${'a'.repeat(250)}@example.com`,
+      }),
+    ).toContain('email');
+  });
+
+  it('rejects a username made only of spaces', () => {
+    expect(
+      propertiesFor(CreateAdminDto, { ...valid, username: '      ' }),
+    ).toContain('username');
   });
 });
 
@@ -125,8 +155,46 @@ describe('UpdateProfileDto', () => {
     );
   });
 
-  it('accepts an avatar url as free text', () => {
-    expect(errorsFor(UpdateProfileDto, { avatarUrl: 'anything' })).toEqual([]);
+  it.each([
+    'data:image/png;base64,iVBORw0KGgo=',
+    'https://example.com/avatar.png',
+    'http://example.com/avatar.png',
+    '',
+    null,
+  ])('accepts the avatar %p', (avatarUrl) => {
+    expect(errorsFor(UpdateProfileDto, { avatarUrl })).toEqual([]);
+  });
+
+  it.each([
+    'javascript:alert(1)',
+    'data:text/html;base64,PHNjcmlwdD4=',
+    'anything',
+    42,
+  ])('rejects the avatar %p', (avatarUrl) => {
+    expect(propertiesFor(UpdateProfileDto, { avatarUrl })).toContain(
+      'avatarUrl',
+    );
+  });
+
+  it('trims the username before checking its length', () => {
+    const dto = plainToInstance(UpdateProfileDto, { username: '  ab  ' });
+    expect(dto.username).toBe('ab');
+    expect(propertiesFor(UpdateProfileDto, { username: '  ab  ' })).toContain(
+      'username',
+    );
+  });
+
+  it('treats a blank email as no email', () => {
+    expect(propertiesFor(UpdateProfileDto, { email: '   ' })).not.toContain(
+      'email',
+    );
+  });
+
+  it('stores the email trimmed and lowercased', () => {
+    const dto = plainToInstance(UpdateProfileDto, {
+      email: ' Admin@Example.COM ',
+    });
+    expect(dto.email).toBe('admin@example.com');
   });
 });
 
@@ -186,6 +254,16 @@ describe('LoginDto', () => {
     ).toEqual([]);
   });
 
+  it.each(['username', 'password'])('rejects an empty %s', (field) => {
+    expect(
+      propertiesFor(LoginDto, {
+        username: 'testuser',
+        password: 'x',
+        [field]: '',
+      }),
+    ).toContain(field);
+  });
+
   it.each(['username', 'password'])('requires a %s', (field) => {
     expect(
       propertiesFor(LoginDto, {
@@ -195,6 +273,19 @@ describe('LoginDto', () => {
       }),
     ).toContain(field);
   });
+});
+
+describe('PlexPinDto', () => {
+  it('accepts a client id', () => {
+    expect(errorsFor(PlexPinDto, { clientId: 'client-1' })).toEqual([]);
+  });
+
+  it.each([undefined, '', ['client-1'], 42, 'x'.repeat(129)])(
+    'rejects the client id %p',
+    (clientId) => {
+      expect(propertiesFor(PlexPinDto, { clientId })).toContain('clientId');
+    },
+  );
 });
 
 describe('ConfirmPasswordDto', () => {

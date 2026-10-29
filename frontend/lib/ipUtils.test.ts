@@ -62,12 +62,17 @@ describe("isPrivateIP", () => {
     "172.31.255.255",
     "192.168.1.1",
     "127.0.0.1",
+    "169.254.10.20",
   ])("treats %s as private", (ip) => expect(isPrivateIP(ip)).toBe(true));
 
-  it.each(["8.8.8.8", "172.15.0.1", "172.32.0.1", "192.169.1.1", "1.1.1.1"])(
-    "treats %s as public",
-    (ip) => expect(isPrivateIP(ip)).toBe(false),
-  );
+  it.each([
+    "8.8.8.8",
+    "172.15.0.1",
+    "172.32.0.1",
+    "192.169.1.1",
+    "1.1.1.1",
+    "100.64.0.1",
+  ])("treats %s as public", (ip) => expect(isPrivateIP(ip)).toBe(false));
 
   it("returns false for an invalid address", () => {
     expect(isPrivateIP("not-an-ip")).toBe(false);
@@ -216,7 +221,10 @@ describe("validateIPAccess", () => {
   it("enforces the allow list when restricted", () => {
     expect(
       validateIPAccess("8.8.8.8", "both", "restricted", ["1.1.1.1"]),
-    ).toEqual({ allowed: false, reason: "This IP address is not on the allowed list" });
+    ).toEqual({
+      allowed: false,
+      reason: "This IP address is not on the allowed list",
+    });
   });
 
   it("permits a listed address when restricted", () => {

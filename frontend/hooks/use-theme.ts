@@ -1,70 +1,153 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState } from "react";
-
-type Theme = "dark" | "light";
+import {
+  DEFAULT_PALETTE,
+  PALETTE_STORAGE_KEY,
+  SYSTEM_DARK_QUERY,
+  THEME_STORAGE_KEY,
+  isPalette,
+  isThemeMode,
+  resolveTheme,
+  type Palette,
+  type Theme,
+  type ThemeMode,
+} from "@/lib/theme";
 
 type ThemeProviderProps = {
   children: React.ReactNode;
   defaultTheme?: Theme;
   storageKey?: string;
+  paletteStorageKey?: string;
 };
 
 type ThemeProviderState = {
   theme: Theme;
-  setTheme: (theme: Theme) => void;
+  mode: ThemeMode;
+  setTheme: (mode: ThemeMode) => void;
   toggleTheme: () => void;
+  palette: Palette;
+  setPalette: (palette: Palette) => void;
 };
 
 const initialState: ThemeProviderState = {
   theme: "dark",
+  mode: "dark",
   setTheme: () => null,
   toggleTheme: () => null,
+  palette: DEFAULT_PALETTE,
+  setPalette: () => null,
 };
 
 const ThemeProviderContext = createContext<ThemeProviderState>(initialState);
 
+const readStored = (key: string) => {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+};
+
+const writeStored = (key: string, value: string) => {
+  try {
+    localStorage.setItem(key, value);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+const THEME_CHANGE_MS = 350;
+let settleTimer: ReturnType<typeof setTimeout> | undefined;
+
+const easeThemeChange = () => {
+  const root = document.documentElement;
+  root.classList.add("theme-changing");
+  clearTimeout(settleTimer);
+  settleTimer = setTimeout(
+    () => root.classList.remove("theme-changing"),
+    THEME_CHANGE_MS,
+  );
+};
+
+const applyTheme = (theme: Theme) => {
+  const root = document.documentElement;
+  root.classList.remove("light", "dark");
+  root.classList.add(theme);
+};
+
+const applyPalette = (palette: Palette) => {
+  document.documentElement.setAttribute("data-palette", palette);
+};
+
 export function ThemeProvider({
   children,
   defaultTheme = "dark",
-  storageKey = "guardian-ui-theme",
+  storageKey = THEME_STORAGE_KEY,
+  paletteStorageKey = PALETTE_STORAGE_KEY,
 }: ThemeProviderProps) {
-  const [theme, setTheme] = useState<Theme>(defaultTheme);
+  const [mode, setModeState] = useState<ThemeMode>(defaultTheme);
+  const [theme, setThemeState] = useState<Theme>(defaultTheme);
+  const [palette, setPaletteState] = useState<Palette>(DEFAULT_PALETTE);
 
   useEffect(() => {
-    // Read current theme from DOM (Inline script at the top of _document)
     const root = document.documentElement;
-    const currentTheme = root.classList.contains("light") ? "light" : "dark";
+    const stored = readStored(storageKey);
+    const fromDom = root.classList.contains("light") ? "light" : "dark";
+    const nextMode = isThemeMode(stored) ? stored : fromDom;
+    const nextTheme = resolveTheme(nextMode);
+    applyTheme(nextTheme);
+    setModeState(nextMode);
+    setThemeState(nextTheme);
 
-    // Update state to match DOM
-    setTheme(currentTheme);
-  }, []);
+    const storedPalette = readStored(paletteStorageKey);
+    const domPalette = root.getAttribute("data-palette");
+    const nextPalette = isPalette(storedPalette)
+      ? storedPalette
+      : isPalette(domPalette)
+        ? domPalette
+        : DEFAULT_PALETTE;
+    applyPalette(nextPalette);
+    setPaletteState(nextPalette);
+  }, [storageKey, paletteStorageKey]);
 
-  // Handle theme changes
   useEffect(() => {
-    const root = document.documentElement;
-    root.className = theme; // Set the class on the root element
-  }, [theme]);
+    if (mode !== "system") return;
+    const query = window.matchMedia(SYSTEM_DARK_QUERY);
+    const follow = () => {
+      const next = resolveTheme("system");
+      easeThemeChange();
+      applyTheme(next);
+      setThemeState(next);
+    };
+    query.addEventListener("change", follow);
+    return () => query.removeEventListener("change", follow);
+  }, [mode]);
 
-  const updateTheme = (newTheme: Theme) => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem(storageKey, newTheme);
-      const root = window.document.documentElement;
-      root.classList.remove("light", "dark");
-      root.classList.add(newTheme);
-    }
-    setTheme(newTheme);
+  const setTheme = (next: ThemeMode) => {
+    const resolved = resolveTheme(next);
+    writeStored(storageKey, next);
+    easeThemeChange();
+    applyTheme(resolved);
+    setModeState(next);
+    setThemeState(resolved);
   };
 
-  const toggleTheme = () => {
-    const newTheme = theme === "dark" ? "light" : "dark";
-    updateTheme(newTheme);
+  const setPalette = (next: Palette) => {
+    writeStored(paletteStorageKey, next);
+    easeThemeChange();
+    applyPalette(next);
+    setPaletteState(next);
   };
 
-  const value = {
+  const value: ThemeProviderState = {
     theme,
-    setTheme: updateTheme,
-    toggleTheme,
+    mode,
+    setTheme,
+    toggleTheme: () => setTheme(theme === "dark" ? "light" : "dark"),
+    palette,
+    setPalette,
   };
 
   return React.createElement(
@@ -74,11 +157,4 @@ export function ThemeProvider({
   );
 }
 
-export const useTheme = () => {
-  const context = useContext(ThemeProviderContext);
-
-  if (context === undefined)
-    throw new Error("useTheme must be used within a ThemeProvider");
-
-  return context;
-};
+export const useTheme = () => useContext(ThemeProviderContext);

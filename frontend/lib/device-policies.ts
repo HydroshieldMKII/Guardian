@@ -1,6 +1,11 @@
 import type { Tone } from "@/components/ui/entity";
 import { formatTimeLeft } from "@/lib/duration";
-import type { UserDevice, UserPreference, UserTimeRule } from "@/types";
+import type {
+  AppSetting,
+  UserDevice,
+  UserPreference,
+  UserTimeRule,
+} from "@/types";
 
 export type DevicePolicy = "temporary" | "schedule" | "ip";
 
@@ -18,17 +23,9 @@ const POLICY_TONE: Record<DevicePolicy, Tone> = {
 };
 
 const POLICY_LABEL: Record<DevicePolicy, string> = {
-  temporary: "Temporary Access",
-  schedule: "Time Schedule",
-  ip: "IP Access",
-};
-
-const POLICY_ORDER: DevicePolicy[] = ["temporary", "schedule", "ip"];
-
-const GROUP_HINT: Record<DevicePolicy, string> = {
-  temporary: "At least one device has temporary access",
-  schedule: "A time schedule applies to at least one device",
-  ip: "Network and IP access rules apply to this user",
+  temporary: "Temporary access",
+  schedule: "Time schedule",
+  ip: "Network access",
 };
 
 const DEVICE_HINT: Record<Exclude<DevicePolicy, "temporary">, string> = {
@@ -41,10 +38,39 @@ export const BYPASSED_BY_TEMPORARY_ACCESS =
   "the time schedule, IP access rules and device approval";
 
 export const isPlexampDevice = (device: UserDevice): boolean =>
-  Boolean(
-    device.deviceProduct?.toLowerCase().includes("plexamp") ||
-    device.deviceName?.toLowerCase().includes("plexamp"),
+  device.deviceProduct?.toLowerCase().includes("plexamp") ?? false;
+
+export const isWaitingDevice = (device: UserDevice): boolean =>
+  device.status === "pending" && !isPlexampDevice(device);
+
+export const canGrantTemporaryAccess = (
+  device: UserDevice,
+  preference: UserPreference | undefined,
+  settings: AppSetting[] = [],
+): boolean => {
+  if (isPlexampDevice(device)) return false;
+  if (device.status === "rejected") return true;
+  if (device.status !== "pending") return false;
+  if (preference && preference.defaultBlock !== null) {
+    return preference.defaultBlock !== false;
+  }
+  return (
+    settings.find((setting) => setting.key === "PLEX_GUARD_DEFAULT_BLOCK")
+      ?.value !== "false"
   );
+};
+
+export const countWaitingDevices = (
+  devices: UserDevice[],
+  users: UserPreference[] = [],
+): number => {
+  const hidden = new Set(
+    users.filter((user) => user.hidden).map((user) => user.userId),
+  );
+  return devices.filter(
+    (device) => isWaitingDevice(device) && !hidden.has(device.userId),
+  ).length;
+};
 
 export const hasTemporaryAccess = (device: UserDevice): boolean => {
   if (!device.temporaryAccessUntil) return false;
@@ -56,15 +82,17 @@ export const temporaryAccessTimeLeft = (device: UserDevice): string | null =>
     ? formatTimeLeft(device.temporaryAccessUntil)
     : null;
 
+export const hasAllowList = (allowed: unknown): boolean =>
+  Array.isArray(allowed)
+    ? allowed.length > 0
+    : typeof allowed === "string" && allowed.trim() !== "";
+
 export const hasIPPolicy = (preference?: UserPreference | null): boolean => {
   if (!preference) return false;
-  const allowed = preference.allowedIPs;
   return (
     preference.networkPolicy !== "both" ||
     preference.ipAccessPolicy !== "all" ||
-    (Array.isArray(allowed)
-      ? allowed.length > 0
-      : String(allowed ?? "").trim() !== "")
+    hasAllowList(preference.allowedIPs)
   );
 };
 
@@ -124,24 +152,4 @@ export function devicePolicyBadges(
       hint: DEVICE_HINT[policy],
     };
   });
-}
-
-export function groupPolicyBadges(
-  devices: UserDevice[],
-  preference?: UserPreference | null,
-  rules?: UserTimeRule[],
-): PolicyBadge[] {
-  const present = new Set<DevicePolicy>();
-  for (const device of devices) {
-    for (const policy of devicePolicies(device, preference, rules)) {
-      present.add(policy);
-    }
-  }
-
-  return POLICY_ORDER.filter((policy) => present.has(policy)).map((policy) => ({
-    policy,
-    label: POLICY_LABEL[policy],
-    tone: POLICY_TONE[policy],
-    hint: GROUP_HINT[policy],
-  }));
 }

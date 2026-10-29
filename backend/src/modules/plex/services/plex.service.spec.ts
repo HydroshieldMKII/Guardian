@@ -1,8 +1,9 @@
+import { Logger } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { PlexService } from './plex.service';
 import { PlexClient } from './plex-client';
-import { SessionTerminationService } from './session-termination.service';
-import { DeviceTrackingService } from '@/modules/devices/services/device-tracking.service';
+import { PlexConfigurationError } from './plex-configuration-error';
+import { DevicesService } from '@/modules/devices/services/devices.service';
 import { ActiveSessionService } from '@/modules/sessions/services/active-session.service';
 import { ConfigService } from '@/modules/config/services/config.service';
 import { SessionOrchestratorService } from '@/services/session-orchestrator.service';
@@ -13,7 +14,7 @@ import { anyValue } from '@/test-matchers';
 describe('PlexService', () => {
   let service: PlexService;
   let plexClient: Record<string, jest.Mock>;
-  let deviceTrackingService: { findDeviceByIdentifier: jest.Mock };
+  let devicesService: { findDeviceByIdentifier: jest.Mock };
   let activeSessionService: { getActiveSessionsFormatted: jest.Mock };
   let sessionOrchestratorService: { orchestrateSessionUpdate: jest.Mock };
   let settings: Partial<SettingValues>;
@@ -33,10 +34,10 @@ describe('PlexService', () => {
     MediaContainer: { size: metadata.length, Metadata: metadata },
   });
 
-  const firstSession = async () => {
+  const firstSession = async (): Promise<Record<string, unknown>> => {
     const result = await service.getActiveSessions();
-    const metadata = result.MediaContainer?.Metadata ?? [];
-    return metadata[0] as unknown as Record<string, unknown>;
+    const [first] = result.MediaContainer?.Metadata ?? [];
+    return { ...first };
   };
 
   beforeEach(async () => {
@@ -56,7 +57,7 @@ describe('PlexService', () => {
       getSessions: jest.fn().mockResolvedValue(sessionsResponse([session()])),
     };
 
-    deviceTrackingService = {
+    devicesService = {
       findDeviceByIdentifier: jest.fn().mockResolvedValue({ sessionCount: 3 }),
     };
 
@@ -74,8 +75,7 @@ describe('PlexService', () => {
       providers: [
         PlexService,
         { provide: PlexClient, useValue: plexClient },
-        { provide: SessionTerminationService, useValue: {} },
-        { provide: DeviceTrackingService, useValue: deviceTrackingService },
+        { provide: DevicesService, useValue: devicesService },
         { provide: ActiveSessionService, useValue: activeSessionService },
         {
           provide: ConfigService,
@@ -144,7 +144,7 @@ describe('PlexService', () => {
     });
 
     it('counts zero for a device it has never seen', async () => {
-      deviceTrackingService.findDeviceByIdentifier.mockResolvedValue(null);
+      devicesService.findDeviceByIdentifier.mockResolvedValue(null);
 
       expect((await firstSession()).Session).toMatchObject({
         sessionCount: 0,
@@ -152,7 +152,7 @@ describe('PlexService', () => {
     });
 
     it('counts zero when the device lookup fails', async () => {
-      deviceTrackingService.findDeviceByIdentifier.mockRejectedValue(
+      devicesService.findDeviceByIdentifier.mockRejectedValue(
         new Error('db down'),
       );
 
@@ -167,9 +167,7 @@ describe('PlexService', () => {
       );
 
       await service.getActiveSessions();
-      expect(
-        deviceTrackingService.findDeviceByIdentifier,
-      ).not.toHaveBeenCalled();
+      expect(devicesService.findDeviceByIdentifier).not.toHaveBeenCalled();
     });
 
     it('passes an empty response through untouched', async () => {
@@ -314,6 +312,23 @@ describe('PlexService', () => {
       );
 
       await expect(service.updateActiveSessions()).resolves.toBe(orchestrated);
+    });
+
+    it('logs an invalid Plex address as a warning and rethrows', async () => {
+      const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+      const error = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+      sessionOrchestratorService.orchestrateSessionUpdate.mockRejectedValue(
+        new PlexConfigurationError('Invalid Plex server address or port.'),
+      );
+
+      await expect(service.updateActiveSessions()).rejects.toThrow(
+        'Invalid Plex server address or port.',
+      );
+
+      expect(warn).toHaveBeenCalled();
+      expect(error).not.toHaveBeenCalled();
+      warn.mockRestore();
+      error.mockRestore();
     });
 
     it('propagates an orchestration failure', async () => {

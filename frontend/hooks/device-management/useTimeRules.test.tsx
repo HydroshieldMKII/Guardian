@@ -1,949 +1,314 @@
-import { act, renderHook } from "@testing-library/react";
-import { CreateTimeRuleDto, UserTimeRule } from "@/types";
-import { useTimeRules } from "./useTimeRules";
+import { act, waitFor } from "@testing-library/react";
+import { renderHookWithQuery } from "@/test-utils/query";
+import { queryKeys } from "@/lib/query-keys";
+import { timeRulesApi } from "@/lib/time-rules-api";
+import type { CreateTimeRuleDto, UserTimeRule } from "@/types";
+import { useTimeRules, useTimeRulesForUsers } from "./useTimeRules";
 
-const fetchMock = jest.fn<Promise<Response>, [RequestInfo | URL, RequestInit?]>();
+jest.mock("@/lib/time-rules-api", () => ({
+  timeRulesApi: {
+    forUser: jest.fn(),
+    forUsers: jest.fn(),
+    create: jest.fn(),
+    update: jest.fn(),
+    remove: jest.fn(),
+    applyPreset: jest.fn(),
+  },
+}));
 
-const ok = (body: unknown) =>
-  new Response(JSON.stringify(body), {
-    status: 200,
-    headers: { "Content-Type": "application/json" },
-  });
+const api = jest.mocked(timeRulesApi);
 
-const lastCall = () => fetchMock.mock.calls[fetchMock.mock.calls.length - 1];
-const bodyOf = (): unknown => JSON.parse(lastCall()[1]?.body as string);
+const rule = (overrides: Partial<UserTimeRule> = {}): UserTimeRule => ({
+  id: 1,
+  userId: "u1",
+  ruleName: "Bedtime",
+  enabled: true,
+  dayOfWeek: 1,
+  startTime: "20:00",
+  endTime: "22:00",
+  createdAt: "",
+  updatedAt: "",
+  ...overrides,
+});
 
-const rule = (overrides: Partial<UserTimeRule> = {}): UserTimeRule =>
-  ({
-    id: 1,
-    userId: "u1",
-    deviceIdentifier: null,
-    dayOfWeek: 1,
-    startTime: "20:00",
-    endTime: "22:00",
-    ruleName: "Bedtime",
-    enabled: true,
-    ...overrides,
-  }) as UserTimeRule;
-
-const draft = (overrides: Partial<CreateTimeRuleDto> = {}): CreateTimeRuleDto =>
-  ({
-    ruleName: "Bedtime",
-    dayOfWeek: 1,
-    startTime: "20:00",
-    endTime: "22:00",
-    ...overrides,
-  }) as CreateTimeRuleDto;
-
-const setup = () => renderHook(() => useTimeRules());
+const draft = (
+  overrides: Partial<CreateTimeRuleDto> = {},
+): CreateTimeRuleDto => ({
+  ruleName: "Bedtime",
+  dayOfWeek: 1,
+  startTime: "20:00",
+  endTime: "22:00",
+  ...overrides,
+});
 
 beforeEach(() => {
   jest.clearAllMocks();
-  global.fetch = fetchMock as typeof fetch;
-  fetchMock.mockImplementation(async () => ok([]));
-
-  const { result } = setup();
-  act(() => result.current.clearCache());
+  api.forUser.mockResolvedValue([]);
+  api.forUsers.mockResolvedValue({});
+  api.create.mockResolvedValue(rule());
+  api.update.mockResolvedValue(rule());
+  api.remove.mockResolvedValue(undefined);
+  api.applyPreset.mockResolvedValue([]);
 });
 
-describe("fetchAllTimeRules", () => {
-  it("asks for every uncached user in one batch", async () => {
-    fetchMock.mockImplementation(async () => ok({ u1: [rule()], u2: [] }));
-    const { result } = setup();
+describe("useTimeRulesForUsers", () => {
+  it("asks once for every distinct user, in a stable order", async () => {
+    api.forUsers.mockResolvedValue({ u1: [rule()], u2: [] });
 
-    await act(async () => {
-      await result.current.fetchAllTimeRules(["u1", "u2"]);
-    });
-
-    expect(lastCall()[0]).toBe("/api/pg/rules/batch");
-    expect(bodyOf()).toEqual({ userIds: ["u1", "u2"] });
-  });
-
-  it("serves a later read from the cache", async () => {
-    fetchMock.mockImplementation(async () => ok({ u1: [rule()] }));
-    const { result } = setup();
-
-    await act(async () => {
-      await result.current.fetchAllTimeRules(["u1"]);
-    });
-    fetchMock.mockClear();
-
-    await act(async () => {
-      await result.current.fetchAllTimeRules(["u1"]);
-    });
-
-    expect(fetchMock).not.toHaveBeenCalled();
-  });
-
-  it("only asks for the users it does not already hold", async () => {
-    fetchMock.mockImplementation(async () => ok({ u1: [rule()] }));
-    const { result } = setup();
-
-    await act(async () => {
-      await result.current.fetchAllTimeRules(["u1"]);
-    });
-    await act(async () => {
-      await result.current.fetchAllTimeRules(["u1", "u2"]);
-    });
-
-    expect(bodyOf()).toEqual({ userIds: ["u2"] });
-  });
-
-  it("caches an empty list for a user the response omitted", async () => {
-    fetchMock.mockImplementation(async () => ok({ u1: [rule()] }));
-    const { result } = setup();
-
-    await act(async () => {
-      await result.current.fetchAllTimeRules(["u1", "u2"]);
-    });
-
-    let rules: UserTimeRule[] | undefined;
-    await act(async () => {
-      rules = await result.current.getAllTimeRules("u2");
-    });
-
-    expect(rules).toEqual([]);
-  });
-
-  it("caches empty lists on a server error so it stops retrying", async () => {
-    fetchMock.mockImplementation(
-      async () => new Response("", { status: 500, statusText: "boom" }),
+    const { result } = renderHookWithQuery(() =>
+      useTimeRulesForUsers(["u2", "u1", "u2"]),
     );
-    const { result } = setup();
 
-    await act(async () => {
-      await result.current.fetchAllTimeRules(["u1"]);
-    });
-    fetchMock.mockClear();
-
-    await act(async () => {
-      await result.current.fetchAllTimeRules(["u1"]);
-    });
-
-    expect(fetchMock).not.toHaveBeenCalled();
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(api.forUsers).toHaveBeenCalledTimes(1);
+    expect(api.forUsers).toHaveBeenCalledWith(["u1", "u2"]);
+    expect(result.current.data).toEqual({ u1: [rule()], u2: [] });
   });
 
-  it("leaves an already cached user alone when the batch fails", async () => {
-    fetchMock.mockImplementation(async () => ok({ u1: [rule({ id: 9 })] }));
-    const { result } = setup();
-    await act(async () => {
-      await result.current.fetchAllTimeRules(["u1"]);
-    });
+  it("shows the cached rules at once for the same users listed in another order", async () => {
+    const { client, result } = renderHookWithQuery(() =>
+      useTimeRulesForUsers(["u1", "u2"]),
+    );
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    fetchMock.mockImplementation(async () => {
-      throw new Error("offline");
-    });
-    await act(async () => {
-      await result.current.fetchAllTimeRules(["u1", "u2"]);
-    });
+    const second = renderHookWithQuery(
+      () => useTimeRulesForUsers(["u2", "u1"]),
+      client,
+    );
 
-    fetchMock.mockClear();
-    let rules: UserTimeRule[] | undefined;
-    await act(async () => {
-      rules = await result.current.getAllTimeRules("u1");
-    });
-    expect(rules?.map((r) => r.id)).toEqual([9]);
+    expect(second.result.current.data).toEqual({});
+    expect(
+      client.getQueryCache().findAll({ queryKey: queryKeys.timeRules.all }),
+    ).toHaveLength(1);
   });
 
-  it("caches empty lists on a network failure", async () => {
-    fetchMock.mockRejectedValue(new Error("offline"));
-    const { result } = setup();
+  it("does not ask when there are no users", () => {
+    const { result } = renderHookWithQuery(() => useTimeRulesForUsers([]));
 
-    await act(async () => {
-      await result.current.fetchAllTimeRules(["u1"]);
-    });
-
-    let rules: UserTimeRule[] | undefined;
-    await act(async () => {
-      rules = await result.current.getAllTimeRules("u1");
-    });
-
-    expect(rules).toEqual([]);
+    expect(result.current.fetchStatus).toBe("idle");
+    expect(api.forUsers).not.toHaveBeenCalled();
   });
 });
 
-describe("getTimeRules", () => {
-  it("fetches the user-wide rules when nothing is cached", async () => {
-    fetchMock.mockImplementation(async () => ok([rule()]));
-    const { result } = setup();
-
-    await act(async () => {
-      await result.current.getTimeRules("u1");
-    });
-
-    expect(lastCall()[0]).toBe("/api/pg/users/u1/rules");
-  });
-
-  it("fetches the device-scoped rules when a device is named", async () => {
-    fetchMock.mockImplementation(async () => ok([]));
-    const { result } = setup();
-
-    await act(async () => {
-      await result.current.getTimeRules("u1", "dev 1");
-    });
-
-    expect(lastCall()[0]).toBe("/api/pg/users/u1/rules/device/dev%201");
-  });
-
-  it("returns only user-wide rules from the cache", async () => {
-    fetchMock.mockImplementation(async () =>
-      ok({
-        u1: [rule({ id: 1 }), rule({ id: 2, deviceIdentifier: "dev-1" })],
-      }),
+describe("useTimeRules", () => {
+  const loaded = async (rules: UserTimeRule[], deviceIdentifier?: string) => {
+    api.forUser.mockResolvedValue(rules);
+    const rendered = renderHookWithQuery(() =>
+      useTimeRules("u1", deviceIdentifier),
     );
-    const { result } = setup();
-
-    await act(async () => {
-      await result.current.fetchAllTimeRules(["u1"]);
-    });
-
-    let rules: UserTimeRule[] | undefined;
-    await act(async () => {
-      rules = await result.current.getTimeRules("u1");
-    });
-
-    expect(rules?.map((r) => r.id)).toEqual([1]);
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-  });
-
-  it("filters the cache down to one device", async () => {
-    fetchMock.mockImplementation(async () =>
-      ok({
-        u1: [rule({ id: 1 }), rule({ id: 2, deviceIdentifier: "dev-1" })],
-      }),
-    );
-    const { result } = setup();
-
-    await act(async () => {
-      await result.current.fetchAllTimeRules(["u1"]);
-    });
-
-    let rules: UserTimeRule[] | undefined;
-    await act(async () => {
-      rules = await result.current.getTimeRules("u1", "dev-1");
-    });
-
-    expect(rules?.map((r) => r.id)).toEqual([2]);
-  });
-
-  it("propagates a server rejection", async () => {
-    fetchMock.mockImplementation(async () => new Response("", { status: 500 }));
-    const { result } = setup();
-
-    await expect(
-      act(async () => {
-        await result.current.getTimeRules("u1");
-      }),
-    ).rejects.toThrow("Failed to fetch time rules");
-  });
-});
-
-describe("getAllTimeRules", () => {
-  it("fetches every rule for a user", async () => {
-    fetchMock.mockImplementation(async () => ok([rule()]));
-    const { result } = setup();
-
-    let rules: UserTimeRule[] | undefined;
-    await act(async () => {
-      rules = await result.current.getAllTimeRules("u1");
-    });
-
-    expect(lastCall()[0]).toBe("/api/pg/users/u1/rules/all");
-    expect(rules).toHaveLength(1);
-  });
-
-  it("serves a repeat read from the cache", async () => {
-    fetchMock.mockImplementation(async () => ok([rule()]));
-    const { result } = setup();
-
-    await act(async () => {
-      await result.current.getAllTimeRules("u1");
-    });
-    fetchMock.mockClear();
-
-    await act(async () => {
-      await result.current.getAllTimeRules("u1");
-    });
-
-    expect(fetchMock).not.toHaveBeenCalled();
-  });
-
-  it("propagates a server rejection", async () => {
-    fetchMock.mockImplementation(async () => new Response("", { status: 500 }));
-    const { result } = setup();
-
-    await expect(
-      act(async () => {
-        await result.current.getAllTimeRules("u1");
-      }),
-    ).rejects.toThrow("Failed to fetch all time rules");
-  });
-});
-
-describe("createTimeRule", () => {
-  it("posts the rule and adds it to the cache", async () => {
-    fetchMock.mockImplementation(async () => ok(rule({ id: 9 })));
-    const { result } = setup();
-
-    await act(async () => {
-      await result.current.createTimeRule("u1", draft());
-    });
-
-    expect(lastCall()[0]).toBe("/api/pg/users/u1/rules");
-    expect(lastCall()[1]?.method).toBe("POST");
-
-    fetchMock.mockClear();
-    let rules: UserTimeRule[] | undefined;
-    await act(async () => {
-      rules = await result.current.getAllTimeRules("u1");
-    });
-
-    expect(rules?.map((r) => r.id)).toEqual([9]);
-  });
-
-  it("refuses a rule that ends before it starts", async () => {
-    const { result } = setup();
-
-    await expect(
-      act(async () => {
-        await result.current.createTimeRule(
-          "u1",
-          draft({ startTime: "22:00", endTime: "20:00" }),
-        );
-      }),
-    ).rejects.toThrow("End time must be greater than start time");
-    expect(fetchMock).not.toHaveBeenCalled();
-  });
-
-  it("surfaces the server's error message", async () => {
-    fetchMock.mockImplementation(
-      async () =>
-        new Response(JSON.stringify({ message: "overlaps another rule" }), {
-          status: 400,
-          headers: { "Content-Type": "application/json" },
-        }),
-    );
-    const { result } = setup();
-
-    await expect(
-      act(async () => {
-        await result.current.createTimeRule("u1", draft());
-      }),
-    ).rejects.toThrow("overlaps another rule");
-  });
-
-  it("falls back to a generic message when the error body is unreadable", async () => {
-    fetchMock.mockImplementation(
-      async () => new Response("not json", { status: 400 }),
-    );
-    const { result } = setup();
-
-    await expect(
-      act(async () => {
-        await result.current.createTimeRule("u1", draft());
-      }),
-    ).rejects.toThrow("Unknown error");
-  });
-});
-
-describe("updateTimeRule", () => {
-  const seedCache = async (result: { current: ReturnType<typeof useTimeRules> }) => {
-    fetchMock.mockImplementation(async () => ok({ u1: [rule({ id: 1 })] }));
-    await act(async () => {
-      await result.current.fetchAllTimeRules(["u1"]);
-    });
+    await waitFor(() => expect(rendered.result.current.isLoading).toBe(false));
+    return rendered;
   };
 
-  it("puts the change and updates the cached rule", async () => {
-    const { result } = setup();
-    await seedCache(result);
+  describe("loading", () => {
+    it("keeps only the user-wide rules, sorted by day then start", async () => {
+      const { result } = await loaded([
+        rule({ id: 1, dayOfWeek: 3, startTime: "08:00", endTime: "09:00" }),
+        rule({ id: 2, dayOfWeek: 1, startTime: "21:00", endTime: "22:00" }),
+        rule({ id: 3, deviceIdentifier: "tv" }),
+        rule({ id: 4, dayOfWeek: 1, startTime: "07:00", endTime: "08:00" }),
+      ]);
 
-    fetchMock.mockImplementation(async () =>
-      ok(rule({ id: 1, ruleName: "Renamed" })),
-    );
-
-    await act(async () => {
-      await result.current.updateTimeRule("u1", 1, { ruleName: "Renamed" });
+      expect(api.forUser).toHaveBeenCalledWith("u1");
+      expect(result.current.rules.map((r) => r.id)).toEqual([4, 2, 1]);
     });
 
-    expect(lastCall()[0]).toBe("/api/pg/users/u1/rules/1");
-    expect(lastCall()[1]?.method).toBe("PUT");
+    it("keeps only the rules of the chosen device", async () => {
+      const { result } = await loaded(
+        [rule({ id: 1 }), rule({ id: 2, deviceIdentifier: "tv" })],
+        "tv",
+      );
 
-    let rules: UserTimeRule[] | undefined;
-    await act(async () => {
-      rules = await result.current.getAllTimeRules("u1");
-    });
-    expect(rules?.[0].ruleName).toBe("Renamed");
-  });
-
-  it("validates a new start time against the cached end time", async () => {
-    const { result } = setup();
-    await seedCache(result);
-
-    await expect(
-      act(async () => {
-        await result.current.updateTimeRule("u1", 1, { startTime: "23:00" });
-      }),
-    ).rejects.toThrow("End time must be greater than start time");
-  });
-
-  it("accepts a valid time change", async () => {
-    const { result } = setup();
-    await seedCache(result);
-    fetchMock.mockImplementation(async () => ok(rule({ id: 1 })));
-
-    await act(async () => {
-      await result.current.updateTimeRule("u1", 1, { endTime: "23:00" });
+      expect(result.current.rules.map((r) => r.id)).toEqual([2]);
     });
 
-    expect(lastCall()[1]?.method).toBe("PUT");
-  });
+    it("waits while disabled", () => {
+      const { result } = renderHookWithQuery(() =>
+        useTimeRules("u1", undefined, false),
+      );
 
-  it("skips validation for a rule it has not cached", async () => {
-    fetchMock.mockImplementation(async () => ok(rule({ id: 99 })));
-    const { result } = setup();
-
-    await act(async () => {
-      await result.current.updateTimeRule("u1", 99, { startTime: "23:00" });
+      expect(result.current.rules).toEqual([]);
+      expect(api.forUser).not.toHaveBeenCalled();
     });
 
-    expect(lastCall()[1]?.method).toBe("PUT");
-  });
+    it("waits until a user is chosen", () => {
+      renderHookWithQuery(() => useTimeRules(""));
 
-  it("surfaces the server's error message", async () => {
-    fetchMock.mockImplementation(
-      async () =>
-        new Response(JSON.stringify({ message: "rule is locked" }), {
-          status: 400,
-          headers: { "Content-Type": "application/json" },
-        }),
-    );
-    const { result } = setup();
-
-    await expect(
-      act(async () => {
-        await result.current.updateTimeRule("u1", 1, { enabled: false });
-      }),
-    ).rejects.toThrow("rule is locked");
-  });
-});
-
-describe("updateTimeRule error handling", () => {
-  it("falls back to a generic message when the error body names none", async () => {
-    fetchMock.mockImplementation(
-      async () =>
-        new Response(JSON.stringify({}), {
-          status: 500,
-          headers: { "Content-Type": "application/json" },
-        }),
-    );
-    const { result } = setup();
-
-    await expect(
-      act(async () => {
-        await result.current.updateTimeRule("u1", 1, { endTime: "23:00" });
-      }),
-    ).rejects.toThrow("Failed to update time rule");
-  });
-
-  it("reports an unreadable error body as an unknown error", async () => {
-    fetchMock.mockImplementation(
-      async () => new Response("not json", { status: 500 }),
-    );
-    const { result } = setup();
-
-    await expect(
-      act(async () => {
-        await result.current.updateTimeRule("u1", 1, { endTime: "23:00" });
-      }),
-    ).rejects.toThrow("Unknown error");
-  });
-
-  it("leaves the other cached rules untouched", async () => {
-    fetchMock.mockImplementation(async () =>
-      ok({ u1: [rule({ id: 1 }), rule({ id: 2, ruleName: "Homework" })] }),
-    );
-    const { result } = setup();
-    await act(async () => {
-      await result.current.fetchAllTimeRules(["u1"]);
+      expect(api.forUser).not.toHaveBeenCalled();
     });
 
-    fetchMock.mockImplementation(async () =>
-      ok(rule({ id: 1, ruleName: "Renamed" })),
-    );
-    await act(async () => {
-      await result.current.updateTimeRule("u1", 1, { ruleName: "Renamed" });
-    });
+    it("reports a failed load", async () => {
+      jest.spyOn(console, "error").mockImplementation(() => {});
+      api.forUser.mockRejectedValue(new Error("down"));
 
-    let rules: UserTimeRule[] | undefined;
-    await act(async () => {
-      rules = await result.current.getAllTimeRules("u1");
-    });
-    expect(rules?.find((r) => r.id === 2)?.ruleName).toBe("Homework");
-  });
-});
+      const { result } = renderHookWithQuery(() => useTimeRules("u1"));
 
-describe("deleteTimeRule", () => {
-  it("deletes the rule and drops it from the cache", async () => {
-    fetchMock.mockImplementation(async () =>
-      ok({ u1: [rule({ id: 1 }), rule({ id: 2 })] }),
-    );
-    const { result } = setup();
-    await act(async () => {
-      await result.current.fetchAllTimeRules(["u1"]);
-    });
-
-    fetchMock.mockImplementation(async () => ok({}));
-    await act(async () => {
-      await result.current.deleteTimeRule("u1", 1);
-    });
-
-    expect(lastCall()[0]).toBe("/api/pg/users/u1/rules/1");
-    expect(lastCall()[1]?.method).toBe("DELETE");
-
-    let rules: UserTimeRule[] | undefined;
-    await act(async () => {
-      rules = await result.current.getAllTimeRules("u1");
-    });
-    expect(rules?.map((r) => r.id)).toEqual([2]);
-  });
-
-  it("propagates a server rejection", async () => {
-    fetchMock.mockImplementation(async () => new Response("", { status: 500 }));
-    const { result } = setup();
-
-    await expect(
-      act(async () => {
-        await result.current.deleteTimeRule("u1", 1);
-      }),
-    ).rejects.toThrow("Failed to delete time rule");
-  });
-});
-
-describe("createPreset", () => {
-  it("posts the preset type and replaces the cache", async () => {
-    fetchMock.mockImplementation(async () => ok([rule({ id: 5 })]));
-    const { result } = setup();
-
-    await act(async () => {
-      await result.current.createPreset("u1", "weekdays-only");
-    });
-
-    expect(lastCall()[0]).toBe("/api/pg/users/u1/rules/preset");
-    expect(bodyOf()).toEqual({ presetType: "weekdays-only" });
-
-    fetchMock.mockClear();
-    let rules: UserTimeRule[] | undefined;
-    await act(async () => {
-      rules = await result.current.getAllTimeRules("u1");
-    });
-    expect(rules?.map((r) => r.id)).toEqual([5]);
-  });
-
-  it("scopes the preset to a device when one is named", async () => {
-    fetchMock.mockImplementation(async () => ok([]));
-    const { result } = setup();
-
-    await act(async () => {
-      await result.current.createPreset("u1", "weekends-only", "dev-1");
-    });
-
-    expect(bodyOf()).toEqual({
-      presetType: "weekends-only",
-      deviceIdentifier: "dev-1",
+      await waitFor(() => expect(result.current.isError).toBe(true));
+      expect(result.current.rules).toEqual([]);
     });
   });
 
-  it("surfaces the server's error message", async () => {
-    fetchMock.mockImplementation(
-      async () =>
-        new Response(JSON.stringify({ message: "preset conflicts" }), {
-          status: 400,
-          headers: { "Content-Type": "application/json" },
-        }),
-    );
-    const { result } = setup();
+  describe("createTimeRule", () => {
+    it("creates the rule and reloads every time rule query", async () => {
+      const { client, result } = await loaded([]);
+      const invalidate = jest.spyOn(client, "invalidateQueries");
 
-    await expect(
-      act(async () => {
-        await result.current.createPreset("u1", "weekdays-only");
-      }),
-    ).rejects.toThrow("preset conflicts");
-  });
+      await act(async () => {
+        await expect(result.current.createTimeRule(draft())).resolves.toEqual(
+          rule(),
+        );
+      });
 
-  it("falls back to a generic message when the error body names none", async () => {
-    fetchMock.mockImplementation(
-      async () =>
-        new Response(JSON.stringify({}), {
-          status: 500,
-          headers: { "Content-Type": "application/json" },
-        }),
-    );
-    const { result } = setup();
-
-    await expect(
-      act(async () => {
-        await result.current.createPreset("u1", "weekdays-only");
-      }),
-    ).rejects.toThrow("Failed to create preset");
-  });
-
-  it("reports an unreadable error body as an unknown error", async () => {
-    fetchMock.mockImplementation(
-      async () => new Response("not json", { status: 500 }),
-    );
-    const { result } = setup();
-
-    await expect(
-      act(async () => {
-        await result.current.createPreset("u1", "weekdays-only");
-      }),
-    ).rejects.toThrow("Unknown error");
-  });
-});
-
-describe("toggleTimeRule", () => {
-  it("toggles the rule and updates the cache", async () => {
-    fetchMock.mockImplementation(async () => ok({ u1: [rule({ id: 1 })] }));
-    const { result } = setup();
-    await act(async () => {
-      await result.current.fetchAllTimeRules(["u1"]);
+      expect(api.create).toHaveBeenCalledWith("u1", draft());
+      expect(invalidate).toHaveBeenCalledWith({
+        queryKey: queryKeys.timeRules.all,
+      });
+      expect(api.forUser).toHaveBeenCalledTimes(2);
     });
 
-    fetchMock.mockImplementation(async () =>
-      ok(rule({ id: 1, enabled: false })),
-    );
-    await act(async () => {
-      await result.current.toggleTimeRule("u1", 1);
+    it("also reloads the users overview", async () => {
+      const { client, result } = await loaded([]);
+      renderHookWithQuery(() => useTimeRulesForUsers(["u1"]), client);
+      await waitFor(() => expect(api.forUsers).toHaveBeenCalledTimes(1));
+
+      await act(async () => {
+        await result.current.createTimeRule(draft());
+      });
+
+      expect(api.forUsers).toHaveBeenCalledTimes(2);
     });
 
-    expect(lastCall()[0]).toBe("/api/pg/users/u1/rules/1/toggle");
+    it.each([
+      ["ends before it starts", "22:00", "20:00"],
+      ["ends when it starts", "20:00", "20:00"],
+    ])("refuses a rule that %s", async (_, startTime, endTime) => {
+      const { result } = await loaded([]);
 
-    let rules: UserTimeRule[] | undefined;
-    await act(async () => {
-      rules = await result.current.getAllTimeRules("u1");
+      await expect(
+        result.current.createTimeRule(draft({ startTime, endTime })),
+      ).rejects.toThrow("End time must be greater than start time");
+      expect(api.create).not.toHaveBeenCalled();
     });
-    expect(rules?.[0].enabled).toBe(false);
+
+    it("passes a failure through without reloading", async () => {
+      const { result } = await loaded([]);
+      api.create.mockRejectedValue(new Error("Rule overlaps"));
+
+      await expect(result.current.createTimeRule(draft())).rejects.toThrow(
+        "Rule overlaps",
+      );
+      expect(api.forUser).toHaveBeenCalledTimes(1);
+    });
   });
 
-  it("propagates a server rejection", async () => {
-    fetchMock.mockImplementation(async () => new Response("", { status: 500 }));
-    const { result } = setup();
+  describe("updateTimeRule", () => {
+    it("saves the change and reloads", async () => {
+      const { result } = await loaded([rule()]);
 
-    await expect(
-      act(async () => {
-        await result.current.toggleTimeRule("u1", 1);
-      }),
-    ).rejects.toThrow("Failed to toggle time rule");
+      await act(async () => {
+        await result.current.updateTimeRule(1, { enabled: false });
+      });
+
+      expect(api.update).toHaveBeenCalledWith("u1", 1, { enabled: false });
+      expect(api.forUser).toHaveBeenCalledTimes(2);
+    });
+
+    it.each([
+      ["a new start after the stored end", { startTime: "23:00" }],
+      ["a new end before the stored start", { endTime: "19:00" }],
+      ["both times reversed", { startTime: "22:00", endTime: "20:00" }],
+    ])("refuses %s", async (_, updates) => {
+      const { result } = await loaded([rule()]);
+
+      await expect(result.current.updateTimeRule(1, updates)).rejects.toThrow(
+        "End time must be greater than start time",
+      );
+      expect(api.update).not.toHaveBeenCalled();
+    });
+
+    it("accepts a new start that still ends after it", async () => {
+      const { result } = await loaded([rule()]);
+
+      await act(async () => {
+        await result.current.updateTimeRule(1, { startTime: "21:00" });
+      });
+
+      expect(api.update).toHaveBeenCalledWith("u1", 1, { startTime: "21:00" });
+    });
+
+    it("leaves a rule it has not loaded to the server", async () => {
+      const { result } = await loaded([]);
+
+      await act(async () => {
+        await result.current.updateTimeRule(9, { startTime: "23:00" });
+      });
+
+      expect(api.update).toHaveBeenCalledWith("u1", 9, { startTime: "23:00" });
+    });
   });
 
-  it("leaves the other cached rules untouched", async () => {
-    fetchMock.mockImplementation(async () =>
-      ok({ u1: [rule({ id: 1 }), rule({ id: 2, ruleName: "Homework" })] }),
-    );
-    const { result } = setup();
-    await act(async () => {
-      await result.current.fetchAllTimeRules(["u1"]);
+  describe("deleting", () => {
+    it("deletes one rule and reloads", async () => {
+      const { result } = await loaded([rule()]);
+
+      await act(async () => {
+        await result.current.deleteTimeRule(1);
+      });
+
+      expect(api.remove).toHaveBeenCalledWith("u1", 1);
+      expect(api.forUser).toHaveBeenCalledTimes(2);
     });
 
-    fetchMock.mockImplementation(async () =>
-      ok(rule({ id: 1, enabled: false })),
-    );
-    await act(async () => {
-      await result.current.toggleTimeRule("u1", 1);
+    it("deletes several rules at once", async () => {
+      const { result } = await loaded([rule({ id: 1 }), rule({ id: 2 })]);
+
+      await act(async () => {
+        await result.current.deleteTimeRules([1, 2]);
+      });
+
+      expect(api.remove).toHaveBeenCalledWith("u1", 1);
+      expect(api.remove).toHaveBeenCalledWith("u1", 2);
+      expect(api.forUser).toHaveBeenCalledTimes(2);
     });
 
-    let rules: UserTimeRule[] | undefined;
-    await act(async () => {
-      rules = await result.current.getAllTimeRules("u1");
+    it("reloads even when a delete fails, so the list shows what is left", async () => {
+      const { result } = await loaded([rule({ id: 1 }), rule({ id: 2 })]);
+      api.remove.mockRejectedValueOnce(new Error("gone"));
+
+      await act(async () => {
+        await expect(result.current.deleteTimeRules([1, 2])).rejects.toThrow(
+          "gone",
+        );
+      });
+
+      expect(api.forUser).toHaveBeenCalledTimes(2);
     });
-    expect(rules?.find((r) => r.id === 2)?.ruleName).toBe("Homework");
   });
 
-  it("toggles a rule for a user it has never cached", async () => {
-    fetchMock.mockImplementation(async () =>
-      ok(rule({ id: 1, enabled: false })),
-    );
-    const { result } = setup();
+  describe("applyPreset", () => {
+    it("applies the preset to the user and reloads", async () => {
+      const { result } = await loaded([]);
 
-    await act(async () => {
-      await result.current.toggleTimeRule("u-fresh", 1);
+      await act(async () => {
+        await result.current.applyPreset("weekdays-only");
+      });
+
+      expect(api.applyPreset).toHaveBeenCalledWith(
+        "u1",
+        "weekdays-only",
+        undefined,
+      );
+      expect(api.forUser).toHaveBeenCalledTimes(2);
     });
 
-    expect(lastCall()[0]).toBe("/api/pg/users/u-fresh/rules/1/toggle");
-  });
-});
+    it("applies the preset to the chosen device", async () => {
+      const { result } = await loaded([], "tv");
 
-describe("checkStreamingAllowed", () => {
-  it("asks whether streaming is allowed right now", async () => {
-    fetchMock.mockImplementation(async () =>
-      ok({ allowed: true, reason: "no rules" }),
-    );
-    const { result } = setup();
+      await act(async () => {
+        await result.current.applyPreset("weekends-only");
+      });
 
-    let verdict: { allowed: boolean; reason: string } | undefined;
-    await act(async () => {
-      verdict = await result.current.checkStreamingAllowed("u1");
+      expect(api.applyPreset).toHaveBeenCalledWith("u1", "weekends-only", "tv");
     });
-
-    expect(lastCall()[0]).toBe("/api/pg/users/u1/rules/check");
-    expect(verdict).toEqual({ allowed: true, reason: "no rules" });
-  });
-
-  it("scopes the check to a device when one is named", async () => {
-    fetchMock.mockImplementation(async () => ok({ allowed: true, reason: "" }));
-    const { result } = setup();
-
-    await act(async () => {
-      await result.current.checkStreamingAllowed("u1", "dev 1");
-    });
-
-    expect(lastCall()[0]).toBe(
-      "/api/pg/users/u1/rules/check?deviceIdentifier=dev%201",
-    );
-  });
-
-  it("propagates a server rejection", async () => {
-    fetchMock.mockImplementation(async () => new Response("", { status: 500 }));
-    const { result } = setup();
-
-    await expect(
-      act(async () => {
-        await result.current.checkStreamingAllowed("u1");
-      }),
-    ).rejects.toThrow("Failed to check streaming status");
-  });
-});
-
-describe("hasTimeRules", () => {
-  it("answers from the full cache without a request", async () => {
-    fetchMock.mockImplementation(async () => ok({ u1: [rule()] }));
-    const { result } = setup();
-    await act(async () => {
-      await result.current.fetchAllTimeRules(["u1"]);
-    });
-    fetchMock.mockClear();
-
-    let hasRules: boolean | undefined;
-    await act(async () => {
-      hasRules = await result.current.hasTimeRules("u1");
-    });
-
-    expect(hasRules).toBe(true);
-    expect(fetchMock).not.toHaveBeenCalled();
-  });
-
-  it("reports false when every cached rule is disabled", async () => {
-    fetchMock.mockImplementation(async () =>
-      ok({ u1: [rule({ enabled: false })] }),
-    );
-    const { result } = setup();
-    await act(async () => {
-      await result.current.fetchAllTimeRules(["u1"]);
-    });
-
-    let hasRules: boolean | undefined;
-    await act(async () => {
-      hasRules = await result.current.hasTimeRules("u1");
-    });
-
-    expect(hasRules).toBe(false);
-  });
-
-  it("asks the server when nothing is cached", async () => {
-    fetchMock.mockImplementation(async () => ok([rule()]));
-    const { result } = setup();
-
-    let hasRules: boolean | undefined;
-    await act(async () => {
-      hasRules = await result.current.hasTimeRules("u1");
-    });
-
-    expect(lastCall()[0]).toBe("/api/pg/users/u1/rules");
-    expect(hasRules).toBe(true);
-  });
-
-  it("remembers the answer for the next call", async () => {
-    fetchMock.mockImplementation(async () => ok([rule()]));
-    const { result } = setup();
-
-    await act(async () => {
-      await result.current.hasTimeRules("u1");
-    });
-    fetchMock.mockClear();
-    await act(async () => {
-      await result.current.hasTimeRules("u1");
-    });
-
-    expect(fetchMock).not.toHaveBeenCalled();
-  });
-
-  it("reports false when the server sends something unexpected", async () => {
-    fetchMock.mockImplementation(async () => ok({ not: "an array" }));
-    const { result } = setup();
-
-    let hasRules: boolean | undefined;
-    await act(async () => {
-      hasRules = await result.current.hasTimeRules("u1");
-    });
-
-    expect(hasRules).toBe(false);
-  });
-
-  it("reports false on a server rejection", async () => {
-    fetchMock.mockImplementation(async () => new Response("", { status: 500 }));
-    const { result } = setup();
-
-    let hasRules: boolean | undefined;
-    await act(async () => {
-      hasRules = await result.current.hasTimeRules("u1");
-    });
-
-    expect(hasRules).toBe(false);
-  });
-
-  it("reports false on a network failure", async () => {
-    fetchMock.mockRejectedValue(new Error("offline"));
-    const { result } = setup();
-
-    let hasRules: boolean | undefined;
-    await act(async () => {
-      hasRules = await result.current.hasTimeRules("u1");
-    });
-
-    expect(hasRules).toBe(false);
-  });
-
-  it("re-asks after a rule is created", async () => {
-    fetchMock.mockImplementation(async () => ok([rule()]));
-    const { result } = setup();
-    await act(async () => {
-      await result.current.hasTimeRules("u1");
-    });
-
-    fetchMock.mockImplementation(async () => ok(rule({ id: 2 })));
-    await act(async () => {
-      await result.current.createTimeRule("u1", draft());
-    });
-
-    fetchMock.mockClear();
-    fetchMock.mockImplementation(async () => ok([rule()]));
-    await act(async () => {
-      await result.current.hasTimeRules("u1");
-    });
-
-    expect(fetchMock).not.toHaveBeenCalled();
-  });
-});
-
-describe("validateRuleArray", () => {
-  it("accepts a set of non-overlapping rules", () => {
-    const { result } = setup();
-
-    expect(
-      result.current.validateRuleArray([
-        draft({ startTime: "08:00", endTime: "10:00" }),
-        draft({ startTime: "10:00", endTime: "12:00" }),
-      ]),
-    ).toEqual({ valid: true, errors: [] });
-  });
-
-  it("rejects a rule that ends before it starts", () => {
-    const { result } = setup();
-
-    const { valid, errors } = result.current.validateRuleArray([
-      draft({ startTime: "22:00", endTime: "20:00" }),
-    ]);
-
-    expect(valid).toBe(false);
-    expect(errors[0]).toContain("Rule 1: End time must be greater");
-  });
-
-  it.each([-1, 7])("rejects day of week %p", (dayOfWeek) => {
-    const { result } = setup();
-
-    const { errors } = result.current.validateRuleArray([draft({ dayOfWeek })]);
-    expect(errors[0]).toContain("Day of week must be between 0");
-  });
-
-  it("rejects two rules that overlap on the same day", () => {
-    const { result } = setup();
-
-    const { errors } = result.current.validateRuleArray([
-      draft({ startTime: "20:00", endTime: "22:00" }),
-      draft({ startTime: "21:00", endTime: "23:00" }),
-    ]);
-
-    expect(errors[0]).toBe(
-      "Rule 1 overlaps with rule 2 on the same day and time",
-    );
-  });
-
-  it("allows the same times on different days", () => {
-    const { result } = setup();
-
-    expect(
-      result.current.validateRuleArray([
-        draft({ dayOfWeek: 1 }),
-        draft({ dayOfWeek: 2 }),
-      ]).valid,
-    ).toBe(true);
-  });
-
-  it("allows rules that merely touch at the boundary", () => {
-    const { result } = setup();
-
-    expect(
-      result.current.validateRuleArray([
-        draft({ startTime: "08:00", endTime: "10:00" }),
-        draft({ startTime: "10:00", endTime: "12:00" }),
-      ]).valid,
-    ).toBe(true);
-  });
-
-  it("reports every problem it finds", () => {
-    const { result } = setup();
-
-    const { errors } = result.current.validateRuleArray([
-      draft({ dayOfWeek: 9, startTime: "22:00", endTime: "20:00" }),
-    ]);
-
-    expect(errors).toHaveLength(2);
-  });
-});
-
-describe("clearCache", () => {
-  it("forgets one user", async () => {
-    fetchMock.mockImplementation(async () => ok({ u1: [rule()] }));
-    const { result } = setup();
-    await act(async () => {
-      await result.current.fetchAllTimeRules(["u1"]);
-    });
-
-    act(() => result.current.clearCache("u1"));
-    fetchMock.mockClear();
-
-    await act(async () => {
-      await result.current.fetchAllTimeRules(["u1"]);
-    });
-
-    expect(fetchMock).toHaveBeenCalled();
-  });
-
-  it("forgets every user", async () => {
-    fetchMock.mockImplementation(async () => ok({ u1: [rule()], u2: [] }));
-    const { result } = setup();
-    await act(async () => {
-      await result.current.fetchAllTimeRules(["u1", "u2"]);
-    });
-
-    act(() => result.current.clearCache());
-    fetchMock.mockClear();
-
-    await act(async () => {
-      await result.current.fetchAllTimeRules(["u1", "u2"]);
-    });
-
-    expect(bodyOf()).toEqual({ userIds: ["u1", "u2"] });
   });
 });

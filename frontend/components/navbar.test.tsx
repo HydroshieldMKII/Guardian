@@ -7,13 +7,17 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Navbar } from "@/components/navbar";
+import { appSetting, dashboardData } from "@/test-utils/dashboard";
+import type { UnifiedDashboardData, UserDevice } from "@/types";
 
 const push = jest.fn();
 const router = { push };
 let pathname = "/";
+let search = "";
 jest.mock("next/navigation", () => ({
   useRouter: () => router,
   usePathname: () => pathname,
+  useSearchParams: () => new URLSearchParams(search),
 }));
 
 jest.mock("next/link", () => ({
@@ -48,8 +52,8 @@ jest.mock("@/hooks/use-theme", () => ({
 }));
 
 let versionInfo: { isVersionMismatch?: boolean } | null = null;
-jest.mock("@/contexts/version-context", () => ({
-  useVersion: () => ({ versionInfo }),
+jest.mock("@/hooks/useVersionInfo", () => ({
+  useVersionInfo: () => ({ versionInfo }),
 }));
 
 const logout = jest.fn();
@@ -82,6 +86,15 @@ jest.mock("@/contexts/unsaved-changes-context", () => ({
     setShowUnsavedWarning,
     setPendingNavigation,
   }),
+}));
+
+let dashboard: UnifiedDashboardData | undefined;
+const useDashboardQuery = jest.fn<
+  { data: UnifiedDashboardData | undefined },
+  [boolean]
+>(() => ({ data: dashboard }));
+jest.mock("@/hooks/useDashboardQuery", () => ({
+  useDashboardQuery: (enabled: boolean) => useDashboardQuery(enabled),
 }));
 
 const toast = jest.fn();
@@ -118,8 +131,10 @@ const openUserMenu = async (user: ReturnType<typeof userEvent.setup>) => {
 beforeEach(() => {
   jest.clearAllMocks();
   pathname = "/";
+  search = "";
   theme = "light";
   versionInfo = null;
+  dashboard = undefined;
   auth = {
     user: admin,
     userType: "admin",
@@ -148,11 +163,14 @@ describe("Navbar visibility", () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  it.each(["/login", "/setup"])("renders nothing on %s", (path) => {
-    pathname = path;
-    const { container } = render(<Navbar />);
-    expect(container).toBeEmptyDOMElement();
-  });
+  it.each(["/login", "/setup", "/forgot-password", "/reset-password"])(
+    "renders nothing on %s",
+    (path) => {
+      pathname = path;
+      const { container } = render(<Navbar />);
+      expect(container).toBeEmptyDOMElement();
+    },
+  );
 
   it("renders for a signed-in admin", () => {
     render(<Navbar />);
@@ -181,16 +199,234 @@ describe("Navbar theme toggle", () => {
 });
 
 describe("Navbar settings link", () => {
-  it("marks a version mismatch with a dot", () => {
+  it("marks a version mismatch with a dot in both navs", () => {
     versionInfo = { isVersionMismatch: true };
-    const { container } = render(<Navbar />);
-    expect(container.querySelector(".bg-red-500")).not.toBeNull();
+    render(<Navbar />);
+    const dots = screen.getAllByLabelText("Version mismatch");
+    expect(dots).toHaveLength(2);
+    dots.forEach((dot) => {
+      expect(dot).toHaveClass("bg-blocked");
+      expect(dot.closest("a")).toHaveAttribute("href", "/settings");
+    });
   });
 
   it("shows no dot when versions agree", () => {
     versionInfo = { isVersionMismatch: false };
-    const { container } = render(<Navbar />);
-    expect(container.querySelector(".bg-red-500")).toBeNull();
+    render(<Navbar />);
+    expect(screen.queryByLabelText("Version mismatch")).toBeNull();
+  });
+});
+
+describe("Navbar sections", () => {
+  const linksNamed = (name: RegExp) => screen.getAllByRole("link", { name });
+
+  it.each([
+    [/^Streams/, "/?view=streams"],
+    [/^Users/, "/?view=users"],
+    [/^Settings/, "/settings"],
+  ])("links %s in the top bar and the tab bar", (name, href) => {
+    render(<Navbar />);
+    const links = linksNamed(name);
+    expect(links).toHaveLength(2);
+    links.forEach((link) => expect(link).toHaveAttribute("href", href));
+  });
+
+  it("puts the three sections in a mobile tab bar", () => {
+    render(<Navbar />);
+    const tabbar = screen.getByRole("navigation", { name: "Sections" });
+    expect(tabbar).toHaveAttribute("data-tabbar");
+    expect(
+      Array.from(tabbar.querySelectorAll("a")).map((a) =>
+        a.getAttribute("href"),
+      ),
+    ).toEqual(["/?view=users", "/?view=streams", "/settings"]);
+  });
+
+  it("shows no counts while nothing is playing or waiting", () => {
+    render(<Navbar />);
+    linksNamed(/^Streams/).forEach((link) =>
+      expect(link).toHaveTextContent(/^Streams$/),
+    );
+    linksNamed(/^Users/).forEach((link) =>
+      expect(link).toHaveTextContent(/^Users$/),
+    );
+  });
+
+  it("counts active streams and devices waiting for approval", () => {
+    const waiting = (id: number): UserDevice => ({
+      id,
+      userId: "u-1",
+      deviceIdentifier: `device-${id}`,
+      approved: false,
+      status: "pending",
+      firstSeen: "2026-01-01T00:00:00Z",
+      lastSeen: "2026-01-01T00:00:00Z",
+      sessionCount: 0,
+    });
+    const all = [1, 2, 3, 4].map(waiting);
+    dashboard = dashboardData({
+      devices: { all, pending: all, approved: [], processed: [] },
+      stats: {
+        activeStreams: 2,
+        totalDevices: 4,
+        pendingDevices: 4,
+        approvedDevices: 0,
+      },
+    });
+    render(<Navbar />);
+    linksNamed(/^Streams/).forEach((link) =>
+      expect(link).toHaveTextContent("2"),
+    );
+    linksNamed(/^Users/).forEach((link) => expect(link).toHaveTextContent("4"));
+  });
+
+  it("offers only settings and no tab bar until Plex is configured", () => {
+    dashboard = dashboardData({
+      plexStatus: {
+        configured: false,
+        hasValidCredentials: false,
+        connectionStatus: "Not configured",
+      },
+    });
+    render(<Navbar />);
+    expect(screen.queryByRole("link", { name: /^Users/ })).toBeNull();
+    expect(screen.queryByRole("link", { name: /^Streams/ })).toBeNull();
+    expect(linksNamed(/^Settings/)).toHaveLength(1);
+    expect(screen.queryByRole("navigation", { name: "Sections" })).toBeNull();
+  });
+
+  it("keeps every section while Plex is configured but unreachable", () => {
+    dashboard = dashboardData({
+      plexStatus: {
+        configured: true,
+        hasValidCredentials: false,
+        connectionStatus: "Unauthorized",
+      },
+    });
+    render(<Navbar />);
+    expect(linksNamed(/^Users/)).toHaveLength(2);
+    expect(linksNamed(/^Streams/)).toHaveLength(2);
+  });
+
+  it("keeps every section before the dashboard data arrives", () => {
+    render(<Navbar />);
+    expect(linksNamed(/^Users/)).toHaveLength(2);
+    expect(
+      screen.getByRole("navigation", { name: "Sections" }),
+    ).toBeInTheDocument();
+  });
+
+  it("keeps room for a two-digit count on the counted sections only", () => {
+    render(<Navbar />);
+    const reserved = (name: RegExp) =>
+      linksNamed(name).some((link) =>
+        link.querySelector("[data-width-reserve]"),
+      );
+    expect(reserved(/^Streams/)).toBe(true);
+    expect(reserved(/^Users/)).toBe(true);
+    expect(reserved(/^Settings/)).toBe(false);
+  });
+
+  it("reads the dashboard data the dashboard already keeps current", () => {
+    render(<Navbar />);
+    expect(useDashboardQuery).toHaveBeenCalledWith(false);
+  });
+
+  it.each(["/settings", "/elsewhere"])(
+    "keeps the counts current itself on %s",
+    (path) => {
+      pathname = path;
+      render(<Navbar />);
+      expect(useDashboardQuery).toHaveBeenCalledWith(true);
+      expect(useDashboardQuery).not.toHaveBeenCalledWith(false);
+    },
+  );
+
+  it("loads nothing while it is hidden", () => {
+    pathname = "/login";
+    render(<Navbar />);
+    expect(useDashboardQuery).toHaveBeenCalledWith(false);
+  });
+
+  const currentLinks = () =>
+    Array.from(document.querySelectorAll('[aria-current="page"]'));
+
+  it.each(["streams", "users"] as const)(
+    "marks the %s default page as the current page on the dashboard",
+    (view) => {
+      dashboard = dashboardData({
+        settings: [appSetting("DEFAULT_PAGE", view)],
+      });
+      render(<Navbar />);
+      const current = currentLinks();
+      expect(current).toHaveLength(2);
+      current.forEach((link) =>
+        expect(link).toHaveAttribute("href", `/?view=${view}`),
+      );
+    },
+  );
+
+  it("marks settings as the current page on the settings route", () => {
+    dashboard = dashboardData();
+    pathname = "/settings";
+    render(<Navbar />);
+    const current = currentLinks();
+    expect(current).toHaveLength(2);
+    current.forEach((link) =>
+      expect(link).toHaveAttribute("href", "/settings"),
+    );
+  });
+
+  it.each(["streams", "users"] as const)(
+    "follows the URL to %s over the default page",
+    (view) => {
+      dashboard = dashboardData({
+        settings: [
+          appSetting("DEFAULT_PAGE", view === "streams" ? "users" : "streams"),
+        ],
+      });
+      search = `view=${view}`;
+      render(<Navbar />);
+      const current = currentLinks();
+      expect(current).toHaveLength(2);
+      current.forEach((link) =>
+        expect(link).toHaveAttribute("href", `/?view=${view}`),
+      );
+    },
+  );
+
+  it("follows the URL before the dashboard data arrives", () => {
+    search = "view=streams";
+    render(<Navbar />);
+    currentLinks().forEach((link) =>
+      expect(link).toHaveAttribute("href", "/?view=streams"),
+    );
+    expect(currentLinks()).toHaveLength(2);
+  });
+
+  it("ignores a view the dashboard does not know", () => {
+    search = "view=elsewhere";
+    dashboard = dashboardData({
+      settings: [appSetting("DEFAULT_PAGE", "streams")],
+    });
+    render(<Navbar />);
+    const current = currentLinks();
+    expect(current).toHaveLength(2);
+    current.forEach((link) =>
+      expect(link).toHaveAttribute("href", "/?view=streams"),
+    );
+  });
+
+  it("marks nothing as current before the dashboard data arrives", () => {
+    render(<Navbar />);
+    expect(document.querySelector('[aria-current="page"]')).toBeNull();
+  });
+
+  it("marks nothing as current on other routes", () => {
+    dashboard = dashboardData();
+    pathname = "/elsewhere";
+    render(<Navbar />);
+    expect(document.querySelector('[aria-current="page"]')).toBeNull();
   });
 });
 
@@ -253,7 +489,7 @@ describe("Navbar user menu", () => {
     expect(screen.getByText("profile:false")).toBeInTheDocument();
 
     await openUserMenu(user);
-    await user.click(screen.getByText("Edit Profile"));
+    await user.click(screen.getByText("Edit profile"));
 
     expect(screen.getByText("profile:true")).toBeInTheDocument();
 
@@ -326,6 +562,40 @@ describe("Navbar unsaved-changes guard", () => {
     expect(setShowUnsavedWarning).not.toHaveBeenCalled();
   });
 
+  it("intercepts a section link on the settings page with unsaved changes", async () => {
+    unsaved.hasUnsavedChanges = true;
+    pathname = "/settings";
+    const user = userEvent.setup();
+    render(<Navbar />);
+
+    const tabbar = screen.getByRole("navigation", { name: "Sections" });
+    await user.click(
+      tabbar.querySelector('a[href="/?view=users"]') as HTMLElement,
+    );
+
+    expect(setPendingNavigation).toHaveBeenCalledWith("/?view=users");
+    expect(setShowUnsavedWarning).toHaveBeenCalledWith(true);
+  });
+
+  it("never intercepts the settings link itself", async () => {
+    unsaved.hasUnsavedChanges = true;
+    pathname = "/settings";
+    const user = userEvent.setup();
+    render(<Navbar />);
+
+    let prevented: boolean | null = null;
+    const settle = (e: MouseEvent) => {
+      prevented = e.defaultPrevented;
+      e.preventDefault();
+    };
+    window.addEventListener("click", settle);
+    await user.click(screen.getAllByRole("link", { name: /^Settings/ })[0]);
+    window.removeEventListener("click", settle);
+
+    expect(prevented).toBe(false);
+    expect(setShowUnsavedWarning).not.toHaveBeenCalled();
+  });
+
   describe("the warning dialog", () => {
     beforeEach(() => {
       unsaved.showUnsavedWarning = true;
@@ -336,7 +606,7 @@ describe("Navbar unsaved-changes guard", () => {
       const user = userEvent.setup();
       render(<Navbar />);
 
-      await user.click(screen.getByRole("button", { name: "Stay on Page" }));
+      await user.click(screen.getByRole("button", { name: "Stay on page" }));
 
       expect(setShowUnsavedWarning).toHaveBeenCalledWith(false);
       expect(setPendingNavigation).toHaveBeenCalledWith(null);
@@ -358,7 +628,7 @@ describe("Navbar unsaved-changes guard", () => {
       const user = userEvent.setup();
       render(<Navbar />);
 
-      await user.click(screen.getByRole("button", { name: "Discard Changes" }));
+      await user.click(screen.getByRole("button", { name: "Discard changes" }));
 
       expect(onDiscardChanges).toHaveBeenCalled();
       expect(push).toHaveBeenCalledWith("/");
@@ -369,7 +639,7 @@ describe("Navbar unsaved-changes guard", () => {
       const user = userEvent.setup();
       render(<Navbar />);
 
-      await user.click(screen.getByRole("button", { name: "Discard Changes" }));
+      await user.click(screen.getByRole("button", { name: "Discard changes" }));
 
       expect(push).not.toHaveBeenCalled();
     });

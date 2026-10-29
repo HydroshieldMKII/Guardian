@@ -3,15 +3,14 @@
 import { useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/contexts/auth-context";
-import { ThreeDotLoader } from "@/components/three-dot-loader";
+import { PageLoader } from "@/components/three-dot-loader";
 import { ErrorHandler } from "@/components/error-handler";
+import {
+  AUTH_ROUTES,
+  loginPathReturningTo,
+  returnPathFrom,
+} from "@/lib/auth/return-to";
 
-const PUBLIC_ROUTES = [
-  "/login",
-  "/setup",
-  "/forgot-password",
-  "/reset-password",
-];
 const USER_PORTAL_ROUTES = ["/portal"];
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
@@ -31,18 +30,16 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    const isPublicRoute = PUBLIC_ROUTES.includes(pathname);
+    const isPublicRoute = AUTH_ROUTES.includes(pathname);
     const isUserPortalRoute = USER_PORTAL_ROUTES.some((route) =>
-      pathname.startsWith(route)
+      pathname.startsWith(route),
     );
 
-    // If setup is required, redirect to setup page (unless already there)
     if (setupRequired && pathname !== "/setup") {
       router.push("/setup");
       return;
     }
 
-    // If setup is complete but user is on setup page, redirect appropriately
     if (!setupRequired && pathname === "/setup") {
       if (userType === "plex_user") {
         router.push("/portal");
@@ -52,29 +49,29 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    // If not authenticated and not on a public route, redirect to login
     if (!isAuthenticated && !isPublicRoute && !setupRequired) {
-      router.push("/login");
+      router.push(
+        loginPathReturningTo(
+          `${pathname}${window.location.search}${window.location.hash}`,
+        ),
+      );
       return;
     }
 
-    // If authenticated and on login page, redirect appropriately
     if (isAuthenticated && pathname === "/login") {
       if (userType === "plex_user") {
         router.push("/portal");
       } else {
-        router.push("/");
+        router.push(returnPathFrom(window.location.search) ?? "/");
       }
       return;
     }
 
-    // Plex users can only access /portal routes
     if (isAuthenticated && userType === "plex_user" && !isUserPortalRoute) {
       router.push("/portal");
       return;
     }
 
-    // Admins cannot access /portal - redirect to dashboard
     if (isAuthenticated && userType === "admin" && isUserPortalRoute) {
       router.push("/");
       return;
@@ -89,22 +86,18 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     userType,
   ]);
 
-  const isPublicRoute = PUBLIC_ROUTES.includes(pathname);
+  const isPublicRoute = AUTH_ROUTES.includes(pathname);
   const isUserPortalRoute = USER_PORTAL_ROUTES.some((route) =>
-    pathname.startsWith(route)
+    pathname.startsWith(route),
   );
 
   const shouldRenderContent =
-    !isLoading && // Auth check complete
-    (isPublicRoute || // Public routes always render
-      (isAuthenticated && !setupRequired) || // Authenticated users on protected routes
-      setupRequired); // Setup page renders during setup
+    !isLoading &&
+    (isPublicRoute || (isAuthenticated && !setupRequired) || setupRequired);
 
-  // Additional check for Plex users - they can only see portal
   const plexUserAllowed =
     userType !== "plex_user" || isUserPortalRoute || isPublicRoute;
 
-  // Additional check for Admins - they cannot access portal
   const adminAllowed =
     userType !== "admin" || !isUserPortalRoute || isPublicRoute;
 
@@ -117,13 +110,8 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // Show loading state while checking auth or redirecting
   if (!shouldRenderContent || !plexUserAllowed || !adminAllowed) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <ThreeDotLoader />
-      </div>
-    );
+    return <PageLoader />;
   }
 
   return <>{children}</>;

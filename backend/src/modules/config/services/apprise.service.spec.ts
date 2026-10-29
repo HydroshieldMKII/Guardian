@@ -110,6 +110,15 @@ describe('AppriseService', () => {
       });
     });
 
+    it('refuses a list made only of separators', async () => {
+      settings.APPRISE_URLS = ',;\n,';
+
+      await expect(service.getAppriseConfig()).resolves.toEqual({
+        success: false,
+        message: 'No valid Apprise URLs found',
+      });
+    });
+
     it('splits URLs on commas, semicolons and newlines', async () => {
       settings.APPRISE_URLS = 'discord://a, slack://b;mailto://c\ntgram://d';
 
@@ -198,6 +207,12 @@ describe('AppriseService', () => {
       });
     });
 
+    it('names an unknown URL when apprise does not say which', async () => {
+      await expect(failWith('Unsupported URL:')).resolves.toMatchObject({
+        message: containing('Invalid service URL: "unknown"'),
+      });
+    });
+
     it('explains an empty server list', async () => {
       await expect(
         failWith('You must specify at least one server URL'),
@@ -258,9 +273,27 @@ describe('AppriseService', () => {
 
       await expect(pending).resolves.toMatchObject({
         success: false,
-        message: containing('timed out'),
+        message: 'Apprise process timed out after 20 seconds',
       });
       expect(child.kill).toHaveBeenCalled();
+    });
+
+    it('leaves a process alone once it has exited', async () => {
+      await send(() => service.sendNotification(notification));
+      jest.advanceTimersByTime(20000);
+
+      expect(child.kill).not.toHaveBeenCalled();
+    });
+
+    it('reports a spawn that throws outright', async () => {
+      mockSpawn.mockImplementation(() => {
+        throw new Error('EMFILE');
+      });
+
+      await expect(service.sendNotification(notification)).resolves.toEqual({
+        success: false,
+        message: 'Apprise notification error: EMFILE',
+      });
     });
   });
 

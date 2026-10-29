@@ -1,4 +1,6 @@
 import {
+  formatAgo,
+  formatAgoShort,
   formatClock,
   formatElapsed,
   formatMinutes,
@@ -143,5 +145,68 @@ describe("formatClock", () => {
 
   it("never runs backwards", () => {
     expect(formatClock(-5000)).toBe("0:00");
+  });
+});
+
+describe("formatAgoShort", () => {
+  const now = Date.parse("2026-06-01T12:00:00Z");
+  const minutesAgo = (minutes: number) => new Date(now - minutes * 60_000);
+
+  it.each([
+    [0, "now"],
+    [1, "now"],
+    [2, "2m ago"],
+    [59, "59m ago"],
+    [60, "1h ago"],
+    [60 * 24 - 1, "23h ago"],
+    [60 * 24, "1d ago"],
+    [60 * 24 * 40, "40d ago"],
+  ])("reads %p minutes as %s", (minutes, expected) => {
+    expect(formatAgoShort(minutesAgo(minutes), now)).toBe(expected);
+  });
+
+  it("reads a broken date as unknown", () => {
+    expect(formatAgoShort("not a date", now)).toBe("Unknown");
+  });
+});
+
+describe("formatAgo", () => {
+  const now = Date.parse("2026-06-01T12:00:00Z");
+
+  it.each([
+    [new Date(now - 30 * 1000), "just now"],
+    [new Date(now + 5 * 60 * 1000), "just now"],
+    [new Date(now - 60 * 1000), "1 minute ago"],
+    [new Date(now - 3 * 60 * 60 * 1000), "3 hours ago"],
+    ["2026-05-30T12:00:00Z", "2 days ago"],
+    ["2026-05-18T12:00:00Z", "2 weeks ago"],
+    [new Date(now - 47 * 60 * 60 * 1000), "1 day ago"],
+    [new Date(now - 5 * 60 * 1000), "5 minutes ago"],
+  ])("reads %p as %s", (date, expected) => {
+    expect(formatAgo(date, now)).toBe(expected);
+  });
+
+  it.each(["not a date", new Date(Number.NaN)])(
+    "reads %p as unknown",
+    (date) => {
+      expect(formatAgo(date, now)).toBe("Unknown");
+    },
+  );
+
+  it("shows the date once a month has passed", () => {
+    const date = "2026-03-15T12:00:00Z";
+    expect(formatAgo(date, now)).toBe(
+      new Date(date).toLocaleDateString(undefined, {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      }),
+    );
+  });
+
+  it("measures from the current time by default", () => {
+    expect(formatAgo(new Date(Date.now() - 2 * 60 * 60 * 1000))).toBe(
+      "2 hours ago",
+    );
   });
 });

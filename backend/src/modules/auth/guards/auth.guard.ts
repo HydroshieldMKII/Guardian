@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Request } from 'express';
-import { AuthService } from '@/modules/auth/auth.service';
+import { AuthSessionService } from '@/modules/auth/auth-session.service';
 import { ConfigService } from '@/modules/config/services/config.service';
 import { PUBLIC_KEY } from '@/modules/auth/decorators/public.decorator';
 import { ADMIN_ONLY_KEY } from '@/modules/auth/decorators/admin-only.decorator';
@@ -16,7 +16,7 @@ import { extractSessionToken } from '@/modules/auth/session-cookie';
 @Injectable()
 export class AuthGuard implements CanActivate {
   constructor(
-    private authService: AuthService,
+    private authSessions: AuthSessionService,
     private configService: ConfigService,
     private reflector: Reflector,
   ) {}
@@ -45,7 +45,7 @@ export class AuthGuard implements CanActivate {
     }
 
     // Validate session and attach user to request
-    const user = await this.authService.validateSession(token);
+    const user = await this.authSessions.validateSession(token);
 
     if (!user) {
       throw new UnauthorizedException('Invalid or expired session');

@@ -1,3 +1,5 @@
+export type DeviceStatus = "pending" | "approved" | "rejected";
+
 export interface PlexSession {
   sessionKey: string;
   User?: {
@@ -78,7 +80,7 @@ export interface UserDevice {
   deviceVersion?: string;
   ipAddress?: string;
   approved: boolean;
-  status: "pending" | "approved" | "rejected";
+  status: DeviceStatus;
   firstSeen: string;
   lastSeen: string;
   sessionCount: number;
@@ -92,7 +94,6 @@ export interface UserDevice {
   requestNoteReadAt?: string;
 }
 
-// User Portal Types (for Plex user portal)
 export interface PortalTimeRule {
   id: number;
   dayOfWeek: number;
@@ -103,25 +104,23 @@ export interface PortalTimeRule {
   deviceIdentifier?: string;
 }
 
-export interface PortalDeviceRules {
-  timeRules: PortalTimeRule[];
-}
-
 export interface PortalDevice {
   id: number;
   deviceIdentifier: string;
   deviceName: string;
   devicePlatform: string;
   deviceProduct: string;
-  status: "pending" | "approved" | "rejected";
+  status: DeviceStatus;
   firstSeen: string;
   lastSeen: string;
-  requestDescription?: string;
-  requestSubmittedAt?: string;
+  requestDescription?: string | null;
+  requestSubmittedAt?: string | null;
+  requestNoteReadAt?: string | null;
   hasTemporaryAccess: boolean;
-  temporaryAccessUntil?: string;
+  temporaryAccessUntil?: string | null;
+  temporaryAccessBypassPolicies?: boolean | null;
   excludeFromConcurrentLimit: boolean;
-  rules?: PortalDeviceRules;
+  rules?: { timeRules: PortalTimeRule[] };
 }
 
 export interface PortalUserRules {
@@ -129,8 +128,15 @@ export interface PortalUserRules {
   ipAccessPolicy: "all" | "restricted";
   allowedIPs?: string[];
   concurrentStreamLimit: number | null;
+  effectiveConcurrentStreamLimit: number;
   defaultBlock: boolean | null;
+  effectiveDefaultBlock: boolean;
   timeRules: PortalTimeRule[];
+}
+
+export interface PortalSettings {
+  showRules: boolean;
+  allowRejectedRequests: boolean;
 }
 
 export interface AppSetting {
@@ -172,10 +178,9 @@ export interface UserTimeRule {
   deviceIdentifier?: string;
   ruleName: string;
   enabled: boolean;
-  action: "allow" | "block";
-  dayOfWeek: number; // Single day (0-6, Sunday=0)
-  startTime: string; // HH:MM format
-  endTime: string; // HH:MM format (must be > startTime)
+  dayOfWeek: number;
+  startTime: string;
+  endTime: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -183,16 +188,14 @@ export interface UserTimeRule {
 export interface CreateTimeRuleDto {
   deviceIdentifier?: string;
   ruleName: string;
-  action: "allow" | "block";
-  dayOfWeek: number; // Single day (0-6)
-  startTime: string; // HH:MM
-  endTime: string; // HH:MM (validated to be > startTime)
+  dayOfWeek: number;
+  startTime: string;
+  endTime: string;
 }
 
 export interface UpdateTimeRuleDto {
   ruleName?: string;
   enabled?: boolean;
-  action?: "allow" | "block";
   dayOfWeek?: number;
   startTime?: string;
   endTime?: string;

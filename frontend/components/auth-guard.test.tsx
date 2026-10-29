@@ -35,6 +35,7 @@ const shown = () => screen.queryByText("protected content") !== null;
 beforeEach(() => {
   jest.clearAllMocks();
   pathname = "/";
+  window.history.replaceState(null, "", "/");
   auth = {
     isAuthenticated: true,
     isLoading: false,
@@ -66,7 +67,7 @@ describe("AuthGuard", () => {
       renderGuard();
 
       expect(shown()).toBe(false);
-      expect(screen.getByText("Cannot Reach the Backend")).toBeInTheDocument();
+      expect(screen.getByText("Cannot reach the backend")).toBeInTheDocument();
       expect(
         screen.getByText("The backend service encountered an error."),
       ).toBeInTheDocument();
@@ -77,7 +78,7 @@ describe("AuthGuard", () => {
       auth.backendError = "offline";
       renderGuard();
 
-      fireEvent.click(screen.getByRole("button", { name: "Retry Connection" }));
+      fireEvent.click(screen.getByRole("button", { name: "Retry connection" }));
 
       expect(auth.retryConnection).toHaveBeenCalledTimes(1);
     });
@@ -89,7 +90,7 @@ describe("AuthGuard", () => {
       renderGuard();
 
       expect(shown()).toBe(false);
-      expect(screen.getByText("Cannot Reach the Backend")).toBeInTheDocument();
+      expect(screen.getByText("Cannot reach the backend")).toBeInTheDocument();
     });
 
     it("reports the failure before setup has ever run", () => {
@@ -99,7 +100,7 @@ describe("AuthGuard", () => {
       renderGuard();
 
       expect(shown()).toBe(false);
-      expect(screen.getByText("Cannot Reach the Backend")).toBeInTheDocument();
+      expect(screen.getByText("Cannot reach the backend")).toBeInTheDocument();
       expect(push).not.toHaveBeenCalled();
     });
   });
@@ -146,6 +147,42 @@ describe("AuthGuard", () => {
 
       expect(push).toHaveBeenCalledWith("/login");
       expect(shown()).toBe(false);
+    });
+
+    it("remembers the page, query and hash the visitor asked for", () => {
+      auth.isAuthenticated = false;
+      pathname = "/settings";
+      window.history.replaceState(null, "", "/settings?tab=a#system");
+      renderGuard();
+
+      expect(push).toHaveBeenCalledWith(
+        "/login?returnTo=%2Fsettings%3Ftab%3Da%23system",
+      );
+    });
+
+    it("sends a signed-in admin back to where they were headed", () => {
+      pathname = "/login";
+      window.history.replaceState(
+        null,
+        "",
+        "/login?returnTo=%2F%3Fview%3Dusers%26user%3D1002",
+      );
+      renderGuard();
+
+      expect(push).toHaveBeenCalledWith("/?view=users&user=1002");
+    });
+
+    it.each([
+      "%2F%2Fevil.example.com",
+      "https%3A%2F%2Fevil.example.com",
+      "%2F%5Cevil.example.com",
+      "javascript%3Aalert(1)",
+    ])("ignores the unsafe return target %s", (target) => {
+      pathname = "/login";
+      window.history.replaceState(null, "", `/login?returnTo=${target}`);
+      renderGuard();
+
+      expect(push).toHaveBeenCalledWith("/");
     });
 
     it("renders /login for an anonymous visitor", () => {

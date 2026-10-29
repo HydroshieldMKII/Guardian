@@ -1,16 +1,21 @@
+import { BadRequestException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { SessionsController } from '@/modules/sessions/sessions.controller';
 import { ActiveSessionService } from '@/modules/sessions/services/active-session.service';
+import { SessionHistoryService } from '@/modules/sessions/services/session-history.service';
 
 describe('SessionsController', () => {
   let controller: SessionsController;
   let activeSessionService: Record<string, jest.Mock>;
+  let sessionHistoryService: Record<string, jest.Mock>;
 
   beforeEach(async () => {
     activeSessionService = {
       getActiveSessionsFormatted: jest
         .fn()
         .mockResolvedValue({ MediaContainer: { size: 0 } }),
+    };
+    sessionHistoryService = {
       getUserSessionHistory: jest.fn().mockResolvedValue([{ id: 1 }]),
       deleteSessionHistory: jest.fn().mockResolvedValue(undefined),
     };
@@ -19,6 +24,7 @@ describe('SessionsController', () => {
       controllers: [SessionsController],
       providers: [
         { provide: ActiveSessionService, useValue: activeSessionService },
+        { provide: SessionHistoryService, useValue: sessionHistoryService },
       ],
     }).compile();
 
@@ -33,7 +39,7 @@ describe('SessionsController', () => {
 
   it('defaults the history page to the first 50 completed sessions', async () => {
     await controller.getUserSessionHistory('u1');
-    expect(activeSessionService.getUserSessionHistory).toHaveBeenCalledWith(
+    expect(sessionHistoryService.getUserSessionHistory).toHaveBeenCalledWith(
       'u1',
       {
         limit: 50,
@@ -41,6 +47,7 @@ describe('SessionsController', () => {
         includeActive: false,
         search: undefined,
         terminatedOnly: false,
+        app: undefined,
       },
     );
   });
@@ -53,8 +60,9 @@ describe('SessionsController', () => {
       '20',
       'ennemie',
       'true',
+      'plexamp',
     );
-    expect(activeSessionService.getUserSessionHistory).toHaveBeenCalledWith(
+    expect(sessionHistoryService.getUserSessionHistory).toHaveBeenCalledWith(
       'u1',
       {
         limit: 10,
@@ -62,7 +70,43 @@ describe('SessionsController', () => {
         includeActive: true,
         search: 'ennemie',
         terminatedOnly: true,
+        app: 'plexamp',
       },
+    );
+  });
+
+  it.each(['plex', 'plexamp'] as const)(
+    'passes the %s app filter through',
+    async (app) => {
+      await controller.getUserSessionHistory(
+        'u1',
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        app,
+      );
+      expect(sessionHistoryService.getUserSessionHistory).toHaveBeenCalledWith(
+        'u1',
+        expect.objectContaining({ app }),
+      );
+    },
+  );
+
+  it('ignores an unknown app filter', async () => {
+    await controller.getUserSessionHistory(
+      'u1',
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      'kodi',
+    );
+    expect(sessionHistoryService.getUserSessionHistory).toHaveBeenCalledWith(
+      'u1',
+      expect.objectContaining({ app: undefined }),
     );
   });
 
@@ -75,7 +119,7 @@ describe('SessionsController', () => {
       undefined,
       'yes',
     );
-    expect(activeSessionService.getUserSessionHistory).toHaveBeenCalledWith(
+    expect(sessionHistoryService.getUserSessionHistory).toHaveBeenCalledWith(
       'u1',
       expect.objectContaining({
         includeActive: false,
@@ -86,9 +130,36 @@ describe('SessionsController', () => {
   });
 
   it('deletes a history row by numeric id', async () => {
-    await expect(controller.deleteSessionHistory('42')).resolves.toEqual({
+    await expect(controller.deleteSessionHistory(42)).resolves.toEqual({
       success: true,
     });
-    expect(activeSessionService.deleteSessionHistory).toHaveBeenCalledWith(42);
+    expect(sessionHistoryService.deleteSessionHistory).toHaveBeenCalledWith(42);
   });
+
+  it.each([0, -1])('rejects the non-positive id %i with a 400', async (id) => {
+    await expect(controller.deleteSessionHistory(id)).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+    expect(sessionHistoryService.deleteSessionHistory).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['abc', undefined, 50, 0],
+    ['-5', '-1', 50, 0],
+    ['0', '1.5', 50, 0],
+    ['99999999999', '30', 200, 30],
+    ['1e30', '1e3', 50, 0],
+  ])(
+    'parses limit=%s offset=%s as %i/%i',
+    async (limit, offset, expectedLimit, expectedOffset) => {
+      await controller.getUserSessionHistory('u1', limit, undefined, offset);
+      expect(sessionHistoryService.getUserSessionHistory).toHaveBeenCalledWith(
+        'u1',
+        expect.objectContaining({
+          limit: expectedLimit,
+          offset: expectedOffset,
+        }),
+      );
+    },
+  );
 });

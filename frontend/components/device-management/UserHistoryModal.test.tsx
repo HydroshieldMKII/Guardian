@@ -1,6 +1,9 @@
-import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { UserHistoryModal } from "@/components/device-management/UserHistoryModal";
+import { renderWithQuery } from "@/test-utils/query";
+
+const render = renderWithQuery;
 
 const push = jest.fn();
 const router = { push };
@@ -71,6 +74,9 @@ const renderModal = async (
     />,
   );
   await act(async () => {});
+  await waitFor(() =>
+    expect(screen.queryByText("Loading history...")).toBeNull(),
+  );
   return {
     ...view,
     onClose,
@@ -196,7 +202,8 @@ describe("UserHistoryModal loading", () => {
       screen.getByText("This user has not streamed anything yet"),
     ).toBeInTheDocument();
     expect(consoleError).toHaveBeenCalledWith(
-      "Error fetching user history:",
+      "Request failed:",
+      expect.arrayContaining(["sessionHistory", "u-1"]),
       expect.any(Error),
     );
   });
@@ -209,7 +216,8 @@ describe("UserHistoryModal loading", () => {
       screen.getByText("This user has not streamed anything yet"),
     ).toBeInTheDocument();
     expect(consoleError).toHaveBeenCalledWith(
-      "Error fetching user history:",
+      "Request failed:",
+      expect.arrayContaining(["sessionHistory", "u-1"]),
       expect.any(Error),
     );
   });
@@ -241,7 +249,8 @@ describe("UserHistoryModal loading", () => {
 
     await waitFor(() =>
       expect(consoleError).toHaveBeenCalledWith(
-        "Error refreshing user history:",
+        "Request failed:",
+        expect.arrayContaining(["sessionHistory", "u-1"]),
         expect.any(Error),
       ),
     );
@@ -348,7 +357,7 @@ describe("UserHistoryModal formatting", () => {
 
   it("falls back for untitled content", async () => {
     await renderWith({ contentTitle: null });
-    expect(screen.getAllByText("Unknown Title").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Unknown title").length).toBeGreaterThan(0);
   });
 
   it("shows artist and year for a track", async () => {
@@ -404,7 +413,7 @@ describe("UserHistoryModal formatting", () => {
 
   it("falls back again when there is no device at all", async () => {
     await renderWith({ userDevice: null });
-    expect(screen.getAllByText("Unknown Device").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Unknown device").length).toBeGreaterThan(0);
   });
 
   it("labels PlexAmp separately", async () => {
@@ -442,6 +451,16 @@ describe("UserHistoryModal formatting", () => {
       expect(screen.getAllByText(expected).length).toBeGreaterThan(0);
     },
   );
+
+  it("wraps a long duration instead of cutting it off", async () => {
+    await renderWith({
+      startedAt: "2026-01-01T10:00:00Z",
+      endedAt: "2026-01-01T10:02:30Z",
+    });
+    expect(screen.getByText("2 minutes and 30 seconds")).not.toHaveClass(
+      "truncate",
+    );
+  });
 
   it("says unknown when the clock runs backwards", async () => {
     await renderWith({
@@ -503,6 +522,83 @@ describe("UserHistoryModal filtering", () => {
 
     expect(lastUrl()).not.toContain("search=");
     expect(lastUrl()).not.toContain("terminatedOnly=");
+    expect(lastUrl()).not.toContain("app=");
+  });
+
+  it.each([
+    ["Plex", "app=plex&"],
+    ["Plexamp", "app=plexamp"],
+  ])("asks the server for %s sessions only", async (label, param) => {
+    const { user } = await renderModal();
+
+    await user.click(screen.getByRole("button", { name: label }));
+
+    await waitFor(() => expect(`${lastUrl()}&`).toContain(param));
+    expect(screen.getByRole("button", { name: label })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+  });
+
+  it("disables the terminated filter while showing Plexamp", async () => {
+    const { user } = await renderModal();
+
+    await user.click(screen.getByRole("button", { name: "Plexamp" }));
+
+    expect(screen.getByRole("switch")).toBeDisabled();
+    expect(screen.getByRole("switch")).not.toBeChecked();
+  });
+
+  it("drops the terminated filter for Plexamp and restores it after", async () => {
+    const { user } = await renderModal();
+
+    await user.click(screen.getByRole("switch"));
+    await waitFor(() => expect(lastUrl()).toContain("terminatedOnly=true"));
+    await user.click(screen.getByRole("button", { name: "Plexamp" }));
+
+    await waitFor(() => expect(lastUrl()).toContain("app=plexamp"));
+    expect(lastUrl()).not.toContain("terminatedOnly=");
+
+    await user.click(screen.getByRole("button", { name: "Plex" }));
+
+    await waitFor(() => expect(lastUrl()).toContain("terminatedOnly=true"));
+    expect(screen.getByRole("switch")).toBeChecked();
+  });
+
+  it("keeps the newest filter's sessions when an older reply lands last", async () => {
+    const { user } = await renderModal();
+    let answerPlexamp: (reply: FetchReply) => void = () => {};
+    fetchMock.mockImplementation((url) =>
+      typeof url === "string" && url.includes("app=plexamp")
+        ? new Promise<FetchReply>((resolve) => {
+            answerPlexamp = resolve;
+          })
+        : ok([session({ id: 2, contentTitle: "Dune: Part Two" })]),
+    );
+
+    await user.click(screen.getByRole("button", { name: "Plexamp" }));
+    await user.click(screen.getByRole("button", { name: "Plex" }));
+    expect(await screen.findByText("Dune: Part Two")).toBeInTheDocument();
+
+    await act(async () =>
+      answerPlexamp({
+        ok: true,
+        json: async () => [session({ id: 3, contentTitle: "Get Lucky" })],
+      }),
+    );
+
+    expect(screen.getByText("Dune: Part Two")).toBeInTheDocument();
+    expect(screen.queryByText("Get Lucky")).toBeNull();
+  });
+
+  it("drops the app filter when switching back to all", async () => {
+    const { user } = await renderModal();
+
+    await user.click(screen.getByRole("button", { name: "Plexamp" }));
+    await waitFor(() => expect(lastUrl()).toContain("app=plexamp"));
+    await user.click(screen.getByRole("button", { name: "All" }));
+
+    await waitFor(() => expect(lastUrl()).not.toContain("app="));
   });
 });
 
@@ -590,7 +686,7 @@ describe("UserHistoryModal searching", () => {
     expect(await screen.findByText("Loading history...")).toBeInTheDocument();
   });
 
-  it("shows the full loader again after the modal is closed and reopened", async () => {
+  it("shows the sessions it already has when reopened, then refreshes them", async () => {
     const { rerender } = await renderModal();
 
     rerender(
@@ -612,11 +708,50 @@ describe("UserHistoryModal searching", () => {
       />,
     );
 
-    expect(await screen.findByText("Loading history...")).toBeInTheDocument();
+    expect(screen.getByText("Arrival")).toBeInTheDocument();
+    expect(screen.queryByText("Loading history...")).toBeNull();
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
   });
 });
 
+class TestIntersectionObserver implements IntersectionObserver {
+  static callbacks: IntersectionObserverCallback[] = [];
+  readonly root = null;
+  readonly rootMargin = "";
+  readonly thresholds: ReadonlyArray<number> = [];
+  constructor(callback: IntersectionObserverCallback) {
+    TestIntersectionObserver.callbacks.push(callback);
+  }
+  observe(): void {}
+  unobserve(): void {}
+  disconnect(): void {}
+  takeRecords(): IntersectionObserverEntry[] {
+    return [];
+  }
+}
+
+const scrollTrigger = async (isIntersecting: boolean) => {
+  const callback = TestIntersectionObserver.callbacks.at(-1);
+  await act(async () => {
+    callback?.(
+      [{ isIntersecting } as IntersectionObserverEntry],
+      new TestIntersectionObserver(() => {}),
+    );
+  });
+};
+
 describe("UserHistoryModal paging", () => {
+  const realObserver = global.IntersectionObserver;
+
+  beforeEach(() => {
+    TestIntersectionObserver.callbacks = [];
+    global.IntersectionObserver = TestIntersectionObserver;
+  });
+
+  afterEach(() => {
+    global.IntersectionObserver = realObserver;
+  });
+
   const fullPage = () =>
     Array.from({ length: 25 }, (_, index) =>
       session({ id: index + 1, contentTitle: `Session ${index + 1}` }),
@@ -685,7 +820,8 @@ describe("UserHistoryModal paging", () => {
 
     await waitFor(() =>
       expect(consoleError).toHaveBeenCalledWith(
-        "Error loading more user history:",
+        "Request failed:",
+        expect.arrayContaining(["sessionHistory", "u-1"]),
         expect.any(Error),
       ),
     );
@@ -695,89 +831,72 @@ describe("UserHistoryModal paging", () => {
   });
 
   it("loads the next page when the trigger scrolls into view", async () => {
-    class TestIntersectionObserver implements IntersectionObserver {
-      static callbacks: IntersectionObserverCallback[] = [];
-      readonly root = null;
-      readonly rootMargin = "";
-      readonly thresholds: ReadonlyArray<number> = [];
-      constructor(callback: IntersectionObserverCallback) {
-        TestIntersectionObserver.callbacks.push(callback);
-      }
-      observe(): void {}
-      unobserve(): void {}
-      disconnect(): void {}
-      takeRecords(): IntersectionObserverEntry[] {
-        return [];
-      }
-    }
-    const original = global.IntersectionObserver;
-    global.IntersectionObserver = TestIntersectionObserver;
-
     fetchMock.mockImplementationOnce(() => ok(fullPage()));
     fetchMock.mockImplementationOnce(() =>
       ok([session({ id: 99, contentTitle: "Much Older" })]),
     );
     await renderModal();
 
-    const observer = new TestIntersectionObserver(() => {});
-    const callback =
-      TestIntersectionObserver.callbacks[
-        TestIntersectionObserver.callbacks.length - 2
-      ];
-    await act(async () => {
-      callback(
-        [{ isIntersecting: true } as IntersectionObserverEntry],
-        observer,
-      );
-    });
+    await scrollTrigger(true);
 
     expect(await screen.findByText("Much Older")).toBeInTheDocument();
-    global.IntersectionObserver = original;
   });
 
   it("stays put while the trigger is out of view", async () => {
-    class TestIntersectionObserver implements IntersectionObserver {
-      static callbacks: IntersectionObserverCallback[] = [];
-      readonly root = null;
-      readonly rootMargin = "";
-      readonly thresholds: ReadonlyArray<number> = [];
-      constructor(callback: IntersectionObserverCallback) {
-        TestIntersectionObserver.callbacks.push(callback);
-      }
-      observe(): void {}
-      unobserve(): void {}
-      disconnect(): void {}
-      takeRecords(): IntersectionObserverEntry[] {
-        return [];
-      }
-    }
-    const original = global.IntersectionObserver;
-    global.IntersectionObserver = TestIntersectionObserver;
-
     fetchMock.mockImplementationOnce(() => ok(fullPage()));
     await renderModal();
     const callsBefore = fetchMock.mock.calls.length;
 
-    const observer = new TestIntersectionObserver(() => {});
-    const callback =
-      TestIntersectionObserver.callbacks[
-        TestIntersectionObserver.callbacks.length - 2
-      ];
-    await act(async () => {
-      callback(
-        [{ isIntersecting: false } as IntersectionObserverEntry],
-        observer,
-      );
-    });
+    await scrollTrigger(false);
 
     expect(fetchMock.mock.calls).toHaveLength(callsBefore);
-    global.IntersectionObserver = original;
+  });
+
+  it("asks for the next page once while it is still on its way", async () => {
+    let release: (reply: FetchReply) => void = () => {};
+    fetchMock.mockImplementationOnce(() => ok(fullPage()));
+    fetchMock.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          release = resolve;
+        }),
+    );
+    await renderModal();
+
+    await scrollTrigger(true);
+    await scrollTrigger(true);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    await act(async () => {
+      release({ ok: true, json: async () => [session({ id: 99 })] });
+    });
+  });
+
+  it("keeps one observer while older sessions load", async () => {
+    fetchMock.mockImplementationOnce(() => ok(fullPage()));
+    fetchMock.mockImplementationOnce(() =>
+      ok(
+        Array.from({ length: 25 }, (_, index) =>
+          session({ id: 100 + index, contentTitle: `Older ${index}` }),
+        ),
+      ),
+    );
+    await renderModal();
+    const observersBefore = TestIntersectionObserver.callbacks.length;
+
+    await scrollTrigger(true);
+    await screen.findByText("Older 0");
+
+    expect(TestIntersectionObserver.callbacks).toHaveLength(
+      observersBefore + 1,
+    );
   });
 
   it("refreshes every page it has already loaded", async () => {
-    fetchMock.mockImplementationOnce(() => ok(fullPage()));
-    fetchMock.mockImplementationOnce(() =>
-      ok([session({ id: 99, contentTitle: "Much Older" })]),
+    fetchMock.mockImplementation((url) =>
+      typeof url === "string" && url.includes("offset=0")
+        ? ok(fullPage())
+        : ok([session({ id: 99, contentTitle: "Much Older" })]),
     );
     const { user } = await renderModal();
     await user.click(
@@ -787,9 +906,9 @@ describe("UserHistoryModal paging", () => {
 
     await user.click(screen.getByRole("button", { name: /Refresh/ }));
 
-    await waitFor(() =>
-      expect(fetchMock.mock.calls[2][0]).toContain("limit=26"),
-    );
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(4));
+    expect(fetchMock.mock.calls[2][0]).toContain("offset=0");
+    expect(fetchMock.mock.calls[3][0]).toContain("offset=25");
   });
 });
 
@@ -840,7 +959,7 @@ describe("UserHistoryModal deletion", () => {
       ),
     );
     expect(toast).toHaveBeenCalledWith(
-      expect.objectContaining({ title: "Session Deleted" }),
+      expect.objectContaining({ title: "Session deleted" }),
     );
     expect(
       screen.getByText("This user has not streamed anything yet"),
@@ -860,7 +979,7 @@ describe("UserHistoryModal deletion", () => {
 
     await waitFor(() =>
       expect(toast).toHaveBeenCalledWith(
-        expect.objectContaining({ title: "Delete Failed" }),
+        expect.objectContaining({ title: "Delete failed" }),
       ),
     );
   });
@@ -878,7 +997,7 @@ describe("UserHistoryModal deletion", () => {
 
     await waitFor(() =>
       expect(toast).toHaveBeenCalledWith(
-        expect.objectContaining({ title: "Delete Failed" }),
+        expect.objectContaining({ title: "Delete failed" }),
       ),
     );
   });
@@ -961,7 +1080,7 @@ describe("UserHistoryModal deep link", () => {
         scrollToSessionId={1}
       />,
     );
-    await act(async () => {});
+    await act(() => jest.advanceTimersByTimeAsync(0));
 
     const card = document.querySelector('[data-session-id="1"]') as HTMLElement;
     expect(card.className).toContain("ring-2");

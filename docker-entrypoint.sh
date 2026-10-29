@@ -24,7 +24,7 @@ node dist/main &
 api_pid=$!
 
 cd /app/frontend
-node server.js &
+node web-server/start.ts &
 web_pid=$!
 
 while kill -0 "$api_pid" 2>/dev/null && kill -0 "$web_pid" 2>/dev/null; do

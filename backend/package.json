@@ -1,6 +1,6 @@
 {
   "name": "backend",
-  "version": "2.0.1",
+  "version": "2.2.0",
   "description": "",
   "author": "",
   "private": true,
@@ -61,7 +61,7 @@
     "@types/linkify-it": "^5.0.0",
     "@types/markdown-it": "^14.2.0",
     "@types/mdurl": "^2.0.0",
-    "@types/node": "^22.20.1",
+    "@types/node": "^26.6.5",
     "@types/supertest": "^7.2.1",
     "eslint": "^9.39.5",
     "eslint-config-prettier": "^10.1.8",
@@ -103,7 +103,8 @@
       "!database/cli.data-source.ts",
       "!scripts/**",
       "!test-setup.ts",
-      "!test-matchers.ts"
+      "!test-matchers.ts",
+      "!**/*.fixture.ts"
     ],
     "coverageDirectory": "../coverage",
     "coverageReporters": [

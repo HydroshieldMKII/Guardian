@@ -28,8 +28,15 @@ jest.mock("@/components/ui/calendar", () => ({
     <div>
       <span>{`calendar:${selected ? selected.toISOString() : "none"}`}</span>
       <span>{`past-disabled:${disabled(new Date(Date.now() - 86400000))}`}</span>
+      <span>{`far-disabled:${disabled(new Date(Date.now() + 11 * 365 * 86400000))}`}</span>
+      <span>{`near-disabled:${disabled(new Date(Date.now() + 3 * 86400000))}`}</span>
       <button onClick={() => onSelect(new Date(Date.now() + 3 * 86400000))}>
         pick date
+      </button>
+      <button
+        onClick={() => onSelect(new Date(Date.now() + 11 * 365 * 86400000))}
+      >
+        pick far date
       </button>
       <button onClick={() => onSelect(undefined)}>clear date</button>
     </div>
@@ -140,7 +147,7 @@ describe("TemporaryAccessModal", () => {
       expect(
         screen.getByText("No devices are eligible for temporary access"),
       ).toBeInTheDocument();
-      expect(screen.queryByRole("button", { name: /Select All/ })).toBeNull();
+      expect(screen.queryByRole("button", { name: /Select all/ })).toBeNull();
     });
 
     it("falls back to the identifier for an unnamed device", () => {
@@ -181,22 +188,22 @@ describe("TemporaryAccessModal", () => {
         ],
       });
 
-      await user.click(screen.getByRole("button", { name: "Select All" }));
+      await user.click(screen.getByRole("button", { name: "Select all" }));
       expect(screen.getByText(/\(2 selected\)/)).toBeInTheDocument();
 
-      await user.click(screen.getByRole("button", { name: "Deselect All" }));
+      await user.click(screen.getByRole("button", { name: "Deselect all" }));
       expect(screen.getByText(/\(0 selected\)/)).toBeInTheDocument();
     });
 
     it("hides the duration and bypass sections until something is selected", async () => {
       const { user } = renderModal();
-      expect(screen.queryByText("Access Duration")).toBeNull();
-      expect(screen.queryByText("Policy Bypass")).toBeNull();
+      expect(screen.queryByText("Access duration")).toBeNull();
+      expect(screen.queryByText("Policy bypass")).toBeNull();
 
       await selectDevice(user);
 
-      expect(screen.getByText("Access Duration")).toBeInTheDocument();
-      expect(screen.getByText("Policy Bypass")).toBeInTheDocument();
+      expect(screen.getByText("Access duration")).toBeInTheDocument();
+      expect(screen.getByText("Policy bypass")).toBeInTheDocument();
     });
   });
 
@@ -206,7 +213,7 @@ describe("TemporaryAccessModal", () => {
       await selectDevice(user);
 
       await user.click(screen.getByRole("button", { name: "1 day" }));
-      await user.click(screen.getByRole("button", { name: /Grant Access/ }));
+      await user.click(screen.getByRole("button", { name: /Grant access/ }));
 
       expect(onGrantAccess).toHaveBeenCalledWith([1], 1440, false);
     });
@@ -221,7 +228,7 @@ describe("TemporaryAccessModal", () => {
       await selectDevice(user);
 
       await user.click(screen.getByRole("button", { name: label }));
-      await user.click(screen.getByRole("button", { name: /Grant Access/ }));
+      await user.click(screen.getByRole("button", { name: /Grant access/ }));
 
       expect(onGrantAccess).toHaveBeenCalledWith([1], expected, false);
     });
@@ -233,7 +240,7 @@ describe("TemporaryAccessModal", () => {
       const input = screen.getByPlaceholderText("Enter duration");
       await user.clear(input);
       await user.type(input, "5");
-      await user.click(screen.getByRole("button", { name: /Grant Access/ }));
+      await user.click(screen.getByRole("button", { name: /Grant access/ }));
 
       expect(onGrantAccess).toHaveBeenCalledWith([1], 300, false);
     });
@@ -244,7 +251,7 @@ describe("TemporaryAccessModal", () => {
 
       await user.click(screen.getByRole("button", { name: "Duration unit" }));
       await user.click(await screen.findByText("minutes"));
-      await user.click(screen.getByRole("button", { name: /Grant Access/ }));
+      await user.click(screen.getByRole("button", { name: /Grant access/ }));
 
       expect(onGrantAccess).toHaveBeenCalledWith([1], 1, false);
     });
@@ -259,7 +266,7 @@ describe("TemporaryAccessModal", () => {
 
       await user.click(screen.getByRole("button", { name: "Duration unit" }));
       await user.click(await screen.findByText(unit));
-      await user.click(screen.getByRole("button", { name: /Grant Access/ }));
+      await user.click(screen.getByRole("button", { name: /Grant access/ }));
 
       expect(onGrantAccess).toHaveBeenCalledWith([1], expected, false);
     });
@@ -276,7 +283,7 @@ describe("TemporaryAccessModal", () => {
         screen.getByText("Please enter a valid duration"),
       ).toBeInTheDocument();
       expect(
-        screen.getByRole("button", { name: /Grant Access/ }),
+        screen.getByRole("button", { name: /Grant access/ }),
       ).toBeDisabled();
     });
 
@@ -287,8 +294,33 @@ describe("TemporaryAccessModal", () => {
 
       expect(screen.getByText(/Duration is too large/)).toBeInTheDocument();
       expect(
-        screen.getByRole("button", { name: /Grant Access/ }),
+        screen.getByRole("button", { name: /Grant access/ }),
       ).toBeDisabled();
+    });
+
+    it("blocks a duration just over ten years", async () => {
+      convertToMinutes.mockReturnValue(10 * 365 * 24 * 60 + 1);
+      const { user } = renderModal();
+      await selectDevice(user);
+
+      expect(screen.getByText(/Duration is too large/)).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: /Grant access/ }),
+      ).toBeDisabled();
+    });
+
+    it("allows a duration of exactly ten years", async () => {
+      convertToMinutes.mockReturnValue(10 * 365 * 24 * 60);
+      const { user, onGrantAccess } = renderModal();
+      await selectDevice(user);
+
+      await user.click(screen.getByRole("button", { name: /Grant access/ }));
+
+      expect(onGrantAccess).toHaveBeenCalledWith(
+        [1],
+        10 * 365 * 24 * 60,
+        false,
+      );
     });
 
     it("blocks a unit the hook rejects", async () => {
@@ -297,7 +329,7 @@ describe("TemporaryAccessModal", () => {
       await selectDevice(user);
 
       expect(
-        screen.getByRole("button", { name: /Grant Access/ }),
+        screen.getByRole("button", { name: /Grant access/ }),
       ).toBeDisabled();
     });
 
@@ -324,7 +356,7 @@ describe("TemporaryAccessModal", () => {
 
       expect(screen.getByText("calendar:none")).toBeInTheDocument();
       expect(
-        screen.getByRole("button", { name: /Grant Access/ }),
+        screen.getByRole("button", { name: /Grant access/ }),
       ).toBeDisabled();
     });
 
@@ -335,12 +367,34 @@ describe("TemporaryAccessModal", () => {
       expect(screen.getByText("past-disabled:true")).toBeInTheDocument();
     });
 
+    it("disables dates beyond ten years but not nearer ones", async () => {
+      const { user } = renderModal();
+      await openCalendar(user);
+
+      expect(screen.getByText("far-disabled:true")).toBeInTheDocument();
+      expect(screen.getByText("near-disabled:false")).toBeInTheDocument();
+    });
+
+    it("refuses a date beyond ten years", async () => {
+      const { user } = renderModal();
+      await openCalendar(user);
+
+      await user.click(screen.getByRole("button", { name: "pick far date" }));
+
+      expect(
+        screen.getByText(/Selected date is too far away/),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: /Grant access/ }),
+      ).toBeDisabled();
+    });
+
     it("grants until the chosen date", async () => {
       const { user, onGrantAccess } = renderModal();
       await openCalendar(user);
 
       await user.click(screen.getByRole("button", { name: "pick date" }));
-      await user.click(screen.getByRole("button", { name: /Grant Access/ }));
+      await user.click(screen.getByRole("button", { name: /Grant access/ }));
 
       expect(onGrantAccess).toHaveBeenCalledWith(
         [1],
@@ -420,7 +474,7 @@ describe("TemporaryAccessModal", () => {
       await selectDevice(user);
 
       await user.click(screen.getByRole("switch"));
-      await user.click(screen.getByRole("button", { name: /Grant Access/ }));
+      await user.click(screen.getByRole("button", { name: /Grant access/ }));
 
       expect(onGrantAccess).toHaveBeenCalledWith([1], 60, true);
     });
@@ -438,7 +492,7 @@ describe("TemporaryAccessModal", () => {
     it("blocks granting with nothing selected", () => {
       renderModal();
       expect(
-        screen.getByRole("button", { name: /Grant Access/ }),
+        screen.getByRole("button", { name: /Grant access/ }),
       ).toBeDisabled();
     });
 

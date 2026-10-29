@@ -1,15 +1,11 @@
-import {
-  act,
-  cleanup,
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-} from "@testing-library/react";
+import { act, cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import React from "react";
 import type { UnifiedDashboardData } from "@/types";
 import { Dashboard } from "@/components/dashboard";
+import { renderWithQuery } from "@/test-utils/query";
+import { queryKeys } from "@/lib/query-keys";
+
+const render = renderWithQuery;
 
 const push = jest.fn();
 const replace = jest.fn();
@@ -27,12 +23,6 @@ jest.mock("@/lib/api", () => ({
   apiClient: {
     getDashboardData: (...args: unknown[]) => getDashboardData(...args),
   },
-}));
-
-const checkForUpdatesIfEnabled = jest.fn();
-let versionInfo: { version?: string } | null = null;
-jest.mock("@/contexts/version-context", () => ({
-  useVersion: () => ({ versionInfo, checkForUpdatesIfEnabled }),
 }));
 
 const retryConnection = jest.fn();
@@ -58,22 +48,16 @@ jest.mock("@/hooks/useLiveDashboard", () => ({
 jest.mock("@/components/streams-list", () => ({
   __esModule: true,
   default: ({
-    tabs,
-    onAutoRefreshChange,
     onRefresh,
     onNavigateToDevice,
     onNavigateToUser,
   }: {
-    tabs: React.ReactNode;
-    onAutoRefreshChange: (value: boolean) => void;
     onRefresh: () => void;
     onNavigateToDevice: (userId: string, deviceIdentifier: string) => void;
     onNavigateToUser: (userId: string) => void;
   }) => (
     <div>
-      {tabs}
       <span>streams-list</span>
-      <button onClick={() => onAutoRefreshChange(false)}>pause streams</button>
       <button onClick={onRefresh}>refresh streams</button>
       <button onClick={() => onNavigateToDevice("u-3", "device-3")}>
         go to device
@@ -83,25 +67,28 @@ jest.mock("@/components/streams-list", () => ({
   ),
 }));
 
+const mockNavigationCallbacks = new Set<() => void>();
+
 jest.mock("@/components/device-management", () => ({
   DeviceManagement: ({
-    tabs,
-    onAutoRefreshChange,
     onRefresh,
     navigationTarget,
     onNavigationComplete,
+    selectedUserId,
+    onSelectUser,
   }: {
-    tabs: React.ReactNode;
-    onAutoRefreshChange: (value: boolean) => void;
     onRefresh: () => void;
     navigationTarget: { userId: string; deviceIdentifier: string } | null;
     onNavigationComplete: () => void;
+    selectedUserId: string | null;
+    onSelectUser: (userId: string | null) => void;
   }) => (
-    <div>
-      {tabs}
+    <div ref={() => void mockNavigationCallbacks.add(onNavigationComplete)}>
       <span>device-management</span>
       <span>{`target:${navigationTarget?.deviceIdentifier ?? "none"}`}</span>
-      <button onClick={() => onAutoRefreshChange(false)}>pause devices</button>
+      <span>{`selected:${selectedUserId ?? "none"}`}</span>
+      <button onClick={() => onSelectUser("u 5/x")}>select user</button>
+      <button onClick={() => onSelectUser(null)}>deselect user</button>
       <button onClick={onRefresh}>refresh devices</button>
       <button onClick={onNavigationComplete}>clear target</button>
     </div>
@@ -147,6 +134,8 @@ const dashboardData = (
     },
     plexStatus: { configured: true, hasValidCredentials: true },
     settings: [],
+    devices: { all: [], pending: [], approved: [], processed: [] },
+    users: [],
     ...overrides,
   }) as UnifiedDashboardData;
 
@@ -157,7 +146,6 @@ beforeEach(() => {
   jest.useRealTimers();
   consoleError = jest.spyOn(console, "error").mockImplementation(() => {});
   authState = { setupRequired: false, backendError: null };
-  versionInfo = null;
   liveConnected = false;
   liveEnabled = true;
   pushLive = null;
@@ -229,6 +217,34 @@ describe("Dashboard", () => {
     expect(await screen.findByText("device-management")).toBeInTheDocument();
   });
 
+  it("shows the last dashboard straight away when it is opened again", async () => {
+    const first = await renderDashboard();
+    first.unmount();
+    getDashboardData.mockReturnValue(new Promise(() => {}));
+
+    render(<Dashboard />, { client: first.client });
+
+    expect(screen.getByText("device-management")).toBeInTheDocument();
+  });
+
+  it("recovers from a failed refresh once the next one succeeds", async () => {
+    await renderDashboard();
+    getDashboardData.mockRejectedValueOnce(new Error("blip"));
+
+    await userEvent
+      .setup()
+      .click(screen.getByRole("button", { name: "refresh devices" }));
+    expect(
+      await screen.findByText(/plex-error:Backend connection error/),
+    ).toBeInTheDocument();
+
+    getDashboardData.mockResolvedValue(dashboardData());
+    await act(async () => {
+      pushLive?.(dashboardData());
+    });
+    expect(await screen.findByText("device-management")).toBeInTheDocument();
+  });
+
   it("prompts for configuration when Plex has no valid credentials", async () => {
     getDashboardData.mockResolvedValue(
       dashboardData({
@@ -256,7 +272,8 @@ describe("Dashboard", () => {
       await screen.findByText(/plex-error:Backend connection error/),
     ).toBeInTheDocument();
     expect(consoleError).toHaveBeenCalledWith(
-      "Failed to fetch dashboard stats:",
+      "Request failed:",
+      ["dashboard"],
       expect.any(Error),
     );
   });
@@ -279,16 +296,15 @@ describe("Dashboard", () => {
     ).toBeInTheDocument();
   });
 
-  it("renders the device statistics once loaded", async () => {
-    await renderDashboard();
+  describe("the view", () => {
+    const withDefaultPage = (value: string) =>
+      getDashboardData.mockResolvedValue(
+        dashboardData({
+          settings: [{ key: "DEFAULT_PAGE", value }],
+        } as Partial<UnifiedDashboardData>),
+      );
 
-    expect(screen.getAllByText("2").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("1").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("4").length).toBeGreaterThan(0);
-  });
-
-  describe("the initial tab", () => {
-    it("defaults to devices", async () => {
+    it("defaults to users", async () => {
       await renderDashboard();
       expect(screen.getByText("device-management")).toBeInTheDocument();
     });
@@ -304,7 +320,7 @@ describe("Dashboard", () => {
       expect(await screen.findByText("streams-list")).toBeInTheDocument();
     });
 
-    it("falls back to devices for an unknown DEFAULT_PAGE", async () => {
+    it("falls back to users for an unknown DEFAULT_PAGE", async () => {
       getDashboardData.mockResolvedValue(
         dashboardData({
           settings: [{ key: "DEFAULT_PAGE", value: "nonsense" }],
@@ -315,15 +331,75 @@ describe("Dashboard", () => {
       expect(await screen.findByText("device-management")).toBeInTheDocument();
     });
 
-    it("switches tabs on click", async () => {
+    it("follows a streams view param over the default page", async () => {
+      searchParams.set("view", "streams");
+
+      render(<Dashboard />);
+
+      expect(await screen.findByText("streams-list")).toBeInTheDocument();
+    });
+
+    it("follows a users view param over a streams default page", async () => {
+      withDefaultPage("streams");
+      searchParams.set("view", "users");
+
+      render(<Dashboard />);
+
+      expect(await screen.findByText("device-management")).toBeInTheDocument();
+      expect(screen.queryByText("streams-list")).toBeNull();
+    });
+
+    it("ignores an unknown view param", async () => {
+      withDefaultPage("streams");
+      searchParams.set("view", "nonsense");
+
+      render(<Dashboard />);
+
+      expect(await screen.findByText("streams-list")).toBeInTheDocument();
+    });
+
+    it("hands the user param to the users view", async () => {
+      searchParams.set("view", "users");
+      searchParams.set("user", "u-2");
+
+      await renderDashboard();
+
+      expect(screen.getByText("selected:u-2")).toBeInTheDocument();
+    });
+
+    it("selects no user without a user param", async () => {
+      await renderDashboard();
+
+      expect(screen.getByText("selected:none")).toBeInTheDocument();
+    });
+
+    it("pushes the selected user into the URL and scrolls to the top", async () => {
+      const scrollTo = jest
+        .spyOn(window, "scrollTo")
+        .mockImplementation(() => {});
       const user = userEvent.setup();
       await renderDashboard();
 
-      await user.click(screen.getByRole("button", { name: /Streams/ }));
-      expect(screen.getByText("streams-list")).toBeInTheDocument();
+      await user.click(screen.getByRole("button", { name: "select user" }));
 
-      await user.click(screen.getByRole("button", { name: /Devices/ }));
-      expect(screen.getByText("device-management")).toBeInTheDocument();
+      expect(push).toHaveBeenCalledWith("/?view=users&user=u%205%2Fx", {
+        scroll: false,
+      });
+      expect(scrollTo).toHaveBeenCalledWith({ top: 0 });
+      scrollTo.mockRestore();
+    });
+
+    it("drops the user from the URL when the selection clears", async () => {
+      const scrollTo = jest
+        .spyOn(window, "scrollTo")
+        .mockImplementation(() => {});
+      const user = userEvent.setup();
+      await renderDashboard();
+
+      await user.click(screen.getByRole("button", { name: "deselect user" }));
+
+      expect(push).toHaveBeenCalledWith("/?view=users", { scroll: false });
+      scrollTo.mockRestore();
     });
   });
 
@@ -360,48 +436,29 @@ describe("Dashboard", () => {
       expect(getDashboardData).toHaveBeenCalledTimes(1);
     });
 
-    it("stops polling when auto-refresh is turned off", async () => {
-      await renderWithTimers();
-
-      await act(async () => {
-        fireEvent.click(screen.getByRole("button", { name: "pause devices" }));
-      });
-
-      await act(async () => {
-        jest.advanceTimersByTime(30000);
-      });
-      expect(getDashboardData).toHaveBeenCalledTimes(1);
-    });
-
-    it("closes the live subscription when auto-refresh is turned off", async () => {
+    it("keeps the live subscription open", async () => {
       await renderDashboard();
       expect(liveEnabled).toBe(true);
-
-      await act(async () => {
-        fireEvent.click(screen.getByRole("button", { name: "pause devices" }));
-      });
-      expect(liveEnabled).toBe(false);
     });
 
     it("applies a pushed payload without any fetch", async () => {
       liveConnected = true;
-      await renderDashboard();
+      const { client } = await renderDashboard();
       getDashboardData.mockClear();
-
-      await act(async () => {
-        pushLive?.(
-          dashboardData({
-            stats: {
-              activeStreams: 9,
-              totalDevices: 9,
-              pendingDevices: 9,
-              approvedDevices: 9,
-            },
-          }),
-        );
+      const pushed = dashboardData({
+        stats: {
+          activeStreams: 9,
+          totalDevices: 9,
+          pendingDevices: 9,
+          approvedDevices: 9,
+        },
       });
 
-      expect(screen.getAllByText("9").length).toBeGreaterThan(0);
+      await act(async () => {
+        pushLive?.(pushed);
+      });
+
+      expect(client.getQueryData(queryKeys.dashboard)).toEqual(pushed);
       expect(getDashboardData).not.toHaveBeenCalled();
     });
 
@@ -416,7 +473,7 @@ describe("Dashboard", () => {
         pushLive?.(dashboardData());
       });
 
-      expect(screen.getByText("device-management")).toBeInTheDocument();
+      expect(await screen.findByText("device-management")).toBeInTheDocument();
     });
   });
 
@@ -428,7 +485,20 @@ describe("Dashboard", () => {
       await renderDashboard();
 
       expect(screen.getByText("target:device-7")).toBeInTheDocument();
-      expect(replace).toHaveBeenCalledWith("/", { scroll: false });
+      expect(replace).toHaveBeenCalledWith("/?view=users&user=u-1", {
+        scroll: false,
+      });
+    });
+
+    it("encodes the user id it moves into the URL", async () => {
+      searchParams.set("userId", "a&b");
+      searchParams.set("deviceId", "device-7");
+
+      await renderDashboard();
+
+      expect(replace).toHaveBeenCalledWith("/?view=users&user=a%26b", {
+        scroll: false,
+      });
     });
 
     it("ignores a partial query string", async () => {
@@ -441,33 +511,7 @@ describe("Dashboard", () => {
     });
   });
 
-  describe("update checks", () => {
-    it("runs on mount when the version is known", async () => {
-      versionInfo = { version: "2.0.0" };
-      await renderDashboard();
-      expect(checkForUpdatesIfEnabled).toHaveBeenCalledTimes(1);
-    });
-
-    it("waits for the version before checking", async () => {
-      await renderDashboard();
-      expect(checkForUpdatesIfEnabled).not.toHaveBeenCalled();
-    });
-
-    it("runs again when the version becomes known", async () => {
-      const { rerender } = await renderDashboard();
-      const initial = checkForUpdatesIfEnabled.mock.calls.length;
-
-      versionInfo = { version: "2.0.0" };
-      await act(async () => {
-        rerender(<Dashboard />);
-      });
-
-      expect(checkForUpdatesIfEnabled.mock.calls.length).toBeGreaterThan(
-        initial,
-      );
-    });
-  });
-  describe("navigation handed up from the tabs", () => {
+  describe("navigation handed up from the views", () => {
     it("opens settings from the configuration prompt", async () => {
       const user = userEvent.setup();
       getDashboardData.mockResolvedValue(
@@ -488,23 +532,28 @@ describe("Dashboard", () => {
       expect(push).toHaveBeenCalledWith("/settings");
     });
 
-    it("switches to devices and targets the device a stream points at", async () => {
+    it("routes to the user and targets the device a stream points at", async () => {
       const user = userEvent.setup();
-      getDashboardData.mockResolvedValue(
-        dashboardData({
-          settings: [{ key: "DEFAULT_PAGE", value: "streams" }],
-        } as Partial<UnifiedDashboardData>),
-      );
+      searchParams.set("view", "streams");
 
-      render(<Dashboard />);
+      const { rerender } = render(<Dashboard />);
       await screen.findByText("streams-list");
       await user.click(screen.getByRole("button", { name: "go to device" }));
 
+      expect(push).toHaveBeenCalledWith("/?view=users&user=u-3", {
+        scroll: false,
+      });
+
+      searchParams.set("view", "users");
+      searchParams.set("user", "u-3");
+      rerender(<Dashboard />);
+
       expect(screen.getByText("device-management")).toBeInTheDocument();
+      expect(screen.getByText("selected:u-3")).toBeInTheDocument();
       expect(screen.getByText("target:device-3")).toBeInTheDocument();
     });
 
-    it("clears the target once the tab reports it navigated", async () => {
+    it("clears the target once the view reports it navigated", async () => {
       searchParams.set("userId", "u-1");
       searchParams.set("deviceId", "device-7");
       const user = userEvent.setup();
@@ -516,7 +565,18 @@ describe("Dashboard", () => {
       expect(screen.getByText("target:none")).toBeInTheDocument();
     });
 
-    it("refreshes silently from the streams tab", async () => {
+    it("hands the view the same completion callback across renders", async () => {
+      mockNavigationCallbacks.clear();
+      searchParams.set("userId", "u-1");
+      searchParams.set("deviceId", "device-7");
+      const view = await renderDashboard();
+
+      view.rerender(<Dashboard />);
+
+      expect(mockNavigationCallbacks.size).toBe(1);
+    });
+
+    it("refreshes silently from the streams view", async () => {
       const user = userEvent.setup();
       getDashboardData.mockResolvedValue(
         dashboardData({
@@ -532,7 +592,7 @@ describe("Dashboard", () => {
       await waitFor(() => expect(getDashboardData).toHaveBeenCalledTimes(2));
     });
 
-    it("refreshes silently when a tab asks for it", async () => {
+    it("refreshes silently when a view asks for it", async () => {
       const user = userEvent.setup();
       await renderDashboard();
 
@@ -542,71 +602,20 @@ describe("Dashboard", () => {
       expect(screen.getByText("device-management")).toBeInTheDocument();
     });
 
-    describe("scrolling to a user", () => {
-      it("highlights the matching card, then removes the highlight", async () => {
-        getDashboardData.mockResolvedValue(
-          dashboardData({
-            settings: [{ key: "DEFAULT_PAGE", value: "streams" }],
-          } as Partial<UnifiedDashboardData>),
-        );
+    it("opens the user from a stream at the top of the page", async () => {
+      const user = userEvent.setup();
+      const scrollTo = jest.spyOn(window, "scrollTo").mockImplementation();
+      searchParams.set("view", "streams");
 
-        render(<Dashboard />);
-        await screen.findByText("streams-list");
+      render(<Dashboard />);
+      await screen.findByText("streams-list");
+      await user.click(screen.getByRole("button", { name: "go to user" }));
 
-        const card = document.createElement("div");
-        card.setAttribute("data-user-id", "u-3");
-        const scrollIntoView = jest.fn();
-        card.scrollIntoView = scrollIntoView;
-        document.body.appendChild(card);
-
-        jest.useFakeTimers();
-        await act(async () => {
-          fireEvent.click(screen.getByRole("button", { name: "go to user" }));
-        });
-
-        await act(async () => {
-          jest.advanceTimersByTime(100);
-        });
-        expect(scrollIntoView).toHaveBeenCalledWith({
-          behavior: "smooth",
-          block: "center",
-          inline: "nearest",
-        });
-
-        await act(async () => {
-          jest.advanceTimersByTime(200);
-        });
-        expect(card.classList.contains("ring-2")).toBe(true);
-
-        await act(async () => {
-          jest.advanceTimersByTime(1500);
-        });
-        expect(card.classList.contains("ring-2")).toBe(false);
-
-        card.remove();
+      expect(push).toHaveBeenCalledWith("/?view=users&user=u-3", {
+        scroll: false,
       });
-
-      it("does nothing when no card matches", async () => {
-        getDashboardData.mockResolvedValue(
-          dashboardData({
-            settings: [{ key: "DEFAULT_PAGE", value: "streams" }],
-          } as Partial<UnifiedDashboardData>),
-        );
-
-        render(<Dashboard />);
-        await screen.findByText("streams-list");
-
-        jest.useFakeTimers();
-        await act(async () => {
-          fireEvent.click(screen.getByRole("button", { name: "go to user" }));
-        });
-
-        await act(async () => {
-          jest.advanceTimersByTime(2000);
-        });
-
-        expect(screen.getByText("device-management")).toBeInTheDocument();
-      });
+      expect(scrollTo).toHaveBeenCalledWith({ top: 0 });
+      scrollTo.mockRestore();
     });
   });
 });

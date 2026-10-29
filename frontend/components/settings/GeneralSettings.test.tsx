@@ -110,10 +110,10 @@ describe("GeneralSettings sections", () => {
     [
       "guardian",
       [
-        "Access Control",
-        "Monitoring & Maintenance",
-        "User Portal",
-        "Login Security",
+        "Access control",
+        "Monitoring & maintenance",
+        "User portal",
+        "Login security",
       ],
     ],
     ["customization", ["Interface", "User-Facing Messages"]],
@@ -132,8 +132,8 @@ describe("GeneralSettings sections", () => {
       ),
     });
 
-    expect(screen.queryByText("Login Security")).toBeNull();
-    expect(screen.getByText("Access Control")).toBeInTheDocument();
+    expect(screen.queryByText("Login security")).toBeNull();
+    expect(screen.getByText("Access control")).toBeInTheDocument();
   });
 
   it("renders nothing for an unknown section", () => {
@@ -232,7 +232,7 @@ describe("GeneralSettings inputs", () => {
 
   describe("the default page picker", () => {
     it.each([
-      ["Devices", "devices"],
+      ["Users", "devices"],
       ["Streams", "streams"],
     ])("selects %s", async (label, expected) => {
       const { user, onFormDataChange } = renderPanel("customization");
@@ -250,7 +250,7 @@ describe("GeneralSettings inputs", () => {
         "aria-pressed",
         "true",
       );
-      expect(screen.getByRole("button", { name: "Devices" })).toHaveAttribute(
+      expect(screen.getByRole("button", { name: "Users" })).toHaveAttribute(
         "aria-pressed",
         "false",
       );
@@ -260,9 +260,11 @@ describe("GeneralSettings inputs", () => {
       renderPanel("customization");
 
       const label = screen.getByText("Default dashboard page");
-      const control = screen.getByRole("button", { name: "Devices" });
+      const control = screen.getByRole("button", { name: "Users" });
 
-      expect(label.parentElement).toContainElement(control);
+      expect(label.closest("[data-slot='field-row']")).toContainElement(
+        control,
+      );
     });
   });
 
@@ -273,7 +275,7 @@ describe("GeneralSettings inputs", () => {
       await user.click(screen.getByRole("combobox"));
 
       expect(
-        (await screen.findAllByText(/^UTC[+-]\d\d:\d\d - /)).length,
+        (await screen.findAllByText(/^UTC[+-]\d\d:\d\d \(\d\d:\d\d\)$/)).length,
       ).toBeGreaterThan(20);
     });
 
@@ -399,7 +401,31 @@ describe("GeneralSettings concurrent stream group", () => {
       formData: { CONCURRENT_STREAM_LIMIT: "0" },
     });
 
-    expect(container.innerHTML).toContain("opacity-50");
+    expect(container.innerHTML).toContain("opacity-60");
+    expect(
+      container.querySelector("#CONCURRENT_LIMIT_INCLUDE_TEMP_ACCESS"),
+    ).toBeDisabled();
+  });
+
+  it("dims a disabled number field once, not twice", () => {
+    renderPanel("guardian", { formData: { DEVICE_CLEANUP_ENABLED: false } });
+
+    const days = screen.getByLabelText(/Delete devices unused/);
+    expect(days).toBeDisabled();
+    const row = days.closest("[data-slot='field-row']");
+    expect(row).toHaveClass("opacity-60");
+    expect(row?.parentElement).not.toHaveClass("opacity-50");
+  });
+
+  it.each([
+    [/Session refresh interval/, "5"],
+    [/Delete devices unused/, "1"],
+  ])("sets a floor on %p", (label, min) => {
+    renderPanel("guardian");
+
+    const input = screen.getByLabelText(label);
+    expect(input).toHaveAttribute("min", min);
+    expect(input).toHaveAttribute("step", "1");
   });
 
   it("stringifies a numeric limit", () => {
@@ -445,7 +471,7 @@ describe("GeneralSettings user portal group", () => {
     });
 
     expect(container.querySelector("#USER_PORTAL_ENABLED")).toBeNull();
-    expect(screen.getByText("Access Control")).toBeInTheDocument();
+    expect(screen.getByText("Access control")).toBeInTheDocument();
   });
 
   it("stringifies a numeric timezone value", () => {
@@ -455,7 +481,7 @@ describe("GeneralSettings user portal group", () => {
 
   it("stringifies a numeric default page value", () => {
     renderPanel("customization", { formData: { DEFAULT_PAGE: 1 } });
-    expect(screen.getByRole("button", { name: "Devices" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Users" })).toBeInTheDocument();
   });
 
   it("stringifies a numeric Turnstile key", () => {
@@ -757,5 +783,51 @@ describe("GeneralSettings password reset", () => {
       "Set the APP_URL environment variable",
       "Add an email address to your admin account",
     ]);
+  });
+});
+
+describe("GeneralSettings numeric validation", () => {
+  it.each([
+    [
+      "CONCURRENT_STREAM_LIMIT",
+      "-1",
+      "Concurrent stream limit must be between 0 and 1000",
+    ],
+    [
+      "CONCURRENT_STREAM_LIMIT",
+      "1.5",
+      "Concurrent stream limit must be a whole number between 0 and 1000",
+    ],
+    [
+      "CONCURRENT_STREAM_LIMIT",
+      "99999999999",
+      "Concurrent stream limit must be between 0 and 1000",
+    ],
+    [
+      "PLEXGUARD_REFRESH_INTERVAL",
+      "4",
+      "Session refresh interval must be between 5 and 86400",
+    ],
+    [
+      "DEVICE_CLEANUP_INTERVAL_DAYS",
+      "0",
+      "Device cleanup interval must be between 1 and 3650",
+    ],
+  ])("flags %s = %s inline", (key, value, message) => {
+    const { container } = renderPanel("guardian", {
+      formData: { [key]: value },
+    });
+
+    expect(screen.getByRole("alert")).toHaveTextContent(message);
+    expect(container.querySelector(`#${key}`)).toHaveAttribute(
+      "aria-invalid",
+      "true",
+    );
+  });
+
+  it("shows no error for stored values", () => {
+    renderPanel("guardian");
+
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 });

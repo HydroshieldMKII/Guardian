@@ -1,8 +1,21 @@
-import { Injectable, Logger } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource } from 'typeorm';
+import { Repository, DataSource, IsNull } from 'typeorm';
 import { UserTimeRule } from '@/entities/user-time-rule.entity';
 import { asHttpError, errorMessage } from '@/common/utils/error-types';
+import { isScheduleActive, readClock } from '@/common/utils/time-of-day';
+import { ConfigService } from '@/modules/config/services/config.service';
+import { serialTransaction } from '@/database/serial-transaction';
+import {
+  TimeRulePreset,
+  presetRules,
+} from '@/modules/users/services/time-rule-presets';
 
 export interface CreateTimeRuleDto {
   userId: string;
@@ -24,8 +37,11 @@ export interface UpdateTimeRuleDto {
 export interface CreatePresetDto {
   userId: string;
   deviceIdentifier?: string;
-  presetType: 'weekdays-only' | 'weekends-only';
+  presetType: TimeRulePreset;
 }
+
+const asRule = (fields: Partial<UserTimeRule>): UserTimeRule =>
+  Object.assign(new UserTimeRule(), fields);
 
 @Injectable()
 export class TimeRuleService {
@@ -35,39 +51,19 @@ export class TimeRuleService {
     @InjectRepository(UserTimeRule)
     private readonly timeRuleRepository: Repository<UserTimeRule>,
     private readonly dataSource: DataSource,
+    private readonly configService: ConfigService,
   ) {}
 
   async createTimeRule(createDto: CreateTimeRuleDto): Promise<UserTimeRule> {
-    // Validate time range
-    if (!this.validateTimeRange(createDto.startTime, createDto.endTime)) {
-      throw new Error('End time must be greater than start time');
-    }
+    await this.assertSchedulable(
+      asRule(createDto),
+      (name) =>
+        `Rule overlaps with existing rule "${name}" on the same day and time`,
+    );
 
-    // Validate day of week
-    if (createDto.dayOfWeek < 0 || createDto.dayOfWeek > 6) {
-      throw new Error(
-        'Day of week must be between 0 (Sunday) and 6 (Saturday)',
-      );
-    }
-
-    // Check for overlapping rules - need to check ALL rules for this user
-    const allUserRules = await this.getAllTimeRules(createDto.userId);
-    const newRule = new UserTimeRule();
-    Object.assign(newRule, createDto);
-
-    for (const existingRule of allUserRules) {
-      if (newRule.overlaps(existingRule)) {
-        throw new Error(
-          `Rule overlaps with existing rule "${existingRule.ruleName}" on the same day and time`,
-        );
-      }
-    }
-
-    const timeRule = this.timeRuleRepository.create({
-      ...createDto,
-    });
-
-    return await this.timeRuleRepository.save(timeRule);
+    return this.timeRuleRepository.save(
+      this.timeRuleRepository.create({ ...createDto }),
+    );
   }
 
   async createPreset(createDto: CreatePresetDto): Promise<UserTimeRule[]> {
@@ -75,194 +71,65 @@ export class TimeRuleService {
       `Creating preset: ${createDto.presetType} for user ${createDto.userId}`,
     );
 
-    const queryRunner = this.dataSource.createQueryRunner();
-
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
+    const rules = presetRules(createDto.presetType);
 
     try {
-      // First, delete all existing rules for this user/device in the transaction
-      const deleteQuery = queryRunner.manager
-        .createQueryBuilder()
-        .delete()
-        .from(UserTimeRule)
-        .where('userId = :userId', { userId: createDto.userId });
-
-      if (createDto.deviceIdentifier) {
-        deleteQuery.andWhere('deviceIdentifier = :deviceIdentifier', {
-          deviceIdentifier: createDto.deviceIdentifier,
-        });
-      } else {
-        deleteQuery.andWhere('deviceIdentifier IS NULL');
-      }
-
-      await deleteQuery.execute();
-
-      // Define preset rules based on type
-      const presetRules = this.getPresetRules(createDto.presetType);
-      this.logger.log(`Creating ${presetRules.length} preset rules`);
-
-      if (presetRules.length === 0) {
+      if (rules.length === 0) {
         throw new Error(`Invalid preset type: ${createDto.presetType}`);
       }
 
-      const createdRules: UserTimeRule[] = [];
+      const createdRules = await serialTransaction(
+        this.dataSource.manager,
+        async (manager) => {
+          await manager.delete(UserTimeRule, {
+            userId: createDto.userId,
+            deviceIdentifier: createDto.deviceIdentifier || IsNull(),
+          });
 
-      // Create all preset rules within the transaction
-      for (const ruleData of presetRules) {
-        // Validate time range first
-        if (!this.validateTimeRange(ruleData.startTime, ruleData.endTime)) {
-          throw new Error(
-            `Invalid time range for rule "${ruleData.ruleName}": ${ruleData.startTime}-${ruleData.endTime}`,
-          );
-        }
+          const saved: UserTimeRule[] = [];
+          for (const rule of rules) {
+            saved.push(
+              await manager.save(
+                manager.create(UserTimeRule, {
+                  ...rule,
+                  userId: createDto.userId,
+                  deviceIdentifier: createDto.deviceIdentifier || undefined,
+                  enabled: true,
+                }),
+              ),
+            );
+          }
+          return saved;
+        },
+      );
 
-        const ruleToCreate = {
-          userId: createDto.userId,
-          deviceIdentifier: createDto.deviceIdentifier || undefined,
-          ruleName: ruleData.ruleName,
-          dayOfWeek: ruleData.dayOfWeek,
-          startTime: ruleData.startTime,
-          endTime: ruleData.endTime,
-          enabled: true,
-        };
-
-        this.logger.debug(`Creating rule: ${JSON.stringify(ruleToCreate)}`);
-
-        // Use the transaction-aware repository
-        const newRule = queryRunner.manager.create(UserTimeRule, ruleToCreate);
-        const savedRule = await queryRunner.manager.save(newRule);
-
-        this.logger.debug(
-          `Saved rule with ID: ${savedRule.id}, ruleName: ${savedRule.ruleName}`,
-        );
-        createdRules.push(savedRule);
-      }
-
-      // Commit the transaction
-      await queryRunner.commitTransaction();
       this.logger.log(
         `Successfully created ${createdRules.length} preset rules`,
       );
-
-      // Verify the rules were actually saved by querying them back
-      const verifyQuery = this.timeRuleRepository
-        .createQueryBuilder('rule')
-        .where('rule.userId = :userId', { userId: createDto.userId });
-
-      if (createDto.deviceIdentifier) {
-        verifyQuery.andWhere('rule.deviceIdentifier = :deviceIdentifier', {
-          deviceIdentifier: createDto.deviceIdentifier,
-        });
-      } else {
-        verifyQuery.andWhere('rule.deviceIdentifier IS NULL');
-      }
-
-      const actualSavedRules = await verifyQuery.getMany();
-      this.logger.log(
-        `Verification: Found ${actualSavedRules.length} rules in database after commit`,
-      );
-
       return createdRules;
     } catch (error) {
-      // Rollback the transaction on error
       this.logger.error(
         `Error creating preset: ${errorMessage(error)}`,
         asHttpError(error).stack,
       );
-      await queryRunner.rollbackTransaction();
       throw new Error(`Failed to create preset: ${errorMessage(error)}`);
-    } finally {
-      // Release the query runner
-      await queryRunner.release();
     }
-  }
-
-  private getPresetRules(presetType: 'weekdays-only' | 'weekends-only') {
-    if (presetType === 'weekdays-only') {
-      // Block weekends (Saturday and Sunday)
-      return [
-        {
-          dayOfWeek: 0,
-          ruleName: 'Sunday - Block All Day',
-          startTime: '00:00',
-          endTime: '23:59',
-        },
-        {
-          dayOfWeek: 6,
-          ruleName: 'Saturday - Block All Day',
-          startTime: '00:00',
-          endTime: '23:59',
-        },
-      ];
-    } else if (presetType === 'weekends-only') {
-      // Block weekdays (Monday through Friday)
-      return [
-        {
-          dayOfWeek: 1,
-          ruleName: 'Monday - Block All Day',
-          startTime: '00:00',
-          endTime: '23:59',
-        },
-        {
-          dayOfWeek: 2,
-          ruleName: 'Tuesday - Block All Day',
-          startTime: '00:00',
-          endTime: '23:59',
-        },
-        {
-          dayOfWeek: 3,
-          ruleName: 'Wednesday - Block All Day',
-          startTime: '00:00',
-          endTime: '23:59',
-        },
-        {
-          dayOfWeek: 4,
-          ruleName: 'Thursday - Block All Day',
-          startTime: '00:00',
-          endTime: '23:59',
-        },
-        {
-          dayOfWeek: 5,
-          ruleName: 'Friday - Block All Day',
-          startTime: '00:00',
-          endTime: '23:59',
-        },
-      ];
-    }
-
-    return [];
   }
 
   async getTimeRules(
     userId: string,
     deviceIdentifier?: string,
   ): Promise<UserTimeRule[]> {
-    const queryBuilder = this.timeRuleRepository
-      .createQueryBuilder('rule')
-      .where('rule.userId = :userId', { userId });
-
-    if (deviceIdentifier) {
-      queryBuilder.andWhere('rule.deviceIdentifier = :deviceIdentifier', {
-        deviceIdentifier,
-      });
-    } else {
-      queryBuilder.andWhere('rule.deviceIdentifier IS NULL');
-    }
-
-    return await queryBuilder
-      .orderBy('rule.dayOfWeek', 'ASC')
-      .addOrderBy('rule.startTime', 'ASC')
-      .getMany();
+    return this.timeRuleRepository.find({
+      where: { userId, deviceIdentifier: deviceIdentifier || IsNull() },
+      order: { dayOfWeek: 'ASC', startTime: 'ASC' },
+    });
   }
 
   async getAllTimeRules(userId: string): Promise<UserTimeRule[]> {
-    return await this.timeRuleRepository.find({
+    return this.timeRuleRepository.find({
       where: { userId },
-      order: {
-        dayOfWeek: 'ASC',
-        startTime: 'ASC',
-      },
+      order: { dayOfWeek: 'ASC', startTime: 'ASC' },
     });
   }
 
@@ -271,84 +138,32 @@ export class TimeRuleService {
     ruleId: number,
     updateDto: UpdateTimeRuleDto,
   ): Promise<UserTimeRule | null> {
-    const rule = await this.timeRuleRepository.findOne({
-      where: { id: ruleId, userId },
-    });
+    const rule = await this.findOwnedRule(userId, ruleId);
 
-    if (!rule) {
-      throw new Error('Time rule not found');
-    }
-
-    // Create a temporary rule with updated values for validation
-    const updatedRule = { ...rule, ...updateDto };
-
-    // Validate time range if times are being updated
-    if (updateDto.startTime || updateDto.endTime) {
-      const startTime = updateDto.startTime || rule.startTime;
-      const endTime = updateDto.endTime || rule.endTime;
-
-      if (!this.validateTimeRange(startTime, endTime)) {
-        throw new Error('End time must be greater than start time');
-      }
-    }
-
-    // Validate day of week if being updated
-    if (
-      updateDto.dayOfWeek !== undefined &&
-      (updateDto.dayOfWeek < 0 || updateDto.dayOfWeek > 6)
-    ) {
-      throw new Error(
-        'Day of week must be between 0 (Sunday) and 6 (Saturday)',
-      );
-    }
-
-    // Check for overlapping rules if relevant fields are being updated
     if (
       updateDto.dayOfWeek !== undefined ||
       updateDto.startTime ||
       updateDto.endTime
     ) {
-      const existingRules = await this.getAllTimeRules(userId);
-      const tempRule = new UserTimeRule();
-      Object.assign(tempRule, updatedRule);
-
-      for (const existingRule of existingRules) {
-        if (tempRule.overlaps(existingRule)) {
-          throw new Error(
-            `Updated rule would overlap with existing rule "${existingRule.ruleName}"`,
-          );
-        }
-      }
+      await this.assertSchedulable(
+        asRule({ ...rule, ...updateDto }),
+        (name) => `Updated rule would overlap with existing rule "${name}"`,
+      );
     }
 
-    // Apply updates
     Object.assign(rule, updateDto);
-    return await this.timeRuleRepository.save(rule);
+    return this.timeRuleRepository.save(rule);
   }
 
   async deleteTimeRule(userId: string, ruleId: number): Promise<void> {
-    const rule = await this.timeRuleRepository.findOne({
-      where: { id: ruleId, userId },
-    });
-
-    if (!rule) {
-      throw new Error('Time rule not found');
-    }
-
+    const rule = await this.findOwnedRule(userId, ruleId);
     await this.timeRuleRepository.remove(rule);
   }
 
   async toggleTimeRule(userId: string, ruleId: number): Promise<UserTimeRule> {
-    const rule = await this.timeRuleRepository.findOne({
-      where: { id: ruleId, userId },
-    });
-
-    if (!rule) {
-      throw new Error('Time rule not found');
-    }
-
+    const rule = await this.findOwnedRule(userId, ruleId);
     rule.enabled = !rule.enabled;
-    return await this.timeRuleRepository.save(rule);
+    return this.timeRuleRepository.save(rule);
   }
 
   async checkStreamingAllowed(
@@ -356,61 +171,69 @@ export class TimeRuleService {
     deviceIdentifier?: string,
     currentTime?: Date,
   ): Promise<{ allowed: boolean; reason: string }> {
-    const now = currentTime || new Date();
-    const dayOfWeek = now.getDay();
-    const timeStr = now.toTimeString().slice(0, 5); // HH:MM format
+    const clock = readClock(
+      currentTime ?? (await this.configService.getCurrentTimeInTimezone()),
+    );
 
-    // Get all applicable rules (device-specific and user-wide)
     const deviceRules = deviceIdentifier
       ? await this.getTimeRules(userId, deviceIdentifier)
       : [];
     const userRules = await this.getTimeRules(userId);
 
-    const allRules = [...deviceRules, ...userRules].filter(
-      (rule) => rule.enabled && rule.dayOfWeek === dayOfWeek,
+    const blockingRule = [...deviceRules, ...userRules].find(
+      (rule) => rule.enabled && isScheduleActive(rule, clock),
     );
 
-    // Check if current time falls within any blocking rule's time range
-    for (const rule of allRules) {
-      if (this.isTimeInRange(timeStr, rule.startTime, rule.endTime)) {
-        // All rules are blocking rules
-        return {
-          allowed: false,
-          reason: `Blocked by rule "${rule.ruleName}" (${rule.startTime}-${rule.endTime})`,
-        };
-      }
+    if (blockingRule) {
+      return {
+        allowed: false,
+        reason: `Blocked by rule "${blockingRule.ruleName}" (${blockingRule.startTime}-${blockingRule.endTime})`,
+      };
     }
 
-    // No matching rules found - default behavior (could be configurable)
-    return {
-      allowed: true,
-      reason: 'No time restrictions apply',
-    };
+    return { allowed: true, reason: 'No time restrictions apply' };
   }
 
-  private validateTimeRange(startTime: string, endTime: string): boolean {
-    const [startHour, startMinute] = startTime.split(':').map(Number);
-    const [endHour, endMinute] = endTime.split(':').map(Number);
+  private async findOwnedRule(
+    userId: string,
+    ruleId: number,
+  ): Promise<UserTimeRule> {
+    const rule = await this.timeRuleRepository.findOne({
+      where: { id: ruleId, userId },
+    });
 
-    const startMinutes = startHour * 60 + startMinute;
-    const endMinutes = endHour * 60 + endMinute;
+    if (!rule) {
+      throw new NotFoundException('Time rule not found');
+    }
 
-    return endMinutes > startMinutes;
+    return rule;
   }
 
-  private isTimeInRange(
-    currentTime: string,
-    startTime: string,
-    endTime: string,
-  ): boolean {
-    const [currentHour, currentMinute] = currentTime.split(':').map(Number);
-    const [startHour, startMinute] = startTime.split(':').map(Number);
-    const [endHour, endMinute] = endTime.split(':').map(Number);
+  private async assertSchedulable(
+    candidate: UserTimeRule,
+    overlapMessage: (ruleName: string) => string,
+  ): Promise<void> {
+    if (!candidate.validateTimeRange()) {
+      throw new BadRequestException(
+        'End time must be greater than start time. A rule cannot cross midnight; split it into one rule ending at 23:59 and one starting at 00:00 on the next day',
+      );
+    }
 
-    const current = currentHour * 60 + currentMinute;
-    const start = startHour * 60 + startMinute;
-    const end = endHour * 60 + endMinute;
+    if (
+      !Number.isInteger(candidate.dayOfWeek) ||
+      candidate.dayOfWeek < 0 ||
+      candidate.dayOfWeek > 6
+    ) {
+      throw new BadRequestException(
+        'Day of week must be between 0 (Sunday) and 6 (Saturday)',
+      );
+    }
 
-    return current >= start && current < end;
+    const clash = (await this.getAllTimeRules(candidate.userId)).find(
+      (existing) => candidate.overlaps(existing),
+    );
+    if (clash) {
+      throw new ConflictException(overlapMessage(clash.ruleName));
+    }
   }
 }

@@ -1,13 +1,21 @@
-import type { UserDevice, UserPreference, UserTimeRule } from "@/types";
+import type {
+  AppSetting,
+  UserDevice,
+  UserPreference,
+  UserTimeRule,
+} from "@/types";
 import {
+  canGrantTemporaryAccess,
+  countWaitingDevices,
   devicePolicies,
   devicePolicyBadges,
-  groupPolicyBadges,
+  hasAllowList,
   hasIPPolicy,
   hasTemporaryAccess,
   hasTimeSchedule,
   isPlexampDevice,
   isPolicyBypassed,
+  isWaitingDevice,
   temporaryAccessTimeLeft,
 } from "@/lib/device-policies";
 
@@ -40,33 +48,78 @@ const preference = (
   ...overrides,
 });
 
-const rule = (overrides: Partial<UserTimeRule> = {}): UserTimeRule =>
-  ({
-    id: 1,
-    userId: "u-1",
-    ruleName: "Bedtime",
-    enabled: true,
-    dayOfWeek: 1,
-    startTime: "22:00",
-    endTime: "23:00",
-    createdAt: "2026-01-01T00:00:00Z",
-    updatedAt: "2026-01-01T00:00:00Z",
-    ...overrides,
-  }) as UserTimeRule;
+const rule = (overrides: Partial<UserTimeRule> = {}): UserTimeRule => ({
+  id: 1,
+  userId: "u-1",
+  ruleName: "Bedtime",
+  enabled: true,
+  dayOfWeek: 1,
+  startTime: "22:00",
+  endTime: "23:00",
+  createdAt: "2026-01-01T00:00:00Z",
+  updatedAt: "2026-01-01T00:00:00Z",
+  ...overrides,
+});
 
 const inHours = (hours: number) =>
   new Date(Date.now() + hours * 3600_000).toISOString();
 
 describe("isPlexampDevice", () => {
-  it.each([
-    ["by product", { deviceProduct: "Plexamp" }],
-    ["by name", { deviceName: "Office PlexAmp" }],
-  ])("recognises a Plexamp device %s", (_label, overrides) => {
-    expect(isPlexampDevice(device(overrides))).toBe(true);
+  it.each(["Plexamp", "plexamp"])(
+    "recognises a device whose product is %s",
+    (deviceProduct) => {
+      expect(isPlexampDevice(device({ deviceProduct }))).toBe(true);
+    },
+  );
+
+  it("ignores a device only named like Plexamp", () => {
+    expect(
+      isPlexampDevice(
+        device({ deviceProduct: "Plex Web", deviceName: "Office PlexAmp" }),
+      ),
+    ).toBe(false);
   });
 
   it("leaves an ordinary device alone", () => {
     expect(isPlexampDevice(device())).toBe(false);
+  });
+});
+
+describe("isWaitingDevice", () => {
+  it("waits on a pending device", () => {
+    expect(isWaitingDevice(device({ status: "pending" }))).toBe(true);
+  });
+
+  it.each([
+    ["an approved device", { status: "approved" as const }],
+    ["a rejected device", { status: "rejected" as const }],
+    [
+      "a pending Plexamp device",
+      { status: "pending" as const, deviceProduct: "Plexamp" },
+    ],
+  ])("does not wait on %s", (_label, overrides) => {
+    expect(isWaitingDevice(device(overrides))).toBe(false);
+  });
+});
+
+describe("countWaitingDevices", () => {
+  it("counts pending devices but not those of hidden users", () => {
+    const devices = [
+      device({ id: 1, status: "pending" }),
+      device({ id: 2, status: "pending", deviceProduct: "Plexamp" }),
+      device({ id: 3, status: "approved" }),
+      device({ id: 4, status: "pending", userId: "u-2" }),
+    ];
+
+    expect(
+      countWaitingDevices(devices, [
+        preference({ userId: "u-2", hidden: true }),
+      ]),
+    ).toBe(1);
+  });
+
+  it("counts every user when no preferences are known", () => {
+    expect(countWaitingDevices([device({ status: "pending" })])).toBe(1);
   });
 });
 
@@ -135,21 +188,20 @@ describe("hasIPPolicy", () => {
     expect(hasIPPolicy(preference(overrides))).toBe(true);
   });
 
-  it("tolerates an allow list stored as a string", () => {
-    expect(
-      hasIPPolicy(
-        preference({ allowedIPs: "10.0.0.0/8" as unknown as string[] }),
-      ),
-    ).toBe(true);
-    expect(
-      hasIPPolicy(preference({ allowedIPs: "   " as unknown as string[] })),
-    ).toBe(false);
-  });
-
   it("is off when the allow list is missing entirely", () => {
-    expect(
-      hasIPPolicy(preference({ allowedIPs: null as unknown as string[] })),
-    ).toBe(false);
+    expect(hasIPPolicy(preference({ allowedIPs: undefined }))).toBe(false);
+  });
+});
+
+describe("hasAllowList", () => {
+  it.each([
+    ["a populated list", ["10.0.0.1"], true],
+    ["an empty list", [], false],
+    ["a list stored as a string", "10.0.0.0/8", true],
+    ["a blank string", "   ", false],
+    ["a missing list", null, false],
+  ])("handles %s", (_label, allowed, expected) => {
+    expect(hasAllowList(allowed)).toBe(expected);
   });
 });
 
@@ -268,7 +320,7 @@ describe("devicePolicyBadges", () => {
       [],
     );
 
-    expect(badge.label).toBe("Temporary Access");
+    expect(badge.label).toBe("Temporary access");
     expect(badge.hint).toBe("Temporary access expires in 2 hours");
     expect(badge.tone).toBe("positive");
   });
@@ -296,8 +348,8 @@ describe("devicePolicyBadges", () => {
     );
 
     expect(badges.map((badge) => badge.label)).toEqual([
-      "Time Schedule",
-      "IP Access",
+      "Time schedule",
+      "Network access",
     ]);
     expect(badges.map((badge) => badge.tone)).toEqual(["info", "accent"]);
     for (const badge of badges) {
@@ -306,61 +358,68 @@ describe("devicePolicyBadges", () => {
   });
 });
 
-describe("groupPolicyBadges", () => {
-  it("raises a badge that any one device earns", () => {
-    const badges = groupPolicyBadges(
-      [device({ id: 1 }), device({ id: 2, temporaryAccessUntil: inHours(1) })],
-      preference(),
-      [],
-    );
+describe("canGrantTemporaryAccess", () => {
+  const globalDefault = (value: string): AppSetting[] => [
+    {
+      id: 1,
+      key: "PLEX_GUARD_DEFAULT_BLOCK",
+      value,
+      description: "",
+      type: "boolean",
+      private: false,
+      updatedAt: "",
+    },
+  ];
+  const pending = device({ status: "pending" });
 
-    expect(badges.map((badge) => badge.label)).toEqual(["Temporary Access"]);
+  it("never offers a grant to Plexamp, which no policy blocks", () => {
+    expect(
+      canGrantTemporaryAccess(
+        device({ status: "rejected", deviceProduct: "Plexamp" }),
+        undefined,
+      ),
+    ).toBe(false);
   });
 
-  it("shows each badge once however many devices earn it", () => {
-    const badges = groupPolicyBadges(
-      [
-        device({ id: 1, temporaryAccessUntil: inHours(1) }),
-        device({ id: 2, temporaryAccessUntil: inHours(3) }),
-      ],
-      preference({ networkPolicy: "lan" }),
-      [rule()],
-    );
-
-    expect(badges.map((badge) => badge.label)).toEqual([
-      "Temporary Access",
-      "Time Schedule",
-      "IP Access",
-    ]);
+  it("offers a grant to a rejected device", () => {
+    expect(
+      canGrantTemporaryAccess(device({ status: "rejected" }), undefined),
+    ).toBe(true);
   });
 
-  it("speaks for the whole group rather than one device", () => {
-    const [badge] = groupPolicyBadges(
-      [device({ temporaryAccessUntil: inHours(2) })],
-      preference(),
-      [],
-    );
-
-    expect(badge.label).toBe("Temporary Access");
-    expect(badge.hint).toBe("At least one device has temporary access");
+  it("offers nothing to an approved device, which already streams", () => {
+    expect(canGrantTemporaryAccess(device(), undefined)).toBe(false);
   });
 
-  it("stays empty for a user with no devices", () => {
-    expect(groupPolicyBadges([], preference(), [])).toEqual([]);
+  it.each([
+    [true, true],
+    [false, false],
+  ])(
+    "follows the user's own rule for a pending device (blocks: %p)",
+    (defaultBlock, expected) => {
+      expect(
+        canGrantTemporaryAccess(
+          pending,
+          preference({ defaultBlock }),
+          globalDefault(String(!defaultBlock)),
+        ),
+      ).toBe(expected);
+    },
+  );
+
+  it.each([
+    ["no preference", undefined],
+    ["a preference that defers", preference({ defaultBlock: null })],
+  ])("falls back to the global rule with %s", (_, userPreference) => {
+    expect(
+      canGrantTemporaryAccess(pending, userPreference, globalDefault("false")),
+    ).toBe(false);
+    expect(
+      canGrantTemporaryAccess(pending, userPreference, globalDefault("true")),
+    ).toBe(true);
   });
 
-  it("keeps an IP policy off the row when the only device bypasses it", () => {
-    const badges = groupPolicyBadges(
-      [
-        device({
-          temporaryAccessUntil: inHours(1),
-          temporaryAccessBypassPolicies: true,
-        }),
-      ],
-      preference({ networkPolicy: "lan" }),
-      [rule()],
-    );
-
-    expect(badges.map((badge) => badge.label)).toEqual(["Temporary Access"]);
+  it("treats a pending device as blocked when the global rule is unknown", () => {
+    expect(canGrantTemporaryAccess(pending, undefined)).toBe(true);
   });
 });

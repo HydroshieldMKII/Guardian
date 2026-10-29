@@ -1,23 +1,23 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Instrument_Sans, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "@/hooks/use-theme";
+import { themeBootScript } from "@/lib/theme";
 import { AuthProvider } from "@/contexts/auth-context";
 import { AuthGuard } from "@/components/auth-guard";
 import { AppProviders } from "@/components/app-providers";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const uiFont = Instrument_Sans({
+  variable: "--font-ui",
   subsets: ["latin"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const dataFont = Geist_Mono({
+  variable: "--font-data",
   subsets: ["latin"],
 });
 
 export const metadata: Metadata = {
-  title: "Guardian",
   description: "Monitor active streams and manage device access",
   icons: {
     icon: "/icon-192.png",
@@ -35,9 +35,11 @@ export const metadata: Metadata = {
 export const viewport = {
   width: "device-width",
   initialScale: 1.0,
-  maximumScale: 1.0,
-  userScalable: false,
-  themeColor: "#0f172a",
+  viewportFit: "cover",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f2f2f3" },
+    { media: "(prefers-color-scheme: dark)", color: "#111112" },
+  ],
 };
 
 export default function RootLayout({
@@ -48,23 +50,11 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${uiFont.variable} ${dataFont.variable} antialiased`}
         suppressHydrationWarning
       >
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              (function() {
-                try {
-                  var theme = localStorage.getItem('guardian-ui-theme') || 'dark';
-                  document.documentElement.className = theme;
-                } catch (e) {
-                  document.documentElement.className = 'dark';
-                }
-              })();
-            `,
-          }}
-        />
+        <title>Guardian</title>
+        <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />
         <ThemeProvider defaultTheme="dark" storageKey="guardian-ui-theme">
           <AuthProvider>
             <AuthGuard>

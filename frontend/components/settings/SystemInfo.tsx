@@ -7,7 +7,8 @@ import { Banner, SettingControl, SettingsCard } from "./settings-ui";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import { apiClient } from "@/lib/api";
-import { useVersion } from "@/contexts/version-context";
+import { useUpdateCheck } from "@/hooks/useUpdateCheck";
+import { useVersionInfo } from "@/hooks/useVersionInfo";
 import { AppSetting } from "@/types";
 import { SettingsFormData } from "./settings-utils";
 
@@ -30,6 +31,11 @@ interface HealthResponse {
   uptime?: UptimeInfo;
 }
 
+const newVersionMessage = (latestVersion?: string) =>
+  latestVersion
+    ? `Version ${latestVersion} is available.`
+    : "A new version is available.";
+
 export function SystemInfo({
   settings,
   formData,
@@ -49,7 +55,8 @@ export function SystemInfo({
   const [latency, setLatency] = useState<number | null>(null);
 
   const { toast } = useToast();
-  const { versionInfo, checkForUpdatesManually } = useVersion();
+  const { versionInfo } = useVersionInfo();
+  const { checkForUpdatesManually } = useUpdateCheck();
 
   // Update uptime counter every second
   useEffect(() => {
@@ -109,7 +116,6 @@ export function SystemInfo({
   const checkForUpdates = async () => {
     try {
       setCheckingUpdates(true);
-      setUpdateStatus(null);
 
       if (!versionInfo?.version) {
         throw new Error(
@@ -125,18 +131,12 @@ export function SystemInfo({
           latestVersion: result.latestVersion,
           currentVersion: result.currentVersion,
           message: result.hasUpdate
-            ? `A new version (${result.latestVersion}) is available!`
+            ? newVersionMessage(result.latestVersion)
             : "You are running the latest version.",
           updateUrl: result.updateUrl,
         };
 
         setUpdateStatus(updateInfo);
-
-        toast({
-          title: "Update Check Complete",
-          description: updateInfo.message,
-          variant: updateInfo.available ? "default" : "success",
-        });
       } else {
         throw new Error("Failed to check for updates");
       }
@@ -148,7 +148,7 @@ export function SystemInfo({
       });
 
       toast({
-        title: "Update Check Failed",
+        title: "Update check failed",
         description: "Unable to check for updates. Please try again later.",
         variant: "destructive",
       });
@@ -164,19 +164,19 @@ export function SystemInfo({
   return (
     <div className="space-y-6">
       <SettingsCard
-        title="System Information"
+        title="System information"
         description="Current system status and version information."
       >
         <MetaGrid className="sm:grid-cols-2">
-          <Meta label="Application Version">
+          <Meta label="Application version">
             <span className="font-mono">v{versionInfo?.version || "N/A"}</span>
           </Meta>
-          <Meta label="Database Version">
+          <Meta label="Database version">
             <span className="font-mono">
               v{versionInfo?.databaseVersion || "N/A"}
             </span>
           </Meta>
-          <Meta label="System Status">
+          <Meta label="System status">
             <span className="flex items-center gap-2">
               <StatusPill
                 tone={
@@ -214,14 +214,14 @@ export function SystemInfo({
 
         {versionInfo?.isVersionMismatch && (
           <Banner tone="warning">
-            <strong className="font-semibold">Version Mismatch:</strong>{" "}
+            <strong className="font-semibold">Version mismatch:</strong>{" "}
             Database version is newer than application version.
           </Banner>
         )}
       </SettingsCard>
 
       <SettingsCard
-        title="Update Management"
+        title="Update management"
         description="Check for application updates."
         footer={
           <Button
@@ -231,7 +231,7 @@ export function SystemInfo({
             variant="outline"
           >
             {checkingUpdates && <Loader2 className="size-4 animate-spin" />}
-            {checkingUpdates ? "Checking for Updates..." : "Check for Updates"}
+            {checkingUpdates ? "Checking for Updates..." : "Check for updates"}
           </Button>
         }
       >
@@ -246,10 +246,18 @@ export function SystemInfo({
         {updateStatus ? (
           <Banner tone={updateStatus.available ? "info" : "positive"}>
             {updateStatus.message}
-            {updateStatus.available && updateStatus.latestVersion && (
-              <span className="mt-1 block text-xs text-muted-foreground">
-                Latest version: v{updateStatus.latestVersion}
-              </span>
+            {updateStatus.available && updateStatus.updateUrl && (
+              <>
+                {" "}
+                <a
+                  href={updateStatus.updateUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium underline underline-offset-2"
+                >
+                  View release
+                </a>
+              </>
             )}
           </Banner>
         ) : (

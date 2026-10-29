@@ -26,13 +26,21 @@ describe("StreamProgress", () => {
     render(<StreamProgress session={session()} />);
 
     expect(screen.getByText("15:00")).toBeInTheDocument();
-    expect(screen.getByText("1:00:00")).toBeInTheDocument();
-    expect(screen.getByText("playing")).toBeInTheDocument();
+    expect(screen.getByText("/ 1:00:00")).toBeInTheDocument();
+    expect(screen.getByText("Playing")).toBeInTheDocument();
+  });
+
+  it.each([
+    ["paused", "Paused"],
+    ["buffering", "Buffering"],
+  ] as const)("names the %s state", (state, label) => {
+    render(<StreamProgress session={session({ Player: { state } })} />);
+    expect(screen.getByText(label)).toBeInTheDocument();
   });
 
   it("falls back to unknown when the player reports no state", () => {
     render(<StreamProgress session={session({ Player: undefined })} />);
-    expect(screen.getByText("unknown")).toBeInTheDocument();
+    expect(screen.getByText("Unknown")).toBeInTheDocument();
   });
 
   it("fills the bar to the elapsed fraction", () => {
@@ -40,24 +48,27 @@ describe("StreamProgress", () => {
     const bar = container.querySelector<HTMLElement>("[style*='width']");
 
     expect(bar?.style.width).toBe("25%");
+    expect(
+      screen.getByRole("progressbar", { name: "Playback progress" }),
+    ).toHaveAttribute("aria-valuenow", "25");
   });
 
-  it("uses the playing gradient and a shimmer while playing", () => {
-    const { container } = render(<StreamProgress session={session()} />);
-    const bar = container.querySelector<HTMLElement>("[style*='width']");
-
-    expect(bar?.className).toContain("from-blue-500");
-    expect(bar?.querySelector(".animate-pulse")).not.toBeNull();
-  });
-
-  it("uses the paused gradient and drops the shimmer when not playing", () => {
+  it.each([
+    ["playing", false, "bg-foreground"],
+    ["playing", true, "bg-white"],
+    ["paused", false, "bg-muted-foreground/60"],
+    ["paused", true, "bg-white/50"],
+    ["buffering", false, "bg-waiting"],
+  ] as const)("fills a %s bar (over art: %s)", (state, hasArt, fill) => {
     const { container } = render(
-      <StreamProgress session={session({ Player: { state: "paused" } })} />,
+      <StreamProgress
+        session={session({ Player: { state } })}
+        hasArt={hasArt}
+      />,
     );
     const bar = container.querySelector<HTMLElement>("[style*='width']");
 
-    expect(bar?.className).toContain("from-yellow-500");
-    expect(bar?.querySelector(".animate-pulse")).toBeNull();
+    expect(bar).toHaveClass(fill);
   });
 
   it("switches the label styling when drawn over artwork", () => {
@@ -67,7 +78,7 @@ describe("StreamProgress", () => {
     );
 
     expect(plain.innerHTML).toContain("text-muted-foreground");
-    expect(overArt.innerHTML).toContain("bg-black/60");
+    expect(overArt.innerHTML).toContain("text-white/70");
   });
 
   it("renders a zero-length progress at the very start", () => {
@@ -77,6 +88,6 @@ describe("StreamProgress", () => {
     const bar = container.querySelector<HTMLElement>("[style*='width']");
 
     expect(bar?.style.width).toBe("0%");
-    expect(screen.getAllByText("0:00").length).toBeGreaterThan(0);
+    expect(screen.getByText("0:00")).toBeInTheDocument();
   });
 });

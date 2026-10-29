@@ -1,6 +1,6 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { DevicesController } from '@/modules/devices/devices.controller';
-import { DeviceTrackingService } from '@/modules/devices/services/device-tracking.service';
+import { DeviceTrackingModule } from '@/modules/devices/services/device-tracking.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UserDevice } from '@/entities/user-device.entity';
 import { SessionHistory } from '@/entities/session-history.entity';
@@ -18,9 +18,8 @@ import { NotificationsModule } from '@/modules/notifications/notifications.modul
     forwardRef(() => SessionsModule),
     ConfigModule,
     forwardRef(() => NotificationsModule),
+    forwardRef(() => DeviceTrackingModule),
   ],
   controllers: [DevicesController],
-  providers: [DeviceTrackingService],
-  exports: [DeviceTrackingService],
 })
 export class DevicesModule {}

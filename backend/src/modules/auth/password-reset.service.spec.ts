@@ -5,7 +5,7 @@ import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import { AdminUser } from '@/entities/admin-user.entity';
 import { PasswordResetToken } from '@/entities/password-reset-token.entity';
-import { AuthService } from '@/modules/auth/auth.service';
+import { AuthSessionService } from '@/modules/auth/auth-session.service';
 import { ConfigService } from '@/modules/config/services/config.service';
 import { EmailService } from '@/modules/config/services/email.service';
 import {
@@ -26,7 +26,7 @@ const hashOf = (token: string) =>
 describe('PasswordResetService', () => {
   let service: PasswordResetService;
   let adminRepo: {
-    createQueryBuilder: jest.Mock;
+    find: jest.Mock;
     findOne: jest.Mock;
     save: jest.Mock<{ passwordHash: string }, [{ passwordHash: string }]>;
   };
@@ -48,24 +48,13 @@ describe('PasswordResetService', () => {
       [string, string, string, number]
     >;
   };
-  let authService: { clearAllSessions: jest.Mock };
-  let queryBuilder: {
-    where: jest.Mock;
-    getOne: jest.Mock;
-    getCount: jest.Mock;
-  };
+  let authSessions: { clearAllSessions: jest.Mock };
 
   beforeEach(async () => {
     process.env.APP_URL = 'https://guardian.example.com';
 
-    queryBuilder = {
-      where: jest.fn().mockReturnThis(),
-      getOne: jest.fn().mockResolvedValue(ADMIN),
-      getCount: jest.fn().mockResolvedValue(1),
-    };
-
     adminRepo = {
-      createQueryBuilder: jest.fn().mockReturnValue(queryBuilder),
+      find: jest.fn().mockResolvedValue([ADMIN]),
       findOne: jest.fn().mockResolvedValue({ ...ADMIN }),
       save: jest
         .fn<{ passwordHash: string }, [{ passwordHash: string }]>()
@@ -111,7 +100,7 @@ describe('PasswordResetService', () => {
         .mockResolvedValue(undefined),
     };
 
-    authService = { clearAllSessions: jest.fn().mockResolvedValue(undefined) };
+    authSessions = { clearAllSessions: jest.fn().mockResolvedValue(undefined) };
 
     const module = await Test.createTestingModule({
       providers: [
@@ -123,7 +112,7 @@ describe('PasswordResetService', () => {
         },
         { provide: ConfigService, useValue: configService },
         { provide: EmailService, useValue: emailService },
-        { provide: AuthService, useValue: authService },
+        { provide: AuthSessionService, useValue: authSessions },
       ],
     }).compile();
 
@@ -189,14 +178,29 @@ describe('PasswordResetService', () => {
       });
     });
 
-    it('is not ready while no admin account carries an email address', async () => {
-      queryBuilder.getCount.mockResolvedValue(0);
+    it.each([
+      [[]],
+      [[{ ...ADMIN, email: '   ' }]],
+      [[{ ...ADMIN, email: null }]],
+    ])(
+      'is not ready while no admin account carries an email address (%j)',
+      async (admins) => {
+        adminRepo.find.mockResolvedValue(admins);
 
-      await expect(service.getStatus()).resolves.toEqual({
-        enabled: false,
-        emailConfigured: true,
-        appUrlConfigured: true,
-        adminEmailConfigured: false,
+        await expect(service.getStatus()).resolves.toEqual({
+          enabled: false,
+          emailConfigured: true,
+          appUrlConfigured: true,
+          adminEmailConfigured: false,
+        });
+      },
+    );
+
+    it('loads the admins without their password hashes', async () => {
+      await service.getStatus();
+
+      expect(adminRepo.find).toHaveBeenCalledWith({
+        select: { id: true, username: true, email: true },
       });
     });
   });
@@ -237,17 +241,37 @@ describe('PasswordResetService', () => {
     });
 
     it('matches the address without regard to case', async () => {
-      await service.requestReset('OWNER@example.com');
+      await service.requestReset('  OWNER@example.com ');
 
-      expect(queryBuilder.where).toHaveBeenCalledWith(
-        'LOWER(admin.email) = LOWER(:email)',
-        { email: 'OWNER@example.com' },
+      expect(emailService.sendPasswordResetEmail).toHaveBeenCalledWith(
+        ADMIN.email,
+        ADMIN.username,
+        expect.any(String),
+        expect.any(Number),
       );
     });
 
-    it('sends nothing for an address that belongs to nobody', async () => {
-      queryBuilder.getOne.mockResolvedValue(null);
+    it.each(['%', '_wner@example.com', 'owner@example'])(
+      'treats %p as a literal address, not a pattern',
+      async (address) => {
+        await service.requestReset(address);
 
+        expect(emailService.sendPasswordResetEmail).not.toHaveBeenCalled();
+      },
+    );
+
+    it('picks the admin whose address matches among several', async () => {
+      adminRepo.find.mockResolvedValue([
+        { id: 'admin-2', username: 'other', email: 'other@example.com' },
+        ADMIN,
+      ]);
+
+      await service.requestReset('owner@example.com');
+
+      expect(transactionRepo.save.mock.calls[0][0].userId).toBe(ADMIN.id);
+    });
+
+    it('sends nothing for an address that belongs to nobody', async () => {
       await service.requestReset('stranger@example.com');
 
       expect(emailService.sendPasswordResetEmail).not.toHaveBeenCalled();
@@ -260,16 +284,16 @@ describe('PasswordResetService', () => {
       await service.requestReset('owner@example.com');
 
       expect(emailService.sendPasswordResetEmail).not.toHaveBeenCalled();
-      expect(queryBuilder.getOne).not.toHaveBeenCalled();
+      expect(adminRepo.find).toHaveBeenCalledTimes(1);
     });
 
     it('sends nothing while no admin account carries an email address', async () => {
-      queryBuilder.getCount.mockResolvedValue(0);
+      adminRepo.find.mockResolvedValue([{ ...ADMIN, email: '' }]);
 
-      await service.requestReset('owner@example.com');
+      await service.requestReset('');
 
       expect(emailService.sendPasswordResetEmail).not.toHaveBeenCalled();
-      expect(queryBuilder.getOne).not.toHaveBeenCalled();
+      expect(transactionRepo.save).not.toHaveBeenCalled();
     });
 
     it('clears tokens that have already expired', async () => {
@@ -347,7 +371,7 @@ describe('PasswordResetService', () => {
       });
 
       expect(tokenRepo.delete).toHaveBeenCalledWith({ id: 't-1' });
-      expect(authService.clearAllSessions).toHaveBeenCalledWith(ADMIN.id);
+      expect(authSessions.clearAllSessions).toHaveBeenCalledWith(ADMIN.id);
     });
 
     it('refuses a mismatched confirmation', async () => {
@@ -385,7 +409,7 @@ describe('PasswordResetService', () => {
         }),
       ).rejects.toThrow(BadRequestException);
       expect(tokenRepo.delete).toHaveBeenCalledWith({ id: 't-1' });
-      expect(authService.clearAllSessions).not.toHaveBeenCalled();
+      expect(authSessions.clearAllSessions).not.toHaveBeenCalled();
     });
   });
 });

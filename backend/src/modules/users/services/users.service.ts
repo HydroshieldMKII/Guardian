@@ -1,19 +1,29 @@
-import { Injectable, Inject, forwardRef } from '@nestjs/common';
+import {
+  Injectable,
+  Inject,
+  Logger,
+  NotFoundException,
+  BadRequestException,
+  forwardRef,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UserPreference } from '@/entities/user-preference.entity';
 import { UserDevice } from '@/entities/user-device.entity';
 import { ConfigService } from '@/modules/config/services/config.service';
-import { PlexClient } from '@/modules/plex/services/plex-client';
-import { Logger } from '@nestjs/common';
 
-interface PlexTvUser {
-  id?: string;
-  username?: string;
-  title?: string;
-  friendlyName?: string;
-  thumb?: string;
+type VisibilityAction = 'hide' | 'show' | 'toggle';
+
+export interface IpPolicyUpdate {
+  networkPolicy?: 'both' | 'lan' | 'wan';
+  ipAccessPolicy?: 'all' | 'restricted';
+  allowedIPs?: string[];
 }
+
+const describeStreamLimit = (limit: number | null): string => {
+  if (limit === null) return 'global default';
+  return limit === 0 ? 'unlimited' : String(limit);
+};
 
 @Injectable()
 export class UsersService {
@@ -26,11 +36,8 @@ export class UsersService {
     private readonly userDeviceRepository: Repository<UserDevice>,
     @Inject(forwardRef(() => ConfigService))
     private readonly configService: ConfigService,
-    @Inject(forwardRef(() => PlexClient))
-    private readonly plexClient: PlexClient,
   ) {}
 
-  // Get all users with preferences
   async getAllUsers(includeHidden: boolean = false): Promise<UserPreference[]> {
     if (includeHidden) {
       return await this.userPreferenceRepository.find();
@@ -40,7 +47,6 @@ export class UsersService {
     });
   }
 
-  // Get only hidden users
   async getHiddenUsers(): Promise<UserPreference[]> {
     return await this.userPreferenceRepository.find({
       where: { hidden: true },
@@ -49,28 +55,10 @@ export class UsersService {
 
   async updateUserVisibility(
     userId: string,
-    action: 'hide' | 'show' | 'toggle',
+    action: VisibilityAction,
   ): Promise<UserPreference> {
-    const user = await this.userPreferenceRepository.findOne({
-      where: { userId },
-    });
-
-    if (!user) {
-      throw new Error('User not found');
-    }
-
-    switch (action) {
-      case 'hide':
-        user.hidden = true;
-        break;
-      case 'show':
-        user.hidden = false;
-        break;
-      case 'toggle':
-        user.hidden = !user.hidden;
-        break;
-    }
-
+    const user = await this.requirePreference(userId, 'User not found');
+    user.hidden = action === 'toggle' ? !user.hidden : action === 'hide';
     return await this.userPreferenceRepository.save(user);
   }
 
@@ -86,33 +74,23 @@ export class UsersService {
     return this.updateUserVisibility(userId, 'show');
   }
 
-  // Create user if not exists
   async updateUserFromSessionData(
     userId: string | null,
     username?: string | null,
-    _avatarUrl?: string | null,
   ): Promise<void> {
     if (!userId) return;
 
     try {
-      // Check if user preference exists
-      const preference = await this.userPreferenceRepository.findOne({
-        where: { userId },
-      });
+      if (await this.getUserPreference(userId)) return;
 
-      if (!preference) {
-        // Create new user preference if it doesn't exist
-        const newPreference = this.userPreferenceRepository.create({
+      await this.userPreferenceRepository.save(
+        this.userPreferenceRepository.create({
           userId,
           username,
-          defaultBlock: null, // null means use global default
-        });
-
-        await this.userPreferenceRepository.save(newPreference);
-        this.logger.debug(
-          `Created new user preference: ${userId} (${username})`,
-        );
-      }
+          defaultBlock: null,
+        }),
+      );
+      this.logger.debug(`Created new user preference: ${userId} (${username})`);
     } catch (error) {
       this.logger.error(
         `Error updating user from session data: ${userId}`,
@@ -131,93 +109,80 @@ export class UsersService {
     userId: string,
     defaultBlock: boolean | null,
   ): Promise<UserPreference> {
-    let preference = await this.userPreferenceRepository.findOne({
-      where: { userId },
-    });
+    const preference = await this.getUserPreference(userId);
 
     if (preference) {
-      // Update existing preference
       preference.defaultBlock = defaultBlock;
       this.logger.log(
         `Updating preference for user: ${userId} to ${defaultBlock}`,
       );
-    } else {
-      // Fallback: Create new preference for the userId
-      this.logger.warn(
-        `No existing preference for user ${userId}, creating new entry`,
-      );
-
-      // Get username from devices
-      const device = await this.userDeviceRepository.findOne({
-        where: { userId },
-      });
-
-      // Create new preference entry
-      preference = this.userPreferenceRepository.create({
-        userId,
-        username: device?.username || undefined,
-        defaultBlock: defaultBlock,
-      });
+      return await this.userPreferenceRepository.save(preference);
     }
 
-    // Save the preference
-    const savedPreference =
-      await this.userPreferenceRepository.save(preference);
-    return savedPreference;
+    const device = await this.userDeviceRepository.findOne({
+      where: { userId },
+    });
+    if (!device) {
+      throw new NotFoundException('User not found');
+    }
+    this.logger.warn(
+      `No existing preference for user ${userId}, creating new entry`,
+    );
+    return await this.userPreferenceRepository.save(
+      this.userPreferenceRepository.create({
+        userId,
+        username: device?.username || undefined,
+        defaultBlock,
+      }),
+    );
   }
 
   async updateUserIPPolicy(
     userId: string,
-    updates: {
-      networkPolicy?: 'both' | 'lan' | 'wan';
-      ipAccessPolicy?: 'all' | 'restricted';
-      allowedIPs?: string[];
-    },
+    updates: IpPolicyUpdate,
   ): Promise<UserPreference> {
-    const preference = await this.userPreferenceRepository.findOne({
-      where: { userId },
-    });
+    const preference = await this.requirePreference(userId);
 
-    if (preference) {
-      // Update existing preference
-      if (updates.networkPolicy !== undefined) {
-        preference.networkPolicy = updates.networkPolicy;
-      }
-      if (updates.ipAccessPolicy !== undefined) {
-        preference.ipAccessPolicy = updates.ipAccessPolicy;
-      }
-      if (updates.allowedIPs !== undefined) {
-        preference.allowedIPs = updates.allowedIPs;
-      }
-      this.logger.log(
-        `Updating IP policy for user: ${userId}`,
-        JSON.stringify(updates),
+    const changesAllowList =
+      updates.ipAccessPolicy !== undefined || updates.allowedIPs !== undefined;
+    const effectivePolicy = updates.ipAccessPolicy ?? preference.ipAccessPolicy;
+    const effectiveIPs = updates.allowedIPs ?? preference.allowedIPs ?? [];
+    if (
+      changesAllowList &&
+      effectivePolicy === 'restricted' &&
+      effectiveIPs.length === 0
+    ) {
+      throw new BadRequestException(
+        'A restricted IP access policy needs at least one allowed address',
       );
-    } else {
-      throw new Error('User preference not found. Does the user exist?');
     }
 
-    // Save the preference
-    const savedPreference =
-      await this.userPreferenceRepository.save(preference);
-    return savedPreference;
+    if (updates.networkPolicy !== undefined) {
+      preference.networkPolicy = updates.networkPolicy;
+    }
+    if (updates.ipAccessPolicy !== undefined) {
+      preference.ipAccessPolicy = updates.ipAccessPolicy;
+    }
+    if (updates.allowedIPs !== undefined) {
+      preference.allowedIPs = updates.allowedIPs;
+    }
+    this.logger.log(
+      `Updating IP policy for user: ${userId}`,
+      JSON.stringify(updates),
+    );
+
+    return await this.userPreferenceRepository.save(preference);
   }
 
   async updateConcurrentStreamLimit(
     userId: string,
     concurrentStreamLimit: number | null,
   ): Promise<UserPreference> {
-    const preference = await this.userPreferenceRepository.findOne({
-      where: { userId },
-    });
-
-    if (!preference) {
-      throw new Error('User preference not found. Does the user exist?');
-    }
+    const preference = await this.requirePreference(userId);
 
     preference.concurrentStreamLimit = concurrentStreamLimit;
     this.logger.log(
-      `Updating concurrent stream limit for user: ${userId} to ${concurrentStreamLimit === null ? 'global default' : concurrentStreamLimit === 0 ? 'unlimited' : concurrentStreamLimit}`,
+      `Updating concurrent stream limit for user: ${userId} to ${describeStreamLimit(concurrentStreamLimit)}`,
     );
 
     return await this.userPreferenceRepository.save(preference);
@@ -225,148 +190,24 @@ export class UsersService {
 
   async getEffectiveDefaultBlock(userId: string): Promise<boolean> {
     const preference = await this.getUserPreference(userId);
-
-    // If user has a specific preference, use it
     if (preference && preference.defaultBlock !== null) {
       return preference.defaultBlock;
     }
 
-    // Otherwise use global default from config
     const defaultBlock = await this.configService.getSetting(
       'PLEX_GUARD_DEFAULT_BLOCK',
     );
     return defaultBlock ?? false;
   }
 
-  private parseUsersFromXML(xmlString: string): PlexTvUser[] {
-    try {
-      const users: PlexTvUser[] = [];
-      const userMatches = xmlString.match(/<User[^>]*>/g);
-
-      if (!userMatches) {
-        this.logger.debug('No User elements found in XML response');
-        return [];
-      }
-
-      for (const userMatch of userMatches) {
-        const user: PlexTvUser = {};
-
-        // Extract attributes from the User element
-        const idMatch = userMatch.match(/id="([^"]*)"/);
-        const usernameMatch =
-          userMatch.match(/username="([^"]*)"/) ||
-          userMatch.match(/title="([^"]*)"/);
-        const thumbMatch = userMatch.match(/thumb="([^"]*)"/);
-        const friendlyNameMatch = userMatch.match(/friendlyName="([^"]*)"/);
-
-        if (idMatch) user.id = idMatch[1];
-        if (usernameMatch) user.username = usernameMatch[1];
-        if (thumbMatch) user.thumb = thumbMatch[1];
-        if (friendlyNameMatch) user.friendlyName = friendlyNameMatch[1];
-
-        users.push(user);
-      }
-
-      this.logger.debug(`Parsed ${users.length} users from XML response`);
-      return users;
-    } catch (error) {
-      this.logger.error('Failed to parse XML response:', error);
-      return [];
+  private async requirePreference(
+    userId: string,
+    missingMessage = 'User preference not found. Does the user exist?',
+  ): Promise<UserPreference> {
+    const preference = await this.getUserPreference(userId);
+    if (!preference) {
+      throw new NotFoundException(missingMessage);
     }
-  }
-
-  async syncUsersFromPlexTV(): Promise<{
-    updated: number;
-    created: number;
-    errors: number;
-  }> {
-    let updated = 0;
-    let created = 0;
-    let errors = 0;
-
-    try {
-      this.logger.log('Starting Plex users sync from Plex.tv API...');
-
-      // Fetch users from Plex.tv
-      const response = await this.plexClient.getPlexUsers();
-
-      if (!response) {
-        this.logger.warn('No users data received from Plex.tv API');
-        return { updated: 0, created: 0, errors: 1 };
-      }
-
-      this.logger.debug('Parsing XML response from Plex.tv');
-      const users = this.parseUsersFromXML(response);
-
-      if (users.length === 0) {
-        this.logger.warn('No users found in Plex.tv API response');
-        return { updated: 0, created: 0, errors: 1 };
-      }
-      this.logger.log(`Received ${users.length} users from Plex.tv`);
-
-      // Process each user
-      for (const user of users) {
-        try {
-          if (!user.id) {
-            this.logger.warn('Skipping user with no ID', user);
-            errors++;
-            continue;
-          }
-
-          const userId = String(user.id);
-          const username = user.username || user.title || user.friendlyName;
-          const avatarUrl = user.thumb;
-
-          // Check if user exists to track creates vs updates
-          const existingUser = await this.userPreferenceRepository.findOne({
-            where: { userId },
-          });
-
-          // Prepare user data for upsert
-          const userData: Partial<UserPreference> = {
-            userId,
-            username,
-            avatarUrl,
-            // Only set defaultBlock for new users, preserve existing preference
-            ...(existingUser
-              ? { id: existingUser.id }
-              : { defaultBlock: null }),
-          };
-
-          // Upsert user preference
-          await this.userPreferenceRepository.upsert(userData, {
-            conflictPaths: ['userId'],
-            skipUpdateIfNoValuesChanged: true,
-          });
-
-          if (!existingUser) {
-            created++;
-            this.logger.log(`Created new user: ${userId} (${username})`);
-          } else {
-            // Check if anything actually changed
-            const hasChanges =
-              (username && existingUser.username !== username) ||
-              (avatarUrl && existingUser.avatarUrl !== avatarUrl);
-
-            if (hasChanges) {
-              updated++;
-              this.logger.debug(`Updated user: ${userId} (${username})`);
-            }
-          }
-        } catch (userError) {
-          this.logger.error(`Error processing user:`, userError);
-          errors++;
-        }
-      }
-
-      this.logger.log(
-        `Plex users sync completed: ${created} created, ${updated} updated, ${errors} errors`,
-      );
-
-      return { updated, created, errors };
-    } catch (error) {
-      this.logger.error('Failed to sync users from Plex.tv:', error);
-      return { updated, created, errors: errors + 1 };
-    }
+    return preference;
   }
 }

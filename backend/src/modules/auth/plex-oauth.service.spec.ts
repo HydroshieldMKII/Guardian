@@ -1,10 +1,8 @@
 import { EventEmitter } from 'events';
 import { BadRequestException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
-import { AdminUser } from '@/entities/admin-user.entity';
-import { UserPreference } from '@/entities/user-preference.entity';
 import { PlexOAuthService } from '@/modules/auth/plex-oauth.service';
+import { PlexTvClient } from '@/modules/auth/plex-tv.client';
 
 interface RequestOptions {
   path: string;
@@ -12,7 +10,9 @@ interface RequestOptions {
   headers: Record<string, string>;
 }
 
-type ResponseListener = (res: EventEmitter & { statusCode: number }) => void;
+type ResponseListener = (
+  res: EventEmitter & { statusCode: number | undefined },
+) => void;
 
 const mockHttpsRequest = jest.fn<unknown, [RequestOptions, ResponseListener]>();
 
@@ -23,6 +23,7 @@ jest.mock('https', () => ({
 
 interface PlexReply {
   statusCode?: number;
+  noStatus?: boolean;
   body?: string;
   error?: Error;
   timeout?: boolean;
@@ -35,10 +36,6 @@ interface SentRequest {
 
 describe('PlexOAuthService', () => {
   let service: PlexOAuthService;
-  let adminRepo: Record<string, jest.Mock>;
-  let preferenceRepo: { findOne: jest.Mock };
-  let selectQueryBuilder: Record<string, jest.Mock>;
-  let updateQueryBuilder: Record<string, jest.Mock>;
 
   let replies: PlexReply[];
   let sent: SentRequest[];
@@ -102,7 +99,9 @@ describe('PlexOAuthService', () => {
             }
 
             const res = Object.assign(new EventEmitter(), {
-              statusCode: reply.statusCode ?? 200,
+              statusCode: reply.noStatus
+                ? undefined
+                : (reply.statusCode ?? 200),
             });
             callback(res);
 
@@ -118,42 +117,8 @@ describe('PlexOAuthService', () => {
       return req;
     });
 
-    selectQueryBuilder = {
-      where: jest.fn(),
-      getOne: jest.fn().mockResolvedValue(null),
-    };
-    selectQueryBuilder.where.mockReturnValue(selectQueryBuilder);
-
-    updateQueryBuilder = {
-      update: jest.fn(),
-      set: jest.fn(),
-      where: jest.fn(),
-      execute: jest.fn().mockResolvedValue({ affected: 1 }),
-    };
-    updateQueryBuilder.update.mockReturnValue(updateQueryBuilder);
-    updateQueryBuilder.set.mockReturnValue(updateQueryBuilder);
-    updateQueryBuilder.where.mockReturnValue(updateQueryBuilder);
-
-    adminRepo = {
-      findOne: jest.fn().mockResolvedValue(null),
-      findOneOrFail: jest.fn().mockResolvedValue({ id: 'admin-1' }),
-      update: jest.fn().mockResolvedValue({ affected: 1 }),
-      createQueryBuilder: jest.fn((alias?: string) =>
-        alias ? selectQueryBuilder : updateQueryBuilder,
-      ),
-    };
-
-    preferenceRepo = { findOne: jest.fn().mockResolvedValue(null) };
-
     const module = await Test.createTestingModule({
-      providers: [
-        PlexOAuthService,
-        { provide: getRepositoryToken(AdminUser), useValue: adminRepo },
-        {
-          provide: getRepositoryToken(UserPreference),
-          useValue: preferenceRepo,
-        },
-      ],
+      providers: [PlexOAuthService, PlexTvClient],
     }).compile();
 
     service = module.get(PlexOAuthService);
@@ -168,10 +133,19 @@ describe('PlexOAuthService', () => {
     return service.createPlexPin('client-1');
   };
 
+  const signIn = async () => {
+    await createPin();
+    respondWith(
+      { statusCode: 200, body: JSON.stringify({ authToken: 'plex-token' }) },
+      { statusCode: 200, body: userResponse },
+    );
+    await service.checkPlexPin('client-1');
+  };
+
   describe('generateClientId', () => {
-    it('namespaces the id and appends 16 hex characters', () => {
+    it('namespaces the id and appends 32 hex characters', () => {
       expect(service.generateClientId()).toMatch(
-        /^Guardian-Plex-Manager-[0-9a-f]{16}$/,
+        /^Guardian-Plex-Manager-[0-9a-f]{32}$/,
       );
     });
 
@@ -216,6 +190,13 @@ describe('PlexOAuthService', () => {
 
     it('rejects a non-2xx response', async () => {
       respondWith({ statusCode: 429, body: 'rate limited' });
+      await expect(service.createPlexPin('client-1')).rejects.toThrow(
+        'Failed to create Plex PIN',
+      );
+    });
+
+    it('rejects a response that carries no status code', async () => {
+      respondWith({ noStatus: true, body: pinResponse });
       await expect(service.createPlexPin('client-1')).rejects.toThrow(
         'Failed to create Plex PIN',
       );
@@ -276,37 +257,24 @@ describe('PlexOAuthService', () => {
         body: JSON.stringify({ authToken: null }),
       });
 
-      await expect(service.checkPlexPin('client-1')).resolves.toBeNull();
+      await expect(service.checkPlexPin('client-1')).resolves.toBe(false);
     });
 
-    it('resolves the Plex user once the pin is claimed', async () => {
+    it('reports the pin as signed in once Plex hands over a token', async () => {
       await createPin();
       respondWith(
         { statusCode: 200, body: JSON.stringify({ authToken: 'plex-token' }) },
         { statusCode: 200, body: userResponse },
       );
 
-      await expect(service.checkPlexPin('client-1')).resolves.toEqual({
-        id: 9,
-        uuid: 'uuid-9',
-        username: 'guest',
-        email: 'guest@example.com',
-        thumb: 'https://plex.tv/thumb.png',
-        authToken: 'plex-token',
-      });
+      await expect(service.checkPlexPin('client-1')).resolves.toBe(true);
     });
 
-    it('forgets the pin once it has been redeemed', async () => {
-      await createPin();
-      respondWith(
-        { statusCode: 200, body: JSON.stringify({ authToken: 'plex-token' }) },
-        { statusCode: 200, body: userResponse },
-      );
-      await service.checkPlexPin('client-1');
+    it('keeps reporting a signed-in pin without asking Plex again', async () => {
+      await signIn();
 
-      await expect(service.checkPlexPin('client-1')).rejects.toThrow(
-        'No pending authentication found',
-      );
+      await expect(service.checkPlexPin('client-1')).resolves.toBe(true);
+      expect(sent).toHaveLength(3);
     });
 
     it('queries the pin by its Plex id', async () => {
@@ -323,25 +291,25 @@ describe('PlexOAuthService', () => {
     it('treats a non-200 as not-yet-claimed', async () => {
       await createPin();
       respondWith({ statusCode: 500, body: '' });
-      await expect(service.checkPlexPin('client-1')).resolves.toBeNull();
+      await expect(service.checkPlexPin('client-1')).resolves.toBe(false);
     });
 
     it('treats an unparseable response as not-yet-claimed', async () => {
       await createPin();
       respondWith({ statusCode: 200, body: 'not json' });
-      await expect(service.checkPlexPin('client-1')).resolves.toBeNull();
+      await expect(service.checkPlexPin('client-1')).resolves.toBe(false);
     });
 
     it('treats a connection failure as not-yet-claimed', async () => {
       await createPin();
       respondWith({ error: new Error('ECONNRESET') });
-      await expect(service.checkPlexPin('client-1')).resolves.toBeNull();
+      await expect(service.checkPlexPin('client-1')).resolves.toBe(false);
     });
 
     it('treats a timeout as not-yet-claimed', async () => {
       await createPin();
       respondWith({ timeout: true });
-      await expect(service.checkPlexPin('client-1')).resolves.toBeNull();
+      await expect(service.checkPlexPin('client-1')).resolves.toBe(false);
     });
 
     it('propagates a failure to load the claimed user', async () => {
@@ -357,156 +325,77 @@ describe('PlexOAuthService', () => {
     });
   });
 
-  describe('getPlexUserFromToken', () => {
-    it('sends the token as an X-Plex-Token header', async () => {
-      respondWith({ statusCode: 200, body: userResponse });
-      await service.getPlexUserFromToken('plex-token');
+  describe('claimPlexUser', () => {
+    it('hands over the signed-in Plex user', async () => {
+      await signIn();
 
-      expect(sent[0].options.path).toBe('/api/v2/user');
-      expect(sent[0].options.headers['X-Plex-Token']).toBe('plex-token');
+      expect(service.claimPlexUser('client-1')).toEqual({
+        id: 9,
+        uuid: 'uuid-9',
+        username: 'guest',
+        email: 'guest@example.com',
+        thumb: 'https://plex.tv/thumb.png',
+        authToken: 'plex-token',
+      });
     });
 
-    it('returns the user carrying the token back', async () => {
-      respondWith({ statusCode: 200, body: userResponse });
-      await expect(
-        service.getPlexUserFromToken('plex-token'),
-      ).resolves.toMatchObject({ username: 'guest', authToken: 'plex-token' });
+    it('looks the user up with the token Plex handed over', async () => {
+      await signIn();
+
+      expect(sent[2].options.path).toBe('/api/v2/user');
+      expect(sent[2].options.headers['X-Plex-Token']).toBe('plex-token');
     });
 
-    it('rejects an unauthorised token', async () => {
-      respondWith({ statusCode: 401, body: '' });
-      await expect(service.getPlexUserFromToken('bad')).rejects.toThrow(
-        'Failed to get Plex user info',
+    it('hands the user over only once', async () => {
+      await signIn();
+      service.claimPlexUser('client-1');
+
+      expect(() => service.claimPlexUser('client-1')).toThrow(
+        'Sign in with Plex first',
       );
     });
+
+    it('refuses a pin that is not signed in yet', async () => {
+      await createPin();
+
+      expect(() => service.claimPlexUser('client-1')).toThrow(
+        'Sign in with Plex first',
+      );
+    });
+
+    it('refuses a client id it never issued', () => {
+      expect(() => service.claimPlexUser('unknown')).toThrow(
+        'Sign in with Plex first',
+      );
+    });
+  });
+
+  describe('loading the signed-in Plex user', () => {
+    const signInWithUserResponse = async (response: PlexReply) => {
+      await createPin();
+      respondWith(
+        { statusCode: 200, body: JSON.stringify({ authToken: 'plex-token' }) },
+        response,
+      );
+      return service.checkPlexPin('client-1');
+    };
 
     it('rejects an unparseable response', async () => {
-      respondWith({ statusCode: 200, body: 'not json' });
-      await expect(service.getPlexUserFromToken('tok')).rejects.toThrow(
-        'Failed to parse Plex user info',
-      );
+      await expect(
+        signInWithUserResponse({ statusCode: 200, body: 'not json' }),
+      ).rejects.toThrow('Failed to parse Plex user info');
     });
 
     it('rejects a connection failure', async () => {
-      respondWith({ error: new Error('ENOTFOUND') });
-      await expect(service.getPlexUserFromToken('tok')).rejects.toThrow(
-        'Failed to connect to Plex',
-      );
+      await expect(
+        signInWithUserResponse({ error: new Error('ENOTFOUND') }),
+      ).rejects.toThrow('Failed to connect to Plex');
     });
 
     it('rejects a timeout', async () => {
-      respondWith({ timeout: true });
-      await expect(service.getPlexUserFromToken('tok')).rejects.toThrow(
+      await expect(signInWithUserResponse({ timeout: true })).rejects.toThrow(
         'Plex request timeout',
       );
-    });
-  });
-
-  describe('server access checks', () => {
-    it('treats a synced user preference as proof of access', async () => {
-      preferenceRepo.findOne.mockResolvedValue({ userId: '9' });
-      await expect(service.isPlexUserOnServer('9', '')).resolves.toBe(true);
-    });
-
-    it('denies a Plex user with no preference row', async () => {
-      await expect(service.isPlexUserOnServer('9', '')).resolves.toBe(false);
-    });
-
-    it('exposes the preference row by Plex id', async () => {
-      await service.getUserPreferenceByPlexId('9');
-      expect(preferenceRepo.findOne).toHaveBeenCalledWith({
-        where: { userId: '9' },
-      });
-    });
-  });
-
-  describe('admin Plex links', () => {
-    it('finds any admin with a linked Plex account', async () => {
-      selectQueryBuilder.getOne.mockResolvedValue({ id: 'admin-1' });
-      await expect(service.getAdminWithPlexLinked()).resolves.toEqual({
-        id: 'admin-1',
-      });
-      expect(selectQueryBuilder.where).toHaveBeenCalledWith(
-        'admin.plexUserId IS NOT NULL',
-      );
-    });
-
-    it('reports Plex OAuth as enabled when a link exists', async () => {
-      selectQueryBuilder.getOne.mockResolvedValue({ id: 'admin-1' });
-      await expect(service.hasPlexOAuthEnabled()).resolves.toBe(true);
-    });
-
-    it('reports Plex OAuth as disabled when no link exists', async () => {
-      await expect(service.hasPlexOAuthEnabled()).resolves.toBe(false);
-    });
-  });
-
-  describe('linkPlexAccountToAdmin', () => {
-    const plexUser = {
-      id: 9,
-      uuid: 'uuid-9',
-      username: 'guest',
-      email: 'guest@example.com',
-      thumb: 'thumb.png',
-      authToken: 'tok',
-    };
-
-    it('stores the Plex identity against the admin', async () => {
-      await service.linkPlexAccountToAdmin('admin-1', plexUser);
-
-      expect(adminRepo.update).toHaveBeenCalledWith('admin-1', {
-        plexUserId: '9',
-        plexUsername: 'guest',
-        plexEmail: 'guest@example.com',
-        plexThumb: 'thumb.png',
-      });
-    });
-
-    it('refuses a Plex account already linked elsewhere', async () => {
-      adminRepo.findOne.mockResolvedValue({ id: 'admin-2' });
-
-      await expect(
-        service.linkPlexAccountToAdmin('admin-1', plexUser),
-      ).rejects.toThrow('This Plex account is already linked to another admin');
-      expect(adminRepo.update).not.toHaveBeenCalled();
-    });
-
-    it('allows re-linking the same account to the same admin', async () => {
-      adminRepo.findOne.mockResolvedValue({ id: 'admin-1' });
-      await expect(
-        service.linkPlexAccountToAdmin('admin-1', plexUser),
-      ).resolves.toEqual({ id: 'admin-1' });
-    });
-  });
-
-  describe('unlinkPlexAccountFromAdmin', () => {
-    it('nulls every Plex column for that admin', async () => {
-      adminRepo.findOne.mockResolvedValue({ id: 'admin-1' });
-      await service.unlinkPlexAccountFromAdmin('admin-1');
-
-      expect(updateQueryBuilder.set).toHaveBeenCalledWith({
-        plexUserId: null,
-        plexUsername: null,
-        plexEmail: null,
-        plexThumb: null,
-      });
-      expect(updateQueryBuilder.where).toHaveBeenCalledWith('id = :id', {
-        id: 'admin-1',
-      });
-    });
-
-    it('returns the refreshed admin row', async () => {
-      adminRepo.findOne.mockResolvedValue({ id: 'admin-1' });
-      await expect(
-        service.unlinkPlexAccountFromAdmin('admin-1'),
-      ).resolves.toEqual({ id: 'admin-1' });
-    });
-
-    it('refuses an unknown admin', async () => {
-      await expect(service.unlinkPlexAccountFromAdmin('ghost')).rejects.toThrow(
-        'Admin not found',
-      );
-      expect(updateQueryBuilder.execute).not.toHaveBeenCalled();
     });
   });
 
@@ -543,7 +432,7 @@ describe('PlexOAuthService', () => {
       jest.advanceTimersByTime(5 * 60 * 1000);
       respondWith({ statusCode: 200, body: JSON.stringify({}) });
 
-      await expect(service.checkPlexPin('client-1')).resolves.toBeNull();
+      await expect(service.checkPlexPin('client-1')).resolves.toBe(false);
     });
   });
 });

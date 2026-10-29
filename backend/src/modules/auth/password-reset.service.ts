@@ -7,9 +7,11 @@ import { AdminUser } from '@/entities/admin-user.entity';
 import { PasswordResetToken } from '@/entities/password-reset-token.entity';
 import { ConfigService } from '@/modules/config/services/config.service';
 import { EmailService } from '@/modules/config/services/email.service';
-import { AuthService } from '@/modules/auth/auth.service';
+import { AuthSessionService } from '@/modules/auth/auth-session.service';
+import { normalizeEmail } from '@/modules/auth/email-address';
 import { ConfirmPasswordResetDto } from '@/modules/auth/dto/password-reset.dto';
 import { appUrl } from '@/config/app.config';
+import { serialTransaction } from '@/database/serial-transaction';
 
 export const PASSWORD_RESET_TTL_MS = 15 * 60 * 1000;
 
@@ -29,7 +31,7 @@ export class PasswordResetService {
     private readonly tokenRepository: Repository<PasswordResetToken>,
     private readonly configService: ConfigService,
     private readonly emailService: EmailService,
-    private readonly authService: AuthService,
+    private readonly authSessions: AuthSessionService,
   ) {}
 
   async getStatus(): Promise<{
@@ -41,17 +43,16 @@ export class PasswordResetService {
     const [toggled, smtp, addressableAdmins] = await Promise.all([
       this.configService.getSetting('PASSWORD_RESET_ENABLED'),
       this.emailService.loadSmtpSettings(),
-      this.adminUserRepository
-        .createQueryBuilder('admin')
-        .where("TRIM(COALESCE(admin.email, '')) <> ''")
-        .getCount(),
+      this.listAdminAddresses(),
     ]);
 
     const emailConfigured = Boolean(
       smtp.SMTP_ENABLED && smtp.SMTP_HOST && smtp.SMTP_FROM_EMAIL,
     );
     const appUrlConfigured = appUrl() !== null;
-    const adminEmailConfigured = addressableAdmins > 0;
+    const adminEmailConfigured = addressableAdmins.some(
+      (admin) => normalizeEmail(admin.email) !== '',
+    );
 
     return {
       enabled:
@@ -76,10 +77,10 @@ export class PasswordResetService {
       return;
     }
 
-    const admin = await this.adminUserRepository
-      .createQueryBuilder('admin')
-      .where('LOWER(admin.email) = LOWER(:email)', { email })
-      .getOne();
+    const wanted = normalizeEmail(email);
+    const admin = (await this.listAdminAddresses()).find(
+      (candidate) => normalizeEmail(candidate.email) === wanted,
+    );
 
     if (!admin) {
       return;
@@ -87,7 +88,7 @@ export class PasswordResetService {
 
     const token = crypto.randomBytes(TOKEN_BYTES).toString('base64url');
 
-    await this.tokenRepository.manager.transaction(async (manager) => {
+    await serialTransaction(this.tokenRepository.manager, async (manager) => {
       const repository = manager.getRepository(PasswordResetToken);
       await repository.delete({ userId: admin.id });
       await repository.save({
@@ -134,7 +135,7 @@ export class PasswordResetService {
     admin.passwordHash = await bcrypt.hash(dto.password, 12);
     await this.adminUserRepository.save(admin);
     await this.tokenRepository.delete({ id: stored.id });
-    await this.authService.clearAllSessions(admin.id);
+    await this.authSessions.clearAllSessions(admin.id);
   }
 
   private async findValidToken(
@@ -147,6 +148,12 @@ export class PasswordResetService {
     });
 
     return stored && stored.expiresAt > new Date() ? stored : null;
+  }
+
+  private listAdminAddresses(): Promise<AdminUser[]> {
+    return this.adminUserRepository.find({
+      select: { id: true, username: true, email: true },
+    });
   }
 
   private async purgeExpired(): Promise<void> {

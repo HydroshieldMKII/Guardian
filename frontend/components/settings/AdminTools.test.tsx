@@ -7,6 +7,7 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { AdminTools } from "@/components/settings/AdminTools";
+import { MAX_IMPORT_FILE_BYTES } from "@/hooks/settings/useSettingsBackup";
 
 const resetStreamCounts = jest.fn<Promise<unknown>, unknown[]>();
 const clearSessionHistory = jest.fn<Promise<unknown>, unknown[]>();
@@ -30,8 +31,8 @@ const toast = jest.fn();
 jest.mock("@/hooks/use-toast", () => ({ useToast: () => ({ toast }) }));
 
 let versionInfo: Record<string, unknown> | null = null;
-jest.mock("@/contexts/version-context", () => ({
-  useVersion: () => ({ versionInfo }),
+jest.mock("@/hooks/useVersionInfo", () => ({
+  useVersionInfo: () => ({ versionInfo }),
 }));
 
 jest.mock("@/components/ui/confirmation-modal", () => ({
@@ -122,16 +123,16 @@ afterEach(() => {
 });
 
 describe("AdminTools post-reload notice", () => {
-  it("announces a completed reset once", () => {
-    localStorage.setItem("guardianResetSuccess", "true");
+  it("announces a completed import once", () => {
+    localStorage.setItem("guardianImportSuccess", "true");
     renderPanel();
 
-    expect(toast).toHaveBeenCalledWith(
-      expect.objectContaining({
-        description: "Everything is back to its default settings.",
-      }),
-    );
-    expect(localStorage.getItem("guardianResetSuccess")).toBeNull();
+    expect(toast).toHaveBeenCalledWith({
+      title: "Settings imported",
+      description: "Your imported settings are now in use.",
+      variant: "success",
+    });
+    expect(localStorage.getItem("guardianImportSuccess")).toBeNull();
   });
 
   it("stays quiet otherwise", () => {
@@ -141,9 +142,9 @@ describe("AdminTools post-reload notice", () => {
 });
 
 describe.each([
-  ["Reset Stream Counts", () => resetStreamCounts, false],
-  ["Clear Session History", () => clearSessionHistory, true],
-  ["Delete All Devices", () => deleteAllDevices, true],
+  ["Reset stream counts", () => resetStreamCounts, false],
+  ["Clear session history", () => clearSessionHistory, true],
+  ["Delete all devices", () => deleteAllDevices, true],
 ] as const)("AdminTools %s", (label, getMock, dangerous) => {
   it("asks for confirmation, then a password, then runs", async () => {
     const { user } = renderPanel();
@@ -225,27 +226,27 @@ describe.each([
 describe("AdminTools dangerous operations", () => {
   const operations = [
     {
-      trigger: "Reset Stream Counts",
-      confirm: "Reset Stream Counts",
-      prompt: "Reset Stream Counts:false",
+      trigger: "Reset stream counts",
+      confirm: "Reset stream counts",
+      prompt: "Reset stream counts:false",
       endpoint: () => resetStreamCounts,
     },
     {
-      trigger: "Clear Session History",
-      confirm: "Clear Session History",
-      prompt: "Clear Session History:true",
+      trigger: "Clear session history",
+      confirm: "Clear session history",
+      prompt: "Clear session history:true",
       endpoint: () => clearSessionHistory,
     },
     {
-      trigger: "Delete All Devices",
-      confirm: "Delete All Devices",
-      prompt: "Delete All Devices:true",
+      trigger: "Delete all devices",
+      confirm: "Delete all devices",
+      prompt: "Delete all devices:true",
       endpoint: () => deleteAllDevices,
     },
     {
-      trigger: "Factory Reset",
-      confirm: "Factory Reset",
-      prompt: "Factory Reset:true",
+      trigger: "Factory reset",
+      confirm: "Factory reset",
+      prompt: "Factory reset:true",
       endpoint: () => resetDatabase,
     },
   ];
@@ -290,9 +291,9 @@ describe("AdminTools factory reset", () => {
     const onSettingsRefresh = jest.fn();
     render(<AdminTools onSettingsRefresh={onSettingsRefresh} />);
 
-    await user.click(screen.getByRole("button", { name: "Factory Reset" }));
-    await user.click(screen.getByRole("button", { name: "yes Factory Reset" }));
-    expect(screen.getByText("password:Factory Reset:true")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Factory reset" }));
+    await user.click(screen.getByRole("button", { name: "yes Factory reset" }));
+    expect(screen.getByText("password:Factory reset:true")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "submit password" }));
     await act(async () => {});
@@ -309,7 +310,7 @@ describe("AdminTools factory reset", () => {
     resetDatabase.mockRejectedValue(new Error("denied"));
     const { user } = renderPanel();
 
-    await runGuarded(user, "Factory Reset");
+    await runGuarded(user, "Factory reset");
 
     await waitFor(() =>
       expect(toast).toHaveBeenCalledWith(
@@ -322,7 +323,7 @@ describe("AdminTools factory reset", () => {
     const user = userEvent.setup();
     render(<AdminTools />);
 
-    await runGuarded(user, "Factory Reset");
+    await runGuarded(user, "Factory reset");
 
     await waitFor(() => expect(resetDatabase).toHaveBeenCalled());
   });
@@ -418,8 +419,26 @@ describe("AdminTools import", () => {
 
     await waitFor(() =>
       expect(toast).toHaveBeenCalledWith(
-        expect.objectContaining({ title: "Invalid File" }),
+        expect.objectContaining({ title: "Invalid file" }),
       ),
+    );
+    expect(importDatabase).not.toHaveBeenCalled();
+  });
+
+  it("refuses a file larger than the server accepts before uploading it", async () => {
+    renderPanel();
+    const input = document.querySelector(
+      'input[type="file"]',
+    ) as HTMLInputElement;
+    const file = new File(["{}"], "backup.json", { type: "application/json" });
+    Object.defineProperty(file, "size", { value: MAX_IMPORT_FILE_BYTES + 1 });
+
+    await act(async () => {
+      fireEvent.change(input, { target: { files: [file] } });
+    });
+
+    expect(toast).toHaveBeenCalledWith(
+      expect.objectContaining({ title: "File too large" }),
     );
     expect(importDatabase).not.toHaveBeenCalled();
   });
@@ -482,7 +501,7 @@ describe("AdminTools import", () => {
       jest.advanceTimersByTime(2000);
     });
 
-    expect(localStorage.getItem("guardianResetSuccess")).toBe("true");
+    expect(localStorage.getItem("guardianImportSuccess")).toBe("true");
   });
 
   describe("on a version mismatch", () => {
@@ -492,7 +511,7 @@ describe("AdminTools import", () => {
       await selectFile(JSON.stringify({ version: "1.3.5" }));
 
       expect(
-        screen.getByText("confirm:Exported by a Different Version"),
+        screen.getByText("confirm:Exported by a different version"),
       ).toBeInTheDocument();
       expect(importDatabase).not.toHaveBeenCalled();
     });
@@ -503,7 +522,7 @@ describe("AdminTools import", () => {
 
       await user.click(
         screen.getByRole("button", {
-          name: "yes Exported by a Different Version",
+          name: "yes Exported by a different version",
         }),
       );
 
@@ -516,7 +535,7 @@ describe("AdminTools import", () => {
 
       await user.click(
         screen.getByRole("button", {
-          name: "no Exported by a Different Version",
+          name: "no Exported by a different version",
         }),
       );
 

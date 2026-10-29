@@ -1,120 +1,37 @@
 "use client";
 
-import React, {
-  useState,
-  useEffect,
-  useRef,
-  memo,
-  useMemo,
-  useDeferredValue,
-} from "react";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  RefreshCw,
-  Search,
-  ArrowUpDown,
-  ArrowUp,
-  ArrowDown,
-  Eye,
-  EyeOff,
-} from "lucide-react";
+import { useState, useEffect, memo, useMemo } from "react";
 
-// Hooks
-import { useDeviceActions } from "@/hooks/device-management/useDeviceActions";
-import { useUserPreferences } from "@/hooks/device-management/useUserPreferences";
-import { useTimeRules } from "@/hooks/device-management/useTimeRules";
+import { useDeviceDecisions } from "@/hooks/device-management/useDeviceDecisions";
+import { useDeviceFocus } from "@/hooks/device-management/useDeviceFocus";
+import { useDeviceRename } from "@/hooks/device-management/useDeviceRename";
+import { useUserDialogs } from "@/hooks/device-management/useUserDialogs";
+import { useUserListControls } from "@/hooks/device-management/useUserListControls";
+import { useUserPolicyUpdates } from "@/hooks/device-management/useUserPolicyUpdates";
+import { useUserVisibility } from "@/hooks/device-management/useUserVisibility";
+import { useTimeRulesForUsers } from "@/hooks/device-management/useTimeRules";
 import { useToast } from "@/hooks/use-toast";
 
-// Types
-import { UserDevice, UserPreference, UserTimeRule, AppSetting } from "@/types";
-import { devicePolicyBadges, isPlexampDevice } from "@/lib/device-policies";
-import { formatMinutes } from "@/lib/duration";
+import { UserDevice, UserPreference, AppSetting } from "@/types";
+import type { TimeRulesByUser } from "@/lib/time-rules-api";
 
-// API
-import { apiClient } from "@/lib/api";
+import { UserDetail } from "@/components/device-management/UserDetail";
+import { UserList } from "@/components/device-management/UserList";
+import { PANEL_HEIGHT } from "@/components/device-management/panel-height";
+import { ApprovalQueue } from "@/components/device-management/ApprovalQueue";
+import {
+  groupDevicesByUser,
+  waitingQueue,
+  withPreferenceChanges,
+  type UserDeviceGroup,
+} from "@/components/device-management/user-group";
+import { cn } from "@/lib/utils";
+import { DeviceManagementDialogs } from "@/components/device-management/DeviceManagementDialogs";
+import { MissingUserNotice } from "@/components/device-management/MissingUserNotice";
 
-// Components
-import { UserGroupCard } from "@/components/device-management/UserGroupCard";
-import { DeviceDetailsModal } from "@/components/device-management/DeviceDetailsModal";
-import { TemporaryAccessModal } from "@/components/device-management/TemporaryAccessModal";
-import { ConfirmationModal } from "@/components/device-management/ConfirmationModal";
-import { UserHistoryModal } from "@/components/device-management/UserHistoryModal";
-import { TimeRuleModal } from "@/components/device-management/TimeRuleModal";
-import { UserAvatar } from "@/components/device-management/SharedComponents";
-import { HIGHLIGHT_CLASSES } from "@/lib/highlight";
-
-// User-Device group interface
-interface UserDeviceGroup {
-  user: {
-    userId: string;
-    username?: string;
-    preference?: UserPreference;
-  };
-  devices: UserDevice[];
-  pendingCount: number;
-  approvedCount: number;
-  rejectedCount: number;
-  lastSeen?: Date;
-}
-
-// Skeleton components for loading states
-const UserGroupSkeleton = () => (
-  <div className="rounded-lg border bg-card shadow-sm animate-pulse">
-    <div className="p-4 border-b">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <div className="w-4 h-4 bg-muted rounded"></div>
-          <div className="h-6 bg-muted rounded w-32"></div>
-          <div className="h-5 bg-muted rounded w-20"></div>
-        </div>
-        <div className="flex gap-2">
-          <div className="h-6 bg-muted rounded w-16"></div>
-          <div className="h-6 bg-muted rounded w-16"></div>
-          <div className="h-6 bg-muted rounded w-16"></div>
-        </div>
-      </div>
-    </div>
-    <div className="p-4 space-y-3">
-      {Array.from({ length: 2 }, (_, i) => (
-        <div key={i} className="p-3 rounded border bg-muted/50">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center space-x-2">
-              <div className="w-4 h-4 bg-muted rounded"></div>
-              <div className="h-4 bg-muted rounded w-24"></div>
-              <div className="h-4 bg-muted rounded w-16"></div>
-            </div>
-            <div className="flex gap-1">
-              <div className="h-6 bg-muted rounded w-16"></div>
-              <div className="h-6 bg-muted rounded w-16"></div>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <div className="h-3 bg-muted rounded w-20"></div>
-            <div className="h-3 bg-muted rounded w-24"></div>
-          </div>
-        </div>
-      ))}
-    </div>
-  </div>
-);
+const NO_TIME_RULES: TimeRulesByUser = {};
 
 interface DeviceManagementProps {
-  tabs?: React.ReactNode;
   devicesData?: {
     all: UserDevice[];
     pending: UserDevice[];
@@ -124,371 +41,83 @@ interface DeviceManagementProps {
   usersData?: UserPreference[];
   settingsData?: AppSetting[];
   onRefresh?: () => void | Promise<void>;
-  autoRefresh?: boolean;
-  onAutoRefreshChange?: (value: boolean) => void;
   navigationTarget?: {
     userId: string;
     deviceIdentifier: string;
   } | null;
   onNavigationComplete?: () => void;
+  selectedUserId?: string | null;
+  onSelectUser?: (userId: string | null) => void;
 }
-
-interface ConfirmActionData {
-  device: UserDevice;
-  action: "approve" | "reject" | "delete" | "toggle" | "removeTemporaryAccess";
-  title: string;
-  description: string;
-}
-
-const CONFIRM_COPY = {
-  approve: {
-    title: "Approve Device",
-    description: "This device will be able to stream from your Plex server.",
-  },
-  reject: {
-    title: "Reject Device",
-    description:
-      "This device will be blocked from streaming from your Plex server.",
-  },
-  removeTemporaryAccess: {
-    title: "Remove Temporary Access",
-    description:
-      "The grant ends now instead of when it was due to expire. This device goes straight back under the user's usual policies, so it stops streaming if they block it.",
-  },
-  delete: {
-    title: "Delete Device",
-    description:
-      "The record is removed for good. The device reappears as pending the next time it connects, and follows the user's default device policy until then.",
-  },
-};
-
-const AUTO_REFRESH_ON = "Refreshing on its own. Click to stop.";
-const AUTO_REFRESH_OFF =
-  "Refreshing only when you ask. Click to refresh on its own.";
 
 const DeviceManagement = memo(
   ({
-    tabs,
     devicesData,
     usersData,
     settingsData,
     onRefresh,
-    autoRefresh: parentAutoRefresh,
-    onAutoRefreshChange,
     navigationTarget,
     onNavigationComplete,
+    selectedUserId: controlledSelectedUserId,
+    onSelectUser,
   }: DeviceManagementProps) => {
-    // State management
     const [userGroups, setUserGroups] = useState<UserDeviceGroup[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
-    const [autoRefresh, setAutoRefresh] = useState(parentAutoRefresh ?? true);
-    const [actionLoading, setActionLoading] = useState<number | null>(null);
     const [selectedDevice, setSelectedDevice] = useState<UserDevice | null>(
       null,
     );
-    const [expandedUsers, setExpandedUsers] = useState<Set<string>>(new Set());
-    const [searchTerm, setSearchTerm] = useState("");
-    const deferredSearchTerm = useDeferredValue(searchTerm);
-    const [editingDevice, setEditingDevice] = useState<number | null>(null);
-    const [newDeviceName, setNewDeviceName] = useState("");
-    const [temporaryAccessUser, setTemporaryAccessUser] = useState<{
-      userId: string;
-      username?: string;
-    } | null>(null);
-    const [hiddenUsersModalOpen, setHiddenUsersModalOpen] = useState(false);
-    const [hiddenUsers, setHiddenUsers] = useState<UserPreference[]>([]);
-    const [userHistoryModalOpen, setUserHistoryModalOpen] = useState(false);
-    const [selectedHistoryUser, setSelectedHistoryUser] = useState<{
-      userId: string;
-      username?: string;
-    } | null>(null);
-    const [scrollToSessionId, setScrollToSessionId] = useState<number | null>(
-      null,
-    );
-    const [timeRuleModalOpen, setTimeRuleModalOpen] = useState(false);
-    const [selectedTimeRuleUser, setSelectedTimeRuleUser] = useState<{
-      userId: string;
-      username?: string;
-      deviceIdentifier?: string;
-    } | null>(null);
-    const [userTimeRules, setUserTimeRules] = useState<
-      Record<string, UserTimeRule[]>
-    >({});
-    const loadingTimeRulesRef = useRef(false);
-    const [updatingUserPreference, setUpdatingUserPreference] = useState<
+    const [localSelectedUserId, setLocalSelectedUserId] = useState<
       string | null
     >(null);
-
-    // Confirmation dialog states
-    const [confirmAction, setConfirmAction] =
-      useState<ConfirmActionData | null>(null);
-    const [hideUserConfirmation, setHideUserConfirmation] = useState<{
-      userId: string;
-      username: string;
-      isCurrentlyHidden: boolean;
-    } | null>(null);
-
-    // Custom hooks
-    const deviceActions = useDeviceActions();
-    const userPreferences = useUserPreferences();
-    const { getAllTimeRules, fetchAllTimeRules } = useTimeRules();
-    const timeRulesApiRef = useRef({ getAllTimeRules, fetchAllTimeRules });
-    const expandedUsersRef = useRef(expandedUsers);
+    const selectedUserId =
+      controlledSelectedUserId !== undefined
+        ? controlledSelectedUserId
+        : localSelectedUserId;
+    const commitSelection = (userId: string | null) => {
+      if (onSelectUser) {
+        onSelectUser(userId);
+      } else {
+        setLocalSelectedUserId(userId);
+      }
+    };
+    const { deviceFocus, setDeviceFocus, focusDevice } = useDeviceFocus(
+      selectedUserId,
+      commitSelection,
+    );
+    const selectUser = (userId: string | null) => {
+      setDeviceFocus(null);
+      commitSelection(userId);
+    };
+    const listControls = useUserListControls(userGroups);
+    const rename = useDeviceRename();
+    const dialogs = useUserDialogs(userGroups);
+    const { data: userTimeRules = NO_TIME_RULES } = useTimeRulesForUsers(
+      userGroups.map((group) => group.user.userId),
+    );
     const { toast } = useToast();
 
     useEffect(() => {
-      timeRulesApiRef.current = { getAllTimeRules, fetchAllTimeRules };
-    });
-
-    useEffect(() => {
-      expandedUsersRef.current = expandedUsers;
-    }, [expandedUsers]);
-
-    // Local storage keys for sorting preferences
-    const USER_SORT_BY_KEY = "guardian-unified-sort-by";
-    const USER_SORT_ORDER_KEY = "guardian-unified-sort-order";
-
-    const getStoredValue = (key: string, defaultValue: string) => {
-      if (typeof window === "undefined") return defaultValue;
-      try {
-        return localStorage.getItem(key) || defaultValue;
-      } catch {
-        return defaultValue;
-      }
-    };
-
-    const setStoredValue = (key: string, value: string) => {
-      if (typeof window === "undefined") return;
-      try {
-        localStorage.setItem(key, value);
-      } catch {
-        // Silently fail if localStorage is not available
-      }
-    };
-
-    // Format duration in minutes to a human-readable format
-    // Sorting state with localStorage initialization
-    const [sortBy, setSortBy] = useState<
-      "username" | "deviceCount" | "pendingCount" | "lastSeen" | "streamCount"
-    >(
-      () =>
-        getStoredValue(USER_SORT_BY_KEY, "pendingCount") as
-          | "username"
-          | "deviceCount"
-          | "pendingCount"
-          | "lastSeen"
-          | "streamCount",
-    );
-    const [sortOrder, setSortOrder] = useState<"asc" | "desc">(
-      () => getStoredValue(USER_SORT_ORDER_KEY, "desc") as "asc" | "desc",
-    );
-
-    // Save sorting preferences to localStorage when they change
-    useEffect(() => {
-      setStoredValue(USER_SORT_BY_KEY, sortBy);
-    }, [sortBy]);
-
-    useEffect(() => {
-      setStoredValue(USER_SORT_ORDER_KEY, sortOrder);
-    }, [sortOrder]);
-
-    // Group devices by user and merge with user preferences
-    useEffect(() => {
       if (devicesData && usersData) {
-        const deviceGroups = new Map<string, UserDeviceGroup>();
-
-        // Initialize groups from devices
-        devicesData.all.forEach((device) => {
-          const userId = device.userId;
-          if (!deviceGroups.has(userId)) {
-            deviceGroups.set(userId, {
-              user: {
-                userId,
-                username: device.username,
-                preference: usersData.find((u) => u.userId === userId),
-              },
-              devices: [],
-              pendingCount: 0,
-              approvedCount: 0,
-              rejectedCount: 0,
-            });
-          }
-
-          const group = deviceGroups.get(userId)!;
-          group.devices.push(device);
-
-          // Update counts (exclude Plexamp from pending count)
-          switch (device.status) {
-            case "pending":
-              // Only count pending devices that are not Plexamp
-              if (!isPlexampDevice(device)) {
-                group.pendingCount++;
-              }
-              break;
-            case "approved":
-              group.approvedCount++;
-              break;
-            case "rejected":
-              group.rejectedCount++;
-              break;
-          }
-
-          // Use device username if user preference doesn't have it
-          if (!group.user.username && device.username) {
-            group.user.username = device.username;
-          }
-
-          // Update lastSeen to the most recent device activity
-          if (device.lastSeen) {
-            const deviceLastSeen = new Date(device.lastSeen);
-            if (!group.lastSeen || deviceLastSeen > group.lastSeen) {
-              group.lastSeen = deviceLastSeen;
-            }
-          }
-        });
-
-        // Add users without devices (users with preferences but no devices yet)
-        usersData.forEach((userPref) => {
-          if (!deviceGroups.has(userPref.userId)) {
-            deviceGroups.set(userPref.userId, {
-              user: {
-                userId: userPref.userId,
-                username: userPref.username,
-                preference: userPref,
-              },
-              devices: [],
-              pendingCount: 0,
-              approvedCount: 0,
-              rejectedCount: 0,
-            });
-          }
-        });
-
-        // Convert to array and filter out hidden users
-        const groups = Array.from(deviceGroups.values())
-          .filter((group) => {
-            // Filter out users that are explicitly marked as hidden
-            // Include users with no preference (not hidden) or users with preference that are not hidden
-            return !group.user.preference || !group.user.preference.hidden;
-          })
-          .map((group) => ({
-            ...group,
-            devices: group.devices.sort((a, b) => {
-              // Helper function to identify Plex Amp devices
-              // Plexamp devices always go last
-              const aIsPlexamp = isPlexampDevice(a);
-              const bIsPlexamp = isPlexampDevice(b);
-
-              if (aIsPlexamp && !bIsPlexamp) return 1; // a goes after b
-              if (!aIsPlexamp && bIsPlexamp) return -1; // a goes before b
-              if (aIsPlexamp && bIsPlexamp) {
-                // Both are Plexamp, sort by lastSeen
-                return (
-                  new Date(b.lastSeen).getTime() -
-                  new Date(a.lastSeen).getTime()
-                );
-              }
-
-              // For non-Plexamp devices, sort by status (pending first, then rejected, then approved)
-              if (a.status !== b.status) {
-                const statusOrder = { pending: 0, rejected: 1, approved: 2 };
-                return statusOrder[a.status] - statusOrder[b.status];
-              }
-              return (
-                new Date(b.lastSeen).getTime() - new Date(a.lastSeen).getTime()
-              );
-            }),
-          }));
-
-        setUserGroups(groups);
+        setUserGroups(groupDevicesByUser(devicesData.all, usersData));
         setLoading(false);
       }
     }, [devicesData, usersData]);
 
-    // Load time policy status for all users when user groups change
+    const hasUsers = userGroups.length > 0;
     useEffect(() => {
-      const loadTimePolicyStatus = async () => {
-        if (userGroups.length > 0 && !loadingTimeRulesRef.current) {
-          loadingTimeRulesRef.current = true;
-          const userIds = userGroups.map((group) => group.user.userId);
-          const { fetchAllTimeRules, getAllTimeRules } =
-            timeRulesApiRef.current;
-
-          try {
-            // Fetch all time rules at once (cached globally)
-            await fetchAllTimeRules(userIds);
-
-            // Keep the full rules so each device can report its own schedule
-            const ruleMap: Record<string, UserTimeRule[]> = {};
-            for (const userId of userIds) {
-              ruleMap[userId] = await getAllTimeRules(userId);
-            }
-            setUserTimeRules(ruleMap);
-          } catch (error) {
-            console.error("Error loading time rule status:", error);
-          } finally {
-            loadingTimeRulesRef.current = false;
-          }
-        }
-      };
-
-      void loadTimePolicyStatus();
-    }, [userGroups]);
-
-    // Sync local autoRefresh with parent
-    useEffect(() => {
-      if (parentAutoRefresh !== undefined) {
-        setAutoRefresh(parentAutoRefresh);
+      if (navigationTarget && hasUsers) {
+        focusDevice(
+          navigationTarget.userId,
+          navigationTarget.deviceIdentifier,
+          onNavigationComplete,
+        );
       }
-    }, [parentAutoRefresh]);
-
-    // Handle navigation from streams
-    useEffect(() => {
-      if (navigationTarget && userGroups.length > 0) {
-        const { userId, deviceIdentifier } = navigationTarget;
-
-        // First expand the user if not already expanded
-        const wasExpanded = expandedUsersRef.current.has(userId);
-        if (!wasExpanded) {
-          setExpandedUsers((prev) => new Set(prev).add(userId));
-        }
-
-        // Use appropriate delay based on whether expansion is needed
-        const delay = wasExpanded ? 100 : 600; // Longer delay if we need to wait for expansion
-
-        setTimeout(() => {
-          const deviceElement = document.querySelector(
-            `[data-device-identifier="${deviceIdentifier}"]`,
-          );
-          if (deviceElement) {
-            // Scroll directly to the device with some padding above
-            deviceElement.scrollIntoView({
-              behavior: "smooth",
-              block: "center",
-              inline: "nearest",
-            });
-
-            // Add highlight effect
-            setTimeout(() => {
-              deviceElement.classList.add(...HIGHLIGHT_CLASSES);
-              setTimeout(() => {
-                deviceElement.classList.remove(...HIGHLIGHT_CLASSES);
-                // Call completion callback
-                if (onNavigationComplete) {
-                  onNavigationComplete();
-                }
-              }, 1500);
-            }, 200); // Small delay before highlighting
-          }
-        }, delay);
-      }
-    }, [navigationTarget, userGroups.length, onNavigationComplete]);
+    }, [navigationTarget, hasUsers, onNavigationComplete, focusDevice]);
 
     const handleRefresh = async () => {
       if (onRefresh) {
         setRefreshing(true);
-        setUserTimeRules({}); // Clear cached rules to force re-fetch
         try {
           await onRefresh();
         } catch (error) {
@@ -499,1064 +128,176 @@ const DeviceManagement = memo(
       }
     };
 
-    // Handle auto-refresh toggle
-    const handleAutoRefreshToggle = () => {
-      const newValue = !autoRefresh;
-      setAutoRefresh(newValue);
-      if (onAutoRefreshChange) {
-        onAutoRefreshChange(newValue);
-      }
-    };
-
-    // Filter and sort user groups
-    const filteredAndSortedGroups = useMemo(() => {
-      return userGroups
-        .filter((group) => {
-          // Apply search filter
-          if (deferredSearchTerm.trim()) {
-            const searchLower = deferredSearchTerm.toLowerCase();
-            const username = (
-              group.user.username || group.user.userId
-            ).toLowerCase();
-            const hasMatchingDevice = group.devices.some((device) => {
-              const deviceName = (
-                device.deviceName ||
-                device.deviceIdentifier ||
-                ""
-              ).toLowerCase();
-              const devicePlatform = (
-                device.devicePlatform || ""
-              ).toLowerCase();
-              const deviceProduct = (device.deviceProduct || "").toLowerCase();
-              return (
-                deviceName.includes(searchLower) ||
-                devicePlatform.includes(searchLower) ||
-                deviceProduct.includes(searchLower)
-              );
-            });
-
-            return username.includes(searchLower) || hasMatchingDevice;
-          }
-
-          return true;
-        })
-        .sort((a, b) => {
-          let valueA: string | number;
-          let valueB: string | number;
-
-          switch (sortBy) {
-            case "username":
-              valueA = (a.user.username || a.user.userId).toLowerCase();
-              valueB = (b.user.username || b.user.userId).toLowerCase();
-              break;
-            case "deviceCount":
-              valueA = a.devices.length;
-              valueB = b.devices.length;
-              break;
-            case "pendingCount":
-              valueA = a.pendingCount;
-              valueB = b.pendingCount;
-              break;
-            case "lastSeen":
-              // Use lastSeen date, fallback to 0 (epoch) if no devices
-              valueA = a.lastSeen ? a.lastSeen.getTime() : 0;
-              valueB = b.lastSeen ? b.lastSeen.getTime() : 0;
-              break;
-            case "streamCount":
-              // Sum up session counts across all devices for each user
-              valueA = a.devices.reduce(
-                (total, device) => total + (device.sessionCount || 0),
-                0,
-              );
-              valueB = b.devices.reduce(
-                (total, device) => total + (device.sessionCount || 0),
-                0,
-              );
-              break;
-            default:
-              valueA = (a.user.username || a.user.userId).toLowerCase();
-              valueB = (b.user.username || b.user.userId).toLowerCase();
-              break;
-          }
-
-          // For numeric values, use numeric comparison
-          if (typeof valueA === "number" && typeof valueB === "number") {
-            const comparison = valueA - valueB;
-            return sortOrder === "asc" ? comparison : -comparison;
-          }
-
-          // For string values, use localeCompare
-          const comparison = String(valueA).localeCompare(String(valueB));
-          return sortOrder === "asc" ? comparison : -comparison;
-        });
-    }, [userGroups, deferredSearchTerm, sortBy, sortOrder]);
-
-    // Toggle user expansion
-    const toggleUserExpansion = (userId: string) => {
-      const newExpanded = new Set(expandedUsers);
-      if (newExpanded.has(userId)) {
-        newExpanded.delete(userId);
-      } else {
-        newExpanded.add(userId);
-      }
-      setExpandedUsers(newExpanded);
-    };
-
-    // User preference update handler
-    const handleUpdateUserPreference = async (
-      userId: string,
-      defaultBlock: boolean | null,
-    ) => {
-      setUpdatingUserPreference(userId);
-      try {
-        const success = await userPreferences.updateUserPreference(
-          userId,
-          defaultBlock,
+    const decisions = useDeviceDecisions({
+      refresh: handleRefresh,
+      onPendingSet: () => setSelectedDevice(null),
+      onRenamed: (deviceId, newName) => {
+        setSelectedDevice((current) =>
+          current?.id === deviceId
+            ? { ...current, deviceName: newName }
+            : current,
         );
-        if (success) {
-          // Refresh data without clearing time rule status to prevent "Scheduled" tag flickering
-          if (onRefresh) {
-            await onRefresh();
-          }
-          toast({
-            title: "Default Device Policy Updated",
-            description:
-              "New devices from this user will follow the policy you picked",
-            variant: "success",
-          });
-        } else {
-          toast({
-            title: "Update Failed",
-            description: "Failed to update the default device policy",
-            variant: "destructive",
-          });
-        }
-      } catch (error) {
-        console.error("Error updating user preference:", error);
-        toast({
-          title: "Update Failed",
-          description: "Failed to update the default device policy",
-          variant: "destructive",
-        });
-      } finally {
-        setUpdatingUserPreference(null);
-      }
-    };
+        rename.cancelEditing();
+      },
+      onAccessGranted: dialogs.closeTemporaryAccess,
+    });
+    const { actionLoading } = decisions;
+    const policies = useUserPolicyUpdates(handleRefresh);
+    const visibility = useUserVisibility({
+      users: usersData,
+      refresh: handleRefresh,
+      onHidden: (userId) => {
+        if (selectedUserId === userId) selectUser(null);
+      },
+    });
 
-    // User IP policy update handler
-    const handleUpdateUserIPPolicy = async (
-      userId: string,
-      updates: Partial<UserPreference>,
-    ) => {
-      const success = await userPreferences.updateUserIPPolicy(userId, updates);
-      if (success) {
-        void handleRefresh();
-        toast({
-          title: "IP Access Updated",
-          description:
-            "The new network and IP rules apply to every device this user owns",
-          variant: "success",
-        });
-      } else {
-        toast({
-          title: "Update Failed",
-          description: "Failed to update the IP access policies",
-          variant: "destructive",
-        });
-      }
-    };
+    const queueItems = useMemo(() => waitingQueue(userGroups), [userGroups]);
 
-    // User visibility toggle handler
-    const handleToggleUserVisibility = async (userId: string) => {
-      try {
-        const user =
-          usersData?.find((u) => u.userId === userId) ||
-          hiddenUsers.find((u) => u.userId === userId);
-        const isCurrentlyHidden = user?.hidden || false;
-        const username = user?.username || userId;
-
-        // If hiding a user, show confirmation modal first
-        if (!isCurrentlyHidden) {
-          setHideUserConfirmation({ userId, username, isCurrentlyHidden });
-          return;
-        }
-
-        // Directly show user without confirmation
-        await apiClient.toggleUserVisibility(userId);
-
-        if (isCurrentlyHidden) {
-          // User was hidden, now showing
-          toast({
-            title: "User Shown",
-            description: `${username} is back in the main user list`,
-            variant: "success",
-          });
-        } else {
-          // User was visible, now hiding
-          toast({
-            title: "User Hidden",
-            description: `${username} moved to the hidden section at the bottom of the user list. Their policies still apply.`,
-            variant: "success",
-          });
-        }
-
-        void handleRefresh();
-        // If modal is open, refresh hidden users list
-        if (hiddenUsersModalOpen) {
-          await loadHiddenUsers();
-        }
-      } catch (error) {
-        console.error("Failed to toggle user visibility:", error);
-        toast({
-          title: "Error",
-          description: "Failed to update user visibility",
-          variant: "destructive",
-        });
-      }
-    };
-
-    // Confirm hiding user
-    const confirmHideUser = async () => {
-      if (!hideUserConfirmation) return;
-
-      try {
-        const { userId, username } = hideUserConfirmation;
-        await apiClient.toggleUserVisibility(userId);
-
-        toast({
-          title: "User Hidden",
-          description: `${username} moved to the hidden section at the bottom of the user list. Their policies still apply.`,
-          variant: "success",
-        });
-
-        void handleRefresh();
-        if (hiddenUsersModalOpen) {
-          await loadHiddenUsers();
-        }
-      } catch (error) {
-        console.error("Failed to hide user:", error);
-        toast({
-          title: "Error",
-          description: "Failed to hide user",
-          variant: "destructive",
-        });
-      } finally {
-        setHideUserConfirmation(null);
-      }
-    };
-
-    const handleShowHistory = (userId: string) => {
-      // Find the username for this userId
-      const userGroup = userGroups.find(
-        (group) => group.user.userId === userId,
-      );
-      const username =
-        userGroup?.user.username || userGroup?.user.preference?.username;
-
-      setSelectedHistoryUser({ userId, username });
-      setUserHistoryModalOpen(true);
-    };
+    const selectedGroup = selectedUserId
+      ? userGroups.find((group) => group.user.userId === selectedUserId)
+      : undefined;
 
     const handleNavigateToDeviceFromHistory = (
       userId: string,
       deviceIdentifier: string,
     ) => {
-      // Expand the user group
-      setExpandedUsers((prev) => new Set(prev).add(userId));
-
-      // Find the device to verify it exists
       const device = userGroups
         .find((group) => group.user.userId === userId)
         ?.devices.find((d) => d.deviceIdentifier === deviceIdentifier);
 
       if (device) {
-        const wasExpanded = expandedUsers.has(userId);
-        const delay = wasExpanded ? 100 : 600;
-
-        setTimeout(() => {
-          const deviceElement = document.querySelector(
-            `[data-device-identifier="${deviceIdentifier}"]`,
-          );
-          if (deviceElement) {
-            deviceElement.scrollIntoView({
-              behavior: "smooth",
-              block: "center",
-              inline: "nearest",
-            });
-
-            // Add highlight effect
-            setTimeout(() => {
-              deviceElement.classList.add(...HIGHLIGHT_CLASSES);
-              setTimeout(() => {
-                deviceElement.classList.remove(...HIGHLIGHT_CLASSES);
-              }, 1500);
-            }, 200);
-          }
-        }, delay);
-      } else {
-        toast({
-          title: "Device Not Found",
-          description:
-            "The device may have been removed or is no longer available.",
-          variant: "destructive",
-        });
+        focusDevice(userId, deviceIdentifier);
+        return;
       }
+
+      selectUser(userId);
+      setDeviceFocus({ deviceIdentifier });
+      toast({
+        title: "Device not found",
+        description:
+          "The device may have been removed or is no longer available.",
+        variant: "destructive",
+      });
     };
 
-    // Load hidden users for modal
-    const loadHiddenUsers = async () => {
-      try {
-        const hiddenUsersData =
-          await apiClient.getHiddenUsers<UserPreference[]>();
-        setHiddenUsers(hiddenUsersData);
-      } catch (error) {
-        console.error("Failed to load hidden users:", error);
-      }
-    };
-
-    // Open hidden users modal
-    const openHiddenUsersModal = async () => {
-      await loadHiddenUsers();
-      setHiddenUsersModalOpen(true);
-    };
-
-    // Device action handlers
-    const handleApprove = async (deviceId: number) => {
-      try {
-        setActionLoading(deviceId);
-        const success = await deviceActions.approveDevice(deviceId);
-        if (success) {
-          setTimeout(() => void handleRefresh(), 100);
-          toast({
-            title: "Device Approved",
-            description: "This device can now stream from your Plex server",
-            variant: "success",
-          });
-        }
-      } finally {
-        setActionLoading(null);
-        setConfirmAction(null);
-      }
-    };
-
-    const handleReject = async (deviceId: number) => {
-      try {
-        setActionLoading(deviceId);
-        const success = await deviceActions.rejectDevice(deviceId);
-        if (success) {
-          setTimeout(() => void handleRefresh(), 100);
-          toast({
-            title: "Device Rejected",
-            description: "This device is now blocked from streaming",
-            variant: "success",
-          });
-        }
-      } finally {
-        setActionLoading(null);
-        setConfirmAction(null);
-      }
-    };
-
-    const handleSetPending = async (deviceId: number): Promise<boolean> => {
-      try {
-        setActionLoading(deviceId);
-        const success = await deviceActions.setPendingDevice(deviceId);
-        if (success) {
-          setTimeout(() => void handleRefresh(), 100);
-          toast({
-            title: "Device Set to Pending",
-            description:
-              "This device follows the user's default device policy until you approve or reject it",
-            variant: "success",
-          });
-          setSelectedDevice(null);
-        }
-        return success;
-      } finally {
-        setActionLoading(null);
-      }
-    };
-
-    const handleDelete = async (deviceId: number) => {
-      try {
-        setActionLoading(deviceId);
-        const success = await deviceActions.deleteDevice(deviceId);
-        if (success) {
-          setTimeout(() => void handleRefresh(), 100);
-          toast({
-            title: "Device Deleted",
-            description:
-              "The record is gone. The device reappears as pending the next time it connects.",
-            variant: "success",
-          });
-        }
-      } finally {
-        setActionLoading(null);
-        setConfirmAction(null);
-      }
-    };
-
-    const handleToggleApproval = async (device: UserDevice) => {
-      if (device.status === "approved") {
-        await handleReject(device.id);
-      } else {
-        await handleApprove(device.id);
-      }
-    };
-
-    const handleRename = async (deviceId: number, newName: string) => {
-      try {
-        setActionLoading(deviceId);
-        const success = await deviceActions.renameDevice(deviceId, newName);
-        if (success) {
-          // Update the selectedDevice state immediately to reflect the change in the modal
-          if (selectedDevice && selectedDevice.id === deviceId) {
-            setSelectedDevice({
-              ...selectedDevice,
-              deviceName: newName,
-            });
-          }
-
-          setTimeout(() => void handleRefresh(), 100);
-          setEditingDevice(null);
-          setNewDeviceName("");
-        }
-      } finally {
-        setActionLoading(null);
-      }
-    };
-
-    const startEditing = (device: UserDevice) => {
-      setEditingDevice(device.id);
-      setNewDeviceName(device.deviceName || "");
-    };
-
-    const cancelEditing = () => {
-      setEditingDevice(null);
-      setNewDeviceName("");
-    };
-
-    const handleGrantTemporaryAccess = async (
-      deviceIds: number[],
-      durationMinutes: number,
-      bypassPolicies?: boolean,
-    ) => {
-      try {
-        if (deviceIds.length === 1) {
-          // Use single device endpoint for single device
-          setActionLoading(deviceIds[0]);
-          const success = await deviceActions.grantTemporaryAccess(
-            deviceIds[0],
-            durationMinutes,
-            bypassPolicies,
-          );
-          if (!success) {
-            toast({
-              title: "Error",
-              description: "Failed to grant temporary access",
-              variant: "destructive",
-            });
-            return;
-          }
-        } else {
-          // Use batch endpoint for multiple devices
-          setActionLoading(deviceIds[0]); // Set loading indicator
-          const result = await deviceActions.grantBatchTemporaryAccess(
-            deviceIds,
-            durationMinutes,
-            bypassPolicies,
-          );
-          if (!result.success) {
-            toast({
-              title: "Error",
-              description: "Failed to grant temporary access to these devices",
-              variant: "destructive",
-            });
-            return;
-          }
-
-          // Check if any devices failed
-          const batchResults = result.results as
-            { success: boolean }[] | undefined;
-          const failedDevices = batchResults?.filter((r) => !r.success) || [];
-          if (failedDevices.length > 0) {
-            toast({
-              title: "Some Devices Were Not Granted Access",
-              description: `${deviceIds.length - failedDevices.length} of ${deviceIds.length} devices were granted temporary access. Try the remaining ${failedDevices.length} again.`,
-              variant: "destructive",
-            });
-          }
-        }
-
-        setTimeout(() => void handleRefresh(), 100);
-        setTemporaryAccessUser(null);
-        toast({
-          title: "Temporary Access Granted",
-          description: `Temporary access granted to ${deviceIds.length} device${deviceIds.length > 1 ? "s" : ""} for ${formatMinutes(durationMinutes)}`,
-          variant: "success",
-        });
-      } finally {
-        setActionLoading(null);
-      }
-    };
-
-    const handleGrantUserTemporaryAccess = (userId: string) => {
-      const userGroup = userGroups.find(
-        (group) => group.user.userId === userId,
+    const handleDeviceUpdate = (updated: UserDevice) => {
+      setUserGroups((groups) =>
+        groups.map((group) =>
+          group.user.userId === updated.userId
+            ? {
+                ...group,
+                devices: group.devices.map((device) =>
+                  device.id === updated.id ? updated : device,
+                ),
+              }
+            : group,
+        ),
       );
-      if (userGroup) {
-        setTemporaryAccessUser({
-          userId: userGroup.user.userId,
-          username: userGroup.user.username,
-        });
-      }
+      setSelectedDevice((current) =>
+        current?.id === updated.id ? updated : current,
+      );
     };
 
-    const handleRemoveTemporaryAccess = async (deviceId: number) => {
-      try {
-        setActionLoading(deviceId);
-        const success = await deviceActions.revokeTemporaryAccess(deviceId);
-        if (success) {
-          setTimeout(() => void handleRefresh(), 100);
-          toast({
-            title: "Temporary Access Removed",
-            description:
-              "The grant ended early. This device is back under the user's usual policies.",
-            variant: "success",
-          });
-        }
-      } finally {
-        setActionLoading(null);
-        setConfirmAction(null);
-      }
-    };
-
-    const handleShowTimePolicy = (
+    const handleUserPreferenceChange = (
       userId: string,
-      deviceIdentifier?: string,
+      changes: Partial<UserPreference>,
     ) => {
-      const userGroup = userGroups.find(
-        (group) => group.user.userId === userId,
-      );
-      if (userGroup) {
-        setSelectedTimeRuleUser({
-          userId: userGroup.user.userId,
-          username: userGroup.user.username,
-          deviceIdentifier,
-        });
-        setTimeRuleModalOpen(true);
-      }
-    };
-
-    const handleTimeRuleModalClose = async () => {
-      setTimeRuleModalOpen(false);
-      setSelectedTimeRuleUser(null);
-      // Refresh time policy status for all users after policy changes
-      if (userGroups.length > 0 && !loadingTimeRulesRef.current) {
-        loadingTimeRulesRef.current = true;
-        const userIds = userGroups.map((group) => group.user.userId);
-
-        try {
-          // Refresh all time rules (cached globally)
-          await fetchAllTimeRules(userIds);
-
-          // Keep the full rules so each device can report its own schedule
-          const ruleMap: Record<string, UserTimeRule[]> = {};
-          for (const userId of userIds) {
-            ruleMap[userId] = await getAllTimeRules(userId);
-          }
-          setUserTimeRules(ruleMap);
-        } catch (error) {
-          console.error("Error refreshing time rule status:", error);
-        } finally {
-          loadingTimeRulesRef.current = false;
-        }
-      }
-    };
-
-    // Only devices Guardian is currently blocking can be granted temporary access
-    const canGrantTemporaryAccess = (device: UserDevice): boolean => {
-      // Plexamp devices are exempt from every policy, so they never need a grant
-      if (isPlexampDevice(device)) {
-        return false;
-      }
-
-      // Only show for pending or rejected devices
-      if (device.status !== "pending" && device.status !== "rejected") {
-        return false;
-      }
-
-      // A rejected device is always blocked
-      if (device.status === "rejected") {
-        return true;
-      }
-
-      // For pending devices, check user and global policies
-      const userPreference = usersData?.find((u) => u.userId === device.userId);
-
-      // A pending device is only blocked when the effective default policy blocks
-      if (userPreference && userPreference.defaultBlock === false) {
-        return false;
-      }
-
-      // If user has no preference (defaultBlock = null), check global setting for pending devices
-      if (!userPreference || userPreference.defaultBlock === null) {
-        // Find global default block setting
-        const globalDefaultBlock = settingsData?.find(
-          (s) => s.key === "PLEX_GUARD_DEFAULT_BLOCK",
-        );
-
-        // The global default allows, so this pending device is already streaming
-        if (globalDefaultBlock && globalDefaultBlock.value === "false") {
-          return false;
-        }
-      }
-
-      return true;
-    };
-
-    // Confirmation dialog handlers
-    const showApproveConfirmation = (device: UserDevice) => {
-      setConfirmAction({ device, action: "approve", ...CONFIRM_COPY.approve });
-    };
-
-    const showRejectConfirmation = (device: UserDevice) => {
-      setConfirmAction({ device, action: "reject", ...CONFIRM_COPY.reject });
-    };
-
-    const showDeleteConfirmation = (device: UserDevice) => {
-      setConfirmAction({ device, action: "delete", ...CONFIRM_COPY.delete });
-    };
-
-    const showRemoveTemporaryAccessConfirmation = (device: UserDevice) => {
-      setConfirmAction({
-        device,
-        action: "removeTemporaryAccess",
-        ...CONFIRM_COPY.removeTemporaryAccess,
-      });
-    };
-
-    const showToggleConfirmation = (device: UserDevice) => {
-      setConfirmAction({
-        device,
-        action: "toggle",
-        ...CONFIRM_COPY[device.status === "approved" ? "reject" : "approve"],
-      });
-    };
-
-    const handleConfirmAction = async () => {
-      if (!confirmAction) return;
-
-      switch (confirmAction.action) {
-        case "approve":
-          await handleApprove(confirmAction.device.id);
-          break;
-        case "reject":
-          await handleReject(confirmAction.device.id);
-          break;
-        case "delete":
-          await handleDelete(confirmAction.device.id);
-          break;
-        case "toggle":
-          await handleToggleApproval(confirmAction.device);
-          break;
-        case "removeTemporaryAccess":
-          await handleRemoveTemporaryAccess(confirmAction.device.id);
-          break;
-      }
+      setUserGroups((groups) => withPreferenceChanges(groups, userId, changes));
+      void handleRefresh();
     };
 
     return (
       <>
-        <Card>
-          <CardHeader className="py-4">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div className="flex-1 min-w-0">{tabs}</div>
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-2">
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleAutoRefreshToggle}
-                    title={autoRefresh ? AUTO_REFRESH_ON : AUTO_REFRESH_OFF}
-                    className={`text-xs sm:text-sm ${
-                      autoRefresh
-                        ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
-                        : ""
-                    }`}
-                  >
-                    {autoRefresh ? "Live" : "Manual"}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => void handleRefresh()}
-                    disabled={refreshing}
-                    className="text-xs sm:text-sm"
-                  >
-                    <RefreshCw
-                      className={`w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 ${refreshing ? "animate-spin" : ""}`}
-                    />
-                    <span>Refresh</span>
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {/* Search and Sort Controls */}
-            <div className="mb-6">
-              <div className="flex flex-col sm:flex-row gap-3 mb-4">
-                <div className="relative flex-1">
-                  <input
-                    type="text"
-                    placeholder="Search by user or device"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="h-10 w-full rounded-md border border-input bg-background px-4 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                  />
-                </div>
+        <h1 className="sr-only">Users</h1>
 
-                {/* Sorting Controls */}
-                <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
-                  <span className="text-sm text-muted-foreground hidden sm:block">
-                    Sort:
-                  </span>
-                  <div className="flex gap-2">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-9 flex-1 sm:flex-none"
-                        >
-                          {sortBy === "username" && "Username"}
-                          {sortBy === "deviceCount" && "Device Count"}
-                          {sortBy === "pendingCount" && "Pending Count"}
-                          {sortBy === "lastSeen" && "Last Stream"}
-                          {sortBy === "streamCount" && "Stream Count"}
-                          <ArrowUpDown className="ml-1 h-3 w-3" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="start">
-                        <DropdownMenuItem onClick={() => setSortBy("username")}>
-                          Username
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => setSortBy("deviceCount")}
-                        >
-                          Device Count
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => setSortBy("pendingCount")}
-                        >
-                          Pending Count
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setSortBy("lastSeen")}>
-                          Last Stream
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => setSortBy("streamCount")}
-                        >
-                          Stream Count
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-9 flex-1 sm:flex-none"
-                      onClick={() =>
-                        setSortOrder(sortOrder === "asc" ? "desc" : "asc")
-                      }
-                    >
-                      {sortOrder === "asc" ? (
-                        <>
-                          <ArrowUp className="h-3 w-3 mr-1" />
-                          <span className="hidden sm:inline">Ascending</span>
-                          <span className="sm:hidden">Asc</span>
-                        </>
-                      ) : (
-                        <>
-                          <ArrowDown className="h-3 w-3 mr-1" />
-                          <span className="hidden sm:inline">Descending</span>
-                          <span className="sm:hidden">Desc</span>
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </div>
-              </div>
-
-              {searchTerm && (
-                <p className="text-xs text-muted-foreground mb-4">
-                  Showing {filteredAndSortedGroups.length} of{" "}
-                  {userGroups.length} users
-                </p>
-              )}
-            </div>
-
-            {/* User Groups List */}
-            {loading && userGroups.length === 0 ? (
-              // Show skeleton loading only on initial load
-              <div className="space-y-4">
-                {Array.from({ length: 3 }, (_, i) => (
-                  <UserGroupSkeleton key={`user-group-skeleton-${i}`} />
-                ))}
-              </div>
-            ) : filteredAndSortedGroups.length === 0 ? (
-              <div className="flex items-center justify-center py-16 text-muted-foreground">
-                {deferredSearchTerm ? (
-                  <>
-                    <Search className="w-6 h-6 mr-2" />
-                    No users match your search
-                  </>
-                ) : (
-                  <>
-                    No users yet. They appear here the first time they stream.
-                  </>
-                )}
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {filteredAndSortedGroups.map((group) => (
-                  <UserGroupCard
-                    key={group.user.userId}
-                    group={group}
-                    isExpanded={expandedUsers.has(group.user.userId)}
-                    actionLoading={actionLoading}
-                    timeRules={userTimeRules[group.user.userId]}
-                    updatingUserPreference={updatingUserPreference}
-                    onToggleExpansion={toggleUserExpansion}
-                    onUpdateUserPreference={(userId, defaultBlock) =>
-                      void handleUpdateUserPreference(userId, defaultBlock)
-                    }
-                    onUpdateUserIPPolicy={(userId, updates) =>
-                      void handleUpdateUserIPPolicy(userId, updates)
-                    }
-                    onToggleUserVisibility={(userId) =>
-                      void handleToggleUserVisibility(userId)
-                    }
-                    onShowHistory={handleShowHistory}
-                    onGrantUserTemporaryAccess={handleGrantUserTemporaryAccess}
-                    onShowTimePolicy={handleShowTimePolicy}
-                    onApprove={showApproveConfirmation}
-                    onReject={showRejectConfirmation}
-                    onDelete={showDeleteConfirmation}
-                    onToggleApproval={showToggleConfirmation}
-                    onRemoveTemporaryAccess={
-                      showRemoveTemporaryAccessConfirmation
-                    }
-                    onShowDetails={setSelectedDevice}
-                  />
-                ))}
-
-                {/* Show Hidden Users Button */}
-                <div className="mt-6 mb-6 pt-4 border-t border-border">
-                  <Button
-                    variant="outline"
-                    onClick={() => void openHiddenUsersModal()}
-                    className="w-full text-sm"
-                  >
-                    <EyeOff className="w-4 h-4 mr-2" />
-                    Show Hidden Users
-                  </Button>
-                </div>
-              </div>
+        <div className="grid items-start gap-6 lg:grid-cols-[minmax(300px,360px)_1fr]">
+          <UserList
+            className={cn(
+              "lg:sticky lg:top-24",
+              PANEL_HEIGHT,
+              selectedUserId && "hidden lg:flex",
             )}
-          </CardContent>
-        </Card>
+            {...listControls}
+            allGroups={userGroups}
+            loading={loading}
+            selectedUserId={selectedUserId}
+            onSelect={selectUser}
+            onShowHidden={() => visibility.setHiddenUsersOpen(true)}
+            pendingCount={queueItems.length}
+            refreshing={refreshing}
+            onRefresh={() => void handleRefresh()}
+          />
 
-        {/* Device Details Modal */}
-        <DeviceDetailsModal
-          device={selectedDevice}
-          isOpen={!!selectedDevice}
-          onClose={() => setSelectedDevice(null)}
-          editingDevice={editingDevice}
-          newDeviceName={newDeviceName}
-          actionLoading={actionLoading}
-          onEdit={startEditing}
-          onCancelEdit={cancelEditing}
-          onRename={(deviceId, newName) => void handleRename(deviceId, newName)}
-          onNewDeviceNameChange={setNewDeviceName}
-          onSetPending={handleSetPending}
-          settingsData={settingsData}
-          policies={
-            selectedDevice
-              ? devicePolicyBadges(
-                  selectedDevice,
-                  usersData?.find((u) => u.userId === selectedDevice.userId),
-                  userTimeRules[selectedDevice.userId],
-                )
-              : []
-          }
-        />
+          <div
+            className={cn(
+              "min-w-0",
+              !selectedUserId && "order-first lg:order-none",
+            )}
+          >
+            {selectedGroup ? (
+              <UserDetail
+                key={selectedGroup.user.userId}
+                group={selectedGroup}
+                actionLoading={actionLoading}
+                timeRules={userTimeRules[selectedGroup.user.userId]}
+                deviceFocus={deviceFocus}
+                updatingUserPreference={policies.updatingUserId}
+                onBack={() => selectUser(null)}
+                onUpdateUserPreference={(userId, defaultBlock) =>
+                  void policies.updateDefaultPolicy(userId, defaultBlock)
+                }
+                onUpdateUserIPPolicy={(userId, updates) =>
+                  void policies.updateIPPolicy(userId, updates)
+                }
+                onUserPreferenceChange={handleUserPreferenceChange}
+                onToggleUserVisibility={(userId) =>
+                  void visibility.toggleVisibility(userId)
+                }
+                onShowHistory={dialogs.showHistory}
+                onGrantUserTemporaryAccess={dialogs.showTemporaryAccess}
+                onShowTimePolicy={dialogs.showTimeRules}
+                onApprove={decisions.confirmApprove}
+                onReject={decisions.confirmReject}
+                onDelete={decisions.confirmDelete}
+                onToggleApproval={decisions.confirmToggle}
+                onRemoveTemporaryAccess={decisions.confirmRemoveTemporaryAccess}
+                onShowDetails={setSelectedDevice}
+                onDeviceUpdate={handleDeviceUpdate}
+              />
+            ) : selectedUserId && !loading ? (
+              <MissingUserNotice onBack={() => selectUser(null)} />
+            ) : loading && userGroups.length === 0 ? (
+              <div
+                className={cn(
+                  "h-64 animate-pulse rounded-2xl border bg-card",
+                  PANEL_HEIGHT,
+                )}
+              />
+            ) : (
+              <ApprovalQueue
+                items={queueItems}
+                actionLoading={actionLoading}
+                onApprove={decisions.confirmApprove}
+                onReject={decisions.confirmReject}
+                onOpenDevice={focusDevice}
+              />
+            )}
+          </div>
+        </div>
 
-        {/* Temporary Access Modal */}
-        <TemporaryAccessModal
-          user={temporaryAccessUser}
-          userDevices={
-            temporaryAccessUser
-              ? userGroups.find(
-                  (group) => group.user.userId === temporaryAccessUser.userId,
-                )?.devices || []
-              : []
-          }
-          isOpen={!!temporaryAccessUser}
-          onClose={() => setTemporaryAccessUser(null)}
-          onGrantAccess={(deviceIds, durationMinutes, bypassPolicies) =>
-            void handleGrantTemporaryAccess(
-              deviceIds,
-              durationMinutes,
-              bypassPolicies,
-            )
-          }
-          actionLoading={actionLoading}
-          canGrantTemporaryAccess={canGrantTemporaryAccess}
-        />
-
-        {/* Confirmation Modal */}
-        <ConfirmationModal
-          confirmAction={confirmAction}
-          actionLoading={actionLoading}
-          onConfirm={() => void handleConfirmAction()}
-          onCancel={() => setConfirmAction(null)}
-        />
-
-        {/* Hidden Users Modal */}
-        <Dialog
-          open={hiddenUsersModalOpen}
-          onOpenChange={setHiddenUsersModalOpen}
-        >
-          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="flex items-center">
-                <EyeOff className="w-5 h-5 mr-2" />
-                Hidden Users
-              </DialogTitle>
-              <DialogDescription>
-                These users are hidden from the main list. Click
-                &quot;Show&quot; to make them visible again.
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="space-y-3">
-              {hiddenUsers.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <p>No hidden users found</p>
-                </div>
-              ) : (
-                hiddenUsers.map((user) => (
-                  <div
-                    key={user.userId}
-                    className="flex items-center justify-between p-3 border rounded-lg bg-muted/30"
-                  >
-                    <div className="flex items-center space-x-3">
-                      <UserAvatar
-                        userId={user.userId}
-                        username={user.username}
-                        avatarUrl={user.avatarUrl}
-                      />
-                      <div>
-                        <p className="font-medium">
-                          {user.username || "Unknown username"}
-                        </p>
-                      </div>
-                    </div>
-                    <Button
-                      size="sm"
-                      onClick={() =>
-                        void handleToggleUserVisibility(user.userId)
-                      }
-                      className="ml-4"
-                    >
-                      <Eye className="w-4 h-4 mr-1" />
-                      Show
-                    </Button>
-                  </div>
-                ))
-              )}
-            </div>
-
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setHiddenUsersModalOpen(false)}
-              >
-                Close
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        {/* User History Modal */}
-        <UserHistoryModal
-          userId={selectedHistoryUser?.userId || null}
-          username={selectedHistoryUser?.username}
-          isOpen={userHistoryModalOpen}
-          onClose={() => {
-            setUserHistoryModalOpen(false);
-            setSelectedHistoryUser(null);
-            setScrollToSessionId(null);
-          }}
+        <DeviceManagementDialogs
+          selectedDevice={selectedDevice}
+          onCloseDevice={() => setSelectedDevice(null)}
+          onDeviceUpdate={handleDeviceUpdate}
           onNavigateToDevice={handleNavigateToDeviceFromHistory}
-          scrollToSessionId={scrollToSessionId}
+          decisions={decisions}
+          rename={rename}
+          dialogs={dialogs}
+          visibility={visibility}
+          usersData={usersData}
+          settingsData={settingsData}
+          timeRules={userTimeRules}
         />
-
-        <TimeRuleModal
-          isOpen={timeRuleModalOpen}
-          onClose={() => void handleTimeRuleModalClose()}
-          userId={selectedTimeRuleUser?.userId || ""}
-          username={selectedTimeRuleUser?.username || "Unknown User"}
-          deviceIdentifier={selectedTimeRuleUser?.deviceIdentifier}
-        />
-
-        {/* Hide User Confirmation Dialog */}
-        <Dialog
-          open={!!hideUserConfirmation}
-          onOpenChange={(open) => !open && setHideUserConfirmation(null)}
-        >
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle className="flex items-center">
-                <EyeOff className="w-5 h-5 mr-2" />
-                Hide User?
-              </DialogTitle>
-              <DialogDescription className="pt-2">
-                Are you sure you want to hide{" "}
-                <span className="font-semibold text-foreground">
-                  {hideUserConfirmation?.username}
-                </span>{" "}
-                from the user list?
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-3 py-4">
-              <div className="bg-muted/50 p-3 rounded-md text-sm">
-                <p className="text-muted-foreground">
-                  Hidden users can be managed from the &quot;Manage Hidden
-                  Users&quot; section at the bottom of the user list.
-                </p>
-              </div>
-            </div>
-            <DialogFooter className="flex-col sm:flex-row gap-2">
-              <Button
-                variant="outline"
-                onClick={() => setHideUserConfirmation(null)}
-                className="w-full sm:w-auto"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={() => void confirmHideUser()}
-                className="w-full sm:w-auto"
-              >
-                <EyeOff className="w-4 h-4 mr-2" />
-                Hide User
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
       </>
     );
   },

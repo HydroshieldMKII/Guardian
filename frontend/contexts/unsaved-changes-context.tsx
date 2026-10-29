@@ -5,6 +5,8 @@ import React, { createContext, useContext, useState, useCallback } from "react";
 interface UnsavedChangesContextType {
   hasUnsavedChanges: boolean;
   setHasUnsavedChanges: (value: boolean) => void;
+  saveBlocked: boolean;
+  setSaveBlocked: (value: boolean) => void;
   pendingNavigation: string | null;
   setPendingNavigation: (path: string | null) => void;
   showUnsavedWarning: boolean;
@@ -19,6 +21,7 @@ const UnsavedChangesContext = createContext<UnsavedChangesContextType | undefine
 
 export function UnsavedChangesProvider({ children }: { children: React.ReactNode }) {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [saveBlocked, setSaveBlocked] = useState(false);
   const [pendingNavigation, setPendingNavigation] = useState<string | null>(null);
   const [showUnsavedWarning, setShowUnsavedWarning] = useState(false);
   const [onSaveAndLeave, setOnSaveAndLeaveState] = useState<(() => Promise<void>) | null>(null);
@@ -37,6 +40,8 @@ export function UnsavedChangesProvider({ children }: { children: React.ReactNode
       value={{
         hasUnsavedChanges,
         setHasUnsavedChanges,
+        saveBlocked,
+        setSaveBlocked,
         pendingNavigation,
         setPendingNavigation,
         showUnsavedWarning,

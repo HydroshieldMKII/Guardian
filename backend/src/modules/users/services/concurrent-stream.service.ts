@@ -4,12 +4,9 @@ import { Repository } from 'typeorm';
 import { UserDevice } from '@/entities/user-device.entity';
 import { UserPreference } from '@/entities/user-preference.entity';
 import { ConfigService } from '@/modules/config/services/config.service';
-import { DeviceTrackingService } from '@/modules/devices/services/device-tracking.service';
-import {
-  PlexSessionsResponse,
-  PlexSession,
-  isPlexampSession,
-} from '@/types/plex.types';
+import { TemporaryAccessService } from '@/modules/devices/services/temporary-access.service';
+import { PlexSessionsResponse, PlexSession } from '@/types/plex.types';
+import { isPlexampSession } from '@/common/utils/plexamp.utils';
 
 /**
  * Concurrent Stream Service
@@ -28,8 +25,8 @@ export class ConcurrentStreamService {
     private userPreferenceRepository: Repository<UserPreference>,
     @Inject(forwardRef(() => ConfigService))
     private configService: ConfigService,
-    @Inject(forwardRef(() => DeviceTrackingService))
-    private deviceTrackingService: DeviceTrackingService,
+    @Inject(forwardRef(() => TemporaryAccessService))
+    private temporaryAccessService: TemporaryAccessService,
   ) {}
 
   /**
@@ -83,7 +80,7 @@ export class ConcurrentStreamService {
       );
 
       const hasValidTempAccess =
-        await this.deviceTrackingService.isTemporaryAccessValid(device);
+        await this.temporaryAccessService.isTemporaryAccessValid(device);
       deviceTempAccessMap.set(device.deviceIdentifier, hasValidTempAccess);
     }
 

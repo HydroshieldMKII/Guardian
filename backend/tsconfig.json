@@ -23,6 +23,8 @@
     "strictNullChecks": true,
     "forceConsistentCasingInFileNames": true,
     "noImplicitAny": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
     "useUnknownInCatchVariables": true,
     "strictBindCallApply": false,
     "noFallthroughCasesInSwitch": false

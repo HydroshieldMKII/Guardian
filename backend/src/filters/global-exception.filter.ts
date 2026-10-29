@@ -8,6 +8,17 @@ import {
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 
+const exposedClientStatus = (exception: unknown): number | undefined =>
+  exception instanceof Error &&
+  'expose' in exception &&
+  exception.expose === true &&
+  'status' in exception &&
+  typeof exception.status === 'number' &&
+  exception.status >= 400 &&
+  exception.status < 500
+    ? exception.status
+    : undefined;
+
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
   private readonly logger = new Logger(GlobalExceptionFilter.name);
@@ -17,15 +28,19 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
 
+    const clientStatus = exposedClientStatus(exception);
+
     const status =
       exception instanceof HttpException
         ? exception.getStatus()
-        : HttpStatus.INTERNAL_SERVER_ERROR;
+        : (clientStatus ?? HttpStatus.INTERNAL_SERVER_ERROR);
 
     const message =
       exception instanceof HttpException
         ? exception.getResponse()
-        : 'Internal server error';
+        : clientStatus !== undefined && exception instanceof Error
+          ? exception.message
+          : 'Internal server error';
 
     const errorResponse = {
       statusCode: status,
@@ -42,12 +57,18 @@ export class GlobalExceptionFilter implements ExceptionFilter {
             : 'Unknown error',
     };
 
-    this.logger.error(
-      `${request.method} ${request.url} - ${status} - ${
-        exception instanceof Error ? exception.message : 'Unknown error'
-      }`,
-      exception instanceof Error ? exception.stack : undefined,
-    );
+    const summary = `${request.method} ${request.url} - ${status} - ${
+      exception instanceof Error ? exception.message : 'Unknown error'
+    }`;
+
+    if (status < 500) {
+      this.logger.warn(summary);
+    } else {
+      this.logger.error(
+        summary,
+        exception instanceof Error ? exception.stack : undefined,
+      );
+    }
 
     response.status(status).json(errorResponse);
   }

@@ -1,124 +1,115 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { Notification } from "@/types";
+import { useCallback } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { NOTIFICATIONS_EVENT, useLiveEvent } from "@/hooks/useLiveDashboard";
 import { apiClient } from "@/lib/api";
+import { queryKeys } from "@/lib/query-keys";
+import type { Notification } from "@/types";
 
-interface UseNotificationsProps {
-  initialData?: {
-    data: Notification[];
-    unreadCount: number;
-  };
-}
+export const NOTIFICATION_POLL_MS = 10000;
 
-export function useNotifications(props?: UseNotificationsProps) {
-  const [notifications, setNotifications] = useState<Notification[]>(
-    props?.initialData?.data || [],
+const NO_NOTIFICATIONS: Notification[] = [];
+
+const withDates = (notifications: Notification[]) =>
+  notifications.map((notification) => ({
+    ...notification,
+    createdAt: new Date(notification.createdAt),
+  }));
+
+const markedRead = (id: number, read: boolean) => (prev: Notification[]) =>
+  prev.map((notification) =>
+    notification.id === id ? { ...notification, read } : notification,
   );
-  const [isLoading, setIsLoading] = useState(!props?.initialData);
-  const [error, setError] = useState<string | null>(null);
 
-  // Fetch notifications from API
-  const fetchNotifications = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
+export function useNotifications(enabled: boolean) {
+  const queryClient = useQueryClient();
 
-      const data = await apiClient.getAllNotifications<Notification[]>();
+  const update = useCallback(
+    (updater: (prev: Notification[]) => Notification[]) =>
+      queryClient.setQueryData<Notification[]>(
+        queryKeys.notifications,
+        (prev) => prev && updater(prev),
+      ),
+    [queryClient],
+  );
 
-      // Convert createdAt strings to Date objects
-      const processedNotifications = data.map((notification) => ({
-        ...notification,
-        createdAt: new Date(notification.createdAt),
-      }));
+  const applyLive = useCallback(
+    (payload: Notification[]) =>
+      queryClient.setQueryData(queryKeys.notifications, payload),
+    [queryClient],
+  );
 
-      setNotifications(processedNotifications);
-    } catch (err) {
-      console.error("Failed to fetch notifications:", err);
-      setError("Failed to load notifications");
-      // Fallback to empty array on error
-      setNotifications([]);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  const { connected } = useLiveEvent<Notification[]>(
+    NOTIFICATIONS_EVENT,
+    applyLive,
+    enabled,
+  );
 
-  // Initial load only if no initial data provided
-  useEffect(() => {
-    if (!props?.initialData) {
-      void fetchNotifications();
-    } else {
-      setIsLoading(false);
-    }
-  }, [fetchNotifications, props?.initialData]);
+  const { data: notifications = NO_NOTIFICATIONS } = useQuery({
+    queryKey: queryKeys.notifications,
+    queryFn: () => apiClient.getAllNotifications<Notification[]>(),
+    enabled,
+    refetchInterval: connected ? false : NOTIFICATION_POLL_MS,
+    select: withDates,
+  });
 
-  // Calculate unread count
-  const unreadCount = notifications.filter((n) => !n.read).length;
-
-  // Mark notification as read
-  const markAsRead = useCallback(async (id: number) => {
+  const markAsRead = async (id: number) => {
     try {
       await apiClient.markNotificationAsRead(id);
-      setNotifications((prev) =>
-        prev.map((notification) =>
-          notification.id === id
-            ? { ...notification, read: true }
-            : notification,
-        ),
-      );
-    } catch (err) {
-      console.error("Failed to mark notification as read:", err);
+      update(markedRead(id, true));
+    } catch (error) {
+      console.error("Failed to mark notification as read:", error);
     }
-  }, []);
+  };
 
-  // Remove notification
-  const removeNotification = useCallback(async (id: number) => {
+  const remove = async (id: number) => {
     try {
       await apiClient.deleteNotification(id);
-      setNotifications((prev) =>
-        prev.filter((notification) => notification.id !== id),
-      );
-    } catch (err) {
-      console.error("Failed to delete notification:", err);
+      update((prev) => prev.filter((notification) => notification.id !== id));
+    } catch (error) {
+      console.error("Failed to delete notification:", error);
     }
-  }, []);
+  };
 
-  // Mark all as read
-  const markAllAsRead = useCallback(async () => {
+  const markAllAsRead = async () => {
     try {
       await apiClient.markAllNotificationsAsRead();
-      setNotifications((prev) =>
+      update((prev) =>
         prev.map((notification) => ({ ...notification, read: true })),
       );
-    } catch (err) {
-      console.error("Failed to mark all notifications as read:", err);
+    } catch (error) {
+      console.error("Failed to mark all notifications as read:", error);
     }
-  }, []);
+  };
 
-  // Clear all notifications
-  const clearAll = useCallback(async () => {
+  const clearAll = async () => {
     try {
       await apiClient.clearAllNotifications();
-      setNotifications([]);
-    } catch (err) {
-      console.error("Failed to clear all notifications:", err);
+      update(() => []);
+    } catch (error) {
+      console.error("Failed to clear all notifications:", error);
     }
-  }, []);
+  };
 
-  // Refresh notifications
-  const refreshNotifications = useCallback(() => {
-    void fetchNotifications();
-  }, [fetchNotifications]);
+  const markReadAutomatically = async (id: number) => {
+    update(markedRead(id, true));
+    try {
+      await apiClient.markNotificationAsReadAuto(id);
+    } catch (error) {
+      console.error("Failed to mark notification as read:", error);
+      update(markedRead(id, false));
+    }
+  };
 
   return {
     notifications,
-    unreadCount,
-    isLoading,
-    error,
+    unreadCount: notifications.filter((notification) => !notification.read)
+      .length,
     markAsRead,
-    removeNotification,
+    remove,
     markAllAsRead,
     clearAll,
-    refreshNotifications,
+    markReadAutomatically,
   };
 }

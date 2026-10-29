@@ -10,6 +10,7 @@ import {
   type Tone,
 } from "@/components/ui/entity";
 import { cn } from "@/lib/utils";
+import { settingError } from "./setting-validation";
 import { getSettingInfo, SettingsFormData } from "./settings-utils";
 import type { AppSetting } from "@/types";
 
@@ -18,6 +19,7 @@ export function SettingsCard({
   description,
   action,
   footer,
+  divided = false,
   className,
   children,
 }: {
@@ -25,6 +27,7 @@ export function SettingsCard({
   description?: React.ReactNode;
   action?: React.ReactNode;
   footer?: React.ReactNode;
+  divided?: boolean;
   className?: string;
   children: React.ReactNode;
 }) {
@@ -45,38 +48,18 @@ export function SettingsCard({
         </div>
         {action && <div className="shrink-0">{action}</div>}
       </div>
-      <div className="space-y-5 px-4 py-5 sm:px-6">{children}</div>
+      <div
+        className={cn(
+          "px-4 py-5 sm:px-6",
+          divided
+            ? "divide-y divide-border/70 [&>*]:py-4 [&>*:first-child]:pt-0 [&>*:last-child]:pb-0"
+            : "space-y-5",
+        )}
+      >
+        {children}
+      </div>
       {footer && <div className="border-t px-4 py-4 sm:px-6">{footer}</div>}
     </section>
-  );
-}
-
-export function ActionRow({
-  title,
-  description,
-  action,
-  tone = "neutral",
-}: {
-  title: React.ReactNode;
-  description?: React.ReactNode;
-  action: React.ReactNode;
-  tone?: Tone;
-}) {
-  return (
-    <Panel
-      tone={tone}
-      className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
-    >
-      <div className="min-w-0 space-y-1">
-        <p className="text-sm font-medium text-foreground">{title}</p>
-        {description && (
-          <p className="text-xs leading-relaxed text-muted-foreground">
-            {description}
-          </p>
-        )}
-      </div>
-      <div className="shrink-0">{action}</div>
-    </Panel>
   );
 }
 
@@ -91,11 +74,11 @@ export function Banner({
 }) {
   const text: Record<Tone, string> = {
     neutral: "text-muted-foreground",
-    positive: "text-emerald-700 dark:text-emerald-300",
-    warning: "text-amber-700 dark:text-amber-300",
-    danger: "text-rose-700 dark:text-rose-300",
-    info: "text-sky-700 dark:text-sky-300",
-    accent: "text-violet-700 dark:text-violet-300",
+    positive: "text-allowed",
+    warning: "text-waiting",
+    danger: "text-blocked",
+    info: "text-info",
+    accent: "text-special",
   };
 
   return (
@@ -126,6 +109,7 @@ export function SettingControl({
 }) {
   const { label, description, optional } = getSettingInfo(setting);
   const value = formData[setting.key] ?? setting.value;
+  const error = settingError(setting.key, value);
 
   if (setting.type === "boolean") {
     return (
@@ -136,6 +120,7 @@ export function SettingControl({
         checked={isTruthy(value)}
         onCheckedChange={(checked) => onChange(setting.key, checked)}
         disabled={disabled}
+        plain
         className={className}
       />
     );
@@ -149,12 +134,14 @@ export function SettingControl({
       action={
         optional ? <StatusPill tone="neutral">Optional</StatusPill> : undefined
       }
+      error={error}
       className={className}
     >
       <SecretInput
         setting={setting}
         value={typeof value === "string" ? value : String(value)}
         placeholder={`Enter ${label.toLowerCase()}`}
+        invalid={Boolean(error)}
         type={
           setting.key.includes("PASSWORD") || setting.key.includes("TOKEN")
             ? "password"

@@ -1,10 +1,12 @@
 import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { SessionHistory } from '@/entities/session-history.entity';
-import { UserDevice } from '@/entities/user-device.entity';
 import { NotificationsService } from '@/modules/notifications/services/notifications.service';
-import { NotificationOrchestratorService } from '@/modules/notifications/services/notification-orchestrator.service';
+import { NotificationDispatchService } from '@/modules/notifications/services/notification-dispatch.service';
+import {
+  NotificationOrchestratorService,
+  StreamBlockedNotificationData,
+} from '@/modules/notifications/services/notification-orchestrator.service';
 
 const history = (overrides: Partial<SessionHistory> = {}): SessionHistory =>
   Object.assign(new SessionHistory(), {
@@ -16,13 +18,13 @@ const history = (overrides: Partial<SessionHistory> = {}): SessionHistory =>
 
 describe('NotificationOrchestratorService', () => {
   let service: NotificationOrchestratorService;
-  let sessionHistoryRepository: jest.Mocked<Repository<SessionHistory>>;
-  let notificationsService: {
+  let sessionHistoryRepository: { findOne: jest.Mock; save: jest.Mock };
+  let notificationDispatch: {
     createNewDeviceNotification: jest.Mock;
     createStreamBlockedNotification: jest.Mock;
     createLocationChangeNotification: jest.Mock;
-    linkNotificationToSessionHistory: jest.Mock;
   };
+  let notificationsService: { linkNotificationToSessionHistory: jest.Mock };
 
   beforeEach(async () => {
     jest.useFakeTimers();
@@ -30,12 +32,15 @@ describe('NotificationOrchestratorService', () => {
     sessionHistoryRepository = {
       findOne: jest.fn().mockResolvedValue(null),
       save: jest.fn((value: SessionHistory) => Promise.resolve(value)),
-    } as unknown as jest.Mocked<Repository<SessionHistory>>;
+    };
 
-    notificationsService = {
+    notificationDispatch = {
       createNewDeviceNotification: jest.fn().mockResolvedValue({ id: 1 }),
       createStreamBlockedNotification: jest.fn().mockResolvedValue({ id: 2 }),
       createLocationChangeNotification: jest.fn().mockResolvedValue({ id: 3 }),
+    };
+
+    notificationsService = {
       linkNotificationToSessionHistory: jest.fn().mockResolvedValue(undefined),
     };
 
@@ -46,8 +51,11 @@ describe('NotificationOrchestratorService', () => {
           provide: getRepositoryToken(SessionHistory),
           useValue: sessionHistoryRepository,
         },
-        { provide: getRepositoryToken(UserDevice), useValue: {} },
         { provide: NotificationsService, useValue: notificationsService },
+        {
+          provide: NotificationDispatchService,
+          useValue: notificationDispatch,
+        },
       ],
     }).compile();
 
@@ -66,10 +74,10 @@ describe('NotificationOrchestratorService', () => {
       ipAddress: '10.0.0.5',
     };
 
-    it('delegates to the notifications service', async () => {
+    it('delegates to the notification dispatcher', async () => {
       await service.notifyNewDevice(data);
       expect(
-        notificationsService.createNewDeviceNotification,
+        notificationDispatch.createNewDeviceNotification,
       ).toHaveBeenCalledWith('u1', 'alice', 'TV', '10.0.0.5', undefined);
     });
 
@@ -86,7 +94,7 @@ describe('NotificationOrchestratorService', () => {
       });
 
       expect(
-        notificationsService.createNewDeviceNotification,
+        notificationDispatch.createNewDeviceNotification,
       ).toHaveBeenCalledWith(
         'u1',
         'Unknown User',
@@ -97,7 +105,7 @@ describe('NotificationOrchestratorService', () => {
     });
 
     it('rethrows a downstream failure', async () => {
-      notificationsService.createNewDeviceNotification.mockRejectedValue(
+      notificationDispatch.createNewDeviceNotification.mockRejectedValue(
         new Error('db down'),
       );
       await expect(service.notifyNewDevice(data)).rejects.toThrow('db down');
@@ -105,7 +113,7 @@ describe('NotificationOrchestratorService', () => {
   });
 
   describe('notifyStreamBlocked', () => {
-    const data = {
+    const data: StreamBlockedNotificationData = {
       userId: 'u1',
       username: 'alice',
       deviceIdentifier: 'device-a',
@@ -115,7 +123,7 @@ describe('NotificationOrchestratorService', () => {
     it('creates the notification without a session key', async () => {
       await service.notifyStreamBlocked(data);
       expect(
-        notificationsService.createStreamBlockedNotification,
+        notificationDispatch.createStreamBlockedNotification,
       ).toHaveBeenCalledWith(
         'u1',
         'alice',
@@ -132,7 +140,7 @@ describe('NotificationOrchestratorService', () => {
       await service.notifyStreamBlocked({ ...data, sessionKey: 'session-1' });
 
       expect(
-        notificationsService.createStreamBlockedNotification,
+        notificationDispatch.createStreamBlockedNotification,
       ).toHaveBeenCalledWith(
         'u1',
         'alice',
@@ -151,6 +159,27 @@ describe('NotificationOrchestratorService', () => {
       expect(sessionHistoryRepository.save).toHaveBeenCalledWith(
         expect.objectContaining({ terminated: true }),
       );
+    });
+
+    it('saves nothing when the session disappears before it is marked', async () => {
+      sessionHistoryRepository.findOne
+        .mockResolvedValueOnce(history())
+        .mockResolvedValue(null);
+
+      await service.notifyStreamBlocked({ ...data, sessionKey: 'session-1' });
+
+      expect(sessionHistoryRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('still notifies when marking the session terminated fails', async () => {
+      sessionHistoryRepository.findOne.mockResolvedValue(history());
+      sessionHistoryRepository.save.mockRejectedValue(new Error('db down'));
+
+      await service.notifyStreamBlocked({ ...data, sessionKey: 'session-1' });
+
+      expect(
+        notificationDispatch.createStreamBlockedNotification,
+      ).toHaveBeenCalled();
     });
 
     it('retries the lookup once before giving up', async () => {
@@ -180,7 +209,7 @@ describe('NotificationOrchestratorService', () => {
       await pending;
 
       expect(
-        notificationsService.createStreamBlockedNotification,
+        notificationDispatch.createStreamBlockedNotification,
       ).toHaveBeenCalledWith(
         'u1',
         'alice',
@@ -197,7 +226,7 @@ describe('NotificationOrchestratorService', () => {
       await service.notifyStreamBlocked({ ...data, sessionKey: 'session-1' });
 
       expect(
-        notificationsService.createStreamBlockedNotification,
+        notificationDispatch.createStreamBlockedNotification,
       ).toHaveBeenCalledWith(
         'u1',
         'alice',
@@ -209,7 +238,7 @@ describe('NotificationOrchestratorService', () => {
     });
 
     it('rethrows a notification failure', async () => {
-      notificationsService.createStreamBlockedNotification.mockRejectedValue(
+      notificationDispatch.createStreamBlockedNotification.mockRejectedValue(
         new Error('boom'),
       );
       await expect(service.notifyStreamBlocked(data)).rejects.toThrow('boom');
@@ -225,7 +254,7 @@ describe('NotificationOrchestratorService', () => {
       });
 
       expect(
-        notificationsService.createStreamBlockedNotification,
+        notificationDispatch.createStreamBlockedNotification,
       ).toHaveBeenCalledWith(
         'u1',
         'Unknown User',
@@ -246,7 +275,7 @@ describe('NotificationOrchestratorService', () => {
       });
 
       expect(
-        notificationsService.createLocationChangeNotification,
+        notificationDispatch.createLocationChangeNotification,
       ).toHaveBeenCalledWith(
         'u1',
         'Unknown User',
@@ -270,7 +299,7 @@ describe('NotificationOrchestratorService', () => {
     it('creates the notification without a session key', async () => {
       await service.notifyLocationChange(data);
       expect(
-        notificationsService.createLocationChangeNotification,
+        notificationDispatch.createLocationChangeNotification,
       ).toHaveBeenCalledWith(
         'u1',
         'alice',
@@ -287,7 +316,7 @@ describe('NotificationOrchestratorService', () => {
       await service.notifyLocationChange({ ...data, sessionKey: 'session-1' });
 
       expect(
-        notificationsService.createLocationChangeNotification,
+        notificationDispatch.createLocationChangeNotification,
       ).toHaveBeenCalledWith('u1', 'alice', 'TV', '10.0.0.5', '8.8.8.8', 10);
     });
 
@@ -298,7 +327,7 @@ describe('NotificationOrchestratorService', () => {
     });
 
     it('rethrows a notification failure', async () => {
-      notificationsService.createLocationChangeNotification.mockRejectedValue(
+      notificationDispatch.createLocationChangeNotification.mockRejectedValue(
         new Error('boom'),
       );
       await expect(service.notifyLocationChange(data)).rejects.toThrow('boom');

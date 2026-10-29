@@ -1,5 +1,7 @@
-export { UserGroupCard } from "./UserGroupCard";
-export { DeviceCard } from "./DeviceCard";
+export { UserList } from "./UserList";
+export { UserDetail } from "./UserDetail";
+export { DeviceRow } from "./DeviceRow";
+export { ApprovalQueue } from "./ApprovalQueue";
 export { DeviceDetailsModal } from "./DeviceDetailsModal";
 export { TemporaryAccessModal } from "./TemporaryAccessModal";
 export { ConfirmationModal } from "./ConfirmationModal";

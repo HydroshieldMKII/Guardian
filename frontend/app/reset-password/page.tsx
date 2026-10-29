@@ -3,23 +3,13 @@
 import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import {
-  AlertCircle,
-  CheckCircle2,
-  Eye,
-  EyeOff,
-  Loader2,
-  Lock,
-} from "lucide-react";
+import { AlertCircle, Eye, EyeOff, Loader2, Lock } from "lucide-react";
 import { AuthShell } from "@/components/auth-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ThreeDotLoader } from "@/components/three-dot-loader";
-import {
-  PASSWORD_RULE_LABELS,
-  getPasswordRequirements,
-  isStrongPassword,
-} from "@/lib/password-rules";
+import { PageLoader } from "@/components/three-dot-loader";
+import { PasswordRequirementList } from "@/components/auth-form/PasswordRequirementList";
+import { isStrongPassword } from "@/lib/password-rules";
 
 type Stage = "checking" | "invalid" | "form" | "done";
 
@@ -56,8 +46,6 @@ function ResetPasswordForm() {
 
     void verify();
   }, [token]);
-
-  const requirements = getPasswordRequirements(password);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -104,17 +92,13 @@ function ResetPasswordForm() {
   };
 
   if (stage === "checking") {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <ThreeDotLoader />
-      </div>
-    );
+    return <PageLoader />;
   }
 
   if (stage === "invalid") {
     return (
       <AuthShell
-        title="Link Expired"
+        title="Link expired"
         description="This reset link no longer works"
         footer={
           <Button asChild className="w-full">
@@ -128,7 +112,7 @@ function ResetPasswordForm() {
   if (stage === "done") {
     return (
       <AuthShell
-        title="Password Changed"
+        title="Password changed"
         description="Your other devices were signed out"
         footer={
           <Button asChild className="w-full">
@@ -141,7 +125,7 @@ function ResetPasswordForm() {
 
   return (
     <AuthShell
-      title="Choose a Password"
+      title="Choose a password"
       description="Set a new password for your account"
     >
       <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4">
@@ -183,26 +167,7 @@ function ResetPasswordForm() {
           </div>
         </div>
 
-        <div className="space-y-1.5 rounded-md border bg-muted/40 p-3">
-          {PASSWORD_RULE_LABELS.map(({ key, label }) => (
-            <div key={key} className="flex items-center gap-2 text-xs">
-              {requirements[key] ? (
-                <CheckCircle2 className="size-3 text-emerald-600" />
-              ) : (
-                <div className="size-3 rounded-full border border-muted-foreground" />
-              )}
-              <span
-                className={
-                  requirements[key]
-                    ? "text-emerald-700 dark:text-emerald-400"
-                    : "text-muted-foreground"
-                }
-              >
-                {label}
-              </span>
-            </div>
-          ))}
-        </div>
+        <PasswordRequirementList password={password} />
 
         <div className="space-y-2">
           <label
@@ -243,7 +208,7 @@ function ResetPasswordForm() {
           className="w-full"
         >
           {submitting && <Loader2 className="size-4 animate-spin" />}
-          {submitting ? "Saving..." : "Set New Password"}
+          {submitting ? "Saving..." : "Set new password"}
         </Button>
       </form>
     </AuthShell>
@@ -252,13 +217,7 @@ function ResetPasswordForm() {
 
 export default function ResetPasswordPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="flex min-h-screen items-center justify-center">
-          <ThreeDotLoader />
-        </div>
-      }
-    >
+    <Suspense fallback={<PageLoader />}>
       <ResetPasswordForm />
     </Suspense>
   );

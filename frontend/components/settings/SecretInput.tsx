@@ -10,6 +10,7 @@ interface SecretInputProps {
   value: string;
   placeholder: string;
   type: string;
+  invalid?: boolean;
   onChange: (value: string) => void;
 }
 
@@ -18,6 +19,7 @@ export function SecretInput({
   value,
   placeholder,
   type,
+  invalid = false,
   onChange,
 }: SecretInputProps) {
   const display = getSecretInputDisplay(setting, value, placeholder);
@@ -31,7 +33,8 @@ export function SecretInput({
         value={display.value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={display.placeholder}
-        className={`cursor-pointer ${canClear ? "pr-9" : ""}`}
+        aria-invalid={invalid}
+        className={`cursor-pointer ${canClear ? "pr-9" : ""} ${invalid ? "border-blocked" : ""}`}
       />
       {canClear && (
         <button

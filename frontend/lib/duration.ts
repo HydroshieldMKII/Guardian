@@ -7,6 +7,8 @@ const MINUTES_IN: Record<DurationUnit, number> = {
   weeks: 60 * 24 * 7,
 };
 
+export const MAX_TEMPORARY_ACCESS_MINUTES = 10 * 365 * MINUTES_IN.days;
+
 const MINUTE_UNITS: [string, number][] = [
   ["week", MINUTES_IN.weeks],
   ["day", MINUTES_IN.days],
@@ -86,4 +88,32 @@ export const formatClock = (milliseconds: number): string => {
   return hours > 0
     ? `${hours}:${pad(minutes % 60)}:${pad(seconds % 60)}`
     : `${minutes}:${pad(seconds % 60)}`;
+};
+
+export const formatAgo = (date: string | Date, now = Date.now()): string => {
+  const elapsed = now - new Date(date).getTime();
+  if (!Number.isFinite(elapsed)) return "Unknown";
+  if (elapsed < 60_000) return "just now";
+  if (elapsed >= 30 * MINUTES_IN.days * 60_000) {
+    return new Date(date).toLocaleDateString(undefined, {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  }
+  return `${formatMinutes(Math.floor(elapsed / 60_000), 1)} ago`;
+};
+
+export const formatAgoShort = (
+  date: string | Date,
+  now = Date.now(),
+): string => {
+  const minutes = Math.floor((now - new Date(date).getTime()) / 60_000);
+  if (!Number.isFinite(minutes)) return "Unknown";
+  if (minutes < 2) return "now";
+  if (minutes < MINUTES_IN.hours) return `${minutes}m ago`;
+  if (minutes < MINUTES_IN.days) {
+    return `${Math.floor(minutes / MINUTES_IN.hours)}h ago`;
+  }
+  return `${Math.floor(minutes / MINUTES_IN.days)}d ago`;
 };

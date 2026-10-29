@@ -1,12 +1,15 @@
+import { Logger } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { EventEmitter } from 'events';
 import type { ClientRequest, IncomingMessage, RequestOptions } from 'http';
+import { Socket } from 'net';
 import { PlexClient } from './plex-client';
 import { ConfigService } from '@/modules/config/services/config.service';
 import { SessionHistory } from '@/entities/session-history.entity';
 import { UserDevice } from '@/entities/user-device.entity';
 import { SettingValues } from '@/modules/config/settings.catalog';
+import { PlexConfigurationError } from './plex-configuration-error';
 import { PlexErrorCode } from '@/types/plex-errors';
 import { callArgs } from '@/test-matchers';
 
@@ -28,14 +31,18 @@ class FakeRequest extends EventEmitter {
   end = jest.fn();
 }
 
-class FakeResponse extends EventEmitter {
-  constructor(
-    public statusCode: number | undefined,
-    public statusMessage?: string,
-  ) {
-    super();
-  }
-}
+const { IncomingMessage: HttpIncomingMessage } =
+  jest.requireActual<typeof import('http')>('http');
+
+const fakeResponse = (
+  statusCode: number | undefined,
+  statusMessage?: string,
+): IncomingMessage => {
+  const res = new HttpIncomingMessage(new Socket());
+  res.statusCode = statusCode;
+  res.statusMessage = statusMessage;
+  return res;
+};
 
 describe('PlexClient', () => {
   let client: PlexClient;
@@ -56,10 +63,10 @@ describe('PlexClient', () => {
     await flush();
     const listener =
       callArgs<[unknown, (res: IncomingMessage) => void]>(mock)[1];
-    const res = new FakeResponse(status, statusMessage);
-    listener(res as unknown as IncomingMessage);
-    if (body) res.emit('data', body);
-    res.emit('end');
+    const res = fakeResponse(status, statusMessage);
+    listener(res);
+    if (body) res.push(body);
+    res.push(null);
   };
 
   const fail = async (error: NodeJS.ErrnoException) => {
@@ -135,6 +142,30 @@ describe('PlexClient', () => {
       settings.PLEX_TOKEN = '';
 
       await expect(client.requestMedia('/thumb')).rejects.toThrow(
+        'Missing required Plex configuration',
+      );
+    });
+    it.each([
+      ['PLEX_SERVER_IP', 'bad host name'],
+      ['PLEX_SERVER_PORT', 'abc'],
+    ] as const)(
+      'rejects an invalid %s without leaking the token',
+      async (key, value) => {
+        settings[key] = value;
+
+        const failure = await client.request('/').catch((e: Error) => e);
+
+        expect(failure).toBeInstanceOf(PlexConfigurationError);
+        expect(JSON.stringify(failure)).not.toContain('plex token');
+        expect((failure as Error).message).not.toContain('plex token');
+        expect(mockHttpRequest).not.toHaveBeenCalled();
+      },
+    );
+
+    it('refuses to dial when nothing is configured', async () => {
+      settings = {};
+
+      await expect(client.request('/')).rejects.toThrow(
         'Missing required Plex configuration',
       );
     });
@@ -269,11 +300,36 @@ describe('PlexClient', () => {
       expect(response.text()).toBe('not json');
     });
 
+    it('rejects a response that carries no status', async () => {
+      const pending = client.request('/');
+      await flush();
+      const listener =
+        callArgs<[unknown, (res: IncomingMessage) => void]>(mockHttpRequest)[1];
+      const res = fakeResponse(undefined);
+      listener(res);
+      res.push(null);
+
+      await expect(pending).rejects.toThrow('HTTP 0:  - ');
+    });
+
     it.each([400, 401, 500])('rejects a %s response', async (status) => {
       const pending = client.request('/');
       await reply(mockHttpRequest, status, 'nope', 'Bad');
 
       await expect(pending).rejects.toThrow(`HTTP ${status}`);
+    });
+
+    it('keeps the token out of the failure logs', async () => {
+      const error = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+      const pending = client.request('/');
+      await reply(mockHttpRequest, 500, '', 'Server Error');
+      await expect(pending).rejects.toThrow('HTTP 500');
+
+      const logged = JSON.stringify(error.mock.calls.map(([m]) => String(m)));
+      expect(logged).toContain('10.0.0.5');
+      expect(logged).not.toContain('plex%20token');
+      expect(logged).not.toContain('X-Plex-Token');
+      error.mockRestore();
     });
 
     it('rejects a transport failure', async () => {
@@ -311,14 +367,13 @@ describe('PlexClient', () => {
     it('collects the body into a buffer', async () => {
       const pending = media();
       await flush();
-      const listener = mockHttpRequest.mock.calls[0][1] as (
-        res: IncomingMessage,
-      ) => void;
-      const res = new FakeResponse(200);
-      listener(res as unknown as IncomingMessage);
-      res.emit('data', Buffer.from([1, 2]));
-      res.emit('data', Buffer.from([3]));
-      res.emit('end');
+      const listener =
+        callArgs<[unknown, (res: IncomingMessage) => void]>(mockHttpRequest)[1];
+      const res = fakeResponse(200);
+      listener(res);
+      res.push(Buffer.from([1, 2]));
+      res.push(Buffer.from([3]));
+      res.push(null);
 
       await expect(pending).resolves.toEqual(Buffer.from([1, 2, 3]));
     });
@@ -443,6 +498,14 @@ describe('PlexClient', () => {
       expect(path).toContain('/status/sessions/terminate');
       expect(path).toContain('sessionId=dev-1');
       expect(path).toContain('reason=Too+many+streams');
+    });
+
+    it('truncates a very long reason so the request line stays small', async () => {
+      const pending = client.terminateSession('dev-1', 'x'.repeat(20000));
+      await reply(mockHttpRequest, 200, '{}');
+      await pending;
+
+      expect((optionsOf(mockHttpRequest).path ?? '').length).toBeLessThan(1000);
     });
 
     it('uses a default reason when none is given', async () => {

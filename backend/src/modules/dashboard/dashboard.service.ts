@@ -1,7 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ActiveSessionService } from '@/modules/sessions/services/active-session.service';
-import { DeviceTrackingService } from '@/modules/devices/services/device-tracking.service';
+import { DevicesService } from '@/modules/devices/services/devices.service';
+import { isPlexampDevice } from '@/common/utils/plexamp.utils';
 import { ConfigService } from '@/modules/config/services/config.service';
+import { ConnectionTestService } from '@/modules/config/services/connection-test.service';
 import { UsersService } from '@/modules/users/services/users.service';
 import { PlexService } from '@/modules/plex/services/plex.service';
 import { asHttpError } from '@/common/utils/error-types';
@@ -39,9 +40,9 @@ export class DashboardService {
   private readonly logger = new Logger(DashboardService.name);
 
   constructor(
-    private readonly activeSessionService: ActiveSessionService,
-    private readonly deviceTrackingService: DeviceTrackingService,
+    private readonly devicesService: DevicesService,
     private readonly configService: ConfigService,
+    private readonly connectionTest: ConnectionTestService,
     private readonly usersService: UsersService,
     private readonly plexService: PlexService,
   ) {}
@@ -50,7 +51,7 @@ export class DashboardService {
     try {
       // Check Plex status and fetch settings in parallel
       const [plexStatus, settings] = await Promise.all([
-        this.configService.getPlexConfigurationStatus(),
+        this.connectionTest.getPlexConfigurationStatus(),
         this.configService.getPublicSettings(),
       ]);
 
@@ -81,24 +82,15 @@ export class DashboardService {
         users,
       ] = await Promise.all([
         this.plexService.getActiveSessionsWithMediaUrls(),
-        this.deviceTrackingService.getAllDevices(),
-        this.deviceTrackingService.getPendingDevices(),
-        this.deviceTrackingService.getApprovedDevices(),
-        this.deviceTrackingService.getProcessedDevices(),
+        this.devicesService.getAllDevices(),
+        this.devicesService.getPendingDevices(),
+        this.devicesService.getApprovedDevices(),
+        this.devicesService.getProcessedDevices(),
         this.usersService.getAllUsers(true),
       ]);
 
-      // Helper function to identify PlexAmp devices
-      const isPlexAmpDevice = (device: UserDevice) => {
-        return (
-          device.deviceProduct?.toLowerCase().includes('plexamp') ||
-          device.deviceName?.toLowerCase().includes('plexamp')
-        );
-      };
-
-      // Filter out PlexAmp devices from pending count
       const manageablePendingDevices = pendingDevices.filter(
-        (device) => !isPlexAmpDevice(device),
+        (device) => !isPlexampDevice(device),
       );
 
       // Calculate stats

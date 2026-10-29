@@ -1,45 +1,56 @@
-import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
-import { spawn } from 'child_process';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@/modules/config/services/config.service';
 import { errorMessage } from '@/common/utils/error-types';
+import { StopCode } from '@/common/utils/stop-codes';
+import {
+  AppriseNotificationData,
+  AppriseResult,
+  runApprise,
+} from '@/modules/config/services/apprise-cli';
+import {
+  blockedStreamMessage,
+  deviceNoteMessage,
+  locationChangeMessage,
+  newDeviceMessage,
+  testMessage,
+} from '@/modules/config/services/apprise-messages';
 
 export interface AppriseConfig {
   enabled: boolean;
   urls: string[];
 }
 
-export interface AppriseNotificationData {
-  title: string;
-  body: string;
-  type?: 'info' | 'success' | 'warning' | 'error';
-}
+type AppriseEventSetting =
+  | 'APPRISE_NOTIFY_ON_NEW_DEVICE'
+  | 'APPRISE_NOTIFY_ON_BLOCK'
+  | 'APPRISE_NOTIFY_ON_LOCATION_CHANGE'
+  | 'APPRISE_NOTIFY_ON_DEVICE_NOTE';
+
+const APPRISE_URL_PATTERN = /^[a-zA-Z][a-zA-Z0-9]*:\/\/.+$/;
+
+const isValidAppriseUrl = (url: string): boolean =>
+  url.length >= 5 && APPRISE_URL_PATTERN.test(url);
 
 @Injectable()
 export class AppriseService {
   private readonly logger = new Logger(AppriseService.name);
 
-  constructor(
-    @Inject(forwardRef(() => ConfigService))
-    private configService: ConfigService,
-  ) {}
+  constructor(private configService: ConfigService) {}
 
   async sendNotification(
     appriseData: AppriseNotificationData,
-  ): Promise<{ success: boolean; message: string }> {
+  ): Promise<AppriseResult> {
     const appriseConfiguration = await this.getAppriseConfig();
 
-    // Check if we got a valid configuration or an error message
     if ('success' in appriseConfiguration) {
-      return {
-        success: false,
-        message: appriseConfiguration.message,
-      };
+      return { success: false, message: appriseConfiguration.message };
     }
 
     try {
-      const result = await this.executeApprise(
+      const result = await runApprise(
         appriseConfiguration.urls,
         appriseData,
+        this.logger,
       );
 
       if (result.success) {
@@ -60,172 +71,78 @@ export class AppriseService {
     }
   }
 
-  async sendNewDeviceNotification(
+  sendNewDeviceNotification(
     username: string,
     deviceName: string,
     ipAddress: string,
-  ): Promise<{ success: boolean; message: string }> {
-    //Check if notifications for new devices is enabled
-    const notifyOnNewDevices = await this.configService.getSetting(
+  ): Promise<AppriseResult> {
+    return this.sendIfEnabled(
       'APPRISE_NOTIFY_ON_NEW_DEVICE',
+      'new devices',
+      newDeviceMessage(username, deviceName, ipAddress),
     );
-    if (notifyOnNewDevices !== true) {
-      this.logger.log('Apprise notification for new devices is disabled');
-      return {
-        success: false,
-        message: 'Apprise notification for new devices is disabled',
-      };
-    }
-
-    const notificationData: AppriseNotificationData = {
-      title: 'New Device Detected - Guardian',
-      body:
-        `A new device has been detected:\n\n` +
-        `User: ${username}\n` +
-        `Device: ${deviceName}\n` +
-        `IP Address: ${ipAddress}\n` +
-        `Status: Pending Approval\n\n` +
-        `Review to approve/reject this device in Guardian.`,
-      type: 'warning',
-    };
-
-    return this.sendNotification(notificationData);
   }
 
-  async sendBlockedNotification(
+  sendBlockedNotification(
     username: string,
     deviceName: string,
     ipAddress?: string,
-    stopCode?: string,
-  ): Promise<{ success: boolean; message: string }> {
-    //Check if notifications for blocked streams is enabled
-    const notifyOnBlockedStreams = await this.configService.getSetting(
+    stopCode?: StopCode,
+  ): Promise<AppriseResult> {
+    return this.sendIfEnabled(
       'APPRISE_NOTIFY_ON_BLOCK',
+      'blocked streams',
+      blockedStreamMessage(username, deviceName, ipAddress, stopCode),
     );
-    if (notifyOnBlockedStreams !== true) {
-      this.logger.log('Apprise notification for blocked streams is disabled');
-      return {
-        success: false,
-        message: 'Apprise notification for blocked streams is disabled',
-      };
-    }
-
-    const notificationData: AppriseNotificationData = {
-      title: 'Stream Blocked - Guardian',
-      body:
-        `A stream has been blocked on your server. See details below.\n\n` +
-        `User: ${username}\n` +
-        `Device: ${deviceName}\n` +
-        `IP Address: ${ipAddress || 'Unknown IP Address'}\n` +
-        `Stop Code: ${stopCode || 'Unknown Stop Code'}\n\n`,
-    };
-
-    return this.sendNotification(notificationData);
   }
 
-  async sendLocationChangeNotification(
+  sendLocationChangeNotification(
     username: string,
     deviceName: string,
     oldIpAddress: string,
     newIpAddress: string,
-  ): Promise<{ success: boolean; message: string }> {
-    //Check if notifications for location changes is enabled
-    const notifyOnLocationChange = await this.configService.getSetting(
+  ): Promise<AppriseResult> {
+    return this.sendIfEnabled(
       'APPRISE_NOTIFY_ON_LOCATION_CHANGE',
+      'location changes',
+      locationChangeMessage(username, deviceName, oldIpAddress, newIpAddress),
     );
-    if (notifyOnLocationChange !== true) {
-      this.logger.log('Apprise notification for location changes is disabled');
-      return {
-        success: false,
-        message: 'Apprise notification for location changes is disabled',
-      };
-    }
-
-    const notificationData: AppriseNotificationData = {
-      title: 'Device Location Changed - Guardian',
-      body:
-        `A device location has changed:\n\n` +
-        `User: ${username}\n` +
-        `Device: ${deviceName}\n` +
-        `Old IP Address: ${oldIpAddress}\n` +
-        `New IP Address: ${newIpAddress}\n\n` +
-        `This could indicate the device is being used from a different location.`,
-      type: 'info',
-    };
-
-    return this.sendNotification(notificationData);
   }
 
-  async sendDeviceNoteNotification(
+  sendDeviceNoteNotification(
     username: string,
     deviceName: string,
     note: string,
-  ): Promise<{ success: boolean; message: string }> {
-    //Check if notifications for device notes is enabled
-    const notifyOnDeviceNote = await this.configService.getSetting(
+  ): Promise<AppriseResult> {
+    return this.sendIfEnabled(
       'APPRISE_NOTIFY_ON_DEVICE_NOTE',
+      'device notes',
+      deviceNoteMessage(username, deviceName, note),
     );
-    if (notifyOnDeviceNote !== true) {
-      this.logger.log('Apprise notification for device notes is disabled');
-      return {
-        success: false,
-        message: 'Apprise notification for device notes is disabled',
-      };
-    }
-
-    const notificationData: AppriseNotificationData = {
-      title: 'Device Note Received - Guardian',
-      body:
-        `A user has left a note on their device:\n\n` +
-        `User: ${username}\n` +
-        `Device: ${deviceName}\n` +
-        `Note: ${note}\n\n` +
-        `Review this device in Guardian to take action.`,
-      type: 'info',
-    };
-
-    return this.sendNotification(notificationData);
   }
 
-  async getAppriseConfig(): Promise<
-    AppriseConfig | { success: boolean; message: string }
-  > {
+  async getAppriseConfig(): Promise<AppriseConfig | AppriseResult> {
     const [appriseEnabled, appriseUrls] = await Promise.all([
       this.configService.getSetting('APPRISE_ENABLED'),
       this.configService.getSetting('APPRISE_URLS'),
     ]);
 
-    // Handle case where Apprise is disabled
     if (appriseEnabled !== true) {
       this.logger.warn('Apprise is disabled');
       return { success: false, message: 'Apprise is disabled' };
     }
 
-    // Check if URLs are provided
     if (!appriseUrls || appriseUrls.trim().length === 0) {
       this.logger.warn('No Apprise URLs configured');
       return { success: false, message: 'No Apprise URLs configured' };
     }
 
-    // Parse URLs
     const urlList = appriseUrls
       .split(/[,;\n]+/)
       .map((url) => url.trim())
       .filter((url) => url.length > 0);
+    const invalidUrls = urlList.filter((url) => !isValidAppriseUrl(url));
 
-    // Validate each URL format
-    const validUrls: string[] = [];
-    const invalidUrls: string[] = [];
-
-    urlList.forEach((url) => {
-      if (this.isValidAppriseUrl(url)) {
-        validUrls.push(url);
-      } else {
-        invalidUrls.push(url);
-      }
-    });
-
-    // Report invalid URLs
     if (invalidUrls.length > 0) {
       this.logger.warn(`Invalid Apprise URLs found: ${invalidUrls.join(', ')}`);
       return {
@@ -234,176 +151,42 @@ export class AppriseService {
       };
     }
 
-    if (validUrls.length === 0) {
+    if (urlList.length === 0) {
       this.logger.warn('No valid Apprise URLs found');
       return { success: false, message: 'No valid Apprise URLs found' };
     }
 
-    const config: AppriseConfig = {
-      enabled: appriseEnabled,
-      urls: validUrls,
-    };
-
-    return config;
+    return { enabled: appriseEnabled, urls: urlList };
   }
 
-  async testAppriseConnection(): Promise<{
-    success: boolean;
-    message: string;
-  }> {
-    // Get current Apprise configuration
+  async testAppriseConnection(): Promise<AppriseResult> {
     const appriseConfig = await this.getAppriseConfig();
 
-    // Check if we got a valid configuration or an error message
     if ('success' in appriseConfig) {
-      return {
-        success: false,
-        message: appriseConfig.message,
-      };
+      return { success: false, message: appriseConfig.message };
     }
 
-    const testData: AppriseNotificationData = {
-      title: 'Guardian Apprise Test',
-      body:
-        `This is a test notification from Guardian.\n\n` +
-        `Apprise integration is working correctly!\n`,
-      type: 'info',
-    };
+    const result = await this.sendNotification(testMessage);
 
-    try {
-      const result = await this.sendNotification(testData);
-
-      if (result.success) {
-        return {
+    return result.success
+      ? {
           success: true,
           message: `Test notification sent successfully to ${appriseConfig.urls.length} service(s)`,
-        };
-      } else {
-        return {
-          success: false,
-          message: result.message,
-        };
-      }
-    } catch (error) {
-      return {
-        success: false,
-        message: `Test notification error: ${errorMessage(error)}`,
-      };
-    }
+        }
+      : { success: false, message: result.message };
   }
 
-  private async executeApprise(
-    urls: string[],
+  private async sendIfEnabled(
+    setting: AppriseEventSetting,
+    eventLabel: string,
     data: AppriseNotificationData,
-  ): Promise<{ success: boolean; message: string }> {
-    return new Promise((resolve) => {
-      const args = [
-        '-vv', // Verbose output for debugging
-        '--title',
-        data.title,
-        '--body',
-        data.body,
-      ];
-
-      // Add all URLs
-      urls.forEach((url) => {
-        args.push(url);
-      });
-
-      this.logger.debug(`Executing apprise with args: ${args.join(' ')}`);
-
-      const appriseProcess = spawn('apprise', args, {
-        stdio: ['pipe', 'pipe', 'pipe'],
-      });
-
-      let stdout = '';
-      let stderr = '';
-
-      appriseProcess.stdout?.on('data', (chunk: Buffer | string) => {
-        stdout += chunk.toString();
-      });
-
-      appriseProcess.stderr?.on('data', (chunk: Buffer | string) => {
-        stderr += chunk.toString();
-      });
-
-      appriseProcess.on('close', (code) => {
-        this.logger.debug(`Apprise process exited with code ${code}`);
-        this.logger.debug(`Apprise stdout: ${stdout}`);
-
-        if (stderr) {
-          this.logger.debug(`Apprise stderr: ${stderr}`);
-        }
-
-        if (code === 0) {
-          resolve({
-            success: true,
-            message: 'Notification sent successfully',
-          });
-        } else {
-          const errorOutput = stderr || stdout;
-          let userFriendlyMessage = '';
-
-          if (errorOutput.includes('Unsupported URL')) {
-            const urlMatch = errorOutput.match(/Unsupported URL: (\S+)/);
-            const invalidUrl = urlMatch ? urlMatch[1] : 'unknown';
-            userFriendlyMessage = `Invalid service URL: "${invalidUrl}". Please check your Apprise service URLs and ensure they follow the correct format.`;
-          } else if (
-            errorOutput.includes('You must specify at least one server URL')
-          ) {
-            userFriendlyMessage =
-              'No valid service URLs found. Please configure at least one valid Apprise service URL.';
-          } else if (
-            errorOutput.includes('ERROR') &&
-            errorOutput.includes('HTTP Error')
-          ) {
-            userFriendlyMessage =
-              'Failed to connect to notification service. Please check your service URLs and network connection.';
-          } else if (
-            errorOutput.includes('Permission denied') ||
-            errorOutput.includes('Forbidden')
-          ) {
-            userFriendlyMessage =
-              'Permission denied when sending notification. Please check your service credentials and permissions.';
-          } else {
-            // Fallback to original error
-            userFriendlyMessage = `Notification failed: ${errorOutput.replace(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3} - ERROR - /, '').trim()}`;
-          }
-
-          resolve({
-            success: false,
-            message: userFriendlyMessage,
-          });
-        }
-      });
-
-      appriseProcess.on('error', (error) => {
-        this.logger.error('Apprise process error:', error);
-        resolve({
-          success: false,
-          message: `Failed to spawn apprise process: ${errorMessage(error)}`,
-        });
-      });
-
-      // Set a timeout for the process
-      setTimeout(() => {
-        if (!appriseProcess.killed) {
-          appriseProcess.kill();
-          resolve({
-            success: false,
-            message: 'Apprise process timed out after 30 seconds',
-          });
-        }
-      }, 20000);
-    });
-  }
-
-  private isValidAppriseUrl(url: string): boolean {
-    if (!url || url.length < 5) {
-      return false;
+  ): Promise<AppriseResult> {
+    if ((await this.configService.getSetting(setting)) !== true) {
+      const message = `Apprise notification for ${eventLabel} is disabled`;
+      this.logger.log(message);
+      return { success: false, message };
     }
 
-    const appriseUrlPattern = /^[a-zA-Z][a-zA-Z0-9]*:\/\/.+$/;
-    return appriseUrlPattern.test(url);
+    return this.sendNotification(data);
   }
 }

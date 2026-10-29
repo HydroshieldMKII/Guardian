@@ -70,10 +70,10 @@ describe("ActionMenu", () => {
 
     expect(
       screen.getByRole("menuitem", { name: "Approve" }).className,
-    ).toContain("text-emerald-700");
+    ).toContain("text-allowed");
     expect(
       screen.getByRole("menuitem", { name: "Delete" }).className,
-    ).toContain("text-rose-600");
+    ).toContain("text-blocked");
   });
 
   it("marks an unavailable action rather than hiding it", async () => {

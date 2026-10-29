@@ -7,44 +7,73 @@ import {
   useLiveEvent,
 } from "./useLiveDashboard";
 
-class FakeEventSource {
+type EventSourceListener =
+  | EventListenerOrEventListenerObject
+  | ((this: EventSource, event: MessageEvent) => unknown);
+
+class FakeEventSource implements EventSource {
   static instances: FakeEventSource[] = [];
   static shouldThrow = false;
+  static readonly CONNECTING = 0;
+  static readonly OPEN = 1;
+  static readonly CLOSED = 2;
+  readonly CONNECTING = 0;
+  readonly OPEN = 1;
+  readonly CLOSED = 2;
+  readonly readyState = 0;
+  readonly url: string;
+  readonly withCredentials: boolean;
 
-  onopen: (() => void) | null = null;
-  onerror: (() => void) | null = null;
+  onopen: EventSource["onopen"] = null;
+  onerror: EventSource["onerror"] = null;
+  onmessage: EventSource["onmessage"] = null;
   close = jest.fn();
-  private listeners = new Map<string, (event: MessageEvent<string>) => void>();
+  private listeners = new Map<string, (event: MessageEvent) => void>();
 
   constructor(
-    public url: string,
+    url: string | URL,
     public init?: EventSourceInit,
   ) {
     if (FakeEventSource.shouldThrow) {
       throw new Error("blocked");
     }
+    this.url = String(url);
+    this.withCredentials = Boolean(init?.withCredentials);
     FakeEventSource.instances.push(this);
   }
 
-  addEventListener(
-    event: string,
-    handler: (event: MessageEvent<string>) => void,
-  ) {
-    this.listeners.set(event, handler);
+  addEventListener(type: string, listener: EventSourceListener) {
+    this.listeners.set(type, (event) =>
+      typeof listener === "function"
+        ? listener.call(this, event)
+        : listener.handleEvent(event),
+    );
+  }
+
+  removeEventListener(type: string) {
+    this.listeners.delete(type);
+  }
+
+  dispatchEvent() {
+    return true;
   }
 
   emit(event: string, data: string) {
     act(() => {
-      this.listeners.get(event)?.({ data } as MessageEvent<string>);
+      this.listeners.get(event)?.(new MessageEvent(event, { data }));
     });
   }
 
   open() {
-    act(() => this.onopen?.());
+    act(() => {
+      this.onopen?.call(this, new Event("open"));
+    });
   }
 
   fail() {
-    act(() => this.onerror?.());
+    act(() => {
+      this.onerror?.call(this, new Event("error"));
+    });
   }
 }
 
@@ -54,7 +83,7 @@ const latest = () =>
 beforeEach(() => {
   FakeEventSource.instances = [];
   FakeEventSource.shouldThrow = false;
-  global.EventSource = FakeEventSource as unknown as typeof EventSource;
+  global.EventSource = FakeEventSource;
 });
 
 describe("connection", () => {

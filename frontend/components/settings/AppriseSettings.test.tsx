@@ -158,7 +158,7 @@ describe("AppriseSettings", () => {
       renderPanel();
 
       expect(
-        screen.getByRole("button", { name: /Send Test Notification/ }),
+        screen.getByRole("button", { name: /Send test notification/ }),
       ).toBeDisabled();
       expect(
         screen.getByText("Turn Apprise on to test the connection."),
@@ -179,7 +179,7 @@ describe("AppriseSettings", () => {
       const { user } = renderPanel(enabled);
 
       await user.click(
-        screen.getByRole("button", { name: /Send Test Notification/ }),
+        screen.getByRole("button", { name: /Send test notification/ }),
       );
 
       expect(await screen.findByText("Sent")).toBeInTheDocument();
@@ -193,7 +193,7 @@ describe("AppriseSettings", () => {
       const { user } = renderPanel(enabled);
 
       await user.click(
-        screen.getByRole("button", { name: /Send Test Notification/ }),
+        screen.getByRole("button", { name: /Send test notification/ }),
       );
 
       expect(await screen.findByText("No URLs configured")).toBeInTheDocument();
@@ -204,7 +204,7 @@ describe("AppriseSettings", () => {
       const { user } = renderPanel(enabled);
 
       await user.click(
-        screen.getByRole("button", { name: /Send Test Notification/ }),
+        screen.getByRole("button", { name: /Send test notification/ }),
       );
 
       expect(
@@ -217,7 +217,7 @@ describe("AppriseSettings", () => {
       const { user } = renderPanel(enabled);
 
       await user.click(
-        screen.getByRole("button", { name: /Send Test Notification/ }),
+        screen.getByRole("button", { name: /Send test notification/ }),
       );
 
       expect(await screen.findByText("offline")).toBeInTheDocument();
@@ -228,7 +228,7 @@ describe("AppriseSettings", () => {
       const { user } = renderPanel(enabled);
 
       await user.click(
-        screen.getByRole("button", { name: /Send Test Notification/ }),
+        screen.getByRole("button", { name: /Send test notification/ }),
       );
 
       expect(
@@ -240,7 +240,7 @@ describe("AppriseSettings", () => {
       renderPanel({ ...enabled, hasUnsavedChanges: true });
 
       expect(
-        screen.getByRole("button", { name: /Send Test Notification/ }),
+        screen.getByRole("button", { name: /Send test notification/ }),
       ).toBeDisabled();
     });
 
@@ -249,7 +249,7 @@ describe("AppriseSettings", () => {
       const { user, container } = renderPanel(enabled);
 
       await user.click(
-        screen.getByRole("button", { name: /Send Test Notification/ }),
+        screen.getByRole("button", { name: /Send test notification/ }),
       );
 
       expect(container.querySelector(".animate-spin")).not.toBeNull();
@@ -259,7 +259,7 @@ describe("AppriseSettings", () => {
       const { user, rerender } = renderPanel(enabled);
 
       await user.click(
-        screen.getByRole("button", { name: /Send Test Notification/ }),
+        screen.getByRole("button", { name: /Send test notification/ }),
       );
       expect(await screen.findByText("Sent")).toBeInTheDocument();
 

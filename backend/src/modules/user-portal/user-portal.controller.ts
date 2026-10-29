@@ -12,32 +12,19 @@ import {
 import type { Request } from 'express';
 import { UserPortalService } from '@/modules/user-portal/services/user-portal.service';
 import { AuthGuard } from '@/modules/auth/guards/auth.guard';
+import { DeviceNoteDto } from '@/modules/user-portal/dto/device-note.dto';
 
-/**
- * User Portal Controller
- * Handles endpoints for Plex users (non-admin) logged in via OAuth
- * All endpoints here are accessible by both admin and plex_user sessions
- * but the data returned is scoped to the logged-in user's Plex ID
- */
 @Controller('user-portal')
 @UseGuards(AuthGuard)
 export class UserPortalController {
   constructor(private readonly userPortalService: UserPortalService) {}
 
-  /**
-   * Get current user's devices
-   */
   @Get('devices')
   async getMyDevices(@Req() req: Request) {
     const plexUserId = this.extractPlexUserId(req);
     return this.userPortalService.getUserDevices(plexUserId);
   }
 
-  /**
-   * Get current user's all rules (user preferences + time rules)
-   * User-level rules are returned at the top level
-   * Device-specific rules are included in the devices endpoint
-   */
   @Get('rules')
   async getMyRules(@Req() req: Request) {
     const plexUserId = this.extractPlexUserId(req);
@@ -50,14 +37,11 @@ export class UserPortalController {
     return { enabled: true, rules };
   }
 
-  /**
-   * Request approval for a device
-   */
   @Post('devices/:id/request')
   async requestDeviceApproval(
     @Req() req: Request,
     @Param('id', ParseIntPipe) deviceId: number,
-    @Body() body: { description?: string },
+    @Body() body: DeviceNoteDto,
   ) {
     const plexUserId = this.extractPlexUserId(req);
 
@@ -70,18 +54,11 @@ export class UserPortalController {
     return { success: true, message: 'Approval request submitted' };
   }
 
-  /**
-   * Get portal settings
-   */
   @Get('settings')
   async getPortalSettings() {
     return this.userPortalService.getPortalSettings();
   }
 
-  /**
-   * Extract Plex user ID from the request
-   * Works for both admin sessions (with linked Plex) and plex_user sessions
-   */
   private extractPlexUserId(req: Request): string {
     const user = req.user;
 
@@ -89,12 +66,10 @@ export class UserPortalController {
       throw new ForbiddenException('Authentication required');
     }
 
-    // For plex_user sessions, use the plexUserId directly
     if (user.userType === 'plex_user') {
       return user.plexUserId;
     }
 
-    // For admin sessions, they must have a linked Plex account
     if (user.userType === 'admin') {
       if (user.plexUserId) {
         return user.plexUserId;

@@ -1,17 +1,16 @@
-import { IsEmail, IsString, MinLength, ValidateIf } from 'class-validator';
+import { IsString } from 'class-validator';
 import { StrongPassword } from '@/modules/auth/dto/strong-password.decorator';
+import {
+  AccountUsername,
+  OptionalAccountEmail,
+} from '@/modules/auth/dto/account-fields.decorator';
 
 export class CreateAdminDto {
-  @IsString()
-  @MinLength(3)
+  @AccountUsername()
   username: string;
 
-  @ValidateIf(
-    (o: CreateAdminDto) =>
-      o.email !== undefined && o.email !== null && o.email !== '',
-  )
-  @IsEmail()
-  email?: string;
+  @OptionalAccountEmail('email')
+  email?: string | null;
 
   @StrongPassword()
   password: string;

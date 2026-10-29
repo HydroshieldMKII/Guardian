@@ -80,7 +80,7 @@ const restrictedModal = async () => {
 describe("IPAccessModal", () => {
   it("renders nothing while closed", () => {
     renderModal({ isOpen: false });
-    expect(screen.queryByText("IP & Network Access Policies")).toBeNull();
+    expect(screen.queryByText("Network access Policies")).toBeNull();
   });
 
   it("names the user it is configuring", () => {
@@ -139,7 +139,7 @@ describe("IPAccessModal", () => {
       const { user, onSave } = renderModal();
 
       await user.click(screen.getByText(label));
-      await user.click(screen.getByRole("button", { name: "Save Policies" }));
+      await user.click(screen.getByRole("button", { name: "Save policies" }));
 
       expect(onSave).toHaveBeenCalledWith(
         "u-1",
@@ -275,7 +275,7 @@ describe("IPAccessModal", () => {
     it("is offered only when the user has devices", async () => {
       renderModal({ preference: preference({ ipAccessPolicy: "restricted" }) });
       expect(
-        screen.queryByRole("button", { name: /Add Current Device Addresses/ }),
+        screen.queryByRole("button", { name: /Add current device addresses/ }),
       ).toBeNull();
     });
 
@@ -294,7 +294,7 @@ describe("IPAccessModal", () => {
       });
 
       await user.click(
-        screen.getByRole("button", { name: /Add Current Device Addresses/ }),
+        screen.getByRole("button", { name: /Add current device addresses/ }),
       );
 
       expect(screen.getByText("2 addresses allowed")).toBeInTheDocument();
@@ -310,7 +310,7 @@ describe("IPAccessModal", () => {
       });
 
       await user.click(
-        screen.getByRole("button", { name: /Add Current Device Addresses/ }),
+        screen.getByRole("button", { name: /Add current device addresses/ }),
       );
 
       expect(screen.getByText("1 address allowed")).toBeInTheDocument();
@@ -328,11 +328,10 @@ describe("IPAccessModal", () => {
         ],
       });
 
-      expect(
-        screen.getByText(/192\.168\.1\.10 \(local network\)/),
-      ).toBeInTheDocument();
-      expect(screen.getByText(/2001:db8::1 \(internet\)/)).toBeInTheDocument();
-      expect(screen.getByText(/fd00::1 \(local network\)/)).toBeInTheDocument();
+      const chip = (name: string) => screen.getByText(name).parentElement;
+      expect(chip("TV")).toHaveTextContent("TV192.168.1.10local network");
+      expect(chip("Phone")).toHaveTextContent("Phone2001:db8::1internet");
+      expect(chip("Laptop")).toHaveTextContent("Laptopfd00::1local network");
       expect(screen.queryByText("Ghost")).toBeNull();
     });
 
@@ -376,7 +375,7 @@ describe("IPAccessModal", () => {
       });
 
       await user.click(screen.getByText("Any address"));
-      await user.click(screen.getByRole("button", { name: "Save Policies" }));
+      await user.click(screen.getByRole("button", { name: "Save policies" }));
 
       expect(onSave).toHaveBeenCalledWith("u-1", {
         networkPolicy: "both",
@@ -394,7 +393,7 @@ describe("IPAccessModal", () => {
         }),
       });
 
-      await user.click(screen.getByRole("button", { name: "Save Policies" }));
+      await user.click(screen.getByRole("button", { name: "Save policies" }));
 
       expect(onSave).toHaveBeenCalledWith("u-1", {
         networkPolicy: "wan",
@@ -406,7 +405,7 @@ describe("IPAccessModal", () => {
     it("cannot be submitted while restricted with an empty list", async () => {
       const { onSave } = await restrictedModal();
       expect(
-        screen.getByRole("button", { name: "Save Policies" }),
+        screen.getByRole("button", { name: "Save policies" }),
       ).toBeDisabled();
       expect(onSave).not.toHaveBeenCalled();
     });
@@ -423,7 +422,7 @@ describe("IPAccessModal", () => {
     it("closes once the policies are saved", async () => {
       const { user, onSave, onClose } = renderModal();
 
-      await user.click(screen.getByRole("button", { name: "Save Policies" }));
+      await user.click(screen.getByRole("button", { name: "Save policies" }));
 
       expect(onSave).toHaveBeenCalled();
       expect(onClose).toHaveBeenCalled();

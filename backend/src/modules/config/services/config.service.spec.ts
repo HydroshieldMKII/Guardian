@@ -1,164 +1,48 @@
-import { Test } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
 import { AppSettings } from '@/entities/app-settings.entity';
-import { Session } from '@/entities/session.entity';
-import { PlexErrorCode } from '@/types/plex-errors';
 import { ConfigService } from '@/modules/config/services/config.service';
-import { EmailService } from '@/modules/config/services/email.service';
-import { EmailTemplateService } from '@/modules/config/services/email-template.service';
-import { PlexConnectionService } from '@/modules/config/services/plex-connection.service';
-import { TimezoneService } from '@/modules/config/services/timezone.service';
-import { DatabaseService } from '@/modules/config/services/database.service';
-import { VersionService } from '@/modules/config/services/version.service';
-import { AppriseService } from '@/modules/config/services/apprise.service';
-import { callArgs } from '@/test-matchers';
-
-const flush = () => new Promise((resolve) => setImmediate(resolve));
+import {
+  ConfigTestbed,
+  createConfigTestbed,
+} from '@/modules/config/services/config-testbed.fixture';
 
 describe('ConfigService', () => {
+  let testbed: ConfigTestbed;
   let service: ConfigService;
   let store: Map<string, AppSettings>;
-  let settingsRepo: Record<string, jest.Mock>;
-  let sessionRepo: { delete: jest.Mock };
-  let emailService: {
-    testSMTPConnection: jest.Mock;
-    loadSmtpSettings: jest.Mock;
-    toSmtpConfig: jest.Mock;
-  };
-  let plexConnectionService: { testConnection: jest.Mock };
-  let timezoneService: Record<string, jest.Mock>;
-  let databaseService: Record<string, jest.Mock>;
-  let versionService: Record<string, jest.Mock>;
-  let appriseService: { testAppriseConnection: jest.Mock };
+  let row: ConfigTestbed['row'];
+  let settingsRepo: ConfigTestbed['settingsRepo'];
+  let sessionRepo: ConfigTestbed['sessionRepo'];
+  let timezoneService: ConfigTestbed['timezoneService'];
+  let versionService: ConfigTestbed['versionService'];
 
-  const row = (
-    key: string,
-    value: string,
-    type = 'string',
-    isPrivate = false,
-  ): AppSettings =>
-    Object.assign(new AppSettings(), {
-      id: store.size + 1,
-      key,
-      value,
-      type,
-      private: isPrivate,
-      updatedAt: new Date('2026-01-01T00:00:00Z'),
-    });
-
-  const build = async () => {
-    const module = await Test.createTestingModule({
-      providers: [
-        ConfigService,
-        { provide: getRepositoryToken(AppSettings), useValue: settingsRepo },
-        { provide: getRepositoryToken(Session), useValue: sessionRepo },
-        { provide: EmailService, useValue: emailService },
-        { provide: EmailTemplateService, useValue: {} },
-        { provide: PlexConnectionService, useValue: plexConnectionService },
-        { provide: TimezoneService, useValue: timezoneService },
-        { provide: DatabaseService, useValue: databaseService },
-        { provide: VersionService, useValue: versionService },
-        { provide: AppriseService, useValue: appriseService },
-      ],
-    }).compile();
-
-    const created = module.get(ConfigService);
-    await flush();
-    return created;
-  };
+  const compile = async () => (await testbed.compile()).get(ConfigService);
+  const build = async () => (await testbed.build()).get(ConfigService);
 
   beforeEach(async () => {
-    store = new Map();
-
-    settingsRepo = {
-      find: jest.fn(() => Promise.resolve([...store.values()])),
-      findOne: jest.fn(({ where }: { where: { key: string } }) =>
-        Promise.resolve(store.get(where.key) ?? null),
-      ),
-      save: jest.fn((entity: AppSettings) => {
-        const saved = Object.assign(
-          store.get(entity.key) ?? new AppSettings(),
-          { id: store.size + 1, private: false },
-          entity,
-        );
-        store.set(saved.key, saved);
-        return Promise.resolve(saved);
-      }),
-    };
-
-    sessionRepo = { delete: jest.fn().mockResolvedValue({ affected: 2 }) };
-
-    emailService = {
-      testSMTPConnection: jest
-        .fn()
-        .mockResolvedValue({ success: true, message: 'sent' }),
-      loadSmtpSettings: jest.fn().mockResolvedValue({
-        SMTP_ENABLED: false,
-        SMTP_HOST: 'smtp.example.com',
-        SMTP_PORT: 465,
-        SMTP_USER: 'guardian',
-        SMTP_PASSWORD: 'secret',
-        SMTP_FROM_EMAIL: 'from@example.com',
-        SMTP_FROM_NAME: 'Guardian',
-        SMTP_USE_TLS: true,
-        SMTP_TO_EMAILS: '',
-      }),
-      toSmtpConfig: jest.fn().mockReturnValue({
-        host: 'smtp.example.com',
-        port: 465,
-        user: 'guardian',
-        password: 'secret',
-        fromEmail: 'from@example.com',
-        fromName: 'Guardian',
-        useTLS: true,
-        toEmails: [],
-      }),
-    };
-
-    plexConnectionService = {
-      testConnection: jest
-        .fn()
-        .mockResolvedValue({ success: true, message: 'Connected' }),
-    };
-
-    timezoneService = {
-      getCurrentTimeInTimezone: jest
-        .fn()
-        .mockReturnValue(new Date('2026-08-21T12:00:00Z')),
-      formatTimestamp: jest.fn().mockReturnValue('2026-08-21 12:00:00'),
-    };
-
-    databaseService = {
-      exportDatabase: jest.fn().mockResolvedValue('{"settings":[]}'),
-      importDatabase: jest.fn().mockResolvedValue({ imported: 5, skipped: 1 }),
-      resetDatabase: jest.fn().mockResolvedValue(undefined),
-      resetStreamCounts: jest.fn().mockResolvedValue(undefined),
-      deleteAllDevices: jest.fn().mockResolvedValue(undefined),
-      clearAllSessionHistory: jest.fn().mockResolvedValue(undefined),
-    };
-
-    versionService = {
-      getCurrentAppVersion: jest.fn().mockReturnValue('1.3.5'),
-      compareVersions: jest.fn().mockReturnValue(0),
-      updateAppVersionIfNewer: jest.fn().mockResolvedValue(undefined),
-      getVersionInfo: jest.fn().mockReturnValue({
-        version: '1.3.5',
-        databaseVersion: '1.3.5',
-        codeVersion: '1.3.5',
-        isVersionMismatch: false,
-      }),
-    };
-
-    appriseService = {
-      testAppriseConnection: jest
-        .fn()
-        .mockResolvedValue({ success: true, message: 'ok' }),
-    };
-
+    testbed = createConfigTestbed();
+    ({
+      store,
+      row,
+      settingsRepo,
+      sessionRepo,
+      timezoneService,
+      versionService,
+    } = testbed);
     service = await build();
   });
 
   describe('default settings', () => {
+    it('waits for module initialization before touching the database', async () => {
+      settingsRepo.findOne.mockClear();
+      const created = await compile();
+
+      expect(settingsRepo.findOne).not.toHaveBeenCalled();
+
+      await created.onModuleInit();
+
+      expect(settingsRepo.findOne).toHaveBeenCalled();
+    });
+
     it('seeds the Plex, SMTP, Apprise and portal defaults', async () => {
       expect(store.has('PLEX_TOKEN')).toBe(true);
       expect(store.has('SMTP_HOST')).toBe(true);
@@ -243,6 +127,16 @@ describe('ConfigService', () => {
       await expect(fresh.getSetting('CUSTOM_PLEX_URL')).resolves.toBeNull();
     });
 
+    it('reads a row written after startup from the database', async () => {
+      settingsRepo.find.mockResolvedValueOnce([]);
+      const fresh = await build();
+      settingsRepo.findOne.mockResolvedValueOnce(
+        row('SMTP_PORT', '2525', 'number'),
+      );
+
+      await expect(fresh.getSetting('SMTP_PORT')).resolves.toBe(2525);
+    });
+
     it('serves repeat reads from the cache', async () => {
       settingsRepo.findOne.mockClear();
       await service.getSetting('DEFAULT_PAGE');
@@ -273,12 +167,7 @@ describe('ConfigService', () => {
       settingsRepo.find.mockResolvedValueOnce([nulled]);
       const fresh = await build();
 
-      const value = await fresh.getSetting('CUSTOM_PLEX_URL');
-      if (typeof expected === 'number') {
-        expect(Number.isNaN(value as unknown as number)).toBe(true);
-      } else {
-        expect(value).toBe(expected);
-      }
+      await expect(fresh.getSetting('CUSTOM_PLEX_URL')).resolves.toBe(expected);
     });
 
     it('reads a null json column as null', async () => {
@@ -353,9 +242,14 @@ describe('ConfigService', () => {
 
   describe('updateSetting validation', () => {
     it.each([
+      ['PLEXGUARD_REFRESH_INTERVAL', 'abc', 'must be a number'],
+      ['PLEXGUARD_REFRESH_INTERVAL', 7.5, 'whole number of seconds'],
+      ['PLEXGUARD_REFRESH_INTERVAL', 4, 'between 5 and 86400 seconds'],
+      ['PLEXGUARD_REFRESH_INTERVAL', 0, 'between 5 and 86400 seconds'],
+      ['PLEXGUARD_REFRESH_INTERVAL', -10, 'between 5 and 86400 seconds'],
       ['DEVICE_CLEANUP_INTERVAL_DAYS', 'abc', 'must be a number'],
       ['DEVICE_CLEANUP_INTERVAL_DAYS', 1.5, 'whole number'],
-      ['DEVICE_CLEANUP_INTERVAL_DAYS', 0, 'at least 1 day'],
+      ['DEVICE_CLEANUP_INTERVAL_DAYS', 0, 'between 1 and 3650 days'],
       ['SMTP_PORT', 'abc', 'valid number'],
       ['SMTP_PORT', 25.5, 'whole number'],
       ['SMTP_PORT', 0, 'between 1 and 65535'],
@@ -368,6 +262,8 @@ describe('ConfigService', () => {
     });
 
     it.each([
+      ['PLEXGUARD_REFRESH_INTERVAL', 5],
+      ['PLEXGUARD_REFRESH_INTERVAL', 30],
       ['DEVICE_CLEANUP_INTERVAL_DAYS', 30],
       ['SMTP_PORT', 465],
       ['SMTP_FROM_EMAIL', 'guardian@example.com'],
@@ -383,7 +279,7 @@ describe('ConfigService', () => {
       store.delete('CUSTOM_PLEX_URL');
       settingsRepo.findOne.mockResolvedValueOnce(null);
       await expect(
-        service.updateSetting('CUSTOM_PLEX_URL', 'x'),
+        service.updateSetting('CUSTOM_PLEX_URL', 'https://plex.example.com'),
       ).rejects.toThrow('Setting CUSTOM_PLEX_URL not found');
     });
   });
@@ -401,16 +297,10 @@ describe('ConfigService', () => {
       await expect(service.getSetting('SMTP_PORT')).resolves.toBe(465);
     });
 
-    it('serialises an object value as json', async () => {
-      store.set('CUSTOM_PLEX_URL', row('CUSTOM_PLEX_URL', '{}', 'json'));
-      const fresh = await build();
-
-      await fresh.updateSetting('CUSTOM_PLEX_URL', { a: 1 });
-
-      expect(store.get('CUSTOM_PLEX_URL')?.value).toBe('{"a":1}');
-      await expect(fresh.getSetting('CUSTOM_PLEX_URL')).resolves.toEqual({
-        a: 1,
-      });
+    it('refuses an object value', async () => {
+      await expect(
+        service.updateSetting('CUSTOM_PLEX_URL', { a: 1 }),
+      ).rejects.toThrow('string, number or boolean');
     });
 
     it('bumps the updated timestamp', async () => {
@@ -445,6 +335,59 @@ describe('ConfigService', () => {
       await expect(
         service.updateSetting('USER_PORTAL_ENABLED', false),
       ).resolves.toBeDefined();
+    });
+  });
+
+  describe('settings written outside the settings page', () => {
+    it('reloads the stored values and notifies their listeners', async () => {
+      const listener = jest.fn();
+      service.addConfigChangeListener('PLEXGUARD_REFRESH_INTERVAL', listener);
+      store.set(
+        'PLEXGUARD_REFRESH_INTERVAL',
+        row('PLEXGUARD_REFRESH_INTERVAL', '60', 'number'),
+      );
+
+      await service.applyStoredSettings([
+        'PLEXGUARD_REFRESH_INTERVAL',
+        'RETIRED_SETTING',
+      ]);
+
+      expect(listener).toHaveBeenCalledTimes(1);
+      await expect(
+        service.getSetting('PLEXGUARD_REFRESH_INTERVAL'),
+      ).resolves.toBe(60);
+    });
+
+    it('signs portal users out when the stored portal switch is off', async () => {
+      store.set(
+        'USER_PORTAL_ENABLED',
+        row('USER_PORTAL_ENABLED', 'false', 'boolean'),
+      );
+
+      await service.applyStoredSettings(['USER_PORTAL_ENABLED']);
+
+      expect(sessionRepo.delete).toHaveBeenCalledWith({
+        userType: 'plex_user',
+      });
+    });
+
+    it('keeps portal sessions when the portal switch was not part of the change', async () => {
+      store.set(
+        'USER_PORTAL_ENABLED',
+        row('USER_PORTAL_ENABLED', 'false', 'boolean'),
+      );
+
+      await service.applyStoredSettings(['DEFAULT_PAGE']);
+
+      expect(sessionRepo.delete).not.toHaveBeenCalled();
+    });
+
+    it('never runs a stored value back through the settings page checks', async () => {
+      store.set('APP_VERSION', row('APP_VERSION', '1.0.0'));
+
+      await expect(
+        service.applyStoredSettings(['APP_VERSION']),
+      ).resolves.toBeUndefined();
     });
   });
 
@@ -527,6 +470,166 @@ describe('ConfigService', () => {
 
       expect(store.get('SMTP_HOST')?.value).toBe('');
     });
+
+    it('saves nothing when any setting in the batch is invalid', async () => {
+      const pageBefore = store.get('DEFAULT_PAGE')?.value;
+
+      await expect(
+        service.updateMultipleSettings([
+          { key: 'DEFAULT_PAGE', value: 'streams' },
+          { key: 'PLEXGUARD_REFRESH_INTERVAL', value: '2' },
+        ]),
+      ).rejects.toThrow('between 5 and 86400 seconds');
+
+      expect(store.get('DEFAULT_PAGE')?.value).toBe(pageBefore);
+    });
+  });
+
+  describe('secret handling', () => {
+    beforeEach(async () => {
+      store.set('PLEX_TOKEN', row('PLEX_TOKEN', 'real-token', 'string', true));
+      service = await build();
+    });
+
+    it('keeps the stored secret when the mask is written back', async () => {
+      await service.updateMultipleSettings([
+        { key: 'PLEX_TOKEN', value: '••••••••' },
+        { key: 'DEFAULT_PAGE', value: 'streams' },
+      ]);
+
+      expect(store.get('PLEX_TOKEN')?.value).toBe('real-token');
+      expect(store.get('DEFAULT_PAGE')?.value).toBe('streams');
+    });
+
+    it('keeps the stored secret on a single write of the mask', async () => {
+      const result = await service.updateSetting('PLEX_TOKEN', '••••••••');
+
+      expect(store.get('PLEX_TOKEN')?.value).toBe('real-token');
+      expect(result.value).toBe('••••••••');
+    });
+
+    it('still lets a new secret through', async () => {
+      await service.updateSetting('PLEX_TOKEN', 'new-token');
+
+      expect(store.get('PLEX_TOKEN')?.value).toBe('new-token');
+    });
+
+    it('masks the secret in the write response', async () => {
+      const [result] = await service.updateMultipleSettings([
+        { key: 'PLEX_TOKEN', value: 'new-token' },
+      ]);
+
+      expect(result.value).toBe('••••••••');
+    });
+
+    it('masks a single secret like the list does', async () => {
+      await expect(service.getPublicSetting('PLEX_TOKEN')).resolves.toEqual(
+        expect.objectContaining({ key: 'PLEX_TOKEN', value: '••••••••' }),
+      );
+    });
+
+    it('returns a plain setting as its stored string', async () => {
+      await expect(
+        service.getPublicSetting('PLEXGUARD_REFRESH_INTERVAL'),
+      ).resolves.toEqual(expect.objectContaining({ value: '10' }));
+    });
+
+    it('has nothing to return for a setting with no row', async () => {
+      store.delete('TIMEZONE');
+      await expect(service.getPublicSetting('TIMEZONE')).resolves.toBeNull();
+    });
+  });
+
+  describe('write safety', () => {
+    it('refuses to write a read-only setting', async () => {
+      await expect(
+        service.updateSetting('APP_VERSION', '9.9.9'),
+      ).rejects.toThrow('read-only');
+      expect(store.get('APP_VERSION')?.value).toBe('1.3.5');
+    });
+
+    it.each([null, undefined, { a: 1 }, ['x']])(
+      'refuses the value %p',
+      async (value) => {
+        await expect(
+          service.updateSetting('MSG_DEVICE_PENDING', value),
+        ).rejects.toThrow('string, number or boolean');
+      },
+    );
+
+    it('refuses a key that is not a setting', async () => {
+      await expect(
+        service.updateMultipleSettings([{ key: '__proto__', value: 'x' }]),
+      ).rejects.toThrow('Unknown setting');
+    });
+
+    it('writes nothing when a later key does not exist', async () => {
+      const before = store.get('MSG_DEVICE_PENDING')?.value;
+
+      await expect(
+        service.updateMultipleSettings([
+          { key: 'MSG_DEVICE_PENDING', value: 'X' },
+          { key: 'NOPE', value: 'x' },
+        ]),
+      ).rejects.toThrow('Unknown setting');
+
+      expect(store.get('MSG_DEVICE_PENDING')?.value).toBe(before);
+    });
+
+    it('rolls back earlier rows when a later row is missing', async () => {
+      const before = store.get('MSG_DEVICE_PENDING')?.value;
+      store.delete('CUSTOM_PLEX_URL');
+
+      await expect(
+        service.updateMultipleSettings([
+          { key: 'MSG_DEVICE_PENDING', value: 'X' },
+          { key: 'CUSTOM_PLEX_URL', value: 'https://plex.example.com' },
+        ]),
+      ).rejects.toThrow('not found');
+
+      expect(store.get('MSG_DEVICE_PENDING')?.value).toBe(before);
+    });
+
+    it('does not notify listeners or cache anything from a rolled back batch', async () => {
+      const listener = jest.fn();
+      service.addConfigChangeListener('MSG_DEVICE_PENDING', listener);
+      store.delete('CUSTOM_PLEX_URL');
+
+      await expect(
+        service.updateMultipleSettings([
+          { key: 'MSG_DEVICE_PENDING', value: 'X' },
+          { key: 'CUSTOM_PLEX_URL', value: 'https://plex.example.com' },
+        ]),
+      ).rejects.toThrow();
+
+      expect(listener).not.toHaveBeenCalled();
+      await expect(service.getSetting('MSG_DEVICE_PENDING')).resolves.not.toBe(
+        'X',
+      );
+    });
+
+    it('rejects the same key twice in one batch', async () => {
+      await expect(
+        service.updateMultipleSettings([
+          { key: 'DEFAULT_PAGE', value: 'streams' },
+          { key: 'DEFAULT_PAGE', value: 'devices' },
+        ]),
+      ).rejects.toThrow('Duplicate setting DEFAULT_PAGE');
+    });
+
+    it('writes inside a transaction', async () => {
+      await service.updateMultipleSettings([
+        { key: 'DEFAULT_PAGE', value: 'streams' },
+      ]);
+
+      expect(settingsRepo.manager.transaction).toHaveBeenCalledTimes(1);
+    });
+
+    it('rejects an over-long message', async () => {
+      await expect(
+        service.updateSetting('MSG_DEVICE_PENDING', 'x'.repeat(20000)),
+      ).rejects.toThrow('at most');
+    });
   });
 
   describe('timezone', () => {
@@ -536,7 +639,8 @@ describe('ConfigService', () => {
     });
 
     it('falls back to UTC when the offset is blank', async () => {
-      await service.updateSetting('TIMEZONE', '');
+      store.set('TIMEZONE', row('TIMEZONE', ''));
+      service = await build();
       await expect(service.getTimezone()).resolves.toBe('+00:00');
     });
 
@@ -548,250 +652,6 @@ describe('ConfigService', () => {
         '+00:00',
       );
     });
-  });
-
-  describe('testPlexConnection', () => {
-    it('passes the stored server details through', async () => {
-      await service.updateSetting('PLEX_SERVER_IP', '10.0.0.5');
-      await service.updateSetting('PLEX_TOKEN', 'plex-token');
-      await service.updateSetting('USE_SSL', true);
-
-      await service.testPlexConnection();
-
-      expect(plexConnectionService.testConnection).toHaveBeenCalledWith(
-        '10.0.0.5',
-        '32400',
-        'plex-token',
-        true,
-        false,
-      );
-    });
-
-    it('reports an unexpected failure as an unknown error', async () => {
-      plexConnectionService.testConnection.mockRejectedValue(
-        new Error('socket hang up'),
-      );
-
-      await expect(service.testPlexConnection()).resolves.toEqual({
-        success: false,
-        errorCode: PlexErrorCode.UNKNOWN_ERROR,
-        message: 'Unexpected error testing Plex connection',
-        details: 'socket hang up',
-      });
-    });
-  });
-
-  describe('testSMTPConnection', () => {
-    it('hands the loaded settings to the email service', async () => {
-      await service.testSMTPConnection();
-
-      expect(emailService.loadSmtpSettings).toHaveBeenCalled();
-      expect(emailService.toSmtpConfig).toHaveBeenCalledWith(
-        await emailService.loadSmtpSettings.mock.results[0].value,
-      );
-    });
-
-    it('forwards the config, the enabled flag and a timestamp', async () => {
-      await service.testSMTPConnection();
-
-      expect(emailService.testSMTPConnection).toHaveBeenCalledWith(
-        expect.objectContaining({ host: 'smtp.example.com', port: 465 }),
-        false,
-        '2026-08-21 12:00:00',
-      );
-    });
-
-    it('passes the enabled flag through as stored', async () => {
-      emailService.loadSmtpSettings.mockResolvedValue({
-        SMTP_ENABLED: true,
-        SMTP_HOST: 'smtp.example.com',
-        SMTP_PORT: 465,
-        SMTP_USER: '',
-        SMTP_PASSWORD: '',
-        SMTP_FROM_EMAIL: '',
-        SMTP_FROM_NAME: '',
-        SMTP_USE_TLS: true,
-        SMTP_TO_EMAILS: '',
-      });
-
-      await service.testSMTPConnection();
-
-      expect(emailService.testSMTPConnection).toHaveBeenCalledWith(
-        expect.anything(),
-        true,
-        expect.anything(),
-      );
-    });
-
-    it('reports an unexpected failure rather than throwing', async () => {
-      emailService.testSMTPConnection.mockRejectedValue(new Error('no route'));
-
-      await expect(service.testSMTPConnection()).resolves.toEqual({
-        success: false,
-        message: 'Unexpected error: no route',
-      });
-    });
-  });
-
-  describe('settings that were never written', () => {
-    it('dials Plex with empty strings rather than nulls', async () => {
-      settingsRepo.find.mockResolvedValueOnce([]);
-      const fresh = await build();
-      settingsRepo.findOne.mockResolvedValue(null);
-
-      await fresh.testPlexConnection();
-
-      expect(plexConnectionService.testConnection).toHaveBeenCalledWith(
-        '',
-        '',
-        '',
-        false,
-        false,
-      );
-    });
-
-    it('exports with an empty version rather than a null', async () => {
-      settingsRepo.find.mockResolvedValueOnce([]);
-      const fresh = await build();
-      settingsRepo.findOne.mockResolvedValue(null);
-
-      await fresh.exportDatabase();
-
-      expect(databaseService.exportDatabase).toHaveBeenCalledWith('');
-    });
-
-    it('reports the build version when none is stored', async () => {
-      settingsRepo.find.mockResolvedValueOnce([]);
-      const fresh = await build();
-      settingsRepo.findOne.mockResolvedValue(null);
-      versionService.getCurrentAppVersion.mockReturnValue('9.9.9');
-
-      await fresh.getVersionInfo();
-
-      expect(versionService.getVersionInfo).toHaveBeenCalledWith('9.9.9');
-    });
-  });
-
-  describe('testAppriseConnection', () => {
-    it('delegates to the Apprise service', async () => {
-      await expect(service.testAppriseConnection()).resolves.toEqual({
-        success: true,
-        message: 'ok',
-      });
-    });
-  });
-
-  describe('getPlexConfigurationStatus', () => {
-    const configure = async () => {
-      await service.updateSetting('PLEX_SERVER_IP', '10.0.0.5');
-      await service.updateSetting('PLEX_TOKEN', 'plex-token');
-    };
-
-    it('reports an unconfigured server without testing the connection', async () => {
-      await expect(service.getPlexConfigurationStatus()).resolves.toEqual({
-        configured: false,
-        hasValidCredentials: false,
-        connectionStatus: 'Not configured',
-      });
-      expect(plexConnectionService.testConnection).not.toHaveBeenCalled();
-    });
-
-    it('reports a working connection', async () => {
-      await configure();
-
-      await expect(service.getPlexConfigurationStatus()).resolves.toEqual({
-        configured: true,
-        hasValidCredentials: true,
-        connectionStatus: 'Connected',
-      });
-    });
-
-    it('falls back to a generic message when the probe says nothing', async () => {
-      await configure();
-      plexConnectionService.testConnection.mockResolvedValue({ success: true });
-
-      const status = await service.getPlexConfigurationStatus();
-      expect(status.connectionStatus).toBe('Connected successfully');
-    });
-
-    it('prefixes a failure with its error code so the UI can parse it', async () => {
-      await configure();
-      plexConnectionService.testConnection.mockResolvedValue({
-        success: false,
-        errorCode: PlexErrorCode.INVALID_TOKEN,
-        message: 'Bad token',
-      });
-
-      await expect(service.getPlexConfigurationStatus()).resolves.toEqual({
-        configured: true,
-        hasValidCredentials: false,
-        connectionStatus: `${PlexErrorCode.INVALID_TOKEN}: Bad token`,
-      });
-    });
-
-    it('reports a failed probe rather than throwing', async () => {
-      await configure();
-      plexConnectionService.testConnection.mockRejectedValue(
-        new Error('socket hang up'),
-      );
-
-      await expect(service.getPlexConfigurationStatus()).resolves.toMatchObject(
-        {
-          configured: true,
-          hasValidCredentials: false,
-          connectionStatus: `${PlexErrorCode.UNKNOWN_ERROR}: Unexpected error testing Plex connection`,
-        },
-      );
-    });
-  });
-
-  describe('database management', () => {
-    it('exports with the stored app version', async () => {
-      await expect(service.exportDatabase()).resolves.toBe('{"settings":[]}');
-      expect(databaseService.exportDatabase).toHaveBeenCalledWith('1.3.5');
-    });
-
-    it('imports and reloads the cache', async () => {
-      settingsRepo.find.mockClear();
-
-      await expect(
-        service.importDatabase({ data: { settings: [] } }),
-      ).resolves.toEqual({
-        imported: 5,
-        skipped: 1,
-      });
-      expect(settingsRepo.find).toHaveBeenCalled();
-    });
-
-    it('hands the importer the running version and a comparator', async () => {
-      await service.importDatabase({ data: { settings: [] } });
-
-      const [, version, compare] = callArgs<[unknown, string, unknown]>(
-        databaseService.importDatabase,
-      );
-      expect(version).toBe('1.3.5');
-      expect(typeof compare).toBe('function');
-    });
-
-    it('re-seeds the defaults after a reset', async () => {
-      store.clear();
-      await service.resetDatabase();
-
-      expect(databaseService.resetDatabase).toHaveBeenCalled();
-      expect(store.has('PLEX_TOKEN')).toBe(true);
-    });
-
-    it.each([
-      ['resetStreamCounts', 'resetStreamCounts'],
-      ['deleteAllDevices', 'deleteAllDevices'],
-      ['clearAllSessionHistory', 'clearAllSessionHistory'],
-    ] as const)(
-      'delegates %s to the database service',
-      async (method, target) => {
-        await service[method]();
-        expect(databaseService[target]).toHaveBeenCalled();
-      },
-    );
   });
 
   describe('getVersionInfo', () => {
@@ -808,6 +668,19 @@ describe('ConfigService', () => {
 
       await service.getVersionInfo();
       expect(versionService.getVersionInfo).toHaveBeenCalledWith('1.3.5');
+    });
+  });
+
+  describe('settings that were never written', () => {
+    it('reports the build version when none is stored', async () => {
+      settingsRepo.find.mockResolvedValueOnce([]);
+      const fresh = await build();
+      settingsRepo.findOne.mockResolvedValue(null);
+      versionService.getCurrentAppVersion.mockReturnValue('9.9.9');
+
+      await fresh.getVersionInfo();
+
+      expect(versionService.getVersionInfo).toHaveBeenCalledWith('9.9.9');
     });
   });
 });

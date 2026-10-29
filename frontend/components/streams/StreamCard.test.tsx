@@ -4,7 +4,6 @@ import type { PlexSession } from "@/types";
 import { StreamCard } from "@/components/streams/StreamCard";
 
 jest.mock("@/components/streams/StreamQuality", () => ({
-  StreamQuality: () => <span>quality-inline</span>,
   StreamQualityDetails: () => <span>quality-details</span>,
 }));
 jest.mock("@/components/streams/StreamDeviceInfo", () => ({
@@ -14,26 +13,25 @@ jest.mock("@/components/streams/StreamProgress", () => ({
   StreamProgress: () => <span>progress</span>,
 }));
 
-const stream = (overrides: Record<string, unknown> = {}) =>
-  ({
-    sessionKey: "s-1",
-    type: "movie",
-    title: "Arrival",
-    year: 2016,
-    ratingKey: "rk-1",
-    serverMachineIdentifier: "server-1",
-    User: { id: "u-1", title: "alice" },
-    Player: {
-      title: "Living Room TV",
-      platform: "Roku",
-      product: "Plex for Roku",
-      machineIdentifier: "m-1",
-    },
-    ...overrides,
-  }) as unknown as PlexSession;
+const stream = (overrides: Partial<PlexSession> = {}): PlexSession => ({
+  sessionKey: "s-1",
+  type: "movie",
+  title: "Arrival",
+  year: 2016,
+  ratingKey: "rk-1",
+  serverMachineIdentifier: "server-1",
+  User: { id: "u-1", title: "alice" },
+  Player: {
+    title: "Living Room TV",
+    platform: "Roku",
+    product: "Plex for Roku",
+    machineIdentifier: "m-1",
+  },
+  ...overrides,
+});
 
 const renderCard = (
-  overrides: Record<string, unknown> = {},
+  overrides: Partial<PlexSession> = {},
   props: Partial<{ isExpanded: boolean; isRevoking: boolean }> = {},
 ) => {
   const onToggleExpand = jest.fn();
@@ -43,7 +41,6 @@ const renderCard = (
   const view = render(
     <StreamCard
       stream={stream(overrides)}
-      index={0}
       isExpanded={props.isExpanded ?? false}
       isRevoking={props.isRevoking ?? false}
       onToggleExpand={onToggleExpand}
@@ -107,9 +104,12 @@ describe("StreamCard content", () => {
   it("shows title, user, device and the child sections", () => {
     renderCard();
 
-    expect(screen.getByText("Arrival (2016)")).toBeInTheDocument();
-    expect(screen.getByText("alice · Living Room TV")).toBeInTheDocument();
-    expect(screen.getByText("quality-inline")).toBeInTheDocument();
+    expect(screen.getByText("Arrival")).toBeInTheDocument();
+    expect(screen.getByText("2016")).toBeInTheDocument();
+    expect(screen.getByText(/on Living Room TV/)).toHaveTextContent(
+      "alice on Living Room TV",
+    );
+    expect(screen.queryByText("1080")).toBeNull();
     expect(screen.getByText("progress")).toBeInTheDocument();
   });
 
@@ -118,16 +118,15 @@ describe("StreamCard content", () => {
 
     expect(screen.queryByText("Streaming")).toBeNull();
     expect(await menuLabels(user)).toEqual([
-      "Go to User",
-      "Go to Device",
-      "View Details",
-      "Remove Access",
+      "Go to user",
+      "Go to device",
+      "Remove access",
     ]);
   });
 
   it("keeps the actions in the header, not in a row of their own", () => {
     const { container } = renderCard();
-    const heading = screen.getByText("Arrival (2016)").closest("h4");
+    const heading = screen.getByText("Arrival").closest("h4");
 
     expect(heading?.parentElement?.parentElement).toContainElement(
       screen.getByRole("button", { name: /Actions/ }),
@@ -143,7 +142,43 @@ describe("StreamCard content", () => {
 
   it("shows the poster when there is one", () => {
     renderCard({ thumbnailUrl: "/poster.jpg" });
-    expect(screen.getByAltText("Arrival (2016)")).toBeInTheDocument();
+    expect(screen.getByAltText("Arrival (2016)")).toHaveAttribute(
+      "src",
+      "/poster.jpg",
+    );
+  });
+
+  it.each([
+    ["movie", "Roygbiv (2016)", "aspect-[2/3]"],
+    ["track", "Roygbiv", "aspect-square"],
+    ["episode", "Roygbiv", "aspect-video"],
+  ])("frames a %s thumbnail in its usual shape", (type, alt, frame) => {
+    renderCard({ type, title: "Roygbiv", thumbnailUrl: "/thumb.jpg" });
+    expect(screen.getByAltText(alt).parentElement).toHaveClass(frame);
+  });
+
+  it.each([
+    [200, 300, "aspect-[2/3]"],
+    [300, 300, "aspect-square"],
+    [480, 270, "aspect-video"],
+  ])("reshapes the frame to a %ix%i image once it loads", (w, h, frame) => {
+    renderCard({ thumbnailUrl: "/thumb.jpg" });
+    const img = screen.getByAltText("Arrival (2016)");
+    Object.defineProperty(img, "naturalWidth", { value: w });
+    Object.defineProperty(img, "naturalHeight", { value: h });
+
+    fireEvent.load(img);
+
+    expect(img.parentElement).toHaveClass(frame);
+  });
+
+  it("keeps the expected shape when the image reports no size", () => {
+    renderCard({ thumbnailUrl: "/thumb.jpg" });
+    const img = screen.getByAltText("Arrival (2016)");
+
+    fireEvent.load(img);
+
+    expect(img.parentElement).toHaveClass("aspect-[2/3]");
   });
 
   it("omits the poster block without a thumbnail", () => {
@@ -151,31 +186,106 @@ describe("StreamCard content", () => {
     expect(screen.queryByRole("img")).toBeNull();
   });
 
-  it("survives a poster error with no fallback node", () => {
-    const { container } = renderCard({ thumbnailUrl: "/poster.jpg" });
-    const img = screen.getByAltText<HTMLImageElement>("Arrival (2016)");
-    container.querySelector(".thumbnail-fallback")?.remove();
-
-    fireEvent.error(img);
-
-    expect(img.style.display).toBe("none");
-  });
-
-  it("hides the poster when it fails to load", () => {
+  it("fades the poster in once it loads", () => {
     renderCard({ thumbnailUrl: "/poster.jpg" });
-    const img = screen.getByAltText<HTMLImageElement>("Arrival (2016)");
+    const img = screen.getByAltText("Arrival (2016)");
+    expect(img).toHaveClass("opacity-0");
 
-    fireEvent.error(img);
+    fireEvent.load(img);
 
-    expect(img.style.display).toBe("none");
+    expect(img).toHaveClass("opacity-100");
   });
 
-  it("paints the artwork background and overlay", () => {
+  it("drops the poster frame when it fails to load", () => {
+    renderCard({ thumbnailUrl: "/poster.jpg" });
+
+    fireEvent.error(screen.getByAltText("Arrival (2016)"));
+
+    expect(screen.queryByAltText("Arrival (2016)")).toBeNull();
+  });
+
+  it("lays the artwork in at its own shape behind a dark card", () => {
     const { container } = renderCard({ artUrl: "/art.jpg" });
     const card = container.firstElementChild as HTMLElement;
+    const art = screen.getByTestId("stream-art");
 
-    expect(card.style.backgroundImage).toContain("/art.jpg");
-    expect(container.innerHTML).toContain("from-black/85");
+    expect(art).toHaveAttribute("src", "/art.jpg");
+    expect(art).toHaveClass("w-auto", "h-full", "opacity-0");
+    expect(card).toHaveClass("bg-neutral-900", "dark:bg-black", "text-white");
+
+    fireEvent.load(art);
+    expect(art).toHaveClass("opacity-45");
+  });
+
+  it("tints the card with a blurred copy of the artwork once it loads", () => {
+    renderCard({ artUrl: "/art.jpg" });
+    const ambient = screen.getByTestId("stream-ambient");
+
+    expect(ambient).toHaveAttribute("src", "/art.jpg");
+    expect(ambient).toHaveClass("blur-3xl", "opacity-0");
+
+    fireEvent.load(screen.getByTestId("stream-art"));
+    expect(ambient).toHaveClass("opacity-70");
+  });
+
+  it("falls back to the plain card when the artwork fails", () => {
+    const { container } = renderCard({ artUrl: "/art.jpg" });
+
+    fireEvent.error(screen.getByTestId("stream-art"));
+
+    expect(screen.queryByTestId("stream-art")).toBeNull();
+    expect(screen.queryByTestId("stream-ambient")).toBeNull();
+    expect(container.firstElementChild).not.toHaveClass("bg-neutral-900");
+  });
+
+  it("tries the poster and artwork again when the next item has new images", () => {
+    const props = {
+      isExpanded: false,
+      isRevoking: false,
+      onToggleExpand: jest.fn(),
+      onRemoveAccess: jest.fn(),
+    };
+    const { rerender } = render(
+      <StreamCard
+        {...props}
+        stream={stream({ thumbnailUrl: "/one.jpg", artUrl: "/one-art.jpg" })}
+      />,
+    );
+    fireEvent.error(screen.getByAltText("Arrival (2016)"));
+    fireEvent.error(screen.getByTestId("stream-art"));
+
+    rerender(
+      <StreamCard
+        {...props}
+        stream={stream({ thumbnailUrl: "/two.jpg", artUrl: "/two-art.jpg" })}
+      />,
+    );
+
+    expect(screen.getByAltText("Arrival (2016)")).toHaveAttribute(
+      "src",
+      "/two.jpg",
+    );
+    expect(screen.getByTestId("stream-art")).toHaveAttribute(
+      "src",
+      "/two-art.jpg",
+    );
+  });
+
+  it("fades new artwork in instead of showing it at once", () => {
+    const { rerender } = renderCard({ artUrl: "/one-art.jpg" });
+    fireEvent.load(screen.getByTestId("stream-art"));
+
+    rerender(
+      <StreamCard
+        stream={stream({ artUrl: "/two-art.jpg" })}
+        isExpanded={false}
+        isRevoking={false}
+        onToggleExpand={jest.fn()}
+        onRemoveAccess={jest.fn()}
+      />,
+    );
+
+    expect(screen.getByTestId("stream-art")).toHaveClass("opacity-0");
   });
 
   it("shows the details only when expanded", () => {
@@ -185,7 +295,6 @@ describe("StreamCard content", () => {
     rerender(
       <StreamCard
         stream={stream()}
-        index={0}
         isExpanded
         isRevoking={false}
         onToggleExpand={jest.fn()}
@@ -197,22 +306,49 @@ describe("StreamCard content", () => {
     expect(screen.getByText("device-info")).toBeInTheDocument();
   });
 
-  it("swaps the details label when expanded", async () => {
+  it("swaps the details label when expanded", () => {
     const collapsed = renderCard();
-    expect(await menuLabels(collapsed.user)).toContain("View Details");
+    expect(
+      screen.getByRole("button", { name: "Show details" }),
+    ).toHaveAttribute("aria-expanded", "false");
 
     collapsed.unmount();
 
-    const expanded = renderCard({}, { isExpanded: true });
-    expect(await menuLabels(expanded.user)).toContain("Hide Details");
+    renderCard({}, { isExpanded: true });
+    expect(
+      screen.getByRole("button", { name: "Hide details" }),
+    ).toHaveAttribute("aria-expanded", "true");
+  });
+
+  it("puts the details toggle beside the actions", () => {
+    renderCard();
+
+    expect(
+      screen.getByRole("button", { name: "Show details" }).parentElement,
+    ).toContainElement(screen.getByRole("button", { name: /Actions/ }));
   });
 });
 
 describe("StreamCard navigation", () => {
+  it("opens the user from their name", async () => {
+    const { user, onNavigateToUser } = renderCard();
+
+    await user.click(screen.getByRole("button", { name: "alice" }));
+
+    expect(onNavigateToUser).toHaveBeenCalledWith("u-1");
+  });
+
+  it("shows the name as plain text when the user cannot be opened", () => {
+    renderCard({ User: { title: "alice" } });
+
+    expect(screen.queryByRole("button", { name: "alice" })).toBeNull();
+    expect(screen.getByText("alice")).toBeInTheDocument();
+  });
+
   it("scrolls to the user", async () => {
     const { user, onNavigateToUser } = renderCard();
 
-    await choose(user, "Go to User");
+    await choose(user, "Go to user");
 
     expect(onNavigateToUser).toHaveBeenCalledWith("u-1");
   });
@@ -220,7 +356,7 @@ describe("StreamCard navigation", () => {
   it("does not scroll to a user it cannot identify", async () => {
     const { user, onNavigateToUser } = renderCard({ User: undefined });
 
-    await choose(user, "Go to User");
+    await choose(user, "Go to user");
 
     expect(onNavigateToUser).not.toHaveBeenCalled();
   });
@@ -228,7 +364,7 @@ describe("StreamCard navigation", () => {
   it("scrolls to the device", async () => {
     const { user, onNavigateToDevice } = renderCard();
 
-    await choose(user, "Go to Device");
+    await choose(user, "Go to device");
 
     expect(onNavigateToDevice).toHaveBeenCalledWith("u-1", "m-1");
   });
@@ -236,7 +372,7 @@ describe("StreamCard navigation", () => {
   it("does not scroll to a device it cannot identify", async () => {
     const { user, onNavigateToDevice } = renderCard({ Player: undefined });
 
-    await choose(user, "Go to Device");
+    await choose(user, "Go to device");
 
     expect(onNavigateToDevice).not.toHaveBeenCalled();
   });
@@ -246,7 +382,6 @@ describe("StreamCard navigation", () => {
     render(
       <StreamCard
         stream={stream()}
-        index={0}
         isExpanded={false}
         isRevoking={false}
         onToggleExpand={jest.fn()}
@@ -254,10 +389,10 @@ describe("StreamCard navigation", () => {
       />,
     );
 
-    await choose(user, "Go to User");
-    await choose(user, "Go to Device");
+    await choose(user, "Go to user");
+    await choose(user, "Go to device");
 
-    expect(screen.getByText("Arrival (2016)")).toBeInTheDocument();
+    expect(screen.getByText("Arrival")).toBeInTheDocument();
   });
 
   it("offers one navigation entry per target, not a mobile duplicate", async () => {
@@ -271,7 +406,7 @@ describe("StreamCard navigation", () => {
     const { user } = renderCard({ User: undefined, Player: undefined });
     await openMenu(user);
 
-    for (const label of ["Go to User", "Go to Device"]) {
+    for (const label of ["Go to user", "Go to device"]) {
       expect(screen.getByRole("menuitem", { name: label })).toHaveAttribute(
         "aria-disabled",
         "true",
@@ -284,7 +419,7 @@ describe("StreamCard access removal", () => {
   it("removes access from the menu", async () => {
     const { user, onRemoveAccess } = renderCard();
 
-    await choose(user, "Remove Access");
+    await choose(user, "Remove access");
 
     expect(onRemoveAccess).toHaveBeenCalled();
   });
@@ -293,12 +428,12 @@ describe("StreamCard access removal", () => {
     const { user } = renderCard();
     await openMenu(user);
 
-    const remove = screen.getByRole("menuitem", { name: "Remove Access" });
+    const remove = screen.getByRole("menuitem", { name: "Remove access" });
 
     expect(remove.previousElementSibling?.getAttribute("role")).toBe(
       "separator",
     );
-    expect(remove.className).toContain("text-rose-600");
+    expect(remove.className).toContain("text-blocked");
   });
 
   it("spins the trigger and blocks the menu while revoking", () => {
@@ -313,7 +448,7 @@ describe("StreamCard access removal", () => {
   it("does nothing without a user or device identifier", async () => {
     const { user, onRemoveAccess } = renderCard({ User: undefined });
 
-    await choose(user, "Remove Access");
+    await choose(user, "Remove access");
 
     expect(onRemoveAccess).not.toHaveBeenCalled();
   });
@@ -323,23 +458,23 @@ describe("StreamCard access removal", () => {
       Player: { product: "Plexamp", machineIdentifier: "m-1" },
     });
 
-    expect(await menuLabels(user)).not.toContain("Remove Access");
+    expect(await menuLabels(user)).not.toContain("Remove access");
   });
 });
 
 describe("StreamCard expanding", () => {
-  it("expands from the details entry", async () => {
+  it("expands from the details button", async () => {
     const { user, onToggleExpand } = renderCard();
 
-    await choose(user, "View Details");
+    await user.click(screen.getByRole("button", { name: "Show details" }));
 
     expect(onToggleExpand).toHaveBeenCalled();
   });
 
-  it("collapses from the same entry when open", async () => {
+  it("collapses from the same button when open", async () => {
     const { user, onToggleExpand } = renderCard({}, { isExpanded: true });
 
-    await choose(user, "Hide Details");
+    await user.click(screen.getByRole("button", { name: "Hide details" }));
 
     expect(onToggleExpand).toHaveBeenCalled();
   });
@@ -347,7 +482,7 @@ describe("StreamCard expanding", () => {
   it("does not expand when a navigation entry is used", async () => {
     const { user, onToggleExpand, onNavigateToUser } = renderCard();
 
-    await choose(user, "Go to User");
+    await choose(user, "Go to user");
 
     expect(onNavigateToUser).toHaveBeenCalled();
     expect(onToggleExpand).not.toHaveBeenCalled();
@@ -355,97 +490,15 @@ describe("StreamCard expanding", () => {
 });
 
 describe("StreamCard opening in Plex", () => {
-  it("opens the item on the right server", async () => {
-    const newWindow = { location: { href: "" }, close: jest.fn() };
-    const open = jest
-      .spyOn(window, "open")
-      .mockReturnValue(newWindow as unknown as Window);
+  it("opens a blank window and looks up the Plex address", async () => {
+    const open = jest.spyOn(window, "open").mockReturnValue(null);
     const { user } = renderCard();
 
-    await user.click(screen.getByText("Arrival (2016)"));
+    await user.click(screen.getByText("Arrival"));
 
-    await waitFor(() =>
-      expect(newWindow.location.href).toBe(
-        "https://plex.test/web/index.html#!/server/server-1/details?key=%2Flibrary%2Fmetadata%2Frk-1",
-      ),
-    );
     expect(open).toHaveBeenCalledWith("about:blank", "_blank");
-    open.mockRestore();
-  });
-
-  it("uses the album key for a music track", async () => {
-    const newWindow = { location: { href: "" }, close: jest.fn() };
-    jest.spyOn(window, "open").mockReturnValue(newWindow as unknown as Window);
-    const { user } = renderCard({
-      type: "track",
-      title: "Roygbiv",
-      ratingKey: "track-1",
-      parentRatingKey: "album-1",
-    });
-
-    await user.click(screen.getByText("Roygbiv"));
-
-    await waitFor(() => expect(newWindow.location.href).toContain("album-1"));
-  });
-
-  it("warns and opens nothing without a rating key", async () => {
-    const open = jest.spyOn(window, "open").mockReturnValue(null);
-    const { user } = renderCard({ ratingKey: undefined });
-
-    await user.click(screen.getByText("Arrival (2016)"));
-
-    expect(consoleWarn).toHaveBeenCalledWith("No rating key found for stream");
-    expect(open).not.toHaveBeenCalled();
-    open.mockRestore();
-  });
-
-  it("errors and opens nothing without a server identifier", async () => {
-    const open = jest.spyOn(window, "open").mockReturnValue(null);
-    const { user } = renderCard({ serverMachineIdentifier: undefined });
-
-    await user.click(screen.getByText("Arrival (2016)"));
-
-    expect(consoleError).toHaveBeenCalledWith(
-      "No server machine identifier available",
-    );
-    expect(open).not.toHaveBeenCalled();
-    open.mockRestore();
-  });
-
-  it("closes the blank window when the backend has no web url", async () => {
-    fetchMock.mockResolvedValue({ json: async () => ({}) });
-    const newWindow = { location: { href: "" }, close: jest.fn() };
-    jest.spyOn(window, "open").mockReturnValue(newWindow as unknown as Window);
-    const { user } = renderCard();
-
-    await user.click(screen.getByText("Arrival (2016)"));
-
-    await waitFor(() => expect(newWindow.close).toHaveBeenCalled());
-    expect(consoleWarn).toHaveBeenCalledWith("No Plex web URL available");
-  });
-
-  it("closes the blank window when the lookup fails", async () => {
-    fetchMock.mockRejectedValue(new Error("offline"));
-    const newWindow = { location: { href: "" }, close: jest.fn() };
-    jest.spyOn(window, "open").mockReturnValue(newWindow as unknown as Window);
-    const { user } = renderCard();
-
-    await user.click(screen.getByText("Arrival (2016)"));
-
-    await waitFor(() => expect(newWindow.close).toHaveBeenCalled());
-    expect(consoleError).toHaveBeenCalledWith(
-      "Failed to get Plex web URL:",
-      expect.any(Error),
-    );
-  });
-
-  it("survives a blocked popup", async () => {
-    jest.spyOn(window, "open").mockReturnValue(null);
-    const { user } = renderCard();
-
-    await user.click(screen.getByText("Arrival (2016)"));
-
     await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    open.mockRestore();
   });
 
   it("labels a track differently from other content", () => {
@@ -455,7 +508,6 @@ describe("StreamCard opening in Plex", () => {
     rerender(
       <StreamCard
         stream={stream({ type: "track", title: "Roygbiv" })}
-        index={0}
         isExpanded={false}
         isRevoking={false}
         onToggleExpand={jest.fn()}

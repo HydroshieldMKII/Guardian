@@ -55,6 +55,25 @@ describe("request behaviour", () => {
     await expect(apiClient.get("/health")).resolves.toEqual({ status: "ok" });
   });
 
+  it("resolves to nothing when a success carries no body", async () => {
+    fetchMock.mockImplementation(
+      async () => new Response(null, { status: 200 }),
+    );
+    await expect(apiClient.delete("/users/u/rules/1")).resolves.toBeUndefined();
+  });
+
+  it("serializes a PUT body", async () => {
+    await apiClient.put("/users/u/rules/1", { enabled: false });
+    const { init } = lastRequest();
+    expect(init.method).toBe("PUT");
+    expect(init.body).toBe(JSON.stringify({ enabled: false }));
+  });
+
+  it("sends a PUT without a body when given none", async () => {
+    await apiClient.put("/users/u/rules/1/toggle");
+    expect(lastRequest().init.body).toBeUndefined();
+  });
+
   it("serializes a POST body", async () => {
     await apiClient.post("/users/1/hide", { a: 1 });
     const { init } = lastRequest();

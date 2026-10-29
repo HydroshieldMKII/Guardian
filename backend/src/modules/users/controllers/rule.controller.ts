@@ -8,23 +8,18 @@ import {
   Param,
   ParseIntPipe,
   Query,
-  HttpException,
   HttpStatus,
   Logger,
 } from '@nestjs/common';
 import { TimeRuleService } from '@/modules/users/services/time-rule.service';
-import type {
-  CreateTimeRuleDto,
-  UpdateTimeRuleDto,
-  CreatePresetDto,
-} from '@/modules/users/services/time-rule.service';
+import { BatchTimeRulesDto } from '@/modules/users/dto/batch-time-rules.dto';
+import { CreateTimeRuleBodyDto } from '@/modules/users/dto/create-time-rule.dto';
+import { UpdateTimeRuleBodyDto } from '@/modules/users/dto/update-time-rule.dto';
+import { TimeRulePresetBodyDto } from '@/modules/users/dto/time-rule-preset.dto';
 import { UserTimeRule } from '@/entities/user-time-rule.entity';
 import { AdminOnly } from '@/modules/auth/decorators/admin-only.decorator';
-import { asHttpError, errorMessage } from '@/common/utils/error-types';
-
-export interface BatchTimeRulesDto {
-  userIds: string[];
-}
+import { asHttpError } from '@/common/utils/error-types';
+import { respondOrFail } from '@/common/utils/respond-or-fail';
 
 @Controller()
 @AdminOnly()
@@ -33,14 +28,12 @@ export class RuleController {
 
   constructor(private readonly timeRuleService: TimeRuleService) {}
 
-  // Batch endpoint for fetching multiple users' rules
   @Post('rules/batch')
   async getTimeRulesBatch(
     @Body() dto: BatchTimeRulesDto,
   ): Promise<Record<string, UserTimeRule[]>> {
     const result: Record<string, UserTimeRule[]> = {};
 
-    // Fetch time rules for each user
     for (const userId of dto.userIds) {
       try {
         const rules = await this.timeRuleService.getAllTimeRules(userId);
@@ -50,7 +43,7 @@ export class RuleController {
           `Error fetching time rules for user ${userId}`,
           asHttpError(error).stack || error,
         );
-        result[userId] = []; // Return empty on error
+        result[userId] = [];
       }
     }
 
@@ -60,7 +53,7 @@ export class RuleController {
   @Post('users/:userId/rules')
   async createTimeRule(
     @Param('userId') userId: string,
-    @Body() createDto: Omit<CreateTimeRuleDto, 'userId'>,
+    @Body() createDto: CreateTimeRuleBodyDto,
   ): Promise<UserTimeRule> {
     return this.timeRuleService.createTimeRule({
       ...createDto,
@@ -95,7 +88,7 @@ export class RuleController {
   async updateTimeRule(
     @Param('userId') userId: string,
     @Param('ruleId', ParseIntPipe) ruleId: number,
-    @Body() updateDto: UpdateTimeRuleDto,
+    @Body() updateDto: UpdateTimeRuleBodyDto,
   ): Promise<UserTimeRule | null> {
     return this.timeRuleService.updateTimeRule(userId, ruleId, updateDto);
   }
@@ -127,22 +120,12 @@ export class RuleController {
   @Post('users/:userId/rules/preset')
   async createPreset(
     @Param('userId') userId: string,
-    @Body() createDto: Omit<CreatePresetDto, 'userId'>,
+    @Body() createDto: TimeRulePresetBodyDto,
   ): Promise<UserTimeRule[]> {
-    try {
-      return await this.timeRuleService.createPreset({
-        ...createDto,
-        userId,
-      });
-    } catch (error) {
-      this.logger.error(
-        `Controller error creating preset: ${errorMessage(error)}`,
-        asHttpError(error).stack,
-      );
-      throw new HttpException(
-        errorMessage(error) || 'Failed to create preset',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
+    return respondOrFail(
+      () => this.timeRuleService.createPreset({ ...createDto, userId }),
+      'Failed to create preset',
+      { status: HttpStatus.BAD_REQUEST, exposeCause: true },
+    );
   }
 }
