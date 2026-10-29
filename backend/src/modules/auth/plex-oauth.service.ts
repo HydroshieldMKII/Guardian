@@ -158,7 +158,7 @@ export class PlexOAuthService {
       return user;
     } catch (error) {
       this.logger.error('Failed to get Plex user info:', error);
-      throw error instanceof Error ? error : new Error(String(error));
+      throw error;
     }
   }
 
@@ -286,11 +286,7 @@ export class PlexOAuthService {
   /**
    * Check if a Plex user is on the server (has access)
    */
-  async isPlexUserOnServer(
-    plexUserId: string,
-    _serverToken: string,
-  ): Promise<boolean> {
-    // The UserPreference entity stores Plex user IDs synced from the server
+  async isPlexUserOnServer(plexUserId: string): Promise<boolean> {
     const userPreference = await this.userPreferenceRepository.findOne({
       where: { userId: plexUserId },
     });

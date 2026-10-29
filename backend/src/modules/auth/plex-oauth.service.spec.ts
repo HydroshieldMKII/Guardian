@@ -13,7 +13,9 @@ interface RequestOptions {
   headers: Record<string, string>;
 }
 
-type ResponseListener = (res: EventEmitter & { statusCode: number }) => void;
+type ResponseListener = (
+  res: EventEmitter & { statusCode: number | undefined },
+) => void;
 
 const mockHttpsRequest = jest.fn<unknown, [RequestOptions, ResponseListener]>();
 
@@ -24,6 +26,7 @@ jest.mock('https', () => ({
 
 interface PlexReply {
   statusCode?: number;
+  noStatus?: boolean;
   body?: string;
   error?: Error;
   timeout?: boolean;
@@ -101,7 +104,9 @@ describe('PlexOAuthService', () => {
             }
 
             const res = Object.assign(new EventEmitter(), {
-              statusCode: reply.statusCode ?? 200,
+              statusCode: reply.noStatus
+                ? undefined
+                : (reply.statusCode ?? 200),
             });
             callback(res);
 
@@ -196,6 +201,13 @@ describe('PlexOAuthService', () => {
 
     it('rejects a non-2xx response', async () => {
       respondWith({ statusCode: 429, body: 'rate limited' });
+      await expect(service.createPlexPin('client-1')).rejects.toThrow(
+        'Failed to create Plex PIN',
+      );
+    });
+
+    it('rejects a response that carries no status code', async () => {
+      respondWith({ noStatus: true, body: pinResponse });
       await expect(service.createPlexPin('client-1')).rejects.toThrow(
         'Failed to create Plex PIN',
       );
@@ -385,11 +397,11 @@ describe('PlexOAuthService', () => {
   describe('server access checks', () => {
     it('treats a synced user preference as proof of access', async () => {
       preferenceRepo.findOne.mockResolvedValue({ userId: '9' });
-      await expect(service.isPlexUserOnServer('9', '')).resolves.toBe(true);
+      await expect(service.isPlexUserOnServer('9')).resolves.toBe(true);
     });
 
     it('denies a Plex user with no preference row', async () => {
-      await expect(service.isPlexUserOnServer('9', '')).resolves.toBe(false);
+      await expect(service.isPlexUserOnServer('9')).resolves.toBe(false);
     });
 
     it('exposes the preference row by Plex id', async () => {
