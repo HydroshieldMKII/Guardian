@@ -10,6 +10,7 @@ import { EmailTemplateService } from '@/modules/config/services/email-template.s
 import { PlexConnectionService } from '@/modules/config/services/plex-connection.service';
 import { TimezoneService } from '@/modules/config/services/timezone.service';
 import { DatabaseService } from '@/modules/config/services/database.service';
+import { DatabaseImportService } from '@/modules/config/services/database-import.service';
 import { VersionService } from '@/modules/config/services/version.service';
 import { AppriseService } from '@/modules/config/services/apprise.service';
 
@@ -30,10 +31,8 @@ export interface ConfigTestbed {
     'getCurrentTimeInTimezone' | 'formatTimestamp',
     jest.Mock
   >;
-  databaseService: Record<
-    'exportDatabase' | 'importDatabase' | 'resetDatabase',
-    jest.Mock
-  >;
+  databaseService: Record<'exportDatabase' | 'resetDatabase', jest.Mock>;
+  databaseImportService: { importDatabase: jest.Mock };
   versionService: Record<
     | 'getCurrentAppVersion'
     | 'compareVersions'
@@ -117,8 +116,11 @@ export const createConfigTestbed = (): ConfigTestbed => {
 
   const databaseService = {
     exportDatabase: jest.fn().mockResolvedValue('{"settings":[]}'),
-    importDatabase: jest.fn().mockResolvedValue({ imported: 5, skipped: 1 }),
     resetDatabase: jest.fn().mockResolvedValue(undefined),
+  };
+
+  const databaseImportService = {
+    importDatabase: jest.fn().mockResolvedValue({ imported: 5, skipped: 1 }),
   };
 
   const versionService = {
@@ -152,6 +154,7 @@ export const createConfigTestbed = (): ConfigTestbed => {
         { provide: PlexConnectionService, useValue: plexConnectionService },
         { provide: TimezoneService, useValue: timezoneService },
         { provide: DatabaseService, useValue: databaseService },
+        { provide: DatabaseImportService, useValue: databaseImportService },
         { provide: VersionService, useValue: versionService },
         { provide: AppriseService, useValue: appriseService },
       ],
@@ -173,6 +176,7 @@ export const createConfigTestbed = (): ConfigTestbed => {
     plexConnectionService,
     timezoneService,
     databaseService,
+    databaseImportService,
     versionService,
     appriseService,
     compile,

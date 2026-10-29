@@ -1,9 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@/modules/config/services/config.service';
+import { DatabaseService } from '@/modules/config/services/database.service';
 import {
-  DatabaseService,
+  DatabaseImportService,
   ImportPayload,
-} from '@/modules/config/services/database.service';
+  ImportResult,
+} from '@/modules/config/services/database-import.service';
 import { VersionService } from '@/modules/config/services/version.service';
 import { validateSettingValue } from '@/modules/config/services/setting-validation';
 import { isSettingKey } from '@/modules/config/settings.catalog';
@@ -13,6 +15,7 @@ export class DatabaseMaintenanceService {
   constructor(
     private readonly configService: ConfigService,
     private readonly databaseService: DatabaseService,
+    private readonly databaseImportService: DatabaseImportService,
     private readonly versionService: VersionService,
   ) {}
 
@@ -23,15 +26,14 @@ export class DatabaseMaintenanceService {
 
   async importDatabase(
     importData: ImportPayload | null | undefined,
-  ): Promise<{ imported: number; skipped: number }> {
-    const result = await this.databaseService.importDatabase(
-      importData,
-      this.versionService.getCurrentAppVersion(),
-      (v1: string, v2: string) => this.versionService.compareVersions(v1, v2),
-      (key: string, value: string) => {
+  ): Promise<ImportResult> {
+    const result = await this.databaseImportService.importDatabase(importData, {
+      currentAppVersion: this.versionService.getCurrentAppVersion(),
+      compareVersions: (v1, v2) => this.versionService.compareVersions(v1, v2),
+      validateSetting: (key, value) => {
         if (isSettingKey(key)) validateSettingValue(key, value);
       },
-    );
+    });
 
     await this.configService.reloadSettings();
     return result;

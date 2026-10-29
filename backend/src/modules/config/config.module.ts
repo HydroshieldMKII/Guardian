@@ -7,6 +7,7 @@ import { EmailTemplateService } from '@/modules/config/services/email-template.s
 import { PlexConnectionService } from '@/modules/config/services/plex-connection.service';
 import { TimezoneService } from '@/modules/config/services/timezone.service';
 import { DatabaseService } from '@/modules/config/services/database.service';
+import { DatabaseImportService } from '@/modules/config/services/database-import.service';
 import { VersionService } from '@/modules/config/services/version.service';
 import { AppriseService } from '@/modules/config/services/apprise.service';
 import { ConnectionTestService } from '@/modules/config/services/connection-test.service';
@@ -28,6 +29,7 @@ import { Session } from '@/entities/session.entity';
     AppriseService,
     ConnectionTestService,
     DatabaseMaintenanceService,
+    DatabaseImportService,
   ],
   exports: [
     ConfigService,

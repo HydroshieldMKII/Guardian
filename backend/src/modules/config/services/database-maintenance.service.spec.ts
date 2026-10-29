@@ -4,6 +4,7 @@ import {
   ConfigTestbed,
   createConfigTestbed,
 } from '@/modules/config/services/config-testbed.fixture';
+import type { ImportRules } from '@/modules/config/services/database-import.service';
 import { callArgs } from '@/test-matchers';
 
 describe('DatabaseMaintenanceService', () => {
@@ -12,13 +13,21 @@ describe('DatabaseMaintenanceService', () => {
   let store: Map<string, AppSettings>;
   let settingsRepo: ConfigTestbed['settingsRepo'];
   let databaseService: ConfigTestbed['databaseService'];
+  let databaseImportService: ConfigTestbed['databaseImportService'];
+  let versionService: ConfigTestbed['versionService'];
 
   const build = async () =>
     (await testbed.build()).get(DatabaseMaintenanceService);
 
   beforeEach(async () => {
     testbed = createConfigTestbed();
-    ({ store, settingsRepo, databaseService } = testbed);
+    ({
+      store,
+      settingsRepo,
+      databaseService,
+      databaseImportService,
+      versionService,
+    } = testbed);
     service = await build();
   });
 
@@ -43,19 +52,23 @@ describe('DatabaseMaintenanceService', () => {
     it('hands the importer the running version and a comparator', async () => {
       await service.importDatabase({ data: { settings: [] } });
 
-      const [, version, compare] = callArgs<[unknown, string, unknown]>(
-        databaseService.importDatabase,
+      const [, rules] = callArgs<[unknown, ImportRules]>(
+        databaseImportService.importDatabase,
       );
-      expect(version).toBe('1.3.5');
-      expect(typeof compare).toBe('function');
+      expect(rules.currentAppVersion).toBe('1.3.5');
+      rules.compareVersions('1.0.0', '1.3.5');
+      expect(versionService.compareVersions).toHaveBeenCalledWith(
+        '1.0.0',
+        '1.3.5',
+      );
     });
 
     it('hands the importer the same rules the settings page uses', async () => {
       await service.importDatabase({ data: { settings: [] } });
 
-      const [, , , validate] = callArgs<
-        [unknown, string, unknown, (key: string, value: string) => void]
-      >(databaseService.importDatabase);
+      const [, { validateSetting: validate }] = callArgs<
+        [unknown, ImportRules]
+      >(databaseImportService.importDatabase);
       expect(() => validate('PLEXGUARD_REFRESH_INTERVAL', '7.5')).toThrow(
         'whole number of seconds',
       );

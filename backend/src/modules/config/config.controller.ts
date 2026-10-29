@@ -20,10 +20,8 @@ import {
 } from '@/modules/config/services/config.service';
 import { ConnectionTestService } from '@/modules/config/services/connection-test.service';
 import { DatabaseMaintenanceService } from '@/modules/config/services/database-maintenance.service';
-import {
-  DatabaseService,
-  type ImportPayload,
-} from '@/modules/config/services/database.service';
+import { DatabaseService } from '@/modules/config/services/database.service';
+import type { ImportPayload } from '@/modules/config/services/database-import.service';
 import { isSettingKey } from '@/modules/config/settings.catalog';
 import { AuthService } from '@/modules/auth/auth.service';
 import { ConfirmPasswordDto } from '@/modules/auth/dto/confirm-password.dto';
