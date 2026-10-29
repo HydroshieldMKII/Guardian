@@ -69,7 +69,7 @@ describe("ConcurrentStreamModal", () => {
       <ConcurrentStreamModal isOpen={false} onClose={jest.fn()} userId="u-1" />,
     );
 
-    expect(screen.queryByText("Concurrent Stream Limit")).toBeNull();
+    expect(screen.queryByText("Concurrent stream limit")).toBeNull();
     expect(getUserConcurrentStreamInfo).not.toHaveBeenCalled();
   });
 

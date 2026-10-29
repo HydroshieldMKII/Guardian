@@ -23,7 +23,7 @@ describe("RemoveAccessModal", () => {
         onCancel={jest.fn()}
       />,
     );
-    expect(screen.queryByText("Remove Device Access")).toBeNull();
+    expect(screen.queryByText("Remove device access")).toBeNull();
   });
 
   it("summarises the content, user and device", () => {
@@ -36,7 +36,7 @@ describe("RemoveAccessModal", () => {
       />,
     );
 
-    expect(screen.getByText("Remove Device Access")).toBeInTheDocument();
+    expect(screen.getByText("Remove device access")).toBeInTheDocument();
     expect(screen.getByText("Arrival (2016)")).toBeInTheDocument();
     expect(screen.getByText("testuser")).toBeInTheDocument();
     expect(screen.getByText("Living Room TV")).toBeInTheDocument();
@@ -52,8 +52,8 @@ describe("RemoveAccessModal", () => {
       />,
     );
 
-    expect(screen.getByText("Unknown User")).toBeInTheDocument();
-    expect(screen.getByText("Unknown Device")).toBeInTheDocument();
+    expect(screen.getByText("Unknown user")).toBeInTheDocument();
+    expect(screen.getByText("Unknown device")).toBeInTheDocument();
   });
 
   it("confirms and cancels", async () => {
@@ -70,7 +70,7 @@ describe("RemoveAccessModal", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: /Remove Access/ }));
+    await user.click(screen.getByRole("button", { name: /Remove access/ }));
     expect(onConfirm).toHaveBeenCalled();
 
     await user.click(screen.getByRole("button", { name: "Cancel" }));
@@ -91,7 +91,7 @@ describe("RemoveAccessModal", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: /Remove Access/ }));
+    await user.click(screen.getByRole("button", { name: /Remove access/ }));
     expect(onConfirm).toHaveBeenCalledWith();
 
     await user.click(screen.getByRole("button", { name: "Cancel" }));

@@ -18,17 +18,23 @@ const POLICY_TONE: Record<DevicePolicy, Tone> = {
 };
 
 const POLICY_LABEL: Record<DevicePolicy, string> = {
-  temporary: "Temporary Access",
-  schedule: "Time Schedule",
-  ip: "IP Access",
+  temporary: "Temporary access",
+  schedule: "Time schedule",
+  ip: "Network access",
 };
 
 const POLICY_ORDER: DevicePolicy[] = ["temporary", "schedule", "ip"];
 
 const GROUP_HINT: Record<DevicePolicy, string> = {
-  temporary: "At least one device has temporary access",
-  schedule: "A time schedule applies to at least one device",
-  ip: "Network and IP access rules apply to this user",
+  temporary: "Temporary access on",
+  schedule: "Time schedule on",
+  ip: "Network access rules on",
+};
+
+const deviceCoverage = (count: number, total: number): string => {
+  if (total === 1) return "their only device";
+  if (count === total) return `all ${total} devices`;
+  return `${count} of ${total} devices`;
 };
 
 const DEVICE_HINT: Record<Exclude<DevicePolicy, "temporary">, string> = {
@@ -45,6 +51,21 @@ export const isPlexampDevice = (device: UserDevice): boolean =>
     device.deviceProduct?.toLowerCase().includes("plexamp") ||
     device.deviceName?.toLowerCase().includes("plexamp"),
   );
+
+export const isWaitingDevice = (device: UserDevice): boolean =>
+  device.status === "pending" && !isPlexampDevice(device);
+
+export const countWaitingDevices = (
+  devices: UserDevice[],
+  users: UserPreference[] = [],
+): number => {
+  const hidden = new Set(
+    users.filter((user) => user.hidden).map((user) => user.userId),
+  );
+  return devices.filter(
+    (device) => isWaitingDevice(device) && !hidden.has(device.userId),
+  ).length;
+};
 
 export const hasTemporaryAccess = (device: UserDevice): boolean => {
   if (!device.temporaryAccessUntil) return false;
@@ -131,17 +152,17 @@ export function groupPolicyBadges(
   preference?: UserPreference | null,
   rules?: UserTimeRule[],
 ): PolicyBadge[] {
-  const present = new Set<DevicePolicy>();
+  const counts = new Map<DevicePolicy, number>();
   for (const device of devices) {
     for (const policy of devicePolicies(device, preference, rules)) {
-      present.add(policy);
+      counts.set(policy, (counts.get(policy) ?? 0) + 1);
     }
   }
 
-  return POLICY_ORDER.filter((policy) => present.has(policy)).map((policy) => ({
+  return POLICY_ORDER.filter((policy) => counts.has(policy)).map((policy) => ({
     policy,
     label: POLICY_LABEL[policy],
     tone: POLICY_TONE[policy],
-    hint: GROUP_HINT[policy],
+    hint: `${GROUP_HINT[policy]} ${deviceCoverage(counts.get(policy) ?? 0, devices.length)}`,
   }));
 }

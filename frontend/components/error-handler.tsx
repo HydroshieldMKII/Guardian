@@ -38,7 +38,7 @@ export function ErrorHandler({
     // Check for backend errors FIRST
     if (backendError) {
       return {
-        title: "Cannot Reach the Backend",
+        title: "Cannot reach the backend",
         description: backendError,
         showChecklist: false,
         isBackendError: true,
@@ -55,7 +55,7 @@ export function ErrorHandler({
       status.includes("Backend server is not reachable")
     ) {
       return {
-        title: "Cannot Reach the Backend",
+        title: "Cannot reach the backend",
         description:
           "The backend is not answering. Check that the service is running.",
         showChecklist: false,
@@ -105,7 +105,7 @@ export function ErrorHandler({
     // Fallback for unknown errors
     return withDetail(
       {
-        title: "Something Went Wrong",
+        title: "Something went wrong",
         description:
           "Something went wrong that could not be explained. Check your setup and try again.",
         showChecklist: false,
@@ -137,13 +137,13 @@ export function ErrorHandler({
                   </h4>
                   <ul className="space-y-2 list-disc list-inside">
                     <li className="text-sm text-muted-foreground">
-                      Plex Server IP Address
+                      Plex server IP address
                     </li>
                     <li className="text-sm text-muted-foreground">
-                      Plex Server Port
+                      Plex server port
                     </li>
                     <li className="text-sm text-muted-foreground">
-                      Plex Authentication Token
+                      Plex authentication token
                     </li>
                   </ul>
                 </div>
@@ -152,7 +152,7 @@ export function ErrorHandler({
               <div className="pt-4 mb-8">
                 {errorInfo.isBackendError && onRetry ? (
                   <Button onClick={onRetry} className="w-full" size="lg">
-                    Retry Connection
+                    Retry connection
                   </Button>
                 ) : (
                   onShowSettings && (

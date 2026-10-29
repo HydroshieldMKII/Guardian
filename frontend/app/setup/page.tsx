@@ -26,7 +26,7 @@ import {
   Sun,
   Moon,
 } from "lucide-react";
-import { ThreeDotLoader } from "@/components/three-dot-loader";
+import { PageLoader } from "@/components/three-dot-loader";
 import { ErrorHandler } from "@/components/error-handler";
 
 export default function SetupPage() {
@@ -124,7 +124,7 @@ export default function SetupPage() {
       );
 
       toast({
-        title: "Account Created",
+        title: "Account created",
         description: "You can sign in with it now",
         variant: "success",
       });
@@ -146,11 +146,7 @@ export default function SetupPage() {
 
   // Show loader while checking auth
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <ThreeDotLoader />
-      </div>
-    );
+    return <PageLoader />;
   }
 
   // Show error if backend is unavailable
@@ -199,10 +195,7 @@ export default function SetupPage() {
         </CardHeader>
 
         <CardContent className="pb-6">
-          <form
-            onSubmit={(e) => void handleSubmit(e)}
-            className="space-y-4"
-          >
+          <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4">
             {/* Username */}
             <div className="space-y-2">
               <label
@@ -363,13 +356,12 @@ export default function SetupPage() {
               )}
             </div>
 
-            {/* Confirm Password */}
             <div className="space-y-2">
               <label
                 htmlFor="confirmPassword"
                 className="text-sm font-semibold text-foreground"
               >
-                Confirm Password
+                Confirm password
               </label>
               <div className="relative">
                 <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
@@ -439,7 +431,7 @@ export default function SetupPage() {
               className="w-full mt-2"
               size="lg"
             >
-              {isSubmitting ? "Creating..." : "Create Administrator Account"}
+              {isSubmitting ? "Creating..." : "Create administrator account"}
             </Button>
           </form>
         </CardContent>

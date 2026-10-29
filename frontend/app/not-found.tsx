@@ -28,7 +28,7 @@ export default function NotFound() {
           <Button asChild variant="default" size="lg">
             <Link href="/">
               <Home className="mr-2 h-4 w-4" />
-              Go Home
+              Go home
             </Link>
           </Button>
           <Button
@@ -37,7 +37,7 @@ export default function NotFound() {
             onClick={() => window.history.back()}
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Go Back
+            Go back
           </Button>
         </div>
       </div>

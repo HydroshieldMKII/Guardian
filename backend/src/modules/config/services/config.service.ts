@@ -24,6 +24,8 @@ import {
 } from '@/modules/config/settings.catalog';
 import { errorMessage } from '@/common/utils/error-types';
 
+export const MIN_REFRESH_INTERVAL_SECONDS = 5;
+
 export interface ConfigSettingDto {
   key: SettingKey;
   value: string;
@@ -217,6 +219,17 @@ export class ConfigService {
 
   private validateSettingValue(key: SettingKey, value: string): void {
     const validators: Partial<Record<SettingKey, () => void>> = {
+      PLEXGUARD_REFRESH_INTERVAL: () =>
+        this.validateInteger(
+          value,
+          {
+            notANumber: 'Session refresh interval must be a number',
+            notWhole:
+              'Session refresh interval must be a whole number of seconds',
+            outOfRange: `Session refresh interval must be at least ${MIN_REFRESH_INTERVAL_SECONDS} seconds`,
+          },
+          { min: MIN_REFRESH_INTERVAL_SECONDS },
+        ),
       DEVICE_CLEANUP_INTERVAL_DAYS: () =>
         this.validateInteger(
           value,
@@ -265,11 +278,14 @@ export class ConfigService {
     validators[key]?.();
   }
 
+  private toStoredValue(value: unknown): string {
+    return typeof value === 'object' && value !== null
+      ? JSON.stringify(value)
+      : String(value);
+  }
+
   async updateSetting(key: SettingKey, value: unknown): Promise<AppSettings> {
-    const stringValue =
-      typeof value === 'object' && value !== null
-        ? JSON.stringify(value)
-        : String(value);
+    const stringValue = this.toStoredValue(value);
 
     this.validateSettingValue(key, stringValue);
 
@@ -337,6 +353,10 @@ export class ConfigService {
   async updateMultipleSettings(
     settings: ConfigSettingDto[],
   ): Promise<AppSettings[]> {
+    for (const { key, value } of settings) {
+      this.validateSettingValue(key, this.toStoredValue(value));
+    }
+
     const results: AppSettings[] = [];
 
     for (const { key, value } of settings) {
@@ -487,6 +507,9 @@ export class ConfigService {
       importData,
       this.versionService.getCurrentAppVersion(),
       (v1: string, v2: string) => this.versionService.compareVersions(v1, v2),
+      (key: string, value: string) => {
+        if (isSettingKey(key)) this.validateSettingValue(key, value);
+      },
     );
 
     // Refresh cache after import

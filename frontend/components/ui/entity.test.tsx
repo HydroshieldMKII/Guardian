@@ -19,10 +19,13 @@ import {
   SegmentedControl,
   SelectRow,
   StatTile,
+  StatusMark,
   StatusPill,
   ToggleRow,
   toneButton,
+  toneColorVar,
   toneMenuItem,
+  toneTint,
   type Tone,
 } from "@/components/ui/entity";
 
@@ -111,7 +114,7 @@ describe("StatusPill", () => {
 
   it("defaults to neutral", () => {
     const { container } = render(<StatusPill>Idle</StatusPill>);
-    expect(container.innerHTML).toContain("bg-muted/60");
+    expect(container.innerHTML).toContain("bg-muted text-muted-foreground");
   });
 
   it("adds a dot only when asked", () => {
@@ -140,12 +143,12 @@ describe("layout primitives", () => {
   it("renders label and value pairs as a description list", () => {
     const { container } = render(
       <MetaGrid>
-        <Meta label="IP Address">192.168.1.10</Meta>
+        <Meta label="IP address">192.168.1.10</Meta>
       </MetaGrid>,
     );
 
     expect(container.querySelector("dl")).not.toBeNull();
-    expect(screen.getByText("IP Address").tagName).toBe("DT");
+    expect(screen.getByText("IP address").tagName).toBe("DT");
     expect(screen.getByText("192.168.1.10").tagName).toBe("DD");
   });
 
@@ -185,9 +188,9 @@ describe("layout primitives", () => {
 
 describe("StatTile", () => {
   it("shows a label and value", () => {
-    render(<StatTile label="Active Streams" value={4} />);
+    render(<StatTile label="Active streams" value={4} />);
 
-    expect(screen.getByText("Active Streams")).toBeInTheDocument();
+    expect(screen.getByText("Active streams")).toBeInTheDocument();
     expect(screen.getByText("4")).toBeInTheDocument();
   });
 
@@ -214,7 +217,7 @@ describe("StatTile", () => {
 describe("Panel", () => {
   it("defaults to the neutral tone", () => {
     const { container } = render(<Panel>body</Panel>);
-    expect(container.innerHTML).toContain("bg-muted/30");
+    expect(container.innerHTML).toContain("bg-surface/60");
   });
 
   it.each(TONES)("paints the %s tone", (tone) => {
@@ -270,6 +273,13 @@ describe("toneMenuItem", () => {
   });
 });
 
+describe("toneTint", () => {
+  it("shares the soft fill of the matching pill", () => {
+    expect(toneTint("positive")).toContain("bg-allowed/12");
+    expect(toneTint("danger")).toContain("text-blocked");
+  });
+});
+
 describe("Field", () => {
   it("links the label to the control", () => {
     render(
@@ -317,6 +327,25 @@ describe("Field", () => {
     expect(label.parentElement).toBe(control.parentElement);
     expect(screen.getByText("Where the app opens")).toBeInTheDocument();
   });
+
+  it("sets an inline control beside the label and hint", () => {
+    render(
+      <Field label="Limit" htmlFor="limit" hint="Streams per user" inline>
+        <input id="limit" />
+      </Field>,
+    );
+
+    const row = screen.getByText("Limit").closest("[data-slot='field-row']");
+
+    expect(row).toContainElement(screen.getByLabelText("Limit"));
+    expect(row).toContainElement(screen.getByText("Streams per user"));
+  });
+
+  it("renders an inline field with no control", () => {
+    const { container } = render(<Field label="Limit" inline />);
+
+    expect(container.querySelector(".shrink-0")).toBeNull();
+  });
 });
 
 describe("ToggleRow", () => {
@@ -352,6 +381,33 @@ describe("ToggleRow", () => {
 
     expect(container.innerHTML).toContain("opacity-60");
     expect(screen.getByRole("switch")).toBeDisabled();
+  });
+
+  it("drops the box when plain", () => {
+    const { container } = render(
+      <ToggleRow
+        id="flag"
+        label="Enable it"
+        checked
+        onCheckedChange={jest.fn()}
+        plain
+      />,
+    );
+
+    expect(container.firstElementChild).not.toHaveClass("border");
+  });
+
+  it("boxes the row by default", () => {
+    const { container } = render(
+      <ToggleRow
+        id="flag"
+        label="Enable it"
+        checked
+        onCheckedChange={jest.fn()}
+      />,
+    );
+
+    expect(container.firstElementChild).toHaveClass("border");
   });
 });
 
@@ -470,12 +526,8 @@ describe("SegmentedControl", () => {
   });
 
   it("carries the tone of whichever segment is active", () => {
-    expect(thumb(control("allow").container).className).toContain(
-      "bg-emerald-600",
-    );
-    expect(thumb(control("block").container).className).toContain(
-      "bg-rose-600",
-    );
+    expect(thumb(control("allow").container).className).toContain("bg-allowed");
+    expect(thumb(control("block").container).className).toContain("bg-blocked");
   });
 
   it("animates the indicator rather than snapping it", () => {
@@ -628,5 +680,43 @@ describe("Section", () => {
     );
 
     expect(screen.getByRole("button", { name: "Add" })).toBeInTheDocument();
+  });
+});
+
+describe("toneColorVar", () => {
+  it("maps neutral to the muted foreground", () => {
+    expect(toneColorVar("neutral")).toBe("var(--muted-foreground)");
+  });
+
+  it.each([
+    ["positive", "allowed"],
+    ["warning", "waiting"],
+    ["danger", "blocked"],
+    ["info", "info"],
+    ["accent", "special"],
+  ] as const)("maps %s to the %s status colour", (tone, token) => {
+    expect(toneColorVar(tone)).toBe(`var(--${token})`);
+  });
+});
+
+describe("StatusMark", () => {
+  it("is decorative without a label", () => {
+    const { container } = render(<StatusMark />);
+    const mark = container.querySelector("svg");
+    expect(mark).toHaveAttribute("aria-hidden", "true");
+    expect(mark).not.toHaveAttribute("role");
+    expect(mark?.getAttribute("style")).toContain("var(--muted-foreground)");
+  });
+
+  it("is announced as an image when labelled", () => {
+    render(<StatusMark tone="danger" label="Rejected" />);
+    const mark = screen.getByRole("img", { name: "Rejected" });
+    expect(mark).not.toHaveAttribute("aria-hidden");
+    expect(mark.getAttribute("style")).toContain("var(--blocked)");
+  });
+
+  it("accepts a className", () => {
+    const { container } = render(<StatusMark className="mark-extra" />);
+    expect(container.querySelector("svg")).toHaveClass("mark-extra");
   });
 });

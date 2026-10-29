@@ -21,7 +21,7 @@ export const ClickableIP: React.FC<ClickableIPProps> = ({ ipAddress }) => {
   return (
     <button
       onClick={handleClick}
-      className="inline-flex cursor-pointer items-center gap-1 truncate text-blue-600 transition-colors hover:text-blue-800 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
+      className="tabular inline-flex cursor-pointer items-center gap-1 truncate underline decoration-border underline-offset-[3px] transition-colors hover:text-foreground hover:decoration-current"
       title={`Look up ${ipAddress} on ipinfo.io`}
     >
       <span className="truncate">{ipAddress}</span>

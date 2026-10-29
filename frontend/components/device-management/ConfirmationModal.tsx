@@ -1,19 +1,21 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Meta,
-  MetaGrid,
-  Panel,
-  toneButton,
-  type Tone,
-} from "@/components/ui/entity";
+import { toneButton, toneTint, type Tone } from "@/components/ui/entity";
 import {
   Modal,
   ModalBody,
   ModalFooter,
   ModalHeader,
 } from "@/components/ui/modal";
-import { RefreshCw } from "lucide-react";
+import {
+  Ban,
+  Check,
+  RefreshCw,
+  TimerOff,
+  Trash2,
+  type LucideIcon,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
 import { UserDevice } from "@/types";
 
 type ConfirmAction =
@@ -35,10 +37,10 @@ interface ConfirmationModalProps {
 }
 
 const ACTION_LABELS: Record<ResolvedAction, string> = {
-  approve: "Approve Device",
-  reject: "Reject Device",
-  delete: "Delete Device",
-  removeTemporaryAccess: "Remove Temporary Access",
+  approve: "Approve device",
+  reject: "Reject device",
+  delete: "Delete device",
+  removeTemporaryAccess: "Remove temporary access",
 };
 
 const ACTION_TONES: Record<ResolvedAction, Tone> = {
@@ -47,6 +49,26 @@ const ACTION_TONES: Record<ResolvedAction, Tone> = {
   delete: "danger",
   removeTemporaryAccess: "warning",
 };
+
+const ACTION_ICONS: Record<ResolvedAction, LucideIcon> = {
+  approve: Check,
+  reject: Ban,
+  delete: Trash2,
+  removeTemporaryAccess: TimerOff,
+};
+
+const DetailRow = ({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) => (
+  <div className="flex items-baseline justify-between gap-4 px-3 py-2.5">
+    <dt className="shrink-0 text-muted-foreground">{label}</dt>
+    <dd className="min-w-0 truncate text-right text-foreground">{children}</dd>
+  </div>
+);
 
 const resolveAction = (
   action: ConfirmAction,
@@ -77,6 +99,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   const tone = ACTION_TONES[resolved];
   const outlined = isDestructiveOutline(action, resolved);
   const isRunning = actionLoading !== null;
+  const Icon = ACTION_ICONS[resolved];
 
   return (
     <Modal open onOpenChange={onCancel} size="md">
@@ -85,25 +108,54 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
         description={confirmAction.description}
       />
 
-      <ModalBody>
-        <Panel tone={tone}>
-          <p className="truncate text-sm font-semibold text-foreground">
-            {device.deviceName || device.deviceIdentifier}
-          </p>
-          <p className="mt-0.5 truncate text-xs text-muted-foreground">
-            {device.username || device.userId}
-          </p>
-          <MetaGrid className="mt-4 sm:grid-cols-2">
-            <Meta label="Platform">{device.devicePlatform || "Unknown"}</Meta>
-            <Meta label="Product">{device.deviceProduct || "Unknown"}</Meta>
-            <Meta label="IP Address">{device.ipAddress || "Unknown"}</Meta>
-            <Meta label="Last Seen">
-              {device.lastSeen
-                ? new Date(device.lastSeen).toLocaleString()
-                : "Never"}
-            </Meta>
-          </MetaGrid>
-        </Panel>
+      <ModalBody className="space-y-4">
+        <div className="flex items-center gap-3">
+          <span
+            aria-hidden
+            className={cn(
+              "flex size-10 shrink-0 items-center justify-center rounded-xl",
+              toneTint(tone),
+            )}
+          >
+            <Icon className="size-5" />
+          </span>
+          <div className="min-w-0">
+            <p className="truncate font-semibold text-foreground">
+              {device.deviceName || device.deviceIdentifier}
+            </p>
+            <p className="truncate text-sm text-muted-foreground">
+              {device.username || device.userId}
+            </p>
+          </div>
+        </div>
+
+        <dl className="divide-y divide-border/70 rounded-lg border text-sm">
+          <DetailRow label="Platform">
+            {device.devicePlatform || "Unknown"}
+          </DetailRow>
+          <DetailRow label="Product">
+            {device.deviceProduct || "Unknown"}
+          </DetailRow>
+          <DetailRow label="IP address">
+            <span className="font-mono text-[13px]">
+              {device.ipAddress || "Unknown"}
+            </span>
+          </DetailRow>
+          <DetailRow label="Last seen">
+            {device.lastSeen
+              ? new Date(device.lastSeen).toLocaleString()
+              : "Never"}
+          </DetailRow>
+        </dl>
+
+        {device.requestDescription && (
+          <div className="rounded-lg bg-waiting/10 px-3 py-2.5">
+            <p className="text-xs font-medium text-waiting">Note from user</p>
+            <p className="mt-0.5 whitespace-pre-wrap break-words text-sm text-foreground">
+              {device.requestDescription}
+            </p>
+          </div>
+        )}
       </ModalBody>
 
       <ModalFooter>

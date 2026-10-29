@@ -557,6 +557,24 @@ describe('ActiveSessionService', () => {
       );
     });
 
+    it('narrows to Plexamp sessions when asked', async () => {
+      await service.getUserSessionHistory('u1', { app: 'plexamp' });
+
+      expect(builders[0].andWhere).toHaveBeenCalledWith(
+        "(LOWER(COALESCE(session.product, '')) LIKE :plexamp OR LOWER(COALESCE(device.deviceProduct, '')) LIKE :plexamp OR LOWER(COALESCE(device.deviceName, '')) LIKE :plexamp)",
+        { plexamp: '%plexamp%' },
+      );
+    });
+
+    it('leaves Plexamp sessions out when only Plex is asked for', async () => {
+      await service.getUserSessionHistory('u1', { app: 'plex' });
+
+      expect(builders[0].andWhere).toHaveBeenCalledWith(
+        "NOT (LOWER(COALESCE(session.product, '')) LIKE :plexamp OR LOWER(COALESCE(device.deviceProduct, '')) LIKE :plexamp OR LOWER(COALESCE(device.deviceName, '')) LIKE :plexamp)",
+        { plexamp: '%plexamp%' },
+      );
+    });
+
     it('matches the search term against titles, addresses and devices', async () => {
       await service.getUserSessionHistory('u1', { search: '  Ennemie ' });
 

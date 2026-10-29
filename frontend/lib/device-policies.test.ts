@@ -1,5 +1,6 @@
 import type { UserDevice, UserPreference, UserTimeRule } from "@/types";
 import {
+  countWaitingDevices,
   devicePolicies,
   devicePolicyBadges,
   groupPolicyBadges,
@@ -8,6 +9,7 @@ import {
   hasTimeSchedule,
   isPlexampDevice,
   isPolicyBypassed,
+  isWaitingDevice,
   temporaryAccessTimeLeft,
 } from "@/lib/device-policies";
 
@@ -67,6 +69,44 @@ describe("isPlexampDevice", () => {
 
   it("leaves an ordinary device alone", () => {
     expect(isPlexampDevice(device())).toBe(false);
+  });
+});
+
+describe("isWaitingDevice", () => {
+  it("waits on a pending device", () => {
+    expect(isWaitingDevice(device({ status: "pending" }))).toBe(true);
+  });
+
+  it.each([
+    ["an approved device", { status: "approved" as const }],
+    ["a rejected device", { status: "rejected" as const }],
+    [
+      "a pending Plexamp device",
+      { status: "pending" as const, deviceProduct: "Plexamp" },
+    ],
+  ])("does not wait on %s", (_label, overrides) => {
+    expect(isWaitingDevice(device(overrides))).toBe(false);
+  });
+});
+
+describe("countWaitingDevices", () => {
+  it("counts pending devices but not those of hidden users", () => {
+    const devices = [
+      device({ id: 1, status: "pending" }),
+      device({ id: 2, status: "pending", deviceProduct: "Plexamp" }),
+      device({ id: 3, status: "approved" }),
+      device({ id: 4, status: "pending", userId: "u-2" }),
+    ];
+
+    expect(
+      countWaitingDevices(devices, [
+        preference({ userId: "u-2", hidden: true }),
+      ]),
+    ).toBe(1);
+  });
+
+  it("counts every user when no preferences are known", () => {
+    expect(countWaitingDevices([device({ status: "pending" })])).toBe(1);
   });
 });
 
@@ -268,7 +308,7 @@ describe("devicePolicyBadges", () => {
       [],
     );
 
-    expect(badge.label).toBe("Temporary Access");
+    expect(badge.label).toBe("Temporary access");
     expect(badge.hint).toBe("Temporary access expires in 2 hours");
     expect(badge.tone).toBe("positive");
   });
@@ -296,8 +336,8 @@ describe("devicePolicyBadges", () => {
     );
 
     expect(badges.map((badge) => badge.label)).toEqual([
-      "Time Schedule",
-      "IP Access",
+      "Time schedule",
+      "Network access",
     ]);
     expect(badges.map((badge) => badge.tone)).toEqual(["info", "accent"]);
     for (const badge of badges) {
@@ -314,7 +354,7 @@ describe("groupPolicyBadges", () => {
       [],
     );
 
-    expect(badges.map((badge) => badge.label)).toEqual(["Temporary Access"]);
+    expect(badges.map((badge) => badge.label)).toEqual(["Temporary access"]);
   });
 
   it("shows each badge once however many devices earn it", () => {
@@ -328,9 +368,9 @@ describe("groupPolicyBadges", () => {
     );
 
     expect(badges.map((badge) => badge.label)).toEqual([
-      "Temporary Access",
-      "Time Schedule",
-      "IP Access",
+      "Temporary access",
+      "Time schedule",
+      "Network access",
     ]);
   });
 
@@ -341,8 +381,39 @@ describe("groupPolicyBadges", () => {
       [],
     );
 
-    expect(badge.label).toBe("Temporary Access");
-    expect(badge.hint).toBe("At least one device has temporary access");
+    expect(badge.label).toBe("Temporary access");
+    expect(badge.hint).toBe("Temporary access on their only device");
+  });
+
+  it("counts how many devices each badge covers", () => {
+    const badges = groupPolicyBadges(
+      [
+        device({ id: 1, temporaryAccessUntil: inHours(1) }),
+        device({ id: 2, deviceIdentifier: "d-2" }),
+        device({ id: 3, deviceIdentifier: "d-3" }),
+      ],
+      preference({ networkPolicy: "lan" }),
+      [rule()],
+    );
+
+    expect(badges.map((badge) => badge.hint)).toEqual([
+      "Temporary access on 1 of 3 devices",
+      "Time schedule on all 3 devices",
+      "Network access rules on all 3 devices",
+    ]);
+  });
+
+  it("leaves Plexamp devices out of the covered count", () => {
+    const [badge] = groupPolicyBadges(
+      [
+        device({ id: 1 }),
+        device({ id: 2, deviceIdentifier: "d-2", deviceProduct: "Plexamp" }),
+      ],
+      preference({ networkPolicy: "lan" }),
+      [],
+    );
+
+    expect(badge.hint).toBe("Network access rules on 1 of 2 devices");
   });
 
   it("stays empty for a user with no devices", () => {
@@ -361,6 +432,6 @@ describe("groupPolicyBadges", () => {
       [rule()],
     );
 
-    expect(badges.map((badge) => badge.label)).toEqual(["Temporary Access"]);
+    expect(badges.map((badge) => badge.label)).toEqual(["Temporary access"]);
   });
 });

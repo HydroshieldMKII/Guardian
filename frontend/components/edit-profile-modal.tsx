@@ -63,7 +63,7 @@ export function EditProfileModal({
   const [clearSessions, setClearSessions] = useState(true);
 
   const [showPasswordError, setShowPasswordError] = useState<string | null>(
-    null
+    null,
   );
   const [showProfileError, setShowProfileError] = useState<string | null>(null);
 
@@ -108,19 +108,19 @@ export function EditProfileModal({
     onAuthenticated: linkPlexAccount,
     copy: {
       success: {
-        title: "Plex Account Linked",
+        title: "Plex account linked",
         description: "You can now sign in with Plex",
       },
       failed: {
-        title: "Plex Link Failed",
+        title: "Plex link failed",
         description: "Could not link your Plex account",
       },
       expired: {
-        title: "Plex Link Expired",
+        title: "Plex link expired",
         description: "The Plex window timed out. Start again to retry.",
       },
       cancelled: {
-        title: "Plex Link Cancelled",
+        title: "Plex link cancelled",
         description: "The Plex window closed before the account was linked",
       },
     },
@@ -162,7 +162,7 @@ export function EditProfileModal({
   };
 
   const validatePassword = (
-    password: string
+    password: string,
   ): { valid: boolean; error?: string } => {
     const passwordRegex =
       /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};:'",./<>?\\|~])[A-Za-z\d!@#$%^&*()_+\-=[\]{};:'",./<>?\\|~]{12,128}$/;
@@ -188,13 +188,14 @@ export function EditProfileModal({
     try {
       await unlinkPlexAccount();
       toast({
-        title: "Plex Account Unlinked",
-        description: "Signing in with Plex is no longer available for this account",
+        title: "Plex account unlinked",
+        description:
+          "Signing in with Plex is no longer available for this account",
         variant: "success",
       });
     } catch (error) {
       toast({
-        title: "Unlink Failed",
+        title: "Unlink failed",
         description:
           error instanceof Error
             ? error.message
@@ -379,7 +380,7 @@ export function EditProfileModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Edit Profile</DialogTitle>
+          <DialogTitle>Edit profile</DialogTitle>
         </DialogHeader>
 
         <Tabs defaultValue="profile" className="w-full">
@@ -428,7 +429,7 @@ export function EditProfileModal({
                     disabled={isLoading}
                   >
                     <Upload className="mr-2 h-4 w-4" />
-                    Upload Avatar
+                    Upload avatar
                   </Button>
                   {profileData.avatarUrl && (
                     <Button
@@ -508,7 +509,7 @@ export function EditProfileModal({
                   {isLoading && (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   )}
-                  Save Changes
+                  Save changes
                 </Button>
               </DialogFooter>
             </form>
@@ -520,9 +521,8 @@ export function EditProfileModal({
               onSubmit={(e) => void handlePasswordSubmit(e)}
               className="space-y-4"
             >
-              {/* Current Password */}
               <div className="space-y-2">
-                <Label htmlFor="currentPassword">Current Password</Label>
+                <Label htmlFor="currentPassword">Current password</Label>
                 <Input
                   id="currentPassword"
                   type="password"
@@ -538,9 +538,8 @@ export function EditProfileModal({
                 />
               </div>
 
-              {/* New Password */}
               <div className="space-y-2">
-                <Label htmlFor="newPassword">New Password</Label>
+                <Label htmlFor="newPassword">New password</Label>
                 <Input
                   id="newPassword"
                   type="password"
@@ -560,9 +559,8 @@ export function EditProfileModal({
                 </p>
               </div>
 
-              {/* Confirm Password */}
               <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Confirm Password</Label>
+                <Label htmlFor="confirmPassword">Confirm password</Label>
                 <Input
                   id="confirmPassword"
                   type="password"
@@ -617,7 +615,7 @@ export function EditProfileModal({
                   {isLoading && (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   )}
-                  Update Password
+                  Update password
                 </Button>
               </DialogFooter>
             </form>
@@ -628,14 +626,13 @@ export function EditProfileModal({
             <div className="space-y-4">
               {linkedPlex ? (
                 <>
-                  {/* Linked Plex Account */}
                   <Card className="p-4">
                     <div className="flex items-center gap-4">
                       <Avatar className="h-12 w-12">
                         {linkedPlex.plexThumb && (
                           <AvatarImage
                             src={linkedPlex.plexThumb}
-                            alt={linkedPlex.plexUsername || "Plex User"}
+                            alt={linkedPlex.plexUsername || "Plex user"}
                           />
                         )}
                         <AvatarFallback className="bg-[#e5a00d]">
@@ -648,10 +645,10 @@ export function EditProfileModal({
                       </Avatar>
                       <div className="flex-1 min-w-0">
                         <p className="font-medium truncate">
-                          {linkedPlex.plexUsername || "Plex User"}
+                          {linkedPlex.plexUsername || "Plex user"}
                         </p>
                         <p className="text-sm text-muted-foreground">
-                          Linked Plex Account
+                          Linked Plex account
                         </p>
                       </div>
                     </div>
@@ -668,12 +665,11 @@ export function EditProfileModal({
                     ) : (
                       <Unlink className="mr-2 h-4 w-4" />
                     )}
-                    Unlink Plex Account
+                    Unlink Plex account
                   </Button>
                 </>
               ) : (
                 <>
-                  {/* No Plex Account Linked */}
                   <Card className="p-4 border-dashed">
                     <div className="flex flex-col items-center gap-2 text-center">
                       <p className="text-sm text-muted-foreground">
@@ -699,7 +695,7 @@ export function EditProfileModal({
                           alt="Plex"
                           className="mr-2 h-4 w-4"
                         />
-                        Link Plex Account
+                        Link Plex account
                       </>
                     )}
                   </Button>

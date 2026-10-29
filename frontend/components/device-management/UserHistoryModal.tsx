@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { cn } from "@/lib/utils";
 import {
   ActionBar,
   EmptyState,
@@ -11,6 +12,7 @@ import {
   EntityHeader,
   Meta,
   MetaGrid,
+  SegmentedControl,
   StatusPill,
   type Tone,
 } from "@/components/ui/entity";
@@ -21,12 +23,21 @@ import {
   ModalHeader,
 } from "@/components/ui/modal";
 import { RefreshCw } from "lucide-react";
+import { RefreshButton } from "@/components/ui/refresh-button";
 import { config } from "@/lib/config";
 import { ClickableIP } from "./SharedComponents";
 import { formatElapsed } from "@/lib/duration";
 import { ConfirmationModal } from "@/components/ui/confirmation-modal";
 import { useToast } from "@/hooks/use-toast";
 import { HIGHLIGHT_CLASSES } from "@/lib/highlight";
+
+type AppFilter = "all" | "plex" | "plexamp";
+
+const APP_FILTERS: { value: AppFilter; label: string }[] = [
+  { value: "all", label: "All" },
+  { value: "plex", label: "Plex" },
+  { value: "plexamp", label: "Plexamp" },
+];
 
 interface UserDevice {
   id: number;
@@ -93,6 +104,9 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
   const [searchTerm, setSearchTerm] = useState("");
   const [activeSearch, setActiveSearch] = useState("");
   const [showTerminatedOnly, setShowTerminatedOnly] = useState(false);
+  const [appFilter, setAppFilter] = useState<AppFilter>("all");
+  const canFilterTerminated = appFilter !== "plexamp";
+  const terminatedOnly = showTerminatedOnly && canFilterTerminated;
   const [sessionToDelete, setSessionToDelete] =
     useState<SessionHistoryEntry | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
@@ -125,8 +139,11 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
       if (activeSearch) {
         params.set("search", activeSearch);
       }
-      if (showTerminatedOnly) {
+      if (terminatedOnly) {
         params.set("terminatedOnly", "true");
+      }
+      if (appFilter !== "all") {
+        params.set("app", appFilter);
       }
 
       const response = await fetch(
@@ -138,24 +155,34 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
       const data: unknown = await response.json();
       return (Array.isArray(data) ? data : []) as SessionHistoryEntry[];
     },
-    [userId, activeSearch, showTerminatedOnly],
+    [userId, activeSearch, terminatedOnly, appFilter],
   );
+
+  const currentQueryRef = useRef(fetchPage);
+  useEffect(() => {
+    currentQueryRef.current = fetchPage;
+  }, [fetchPage]);
 
   const loadFirstPage = useCallback(async () => {
     if (!userId) return;
 
+    const isCurrent = () => currentQueryRef.current === fetchPage;
     setLoading(true);
     try {
       const page = await fetchPage(0, PAGE_SIZE);
+      if (!isCurrent()) return;
       setSessions(page);
       setHasMore(page.length === PAGE_SIZE);
     } catch (error) {
       console.error("Error fetching user history:", error);
+      if (!isCurrent()) return;
       setSessions([]);
       setHasMore(false);
     } finally {
-      setLoading(false);
-      setLoaded(true);
+      if (isCurrent()) {
+        setLoading(false);
+        setLoaded(true);
+      }
     }
   }, [userId, fetchPage]);
 
@@ -169,6 +196,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
       try {
         const limit = Math.max(loadedCountRef.current, PAGE_SIZE);
         const page = await fetchPage(0, limit);
+        if (currentQueryRef.current !== fetchPage) return;
         setSessions(page);
         setHasMore(page.length === limit);
       } catch (error) {
@@ -188,6 +216,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
     setLoadingMore(true);
     try {
       const page = await fetchPage(loadedCountRef.current, PAGE_SIZE);
+      if (currentQueryRef.current !== fetchPage) return;
       setSessions((prev) => {
         const known = new Set(prev.map((session) => session.id));
         return [...prev, ...page.filter((session) => !known.has(session.id))];
@@ -213,6 +242,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
     setSearchTerm("");
     setActiveSearch("");
     setShowTerminatedOnly(false);
+    setAppFilter("all");
     setLoaded(false);
     scrolledToRef.current = null;
   }, [isOpen]);
@@ -269,7 +299,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
       return result;
     }
 
-    return session.contentTitle || "Unknown Title";
+    return session.contentTitle || "Unknown title";
   };
 
   const formatSubtitle = (session: SessionHistoryEntry) => {
@@ -287,7 +317,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
     return (
       session.userDevice?.deviceName ||
       session.userDevice?.deviceProduct ||
-      "Unknown Device"
+      "Unknown device"
     );
   };
 
@@ -385,20 +415,20 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
         setSessions((prev) => prev.filter((s) => s.id !== sessionToDelete.id));
         setSessionToDelete(null);
         toast({
-          title: "Session Deleted",
+          title: "Session deleted",
           description: "That entry is gone from this user's stream history.",
           variant: "success",
         });
       } else {
         toast({
-          title: "Delete Failed",
+          title: "Delete failed",
           description: "Could not delete that entry. Try again.",
           variant: "destructive",
         });
       }
     } catch {
       toast({
-        title: "Delete Failed",
+        title: "Delete failed",
         description: "Something went wrong while deleting that entry.",
         variant: "destructive",
       });
@@ -416,13 +446,15 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
     return session.terminated ? "danger" : "neutral";
   };
 
-  const filtered = Boolean(activeSearch || showTerminatedOnly);
+  const filtered = Boolean(
+    activeSearch || terminatedOnly || appFilter !== "all",
+  );
 
   return (
     <>
       <Modal open={isOpen} onOpenChange={onClose} size="xl">
         <ModalHeader
-          title="Stream History"
+          title="Stream history"
           description={
             <>
               View and manage streaming session history for{" "}
@@ -433,20 +465,44 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
             </>
           }
         >
-          <div className="flex flex-col gap-3 pt-3 sm:flex-row sm:items-center">
-            <Input
-              placeholder="Search by title, device or IP address"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="flex-1"
-            />
-            <div className="flex items-center justify-between gap-3 sm:justify-start">
-              <div className="flex items-center gap-2">
+          <div className="space-y-3 pt-3">
+            <div className="flex items-center gap-2">
+              <Input
+                placeholder="Search by title, device or IP address"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="flex-1"
+              />
+              <RefreshButton
+                refreshing={refreshing}
+                disabled={loading}
+                onRefresh={() => void refreshLoaded(true)}
+                className="size-9"
+              />
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <SegmentedControl
+                options={APP_FILTERS}
+                value={appFilter}
+                onChange={setAppFilter}
+              />
+              <div
+                className={cn(
+                  "flex items-center gap-2 transition-opacity duration-200",
+                  !canFilterTerminated && "opacity-50",
+                )}
+                title={
+                  canFilterTerminated
+                    ? undefined
+                    : "Plexamp streams are never terminated"
+                }
+              >
                 <Switch
                   id="terminated-filter"
-                  checked={showTerminatedOnly}
+                  checked={terminatedOnly}
                   onCheckedChange={setShowTerminatedOnly}
-                  className="cursor-pointer"
+                  disabled={!canFilterTerminated}
+                  className="cursor-pointer disabled:cursor-not-allowed"
                 />
                 <Label
                   htmlFor="terminated-filter"
@@ -455,16 +511,6 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
                   Terminated only
                 </Label>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => void refreshLoaded(true)}
-                disabled={loading || refreshing}
-                title="Refresh"
-              >
-                <RefreshCw className={refreshing ? "animate-spin" : ""} />
-                Refresh
-              </Button>
             </div>
           </div>
         </ModalHeader>
@@ -492,7 +538,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
                   data-session-id={session.id}
                   tone={sessionTone(session)}
                 >
-                  <div className="space-y-4 p-4 pl-5">
+                  <div className="space-y-3 p-4 pl-5 sm:space-y-4">
                     <EntityHeader
                       title={formatTitle(session)}
                       subtitle={formatSubtitle(session) || undefined}
@@ -507,15 +553,15 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
                       }
                     />
 
-                    <MetaGrid className="sm:grid-cols-3 lg:grid-cols-4">
+                    <MetaGrid className="gap-y-3 sm:grid-cols-3 sm:gap-y-4 lg:grid-cols-4">
                       <Meta label="Device">
                         {getDeviceDisplayName(session)}
                       </Meta>
-                      <Meta label="Platform" className="capitalize">
+                      <Meta label="Platform">
                         {session.userDevice?.devicePlatform || "Unknown"}
                       </Meta>
                       <Meta label="Product">{formatProduct(session)}</Meta>
-                      <Meta label="IP Address">
+                      <Meta label="IP address">
                         <ClickableIP ipAddress={session.deviceAddress} />
                       </Meta>
                       <Meta label="Started">
@@ -526,7 +572,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
                           ? formatDate(session.endedAt)
                           : "Active"}
                       </Meta>
-                      <Meta label="Duration" className="tabular-nums">
+                      <Meta label="Duration" wrap className="tabular-nums">
                         {formatDuration(session)}
                       </Meta>
                     </MetaGrid>
@@ -539,7 +585,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
                         title="Go to this device"
                         className="h-10 flex-1 sm:h-8 sm:flex-none"
                       >
-                        See Device
+                        See device
                       </Button>
                       {session.endedAt && (
                         <Button
@@ -579,7 +625,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
           )}
         </ModalBody>
 
-        <ModalFooter className="sm:justify-between">
+        <ModalFooter className="flex-row items-center justify-between [&>button]:w-auto">
           <p className="text-xs text-muted-foreground">
             {loading && !loaded
               ? ""
@@ -597,7 +643,7 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
         isOpen={!!sessionToDelete}
         onClose={cancelDelete}
         onConfirm={() => void confirmDelete()}
-        title="Delete Session History"
+        title="Delete session history"
         description="Are you sure you want to delete this session history? This action cannot be undone."
         confirmText="Delete"
         cancelText="Cancel"

@@ -35,7 +35,7 @@ export function PlexSettings({
     .filter(
       (setting) =>
         (setting.key.startsWith("PLEX_") &&
-          setting.key !== "PLEX_GUARD_DEFAULT_BLOCK") ||
+          !setting.key.startsWith("PLEX_GUARD_")) ||
         setting.key === "USE_SSL" ||
         setting.key === "IGNORE_CERT_ERRORS" ||
         setting.key === "CUSTOM_PLEX_URL",
@@ -92,8 +92,9 @@ export function PlexSettings({
 
   return (
     <SettingsCard
-      title="Plex Integration"
+      title="Plex integration"
       description="Configure your Plex Media Server connection and related settings."
+      divided
       footer={
         <div className="space-y-3">
           {hasUnsavedChanges && (
@@ -114,7 +115,7 @@ export function PlexSettings({
             className="w-full"
           >
             {testingConnection && <Loader2 className="size-4 animate-spin" />}
-            {testingConnection ? "Testing..." : "Test Plex Connection"}
+            {testingConnection ? "Testing..." : "Test Plex connection"}
           </Button>
         </div>
       }
@@ -134,19 +135,20 @@ export function PlexSettings({
         ))}
 
       {useSslSetting && ignoreCertErrorsSetting && (
-        <div className="space-y-3">
+        <div className="space-y-4">
           <SettingControl
             setting={useSslSetting}
             formData={formData}
             onChange={handleInputChange}
           />
-          <SettingControl
-            setting={ignoreCertErrorsSetting}
-            formData={formData}
-            onChange={handleInputChange}
-            disabled={!isSslEnabled}
-            className="ml-6"
-          />
+          <div className="border-l-2 pl-4 sm:ml-1">
+            <SettingControl
+              setting={ignoreCertErrorsSetting}
+              formData={formData}
+              onChange={handleInputChange}
+              disabled={!isSslEnabled}
+            />
+          </div>
         </div>
       )}
     </SettingsCard>

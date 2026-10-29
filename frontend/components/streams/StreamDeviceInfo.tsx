@@ -25,14 +25,14 @@ export const StreamDeviceInfo: React.FC<StreamDeviceInfoProps> = ({
           hasArt ? "text-white/70" : "text-muted-foreground"
         }`}
       >
-        Device Information
+        Device information
       </h4>
       <MetaGrid
         className={hasArt ? "[&_dt]:text-white/60 [&_dd]:text-white" : ""}
       >
         <Meta label="Platform">{session.Player?.platform || "Unknown"}</Meta>
         <Meta label="Product">{session.Player?.product || "Unknown"}</Meta>
-        <Meta label="IP Address">
+        <Meta label="IP address">
           <ClickableIP ipAddress={session.Player?.address || null} />
         </Meta>
         <Meta label="Streams">{session.Session?.sessionCount ?? 0}</Meta>

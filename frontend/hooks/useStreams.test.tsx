@@ -248,7 +248,7 @@ describe("useStreamActions", () => {
 
     expect(toast).toHaveBeenCalledWith(
       expect.objectContaining({
-        title: "Access Revoked",
+        title: "Access revoked",
         variant: "success",
       }),
     );
@@ -308,7 +308,7 @@ describe("useStreamActions", () => {
     expect(revoked).toBe(false);
     expect(toast).toHaveBeenCalledWith(
       expect.objectContaining({
-        title: "Revocation Failed",
+        title: "Revocation failed",
         description: "device is busy",
       }),
     );
@@ -372,7 +372,7 @@ describe("useStreamActions", () => {
 
     expect(revoked).toBe(false);
     expect(toast).toHaveBeenCalledWith(
-      expect.objectContaining({ title: "Network Error" }),
+      expect.objectContaining({ title: "Network error" }),
     );
   });
 });

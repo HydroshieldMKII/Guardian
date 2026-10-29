@@ -28,8 +28,9 @@ describe('DatabaseService', () => {
     count: jest.fn().mockResolvedValue(0),
   });
 
+  const validateSetting = jest.fn();
   const importing = (payload: ImportPayload) =>
-    service.importDatabase(payload, '1.3.5', compareVersions);
+    service.importDatabase(payload, '1.3.5', compareVersions, validateSetting);
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -166,6 +167,7 @@ describe('DatabaseService', () => {
           payload as ImportPayload,
           '1.3.5',
           compareVersions,
+          validateSetting,
         ),
       ).rejects.toThrow('Invalid import data format');
     });
@@ -204,6 +206,31 @@ describe('DatabaseService', () => {
 
       expect(settingsRepo.save).toHaveBeenCalledWith(
         expect.objectContaining({ value: 'streams' }),
+      );
+    });
+
+    it('skips a value the settings rules reject and keeps going', async () => {
+      settingsRepo.findOne.mockImplementation(
+        ({ where }: { where: { key: string } }) =>
+          Promise.resolve({ key: where.key, value: '10' }),
+      );
+      validateSetting.mockImplementation((key: string) => {
+        if (key === 'PLEXGUARD_REFRESH_INTERVAL') {
+          throw new Error(
+            'Session refresh interval must be at least 5 seconds',
+          );
+        }
+      });
+
+      await expect(
+        importSettings([
+          { key: 'PLEXGUARD_REFRESH_INTERVAL', value: '7.5' },
+          { key: 'DEFAULT_PAGE', value: 'streams' },
+        ]),
+      ).resolves.toEqual({ imported: 1, skipped: 1 });
+      expect(settingsRepo.save).toHaveBeenCalledTimes(1);
+      expect(settingsRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({ key: 'DEFAULT_PAGE', value: 'streams' }),
       );
     });
 

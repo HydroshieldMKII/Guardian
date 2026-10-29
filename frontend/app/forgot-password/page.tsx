@@ -5,7 +5,7 @@ import { AlertCircle, Loader2, Mail } from "lucide-react";
 import { AuthShell } from "@/components/auth-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ThreeDotLoader } from "@/components/three-dot-loader";
+import { PageLoader } from "@/components/three-dot-loader";
 
 type Stage = "checking" | "unavailable" | "form" | "sent";
 
@@ -66,17 +66,13 @@ export default function ForgotPasswordPage() {
   };
 
   if (stage === "checking") {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <ThreeDotLoader />
-      </div>
-    );
+    return <PageLoader />;
   }
 
   if (stage === "unavailable") {
     return (
       <AuthShell
-        title="Password Reset"
+        title="Password reset"
         description="This server does not offer password resets"
       />
     );
@@ -85,7 +81,7 @@ export default function ForgotPasswordPage() {
   if (stage === "sent") {
     return (
       <AuthShell
-        title="Check Your Email"
+        title="Check your email"
         description="A reset link is on its way if the address is registered"
       />
     );
@@ -93,7 +89,7 @@ export default function ForgotPasswordPage() {
 
   return (
     <AuthShell
-      title="Forgot Password"
+      title="Forgot password"
       description="Enter your email to be sent a reset link"
     >
       <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4">
@@ -137,7 +133,7 @@ export default function ForgotPasswordPage() {
           className="w-full"
         >
           {submitting && <Loader2 className="size-4 animate-spin" />}
-          {submitting ? "Sending..." : "Send Reset Link"}
+          {submitting ? "Sending..." : "Send reset link"}
         </Button>
       </form>
     </AuthShell>

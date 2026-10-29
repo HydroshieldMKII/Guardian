@@ -12,12 +12,17 @@ import {
   PlexSessionsResponse,
 } from '@/types/plex.types';
 
+export type SessionHistoryApp = 'plex' | 'plexamp';
+
+const PLEXAMP_SESSION_SQL = `(LOWER(COALESCE(session.product, '')) LIKE :plexamp OR LOWER(COALESCE(device.deviceProduct, '')) LIKE :plexamp OR LOWER(COALESCE(device.deviceName, '')) LIKE :plexamp)`;
+
 export interface SessionHistoryQuery {
   limit?: number;
   offset?: number;
   includeActive?: boolean;
   search?: string;
   terminatedOnly?: boolean;
+  app?: SessionHistoryApp;
 }
 
 interface PlexSessionData {
@@ -385,6 +390,7 @@ export class ActiveSessionService {
       includeActive = false,
       search,
       terminatedOnly = false,
+      app,
     } = query;
 
     try {
@@ -405,6 +411,13 @@ export class ActiveSessionService {
         queryBuilder.andWhere('session.terminated = :terminated', {
           terminated: true,
         });
+      }
+
+      if (app) {
+        queryBuilder.andWhere(
+          `${app === 'plexamp' ? '' : 'NOT '}${PLEXAMP_SESSION_SQL}`,
+          { plexamp: '%plexamp%' },
+        );
       }
 
       const term = search?.trim().toLowerCase();

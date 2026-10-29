@@ -2,9 +2,10 @@ export {
   ClickableIP,
   getProgressPercentage,
   getContentTitle,
+  getContentLines,
   getDetailedQuality,
 } from "./SharedComponents";
-export { StreamQuality, StreamQualityDetails } from "./StreamQuality";
+export { StreamQualityDetails } from "./StreamQuality";
 export { StreamDeviceInfo } from "./StreamDeviceInfo";
 export { StreamProgress } from "./StreamProgress";
 export { RemoveAccessModal } from "./RemoveAccessModal";

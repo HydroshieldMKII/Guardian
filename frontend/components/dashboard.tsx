@@ -2,20 +2,28 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { StatTile } from "@/components/ui/entity";
 import StreamsList from "./streams-list";
 import { DeviceManagement } from "./device-management";
-import { DashboardTabs } from "./dashboard-tabs";
 import { PlexErrorHandler, ErrorHandler } from "./error-handler";
-import { ThreeDotLoader } from "./three-dot-loader";
+import { PageLoader } from "./three-dot-loader";
 
 import { DashboardStats, UnifiedDashboardData, PlexStatus } from "@/types";
 import { apiClient } from "@/lib/api";
+import { countWaitingDevices } from "@/lib/device-policies";
 import { config } from "@/lib/config";
 import { useVersion } from "@/contexts/version-context";
 import { useAuth } from "@/contexts/auth-context";
 import { useLiveDashboard } from "@/hooks/useLiveDashboard";
-import { HIGHLIGHT_CLASSES } from "@/lib/highlight";
+import {
+  dashboardHref,
+  useDashboardNav,
+  type DashboardView,
+} from "@/contexts/dashboard-nav-context";
+
+const usersHref = (userId?: string | null) =>
+  userId
+    ? `${dashboardHref("users")}&user=${encodeURIComponent(userId)}`
+    : dashboardHref("users");
 
 export function Dashboard() {
   const router = useRouter();
@@ -31,11 +39,8 @@ export function Dashboard() {
     pendingDevices: 0,
     approvedDevices: 0,
   });
-  const [activeTab, setActiveTab] = useState<"streams" | "devices">("devices");
   const [loading, setLoading] = useState(true);
   const [plexStatus, setPlexStatus] = useState<PlexStatus | null>(null);
-  const [autoRefresh, setAutoRefresh] = useState(true);
-  const [initialTabSet, setInitialTabSet] = useState(false);
   const [navigationTarget, setNavigationTarget] = useState<{
     userId: string;
     deviceIdentifier: string;
@@ -72,58 +77,46 @@ export function Dashboard() {
     }
   }, []);
 
-  // Set initial tab only once when dashboard data is first available
+  const requestedView = searchParams.get("view");
+  const selectedUserId = searchParams.get("user");
+  const defaultView: DashboardView | null = dashboardData
+    ? dashboardData.settings.find((s) => s.key === "DEFAULT_PAGE")?.value ===
+      "streams"
+      ? "streams"
+      : "users"
+    : null;
+  const view: DashboardView | null =
+    requestedView === "streams" || requestedView === "users"
+      ? requestedView
+      : defaultView;
+
+  const { publish } = useDashboardNav();
+  const waitingDevices = dashboardData
+    ? countWaitingDevices(dashboardData.devices.all, dashboardData.users)
+    : stats.pendingDevices;
+
   useEffect(() => {
-    if (dashboardData && !initialTabSet) {
-      const defaultPageSetting = dashboardData.settings.find(
-        (s) => s.key === "DEFAULT_PAGE",
-      );
-      const defaultPage = defaultPageSetting?.value || "devices";
-      setActiveTab(defaultPage === "streams" ? "streams" : "devices");
-      setInitialTabSet(true);
-    }
-  }, [dashboardData, initialTabSet]);
+    if (!dashboardData) return;
+    publish({
+      view,
+      pendingDevices: waitingDevices,
+      activeStreams: stats.activeStreams,
+    });
+  }, [publish, dashboardData, view, waitingDevices, stats.activeStreams]);
 
-  // Navigate to device in device management
+  const handleSelectUser = (userId: string | null) => {
+    router.push(usersHref(userId), { scroll: false });
+    window.scrollTo({ top: 0 });
+  };
+
   const handleNavigateToDevice = (userId: string, deviceIdentifier: string) => {
-    // Switch to devices tab
-    setActiveTab("devices");
-
-    // Set navigation target for DeviceManagement component
+    router.push(usersHref(userId), { scroll: false });
     setNavigationTarget({ userId, deviceIdentifier });
   };
 
-  // Navigate to user in device management (scroll to user card)
-  const handleNavigateToUser = (userId: string) => {
-    // Switch to devices tab
-    setActiveTab("devices");
-
-    // Wait for tab switch to complete before scrolling
-    setTimeout(() => {
-      const userElement = document.querySelector(`[data-user-id="${userId}"]`);
-      if (userElement) {
-        // Scroll to the user card
-        userElement.scrollIntoView({
-          behavior: "smooth",
-          block: "center",
-          inline: "nearest",
-        });
-
-        // Add highlight effect
-        setTimeout(() => {
-          userElement.classList.add(...HIGHLIGHT_CLASSES);
-          setTimeout(() => {
-            userElement.classList.remove(...HIGHLIGHT_CLASSES);
-          }, 1500);
-        }, 200);
-      }
-    }, 100);
-  };
-
-  // Handle navigation completion
-  const handleNavigationComplete = () => {
+  const handleNavigationComplete = useCallback(() => {
     setNavigationTarget(null);
-  };
+  }, []);
 
   useEffect(() => {
     // Don't fetch dashboard data during setup
@@ -139,12 +132,8 @@ export function Dashboard() {
     const deviceId = searchParams.get("deviceId");
 
     if (userId && deviceId) {
-      // Switch to devices tab and set navigation target
-      setActiveTab("devices");
       setNavigationTarget({ userId, deviceIdentifier: deviceId });
-
-      // Clean up URL parameters
-      router.replace("/", { scroll: false });
+      router.replace(usersHref(userId), { scroll: false });
     }
   }, [searchParams, router]);
 
@@ -163,12 +152,11 @@ export function Dashboard() {
 
   const { connected: liveConnected } = useLiveDashboard<UnifiedDashboardData>(
     applyLiveDashboard,
-    autoRefresh && !setupRequired,
+    !setupRequired,
   );
 
   // Poll only while the live connection is unavailable
   useEffect(() => {
-    if (!autoRefresh) return; // Don't set up interval in manual mode
     if (liveConnected) return; // Updates arrive over the socket instead
 
     const interval = setInterval(
@@ -176,7 +164,7 @@ export function Dashboard() {
       config.app.refreshInterval,
     );
     return () => clearInterval(interval);
-  }, [autoRefresh, liveConnected, refreshDashboard]);
+  }, [liveConnected, refreshDashboard]);
 
   // Show error if backend is unavailable
   if (backendError) {
@@ -194,11 +182,7 @@ export function Dashboard() {
   }
 
   if (loading) {
-    return (
-      <div className="min-h-[calc(100vh-3.5rem)] sm:min-h-[calc(100vh-4rem)] flex items-center justify-center">
-        <ThreeDotLoader />
-      </div>
-    );
+    return <PageLoader />;
   }
 
   // Show configuration prompt if Plex is not properly connected
@@ -211,74 +195,31 @@ export function Dashboard() {
     );
   }
 
-  const tabs = (
-    <DashboardTabs
-      activeTab={activeTab}
-      onTabChange={setActiveTab}
-      pendingDevices={stats.pendingDevices}
-      activeStreams={stats.activeStreams}
-    />
-  );
-
   return (
-    <div className="min-h-[calc(100vh-3.5rem)] sm:min-h-[calc(100vh-4rem)]">
-      <div className="w-full max-w-[1400px] mx-auto px-2 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
-        {/* Server Statistics */}
-        <div className="mb-4 sm:mb-6 lg:mb-10">
-          <h3 className="text-lg sm:text-xl font-semibold text-foreground mb-3 sm:mb-4 flex items-center">
-            Devices Overview
-          </h3>
-
-          <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4 lg:gap-6">
-            <StatTile
-              label="Active Streams"
-              value={stats.activeStreams}
-              tone="info"
-            />
-            <StatTile
-              label="Pending Approval"
-              value={stats.pendingDevices}
-              tone="warning"
-            />
-            <StatTile
-              label="Approved Devices"
-              value={stats.approvedDevices}
-              tone="positive"
-            />
-            <StatTile
-              label="Total Devices"
-              value={stats.totalDevices}
-              tone="accent"
-            />
-          </div>
-        </div>
-
-        {/* Tab Content */}
-        <div className="w-full">
-          {activeTab === "streams" ? (
-            <StreamsList
-              tabs={tabs}
-              sessionsData={dashboardData?.sessions}
-              onRefresh={() => refreshDashboard(true)}
-              autoRefresh={autoRefresh}
-              onAutoRefreshChange={setAutoRefresh}
-              onNavigateToDevice={handleNavigateToDevice}
-              onNavigateToUser={handleNavigateToUser}
-            />
-          ) : (
-            <DeviceManagement
-              tabs={tabs}
-              devicesData={dashboardData?.devices}
-              usersData={dashboardData?.users}
-              settingsData={dashboardData?.settings}
-              onRefresh={() => refreshDashboard(true)}
-              autoRefresh={autoRefresh}
-              onAutoRefreshChange={setAutoRefresh}
-              navigationTarget={navigationTarget}
-              onNavigationComplete={handleNavigationComplete}
-            />
-          )}
-        </div>
+    <div>
+      <div
+        key={view}
+        className="mx-auto w-full max-w-[1400px] animate-in fade-in px-4 py-6 duration-300 ease-out motion-reduce:animate-none sm:px-6 sm:py-8 lg:px-8"
+      >
+        {view === "streams" ? (
+          <StreamsList
+            sessionsData={dashboardData?.sessions}
+            onRefresh={() => refreshDashboard(true)}
+            onNavigateToDevice={handleNavigateToDevice}
+            onNavigateToUser={handleSelectUser}
+          />
+        ) : (
+          <DeviceManagement
+            devicesData={dashboardData?.devices}
+            usersData={dashboardData?.users}
+            settingsData={dashboardData?.settings}
+            onRefresh={() => refreshDashboard(true)}
+            navigationTarget={navigationTarget}
+            onNavigationComplete={handleNavigationComplete}
+            selectedUserId={selectedUserId}
+            onSelectUser={handleSelectUser}
+          />
+        )}
       </div>
     </div>
   );

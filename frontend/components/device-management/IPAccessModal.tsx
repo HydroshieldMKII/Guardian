@@ -166,7 +166,7 @@ export const IPAccessModal: React.FC<IPAccessModalProps> = ({
   return (
     <Modal open={isOpen} onOpenChange={onClose} size="lg">
       <ModalHeader
-        title="IP & Network Access"
+        title="IP & network access"
         description={
           <>
             Choose where{" "}
@@ -181,7 +181,7 @@ export const IPAccessModal: React.FC<IPAccessModalProps> = ({
 
       <ModalBody className="space-y-8">
         <Section
-          title="Network Policy"
+          title="Network policy"
           description="Allow streaming from the local network, from the internet, or from both."
         >
           <OptionGroup className="sm:grid-cols-3">
@@ -198,7 +198,7 @@ export const IPAccessModal: React.FC<IPAccessModalProps> = ({
         </Section>
 
         <Section
-          title="IP Access Policy"
+          title="IP access policy"
           description="Narrow access further to a list of specific IP addresses or address ranges."
         >
           <OptionGroup className="sm:grid-cols-2">
@@ -225,7 +225,7 @@ export const IPAccessModal: React.FC<IPAccessModalProps> = ({
                       size="sm"
                       onClick={handleAutoFillCurrentIPs}
                     >
-                      Add Current Device Addresses
+                      Add current device addresses
                     </Button>
                   ) : undefined
                 }
@@ -296,7 +296,10 @@ export const IPAccessModal: React.FC<IPAccessModalProps> = ({
                   <span className="max-w-[140px] truncate font-sans">
                     {device.deviceName || device.deviceIdentifier}
                   </span>
-                  {`${device.ipAddress} (${NETWORK_TYPE_LABEL[getNetworkType(device.ipAddress)]})`}
+                  <span>{device.ipAddress}</span>
+                  <span className="font-sans opacity-70">
+                    {NETWORK_TYPE_LABEL[getNetworkType(device.ipAddress)]}
+                  </span>
                 </Chip>
               ))}
             </PillRow>
@@ -309,7 +312,7 @@ export const IPAccessModal: React.FC<IPAccessModalProps> = ({
           Cancel
         </Button>
         <Button onClick={handleSave} disabled={noIPsConfigured}>
-          Save Policies
+          Save policies
         </Button>
       </ModalFooter>
     </Modal>

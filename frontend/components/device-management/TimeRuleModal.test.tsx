@@ -187,7 +187,7 @@ describe("TimeRuleModal creating a rule", () => {
   it("refuses an empty name", async () => {
     await renderModal();
 
-    expect(screen.getByRole("button", { name: /Create Rule/ })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /Create rule/ })).toBeDisabled();
     expect(createTimeRule).not.toHaveBeenCalled();
   });
 
@@ -195,7 +195,7 @@ describe("TimeRuleModal creating a rule", () => {
     const { user } = await renderModal();
 
     await user.type(nameField(), "Sleep time");
-    await user.click(screen.getByRole("button", { name: /Create Rule/ }));
+    await user.click(screen.getByRole("button", { name: /Create rule/ }));
 
     await waitFor(() =>
       expect(createTimeRule).toHaveBeenCalledWith(
@@ -209,7 +209,7 @@ describe("TimeRuleModal creating a rule", () => {
       ),
     );
     expect(toast).toHaveBeenCalledWith(
-      expect.objectContaining({ title: "Rule Created" }),
+      expect.objectContaining({ title: "Rule created" }),
     );
     expect(nameField()).toHaveValue("");
   });
@@ -218,7 +218,7 @@ describe("TimeRuleModal creating a rule", () => {
     const { user } = await renderModal({ deviceIdentifier: "device-1" });
 
     await user.type(nameField(), "Sleep time");
-    await user.click(screen.getByRole("button", { name: /Create Rule/ }));
+    await user.click(screen.getByRole("button", { name: /Create rule/ }));
 
     await waitFor(() =>
       expect(createTimeRule).toHaveBeenCalledWith(
@@ -235,11 +235,11 @@ describe("TimeRuleModal creating a rule", () => {
     const { user } = await renderModal();
 
     await user.type(nameField(), "Overlapping");
-    await user.click(screen.getByRole("button", { name: /Create Rule/ }));
+    await user.click(screen.getByRole("button", { name: /Create rule/ }));
 
     await waitFor(() =>
       expect(toast).toHaveBeenCalledWith(
-        expect.objectContaining({ title: "Time Conflict" }),
+        expect.objectContaining({ title: "Time conflict" }),
       ),
     );
     expect(createTimeRule).not.toHaveBeenCalled();
@@ -252,7 +252,7 @@ describe("TimeRuleModal creating a rule", () => {
     const { user } = await renderModal();
 
     await user.type(nameField(), "Adjacent");
-    await user.click(screen.getByRole("button", { name: /Create Rule/ }));
+    await user.click(screen.getByRole("button", { name: /Create rule/ }));
 
     await waitFor(() => expect(createTimeRule).toHaveBeenCalled());
   });
@@ -264,7 +264,7 @@ describe("TimeRuleModal creating a rule", () => {
     const { user } = await renderModal();
 
     await user.type(nameField(), "Other day");
-    await user.click(screen.getByRole("button", { name: /Create Rule/ }));
+    await user.click(screen.getByRole("button", { name: /Create rule/ }));
 
     await waitFor(() => expect(createTimeRule).toHaveBeenCalled());
   });
@@ -274,7 +274,7 @@ describe("TimeRuleModal creating a rule", () => {
     const { user } = await renderModal();
 
     await user.type(nameField(), "Sleep time");
-    await user.click(screen.getByRole("button", { name: /Create Rule/ }));
+    await user.click(screen.getByRole("button", { name: /Create rule/ }));
 
     await waitFor(() =>
       expect(toast).toHaveBeenCalledWith(
@@ -288,7 +288,7 @@ describe("TimeRuleModal creating a rule", () => {
     const { user } = await renderModal();
 
     await user.type(nameField(), "Sleep time");
-    await user.click(screen.getByRole("button", { name: /Create Rule/ }));
+    await user.click(screen.getByRole("button", { name: /Create rule/ }));
 
     await waitFor(() =>
       expect(toast).toHaveBeenCalledWith(
@@ -308,7 +308,7 @@ describe("TimeRuleModal creating a rule", () => {
     await user.type(times[1], "12:45");
 
     await user.type(nameField(), "Morning");
-    await user.click(screen.getByRole("button", { name: /Create Rule/ }));
+    await user.click(screen.getByRole("button", { name: /Create rule/ }));
 
     await waitFor(() =>
       expect(createTimeRule).toHaveBeenCalledWith(
@@ -324,7 +324,7 @@ describe("TimeRuleModal creating a rule", () => {
     await user.type(nameField(), "Friday rule");
     await user.click(screen.getByRole("button", { name: /Sunday/ }));
     await user.click(await screen.findByText("Friday"));
-    await user.click(screen.getByRole("button", { name: /Create Rule/ }));
+    await user.click(screen.getByRole("button", { name: /Create rule/ }));
 
     await waitFor(() =>
       expect(createTimeRule).toHaveBeenCalledWith(
@@ -368,7 +368,7 @@ describe("TimeRuleModal editing a rule", () => {
       ),
     );
     expect(toast).toHaveBeenCalledWith(
-      expect.objectContaining({ title: "Rule Updated" }),
+      expect.objectContaining({ title: "Rule updated" }),
     );
   });
 
@@ -458,7 +458,7 @@ describe("TimeRuleModal editing a rule", () => {
 
     await waitFor(() =>
       expect(toast).toHaveBeenCalledWith(
-        expect.objectContaining({ title: "Time Conflict" }),
+        expect.objectContaining({ title: "Time conflict" }),
       ),
     );
     expect(updateTimeRule).not.toHaveBeenCalled();
@@ -516,7 +516,7 @@ describe("TimeRuleModal deleting", () => {
 
     await waitFor(() => expect(deleteTimeRule).toHaveBeenCalledWith("u-1", 1));
     expect(toast).toHaveBeenCalledWith(
-      expect.objectContaining({ title: "Rule Deleted" }),
+      expect.objectContaining({ title: "Rule deleted" }),
     );
   });
 
@@ -548,14 +548,14 @@ describe("TimeRuleModal deleting", () => {
     getTimeRules.mockResolvedValue([]);
     await renderModal();
 
-    expect(screen.queryByRole("button", { name: /Delete All/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Delete all/ })).toBeNull();
   });
 
   it("falls back to a generic delete-all failure message", async () => {
     deleteTimeRule.mockRejectedValue({});
     const { user } = await renderModal();
 
-    await user.click(screen.getByRole("button", { name: /Delete All/ }));
+    await user.click(screen.getByRole("button", { name: /Delete all/ }));
     await user.click(screen.getByText("confirm dialog"));
 
     await waitFor(() =>
@@ -568,7 +568,7 @@ describe("TimeRuleModal deleting", () => {
   it("deletes every rule after confirmation", async () => {
     const { user } = await renderModal();
 
-    await user.click(screen.getByRole("button", { name: /Delete All/ }));
+    await user.click(screen.getByRole("button", { name: /Delete all/ }));
     expect(screen.getByText("dialog:Delete every rule?")).toBeInTheDocument();
 
     await user.click(screen.getByText("confirm dialog"));
@@ -580,7 +580,7 @@ describe("TimeRuleModal deleting", () => {
     getTimeRules.mockResolvedValue([rule({ id: 1 }), rule({ id: 2 })]);
     const { user } = await renderModal();
 
-    await user.click(screen.getByRole("button", { name: /Delete All/ }));
+    await user.click(screen.getByRole("button", { name: /Delete all/ }));
     await user.click(screen.getByText("confirm dialog"));
 
     await waitFor(() =>
@@ -595,7 +595,7 @@ describe("TimeRuleModal deleting", () => {
   it("can abandon deleting every rule", async () => {
     const { user } = await renderModal();
 
-    await user.click(screen.getByRole("button", { name: /Delete All/ }));
+    await user.click(screen.getByRole("button", { name: /Delete all/ }));
     await user.click(screen.getByText("cancel dialog"));
 
     expect(screen.queryByText(/^dialog:/)).toBeNull();
@@ -606,7 +606,7 @@ describe("TimeRuleModal deleting", () => {
     deleteTimeRule.mockRejectedValue(new Error("server said no"));
     const { user } = await renderModal();
 
-    await user.click(screen.getByRole("button", { name: /Delete All/ }));
+    await user.click(screen.getByRole("button", { name: /Delete all/ }));
     await user.click(screen.getByText("confirm dialog"));
 
     await waitFor(() =>
@@ -619,8 +619,8 @@ describe("TimeRuleModal deleting", () => {
 
 describe("TimeRuleModal presets", () => {
   it.each([
-    ["Allow Weekdays Only", "weekdays-only", "Allow weekdays only?"],
-    ["Allow Weekends Only", "weekends-only", "Allow weekends only?"],
+    ["Allow weekdays only", "weekdays-only", "Allow weekdays only?"],
+    ["Allow weekends only", "weekends-only", "Allow weekends only?"],
   ])("applies the %s preset", async (label, presetType, dialogTitle) => {
     const { user } = await renderModal();
 
@@ -638,7 +638,7 @@ describe("TimeRuleModal presets", () => {
     const { user } = await renderModal();
 
     await user.click(
-      screen.getByRole("button", { name: "Allow Weekdays Only" }),
+      screen.getByRole("button", { name: "Allow weekdays only" }),
     );
     await user.click(screen.getByText("cancel dialog"));
 
@@ -650,7 +650,7 @@ describe("TimeRuleModal presets", () => {
     const { user } = await renderModal();
 
     await user.click(
-      screen.getByRole("button", { name: "Allow Weekdays Only" }),
+      screen.getByRole("button", { name: "Allow weekdays only" }),
     );
     await user.click(screen.getByText("confirm dialog"));
 
@@ -693,7 +693,7 @@ describe("TimeRuleModal presets", () => {
     const { user } = await renderModal();
 
     await user.click(
-      screen.getByRole("button", { name: "Allow Weekdays Only" }),
+      screen.getByRole("button", { name: "Allow weekdays only" }),
     );
     await user.click(screen.getByText("confirm dialog"));
 
@@ -809,13 +809,13 @@ describe("TimeRuleModal guards", () => {
     const { user } = await renderModal();
 
     await user.click(
-      screen.getByRole("button", { name: "Allow Weekdays Only" }),
+      screen.getByRole("button", { name: "Allow weekdays only" }),
     );
     await user.click(screen.getByText("confirm dialog"));
     await waitFor(() => expect(createPreset).toHaveBeenCalledTimes(1));
 
     await user.click(
-      screen.getByRole("button", { name: "Allow Weekends Only" }),
+      screen.getByRole("button", { name: "Allow weekends only" }),
     );
     await user.click(screen.getByText("confirm dialog"));
 

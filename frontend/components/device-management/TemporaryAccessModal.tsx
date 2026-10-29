@@ -45,19 +45,19 @@ const QUICK_DURATIONS = [
 
 const BYPASSED_POLICIES = [
   {
-    name: "Network Policy",
+    name: "Network policy",
     detail: "Restrictions on local network or internet streaming",
   },
   {
-    name: "IP Access",
+    name: "IP access",
     detail: "The allowed list of IP addresses and address ranges",
   },
   {
-    name: "Time Schedule",
+    name: "Time schedule",
     detail: "The hours during which streaming is blocked",
   },
   {
-    name: "Device Approval",
+    name: "Device approval",
     detail: "Devices still pending approval, or already rejected",
   },
 ];
@@ -202,7 +202,7 @@ export const TemporaryAccessModal: React.FC<TemporaryAccessModalProps> = ({
   return (
     <Modal open={isOpen} onOpenChange={onClose} size="lg">
       <ModalHeader
-        title="Temporary Access"
+        title="Temporary access"
         description={
           <>
             Grant temporary streaming access to{" "}
@@ -216,11 +216,11 @@ export const TemporaryAccessModal: React.FC<TemporaryAccessModalProps> = ({
 
       <ModalBody className="space-y-8">
         <Section
-          title={`Select Devices (${selectedDeviceIds.length} selected)`}
+          title={`Select devices (${selectedDeviceIds.length} selected)`}
           action={
             eligibleDevices.length > 0 ? (
               <Button variant="outline" size="sm" onClick={handleSelectAll}>
-                {allSelected ? "Deselect All" : "Select All"}
+                {allSelected ? "Deselect all" : "Select all"}
               </Button>
             ) : undefined
           }
@@ -228,10 +228,10 @@ export const TemporaryAccessModal: React.FC<TemporaryAccessModalProps> = ({
           {eligibleDevices.length === 0 ? (
             <EmptyState
               title="No devices are eligible for temporary access"
-              description="Only devices that are currently blocked can be granted temporary access, meaning devices this user has had rejected, or devices still pending approval while the default policy blocks them."
+              description="Only devices that are currently blocked can be granted temporary access, meaning devices this user has had rejected, or devices still pending approval while the New devices rule blocks them."
             />
           ) : (
-            <div className="max-h-64 space-y-2 overflow-y-auto pr-1">
+            <div className="space-y-2">
               {eligibleDevices.map((device) => (
                 <SelectRow
                   key={device.id}
@@ -256,7 +256,7 @@ export const TemporaryAccessModal: React.FC<TemporaryAccessModalProps> = ({
 
         {selectedDeviceIds.length > 0 && (
           <Section
-            title="Access Duration"
+            title="Access duration"
             action={
               <SegmentedControl
                 value={inputMode}
@@ -312,7 +312,7 @@ export const TemporaryAccessModal: React.FC<TemporaryAccessModalProps> = ({
                   </Field>
                 </div>
 
-                <Field label="Common Durations">
+                <Field label="Common durations">
                   <div className="flex flex-wrap gap-2">
                     {QUICK_DURATIONS.map((quick) => (
                       <Button
@@ -331,7 +331,7 @@ export const TemporaryAccessModal: React.FC<TemporaryAccessModalProps> = ({
                 </Field>
               </div>
             ) : (
-              <Field label="Expires On">
+              <Field label="Expires on">
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button
@@ -454,7 +454,7 @@ export const TemporaryAccessModal: React.FC<TemporaryAccessModalProps> = ({
         )}
 
         {selectedDeviceIds.length > 0 && (
-          <Section title="Policy Bypass">
+          <Section title="Policy bypass">
             <Panel tone="warning" className="space-y-4">
               <p className="text-xs leading-relaxed text-muted-foreground">
                 While temporary access lasts, the selected devices stream
@@ -505,7 +505,7 @@ export const TemporaryAccessModal: React.FC<TemporaryAccessModalProps> = ({
               Granting Access...
             </>
           ) : (
-            "Grant Access"
+            "Grant access"
           )}
         </Button>
       </ModalFooter>

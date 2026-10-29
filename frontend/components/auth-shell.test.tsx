@@ -19,7 +19,7 @@ const renderShell = (
 ) =>
   render(
     <AuthShell
-      title="Forgot Password"
+      title="Forgot password"
       description="Enter your email"
       {...props}
     >
@@ -31,7 +31,7 @@ describe("AuthShell", () => {
   it("names the page and explains it", () => {
     renderShell();
 
-    expect(screen.getByText("Forgot Password")).toBeInTheDocument();
+    expect(screen.getByText("Forgot password")).toBeInTheDocument();
     expect(screen.getByText("Enter your email")).toBeInTheDocument();
   });
 

@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/contexts/auth-context";
-import { ThreeDotLoader } from "@/components/three-dot-loader";
+import { PageLoader } from "@/components/three-dot-loader";
 import { ErrorHandler } from "@/components/error-handler";
 
 const PUBLIC_ROUTES = [
@@ -33,7 +33,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
 
     const isPublicRoute = PUBLIC_ROUTES.includes(pathname);
     const isUserPortalRoute = USER_PORTAL_ROUTES.some((route) =>
-      pathname.startsWith(route)
+      pathname.startsWith(route),
     );
 
     // If setup is required, redirect to setup page (unless already there)
@@ -91,7 +91,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
 
   const isPublicRoute = PUBLIC_ROUTES.includes(pathname);
   const isUserPortalRoute = USER_PORTAL_ROUTES.some((route) =>
-    pathname.startsWith(route)
+    pathname.startsWith(route),
   );
 
   const shouldRenderContent =
@@ -119,11 +119,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
 
   // Show loading state while checking auth or redirecting
   if (!shouldRenderContent || !plexUserAllowed || !adminAllowed) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <ThreeDotLoader />
-      </div>
-    );
+    return <PageLoader />;
   }
 
   return <>{children}</>;

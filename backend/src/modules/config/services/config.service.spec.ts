@@ -353,6 +353,11 @@ describe('ConfigService', () => {
 
   describe('updateSetting validation', () => {
     it.each([
+      ['PLEXGUARD_REFRESH_INTERVAL', 'abc', 'must be a number'],
+      ['PLEXGUARD_REFRESH_INTERVAL', 7.5, 'whole number of seconds'],
+      ['PLEXGUARD_REFRESH_INTERVAL', 4, 'at least 5 seconds'],
+      ['PLEXGUARD_REFRESH_INTERVAL', 0, 'at least 5 seconds'],
+      ['PLEXGUARD_REFRESH_INTERVAL', -10, 'at least 5 seconds'],
       ['DEVICE_CLEANUP_INTERVAL_DAYS', 'abc', 'must be a number'],
       ['DEVICE_CLEANUP_INTERVAL_DAYS', 1.5, 'whole number'],
       ['DEVICE_CLEANUP_INTERVAL_DAYS', 0, 'at least 1 day'],
@@ -368,6 +373,8 @@ describe('ConfigService', () => {
     });
 
     it.each([
+      ['PLEXGUARD_REFRESH_INTERVAL', 5],
+      ['PLEXGUARD_REFRESH_INTERVAL', 30],
       ['DEVICE_CLEANUP_INTERVAL_DAYS', 30],
       ['SMTP_PORT', 465],
       ['SMTP_FROM_EMAIL', 'guardian@example.com'],
@@ -526,6 +533,19 @@ describe('ConfigService', () => {
       ).rejects.toThrow('between 1 and 65535');
 
       expect(store.get('SMTP_HOST')?.value).toBe('');
+    });
+
+    it('saves nothing when any setting in the batch is invalid', async () => {
+      const pageBefore = store.get('DEFAULT_PAGE')?.value;
+
+      await expect(
+        service.updateMultipleSettings([
+          { key: 'DEFAULT_PAGE', value: 'streams' },
+          { key: 'PLEXGUARD_REFRESH_INTERVAL', value: '2' },
+        ]),
+      ).rejects.toThrow('at least 5 seconds');
+
+      expect(store.get('DEFAULT_PAGE')?.value).toBe(pageBefore);
     });
   });
 
@@ -771,6 +791,22 @@ describe('ConfigService', () => {
       );
       expect(version).toBe('1.3.5');
       expect(typeof compare).toBe('function');
+    });
+
+    it('hands the importer the same rules the settings page uses', async () => {
+      await service.importDatabase({ data: { settings: [] } });
+
+      const [, , , validate] = callArgs<
+        [unknown, string, unknown, (key: string, value: string) => void]
+      >(databaseService.importDatabase);
+      expect(() => validate('PLEXGUARD_REFRESH_INTERVAL', '7.5')).toThrow(
+        'whole number of seconds',
+      );
+      expect(() => validate('PLEXGUARD_REFRESH_INTERVAL', '2')).toThrow(
+        'at least 5 seconds',
+      );
+      expect(() => validate('PLEXGUARD_REFRESH_INTERVAL', '30')).not.toThrow();
+      expect(() => validate('RETIRED_SETTING', 'x')).not.toThrow();
     });
 
     it('re-seeds the defaults after a reset', async () => {

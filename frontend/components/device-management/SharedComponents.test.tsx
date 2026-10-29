@@ -94,7 +94,7 @@ describe("DeviceStatus", () => {
       );
 
       expect(screen.getByText(label)).toBeInTheDocument();
-      expect(screen.queryByText("Temporary Access")).toBeNull();
+      expect(screen.queryByText("Temporary access")).toBeNull();
     },
   );
 
@@ -126,7 +126,7 @@ describe("DeviceStatus", () => {
       render(
         <DeviceStatus device={device({ status: "pending", ...overrides })} />,
       );
-      expect(screen.getByText("Not Manageable")).toBeInTheDocument();
+      expect(screen.getByText("Not manageable")).toBeInTheDocument();
     },
   );
 
@@ -198,9 +198,9 @@ describe("DeviceStatus", () => {
 
 describe("getUserPreferenceBadge", () => {
   it.each([
-    [null, "Global Default"],
-    [true, "Block by Default"],
-    [false, "Allow by Default"],
+    [null, "Global default"],
+    [true, "Block by default"],
+    [false, "Allow by default"],
   ])("renders %p as %s", (defaultBlock, label) => {
     render(<div>{getUserPreferenceBadge(defaultBlock)}</div>);
     expect(screen.getByText(label)).toBeInTheDocument();

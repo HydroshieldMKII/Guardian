@@ -65,7 +65,7 @@ export const getSettingInfo = (setting: AppSetting): SettingInfo => {
     PLEXGUARD_REFRESH_INTERVAL: {
       label: "Session refresh interval (seconds)",
       description:
-        "How often Plex is asked what is playing, and your policies enforced",
+        "How often Plex is asked what is playing, and your policies enforced. Minimum 5 seconds.",
     },
     PLEX_GUARD_DEFAULT_BLOCK: {
       label: "Block new devices by default",
@@ -75,7 +75,7 @@ export const getSettingInfo = (setting: AppSetting): SettingInfo => {
     PLEX_GUARD_STRICT_MODE: {
       label: "Strict mode",
       description:
-        "Every new device is decided immediately using the default policy, so nothing sits pending. Devices waiting now are decided as soon as you turn this on.",
+        "Every new device is decided immediately using its user's New devices rule, so nothing sits pending. Devices waiting now are decided as soon as you turn this on.",
     },
     MSG_DEVICE_PENDING: {
       label: "Device pending message",
@@ -172,7 +172,7 @@ export const getSettingInfo = (setting: AppSetting): SettingInfo => {
     CUSTOM_PLEX_URL: {
       label: "Custom Plex URL",
       description:
-        'Where the "open in Plex" links point, if your server is not at the default address',
+        "Where a stream's title takes you when you click it to open it in Plex. Leave empty to use your Plex server address.",
       optional: true,
     },
     TIMEZONE: {
@@ -262,7 +262,6 @@ export const getSettingInfo = (setting: AppSetting): SettingInfo => {
       label: "Notes from users",
       description: "When a user leaves a note asking you to review a device",
     },
-    // Concurrent Stream Limit Settings
     CONCURRENT_STREAM_LIMIT: {
       label: "Global concurrent stream limit",
       description:
@@ -278,7 +277,6 @@ export const getSettingInfo = (setting: AppSetting): SettingInfo => {
       description:
         "Shown when a user starts more streams at once than their limit allows",
     },
-    // User Portal Settings
     USER_PORTAL_ENABLED: {
       label: "Enable Plex user portal",
       description:

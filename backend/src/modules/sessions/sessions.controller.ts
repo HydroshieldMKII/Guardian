@@ -22,6 +22,7 @@ export class SessionsController {
     @Query('offset') offset?: string,
     @Query('search') search?: string,
     @Query('terminatedOnly') terminatedOnly?: string,
+    @Query('app') app?: string,
   ): Promise<SessionHistory[]> {
     return this.activeSessionService.getUserSessionHistory(userId, {
       limit: limit ? parseInt(limit, 10) : 50,
@@ -29,6 +30,7 @@ export class SessionsController {
       includeActive: includeActive === 'true',
       search,
       terminatedOnly: terminatedOnly === 'true',
+      app: app === 'plex' || app === 'plexamp' ? app : undefined,
     });
   }
 

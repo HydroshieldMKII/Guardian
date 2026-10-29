@@ -348,7 +348,7 @@ describe("UserHistoryModal formatting", () => {
 
   it("falls back for untitled content", async () => {
     await renderWith({ contentTitle: null });
-    expect(screen.getAllByText("Unknown Title").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Unknown title").length).toBeGreaterThan(0);
   });
 
   it("shows artist and year for a track", async () => {
@@ -404,7 +404,7 @@ describe("UserHistoryModal formatting", () => {
 
   it("falls back again when there is no device at all", async () => {
     await renderWith({ userDevice: null });
-    expect(screen.getAllByText("Unknown Device").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Unknown device").length).toBeGreaterThan(0);
   });
 
   it("labels PlexAmp separately", async () => {
@@ -442,6 +442,16 @@ describe("UserHistoryModal formatting", () => {
       expect(screen.getAllByText(expected).length).toBeGreaterThan(0);
     },
   );
+
+  it("wraps a long duration instead of cutting it off", async () => {
+    await renderWith({
+      startedAt: "2026-01-01T10:00:00Z",
+      endedAt: "2026-01-01T10:02:30Z",
+    });
+    expect(screen.getByText("2 minutes and 30 seconds")).not.toHaveClass(
+      "truncate",
+    );
+  });
 
   it("says unknown when the clock runs backwards", async () => {
     await renderWith({
@@ -503,6 +513,83 @@ describe("UserHistoryModal filtering", () => {
 
     expect(lastUrl()).not.toContain("search=");
     expect(lastUrl()).not.toContain("terminatedOnly=");
+    expect(lastUrl()).not.toContain("app=");
+  });
+
+  it.each([
+    ["Plex", "app=plex&"],
+    ["Plexamp", "app=plexamp"],
+  ])("asks the server for %s sessions only", async (label, param) => {
+    const { user } = await renderModal();
+
+    await user.click(screen.getByRole("button", { name: label }));
+
+    await waitFor(() => expect(`${lastUrl()}&`).toContain(param));
+    expect(screen.getByRole("button", { name: label })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+  });
+
+  it("disables the terminated filter while showing Plexamp", async () => {
+    const { user } = await renderModal();
+
+    await user.click(screen.getByRole("button", { name: "Plexamp" }));
+
+    expect(screen.getByRole("switch")).toBeDisabled();
+    expect(screen.getByRole("switch")).not.toBeChecked();
+  });
+
+  it("drops the terminated filter for Plexamp and restores it after", async () => {
+    const { user } = await renderModal();
+
+    await user.click(screen.getByRole("switch"));
+    await waitFor(() => expect(lastUrl()).toContain("terminatedOnly=true"));
+    await user.click(screen.getByRole("button", { name: "Plexamp" }));
+
+    await waitFor(() => expect(lastUrl()).toContain("app=plexamp"));
+    expect(lastUrl()).not.toContain("terminatedOnly=");
+
+    await user.click(screen.getByRole("button", { name: "Plex" }));
+
+    await waitFor(() => expect(lastUrl()).toContain("terminatedOnly=true"));
+    expect(screen.getByRole("switch")).toBeChecked();
+  });
+
+  it("keeps the newest filter's sessions when an older reply lands last", async () => {
+    const { user } = await renderModal();
+    let answerPlexamp: (reply: FetchReply) => void = () => {};
+    fetchMock.mockImplementation((url) =>
+      typeof url === "string" && url.includes("app=plexamp")
+        ? new Promise<FetchReply>((resolve) => {
+            answerPlexamp = resolve;
+          })
+        : ok([session({ id: 2, contentTitle: "Dune: Part Two" })]),
+    );
+
+    await user.click(screen.getByRole("button", { name: "Plexamp" }));
+    await user.click(screen.getByRole("button", { name: "Plex" }));
+    expect(await screen.findByText("Dune: Part Two")).toBeInTheDocument();
+
+    await act(async () =>
+      answerPlexamp({
+        ok: true,
+        json: async () => [session({ id: 3, contentTitle: "Get Lucky" })],
+      }),
+    );
+
+    expect(screen.getByText("Dune: Part Two")).toBeInTheDocument();
+    expect(screen.queryByText("Get Lucky")).toBeNull();
+  });
+
+  it("drops the app filter when switching back to all", async () => {
+    const { user } = await renderModal();
+
+    await user.click(screen.getByRole("button", { name: "Plexamp" }));
+    await waitFor(() => expect(lastUrl()).toContain("app=plexamp"));
+    await user.click(screen.getByRole("button", { name: "All" }));
+
+    await waitFor(() => expect(lastUrl()).not.toContain("app="));
   });
 });
 
@@ -840,7 +927,7 @@ describe("UserHistoryModal deletion", () => {
       ),
     );
     expect(toast).toHaveBeenCalledWith(
-      expect.objectContaining({ title: "Session Deleted" }),
+      expect.objectContaining({ title: "Session deleted" }),
     );
     expect(
       screen.getByText("This user has not streamed anything yet"),
@@ -860,7 +947,7 @@ describe("UserHistoryModal deletion", () => {
 
     await waitFor(() =>
       expect(toast).toHaveBeenCalledWith(
-        expect.objectContaining({ title: "Delete Failed" }),
+        expect.objectContaining({ title: "Delete failed" }),
       ),
     );
   });
@@ -878,7 +965,7 @@ describe("UserHistoryModal deletion", () => {
 
     await waitFor(() =>
       expect(toast).toHaveBeenCalledWith(
-        expect.objectContaining({ title: "Delete Failed" }),
+        expect.objectContaining({ title: "Delete failed" }),
       ),
     );
   });

@@ -12,7 +12,7 @@ const SIZES: ModalSize[] = ["sm", "md", "lg", "xl"];
 
 const renderModal = (
   props: Partial<React.ComponentProps<typeof Modal>> = {},
-  header: React.ReactNode = <ModalHeader title="Device Details" />,
+  header: React.ReactNode = <ModalHeader title="Device details" />,
 ) => {
   const onOpenChange = jest.fn();
   const view = render(
@@ -30,6 +30,18 @@ const renderModal = (
 };
 
 describe("Modal", () => {
+  it("focuses the first control when it opens", () => {
+    renderModal();
+
+    expect(screen.getByRole("button", { name: "Close" })).toHaveFocus();
+  });
+
+  it("can focus the dialog itself instead of its first control", () => {
+    renderModal({ focusDialogOnOpen: true });
+
+    expect(screen.getByRole("dialog")).toHaveFocus();
+  });
+
   it("renders nothing while closed", () => {
     render(
       <Modal open={false} onOpenChange={jest.fn()}>
@@ -44,7 +56,7 @@ describe("Modal", () => {
     renderModal();
 
     expect(
-      screen.getByRole("heading", { name: "Device Details" }),
+      screen.getByRole("heading", { name: "Device details" }),
     ).toBeInTheDocument();
     expect(screen.getByText("body content")).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: "Close" })).toHaveLength(1);
@@ -53,7 +65,7 @@ describe("Modal", () => {
   it.each(SIZES)("accepts the %s size", (size) => {
     renderModal({ size });
     expect(
-      screen.getByRole("heading", { name: "Device Details" }),
+      screen.getByRole("heading", { name: "Device details" }),
     ).toBeInTheDocument();
   });
 
@@ -112,7 +124,7 @@ describe("ModalHeader", () => {
   it("shows a visible description when given one", () => {
     renderModal(
       {},
-      <ModalHeader title="Device Details" description="Managed device" />,
+      <ModalHeader title="Device details" description="Managed device" />,
     );
 
     expect(screen.getByText("Managed device")).toBeInTheDocument();
@@ -125,13 +137,13 @@ describe("ModalHeader", () => {
       '[data-slot="dialog-description"]',
     );
     expect(description?.className).toContain("sr-only");
-    expect(description?.textContent).toBe("Device Details");
+    expect(description?.textContent).toBe("Device details");
   });
 
   it("renders extra header children", () => {
     renderModal(
       {},
-      <ModalHeader title="Device Details">
+      <ModalHeader title="Device details">
         <input placeholder="Search" />
       </ModalHeader>,
     );

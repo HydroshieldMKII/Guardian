@@ -11,9 +11,18 @@ import { Navbar } from "@/components/navbar";
 const push = jest.fn();
 const router = { push };
 let pathname = "/";
+let search = "";
 jest.mock("next/navigation", () => ({
   useRouter: () => router,
   usePathname: () => pathname,
+  useSearchParams: () => new URLSearchParams(search),
+}));
+
+let defaultPage: string | null = null;
+jest.mock("@/contexts/settings-context", () => ({
+  useSettings: () => ({
+    getSetting: (key: string) => (key === "DEFAULT_PAGE" ? defaultPage : null),
+  }),
 }));
 
 jest.mock("next/link", () => ({
@@ -84,6 +93,18 @@ jest.mock("@/contexts/unsaved-changes-context", () => ({
   }),
 }));
 
+let nav = {
+  view: null as "streams" | "users" | null,
+  pendingDevices: 0,
+  activeStreams: 0,
+};
+jest.mock("@/contexts/dashboard-nav-context", () => ({
+  ...jest.requireActual<typeof import("@/contexts/dashboard-nav-context")>(
+    "@/contexts/dashboard-nav-context",
+  ),
+  useDashboardNav: () => ({ ...nav, publish: jest.fn() }),
+}));
+
 const toast = jest.fn();
 jest.mock("@/hooks/use-toast", () => ({ useToast: () => ({ toast }) }));
 
@@ -118,8 +139,11 @@ const openUserMenu = async (user: ReturnType<typeof userEvent.setup>) => {
 beforeEach(() => {
   jest.clearAllMocks();
   pathname = "/";
+  search = "";
+  defaultPage = null;
   theme = "light";
   versionInfo = null;
+  nav = { view: null, pendingDevices: 0, activeStreams: 0 };
   auth = {
     user: admin,
     userType: "admin",
@@ -181,16 +205,149 @@ describe("Navbar theme toggle", () => {
 });
 
 describe("Navbar settings link", () => {
-  it("marks a version mismatch with a dot", () => {
+  it("marks a version mismatch with a dot in both navs", () => {
     versionInfo = { isVersionMismatch: true };
-    const { container } = render(<Navbar />);
-    expect(container.querySelector(".bg-red-500")).not.toBeNull();
+    render(<Navbar />);
+    const dots = screen.getAllByLabelText("Version mismatch");
+    expect(dots).toHaveLength(2);
+    dots.forEach((dot) => {
+      expect(dot).toHaveClass("bg-blocked");
+      expect(dot.closest("a")).toHaveAttribute("href", "/settings");
+    });
   });
 
   it("shows no dot when versions agree", () => {
     versionInfo = { isVersionMismatch: false };
-    const { container } = render(<Navbar />);
-    expect(container.querySelector(".bg-red-500")).toBeNull();
+    render(<Navbar />);
+    expect(screen.queryByLabelText("Version mismatch")).toBeNull();
+  });
+});
+
+describe("Navbar sections", () => {
+  const linksNamed = (name: RegExp) => screen.getAllByRole("link", { name });
+
+  it.each([
+    [/^Streams/, "/?view=streams"],
+    [/^Users/, "/?view=users"],
+    [/^Settings/, "/settings"],
+  ])("links %s in the top bar and the tab bar", (name, href) => {
+    render(<Navbar />);
+    const links = linksNamed(name);
+    expect(links).toHaveLength(2);
+    links.forEach((link) => expect(link).toHaveAttribute("href", href));
+  });
+
+  it("puts the three sections in a mobile tab bar", () => {
+    render(<Navbar />);
+    const tabbar = screen.getByRole("navigation", { name: "Sections" });
+    expect(tabbar).toHaveAttribute("data-tabbar");
+    expect(
+      Array.from(tabbar.querySelectorAll("a")).map((a) =>
+        a.getAttribute("href"),
+      ),
+    ).toEqual(["/?view=users", "/?view=streams", "/settings"]);
+  });
+
+  it("shows no counts while nothing is playing or waiting", () => {
+    render(<Navbar />);
+    linksNamed(/^Streams/).forEach((link) =>
+      expect(link).toHaveTextContent(/^Streams$/),
+    );
+    linksNamed(/^Users/).forEach((link) =>
+      expect(link).toHaveTextContent(/^Users$/),
+    );
+  });
+
+  it("counts active streams and devices waiting for approval", () => {
+    nav = { view: "streams", pendingDevices: 4, activeStreams: 2 };
+    render(<Navbar />);
+    linksNamed(/^Streams/).forEach((link) =>
+      expect(link).toHaveTextContent("2"),
+    );
+    linksNamed(/^Users/).forEach((link) => expect(link).toHaveTextContent("4"));
+  });
+
+  it.each(["streams", "users"] as const)(
+    "marks the %s view as the current page on the dashboard",
+    (view) => {
+      nav = { ...nav, view };
+      render(<Navbar />);
+      const current = document.querySelectorAll('[aria-current="page"]');
+      expect(current).toHaveLength(2);
+      current.forEach((link) =>
+        expect(link).toHaveAttribute("href", `/?view=${view}`),
+      );
+    },
+  );
+
+  it("marks settings as the current page on the settings route", () => {
+    nav = { ...nav, view: "users" };
+    pathname = "/settings";
+    render(<Navbar />);
+    const current = document.querySelectorAll('[aria-current="page"]');
+    expect(current).toHaveLength(2);
+    current.forEach((link) =>
+      expect(link).toHaveAttribute("href", "/settings"),
+    );
+  });
+
+  it.each(["streams", "users"] as const)(
+    "follows the URL to %s before the dashboard catches up",
+    (view) => {
+      nav = { ...nav, view: view === "streams" ? "users" : "streams" };
+      search = `view=${view}`;
+      render(<Navbar />);
+      document
+        .querySelectorAll('[aria-current="page"]')
+        .forEach((link) =>
+          expect(link).toHaveAttribute("href", `/?view=${view}`),
+        );
+      expect(document.querySelectorAll('[aria-current="page"]')).toHaveLength(
+        2,
+      );
+    },
+  );
+
+  it("falls back to the default page when the URL names no view", () => {
+    nav = { ...nav, view: "users" };
+    defaultPage = "streams";
+    render(<Navbar />);
+    document
+      .querySelectorAll('[aria-current="page"]')
+      .forEach((link) =>
+        expect(link).toHaveAttribute("href", "/?view=streams"),
+      );
+  });
+
+  it("treats the stored devices default as the users view", () => {
+    defaultPage = "devices";
+    render(<Navbar />);
+    const current = document.querySelectorAll('[aria-current="page"]');
+    expect(current.length).toBeGreaterThan(0);
+    current.forEach((link) =>
+      expect(link).toHaveAttribute("href", "/?view=users"),
+    );
+  });
+
+  it("ignores a view the dashboard does not know", () => {
+    search = "view=elsewhere";
+    nav = { ...nav, view: "users" };
+    render(<Navbar />);
+    document
+      .querySelectorAll('[aria-current="page"]')
+      .forEach((link) => expect(link).toHaveAttribute("href", "/?view=users"));
+  });
+
+  it("marks nothing as current before the dashboard picks a view", () => {
+    render(<Navbar />);
+    expect(document.querySelector('[aria-current="page"]')).toBeNull();
+  });
+
+  it("marks nothing as current on other routes", () => {
+    nav = { ...nav, view: "streams" };
+    pathname = "/elsewhere";
+    render(<Navbar />);
+    expect(document.querySelector('[aria-current="page"]')).toBeNull();
   });
 });
 
@@ -253,7 +410,7 @@ describe("Navbar user menu", () => {
     expect(screen.getByText("profile:false")).toBeInTheDocument();
 
     await openUserMenu(user);
-    await user.click(screen.getByText("Edit Profile"));
+    await user.click(screen.getByText("Edit profile"));
 
     expect(screen.getByText("profile:true")).toBeInTheDocument();
 
@@ -326,6 +483,40 @@ describe("Navbar unsaved-changes guard", () => {
     expect(setShowUnsavedWarning).not.toHaveBeenCalled();
   });
 
+  it("intercepts a section link on the settings page with unsaved changes", async () => {
+    unsaved.hasUnsavedChanges = true;
+    pathname = "/settings";
+    const user = userEvent.setup();
+    render(<Navbar />);
+
+    const tabbar = screen.getByRole("navigation", { name: "Sections" });
+    await user.click(
+      tabbar.querySelector('a[href="/?view=users"]') as HTMLElement,
+    );
+
+    expect(setPendingNavigation).toHaveBeenCalledWith("/?view=users");
+    expect(setShowUnsavedWarning).toHaveBeenCalledWith(true);
+  });
+
+  it("never intercepts the settings link itself", async () => {
+    unsaved.hasUnsavedChanges = true;
+    pathname = "/settings";
+    const user = userEvent.setup();
+    render(<Navbar />);
+
+    let prevented: boolean | null = null;
+    const settle = (e: MouseEvent) => {
+      prevented = e.defaultPrevented;
+      e.preventDefault();
+    };
+    window.addEventListener("click", settle);
+    await user.click(screen.getAllByRole("link", { name: /^Settings/ })[0]);
+    window.removeEventListener("click", settle);
+
+    expect(prevented).toBe(false);
+    expect(setShowUnsavedWarning).not.toHaveBeenCalled();
+  });
+
   describe("the warning dialog", () => {
     beforeEach(() => {
       unsaved.showUnsavedWarning = true;
@@ -336,7 +527,7 @@ describe("Navbar unsaved-changes guard", () => {
       const user = userEvent.setup();
       render(<Navbar />);
 
-      await user.click(screen.getByRole("button", { name: "Stay on Page" }));
+      await user.click(screen.getByRole("button", { name: "Stay on page" }));
 
       expect(setShowUnsavedWarning).toHaveBeenCalledWith(false);
       expect(setPendingNavigation).toHaveBeenCalledWith(null);
@@ -358,7 +549,7 @@ describe("Navbar unsaved-changes guard", () => {
       const user = userEvent.setup();
       render(<Navbar />);
 
-      await user.click(screen.getByRole("button", { name: "Discard Changes" }));
+      await user.click(screen.getByRole("button", { name: "Discard changes" }));
 
       expect(onDiscardChanges).toHaveBeenCalled();
       expect(push).toHaveBeenCalledWith("/");
@@ -369,7 +560,7 @@ describe("Navbar unsaved-changes guard", () => {
       const user = userEvent.setup();
       render(<Navbar />);
 
-      await user.click(screen.getByRole("button", { name: "Discard Changes" }));
+      await user.click(screen.getByRole("button", { name: "Discard changes" }));
 
       expect(push).not.toHaveBeenCalled();
     });

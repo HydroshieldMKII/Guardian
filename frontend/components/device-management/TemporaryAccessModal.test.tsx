@@ -140,7 +140,7 @@ describe("TemporaryAccessModal", () => {
       expect(
         screen.getByText("No devices are eligible for temporary access"),
       ).toBeInTheDocument();
-      expect(screen.queryByRole("button", { name: /Select All/ })).toBeNull();
+      expect(screen.queryByRole("button", { name: /Select all/ })).toBeNull();
     });
 
     it("falls back to the identifier for an unnamed device", () => {
@@ -181,22 +181,22 @@ describe("TemporaryAccessModal", () => {
         ],
       });
 
-      await user.click(screen.getByRole("button", { name: "Select All" }));
+      await user.click(screen.getByRole("button", { name: "Select all" }));
       expect(screen.getByText(/\(2 selected\)/)).toBeInTheDocument();
 
-      await user.click(screen.getByRole("button", { name: "Deselect All" }));
+      await user.click(screen.getByRole("button", { name: "Deselect all" }));
       expect(screen.getByText(/\(0 selected\)/)).toBeInTheDocument();
     });
 
     it("hides the duration and bypass sections until something is selected", async () => {
       const { user } = renderModal();
-      expect(screen.queryByText("Access Duration")).toBeNull();
-      expect(screen.queryByText("Policy Bypass")).toBeNull();
+      expect(screen.queryByText("Access duration")).toBeNull();
+      expect(screen.queryByText("Policy bypass")).toBeNull();
 
       await selectDevice(user);
 
-      expect(screen.getByText("Access Duration")).toBeInTheDocument();
-      expect(screen.getByText("Policy Bypass")).toBeInTheDocument();
+      expect(screen.getByText("Access duration")).toBeInTheDocument();
+      expect(screen.getByText("Policy bypass")).toBeInTheDocument();
     });
   });
 
@@ -206,7 +206,7 @@ describe("TemporaryAccessModal", () => {
       await selectDevice(user);
 
       await user.click(screen.getByRole("button", { name: "1 day" }));
-      await user.click(screen.getByRole("button", { name: /Grant Access/ }));
+      await user.click(screen.getByRole("button", { name: /Grant access/ }));
 
       expect(onGrantAccess).toHaveBeenCalledWith([1], 1440, false);
     });
@@ -221,7 +221,7 @@ describe("TemporaryAccessModal", () => {
       await selectDevice(user);
 
       await user.click(screen.getByRole("button", { name: label }));
-      await user.click(screen.getByRole("button", { name: /Grant Access/ }));
+      await user.click(screen.getByRole("button", { name: /Grant access/ }));
 
       expect(onGrantAccess).toHaveBeenCalledWith([1], expected, false);
     });
@@ -233,7 +233,7 @@ describe("TemporaryAccessModal", () => {
       const input = screen.getByPlaceholderText("Enter duration");
       await user.clear(input);
       await user.type(input, "5");
-      await user.click(screen.getByRole("button", { name: /Grant Access/ }));
+      await user.click(screen.getByRole("button", { name: /Grant access/ }));
 
       expect(onGrantAccess).toHaveBeenCalledWith([1], 300, false);
     });
@@ -244,7 +244,7 @@ describe("TemporaryAccessModal", () => {
 
       await user.click(screen.getByRole("button", { name: "Duration unit" }));
       await user.click(await screen.findByText("minutes"));
-      await user.click(screen.getByRole("button", { name: /Grant Access/ }));
+      await user.click(screen.getByRole("button", { name: /Grant access/ }));
 
       expect(onGrantAccess).toHaveBeenCalledWith([1], 1, false);
     });
@@ -259,7 +259,7 @@ describe("TemporaryAccessModal", () => {
 
       await user.click(screen.getByRole("button", { name: "Duration unit" }));
       await user.click(await screen.findByText(unit));
-      await user.click(screen.getByRole("button", { name: /Grant Access/ }));
+      await user.click(screen.getByRole("button", { name: /Grant access/ }));
 
       expect(onGrantAccess).toHaveBeenCalledWith([1], expected, false);
     });
@@ -276,7 +276,7 @@ describe("TemporaryAccessModal", () => {
         screen.getByText("Please enter a valid duration"),
       ).toBeInTheDocument();
       expect(
-        screen.getByRole("button", { name: /Grant Access/ }),
+        screen.getByRole("button", { name: /Grant access/ }),
       ).toBeDisabled();
     });
 
@@ -287,7 +287,7 @@ describe("TemporaryAccessModal", () => {
 
       expect(screen.getByText(/Duration is too large/)).toBeInTheDocument();
       expect(
-        screen.getByRole("button", { name: /Grant Access/ }),
+        screen.getByRole("button", { name: /Grant access/ }),
       ).toBeDisabled();
     });
 
@@ -297,7 +297,7 @@ describe("TemporaryAccessModal", () => {
       await selectDevice(user);
 
       expect(
-        screen.getByRole("button", { name: /Grant Access/ }),
+        screen.getByRole("button", { name: /Grant access/ }),
       ).toBeDisabled();
     });
 
@@ -324,7 +324,7 @@ describe("TemporaryAccessModal", () => {
 
       expect(screen.getByText("calendar:none")).toBeInTheDocument();
       expect(
-        screen.getByRole("button", { name: /Grant Access/ }),
+        screen.getByRole("button", { name: /Grant access/ }),
       ).toBeDisabled();
     });
 
@@ -340,7 +340,7 @@ describe("TemporaryAccessModal", () => {
       await openCalendar(user);
 
       await user.click(screen.getByRole("button", { name: "pick date" }));
-      await user.click(screen.getByRole("button", { name: /Grant Access/ }));
+      await user.click(screen.getByRole("button", { name: /Grant access/ }));
 
       expect(onGrantAccess).toHaveBeenCalledWith(
         [1],
@@ -420,7 +420,7 @@ describe("TemporaryAccessModal", () => {
       await selectDevice(user);
 
       await user.click(screen.getByRole("switch"));
-      await user.click(screen.getByRole("button", { name: /Grant Access/ }));
+      await user.click(screen.getByRole("button", { name: /Grant access/ }));
 
       expect(onGrantAccess).toHaveBeenCalledWith([1], 60, true);
     });
@@ -438,7 +438,7 @@ describe("TemporaryAccessModal", () => {
     it("blocks granting with nothing selected", () => {
       renderModal();
       expect(
-        screen.getByRole("button", { name: /Grant Access/ }),
+        screen.getByRole("button", { name: /Grant access/ }),
       ).toBeDisabled();
     });
 

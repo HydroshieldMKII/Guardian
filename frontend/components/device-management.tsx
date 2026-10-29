@@ -2,20 +2,14 @@
 
 import React, {
   useState,
+  useCallback,
   useEffect,
   useRef,
   memo,
   useMemo,
   useDeferredValue,
 } from "react";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import {
   Dialog,
   DialogContent,
@@ -24,15 +18,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  RefreshCw,
-  Search,
-  ArrowUpDown,
-  ArrowUp,
-  ArrowDown,
-  Eye,
-  EyeOff,
-} from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
 
 // Hooks
 import { useDeviceActions } from "@/hooks/device-management/useDeviceActions";
@@ -42,14 +28,33 @@ import { useToast } from "@/hooks/use-toast";
 
 // Types
 import { UserDevice, UserPreference, UserTimeRule, AppSetting } from "@/types";
-import { devicePolicyBadges, isPlexampDevice } from "@/lib/device-policies";
+import {
+  devicePolicyBadges,
+  isPlexampDevice,
+  isWaitingDevice,
+} from "@/lib/device-policies";
 import { formatMinutes } from "@/lib/duration";
 
 // API
 import { apiClient } from "@/lib/api";
 
 // Components
-import { UserGroupCard } from "@/components/device-management/UserGroupCard";
+import {
+  UserDetail,
+  type DeviceFocus,
+} from "@/components/device-management/UserDetail";
+import {
+  UserList,
+  matchesFilter,
+  type UserFilter,
+  type UserSort,
+} from "@/components/device-management/UserList";
+import {
+  ApprovalQueue,
+  type QueueItem,
+} from "@/components/device-management/ApprovalQueue";
+import type { UserDeviceGroup } from "@/components/device-management/user-group";
+import { cn } from "@/lib/utils";
 import { DeviceDetailsModal } from "@/components/device-management/DeviceDetailsModal";
 import { TemporaryAccessModal } from "@/components/device-management/TemporaryAccessModal";
 import { ConfirmationModal } from "@/components/device-management/ConfirmationModal";
@@ -58,63 +63,10 @@ import { TimeRuleModal } from "@/components/device-management/TimeRuleModal";
 import { UserAvatar } from "@/components/device-management/SharedComponents";
 import { HIGHLIGHT_CLASSES } from "@/lib/highlight";
 
-// User-Device group interface
-interface UserDeviceGroup {
-  user: {
-    userId: string;
-    username?: string;
-    preference?: UserPreference;
-  };
-  devices: UserDevice[];
-  pendingCount: number;
-  approvedCount: number;
-  rejectedCount: number;
-  lastSeen?: Date;
-}
-
-// Skeleton components for loading states
-const UserGroupSkeleton = () => (
-  <div className="rounded-lg border bg-card shadow-sm animate-pulse">
-    <div className="p-4 border-b">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <div className="w-4 h-4 bg-muted rounded"></div>
-          <div className="h-6 bg-muted rounded w-32"></div>
-          <div className="h-5 bg-muted rounded w-20"></div>
-        </div>
-        <div className="flex gap-2">
-          <div className="h-6 bg-muted rounded w-16"></div>
-          <div className="h-6 bg-muted rounded w-16"></div>
-          <div className="h-6 bg-muted rounded w-16"></div>
-        </div>
-      </div>
-    </div>
-    <div className="p-4 space-y-3">
-      {Array.from({ length: 2 }, (_, i) => (
-        <div key={i} className="p-3 rounded border bg-muted/50">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center space-x-2">
-              <div className="w-4 h-4 bg-muted rounded"></div>
-              <div className="h-4 bg-muted rounded w-24"></div>
-              <div className="h-4 bg-muted rounded w-16"></div>
-            </div>
-            <div className="flex gap-1">
-              <div className="h-6 bg-muted rounded w-16"></div>
-              <div className="h-6 bg-muted rounded w-16"></div>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <div className="h-3 bg-muted rounded w-20"></div>
-            <div className="h-3 bg-muted rounded w-24"></div>
-          </div>
-        </div>
-      ))}
-    </div>
-  </div>
-);
+const DEVICE_LOOKUP_ATTEMPTS = 20;
+const DEVICE_LOOKUP_RETRY_MS = 100;
 
 interface DeviceManagementProps {
-  tabs?: React.ReactNode;
   devicesData?: {
     all: UserDevice[];
     pending: UserDevice[];
@@ -124,13 +76,13 @@ interface DeviceManagementProps {
   usersData?: UserPreference[];
   settingsData?: AppSetting[];
   onRefresh?: () => void | Promise<void>;
-  autoRefresh?: boolean;
-  onAutoRefreshChange?: (value: boolean) => void;
   navigationTarget?: {
     userId: string;
     deviceIdentifier: string;
   } | null;
   onNavigationComplete?: () => void;
+  selectedUserId?: string | null;
+  onSelectUser?: (userId: string | null) => void;
 }
 
 interface ConfirmActionData {
@@ -142,52 +94,62 @@ interface ConfirmActionData {
 
 const CONFIRM_COPY = {
   approve: {
-    title: "Approve Device",
+    title: "Approve device",
     description: "This device will be able to stream from your Plex server.",
   },
   reject: {
-    title: "Reject Device",
+    title: "Reject device",
     description:
       "This device will be blocked from streaming from your Plex server.",
   },
   removeTemporaryAccess: {
-    title: "Remove Temporary Access",
+    title: "Remove temporary access",
     description:
       "The grant ends now instead of when it was due to expire. This device goes straight back under the user's usual policies, so it stops streaming if they block it.",
   },
   delete: {
-    title: "Delete Device",
+    title: "Delete device",
     description:
-      "The record is removed for good. The device reappears as pending the next time it connects, and follows the user's default device policy until then.",
+      "The record is removed for good. The device reappears as pending the next time it connects, and follows this user's New devices rule until then.",
   },
 };
 
-const AUTO_REFRESH_ON = "Refreshing on its own. Click to stop.";
-const AUTO_REFRESH_OFF =
-  "Refreshing only when you ask. Click to refresh on its own.";
-
 const DeviceManagement = memo(
   ({
-    tabs,
     devicesData,
     usersData,
     settingsData,
     onRefresh,
-    autoRefresh: parentAutoRefresh,
-    onAutoRefreshChange,
     navigationTarget,
     onNavigationComplete,
+    selectedUserId: controlledSelectedUserId,
+    onSelectUser,
   }: DeviceManagementProps) => {
     // State management
     const [userGroups, setUserGroups] = useState<UserDeviceGroup[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
-    const [autoRefresh, setAutoRefresh] = useState(parentAutoRefresh ?? true);
     const [actionLoading, setActionLoading] = useState<number | null>(null);
+    const [deviceFocus, setDeviceFocus] = useState<DeviceFocus | null>(null);
     const [selectedDevice, setSelectedDevice] = useState<UserDevice | null>(
       null,
     );
-    const [expandedUsers, setExpandedUsers] = useState<Set<string>>(new Set());
+    const [localSelectedUserId, setLocalSelectedUserId] = useState<
+      string | null
+    >(null);
+    const selectedUserId =
+      controlledSelectedUserId !== undefined
+        ? controlledSelectedUserId
+        : localSelectedUserId;
+    const selectUser = (userId: string | null) => {
+      setDeviceFocus(null);
+      if (onSelectUser) {
+        onSelectUser(userId);
+      } else {
+        setLocalSelectedUserId(userId);
+      }
+    };
+    const [filter, setFilter] = useState<UserFilter>("all");
     const [searchTerm, setSearchTerm] = useState("");
     const deferredSearchTerm = useDeferredValue(searchTerm);
     const [editingDevice, setEditingDevice] = useState<number | null>(null);
@@ -234,7 +196,8 @@ const DeviceManagement = memo(
     const userPreferences = useUserPreferences();
     const { getAllTimeRules, fetchAllTimeRules } = useTimeRules();
     const timeRulesApiRef = useRef({ getAllTimeRules, fetchAllTimeRules });
-    const expandedUsersRef = useRef(expandedUsers);
+    const selectedUserIdRef = useRef(selectedUserId);
+    const selectUserRef = useRef(selectUser);
     const { toast } = useToast();
 
     useEffect(() => {
@@ -242,8 +205,9 @@ const DeviceManagement = memo(
     });
 
     useEffect(() => {
-      expandedUsersRef.current = expandedUsers;
-    }, [expandedUsers]);
+      selectedUserIdRef.current = selectedUserId;
+      selectUserRef.current = selectUser;
+    });
 
     // Local storage keys for sorting preferences
     const USER_SORT_BY_KEY = "guardian-unified-sort-by";
@@ -267,18 +231,8 @@ const DeviceManagement = memo(
       }
     };
 
-    // Format duration in minutes to a human-readable format
-    // Sorting state with localStorage initialization
-    const [sortBy, setSortBy] = useState<
-      "username" | "deviceCount" | "pendingCount" | "lastSeen" | "streamCount"
-    >(
-      () =>
-        getStoredValue(USER_SORT_BY_KEY, "pendingCount") as
-          | "username"
-          | "deviceCount"
-          | "pendingCount"
-          | "lastSeen"
-          | "streamCount",
+    const [sortBy, setSortBy] = useState<UserSort>(
+      () => getStoredValue(USER_SORT_BY_KEY, "pendingCount") as UserSort,
     );
     const [sortOrder, setSortOrder] = useState<"asc" | "desc">(
       () => getStoredValue(USER_SORT_ORDER_KEY, "desc") as "asc" | "desc",
@@ -436,59 +390,72 @@ const DeviceManagement = memo(
       void loadTimePolicyStatus();
     }, [userGroups]);
 
-    // Sync local autoRefresh with parent
-    useEffect(() => {
-      if (parentAutoRefresh !== undefined) {
-        setAutoRefresh(parentAutoRefresh);
-      }
-    }, [parentAutoRefresh]);
+    const focusDevice = useCallback(
+      (userId: string, deviceIdentifier: string, onDone?: () => void) => {
+        const wasSelected = selectedUserIdRef.current === userId;
+        if (!wasSelected) {
+          selectUserRef.current(userId);
+        }
+        setDeviceFocus({ deviceIdentifier });
 
-    // Handle navigation from streams
+        const delay = wasSelected ? 100 : 400;
+
+        const highlightDevice = (attempt: number) => {
+          const deviceElement = Array.from(
+            document.querySelectorAll<HTMLElement>("[data-device-identifier]"),
+          ).find(
+            (element) => element.dataset.deviceIdentifier === deviceIdentifier,
+          );
+          if (!deviceElement) {
+            if (attempt < DEVICE_LOOKUP_ATTEMPTS) {
+              setTimeout(
+                () => highlightDevice(attempt + 1),
+                DEVICE_LOOKUP_RETRY_MS,
+              );
+            } else {
+              onDone?.();
+            }
+            return;
+          }
+
+          deviceElement.scrollIntoView({
+            behavior: "smooth",
+            block: "center",
+            inline: "nearest",
+          });
+
+          setTimeout(() => {
+            deviceElement.classList.add(...HIGHLIGHT_CLASSES);
+            setTimeout(() => {
+              deviceElement.classList.remove(...HIGHLIGHT_CLASSES);
+              onDone?.();
+            }, 1500);
+          }, 200);
+        };
+
+        setTimeout(() => highlightDevice(1), delay);
+      },
+      [],
+    );
+
     useEffect(() => {
       if (navigationTarget && userGroups.length > 0) {
-        const { userId, deviceIdentifier } = navigationTarget;
-
-        // First expand the user if not already expanded
-        const wasExpanded = expandedUsersRef.current.has(userId);
-        if (!wasExpanded) {
-          setExpandedUsers((prev) => new Set(prev).add(userId));
-        }
-
-        // Use appropriate delay based on whether expansion is needed
-        const delay = wasExpanded ? 100 : 600; // Longer delay if we need to wait for expansion
-
-        setTimeout(() => {
-          const deviceElement = document.querySelector(
-            `[data-device-identifier="${deviceIdentifier}"]`,
-          );
-          if (deviceElement) {
-            // Scroll directly to the device with some padding above
-            deviceElement.scrollIntoView({
-              behavior: "smooth",
-              block: "center",
-              inline: "nearest",
-            });
-
-            // Add highlight effect
-            setTimeout(() => {
-              deviceElement.classList.add(...HIGHLIGHT_CLASSES);
-              setTimeout(() => {
-                deviceElement.classList.remove(...HIGHLIGHT_CLASSES);
-                // Call completion callback
-                if (onNavigationComplete) {
-                  onNavigationComplete();
-                }
-              }, 1500);
-            }, 200); // Small delay before highlighting
-          }
-        }, delay);
+        focusDevice(
+          navigationTarget.userId,
+          navigationTarget.deviceIdentifier,
+          onNavigationComplete,
+        );
       }
-    }, [navigationTarget, userGroups.length, onNavigationComplete]);
+    }, [
+      navigationTarget,
+      userGroups.length,
+      onNavigationComplete,
+      focusDevice,
+    ]);
 
     const handleRefresh = async () => {
       if (onRefresh) {
         setRefreshing(true);
-        setUserTimeRules({}); // Clear cached rules to force re-fetch
         try {
           await onRefresh();
         } catch (error) {
@@ -499,18 +466,34 @@ const DeviceManagement = memo(
       }
     };
 
-    // Handle auto-refresh toggle
-    const handleAutoRefreshToggle = () => {
-      const newValue = !autoRefresh;
-      setAutoRefresh(newValue);
-      if (onAutoRefreshChange) {
-        onAutoRefreshChange(newValue);
-      }
-    };
+    const visibleGroups = useMemo(
+      () => userGroups.filter((group) => matchesFilter(group, filter)),
+      [userGroups, filter],
+    );
+
+    const queueItems = useMemo<QueueItem[]>(
+      () =>
+        userGroups
+          .flatMap((group) =>
+            group.devices
+              .filter(isWaitingDevice)
+              .map((device) => ({ device, group })),
+          )
+          .sort(
+            (a, b) =>
+              new Date(b.device.lastSeen).getTime() -
+              new Date(a.device.lastSeen).getTime(),
+          ),
+      [userGroups],
+    );
+
+    const selectedGroup = selectedUserId
+      ? userGroups.find((group) => group.user.userId === selectedUserId)
+      : undefined;
 
     // Filter and sort user groups
     const filteredAndSortedGroups = useMemo(() => {
-      return userGroups
+      return visibleGroups
         .filter((group) => {
           // Apply search filter
           if (deferredSearchTerm.trim()) {
@@ -589,18 +572,7 @@ const DeviceManagement = memo(
           const comparison = String(valueA).localeCompare(String(valueB));
           return sortOrder === "asc" ? comparison : -comparison;
         });
-    }, [userGroups, deferredSearchTerm, sortBy, sortOrder]);
-
-    // Toggle user expansion
-    const toggleUserExpansion = (userId: string) => {
-      const newExpanded = new Set(expandedUsers);
-      if (newExpanded.has(userId)) {
-        newExpanded.delete(userId);
-      } else {
-        newExpanded.add(userId);
-      }
-      setExpandedUsers(newExpanded);
-    };
+    }, [visibleGroups, deferredSearchTerm, sortBy, sortOrder]);
 
     // User preference update handler
     const handleUpdateUserPreference = async (
@@ -619,23 +591,23 @@ const DeviceManagement = memo(
             await onRefresh();
           }
           toast({
-            title: "Default Device Policy Updated",
+            title: "Default device policy updated",
             description:
               "New devices from this user will follow the policy you picked",
             variant: "success",
           });
         } else {
           toast({
-            title: "Update Failed",
-            description: "Failed to update the default device policy",
+            title: "Update failed",
+            description: "Failed to update the New devices rule",
             variant: "destructive",
           });
         }
       } catch (error) {
         console.error("Error updating user preference:", error);
         toast({
-          title: "Update Failed",
-          description: "Failed to update the default device policy",
+          title: "Update failed",
+          description: "Failed to update the New devices rule",
           variant: "destructive",
         });
       } finally {
@@ -652,14 +624,14 @@ const DeviceManagement = memo(
       if (success) {
         void handleRefresh();
         toast({
-          title: "IP Access Updated",
+          title: "IP access updated",
           description:
             "The new network and IP rules apply to every device this user owns",
           variant: "success",
         });
       } else {
         toast({
-          title: "Update Failed",
+          title: "Update failed",
           description: "Failed to update the IP access policies",
           variant: "destructive",
         });
@@ -687,15 +659,15 @@ const DeviceManagement = memo(
         if (isCurrentlyHidden) {
           // User was hidden, now showing
           toast({
-            title: "User Shown",
+            title: "User shown",
             description: `${username} is back in the main user list`,
             variant: "success",
           });
         } else {
           // User was visible, now hiding
           toast({
-            title: "User Hidden",
-            description: `${username} moved to the hidden section at the bottom of the user list. Their policies still apply.`,
+            title: "User hidden",
+            description: `${username} is now under "Hidden users" at the bottom of the user list. Their policies still apply.`,
             variant: "success",
           });
         }
@@ -722,10 +694,11 @@ const DeviceManagement = memo(
       try {
         const { userId, username } = hideUserConfirmation;
         await apiClient.toggleUserVisibility(userId);
+        if (selectedUserId === userId) selectUser(null);
 
         toast({
-          title: "User Hidden",
-          description: `${username} moved to the hidden section at the bottom of the user list. Their policies still apply.`,
+          title: "User hidden",
+          description: `${username} is now under "Hidden users" at the bottom of the user list. Their policies still apply.`,
           variant: "success",
         });
 
@@ -761,46 +734,23 @@ const DeviceManagement = memo(
       userId: string,
       deviceIdentifier: string,
     ) => {
-      // Expand the user group
-      setExpandedUsers((prev) => new Set(prev).add(userId));
-
-      // Find the device to verify it exists
       const device = userGroups
         .find((group) => group.user.userId === userId)
         ?.devices.find((d) => d.deviceIdentifier === deviceIdentifier);
 
       if (device) {
-        const wasExpanded = expandedUsers.has(userId);
-        const delay = wasExpanded ? 100 : 600;
-
-        setTimeout(() => {
-          const deviceElement = document.querySelector(
-            `[data-device-identifier="${deviceIdentifier}"]`,
-          );
-          if (deviceElement) {
-            deviceElement.scrollIntoView({
-              behavior: "smooth",
-              block: "center",
-              inline: "nearest",
-            });
-
-            // Add highlight effect
-            setTimeout(() => {
-              deviceElement.classList.add(...HIGHLIGHT_CLASSES);
-              setTimeout(() => {
-                deviceElement.classList.remove(...HIGHLIGHT_CLASSES);
-              }, 1500);
-            }, 200);
-          }
-        }, delay);
-      } else {
-        toast({
-          title: "Device Not Found",
-          description:
-            "The device may have been removed or is no longer available.",
-          variant: "destructive",
-        });
+        focusDevice(userId, deviceIdentifier);
+        return;
       }
+
+      selectUser(userId);
+      setDeviceFocus({ deviceIdentifier });
+      toast({
+        title: "Device not found",
+        description:
+          "The device may have been removed or is no longer available.",
+        variant: "destructive",
+      });
     };
 
     // Load hidden users for modal
@@ -828,7 +778,7 @@ const DeviceManagement = memo(
         if (success) {
           setTimeout(() => void handleRefresh(), 100);
           toast({
-            title: "Device Approved",
+            title: "Device approved",
             description: "This device can now stream from your Plex server",
             variant: "success",
           });
@@ -846,7 +796,7 @@ const DeviceManagement = memo(
         if (success) {
           setTimeout(() => void handleRefresh(), 100);
           toast({
-            title: "Device Rejected",
+            title: "Device rejected",
             description: "This device is now blocked from streaming",
             variant: "success",
           });
@@ -864,9 +814,9 @@ const DeviceManagement = memo(
         if (success) {
           setTimeout(() => void handleRefresh(), 100);
           toast({
-            title: "Device Set to Pending",
+            title: "Device set to pending",
             description:
-              "This device follows the user's default device policy until you approve or reject it",
+              "This device follows this user's New devices rule until you approve or reject it",
             variant: "success",
           });
           setSelectedDevice(null);
@@ -884,7 +834,7 @@ const DeviceManagement = memo(
         if (success) {
           setTimeout(() => void handleRefresh(), 100);
           toast({
-            title: "Device Deleted",
+            title: "Device deleted",
             description:
               "The record is gone. The device reappears as pending the next time it connects.",
             variant: "success",
@@ -924,6 +874,24 @@ const DeviceManagement = memo(
       } finally {
         setActionLoading(null);
       }
+    };
+
+    const handleDeviceUpdate = (updated: UserDevice) => {
+      setUserGroups((groups) =>
+        groups.map((group) =>
+          group.user.userId === updated.userId
+            ? {
+                ...group,
+                devices: group.devices.map((device) =>
+                  device.id === updated.id ? updated : device,
+                ),
+              }
+            : group,
+        ),
+      );
+      setSelectedDevice((current) =>
+        current?.id === updated.id ? updated : current,
+      );
     };
 
     const startEditing = (device: UserDevice) => {
@@ -981,7 +949,7 @@ const DeviceManagement = memo(
           const failedDevices = batchResults?.filter((r) => !r.success) || [];
           if (failedDevices.length > 0) {
             toast({
-              title: "Some Devices Were Not Granted Access",
+              title: "Some devices were not granted access",
               description: `${deviceIds.length - failedDevices.length} of ${deviceIds.length} devices were granted temporary access. Try the remaining ${failedDevices.length} again.`,
               variant: "destructive",
             });
@@ -991,7 +959,7 @@ const DeviceManagement = memo(
         setTimeout(() => void handleRefresh(), 100);
         setTemporaryAccessUser(null);
         toast({
-          title: "Temporary Access Granted",
+          title: "Temporary access granted",
           description: `Temporary access granted to ${deviceIds.length} device${deviceIds.length > 1 ? "s" : ""} for ${formatMinutes(durationMinutes)}`,
           variant: "success",
         });
@@ -1019,7 +987,7 @@ const DeviceManagement = memo(
         if (success) {
           setTimeout(() => void handleRefresh(), 100);
           toast({
-            title: "Temporary Access Removed",
+            title: "Temporary access removed",
             description:
               "The grant ended early. This device is back under the user's usual policies.",
             variant: "success",
@@ -1166,209 +1134,114 @@ const DeviceManagement = memo(
       }
     };
 
+    const totalPending = queueItems.length;
+
     return (
       <>
-        <Card>
-          <CardHeader className="py-4">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div className="flex-1 min-w-0">{tabs}</div>
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-2">
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleAutoRefreshToggle}
-                    title={autoRefresh ? AUTO_REFRESH_ON : AUTO_REFRESH_OFF}
-                    className={`text-xs sm:text-sm ${
-                      autoRefresh
-                        ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
-                        : ""
-                    }`}
-                  >
-                    {autoRefresh ? "Live" : "Manual"}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => void handleRefresh()}
-                    disabled={refreshing}
-                    className="text-xs sm:text-sm"
-                  >
-                    <RefreshCw
-                      className={`w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 ${refreshing ? "animate-spin" : ""}`}
-                    />
-                    <span>Refresh</span>
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {/* Search and Sort Controls */}
-            <div className="mb-6">
-              <div className="flex flex-col sm:flex-row gap-3 mb-4">
-                <div className="relative flex-1">
-                  <input
-                    type="text"
-                    placeholder="Search by user or device"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="h-10 w-full rounded-md border border-input bg-background px-4 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                  />
-                </div>
+        <h1 className="sr-only">Users</h1>
 
-                {/* Sorting Controls */}
-                <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
-                  <span className="text-sm text-muted-foreground hidden sm:block">
-                    Sort:
-                  </span>
-                  <div className="flex gap-2">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-9 flex-1 sm:flex-none"
-                        >
-                          {sortBy === "username" && "Username"}
-                          {sortBy === "deviceCount" && "Device Count"}
-                          {sortBy === "pendingCount" && "Pending Count"}
-                          {sortBy === "lastSeen" && "Last Stream"}
-                          {sortBy === "streamCount" && "Stream Count"}
-                          <ArrowUpDown className="ml-1 h-3 w-3" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="start">
-                        <DropdownMenuItem onClick={() => setSortBy("username")}>
-                          Username
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => setSortBy("deviceCount")}
-                        >
-                          Device Count
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => setSortBy("pendingCount")}
-                        >
-                          Pending Count
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setSortBy("lastSeen")}>
-                          Last Stream
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => setSortBy("streamCount")}
-                        >
-                          Stream Count
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-9 flex-1 sm:flex-none"
-                      onClick={() =>
-                        setSortOrder(sortOrder === "asc" ? "desc" : "asc")
-                      }
-                    >
-                      {sortOrder === "asc" ? (
-                        <>
-                          <ArrowUp className="h-3 w-3 mr-1" />
-                          <span className="hidden sm:inline">Ascending</span>
-                          <span className="sm:hidden">Asc</span>
-                        </>
-                      ) : (
-                        <>
-                          <ArrowDown className="h-3 w-3 mr-1" />
-                          <span className="hidden sm:inline">Descending</span>
-                          <span className="sm:hidden">Desc</span>
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </div>
-              </div>
-
-              {searchTerm && (
-                <p className="text-xs text-muted-foreground mb-4">
-                  Showing {filteredAndSortedGroups.length} of{" "}
-                  {userGroups.length} users
-                </p>
-              )}
-            </div>
-
-            {/* User Groups List */}
-            {loading && userGroups.length === 0 ? (
-              // Show skeleton loading only on initial load
-              <div className="space-y-4">
-                {Array.from({ length: 3 }, (_, i) => (
-                  <UserGroupSkeleton key={`user-group-skeleton-${i}`} />
-                ))}
-              </div>
-            ) : filteredAndSortedGroups.length === 0 ? (
-              <div className="flex items-center justify-center py-16 text-muted-foreground">
-                {deferredSearchTerm ? (
-                  <>
-                    <Search className="w-6 h-6 mr-2" />
-                    No users match your search
-                  </>
-                ) : (
-                  <>
-                    No users yet. They appear here the first time they stream.
-                  </>
-                )}
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {filteredAndSortedGroups.map((group) => (
-                  <UserGroupCard
-                    key={group.user.userId}
-                    group={group}
-                    isExpanded={expandedUsers.has(group.user.userId)}
-                    actionLoading={actionLoading}
-                    timeRules={userTimeRules[group.user.userId]}
-                    updatingUserPreference={updatingUserPreference}
-                    onToggleExpansion={toggleUserExpansion}
-                    onUpdateUserPreference={(userId, defaultBlock) =>
-                      void handleUpdateUserPreference(userId, defaultBlock)
-                    }
-                    onUpdateUserIPPolicy={(userId, updates) =>
-                      void handleUpdateUserIPPolicy(userId, updates)
-                    }
-                    onToggleUserVisibility={(userId) =>
-                      void handleToggleUserVisibility(userId)
-                    }
-                    onShowHistory={handleShowHistory}
-                    onGrantUserTemporaryAccess={handleGrantUserTemporaryAccess}
-                    onShowTimePolicy={handleShowTimePolicy}
-                    onApprove={showApproveConfirmation}
-                    onReject={showRejectConfirmation}
-                    onDelete={showDeleteConfirmation}
-                    onToggleApproval={showToggleConfirmation}
-                    onRemoveTemporaryAccess={
-                      showRemoveTemporaryAccessConfirmation
-                    }
-                    onShowDetails={setSelectedDevice}
-                  />
-                ))}
-
-                {/* Show Hidden Users Button */}
-                <div className="mt-6 mb-6 pt-4 border-t border-border">
-                  <Button
-                    variant="outline"
-                    onClick={() => void openHiddenUsersModal()}
-                    className="w-full text-sm"
-                  >
-                    <EyeOff className="w-4 h-4 mr-2" />
-                    Show Hidden Users
-                  </Button>
-                </div>
-              </div>
+        <div className="grid items-start gap-6 lg:grid-cols-[minmax(300px,360px)_1fr]">
+          <UserList
+            className={cn(
+              "lg:sticky lg:top-24 lg:max-h-[calc(100dvh-8rem)]",
+              selectedUserId && "hidden lg:flex",
             )}
-          </CardContent>
-        </Card>
+            groups={filteredAndSortedGroups}
+            allGroups={userGroups}
+            loading={loading}
+            selectedUserId={selectedUserId}
+            onSelect={selectUser}
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
+            filter={filter}
+            onFilterChange={setFilter}
+            sortBy={sortBy}
+            onSortByChange={setSortBy}
+            sortOrder={sortOrder}
+            onSortOrderChange={setSortOrder}
+            onShowHidden={() => void openHiddenUsersModal()}
+            pendingCount={totalPending}
+            refreshing={refreshing}
+            onRefresh={() => void handleRefresh()}
+          />
 
-        {/* Device Details Modal */}
+          <div
+            className={cn(
+              "min-w-0",
+              !selectedUserId && "order-first lg:order-none",
+            )}
+          >
+            {selectedGroup ? (
+              <UserDetail
+                key={selectedGroup.user.userId}
+                group={selectedGroup}
+                actionLoading={actionLoading}
+                timeRules={userTimeRules[selectedGroup.user.userId]}
+                deviceFocus={deviceFocus}
+                updatingUserPreference={updatingUserPreference}
+                onBack={() => selectUser(null)}
+                onUpdateUserPreference={(userId, defaultBlock) =>
+                  void handleUpdateUserPreference(userId, defaultBlock)
+                }
+                onUpdateUserIPPolicy={(userId, updates) =>
+                  void handleUpdateUserIPPolicy(userId, updates)
+                }
+                onToggleUserVisibility={(userId) =>
+                  void handleToggleUserVisibility(userId)
+                }
+                onShowHistory={handleShowHistory}
+                onGrantUserTemporaryAccess={handleGrantUserTemporaryAccess}
+                onShowTimePolicy={handleShowTimePolicy}
+                onApprove={showApproveConfirmation}
+                onReject={showRejectConfirmation}
+                onDelete={showDeleteConfirmation}
+                onToggleApproval={showToggleConfirmation}
+                onRemoveTemporaryAccess={showRemoveTemporaryAccessConfirmation}
+                onShowDetails={setSelectedDevice}
+                onDeviceUpdate={handleDeviceUpdate}
+              />
+            ) : selectedUserId && !loading ? (
+              <div className="space-y-3 rounded-2xl border border-dashed px-6 py-16 text-center">
+                <p className="text-[15px] font-semibold text-foreground">
+                  This user is not in the list
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  They may be hidden or no longer have any devices.
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => selectUser(null)}
+                >
+                  Back to all users
+                </Button>
+              </div>
+            ) : loading && userGroups.length === 0 ? (
+              <div className="h-64 animate-pulse rounded-2xl border bg-card" />
+            ) : (
+              <>
+                <ApprovalQueue
+                  className="hidden lg:block"
+                  items={queueItems}
+                  actionLoading={actionLoading}
+                  onApprove={showApproveConfirmation}
+                  onReject={showRejectConfirmation}
+                  onOpenDevice={focusDevice}
+                />
+                <ApprovalQueue
+                  compact
+                  className="lg:hidden"
+                  items={queueItems}
+                  actionLoading={actionLoading}
+                  onApprove={showApproveConfirmation}
+                  onReject={showRejectConfirmation}
+                  onOpenDevice={focusDevice}
+                />
+              </>
+            )}
+          </div>
+        </div>
+
         <DeviceDetailsModal
           device={selectedDevice}
           isOpen={!!selectedDevice}
@@ -1381,6 +1254,7 @@ const DeviceManagement = memo(
           onRename={(deviceId, newName) => void handleRename(deviceId, newName)}
           onNewDeviceNameChange={setNewDeviceName}
           onSetPending={handleSetPending}
+          onDeviceUpdate={handleDeviceUpdate}
           settingsData={settingsData}
           policies={
             selectedDevice
@@ -1393,7 +1267,6 @@ const DeviceManagement = memo(
           }
         />
 
-        {/* Temporary Access Modal */}
         <TemporaryAccessModal
           user={temporaryAccessUser}
           userDevices={
@@ -1424,7 +1297,6 @@ const DeviceManagement = memo(
           onCancel={() => setConfirmAction(null)}
         />
 
-        {/* Hidden Users Modal */}
         <Dialog
           open={hiddenUsersModalOpen}
           onOpenChange={setHiddenUsersModalOpen}
@@ -1433,7 +1305,7 @@ const DeviceManagement = memo(
             <DialogHeader>
               <DialogTitle className="flex items-center">
                 <EyeOff className="w-5 h-5 mr-2" />
-                Hidden Users
+                Hidden users
               </DialogTitle>
               <DialogDescription>
                 These users are hidden from the main list. Click
@@ -1508,11 +1380,10 @@ const DeviceManagement = memo(
           isOpen={timeRuleModalOpen}
           onClose={() => void handleTimeRuleModalClose()}
           userId={selectedTimeRuleUser?.userId || ""}
-          username={selectedTimeRuleUser?.username || "Unknown User"}
+          username={selectedTimeRuleUser?.username || "Unknown user"}
           deviceIdentifier={selectedTimeRuleUser?.deviceIdentifier}
         />
 
-        {/* Hide User Confirmation Dialog */}
         <Dialog
           open={!!hideUserConfirmation}
           onOpenChange={(open) => !open && setHideUserConfirmation(null)}
@@ -1521,7 +1392,7 @@ const DeviceManagement = memo(
             <DialogHeader>
               <DialogTitle className="flex items-center">
                 <EyeOff className="w-5 h-5 mr-2" />
-                Hide User?
+                Hide user?
               </DialogTitle>
               <DialogDescription className="pt-2">
                 Are you sure you want to hide{" "}
@@ -1534,8 +1405,8 @@ const DeviceManagement = memo(
             <div className="space-y-3 py-4">
               <div className="bg-muted/50 p-3 rounded-md text-sm">
                 <p className="text-muted-foreground">
-                  Hidden users can be managed from the &quot;Manage Hidden
-                  Users&quot; section at the bottom of the user list.
+                  You can show them again from &quot;Hidden users&quot; at the
+                  bottom of the user list.
                 </p>
               </div>
             </div>
@@ -1552,7 +1423,7 @@ const DeviceManagement = memo(
                 className="w-full sm:w-auto"
               >
                 <EyeOff className="w-4 h-4 mr-2" />
-                Hide User
+                Hide user
               </Button>
             </DialogFooter>
           </DialogContent>

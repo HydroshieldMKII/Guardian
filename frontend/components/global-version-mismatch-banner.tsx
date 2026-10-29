@@ -22,7 +22,7 @@ export function GlobalVersionMismatchBanner() {
             <AlertTriangle className="h-5 w-5 shrink-0 mt-0.5 sm:mt-0" />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium">
-                Critical Version Mismatch Detected
+                Critical version mismatch detected
               </p>
               <p className="text-xs text-red-100 break-words sm:truncate">
                 Database version ({versionInfo.databaseVersion}) is newer than

@@ -200,12 +200,25 @@ describe('SchedulerService', () => {
       expect(registeredJob().cronTime).toBe('*/10 * * * * *');
     });
 
-    it('falls back to ten seconds when the interval is unreadable', async () => {
-      settings.set('PLEXGUARD_REFRESH_INTERVAL', Number.NaN);
-      await service.onModuleInit();
+    it.each([1, -3])(
+      'never polls faster than every five seconds, even for a stored %ss',
+      async (interval) => {
+        settings.set('PLEXGUARD_REFRESH_INTERVAL', interval);
+        await service.onModuleInit();
 
-      expect(registeredJob().cronTime).toBe('*/10 * * * * *');
-    });
+        expect(registeredJob().cronTime).toBe('*/5 * * * * *');
+      },
+    );
+
+    it.each([Number.NaN, 7.5])(
+      'falls back to ten seconds when the stored interval is %s',
+      async (interval) => {
+        settings.set('PLEXGUARD_REFRESH_INTERVAL', interval);
+        await service.onModuleInit();
+
+        expect(registeredJob().cronTime).toBe('*/10 * * * * *');
+      },
+    );
 
     it('tolerates there being no existing job to replace', async () => {
       schedulerRegistry.deleteCronJob.mockImplementation(() => {

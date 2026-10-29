@@ -41,6 +41,7 @@ describe('SessionsController', () => {
         includeActive: false,
         search: undefined,
         terminatedOnly: false,
+        app: undefined,
       },
     );
   });
@@ -53,6 +54,7 @@ describe('SessionsController', () => {
       '20',
       'ennemie',
       'true',
+      'plexamp',
     );
     expect(activeSessionService.getUserSessionHistory).toHaveBeenCalledWith(
       'u1',
@@ -62,7 +64,43 @@ describe('SessionsController', () => {
         includeActive: true,
         search: 'ennemie',
         terminatedOnly: true,
+        app: 'plexamp',
       },
+    );
+  });
+
+  it.each(['plex', 'plexamp'] as const)(
+    'passes the %s app filter through',
+    async (app) => {
+      await controller.getUserSessionHistory(
+        'u1',
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        app,
+      );
+      expect(activeSessionService.getUserSessionHistory).toHaveBeenCalledWith(
+        'u1',
+        expect.objectContaining({ app }),
+      );
+    },
+  );
+
+  it('ignores an unknown app filter', async () => {
+    await controller.getUserSessionHistory(
+      'u1',
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      'kodi',
+    );
+    expect(activeSessionService.getUserSessionHistory).toHaveBeenCalledWith(
+      'u1',
+      expect.objectContaining({ app: undefined }),
     );
   });
 

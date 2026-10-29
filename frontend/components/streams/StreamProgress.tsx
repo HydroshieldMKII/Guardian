@@ -1,12 +1,25 @@
 import React from "react";
 import { getProgressPercentage } from "./SharedComponents";
 import { formatClock } from "@/lib/duration";
+import { cn } from "@/lib/utils";
 import type { PlexSession } from "@/types";
 
 interface StreamProgressProps {
   session: Pick<PlexSession, "duration" | "viewOffset" | "Player">;
   hasArt?: boolean;
 }
+
+const STATE_LABEL: Record<string, string> = {
+  playing: "Playing",
+  paused: "Paused",
+  buffering: "Buffering",
+};
+
+const fillClass = (state: string, hasArt: boolean) => {
+  if (state === "buffering") return "bg-waiting";
+  if (state === "playing") return hasArt ? "bg-white" : "bg-foreground";
+  return hasArt ? "bg-white/50" : "bg-muted-foreground/60";
+};
 
 export const StreamProgress: React.FC<StreamProgressProps> = ({
   session,
@@ -17,47 +30,47 @@ export const StreamProgress: React.FC<StreamProgressProps> = ({
   }
 
   const playerState = session.Player?.state || "unknown";
+  const percent = getProgressPercentage(session.viewOffset, session.duration);
 
   return (
-    <div className="mb-1 sm:mb-2 mt-3 sm:mt-4">
-      <div className="relative flex items-center justify-between text-xs mb-1">
-        <span
-          className={`flex-shrink-0 px-1.5 py-0.5 rounded-md font-medium ${hasArt ? "bg-black/60 text-white" : "text-muted-foreground"}`}
-        >
-          {formatClock(session.viewOffset)}
-        </span>
-        {/* Status text absolutely centered */}
-        <span
-          className={`absolute left-1/2 -translate-x-1/2 text-xs px-1.5 py-0.5 rounded-md ${
-            hasArt ? "bg-black/60 text-white" : "text-muted-foreground"
-          }`}
-        >
-          {playerState}
-        </span>
-        <span
-          className={`flex-shrink-0 px-1.5 py-0.5 rounded-md font-medium ${hasArt ? "bg-black/60 text-white" : "text-muted-foreground"}`}
-        >
-          {formatClock(session.duration)}
-        </span>
-      </div>
-      <div className="w-full bg-muted rounded-full h-1.5 sm:h-2">
+    <div className="space-y-1.5">
+      <div
+        role="progressbar"
+        aria-label="Playback progress"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={Math.round(percent)}
+        className={cn(
+          "h-1 w-full overflow-hidden rounded-full",
+          hasArt ? "bg-white/20" : "bg-muted",
+        )}
+      >
         <div
-          className={`h-1.5 sm:h-2 rounded-full transition-all duration-500 relative overflow-hidden ${
-            playerState === "playing"
-              ? "bg-gradient-to-r from-blue-500 to-blue-600"
-              : "bg-gradient-to-r from-yellow-500 to-yellow-600"
-          }`}
-          style={{
-            width: `${getProgressPercentage(
-              session.viewOffset,
-              session.duration,
-            )}%`,
-          }}
-        >
-          {playerState === "playing" && (
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-pulse" />
+          className={cn(
+            "h-full rounded-full transition-[width,background-color] duration-700 ease-out motion-reduce:transition-none",
+            fillClass(playerState, hasArt),
           )}
-        </div>
+          style={{ width: `${percent}%` }}
+        />
+      </div>
+      <div
+        className={cn(
+          "flex items-center justify-between text-xs tabular-nums",
+          hasArt ? "text-white/70" : "text-muted-foreground",
+        )}
+      >
+        <span>
+          {formatClock(session.viewOffset)}
+          <span className="opacity-60"> / {formatClock(session.duration)}</span>
+        </span>
+        <span
+          className={cn(
+            "font-medium",
+            playerState === "buffering" && !hasArt && "text-waiting",
+          )}
+        >
+          {STATE_LABEL[playerState] ?? "Unknown"}
+        </span>
       </div>
     </div>
   );

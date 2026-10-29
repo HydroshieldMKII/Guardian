@@ -91,7 +91,7 @@ describe("GlobalUpdateBanner", () => {
     const user = userEvent.setup();
     render(<GlobalUpdateBanner />);
 
-    await user.click(screen.getByRole("button", { name: /How to Update/ }));
+    await user.click(screen.getByRole("button", { name: /How to update/ }));
 
     expect(open).toHaveBeenCalledWith(
       "https://github.com/HydroshieldMKII/Guardian?tab=readme-ov-file#updating",

@@ -56,7 +56,7 @@ export function GlobalUpdateBanner() {
                 className="bg-blue-700 hover:bg-blue-800 text-white text-xs px-3 py-1 h-auto"
               >
                 <Download className="h-3 w-3 mr-1" />
-                How to Update
+                How to update
               </Button>
               <Button
                 variant="ghost"
@@ -77,6 +77,7 @@ export function GlobalUpdateBanner() {
           isOpen={showReleaseNotes}
           onClose={() => setShowReleaseNotes(false)}
           latestVersion={updateInfo.latestVersion}
+          currentVersion={updateInfo.currentVersion}
           releaseNotes={updateInfo.releaseNotes || ""}
           updateUrl={updateInfo.updateUrl}
         />

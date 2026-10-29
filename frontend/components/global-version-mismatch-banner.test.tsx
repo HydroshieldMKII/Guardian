@@ -35,7 +35,7 @@ describe("GlobalVersionMismatchBanner", () => {
     render(<GlobalVersionMismatchBanner />);
 
     expect(
-      screen.getByText("Critical Version Mismatch Detected"),
+      screen.getByText("Critical version mismatch detected"),
     ).toBeInTheDocument();
     expect(screen.getByText(/2\.1\.0/)).toBeInTheDocument();
     expect(screen.getByText(/2\.0\.0/)).toBeInTheDocument();
@@ -50,7 +50,7 @@ describe("GlobalVersionMismatchBanner", () => {
 
     expect(refreshVersionInfo).toHaveBeenCalled();
     expect(
-      screen.getByText("Critical Version Mismatch Detected"),
+      screen.getByText("Critical version mismatch detected"),
     ).toBeInTheDocument();
   });
 

@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ReleaseNotesModal } from "@/components/ui/release-notes-modal";
 
@@ -24,7 +24,9 @@ describe("ReleaseNotesModal", () => {
   it("names the version it is describing", () => {
     renderModal();
 
-    expect(screen.getByText("What's New in v2.1.0")).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "What's New in v2.1.0" }),
+    ).toBeInTheDocument();
   });
 
   it("renders the release notes as formatted markdown", () => {
@@ -32,20 +34,50 @@ describe("ReleaseNotesModal", () => {
       releaseNotes: "## Added\n- A thing\n**bold** and [a link](https://x.dev)",
     });
 
-    const notes = document.querySelector(".prose");
-
-    expect(notes?.querySelector("h2")?.textContent).toBe("Added");
-    expect(notes?.querySelector("li")?.textContent).toBe("A thing");
-    expect(notes?.querySelector("strong")?.textContent).toBe("bold");
-    expect(notes?.querySelector("a")?.getAttribute("href")).toBe(
+    expect(
+      screen.getByRole("heading", { level: 3, name: "Added" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("listitem")).toHaveTextContent("A thing");
+    expect(screen.getByText("bold").tagName).toBe("STRONG");
+    expect(screen.getByRole("link", { name: "a link" })).toHaveAttribute(
+      "href",
       "https://x.dev",
     );
+  });
+
+  it("never turns the notes into raw HTML", () => {
+    renderModal({ releaseNotes: "- <img src=x onerror=alert(1)>" });
+
+    expect(document.querySelector("img")).toBeNull();
+    expect(screen.getByRole("listitem")).toHaveTextContent(
+      "<img src=x onerror=alert(1)>",
+    );
+  });
+
+  it("names the installed version when it is known", () => {
+    renderModal({ currentVersion: "2.0.0" });
+
+    expect(screen.getByText("You're on v2.0.0")).toBeInTheDocument();
+  });
+
+  it("renders code spans", () => {
+    renderModal({ releaseNotes: "Run `npm ci` first" });
+
+    expect(screen.getByText("npm ci").tagName).toBe("CODE");
   });
 
   it("says so when a release ships without notes", () => {
     renderModal({ releaseNotes: "" });
 
     expect(screen.getByText("No release notes available.")).toBeInTheDocument();
+  });
+
+  it("closes on escape", async () => {
+    const { onClose, user } = renderModal();
+
+    await user.keyboard("{Escape}");
+
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
   });
 
   it("closes from the footer", async () => {
@@ -61,8 +93,8 @@ describe("ReleaseNotesModal", () => {
     Object.defineProperty(window, "open", { value: open, writable: true });
     const { user } = renderModal();
 
-    await user.click(screen.getByRole("button", { name: "How to Update" }));
-    await user.click(screen.getByRole("button", { name: "View on Github" }));
+    await user.click(screen.getByRole("button", { name: "How to update" }));
+    await user.click(screen.getByRole("button", { name: "View on GitHub" }));
 
     expect(open).toHaveBeenNthCalledWith(
       1,

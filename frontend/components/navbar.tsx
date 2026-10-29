@@ -5,6 +5,8 @@ import Image from "next/image";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
+  MonitorPlay,
+  Users,
   Settings,
   Moon,
   Sun,
@@ -18,6 +20,7 @@ import { useTheme } from "@/hooks/use-theme";
 import { useVersion } from "@/contexts/version-context";
 import { useAuth, isAdminUser, isPlexUser } from "@/contexts/auth-context";
 import { useUnsavedChanges } from "@/contexts/unsaved-changes-context";
+import { useSettings } from "@/contexts/settings-context";
 import { NotificationMenu } from "@/components/notification-menu";
 import { EditProfileModal } from "@/components/edit-profile-modal";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -36,8 +39,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
+import {
+  dashboardHref,
+  useDashboardNav,
+  type DashboardView,
+} from "@/contexts/dashboard-nav-context";
+import { cn } from "@/lib/utils";
 
 export function Navbar() {
   const [editProfileOpen, setEditProfileOpen] = useState(false);
@@ -57,6 +66,9 @@ export function Navbar() {
   const router = useRouter();
   const { toast } = useToast();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const { getSetting } = useSettings();
+  const { view, pendingDevices, activeStreams } = useDashboardNav();
 
   const isOnSettingsPage = pathname === "/settings";
 
@@ -71,11 +83,10 @@ export function Navbar() {
     return null;
   }
 
-  const handleLogoClick = (e: React.MouseEvent) => {
-    // Only intercept if on settings page with unsaved changes
-    if (isOnSettingsPage && hasUnsavedChanges) {
+  const guardNavigation = (e: React.MouseEvent, href: string) => {
+    if (isOnSettingsPage && hasUnsavedChanges && href !== "/settings") {
       e.preventDefault();
-      setPendingNavigation("/");
+      setPendingNavigation(href);
       setShowUnsavedWarning(true);
     }
   };
@@ -122,7 +133,7 @@ export function Navbar() {
     try {
       await logout();
       toast({
-        title: "Signed Out",
+        title: "Signed out",
         description: "You have been signed out",
         variant: "success",
       });
@@ -169,140 +180,199 @@ export function Navbar() {
       .substring(0, 2);
   };
 
+  const navItems: {
+    key: "streams" | "users" | "settings";
+    label: string;
+    href: string;
+    icon: typeof Settings;
+    count?: number;
+    countTone?: "waiting" | "info";
+    dot?: boolean;
+  }[] = [
+    {
+      key: "users",
+      label: "Users",
+      href: dashboardHref("users"),
+      icon: Users,
+      count: pendingDevices,
+      countTone: "waiting",
+    },
+    {
+      key: "streams",
+      label: "Streams",
+      href: dashboardHref("streams"),
+      icon: MonitorPlay,
+      count: activeStreams,
+      countTone: "info",
+    },
+    {
+      key: "settings",
+      label: "Settings",
+      href: "/settings",
+      icon: Settings,
+      dot: Boolean(versionInfo?.isVersionMismatch),
+    },
+  ];
+
+  const requestedView = searchParams.get("view");
+  const defaultPage = getSetting("DEFAULT_PAGE");
+  const dashboardView: DashboardView | null =
+    requestedView === "streams" || requestedView === "users"
+      ? requestedView
+      : defaultPage === null
+        ? view
+        : defaultPage === "streams"
+          ? "streams"
+          : "users";
+  const activeKey =
+    pathname === "/settings"
+      ? "settings"
+      : pathname === "/"
+        ? dashboardView
+        : null;
+
+  const COUNT_TONE = {
+    waiting: "bg-waiting text-white dark:text-background",
+    info: "bg-info/15 text-info",
+  };
+
   return (
-    <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="w-full max-w-[1400px] mx-auto px-2 sm:px-4 md:px-6 lg:px-8">
-        <div className="flex h-14 sm:h-16 items-center justify-between">
+    <>
+      <nav className="sticky top-0 z-50 h-14 w-full border-b border-border/70 bg-background/85 backdrop-blur-md supports-[backdrop-filter]:bg-background/70 sm:h-16">
+        <div className="mx-auto flex h-full w-full max-w-[1400px] items-center gap-6 px-4 sm:px-6 lg:px-8">
           <Link
             href="/"
-            onClick={handleLogoClick}
-            className="flex items-center space-x-2 sm:space-x-3 hover:opacity-80 transition-opacity cursor-pointer"
+            onClick={(e) => guardNavigation(e, "/")}
+            className="-ml-2 flex shrink-0 items-center rounded-lg transition-opacity hover:opacity-80"
           >
-            <div className="flex items-center">
-              {/* Light theme logo (dark logo) */}
-              <Image
-                src="/logo_dark.svg"
-                alt="Guardian"
-                width={300}
-                height={48}
-                className="block dark:hidden h-[56px] sm:h-[64px] w-auto"
-                priority
-              />
-              {/* Dark theme logo (light logo) */}
-              <Image
-                src="/logo_white.svg"
-                alt="Guardian"
-                width={300}
-                height={48}
-                className="hidden dark:block h-[56px] sm:h-[64px] w-auto"
-                priority
-              />
-            </div>
+            <Image
+              src="/logo_dark.svg"
+              alt="Guardian"
+              width={1024}
+              height={768}
+              className="block h-[52px] w-auto dark:hidden sm:h-[60px]"
+              priority
+            />
+            <Image
+              src="/logo_white.svg"
+              alt="Guardian"
+              width={1024}
+              height={768}
+              className="hidden h-[52px] w-auto dark:block sm:h-[60px]"
+              priority
+            />
           </Link>
 
-          {/* Right side with theme toggle, notifications, settings, and user menu */}
-          <div className="flex items-center space-x-0.5 sm:space-x-1">
-            {/* Theme Toggle Button */}
+          <div className="hidden items-center gap-1 sm:flex">
+            {navItems.map(({ key, label, href, count, countTone, dot }) => (
+              <Link
+                key={key}
+                href={href}
+                onClick={(e) => guardNavigation(e, href)}
+                aria-current={activeKey === key ? "page" : undefined}
+                className={cn(
+                  "relative inline-flex h-9 items-center gap-2 rounded-lg px-3 text-sm font-medium transition-colors",
+                  activeKey === key
+                    ? "bg-foreground/[0.06] text-foreground dark:bg-foreground/[0.08]"
+                    : "text-muted-foreground hover:bg-accent hover:text-foreground",
+                )}
+              >
+                {label}
+                {count !== undefined && count > 0 && countTone && (
+                  <span
+                    className={cn(
+                      "tabular min-w-5 rounded-full px-1.5 text-center text-xs font-semibold leading-5",
+                      COUNT_TONE[countTone],
+                    )}
+                  >
+                    {count}
+                  </span>
+                )}
+                {dot && (
+                  <span
+                    aria-label="Version mismatch"
+                    className="size-2 rounded-full bg-blocked"
+                  />
+                )}
+              </Link>
+            ))}
+          </div>
+
+          <div className="ml-auto flex items-center gap-1">
             <Button
               variant="ghost"
               size="icon"
               onClick={toggleTheme}
-              className="h-8 w-8 sm:h-9 sm:w-9 rounded-full hover:bg-muted transition-colors"
+              className="rounded-full"
               title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
             >
               {theme === "dark" ? (
-                <Sun className="h-4 w-4 sm:h-[18px] sm:w-[18px]" />
+                <Sun className="size-[18px]" />
               ) : (
-                <Moon className="h-4 w-4 sm:h-[18px] sm:w-[18px]" />
+                <Moon className="size-[18px]" />
               )}
             </Button>
 
-            {/* Notification Menu */}
             <NotificationMenu />
 
-            {/* Settings Button */}
-            <Button
-              variant="ghost"
-              size="icon"
-              asChild
-              className="h-8 w-8 sm:h-9 sm:w-9 rounded-full hover:bg-muted transition-colors relative"
-              title="Settings"
-            >
-              <Link
-                href="/settings"
-                className="flex items-center justify-center"
-              >
-                <Settings className="h-4 w-4 sm:h-[18px] sm:w-[18px]" />
-                {versionInfo?.isVersionMismatch && (
-                  <div className="absolute -top-1 -right-1 h-2 w-2 sm:h-2.5 sm:w-2.5 bg-red-500 rounded-full border border-background" />
-                )}
-              </Link>
-            </Button>
-
-            {/* User Avatar Menu */}
             {user && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 sm:h-9 sm:w-9 rounded-full hover:bg-muted transition-colors ml-1 sm:ml-2"
+                    className="ml-1 rounded-full"
                     title={getDisplayName()}
                   >
-                    <Avatar className="h-7 w-7 sm:h-8 sm:w-8">
+                    <Avatar className="size-8">
                       <AvatarImage
                         src={getAvatarUrl()}
                         alt={getDisplayName()}
                       />
-                      <AvatarFallback className="text-[10px] sm:text-xs font-semibold">
+                      <AvatarFallback className="bg-foreground text-xs font-semibold text-background">
                         {getAvatarInitials()}
                       </AvatarFallback>
                     </Avatar>
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  {/* User Info */}
-                  <div className="px-3 py-2">
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-10 w-10">
-                        <AvatarImage
-                          src={getAvatarUrl()}
-                          alt={getDisplayName()}
-                        />
-                        <AvatarFallback className="text-sm font-semibold">
-                          {getAvatarInitials()}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex flex-col min-w-0">
-                        <p className="text-sm font-medium truncate">
-                          {getDisplayName()}
+                <DropdownMenuContent align="end" className="w-60">
+                  <div className="flex items-center gap-3 px-2.5 py-2">
+                    <Avatar className="size-10">
+                      <AvatarImage
+                        src={getAvatarUrl()}
+                        alt={getDisplayName()}
+                      />
+                      <AvatarFallback className="bg-foreground text-sm font-semibold text-background">
+                        {getAvatarInitials()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex min-w-0 flex-col">
+                      <p className="truncate text-sm font-medium">
+                        {getDisplayName()}
+                      </p>
+                      {getDisplayEmail() && (
+                        <p className="truncate text-xs text-muted-foreground">
+                          {getDisplayEmail()}
                         </p>
-                        {getDisplayEmail() && (
-                          <p className="text-xs text-muted-foreground truncate">
-                            {getDisplayEmail()}
-                          </p>
-                        )}
-                      </div>
+                      )}
                     </div>
                   </div>
 
                   <DropdownMenuSeparator />
 
-                  {/* Edit Profile */}
                   <DropdownMenuItem
                     onClick={() => setEditProfileOpen(true)}
                     className="cursor-pointer"
                   >
-                    <Edit className="mr-2 h-4 w-4" />
-                    <span>Edit Profile</span>
+                    <Edit />
+                    <span>Edit profile</span>
                   </DropdownMenuItem>
 
-                  {/* Logout */}
                   <DropdownMenuItem
                     onClick={() => void handleLogout()}
-                    className="text-red-500 focus:text-red-600 cursor-pointer"
+                    className="cursor-pointer text-blocked focus:text-blocked"
                   >
-                    <LogOut className="mr-2 h-4 w-4" />
+                    <LogOut />
                     <span>Logout</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -310,15 +380,64 @@ export function Navbar() {
             )}
           </div>
         </div>
-      </div>
+      </nav>
 
-      {/* Edit Profile Modal */}
+      <nav
+        data-tabbar
+        aria-label="Sections"
+        className="fixed inset-x-0 bottom-0 z-50 border-t border-border/70 bg-background/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-md sm:hidden"
+      >
+        <div className="grid grid-cols-3">
+          {navItems.map(
+            ({ key, label, href, icon: Icon, count, countTone, dot }) => (
+              <Link
+                key={key}
+                href={href}
+                onClick={(e) => guardNavigation(e, href)}
+                aria-current={activeKey === key ? "page" : undefined}
+                className={cn(
+                  "flex h-16 flex-col items-center justify-center gap-1 text-xs font-medium transition-colors",
+                  activeKey === key
+                    ? "text-foreground"
+                    : "text-muted-foreground",
+                )}
+              >
+                <span className="relative">
+                  <Icon
+                    className="size-[22px]"
+                    strokeWidth={activeKey === key ? 2.25 : 1.75}
+                  />
+                  {count !== undefined && count > 0 && countTone && (
+                    <span
+                      className={cn(
+                        "tabular absolute -top-1.5 left-4 min-w-[18px] rounded-full px-1 text-center text-[11px] font-semibold leading-[18px] ring-2 ring-background",
+                        countTone === "waiting"
+                          ? COUNT_TONE.waiting
+                          : "bg-info text-white dark:text-background",
+                      )}
+                    >
+                      {count}
+                    </span>
+                  )}
+                  {dot && (
+                    <span
+                      aria-label="Version mismatch"
+                      className="absolute -top-0.5 -right-1 size-2 rounded-full bg-blocked ring-2 ring-background"
+                    />
+                  )}
+                </span>
+                {label}
+              </Link>
+            ),
+          )}
+        </div>
+      </nav>
+
       <EditProfileModal
         open={editProfileOpen}
         onOpenChange={setEditProfileOpen}
       />
 
-      {/* Unsaved Changes Warning Modal */}
       <Dialog
         open={showUnsavedWarning}
         onOpenChange={(open) => !open && handleCancelLeave()}
@@ -326,8 +445,8 @@ export function Navbar() {
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-orange-500" />
-              Unsaved Changes
+              <AlertTriangle className="size-5 text-waiting" />
+              Unsaved changes
             </DialogTitle>
             <DialogDescription>
               You have unsaved changes that will be lost if you leave this page.
@@ -340,7 +459,7 @@ export function Navbar() {
               onClick={handleCancelLeave}
               className="order-1 sm:order-1"
             >
-              Stay on Page
+              Stay on page
             </Button>
             <Button
               onClick={() => void handleSaveAndLeave()}
@@ -359,11 +478,11 @@ export function Navbar() {
               onClick={handleConfirmLeave}
               className="order-3 sm:order-3"
             >
-              Discard Changes
+              Discard changes
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </nav>
+    </>
   );
 }

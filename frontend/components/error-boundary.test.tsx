@@ -67,7 +67,7 @@ describe("ErrorBoundary", () => {
         <Boom shouldThrow={false} />
       </ErrorBoundary>,
     );
-    await user.click(screen.getByRole("button", { name: /Try Again/ }));
+    await user.click(screen.getByRole("button", { name: /Try again/ }));
 
     expect(screen.getByText("recovered")).toBeInTheDocument();
   });

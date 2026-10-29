@@ -106,11 +106,11 @@ describe("DeviceDetailsModal", () => {
     expect(
       screen.getByRole("heading", { name: /Living Room TV/ }),
     ).toBeInTheDocument();
-    expect(screen.queryByText("Device Details")).toBeNull();
-    expect(screen.queryByText("Basic Information")).toBeNull();
+    expect(screen.queryByText("Device details")).toBeNull();
+    expect(screen.queryByText("Basic information")).toBeNull();
   });
 
-  it("reports the status as a field beside Last Seen, not on the name", () => {
+  it("reports the status as a field beside Last seen, not on the name", () => {
     const { baseElement } = renderModal({ status: "pending" });
 
     const heading = screen.getByRole("heading", { name: "Living Room TV" });
@@ -121,10 +121,10 @@ describe("DeviceDetailsModal", () => {
     expect(heading.parentElement).not.toContainElement(
       screen.getByText("Pending"),
     );
-    expect(labels.slice(labels.indexOf("Last Seen"))).toEqual([
-      "Last Seen",
+    expect(labels.slice(labels.indexOf("Last seen"))).toEqual([
+      "Last seen",
       "Status",
-      "Enforced Policies",
+      "Enforced policies",
       "Identifier",
     ]);
   });
@@ -136,13 +136,13 @@ describe("DeviceDetailsModal", () => {
         policies: [
           {
             policy: "schedule",
-            label: "Time Schedule",
+            label: "Time schedule",
             tone: "info",
             hint: "A time schedule restricts when this device can stream",
           },
           {
             policy: "ip",
-            label: "IP Access",
+            label: "Network access",
             tone: "accent",
             hint: "Network or IP restrictions apply to this device",
           },
@@ -150,8 +150,8 @@ describe("DeviceDetailsModal", () => {
       },
     );
 
-    expect(screen.getByText("Time Schedule")).toBeInTheDocument();
-    expect(screen.getByText("IP Access")).toBeInTheDocument();
+    expect(screen.getByText("Time schedule")).toBeInTheDocument();
+    expect(screen.getByText("Network access")).toBeInTheDocument();
   });
 
   it("says none when nothing is enforced against the device", () => {
@@ -168,7 +168,7 @@ describe("DeviceDetailsModal", () => {
         policies: [
           {
             policy: "temporary",
-            label: "Temporary Access",
+            label: "Temporary access",
             tone: "positive",
             hint: "Temporary access expires in 2 hours",
           },
@@ -180,7 +180,7 @@ describe("DeviceDetailsModal", () => {
       screen.getByRole("button", {
         name: /Temporary access expires in 2 hours/,
       }),
-    ).toHaveTextContent("Temporary Access");
+    ).toHaveTextContent("Temporary access");
   });
 
   it("keeps reporting the status a grant is standing in for", () => {
@@ -190,7 +190,7 @@ describe("DeviceDetailsModal", () => {
         policies: [
           {
             policy: "temporary",
-            label: "Temporary Access",
+            label: "Temporary access",
             tone: "positive",
             hint: "Temporary access expires in 2 hours",
           },
@@ -236,9 +236,9 @@ describe("DeviceDetailsModal", () => {
       temporaryAccessUntil: "2026-03-01T00:00:00Z",
       temporaryAccessBypassPolicies: true,
     });
-    seeSection("Temporary Access");
+    seeSection("Temporary access");
 
-    expect(screen.getByText("Policies Bypassed")).toBeInTheDocument();
+    expect(screen.getByText("Policies bypassed")).toBeInTheDocument();
   });
 
   it("reports when it does not", async () => {
@@ -246,9 +246,9 @@ describe("DeviceDetailsModal", () => {
       temporaryAccessUntil: "2026-03-01T00:00:00Z",
       temporaryAccessBypassPolicies: false,
     });
-    seeSection("Temporary Access");
+    seeSection("Temporary access");
 
-    expect(screen.getByText("Policies Enforced")).toBeInTheDocument();
+    expect(screen.getByText("Policies enforced")).toBeInTheDocument();
   });
 
   it("closes from the footer", async () => {
@@ -393,8 +393,8 @@ describe("DeviceDetailsModal", () => {
       renderModal();
 
       expect(screen.getByText("device-1")).toBeInTheDocument();
-      expect(screen.getByText("First Seen")).toBeInTheDocument();
-      expect(screen.getByText("Last Seen")).toBeInTheDocument();
+      expect(screen.getByText("First seen")).toBeInTheDocument();
+      expect(screen.getByText("Last seen")).toBeInTheDocument();
     });
 
     it("keeps nothing behind a disclosure", () => {
@@ -402,8 +402,8 @@ describe("DeviceDetailsModal", () => {
 
       expect(container.querySelectorAll("[data-state=closed]")).toHaveLength(0);
       for (const gone of [
-        "Basic Information",
-        "Device Identifier",
+        "Basic information",
+        "Device identifier",
         "Activity",
       ]) {
         expect(screen.queryByText(gone)).toBeNull();
@@ -429,22 +429,22 @@ describe("DeviceDetailsModal", () => {
         temporaryAccessDurationMinutes: minutes,
         temporaryAccessGrantedAt: "2026-01-01T00:00:00Z",
       });
-      seeSection("Temporary Access");
+      seeSection("Temporary access");
 
       expect(screen.getByText(expected)).toBeInTheDocument();
     });
 
     it("shows the temporary access section only when relevant", async () => {
       renderModal();
-      expect(screen.queryByText("Temporary Access")).toBeNull();
+      expect(screen.queryByText("Temporary access")).toBeNull();
 
       renderModal({
         temporaryAccessUntil: "2026-03-01T00:00:00Z",
         temporaryAccessDurationMinutes: 90,
       });
-      seeSection("Temporary Access");
+      seeSection("Temporary access");
 
-      expect(screen.getByText("Temporary Access")).toBeInTheDocument();
+      expect(screen.getByText("Temporary access")).toBeInTheDocument();
     });
   });
 
@@ -457,7 +457,7 @@ describe("DeviceDetailsModal", () => {
 
     it("is hidden without one", () => {
       renderModal();
-      expect(screen.queryByText("User Note")).toBeNull();
+      expect(screen.queryByText("User note")).toBeNull();
     });
 
     it("is hidden while the note is still unread", () => {
@@ -465,13 +465,13 @@ describe("DeviceDetailsModal", () => {
         requestDescription: "Please let me in",
         requestSubmittedAt: "2026-01-05T00:00:00Z",
       });
-      expect(screen.queryByText("User Note")).toBeNull();
+      expect(screen.queryByText("User note")).toBeNull();
     });
 
     it("shows the note text", async () => {
       renderModal(withNote);
 
-      seeSection("User Note");
+      seeSection("User note");
 
       expect(screen.getByText("Please let me in")).toBeInTheDocument();
     });
@@ -479,9 +479,9 @@ describe("DeviceDetailsModal", () => {
     it("deletes the note", async () => {
       const onDeviceUpdate = jest.fn();
       const { user } = renderModal(withNote, { onDeviceUpdate });
-      seeSection("User Note");
+      seeSection("User note");
 
-      await user.click(screen.getByRole("button", { name: /Delete Note/ }));
+      await user.click(screen.getByRole("button", { name: /Delete note/ }));
 
       await waitFor(() => expect(deleteDeviceNote).toHaveBeenCalledWith(1));
       expect(toast).toHaveBeenCalledWith(
@@ -494,9 +494,9 @@ describe("DeviceDetailsModal", () => {
 
     it("deletes without an update callback", async () => {
       const { user } = renderModal(withNote);
-      seeSection("User Note");
+      seeSection("User note");
 
-      await user.click(screen.getByRole("button", { name: /Delete Note/ }));
+      await user.click(screen.getByRole("button", { name: /Delete note/ }));
 
       await waitFor(() => expect(deleteDeviceNote).toHaveBeenCalled());
     });
@@ -504,9 +504,9 @@ describe("DeviceDetailsModal", () => {
     it("reports a delete failure", async () => {
       deleteDeviceNote.mockRejectedValue(new Error("server said no"));
       const { user } = renderModal(withNote);
-      seeSection("User Note");
+      seeSection("User note");
 
-      await user.click(screen.getByRole("button", { name: /Delete Note/ }));
+      await user.click(screen.getByRole("button", { name: /Delete note/ }));
 
       await waitFor(() =>
         expect(toast).toHaveBeenCalledWith(
@@ -521,9 +521,9 @@ describe("DeviceDetailsModal", () => {
     it("falls back to a generic delete message", async () => {
       deleteDeviceNote.mockRejectedValue("boom");
       const { user } = renderModal(withNote);
-      seeSection("User Note");
+      seeSection("User note");
 
-      await user.click(screen.getByRole("button", { name: /Delete Note/ }));
+      await user.click(screen.getByRole("button", { name: /Delete note/ }));
 
       await waitFor(() =>
         expect(toast).toHaveBeenCalledWith(
@@ -534,7 +534,7 @@ describe("DeviceDetailsModal", () => {
 
     it("shows when the note was read", async () => {
       renderModal(withNote);
-      seeSection("User Note");
+      seeSection("User note");
 
       expect(screen.getByText("Read")).toBeInTheDocument();
     });
@@ -544,7 +544,7 @@ describe("DeviceDetailsModal", () => {
     it("toggles on and reports success", async () => {
       const onDeviceUpdate = jest.fn();
       const { user } = renderModal({}, { onDeviceUpdate });
-      seeSection("Device Settings");
+      seeSection("Device settings");
 
       await user.click(screen.getByRole("switch"));
 
@@ -567,7 +567,7 @@ describe("DeviceDetailsModal", () => {
 
     it("toggles back off", async () => {
       const { user } = renderModal({ excludeFromConcurrentLimit: true });
-      seeSection("Device Settings");
+      seeSection("Device settings");
 
       await user.click(screen.getByRole("switch"));
 
@@ -586,7 +586,7 @@ describe("DeviceDetailsModal", () => {
         new Error("nope"),
       );
       const { user } = renderModal();
-      seeSection("Device Settings");
+      seeSection("Device settings");
 
       await user.click(screen.getByRole("switch"));
 
@@ -603,7 +603,7 @@ describe("DeviceDetailsModal", () => {
     it("falls back to a generic failure message", async () => {
       updateDeviceExcludeFromConcurrentLimit.mockRejectedValue("boom");
       const { user } = renderModal();
-      seeSection("Device Settings");
+      seeSection("Device settings");
 
       await user.click(screen.getByRole("switch"));
 
@@ -618,7 +618,7 @@ describe("DeviceDetailsModal", () => {
 
     it("is hidden for a PlexAmp device, which is always excluded", async () => {
       renderModal({ deviceProduct: "Plexamp" });
-      seeSection("Device Settings");
+      seeSection("Device settings");
 
       expect(screen.queryByRole("switch")).toBeNull();
       expect(
@@ -630,14 +630,14 @@ describe("DeviceDetailsModal", () => {
   describe("reverting to pending", () => {
     it("is hidden without the callback", async () => {
       renderModal();
-      seeSection("Device Settings");
+      seeSection("Device settings");
 
       expect(screen.queryByText("Set back to pending")).toBeNull();
     });
 
     it("is hidden for a device already pending", async () => {
       renderModal({ status: "pending" }, { onSetPending: jest.fn() });
-      seeSection("Device Settings");
+      seeSection("Device settings");
 
       expect(screen.queryByText("Set back to pending")).toBeNull();
     });
@@ -649,9 +649,9 @@ describe("DeviceDetailsModal", () => {
         {},
         { onSetPending, onDeviceUpdate },
       );
-      seeSection("Device Settings");
+      seeSection("Device settings");
 
-      await user.click(screen.getByRole("button", { name: /Set to Pending/ }));
+      await user.click(screen.getByRole("button", { name: /Set to pending/ }));
 
       await waitFor(() => expect(onSetPending).toHaveBeenCalledWith(1));
       expect(onDeviceUpdate).toHaveBeenCalledWith(
@@ -663,9 +663,9 @@ describe("DeviceDetailsModal", () => {
     it("reports a refusal from the server", async () => {
       const onSetPending = jest.fn().mockResolvedValue(false);
       const { user, handlers } = renderModal({}, { onSetPending });
-      seeSection("Device Settings");
+      seeSection("Device settings");
 
-      await user.click(screen.getByRole("button", { name: /Set to Pending/ }));
+      await user.click(screen.getByRole("button", { name: /Set to pending/ }));
 
       await waitFor(() =>
         expect(toast).toHaveBeenCalledWith(
@@ -681,9 +681,9 @@ describe("DeviceDetailsModal", () => {
     it("reports a thrown failure", async () => {
       const onSetPending = jest.fn().mockRejectedValue(new Error("nope"));
       const { user } = renderModal({}, { onSetPending });
-      seeSection("Device Settings");
+      seeSection("Device settings");
 
-      await user.click(screen.getByRole("button", { name: /Set to Pending/ }));
+      await user.click(screen.getByRole("button", { name: /Set to pending/ }));
 
       await waitFor(() =>
         expect(toast).toHaveBeenCalledWith(
@@ -695,9 +695,9 @@ describe("DeviceDetailsModal", () => {
     it("works without an update callback", async () => {
       const onSetPending = jest.fn().mockResolvedValue(true);
       const { user } = renderModal({}, { onSetPending });
-      seeSection("Device Settings");
+      seeSection("Device settings");
 
-      await user.click(screen.getByRole("button", { name: /Set to Pending/ }));
+      await user.click(screen.getByRole("button", { name: /Set to pending/ }));
 
       await waitFor(() => expect(onSetPending).toHaveBeenCalled());
     });
@@ -708,10 +708,10 @@ describe("DeviceDetailsModal", () => {
           {},
           { onSetPending: jest.fn(), settingsData: strictMode("true") },
         );
-        seeSection("Device Settings");
+        seeSection("Device settings");
 
         await user.hover(
-          screen.getByRole("button", { name: /Set to Pending/ }),
+          screen.getByRole("button", { name: /Set to pending/ }),
         );
 
         expect(screen.getAllByText(/Strict mode is on/).length).toBeGreaterThan(
@@ -724,8 +724,8 @@ describe("DeviceDetailsModal", () => {
           {},
           { onSetPending: jest.fn(), settingsData: strictMode("true") },
         );
-        seeSection("Device Settings");
-        const trigger = screen.getByRole("button", { name: /Set to Pending/ });
+        seeSection("Device settings");
+        const trigger = screen.getByRole("button", { name: /Set to pending/ });
 
         fireEvent.mouseEnter(trigger);
         expect(screen.getAllByText(/Strict mode is on/).length).toBeGreaterThan(
@@ -745,8 +745,8 @@ describe("DeviceDetailsModal", () => {
           {},
           { onSetPending: jest.fn(), settingsData: strictMode("true") },
         );
-        seeSection("Device Settings");
-        const trigger = screen.getByRole("button", { name: /Set to Pending/ });
+        seeSection("Device settings");
+        const trigger = screen.getByRole("button", { name: /Set to pending/ });
 
         fireEvent.mouseEnter(trigger);
         fireEvent.mouseLeave(trigger);
@@ -763,10 +763,10 @@ describe("DeviceDetailsModal", () => {
           {},
           { onSetPending: jest.fn(), settingsData: strictMode("true") },
         );
-        seeSection("Device Settings");
+        seeSection("Device settings");
 
         await user.click(
-          screen.getByRole("button", { name: /Set to Pending/ }),
+          screen.getByRole("button", { name: /Set to pending/ }),
         );
 
         expect(screen.getAllByText(/Strict mode is on/).length).toBeGreaterThan(
@@ -780,10 +780,10 @@ describe("DeviceDetailsModal", () => {
           {},
           { onSetPending, settingsData: strictMode("false") },
         );
-        seeSection("Device Settings");
+        seeSection("Device settings");
 
         await user.click(
-          screen.getByRole("button", { name: /Set to Pending/ }),
+          screen.getByRole("button", { name: /Set to pending/ }),
         );
 
         await waitFor(() => expect(onSetPending).toHaveBeenCalled());
@@ -821,7 +821,7 @@ describe("DeviceDetailsModal temporary access expiry", () => {
       temporaryAccessUntil: inHours(24),
     });
 
-    expect(screen.getByText("Expires At")).toBeInTheDocument();
+    expect(screen.getByText("Expires at")).toBeInTheDocument();
   });
 
   it("labels a lapsed grant as expired", async () => {
@@ -829,9 +829,9 @@ describe("DeviceDetailsModal temporary access expiry", () => {
       temporaryAccessUntil: inHours(-24),
     });
 
-    seeSection("Temporary Access");
+    seeSection("Temporary access");
 
-    expect(screen.getByText("Expired At")).toBeInTheDocument();
+    expect(screen.getByText("Expired at")).toBeInTheDocument();
   });
 });
 
@@ -840,8 +840,8 @@ describe("DeviceDetailsModal set to pending", () => {
     const onSetPending = jest.fn().mockRejectedValue("nope");
     const { user } = renderModal({}, { onSetPending });
 
-    seeSection("Device Settings");
-    await user.click(screen.getByRole("button", { name: /Set to Pending/ }));
+    seeSection("Device settings");
+    await user.click(screen.getByRole("button", { name: /Set to pending/ }));
 
     await waitFor(() =>
       expect(toast).toHaveBeenCalledWith(
@@ -860,11 +860,11 @@ describe("DeviceDetailsModal strict mode help", () => {
   });
 
   const pendingTrigger = () =>
-    screen.getByRole("button", { name: /Set to Pending/ });
+    screen.getByRole("button", { name: /Set to pending/ });
 
   it("lets the tooltip drive its own open state on a wide screen", async () => {
     const { user } = renderModal({}, strictOn());
-    seeSection("Device Settings");
+    seeSection("Device settings");
 
     await user.hover(pendingTrigger());
 
@@ -877,7 +877,7 @@ describe("DeviceDetailsModal strict mode help", () => {
       value: 500,
     });
     renderModal({}, strictOn());
-    seeSection("Device Settings");
+    seeSection("Device settings");
 
     fireEvent.click(pendingTrigger());
 
@@ -890,7 +890,7 @@ describe("DeviceDetailsModal strict mode help", () => {
       value: 500,
     });
     renderModal({}, strictOn());
-    seeSection("Device Settings");
+    seeSection("Device settings");
 
     fireEvent.mouseEnter(pendingTrigger());
 

@@ -52,9 +52,8 @@ const notification = (overrides: Partial<Notification> = {}) =>
 let consoleError: jest.SpyInstance;
 
 const openMenu = async (user: ReturnType<typeof userEvent.setup>) => {
-  const trigger = document.querySelector<HTMLElement>('[aria-haspopup="menu"]');
-  await user.click(trigger as HTMLElement);
-  await screen.findByRole("menu");
+  await user.click(screen.getByTitle("Notifications"));
+  await screen.findByRole("dialog");
 };
 
 beforeEach(() => {
@@ -74,24 +73,32 @@ afterEach(() => {
 
 describe("NotificationMenu trigger", () => {
   it("shows a plain bell with nothing unread", () => {
-    const { container } = render(<NotificationMenu />);
+    render(<NotificationMenu />);
 
-    expect(container.querySelector(".lucide-bell")).not.toBeNull();
-    expect(container.querySelector(".lucide-bell-ring")).toBeNull();
+    expect(screen.queryByTestId("unread-dot")).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Notifications" }),
+    ).toBeInTheDocument();
   });
 
-  it("shows a ringing bell and a count when there is unread mail", () => {
+  it("marks unread mail with a dot and names the count", () => {
     unreadCount = 3;
-    const { container } = render(<NotificationMenu />);
+    render(<NotificationMenu />);
 
-    expect(container.querySelector(".lucide-bell-ring")).not.toBeNull();
-    expect(screen.getByText("3")).toBeInTheDocument();
+    expect(screen.getByTestId("unread-dot")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Notifications, 3 unread" }),
+    ).toBeInTheDocument();
   });
 
-  it("caps the badge at 99+", () => {
+  it("keeps the dot the same size however much is unread", () => {
     unreadCount = 250;
     render(<NotificationMenu />);
-    expect(screen.getByText("99+")).toBeInTheDocument();
+
+    expect(screen.queryByText("99+")).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Notifications, 250 unread" }),
+    ).toBeInTheDocument();
   });
 });
 
@@ -170,6 +177,67 @@ describe("NotificationMenu contents", () => {
     expect(
       screen.getAllByRole("button", { name: "Delete this notification" }),
     ).toHaveLength(2);
+  });
+});
+
+describe("NotificationMenu panel", () => {
+  it("names the panel after its heading", async () => {
+    const user = userEvent.setup();
+    render(<NotificationMenu />);
+
+    await openMenu(user);
+
+    expect(screen.getByRole("dialog")).toHaveAccessibleName("Notifications");
+  });
+
+  it.each([
+    [2, "2 unread"],
+    [0, "All caught up"],
+  ])("summarises %p unread as %p", async (count, expected) => {
+    notifications = [notification({ read: count === 0 })];
+    unreadCount = count;
+    const user = userEvent.setup();
+    render(<NotificationMenu />);
+
+    await openMenu(user);
+
+    expect(screen.getByText(expected)).toBeInTheDocument();
+  });
+
+  it("lets the keyboard reach every action", async () => {
+    notifications = [notification({ id: 1 })];
+    unreadCount = 1;
+    const user = userEvent.setup();
+    render(<NotificationMenu />);
+    await openMenu(user);
+
+    const reached = new Set<string>();
+    for (let step = 0; step < 6; step++) {
+      await user.tab();
+      const label =
+        document.activeElement?.getAttribute("title") ??
+        document.activeElement?.textContent ??
+        "";
+      reached.add(label);
+    }
+
+    expect(reached.has("Mark as read")).toBe(true);
+    expect(reached.has("Delete this notification")).toBe(true);
+    expect(reached.has("Open this stream in the user's history")).toBe(true);
+  });
+
+  it("opens a linked stream from the keyboard", async () => {
+    notifications = [notification({ sessionHistoryId: 42, text: "Linked" })];
+    const user = userEvent.setup();
+    render(<NotificationMenu />);
+    await openMenu(user);
+
+    screen.getByTitle("Open this stream in the user's history").focus();
+    await user.keyboard("{Enter}");
+
+    expect(onNotificationClick).toHaveBeenCalledWith(
+      expect.objectContaining({ sessionHistoryId: 42 }),
+    );
   });
 });
 
@@ -316,7 +384,7 @@ describe("opening session history from a notification", () => {
 
     await user.click(screen.getByText("Linked"));
 
-    await waitFor(() => expect(screen.queryByRole("menu")).toBeNull());
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   });
 
   it("stays open while triaging, so several can be cleared at once", async () => {
@@ -327,7 +395,7 @@ describe("opening session history from a notification", () => {
 
     await user.click(screen.getByTitle("Mark as read"));
 
-    expect(screen.getByRole("menu")).toBeInTheDocument();
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
   });
 
   it("does nothing when no session is linked", async () => {
@@ -352,11 +420,11 @@ describe("opening session history from a notification", () => {
     render(<NotificationMenu />);
     await openMenu(user);
 
-    expect(screen.getByText("Linked").closest("div")).toHaveAttribute(
+    expect(screen.getByText("Linked").closest("[title]")).toHaveAttribute(
       "title",
       "Open this stream in the user's history",
     );
-    expect(screen.getByText("Unlinked").closest("div")).toHaveAttribute(
+    expect(screen.getByText("Unlinked").closest("[title]")).toHaveAttribute(
       "title",
       "The stream behind this notification is no longer in the history",
     );
@@ -388,7 +456,9 @@ describe("on a narrow viewport", () => {
     const dialog = await openSheet(user);
 
     expect(within(dialog).getByText("Linked")).toBeInTheDocument();
-    expect(screen.queryByRole("menu")).toBeNull();
+    expect(
+      within(dialog).getByRole("button", { name: "Close" }),
+    ).toBeInTheDocument();
   });
 
   it("names the panel for a screen reader", async () => {

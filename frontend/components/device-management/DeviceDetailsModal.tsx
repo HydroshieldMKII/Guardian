@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { HintTooltip } from "@/components/ui/hint-tooltip";
 import {
+  ActionRow,
   Meta,
   MetaGrid,
   Panel,
@@ -10,6 +11,7 @@ import {
   Section,
   StatusPill,
   ToggleRow,
+  toneButton,
 } from "@/components/ui/entity";
 import {
   Modal,
@@ -100,7 +102,7 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
       await apiClient.deleteDeviceNote(device.id);
       setNoteReadAt(undefined);
       toast({
-        title: "Note Deleted",
+        title: "Note deleted",
         description: "The note this user left on the device is gone for good.",
         variant: "success",
       });
@@ -167,9 +169,9 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
       const success = await onSetPending(device.id);
       if (success) {
         toast({
-          title: "Device Set to Pending",
+          title: "Device set to pending",
           description:
-            "This device is waiting for approval again and follows the user's default device policy until you decide.",
+            "This device is waiting for approval again and follows this user's New devices rule until you decide.",
           variant: "success",
         });
         // Update parent state
@@ -210,7 +212,7 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
   };
 
   return (
-    <Modal open={isOpen} onOpenChange={handleClose} size="lg">
+    <Modal open={isOpen} onOpenChange={handleClose} size="lg" focusDialogOnOpen>
       <ModalHeader
         title={device.deviceName || "Unknown"}
         titleHidden={renaming}
@@ -261,20 +263,24 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
           <Meta label="Platform">{device.devicePlatform || "Unknown"}</Meta>
           <Meta label="Product">{device.deviceProduct || "Unknown"}</Meta>
           <Meta label="Version">{device.deviceVersion || "Unknown"}</Meta>
-          <Meta label="IP Address">
+          <Meta label="IP address">
             <ClickableIP ipAddress={device.ipAddress} />
           </Meta>
-          <Meta label="Streams Started">{device.sessionCount}</Meta>
-          <Meta label="First Seen">
+          <Meta label="Streams started">{device.sessionCount}</Meta>
+          <Meta label="First seen">
             {new Date(device.firstSeen).toLocaleString()}
           </Meta>
-          <Meta label="Last Seen">
+          <Meta label="Last seen">
             {new Date(device.lastSeen).toLocaleString()}
           </Meta>
           <Meta label="Status">
             <DeviceStatus device={device} />
           </Meta>
-          <Meta label="Enforced Policies" wrap className="sm:col-span-3">
+          <Meta
+            label="Enforced policies"
+            wrap
+            className="col-span-2 sm:col-span-3"
+          >
             {policies.length === 0 ? (
               <span className="text-muted-foreground">
                 None. This device streams without restriction.
@@ -289,7 +295,7 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
               </PillRow>
             )}
           </Meta>
-          <Meta label="Identifier" wrap className="sm:col-span-3">
+          <Meta label="Identifier" wrap className="col-span-2 sm:col-span-3">
             <span className="font-mono text-xs">{device.deviceIdentifier}</span>
           </Meta>
         </MetaGrid>
@@ -297,7 +303,7 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
         {device.requestDescription &&
           device.requestSubmittedAt &&
           noteReadAt && (
-            <Section title="User Note">
+            <Section title="User note">
               <Panel>
                 <p className="text-sm leading-relaxed text-foreground">
                   {device.requestDescription}
@@ -311,44 +317,46 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
                   {new Date(noteReadAt).toLocaleString()}
                 </Meta>
               </MetaGrid>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => void handleDeleteNote()}
-                disabled={deletingNote}
-                className="w-full border-rose-500/40 text-rose-600 hover:bg-rose-500/10 dark:text-rose-400"
-              >
-                {deletingNote && spinner}
-                Delete Note
-              </Button>
+              <div className="flex sm:justify-end">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => void handleDeleteNote()}
+                  disabled={deletingNote}
+                  className={`w-full sm:w-auto ${toneButton("danger")}`}
+                >
+                  {deletingNote && spinner}
+                  Delete note
+                </Button>
+              </div>
             </Section>
           )}
 
         {(device.temporaryAccessUntil ||
           device.temporaryAccessGrantedAt ||
           device.temporaryAccessDurationMinutes) && (
-          <Section title="Temporary Access">
+          <Section title="Temporary access">
             <MetaGrid className="sm:grid-cols-2">
               {device.temporaryAccessDurationMinutes && (
-                <Meta label="Duration Granted">
+                <Meta label="Duration granted">
                   {formatMinutes(device.temporaryAccessDurationMinutes)}
                 </Meta>
               )}
               {device.temporaryAccessGrantedAt && (
-                <Meta label="Granted At">
+                <Meta label="Granted at">
                   {new Date(device.temporaryAccessGrantedAt).toLocaleString()}
                 </Meta>
               )}
               {device.temporaryAccessUntil && (
                 <Meta
                   label={
-                    hasTemporaryAccess(device) ? "Expires At" : "Expired At"
+                    hasTemporaryAccess(device) ? "Expires at" : "Expired at"
                   }
                 >
                   {new Date(device.temporaryAccessUntil).toLocaleString()}
                 </Meta>
               )}
-              <Meta label="Policy Bypass">
+              <Meta label="Policy bypass">
                 <StatusPill
                   tone={
                     device.temporaryAccessBypassPolicies ? "warning" : "neutral"
@@ -360,15 +368,15 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
                   }
                 >
                   {device.temporaryAccessBypassPolicies
-                    ? "Policies Bypassed"
-                    : "Policies Enforced"}
+                    ? "Policies bypassed"
+                    : "Policies enforced"}
                 </StatusPill>
               </Meta>
             </MetaGrid>
           </Section>
         )}
 
-        <Section title="Device Settings">
+        <Section title="Device settings">
           {!plexamp && (
             <ToggleRow
               id="exclude-concurrent-limit"
@@ -383,38 +391,33 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
           )}
 
           {!plexamp && device.status !== "pending" && onSetPending && (
-            <Panel className="space-y-3">
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-foreground">
-                  Set back to pending
-                </p>
-                <p className="text-xs leading-relaxed text-muted-foreground">
-                  Undo your decision on this device. It follows the user&apos;s
-                  default device policy until you approve or reject it again.
-                </p>
-              </div>
-              {isStrictModeEnabled ? (
-                <HintTooltip
-                  side="top"
-                  align="center"
-                  triggerClassName="h-8 w-full cursor-not-allowed items-center justify-center whitespace-nowrap rounded-md border border-dashed bg-background px-3 text-sm font-medium text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring"
-                  hint="Strict mode is on, so every device is approved or rejected automatically using the default policy. Turn strict mode off in settings to move a device back to pending."
-                >
-                  Set to Pending
-                </HintTooltip>
-              ) : (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => void handleSetPending()}
-                  disabled={setPendingLoading}
-                  className="w-full border-amber-500/40 text-amber-700 hover:bg-amber-500/10 dark:text-amber-400"
-                >
-                  {setPendingLoading && spinner}
-                  Set to Pending
-                </Button>
-              )}
-            </Panel>
+            <ActionRow
+              title="Set back to pending"
+              description="Undo your decision on this device. It follows this user's New devices rule until you approve or reject it again."
+              action={
+                isStrictModeEnabled ? (
+                  <HintTooltip
+                    side="top"
+                    align="center"
+                    triggerClassName="h-8 w-full cursor-not-allowed items-center justify-center whitespace-nowrap rounded-md border border-dashed bg-background px-3 text-sm font-medium text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring sm:w-auto"
+                    hint="Strict mode is on, so every device is approved or rejected automatically using this user's New devices rule. Turn strict mode off in settings to move a device back to pending."
+                  >
+                    Set to pending
+                  </HintTooltip>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => void handleSetPending()}
+                    disabled={setPendingLoading}
+                    className="w-full sm:w-auto"
+                  >
+                    {setPendingLoading && spinner}
+                    Set to pending
+                  </Button>
+                )
+              }
+            />
           )}
 
           {plexamp && (

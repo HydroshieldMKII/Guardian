@@ -11,6 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Field, SegmentedControl } from "@/components/ui/entity";
+import { cn } from "@/lib/utils";
 import { isAdminUser, useAuth } from "@/contexts/auth-context";
 import { Banner, SettingControl, SettingsCard, isTruthy } from "./settings-ui";
 import { AppSetting } from "@/types";
@@ -21,6 +22,12 @@ const UTC_OFFSETS = Array.from({ length: 25 }, (_, index) => {
   const sign = hours < 0 ? "-" : "+";
   return `${sign}${String(Math.abs(hours)).padStart(2, "0")}:00`;
 });
+
+const NUMBER_MIN: Record<string, number> = {
+  CONCURRENT_STREAM_LIMIT: 0,
+  PLEXGUARD_REFRESH_INTERVAL: 5,
+  DEVICE_CLEANUP_INTERVAL_DAYS: 1,
+};
 
 const getCurrentTimeInOffset = (offsetString: string): string => {
   const now = new Date();
@@ -83,7 +90,7 @@ const CHILD_GROUPS: ChildGroup[] = [
 const SECTIONS: Record<string, SettingGroup[]> = {
   guardian: [
     {
-      title: "Access Control",
+      title: "Access control",
       description: "How devices are treated and how many streams they get.",
       keys: [
         "PLEX_GUARD_DEFAULT_BLOCK",
@@ -92,7 +99,7 @@ const SECTIONS: Record<string, SettingGroup[]> = {
       ],
     },
     {
-      title: "Monitoring & Maintenance",
+      title: "Monitoring & maintenance",
       description:
         "How often Plex is polled, which clock is used, and when stale devices are dropped.",
       keys: [
@@ -102,12 +109,12 @@ const SECTIONS: Record<string, SettingGroup[]> = {
       ],
     },
     {
-      title: "User Portal",
+      title: "User portal",
       description: "What Plex users can see and do when they sign in.",
       keys: ["USER_PORTAL_ENABLED"],
     },
     {
-      title: "Login Security",
+      title: "Login security",
       description:
         "Password recovery and optional captcha protection for the login page.",
       keys: [
@@ -223,14 +230,10 @@ export function GeneralSettings({
     const disabled = group.isDisabled(valueOf(parent));
 
     return (
-      <div className="space-y-3" key={parent.key}>
+      <div className="space-y-4" key={parent.key}>
         {renderSetting(parent)}
         {children.length > 0 && (
-          <div
-            className={`space-y-3 border-l-2 pl-4 transition-opacity duration-200 sm:ml-2 ${
-              disabled ? "opacity-50" : ""
-            }`}
-          >
+          <div className="space-y-4 border-l-2 pl-4 sm:ml-1">
             {children.map((child) => renderSetting(child, disabled))}
           </div>
         )}
@@ -316,6 +319,7 @@ export function GeneralSettings({
           label={label}
           htmlFor={setting.key}
           hint={description}
+          inline
         >
           <Select
             value={asString(value)}
@@ -323,13 +327,16 @@ export function GeneralSettings({
               handleInputChange(setting.key, newValue)
             }
           >
-            <SelectTrigger id={setting.key} className="w-full cursor-pointer">
+            <SelectTrigger
+              id={setting.key}
+              className="w-full cursor-pointer sm:w-56"
+            >
               <SelectValue placeholder="Select timezone" />
             </SelectTrigger>
             <SelectContent>
               {UTC_OFFSETS.map((offset) => (
                 <SelectItem key={offset} value={offset}>
-                  UTC{offset} - {getCurrentTimeInOffset(offset)}
+                  UTC{offset} ({getCurrentTimeInOffset(offset)})
                 </SelectItem>
               ))}
             </SelectContent>
@@ -340,21 +347,16 @@ export function GeneralSettings({
 
     if (setting.key === "DEFAULT_PAGE") {
       return (
-        <Field
-          key={setting.key}
-          label={label}
-          hint={description}
-          action={
-            <SegmentedControl
-              value={asString(value)}
-              onChange={(next) => handleInputChange(setting.key, next)}
-              options={[
-                { value: "devices", label: "Devices" },
-                { value: "streams", label: "Streams" },
-              ]}
-            />
-          }
-        />
+        <Field key={setting.key} label={label} hint={description} inline>
+          <SegmentedControl
+            value={asString(value)}
+            onChange={(next) => handleInputChange(setting.key, next)}
+            options={[
+              { value: "devices", label: "Users" },
+              { value: "streams", label: "Streams" },
+            ]}
+          />
+        </Field>
       );
     }
 
@@ -370,7 +372,7 @@ export function GeneralSettings({
           hint={
             setting.key === "CLOUDFLARE_TURNSTILE_SITE_KEY" ? (
               <>
-                {description} Get your Turnstile keys from{" "}
+                {description}. Get your Turnstile keys from{" "}
                 <a
                   href="https://dash.cloudflare.com/sign-up?to=/:account/turnstile"
                   target="_blank"
@@ -402,22 +404,28 @@ export function GeneralSettings({
     }
 
     if (setting.type !== "boolean") {
+      const numeric =
+        setting.type === "number" ||
+        setting.key.includes("INTERVAL") ||
+        setting.key === "CONCURRENT_STREAM_LIMIT";
       return (
         <Field
           key={setting.key}
           label={label}
           htmlFor={setting.key}
           hint={description}
+          inline={numeric}
+          className={cn(
+            "transition-opacity duration-200",
+            disabled && "opacity-60",
+          )}
         >
           <Input
             id={setting.key}
-            type={
-              setting.key.includes("INTERVAL") ||
-              setting.key === "CONCURRENT_STREAM_LIMIT"
-                ? "number"
-                : "text"
-            }
-            min={setting.key === "CONCURRENT_STREAM_LIMIT" ? "0" : undefined}
+            type={numeric ? "number" : "text"}
+            className={numeric ? "w-full tabular-nums sm:w-28" : undefined}
+            min={numeric ? NUMBER_MIN[setting.key] : undefined}
+            step={numeric ? 1 : undefined}
             value={asString(value)}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
               handleInputChange(setting.key, e.target.value)
@@ -459,6 +467,7 @@ export function GeneralSettings({
           key={group.title}
           title={group.title}
           description={group.description}
+          divided
         >
           {entries.map((setting) => {
             const childGroup = CHILD_GROUPS.find(

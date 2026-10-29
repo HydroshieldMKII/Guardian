@@ -9,21 +9,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  EmptyState,
-  Field,
-  Panel,
-  Section,
-  StatusPill,
-} from "@/components/ui/entity";
+import { EmptyState, Field, Panel, Section } from "@/components/ui/entity";
 import {
   Modal,
   ModalBody,
   ModalFooter,
   ModalHeader,
 } from "@/components/ui/modal";
-import { ChevronDown, RefreshCw } from "lucide-react";
+import { ChevronDown, Pencil, RefreshCw, Trash2 } from "lucide-react";
 import { UserTimeRule, CreateTimeRuleDto } from "@/types";
+import { cn } from "@/lib/utils";
 import { useTimeRules } from "@/hooks/device-management/useTimeRules";
 import { useToast } from "@/hooks/use-toast";
 
@@ -271,7 +266,7 @@ export function TimeRuleModal({
 
     if (!validation.isValid && validation.conflictingRule) {
       toast({
-        title: "Time Conflict",
+        title: "Time conflict",
         description: `This rule overlaps with "${validation.conflictingRule.ruleName}" on ${getDayLabel(validation.conflictingRule.dayOfWeek)}. Adjust the times so they do not cover the same hours.`,
         variant: "destructive",
       });
@@ -305,7 +300,7 @@ export function TimeRuleModal({
       });
 
       toast({
-        title: "Rule Updated",
+        title: "Rule updated",
         description: "The rule has been updated",
         variant: "success",
       });
@@ -348,7 +343,7 @@ export function TimeRuleModal({
       await deleteTimeRule(userId, ruleId);
       setRules((prev) => prev.filter((r) => r.id !== ruleId));
       toast({
-        title: "Rule Deleted",
+        title: "Rule deleted",
         description: "The rule has been removed from this user's time schedule",
         variant: "success",
       });
@@ -383,7 +378,7 @@ export function TimeRuleModal({
 
     if (!validation.isValid && validation.conflictingRule) {
       toast({
-        title: "Time Conflict",
+        title: "Time conflict",
         description: `This rule overlaps with "${validation.conflictingRule.ruleName}" on ${getDayLabel(validation.conflictingRule.dayOfWeek)}. Adjust the times so they do not cover the same hours.`,
         variant: "destructive",
       });
@@ -412,7 +407,7 @@ export function TimeRuleModal({
       });
 
       toast({
-        title: "Rule Created",
+        title: "Rule created",
         description: "The rule has been added to this user's time schedule",
         variant: "success",
       });
@@ -449,7 +444,7 @@ export function TimeRuleModal({
 
       setRules([]);
       toast({
-        title: "Time Schedule Cleared",
+        title: "Time schedule cleared",
         description: `Deleted ${rules.length} ${rules.length === 1 ? "rule" : "rules"}. This user can now stream at any time.`,
         variant: "success",
       });
@@ -486,7 +481,7 @@ export function TimeRuleModal({
       }));
       setRules(sortRules(editingRules));
       toast({
-        title: "Preset Applied",
+        title: "Preset applied",
         description:
           presetType === "weekdays-only"
             ? "Streaming is now blocked all day on Saturday and Sunday"
@@ -514,7 +509,7 @@ export function TimeRuleModal({
     <>
       <Modal open={isOpen} onOpenChange={onClose} size="xl">
         <ModalHeader
-          title="Time Schedule"
+          title="Time schedule"
           description={
             <>
               <span className="font-medium text-foreground">{username}</span>{" "}
@@ -528,7 +523,7 @@ export function TimeRuleModal({
           <div className="flex flex-col gap-8 lg:flex-row lg:gap-10">
             <Section
               className="order-1 lg:w-1/2"
-              title="Active Rules"
+              title="Active rules"
               action={
                 rules.length > 0 ? (
                   <Button
@@ -539,7 +534,7 @@ export function TimeRuleModal({
                     className="border-rose-500/40 text-rose-600 hover:bg-rose-500/10 dark:text-rose-400"
                   >
                     {deletingAllRules && spinner}
-                    {deletingAllRules ? "Deleting..." : "Delete All"}
+                    {deletingAllRules ? "Deleting..." : "Delete all"}
                   </Button>
                 ) : undefined
               }
@@ -555,7 +550,7 @@ export function TimeRuleModal({
                   description="This user can stream at any time. Add a rule to block streaming during a set part of the day."
                 />
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {rules.map((rule) => {
                     const displayData =
                       rule.isEditing && rule.tempData
@@ -566,13 +561,15 @@ export function TimeRuleModal({
                     return (
                       <div
                         key={rule.id}
-                        className={`rounded-lg border p-4 ${
-                          rule.enabled ? "bg-card" : "bg-muted/30"
-                        }`}
+                        className={cn(
+                          "rounded-lg border transition-colors duration-200",
+                          rule.isEditing ? "p-4" : "px-3 py-2.5",
+                          rule.enabled ? "bg-card" : "bg-muted/30",
+                        )}
                       >
                         {rule.isEditing ? (
                           <div className="space-y-4">
-                            <Field label="Rule Name">
+                            <Field label="Rule name">
                               <FocusInput
                                 value={displayData.ruleName}
                                 onChange={(value) =>
@@ -614,7 +611,7 @@ export function TimeRuleModal({
                               </DropdownMenu>
                             </Field>
 
-                            <Field label="Time Range">
+                            <Field label="Time range">
                               <div className="flex items-center gap-2">
                                 <FocusInput
                                   type="time"
@@ -661,58 +658,58 @@ export function TimeRuleModal({
                             </div>
                           </div>
                         ) : (
-                          <div className="space-y-3">
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="min-w-0 flex-1">
-                                <p
-                                  className={`truncate text-sm font-semibold ${
-                                    rule.enabled
-                                      ? "text-foreground"
-                                      : "text-muted-foreground"
-                                  }`}
-                                >
-                                  {rule.ruleName}
-                                </p>
-                                <p className="mt-1 text-xs text-muted-foreground">
-                                  {getDayLabel(rule.dayOfWeek)} ·{" "}
-                                  {rule.startTime} - {rule.endTime}
-                                </p>
-                              </div>
-                              <StatusPill
-                                tone={rule.enabled ? "danger" : "neutral"}
+                          <div className="flex items-center gap-3">
+                            <Switch
+                              checked={rule.enabled}
+                              disabled={busy}
+                              aria-label={`${rule.ruleName} enabled`}
+                              className="cursor-pointer"
+                              onCheckedChange={(checked) =>
+                                void toggleRuleEnabled(rule.id, checked)
+                              }
+                            />
+                            <div className="min-w-0 flex-1">
+                              <p
+                                className={cn(
+                                  "truncate text-sm font-semibold",
+                                  rule.enabled
+                                    ? "text-foreground"
+                                    : "text-muted-foreground",
+                                )}
                               >
-                                Block
-                              </StatusPill>
+                                {rule.ruleName}
+                              </p>
+                              <p className="mt-0.5 text-xs tabular-nums text-muted-foreground">
+                                {getDayLabel(rule.dayOfWeek)} · {rule.startTime}{" "}
+                                – {rule.endTime}
+                              </p>
                             </div>
-
-                            <div className="flex items-center gap-2 border-t pt-3">
-                              <Switch
-                                checked={rule.enabled}
-                                disabled={busy}
-                                className="cursor-pointer"
-                                onCheckedChange={(checked) =>
-                                  void toggleRuleEnabled(rule.id, checked)
-                                }
-                              />
+                            <div className="flex shrink-0 items-center gap-1">
                               <Button
-                                variant="outline"
-                                size="sm"
+                                variant="ghost"
+                                size="icon"
                                 onClick={() => startEdit(rule.id)}
                                 disabled={busy || deletingRuleId === rule.id}
-                                className="ml-auto"
+                                aria-label="Edit"
+                                title="Edit this rule"
+                                className="size-8 text-muted-foreground hover:text-foreground"
                               >
-                                Edit
+                                <Pencil className="size-4" />
                               </Button>
                               <Button
-                                variant="outline"
-                                size="sm"
+                                variant="ghost"
+                                size="icon"
                                 onClick={() => void deleteRule(rule.id)}
                                 disabled={busy || deletingRuleId === rule.id}
-                                className="border-rose-500/40 text-rose-600 hover:bg-rose-500/10 dark:text-rose-400"
+                                aria-label="Delete"
+                                title="Delete this rule"
+                                className="size-8 text-muted-foreground hover:bg-blocked/10 hover:text-blocked"
                               >
-                                {deletingRuleId === rule.id
-                                  ? spinner
-                                  : "Delete"}
+                                {deletingRuleId === rule.id ? (
+                                  spinner
+                                ) : (
+                                  <Trash2 className="size-4" />
+                                )}
                               </Button>
                             </div>
                           </div>
@@ -724,7 +721,10 @@ export function TimeRuleModal({
               )}
             </Section>
 
-            <Section className="order-2 lg:w-1/2" title="Add a Rule">
+            <Section
+              className="order-2 lg:sticky lg:top-0 lg:w-1/2 lg:self-start"
+              title="Add a rule"
+            >
               <Field
                 label="Presets"
                 hint="Each preset replaces every existing rule with a schedule that blocks the other days entirely."
@@ -742,7 +742,7 @@ export function TimeRuleModal({
                         Applying...
                       </>
                     ) : (
-                      "Allow Weekdays Only"
+                      "Allow weekdays only"
                     )}
                   </Button>
                   <Button
@@ -757,14 +757,14 @@ export function TimeRuleModal({
                         Applying...
                       </>
                     ) : (
-                      "Allow Weekends Only"
+                      "Allow weekends only"
                     )}
                   </Button>
                 </div>
               </Field>
 
               <Panel className="space-y-4">
-                <Field label="Rule Name" htmlFor="new-rule-name">
+                <Field label="Rule name" htmlFor="new-rule-name">
                   <Input
                     id="new-rule-name"
                     value={newRule.ruleName}
@@ -808,7 +808,7 @@ export function TimeRuleModal({
                 </Field>
 
                 <Field
-                  label="Block Streaming Between"
+                  label="Block streaming between"
                   hint="An end time earlier than the start time runs past midnight into the next day."
                 >
                   <div className="flex items-center gap-2">
@@ -851,7 +851,7 @@ export function TimeRuleModal({
                       Creating...
                     </>
                   ) : (
-                    "Create Rule"
+                    "Create rule"
                   )}
                 </Button>
               </Panel>
@@ -872,7 +872,7 @@ export function TimeRuleModal({
         onConfirm={() => void confirmDeleteAllRules()}
         title="Delete every rule?"
         description="This permanently deletes every rule in this user's time schedule, so they will be able to stream at any time. This cannot be undone."
-        confirmText="Delete All"
+        confirmText="Delete all"
         variant="destructive"
         loading={deletingAllRules}
       />
@@ -891,7 +891,7 @@ export function TimeRuleModal({
             ? "This deletes every existing rule and blocks streaming all day on Saturday and Sunday. This cannot be undone."
             : "This deletes every existing rule and blocks streaming all day from Monday to Friday. This cannot be undone."
         }
-        confirmText="Apply Preset"
+        confirmText="Apply preset"
         variant="default"
         loading={creatingPreset === showPresetConfirm}
       />

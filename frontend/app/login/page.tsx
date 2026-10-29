@@ -24,7 +24,7 @@ import {
   Moon,
   Loader2,
 } from "lucide-react";
-import { ThreeDotLoader } from "@/components/three-dot-loader";
+import { PageLoader } from "@/components/three-dot-loader";
 import { ErrorHandler } from "@/components/error-handler";
 import { usePlexOAuth } from "@/hooks/use-plex-oauth";
 
@@ -47,7 +47,7 @@ declare global {
     turnstile?: {
       render: (
         container: HTMLElement,
-        options: TurnstileRenderOptions
+        options: TurnstileRenderOptions,
       ) => string;
       reset: (widgetId: string) => void;
       remove: (widgetId: string) => void;
@@ -177,19 +177,19 @@ export default function LoginPage() {
     onAuthenticated: loginWithPlex,
     copy: {
       success: {
-        title: "Signed In",
+        title: "Signed in",
         description: "You are signed in with Plex",
       },
       failed: {
-        title: "Plex Sign-In Failed",
+        title: "Plex sign-in failed",
         description: "Could not sign you in with Plex",
       },
       expired: {
-        title: "Plex Sign-In Expired",
+        title: "Plex sign-in expired",
         description: "The sign-in window timed out. Start again to retry.",
       },
       cancelled: {
-        title: "Plex Sign-In Cancelled",
+        title: "Plex sign-in cancelled",
         description: "The Plex window closed before you signed in",
       },
     },
@@ -250,7 +250,7 @@ export default function LoginPage() {
       }
 
       setLoginError(
-        error instanceof Error ? error.message : "Invalid credentials"
+        error instanceof Error ? error.message : "Invalid credentials",
       );
     } finally {
       setIsSubmitting(false);
@@ -259,11 +259,7 @@ export default function LoginPage() {
 
   // Show loader while checking auth
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <ThreeDotLoader />
-      </div>
-    );
+    return <PageLoader />;
   }
 
   // Show error if backend is unavailable
@@ -310,10 +306,7 @@ export default function LoginPage() {
         </CardHeader>
 
         <CardContent className="pb-6">
-          <form
-            onSubmit={(e) => void handleSubmit(e)}
-            className="space-y-4"
-          >
+          <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4">
             {/* Username/Email */}
             <div className="space-y-2">
               <label
@@ -420,7 +413,7 @@ export default function LoginPage() {
               className="w-full mt-2"
               size="lg"
             >
-              {isSubmitting ? "Signing in..." : "Sign In"}
+              {isSubmitting ? "Signing in..." : "Sign in"}
             </Button>
           </form>
 

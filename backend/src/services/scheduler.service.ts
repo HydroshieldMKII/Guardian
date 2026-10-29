@@ -2,7 +2,10 @@ import { Injectable, OnModuleInit, Inject, forwardRef } from '@nestjs/common';
 import { Cron, SchedulerRegistry } from '@nestjs/schedule';
 import { CronJob } from 'cron';
 import { PlexService } from '@/modules/plex/services/plex.service';
-import { ConfigService } from '@/modules/config/services/config.service';
+import {
+  ConfigService,
+  MIN_REFRESH_INTERVAL_SECONDS,
+} from '@/modules/config/services/config.service';
 import { DeviceTrackingService } from '@/modules/devices/services/device-tracking.service';
 import { UsersService } from '@/modules/users/services/users.service';
 import { AuthService } from '@/modules/auth/auth.service';
@@ -63,7 +66,12 @@ export class SchedulerService implements OnModuleInit {
       const refreshInterval = await this.configService.getSetting(
         'PLEXGUARD_REFRESH_INTERVAL',
       );
-      const intervalSeconds = refreshInterval || 10;
+      const intervalSeconds = Math.max(
+        Number.isInteger(refreshInterval) && refreshInterval
+          ? refreshInterval
+          : 10,
+        MIN_REFRESH_INTERVAL_SECONDS,
+      );
 
       // Convert seconds to cron expression
       const cronExpression = this.secondsToCronExpression(intervalSeconds);

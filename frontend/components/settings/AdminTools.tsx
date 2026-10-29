@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { toneButton } from "@/components/ui/entity";
-import { ActionRow, SettingsCard } from "./settings-ui";
+import { ActionRow, toneButton } from "@/components/ui/entity";
+import { SettingsCard } from "./settings-ui";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import { apiClient } from "@/lib/api";
@@ -61,7 +61,7 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
     if (resetSuccess) {
       localStorage.removeItem("guardianResetSuccess");
       toast({
-        title: "Factory Reset Complete",
+        title: "Factory reset complete",
         description: "Everything is back to its default settings.",
         variant: "success",
       });
@@ -72,7 +72,7 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
     if (typeof password !== "string" || password === "") {
       setPendingAction({
         type: "resetStreamCounts",
-        title: "Reset Stream Counts",
+        title: "Reset stream counts",
         description:
           "Enter your password to reset every device's stream count.",
         isDangerous: false,
@@ -87,7 +87,7 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
       await apiClient.resetStreamCounts(password);
 
       toast({
-        title: "Stream Counts Reset",
+        title: "Stream counts reset",
         description: "Every device's stream count is back to zero.",
         variant: "success",
       });
@@ -112,7 +112,7 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
     if (typeof password !== "string" || password === "") {
       setPendingAction({
         type: "clearSessionHistory",
-        title: "Clear Session History",
+        title: "Clear session history",
         description:
           "Enter your password to permanently delete every session history record.",
         isDangerous: true,
@@ -127,7 +127,7 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
       await apiClient.clearSessionHistory(password);
 
       toast({
-        title: "Session History Cleared",
+        title: "Session history cleared",
         description: "Every session history record has been deleted.",
         variant: "success",
       });
@@ -152,7 +152,7 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
     if (typeof password !== "string" || password === "") {
       setPendingAction({
         type: "deleteAllDevices",
-        title: "Delete All Devices",
+        title: "Delete all devices",
         description:
           "Enter your password to permanently delete every device. Each one has to be approved again the next time it connects.",
         isDangerous: true,
@@ -167,7 +167,7 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
       await apiClient.deleteAllDevices(password);
 
       toast({
-        title: "All Devices Deleted",
+        title: "All devices deleted",
         description:
           "Every device is gone. They reappear as pending the next time they connect.",
         variant: "success",
@@ -194,7 +194,7 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
     if (typeof password !== "string" || password === "") {
       setPendingAction({
         type: "resetDatabase",
-        title: "Factory Reset",
+        title: "Factory reset",
         description:
           "Enter your password to erase all of your data and restore the default settings.",
         isDangerous: true,
@@ -271,7 +271,7 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
       document.body.removeChild(a);
 
       toast({
-        title: "Settings Exported",
+        title: "Settings exported",
         description:
           "Your settings, user preferences and policies were downloaded",
         variant: "success",
@@ -279,7 +279,7 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
     } catch (error) {
       console.error("Export error:", error);
       toast({
-        title: "Export Failed",
+        title: "Export failed",
         description: "Failed to export your settings",
         variant: "destructive",
       });
@@ -318,7 +318,7 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
         void importDatabase(file);
       } catch {
         toast({
-          title: "Invalid File",
+          title: "Invalid file",
           description: "Choose an exported .json settings file",
           variant: "destructive",
         });
@@ -339,7 +339,7 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
       await apiClient.importDatabase(formData);
 
       toast({
-        title: "Settings Imported",
+        title: "Settings imported",
         description: "Applying new settings...",
         variant: "success",
       });
@@ -354,7 +354,7 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
     } catch (error) {
       console.error("Import error:", error);
       toast({
-        title: "Import Failed",
+        title: "Import failed",
         description:
           error instanceof Error ? error.message : "Failed to import settings",
         variant: "destructive",
@@ -387,7 +387,7 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
         description="Routine clean-up that leaves your devices and users in place."
       >
         <ActionRow
-          title="Reset Stream Counts"
+          title="Reset stream counts"
           description="Set every device's stream count back to zero. Nothing else about the device changes."
           action={
             <Button
@@ -398,13 +398,13 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
               className="w-full sm:w-auto"
             >
               {resettingStreamCounts && spinner}
-              {resettingStreamCounts ? "Resetting..." : "Reset Stream Counts"}
+              {resettingStreamCounts ? "Resetting..." : "Reset stream counts"}
             </Button>
           }
         />
 
         <ActionRow
-          title="Clear Session History"
+          title="Clear session history"
           description="Permanently delete every session history record. Devices, users and settings are left untouched."
           action={
             <Button
@@ -415,18 +415,18 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
               className="w-full sm:w-auto"
             >
               {clearingSessionHistory && spinner}
-              {clearingSessionHistory ? "Clearing..." : "Clear Session History"}
+              {clearingSessionHistory ? "Clearing..." : "Clear session history"}
             </Button>
           }
         />
       </SettingsCard>
 
       <SettingsCard
-        title="Backup & Restore"
+        title="Backup & restore"
         description="Save your settings, user preferences and policies to a file, or load them back."
       >
         <ActionRow
-          title="Export Settings"
+          title="Export settings"
           description="Download your settings, user preferences and policies as a file. Devices and session history are not included."
           action={
             <Button
@@ -437,13 +437,13 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
               className="w-full sm:w-auto"
             >
               {exportingDatabase && spinner}
-              {exportingDatabase ? "Exporting..." : "Export Settings"}
+              {exportingDatabase ? "Exporting..." : "Export settings"}
             </Button>
           }
         />
 
         <ActionRow
-          title="Import Settings"
+          title="Import settings"
           description="Load settings, user preferences and policies from a file you exported earlier. This overwrites what you have now."
           action={
             <>
@@ -465,7 +465,7 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
                 >
                   <span>
                     {importingDatabase && spinner}
-                    {importingDatabase ? "Importing..." : "Import Settings"}
+                    {importingDatabase ? "Importing..." : "Import settings"}
                   </span>
                 </Button>
               </label>
@@ -475,12 +475,12 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
       </SettingsCard>
 
       <SettingsCard
-        title="Dangerous Operations"
+        title="Dangerous operations"
         description="Nothing here can be undone."
       >
         <ActionRow
           tone="danger"
-          title="Delete All Devices"
+          title="Delete all devices"
           description="Permanently delete every device, along with its session history and notifications. Users and application settings are kept, and every device has to be approved again the next time it connects."
           action={
             <Button
@@ -491,14 +491,14 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
               className={`w-full sm:w-auto ${toneButton("danger")}`}
             >
               {deletingAllDevices && spinner}
-              {deletingAllDevices ? "Deleting..." : "Delete All Devices"}
+              {deletingAllDevices ? "Deleting..." : "Delete all devices"}
             </Button>
           }
         />
 
         <ActionRow
           tone="danger"
-          title="Factory Reset"
+          title="Factory reset"
           description="Permanently delete everything: settings, devices, user preferences, session history and notifications. Everything restarts as a fresh install."
           action={
             <Button
@@ -509,7 +509,7 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
               className={`w-full sm:w-auto ${toneButton("danger")}`}
             >
               {resettingDatabase && spinner}
-              {resettingDatabase ? "Resetting..." : "Factory Reset"}
+              {resettingDatabase ? "Resetting..." : "Factory reset"}
             </Button>
           }
         />
@@ -519,9 +519,9 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
         isOpen={showResetStreamCountsModal}
         onClose={() => setShowResetStreamCountsModal(false)}
         onConfirm={() => void handleResetStreamCounts()}
-        title="Reset Stream Counts"
+        title="Reset stream counts"
         description="Every device's stream count goes back to zero. The devices themselves are kept."
-        confirmText="Reset Stream Counts"
+        confirmText="Reset stream counts"
         cancelText="Cancel"
         variant="default"
       />
@@ -530,9 +530,9 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
         isOpen={showClearSessionHistoryModal}
         onClose={() => setShowClearSessionHistoryModal(false)}
         onConfirm={() => void handleClearSessionHistory()}
-        title="Clear Session History"
+        title="Clear session history"
         description="Every session history record is deleted for good, for every user. Devices, users and settings are left untouched."
-        confirmText="Clear Session History"
+        confirmText="Clear session history"
         cancelText="Cancel"
         variant="destructive"
       />
@@ -541,9 +541,9 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
         isOpen={showDeleteAllDevicesModal}
         onClose={() => setShowDeleteAllDevicesModal(false)}
         onConfirm={() => void handleDeleteAllDevices()}
-        title="Delete All Devices"
+        title="Delete all devices"
         description="Every device is deleted for good, along with its session history and notifications. Each one reappears as pending the next time it connects, and per-device settings are lost."
-        confirmText="Delete All Devices"
+        confirmText="Delete all devices"
         cancelText="Cancel"
         variant="destructive"
       />
@@ -552,7 +552,7 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
         isOpen={showResetDatabaseModal}
         onClose={() => setShowResetDatabaseModal(false)}
         onConfirm={() => void handleResetDatabase()}
-        title="Factory Reset"
+        title="Factory reset"
         description="Everything is deleted for good: settings, devices, users and session history. It all restarts as a fresh install."
         confirmText="Yes, Wipe All Data"
         cancelText="Cancel"
@@ -565,10 +565,10 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
           isOpen={showVersionMismatchModal}
           onClose={handleCancelImport}
           onConfirm={handleProceedWithImport}
-          title="Exported by a Different Version"
+          title="Exported by a different version"
           description={`The import file was created with version ${versionMismatchInfo.importVersion}, but you are currently running version ${versionMismatchInfo.currentVersion}. Importing data from a different version may cause compatibility issues. Do you want to proceed anyway?`}
           confirmText="Proceed with Import"
-          cancelText="Cancel Import"
+          cancelText="Cancel import"
           variant="destructive"
         />
       )}
@@ -581,7 +581,7 @@ export function AdminTools({ onSettingsRefresh }: AdminToolsProps) {
           setPendingAction(null);
         }}
         onConfirm={(password) => void handlePasswordConfirmation(password)}
-        title={pendingAction?.title || "Confirm Action"}
+        title={pendingAction?.title || "Confirm action"}
         description={
           pendingAction?.description ||
           "Please enter your password to continue."

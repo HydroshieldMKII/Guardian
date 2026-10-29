@@ -99,6 +99,116 @@ beforeEach(() => {
 });
 
 describe("StreamsList", () => {
+  describe("layout", () => {
+    const keysIn = (column: HTMLElement) =>
+      Array.from(column.querySelectorAll("span"))
+        .map((span) => span.textContent)
+        .filter((text) => text?.startsWith("card:"));
+
+    const withWidth = (width: number) => {
+      const original = window.innerWidth;
+      window.innerWidth = width;
+      return () => {
+        window.innerWidth = original;
+      };
+    };
+
+    beforeEach(() => {
+      streams = ["a", "b", "c", "d", "e"].map((key) =>
+        session({ sessionKey: key }),
+      );
+    });
+
+    it("splits wide screens into two columns that grow on their own", () => {
+      const restore = withWidth(1440);
+      render(<StreamsList />);
+
+      const [left, right] = screen.getAllByTestId("stream-column");
+      expect(keysIn(left)).toEqual(["card:a", "card:c", "card:e"]);
+      expect(keysIn(right)).toEqual(["card:b", "card:d"]);
+      restore();
+    });
+
+    it("keeps cards in their column when a stream ends or starts", () => {
+      const restore = withWidth(1440);
+      const { rerender } = render(<StreamsList />);
+
+      streams = ["b", "c", "d", "e", "f"].map((key) =>
+        session({ sessionKey: key }),
+      );
+      rerender(<StreamsList />);
+
+      const [left, right] = screen.getAllByTestId("stream-column");
+      expect(keysIn(left)).toEqual(["card:c", "card:e", "card:f"]);
+      expect(keysIn(right)).toEqual(["card:b", "card:d"]);
+      restore();
+    });
+
+    it("keeps the open card in place when the columns rebalance", async () => {
+      const restore = withWidth(1440);
+      const { rerender } = render(<StreamsList />);
+      await userEvent.click(screen.getByRole("button", { name: "toggle e" }));
+
+      streams = ["a", "c", "e"].map((key) => session({ sessionKey: key }));
+      rerender(<StreamsList />);
+
+      const [left, right] = screen.getAllByTestId("stream-column");
+      expect(keysIn(left)).toEqual(["card:a", "card:e"]);
+      expect(keysIn(right)).toEqual(["card:c"]);
+      restore();
+    });
+
+    it("spreads search results across both columns", async () => {
+      const restore = withWidth(1440);
+      streams = ["a", "b", "c", "d"].map((key) =>
+        session({ sessionKey: key, title: key === "b" ? "Other" : "Match" }),
+      );
+      render(<StreamsList />);
+
+      await userEvent.type(
+        screen.getByRole("searchbox", {
+          name: "Search by user, device, title or app",
+        }),
+        "match",
+      );
+
+      const [left, right] = screen.getAllByTestId("stream-column");
+      expect(keysIn(left)).toEqual(["card:a", "card:d"]);
+      expect(keysIn(right)).toEqual(["card:c"]);
+      restore();
+    });
+
+    it("opens only the clicked card when sessions have no key", async () => {
+      streams = [
+        session({ sessionKey: undefined, title: "First" }),
+        session({ sessionKey: undefined, title: "Second" }),
+      ];
+      render(<StreamsList />);
+
+      await userEvent.click(screen.getAllByText("toggle undefined")[1]);
+
+      expect(
+        screen.getAllByText(/^expanded:/).map((node) => node.textContent),
+      ).toEqual(["expanded:false", "expanded:true"]);
+    });
+
+    it("keeps one column in reading order on narrower screens", () => {
+      const restore = withWidth(800);
+      render(<StreamsList />);
+
+      const columns = screen.getAllByTestId("stream-column");
+      expect(columns).toHaveLength(1);
+      expect(keysIn(columns[0])).toEqual([
+        "card:a",
+        "card:b",
+        "card:c",
+        "card:d",
+        "card:e",
+      ]);
+      restore();
+    });
+  });
+
   describe("where its data comes from", () => {
     it("fetches when no sessions are supplied", () => {
       render(<StreamsList />);
@@ -139,12 +249,10 @@ describe("StreamsList", () => {
       const user = userEvent.setup();
       render(<StreamsList onRefresh={onRefresh} />);
 
-      expect(
-        screen.getByText("Cannot reach the server"),
-      ).toBeInTheDocument();
+      expect(screen.getByText("Cannot reach the server")).toBeInTheDocument();
       expect(screen.getByText("backend unreachable")).toBeInTheDocument();
 
-      await user.click(screen.getByRole("button", { name: "Try Again" }));
+      await user.click(screen.getByRole("button", { name: "Try again" }));
       expect(onRefresh).toHaveBeenCalled();
     });
 
@@ -157,60 +265,28 @@ describe("StreamsList", () => {
     });
   });
 
-  describe("the two-column layout", () => {
-    const placeholders = (container: HTMLElement) =>
-      container.querySelectorAll("[aria-hidden].border-dashed");
+  describe("the page header", () => {
+    it("names the page", () => {
+      render(<StreamsList />);
+      expect(
+        screen.getByRole("heading", { level: 1, name: "Streams" }),
+      ).toBeInTheDocument();
+    });
 
-    it("fills the last row when the stream count is odd", () => {
+    it("offers no live toggle", () => {
+      render(<StreamsList />);
+      expect(screen.queryByRole("button", { name: /Live|Manual/ })).toBeNull();
+    });
+  });
+
+  describe("the grid", () => {
+    it("never pads an odd count with a placeholder card", () => {
       streams = [session({ sessionKey: "s-1" })];
       const { container } = render(<StreamsList />);
 
-      expect(placeholders(container)).toHaveLength(1);
-    });
-
-    it("adds nothing when the rows are already full", () => {
-      streams = [
-        session({ sessionKey: "s-1" }),
-        session({ sessionKey: "s-2" }),
-      ];
-      const { container } = render(<StreamsList />);
-
-      expect(placeholders(container)).toHaveLength(0);
-    });
-
-    it("fills the last row of a longer odd list", () => {
-      streams = [
-        session({ sessionKey: "s-1" }),
-        session({ sessionKey: "s-2" }),
-        session({ sessionKey: "s-3" }),
-      ];
-      const { container } = render(<StreamsList />);
-
-      expect(placeholders(container)).toHaveLength(1);
-    });
-
-    it("counts the filtered streams, not every stream", async () => {
-      const user = userEvent.setup();
-      streams = [
-        session({ sessionKey: "s-1", title: "Arrival" }),
-        session({ sessionKey: "s-2", title: "Severance" }),
-      ];
-      const { container } = render(<StreamsList />);
-
-      await user.type(
-        screen.getByPlaceholderText(/Search by user, device, title or app/),
-        "Arrival",
-      );
-
-      await waitFor(() => expect(placeholders(container)).toHaveLength(1));
-    });
-
-    it("keeps the filler out of the one-column layout", () => {
-      streams = [session({ sessionKey: "s-1" })];
-      const { container } = render(<StreamsList />);
-
-      expect(placeholders(container)[0].className).toContain("hidden");
-      expect(placeholders(container)[0].className).toContain("xl:block");
+      expect(
+        container.querySelectorAll("[aria-hidden].border-dashed"),
+      ).toHaveLength(0);
     });
   });
 
@@ -307,29 +383,6 @@ describe("StreamsList", () => {
   });
 
   describe("the toolbar", () => {
-    it("reports and toggles live mode", async () => {
-      const onAutoRefreshChange = jest.fn();
-      const user = userEvent.setup();
-      render(
-        <StreamsList autoRefresh onAutoRefreshChange={onAutoRefreshChange} />,
-      );
-
-      expect(screen.getByRole("button", { name: /Live/ })).toBeInTheDocument();
-      await user.click(screen.getByRole("button", { name: /Live/ }));
-
-      expect(onAutoRefreshChange).toHaveBeenCalledWith(false);
-    });
-
-    it("reports and toggles manual mode", async () => {
-      const onAutoRefreshChange = jest.fn();
-      const user = userEvent.setup();
-      render(<StreamsList onAutoRefreshChange={onAutoRefreshChange} />);
-
-      await user.click(screen.getByRole("button", { name: /Manual/ }));
-
-      expect(onAutoRefreshChange).toHaveBeenCalledWith(true);
-    });
-
     it("keeps refresh disabled until the request actually settles", async () => {
       let finish: () => void = () => {};
       const onRefresh = jest.fn(
@@ -380,7 +433,6 @@ describe("StreamsList", () => {
       render(<StreamsList />);
 
       await user.click(screen.getByRole("button", { name: /Refresh/ }));
-      await user.click(screen.getByRole("button", { name: /Manual/ }));
 
       expect(screen.getByText("No active streams")).toBeInTheDocument();
     });

@@ -82,6 +82,7 @@ export class DatabaseService {
     importData: ImportPayload | null | undefined,
     currentAppVersion: string,
     compareVersions: (v1: string, v2: string) => number,
+    validateSetting: (key: string, value: string) => void,
   ): Promise<ImportResult> {
     try {
       this.logger.log('Starting database import...');
@@ -106,6 +107,7 @@ export class DatabaseService {
           data.settings,
           currentAppVersion,
           compareVersions,
+          validateSetting,
         );
         imported += settingsResult.imported;
         skipped += settingsResult.skipped;
@@ -142,6 +144,7 @@ export class DatabaseService {
     settings: ImportedSetting[],
     currentAppVersion: string,
     compareVersions: (v1: string, v2: string) => number,
+    validateSetting: (key: string, value: string) => void,
   ): Promise<ImportResult> {
     let imported = 0;
     let skipped = 0;
@@ -172,6 +175,7 @@ export class DatabaseService {
         );
 
         if (existing) {
+          validateSetting(setting.key, setting.value);
           existing.value = setting.value;
           await this.settingsRepository.save(existing);
           imported++;

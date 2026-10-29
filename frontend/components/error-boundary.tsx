@@ -61,7 +61,7 @@ export class ErrorBoundary extends Component<Props, State> {
               className="w-full"
             >
               <RefreshCw className="w-4 h-4 mr-2" />
-              Try Again
+              Try again
             </Button>
           </CardContent>
         </Card>

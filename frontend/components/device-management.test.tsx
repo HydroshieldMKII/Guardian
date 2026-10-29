@@ -1,4 +1,11 @@
-import { act, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { AppSetting, UserDevice, UserPreference } from "@/types";
 import { DeviceManagement } from "@/components/device-management";
@@ -49,13 +56,35 @@ jest.mock("@/lib/api", () => ({
   },
 }));
 
-jest.mock("@/components/device-management/UserGroupCard", () => ({
-  UserGroupCard: ({
+const READ_AT = "2026-03-01T00:00:00Z";
+
+type DetailProps = {
+  group: { user: { userId: string }; devices: UserDevice[] };
+  timeRules?: { id: number }[];
+  updatingUserPreference?: string | null;
+  onBack: () => void;
+  onUpdateUserPreference: (id: string, block: boolean | null) => void;
+  onUpdateUserIPPolicy: (id: string, updates: unknown) => void;
+  onToggleUserVisibility: (id: string) => void;
+  onShowHistory: (id: string) => void;
+  onGrantUserTemporaryAccess: (id: string) => void;
+  onShowTimePolicy: (id: string, deviceIdentifier?: string) => void;
+  onApprove: (d: UserDevice) => void;
+  onReject: (d: UserDevice) => void;
+  onDelete: (d: UserDevice) => void;
+  onToggleApproval: (d: UserDevice) => void;
+  onRemoveTemporaryAccess: (d: UserDevice) => void;
+  onShowDetails: (d: UserDevice) => void;
+  onDeviceUpdate?: (d: UserDevice) => void;
+  deviceFocus?: { deviceIdentifier: string } | null;
+};
+
+jest.mock("@/components/device-management/UserDetail", () => ({
+  UserDetail: ({
     group,
-    isExpanded,
     timeRules,
     updatingUserPreference,
-    onToggleExpansion,
+    onBack,
     onUpdateUserPreference,
     onUpdateUserIPPolicy,
     onToggleUserVisibility,
@@ -68,34 +97,21 @@ jest.mock("@/components/device-management/UserGroupCard", () => ({
     onToggleApproval,
     onRemoveTemporaryAccess,
     onShowDetails,
-  }: Record<string, never> & {
-    group: { user: { userId: string }; devices: UserDevice[] };
-    isExpanded: boolean;
-    timeRules?: { id: number }[];
-    updatingUserPreference?: string | null;
-    onToggleExpansion: (id: string) => void;
-    onUpdateUserPreference: (id: string, block: boolean | null) => void;
-    onUpdateUserIPPolicy: (id: string, updates: unknown) => void;
-    onToggleUserVisibility: (id: string) => void;
-    onShowHistory: (id: string) => void;
-    onGrantUserTemporaryAccess: (id: string) => void;
-    onShowTimePolicy: (id: string, deviceIdentifier?: string) => void;
-    onApprove: (d: UserDevice) => void;
-    onReject: (d: UserDevice) => void;
-    onDelete: (d: UserDevice) => void;
-    onToggleApproval: (d: UserDevice) => void;
-    onRemoveTemporaryAccess: (device: { id: number }) => void;
-    onShowDetails: (d: UserDevice) => void;
-  }) => {
+    onDeviceUpdate,
+    deviceFocus,
+  }: DetailProps) => {
     const id = group.user.userId;
     const device = group.devices[0];
     return (
       <div data-user-id={id}>
-        <span>{`group:${id}`}</span>
-        <span>{`expanded:${id}:${isExpanded}`}</span>
+        <span>{`detail:${id}`}</span>
         <span>{`rules:${id}:${timeRules?.length ?? "none"}`}</span>
         <span>{`updating:${id}:${updatingUserPreference ?? "none"}`}</span>
-        <button onClick={() => onToggleExpansion(id)}>{`toggle ${id}`}</button>
+        <span>{`focus:${id}:${deviceFocus?.deviceIdentifier ?? "none"}`}</span>
+        {group.devices.map((d) => (
+          <div key={d.id} data-device-identifier={d.deviceIdentifier} />
+        ))}
+        <button onClick={onBack}>{`back ${id}`}</button>
         <button onClick={() => onUpdateUserPreference(id, true)}>
           {`block ${id}`}
         </button>
@@ -126,6 +142,14 @@ jest.mock("@/components/device-management/UserGroupCard", () => ({
             <button onClick={() => onShowDetails(device)}>
               {`details ${id}`}
             </button>
+            <span>{`note:${id}:${device.requestNoteReadAt ?? "unread"}`}</span>
+            <button
+              onClick={() =>
+                onDeviceUpdate?.({ ...device, requestNoteReadAt: READ_AT })
+              }
+            >
+              {`read note ${id}`}
+            </button>
           </>
         )}
       </div>
@@ -140,15 +164,27 @@ jest.mock("@/components/device-management/DeviceDetailsModal", () => ({
     onClose,
     onSetPending,
     onRename,
+    onDeviceUpdate,
   }: {
     device: UserDevice | null;
     isOpen: boolean;
     onClose: () => void;
     onSetPending?: (id: number) => Promise<boolean>;
     onRename: (id: number, name: string) => void;
+    onDeviceUpdate?: (d: UserDevice) => void;
   }) => (
     <div>
       <span>{`details-modal:${isOpen}:${device?.id ?? "none"}`}</span>
+      <span>{`modal-note:${device?.requestNoteReadAt ?? "unread"}`}</span>
+      <span>{`modal-exclude:${device?.excludeFromConcurrentLimit ? "yes" : "no"}`}</span>
+      <button
+        onClick={() =>
+          device &&
+          onDeviceUpdate?.({ ...device, excludeFromConcurrentLimit: true })
+        }
+      >
+        exclude device
+      </button>
       <button onClick={onClose}>close details</button>
       <button onClick={() => void onSetPending?.(device?.id ?? 0)}>
         set pending
@@ -252,7 +288,7 @@ jest.mock("@/components/device-management/TimeRuleModal", () => ({
 const device = (overrides: Partial<UserDevice> = {}): UserDevice => ({
   id: 1,
   userId: "u-1",
-  username: "alice",
+  username: "alex",
   deviceIdentifier: "device-1",
   deviceName: "TV",
   devicePlatform: "Roku",
@@ -287,17 +323,19 @@ const devicesData = (all: UserDevice[]) => ({
   approved: all.filter((d) => d.status === "approved"),
 });
 
+type User = ReturnType<typeof userEvent.setup>;
+
 const renderPanel = async (
   props: {
     devices?: UserDevice[];
     users?: UserPreference[];
     settings?: AppSetting[];
     navigationTarget?: { userId: string; deviceIdentifier: string } | null;
-    autoRefresh?: boolean;
+    selectedUserId?: string | null;
+    onSelectUser?: (userId: string | null) => void;
   } = {},
 ) => {
   const onRefresh = jest.fn();
-  const onAutoRefreshChange = jest.fn();
   const onNavigationComplete = jest.fn();
   const view = render(
     <DeviceManagement
@@ -305,20 +343,43 @@ const renderPanel = async (
       usersData={props.users ?? [preference()]}
       settingsData={props.settings}
       onRefresh={onRefresh}
-      autoRefresh={props.autoRefresh}
-      onAutoRefreshChange={onAutoRefreshChange}
       navigationTarget={props.navigationTarget}
       onNavigationComplete={onNavigationComplete}
+      selectedUserId={props.selectedUserId}
+      onSelectUser={props.onSelectUser}
     />,
   );
   await act(async () => {});
   return {
     ...view,
     onRefresh,
-    onAutoRefreshChange,
     onNavigationComplete,
     user: userEvent.setup({ pointerEventsCheck: 0 }),
   };
+};
+
+const userList = () => {
+  const list = screen.getByRole("button", { name: "Hidden users" })
+    .parentElement?.parentElement;
+  if (!list) throw new Error("user list not rendered");
+  return list;
+};
+
+const listedUsers = () =>
+  within(userList())
+    .queryAllByRole("listitem")
+    .map((item) => item.querySelector("span.block")?.textContent);
+
+const openUser = async (user: User, name = "alex") => {
+  await user.click(within(userList()).getByText(name));
+};
+
+const renderSelected = async (
+  props: Parameters<typeof renderPanel>[0] = {},
+) => {
+  const view = await renderPanel(props);
+  await openUser(view.user);
+  return view;
 };
 
 let consoleError: jest.SpyInstance;
@@ -336,7 +397,7 @@ beforeEach(() => {
   renameDevice.mockResolvedValue(true);
   setPendingDevice.mockResolvedValue(true);
   grantTemporaryAccess.mockResolvedValue(true);
-  grantBatchTemporaryAccess.mockResolvedValue(true);
+  grantBatchTemporaryAccess.mockResolvedValue({ success: true, results: [] });
   revokeTemporaryAccess.mockResolvedValue(true);
   updateUserPreference.mockResolvedValue(true);
   updateUserIPPolicy.mockResolvedValue(true);
@@ -346,45 +407,85 @@ beforeEach(() => {
 
 afterEach(() => consoleError.mockRestore());
 
-describe("DeviceManagement grouping", () => {
-  it("groups devices by user", async () => {
-    await renderPanel({
-      devices: [
-        device({ id: 1, userId: "u-1" }),
-        device({ id: 2, userId: "u-2", username: "bob" }),
-      ],
-      users: [preference({ userId: "u-1" }), preference({ userId: "u-2" })],
-    });
+const twoUsers = {
+  devices: [
+    device({ id: 1, userId: "u-1", username: "alex", deviceName: "TV" }),
+    device({
+      id: 2,
+      userId: "u-2",
+      username: "sam",
+      deviceIdentifier: "device-2",
+      deviceName: "Phone",
+      devicePlatform: "Android",
+      deviceProduct: "Plexamp",
+      status: "rejected",
+      sessionCount: 9,
+    }),
+  ],
+  users: [preference({ userId: "u-1" }), preference({ id: 2, userId: "u-2" })],
+};
 
-    expect(screen.getByText("group:u-1")).toBeInTheDocument();
-    expect(screen.getByText("group:u-2")).toBeInTheDocument();
+describe("DeviceManagement page header", () => {
+  it("titles the page", async () => {
+    await renderPanel(twoUsers);
+
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
+      "Users",
+    );
   });
 
-  it("keeps PlexAmp devices out of the pending count", async () => {
+  it("shows skeletons before any data arrives", () => {
+    const { container } = render(<DeviceManagement />);
+
+    expect(container.querySelector(".animate-pulse")).not.toBeNull();
+  });
+});
+
+describe("DeviceManagement grouping", () => {
+  it("lists one row per user", async () => {
+    await renderPanel(twoUsers);
+
+    expect(listedUsers()).toEqual(expect.arrayContaining(["alex", "sam"]));
+    expect(listedUsers()).toHaveLength(2);
+  });
+
+  it("keeps Plexamp devices out of the waiting count", async () => {
     await renderPanel({
       devices: [
         device({ id: 1, status: "pending" }),
-        device({ id: 2, status: "pending", deviceProduct: "Plexamp" }),
+        device({
+          id: 2,
+          status: "pending",
+          deviceIdentifier: "d-2",
+          deviceProduct: "Plexamp",
+        }),
       ],
     });
 
-    expect(screen.getByText("group:u-1")).toBeInTheDocument();
+    expect(
+      screen.getByText("Approval queue").closest("button"),
+    ).toHaveTextContent(/1 waiting$/);
   });
 
-  it("hides users whose preference marks them hidden", async () => {
+  it("leaves out users whose preference marks them hidden", async () => {
     await renderPanel({
       devices: [device({ userId: "u-1" })],
       users: [preference({ userId: "u-1", hidden: true })],
     });
 
-    expect(screen.queryByText("group:u-1")).toBeNull();
+    expect(listedUsers()).toEqual([]);
+    expect(
+      screen.getByText(
+        "No users yet. They appear here the first time they stream.",
+      ),
+    ).toBeInTheDocument();
   });
 
-  it("hands each group the user's time rules for per-device badges", async () => {
+  it("hands the selected user's time rules to the detail pane", async () => {
     getAllTimeRules.mockResolvedValue([
       { id: 1, userId: "u-1", enabled: true, dayOfWeek: 1 },
     ]);
-    await renderPanel();
+    await renderSelected();
 
     await waitFor(() =>
       expect(screen.getByText("rules:u-1:1")).toBeInTheDocument(),
@@ -404,39 +505,19 @@ describe("DeviceManagement grouping", () => {
   });
 });
 
-describe("DeviceManagement search and sort", () => {
-  const twoUsers = {
-    devices: [
-      device({ id: 1, userId: "u-1", username: "alice", deviceName: "TV" }),
-      device({
-        id: 2,
-        userId: "u-2",
-        username: "bob",
-        deviceName: "Phone",
-        devicePlatform: "Android",
-        deviceProduct: "Plexamp",
-        sessionCount: 9,
-      }),
-    ],
-    users: [preference({ userId: "u-1" }), preference({ userId: "u-2" })],
-  };
-
+describe("DeviceManagement user list", () => {
   it.each([
-    ["bob", "u-2"],
-    ["Phone", "u-2"],
-    ["Android", "u-2"],
-    ["Plexamp", "u-2"],
-    ["alice", "u-1"],
+    ["sam", "sam"],
+    ["Phone", "sam"],
+    ["Android", "sam"],
+    ["Plexamp", "sam"],
+    ["alex", "alex"],
   ])("matches %p", async (term, expected) => {
     const { user } = await renderPanel(twoUsers);
 
-    await user.type(
-      screen.getByPlaceholderText("Search by user or device"),
-      term,
-    );
+    await user.type(screen.getByRole("searchbox"), term);
 
-    expect(screen.getByText(`group:${expected}`)).toBeInTheDocument();
-    expect(screen.getByText(/Showing 1 of 2/)).toBeInTheDocument();
+    await waitFor(() => expect(listedUsers()).toEqual([expected]));
   });
 
   it("says when nothing matches", async () => {
@@ -447,7 +528,7 @@ describe("DeviceManagement search and sort", () => {
       "zzz",
     );
 
-    expect(screen.getByText(/Showing 0 of 2/)).toBeInTheDocument();
+    expect(await screen.findByText("No users match")).toBeInTheDocument();
   });
 
   it("falls back to the user id when there is no username", async () => {
@@ -456,58 +537,200 @@ describe("DeviceManagement search and sort", () => {
       users: [preference({ userId: "u-42" })],
     });
 
-    await user.type(
-      screen.getByPlaceholderText("Search by user or device"),
-      "u-42",
-    );
+    await user.type(screen.getByRole("searchbox"), "u-42");
 
-    expect(screen.getByText("group:u-42")).toBeInTheDocument();
+    expect(listedUsers()).toEqual(["u-42"]);
   });
-
-  const openSortMenu = async (user: ReturnType<typeof userEvent.setup>) =>
-    user.click(document.querySelector('[aria-haspopup="menu"]') as HTMLElement);
 
   it.each([
-    "Device Count",
-    "Pending Count",
-    "Last Stream",
-    "Stream Count",
-    "Username",
-  ])("sorts by %s", async (label) => {
+    [/^All/, ["alex", "sam"]],
+    [/^Waiting/, ["alex"]],
+    [/^Blocked/, ["sam"]],
+  ])("filters with the %s chip", async (chip, expected) => {
     const { user } = await renderPanel(twoUsers);
 
-    await openSortMenu(user);
-    const items = await screen.findAllByText(label);
-    await user.click(items[items.length - 1]);
+    await user.click(screen.getByRole("button", { name: chip }));
 
-    expect(screen.getAllByText(/^group:/).length).toBe(2);
+    expect(screen.getByRole("button", { name: chip })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(listedUsers().sort()).toEqual(expected);
   });
 
-  it("reverses the sort order", async () => {
-    const { user } = await renderPanel(twoUsers);
+  it("labels the chips without counts", async () => {
+    await renderPanel(twoUsers);
 
-    expect(screen.getByText("Descending")).toBeInTheDocument();
-
-    await user.click(screen.getByText("Descending").closest("button")!);
-
-    expect(screen.getByText("Ascending")).toBeInTheDocument();
+    for (const name of ["All", "Waiting", "Blocked"]) {
+      expect(screen.getByRole("button", { name })).toBeInTheDocument();
+    }
   });
 
-  it("remembers the sort preference", async () => {
+  it("says no users match when a chip filters everyone out", async () => {
+    const { user } = await renderPanel();
+
+    await user.click(screen.getByRole("button", { name: /^Blocked/ }));
+
+    expect(screen.getByText("No users match")).toBeInTheDocument();
+  });
+
+  it.each([
+    ["Device count", "deviceCount"],
+    ["Pending count", "pendingCount"],
+    ["Last stream", "lastSeen"],
+    ["Stream count", "streamCount"],
+    ["Username", "username"],
+  ])("sorts by %s and remembers it", async (label, stored) => {
     const { user } = await renderPanel(twoUsers);
 
-    await openSortMenu(user);
-    await user.click(await screen.findByText("Device Count"));
+    await user.click(screen.getByRole("button", { name: "Sort users" }));
+    await user.click(await screen.findByRole("menuitem", { name: label }));
 
     await waitFor(() =>
-      expect(localStorage.getItem("guardian-unified-sort-by")).toContain(
-        "deviceCount",
-      ),
+      expect(localStorage.getItem("guardian-unified-sort-by")).toBe(stored),
+    );
+    expect(screen.getByRole("button", { name: "Sort users" })).toHaveAttribute(
+      "title",
+      `Sorted by ${label.toLowerCase()}`,
+    );
+  });
+
+  it("remembers the sort order", async () => {
+    const { user } = await renderPanel(twoUsers);
+    expect(localStorage.getItem("guardian-unified-sort-order")).toBe("desc");
+
+    await user.click(screen.getByRole("button", { name: "Sort users" }));
+    await user.click(
+      await screen.findByRole("menuitem", { name: "Ascending" }),
+    );
+
+    await waitFor(() =>
+      expect(localStorage.getItem("guardian-unified-sort-order")).toBe("asc"),
     );
   });
 });
 
-describe("DeviceManagement toolbar", () => {
+describe("DeviceManagement selection", () => {
+  it("shows the approval queue in both layouts until a user is picked", async () => {
+    await renderPanel();
+
+    expect(screen.getAllByText("Waiting for approval")).toHaveLength(2);
+    expect(screen.queryByText(/^detail:/)).toBeNull();
+  });
+
+  it("opens the user picked from the list", async () => {
+    const { user } = await renderPanel(twoUsers);
+
+    await openUser(user, "sam");
+
+    expect(screen.getByText("detail:u-2")).toBeInTheDocument();
+    expect(screen.queryByText("Waiting for approval")).toBeNull();
+    expect(
+      within(userList()).getByText("sam").closest("button"),
+    ).toHaveAttribute("aria-current", "true");
+  });
+
+  it("opens a user from the approval queue", async () => {
+    const { user } = await renderPanel();
+
+    await user.click(screen.getAllByTitle("Show in alex")[0]);
+
+    expect(screen.getByText("detail:u-1")).toBeInTheDocument();
+  });
+
+  it("asks before approving from the queue", async () => {
+    const { user } = await renderPanel();
+
+    await user.click(screen.getAllByRole("button", { name: "Approve" })[0]);
+    expect(screen.getByText("confirm:approve")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "do it" }));
+
+    await waitFor(() => expect(approveDevice).toHaveBeenCalledWith(1));
+  });
+
+  it("asks before rejecting from the queue", async () => {
+    const { user } = await renderPanel();
+
+    await user.click(screen.getAllByRole("button", { name: "Reject" })[0]);
+
+    expect(screen.getByText("confirm:reject")).toBeInTheDocument();
+  });
+
+  it("goes back to the queue", async () => {
+    const { user } = await renderSelected();
+
+    await user.click(screen.getByRole("button", { name: "back u-1" }));
+
+    expect(screen.queryByText("detail:u-1")).toBeNull();
+    expect(screen.getAllByText("Waiting for approval")).toHaveLength(2);
+  });
+
+  it("reports selection to a parent that controls it", async () => {
+    const onSelectUser = jest.fn();
+    const { user } = await renderPanel({
+      ...twoUsers,
+      selectedUserId: "u-1",
+      onSelectUser,
+    });
+    expect(screen.getByText("detail:u-1")).toBeInTheDocument();
+
+    await openUser(user, "sam");
+
+    expect(onSelectUser).toHaveBeenCalledWith("u-2");
+    expect(screen.getByText("detail:u-1")).toBeInTheDocument();
+  });
+
+  it("tells a controlling parent when the user goes back", async () => {
+    const onSelectUser = jest.fn();
+    const { user } = await renderPanel({ selectedUserId: "u-1", onSelectUser });
+
+    await user.click(screen.getByRole("button", { name: "back u-1" }));
+
+    expect(onSelectUser).toHaveBeenCalledWith(null);
+  });
+
+  it("explains when the selected user is not in the list", async () => {
+    const onSelectUser = jest.fn();
+    const { user } = await renderPanel({
+      selectedUserId: "u-missing",
+      onSelectUser,
+    });
+
+    expect(
+      screen.getByText("This user is not in the list"),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Back to all users" }));
+
+    expect(onSelectUser).toHaveBeenCalledWith(null);
+  });
+
+  it("shows the detail skeleton while a selected user loads", () => {
+    const { container } = render(<DeviceManagement selectedUserId="u-1" />);
+
+    expect(screen.queryByText("This user is not in the list")).toBeNull();
+    expect(container.querySelector(".h-64.animate-pulse")).not.toBeNull();
+  });
+});
+
+describe("DeviceManagement refresh controls", () => {
+  it("keeps the current time rules on screen while refreshing", async () => {
+    getAllTimeRules.mockResolvedValue([
+      { id: 1, userId: "u-1", enabled: true, dayOfWeek: 1 },
+    ]);
+    const { user, onRefresh } = await renderSelected();
+    await waitFor(() =>
+      expect(screen.getByText("rules:u-1:1")).toBeInTheDocument(),
+    );
+    onRefresh.mockReturnValue(new Promise(() => {}));
+
+    await user.click(screen.getByRole("button", { name: /Refresh/ }));
+
+    expect(onRefresh).toHaveBeenCalled();
+    expect(screen.getByText("rules:u-1:1")).toBeInTheDocument();
+  });
+
   it("refreshes", async () => {
     const { user, onRefresh } = await renderPanel();
 
@@ -528,46 +751,18 @@ describe("DeviceManagement toolbar", () => {
         expect.any(Error),
       ),
     );
-  });
-
-  it("toggles auto refresh", async () => {
-    const { user, onAutoRefreshChange } = await renderPanel({
-      autoRefresh: true,
-    });
-
-    await user.click(screen.getByRole("button", { name: /Live/ }));
-
-    expect(onAutoRefreshChange).toHaveBeenCalledWith(false);
-  });
-
-  it("expands and collapses a user", async () => {
-    const { user } = await renderPanel();
-    expect(screen.getByText("expanded:u-1:false")).toBeInTheDocument();
-
-    await user.click(screen.getByRole("button", { name: "toggle u-1" }));
-    expect(screen.getByText("expanded:u-1:true")).toBeInTheDocument();
-
-    await user.click(screen.getByRole("button", { name: "toggle u-1" }));
-    expect(screen.getByText("expanded:u-1:false")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Refresh/ })).toBeEnabled();
   });
 });
 
 describe("DeviceManagement device actions", () => {
-  const confirmAnd = async (
-    user: ReturnType<typeof userEvent.setup>,
-    trigger: string,
-  ) => {
-    await user.click(screen.getByRole("button", { name: trigger }));
-    await user.click(screen.getByRole("button", { name: "do it" }));
-  };
-
   it.each([
     ["approve u-1", "approve", () => approveDevice],
     ["reject u-1", "reject", () => rejectDevice],
     ["delete u-1", "delete", () => deleteDevice],
     ["switch u-1", "toggle", () => approveDevice],
   ] as const)("confirms then runs %s", async (trigger, action, getMock) => {
-    const { user } = await renderPanel();
+    const { user } = await renderSelected();
 
     await user.click(screen.getByRole("button", { name: trigger }));
     expect(screen.getByText(`confirm:${action}`)).toBeInTheDocument();
@@ -578,7 +773,7 @@ describe("DeviceManagement device actions", () => {
   });
 
   it("can be abandoned", async () => {
-    const { user } = await renderPanel();
+    const { user } = await renderSelected();
 
     await user.click(screen.getByRole("button", { name: "approve u-1" }));
     await user.click(screen.getByRole("button", { name: "never mind" }));
@@ -588,27 +783,38 @@ describe("DeviceManagement device actions", () => {
   });
 
   it("rejects an approved device through the toggle", async () => {
-    const { user } = await renderPanel({
+    const { user } = await renderSelected({
       devices: [device({ status: "approved" })],
     });
 
-    await confirmAnd(user, "switch u-1");
+    await user.click(screen.getByRole("button", { name: "switch u-1" }));
+    await user.click(screen.getByRole("button", { name: "do it" }));
 
     await waitFor(() => expect(rejectDevice).toHaveBeenCalledWith(1));
   });
 
   it("stays quiet when an action reports failure", async () => {
     approveDevice.mockResolvedValue(false);
-    const { user } = await renderPanel();
+    const { user } = await renderSelected();
 
-    await confirmAnd(user, "approve u-1");
+    await user.click(screen.getByRole("button", { name: "approve u-1" }));
+    await user.click(screen.getByRole("button", { name: "do it" }));
 
     await waitFor(() => expect(approveDevice).toHaveBeenCalled());
     expect(toast).not.toHaveBeenCalled();
   });
 
+  it("refreshes shortly after a successful action", async () => {
+    const { user, onRefresh } = await renderSelected();
+
+    await user.click(screen.getByRole("button", { name: "approve u-1" }));
+    await user.click(screen.getByRole("button", { name: "do it" }));
+
+    await waitFor(() => expect(onRefresh).toHaveBeenCalled());
+  });
+
   it("asks before removing temporary access", async () => {
-    const { user } = await renderPanel();
+    const { user } = await renderSelected();
 
     await user.click(screen.getByRole("button", { name: "revoke u-1" }));
 
@@ -623,7 +829,7 @@ describe("DeviceManagement device actions", () => {
   });
 
   it("leaves temporary access alone when the confirmation is dismissed", async () => {
-    const { user } = await renderPanel();
+    const { user } = await renderSelected();
 
     await user.click(screen.getByRole("button", { name: "revoke u-1" }));
     await user.click(screen.getByRole("button", { name: "never mind" }));
@@ -631,11 +837,22 @@ describe("DeviceManagement device actions", () => {
     expect(screen.queryByText(/^confirm:/)).toBeNull();
     expect(revokeTemporaryAccess).not.toHaveBeenCalled();
   });
+
+  it("reports a revoke failure", async () => {
+    revokeTemporaryAccess.mockResolvedValue(false);
+    const { user } = await renderSelected();
+
+    await user.click(screen.getByRole("button", { name: "revoke u-1" }));
+    await user.click(screen.getByRole("button", { name: "do it" }));
+
+    await waitFor(() => expect(revokeTemporaryAccess).toHaveBeenCalled());
+    expect(toast).not.toHaveBeenCalled();
+  });
 });
 
 describe("DeviceManagement details modal", () => {
   it("opens and closes", async () => {
-    const { user } = await renderPanel();
+    const { user } = await renderSelected();
     expect(screen.getByText("details-modal:false:none")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "details u-1" }));
@@ -646,6 +863,18 @@ describe("DeviceManagement details modal", () => {
   });
 
   it("renames a device", async () => {
+    const { user } = await renderSelected();
+
+    await user.click(screen.getByRole("button", { name: "details u-1" }));
+    await user.click(screen.getByRole("button", { name: "rename device" }));
+
+    await waitFor(() =>
+      expect(renameDevice).toHaveBeenCalledWith(1, "Renamed"),
+    );
+  });
+
+  it("reports a rename failure", async () => {
+    renameDevice.mockResolvedValue(false);
     const { user } = await renderPanel();
 
     await user.click(screen.getByRole("button", { name: "rename device" }));
@@ -655,30 +884,36 @@ describe("DeviceManagement details modal", () => {
     );
   });
 
-  it("sets a device back to pending", async () => {
-    const { user } = await renderPanel();
+  it("sets a device back to pending and closes the modal", async () => {
+    const { user } = await renderSelected();
 
     await user.click(screen.getByRole("button", { name: "details u-1" }));
     await user.click(screen.getByRole("button", { name: "set pending" }));
 
     await waitFor(() => expect(setPendingDevice).toHaveBeenCalledWith(1));
+    await waitFor(() =>
+      expect(screen.getByText("details-modal:false:none")).toBeInTheDocument(),
+    );
   });
 });
 
 describe("DeviceManagement user actions", () => {
   it("updates a default policy", async () => {
-    const { user } = await renderPanel();
+    const { user } = await renderSelected();
 
     await user.click(screen.getByRole("button", { name: "block u-1" }));
 
     await waitFor(() =>
       expect(updateUserPreference).toHaveBeenCalledWith("u-1", true),
     );
+    expect(toast).toHaveBeenCalledWith(
+      expect.objectContaining({ title: "Default device policy updated" }),
+    );
   });
 
   it("keeps the saving flag up until the refreshed data lands", async () => {
     let release: () => void = () => {};
-    const { user, onRefresh } = await renderPanel();
+    const { user, onRefresh } = await renderSelected();
     onRefresh.mockImplementation(
       () =>
         new Promise<void>((resolve) => {
@@ -700,7 +935,7 @@ describe("DeviceManagement user actions", () => {
 
   it("drops the saving flag when the save itself fails", async () => {
     updateUserPreference.mockResolvedValue(false);
-    const { user, onRefresh } = await renderPanel();
+    const { user, onRefresh } = await renderSelected();
 
     await user.click(screen.getByRole("button", { name: "block u-1" }));
 
@@ -708,10 +943,13 @@ describe("DeviceManagement user actions", () => {
       expect(screen.getByText("updating:u-1:none")).toBeInTheDocument(),
     );
     expect(onRefresh).not.toHaveBeenCalled();
+    expect(toast).toHaveBeenCalledWith(
+      expect.objectContaining({ title: "Update failed" }),
+    );
   });
 
-  it("updates an IP policy", async () => {
-    const { user } = await renderPanel();
+  it("updates an IP policy and refreshes", async () => {
+    const { user, onRefresh } = await renderSelected();
 
     await user.click(screen.getByRole("button", { name: "ip u-1" }));
 
@@ -720,54 +958,52 @@ describe("DeviceManagement user actions", () => {
         networkPolicy: "lan",
       }),
     );
-  });
-
-  it("asks before hiding a user", async () => {
-    const { user } = await renderPanel();
-
-    await user.click(screen.getByRole("button", { name: "hide u-1" }));
-
-    expect(toggleUserVisibility).not.toHaveBeenCalled();
-  });
-
-  it("hides the user once the warning is confirmed", async () => {
-    const { user } = await renderPanel();
-
-    await user.click(screen.getByRole("button", { name: "hide u-1" }));
-    await user.click(await screen.findByRole("button", { name: /Hide User/ }));
-
-    await waitFor(() =>
-      expect(toggleUserVisibility).toHaveBeenCalledWith("u-1"),
+    expect(onRefresh).toHaveBeenCalled();
+    expect(toast).toHaveBeenCalledWith(
+      expect.objectContaining({ title: "IP access updated" }),
     );
   });
 
-  it("opens the history modal", async () => {
-    const { user } = await renderPanel();
+  it("reports a failed IP policy update", async () => {
+    updateUserIPPolicy.mockResolvedValue(false);
+    const { user } = await renderSelected();
 
-    await user.click(screen.getByRole("button", { name: "history u-1" }));
+    await user.click(screen.getByRole("button", { name: "ip u-1" }));
 
-    expect(screen.getByText("history-modal:true:u-1")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(toast).toHaveBeenCalledWith(
+        expect.objectContaining({
+          description: "Failed to update the IP access policies",
+        }),
+      ),
+    );
   });
 
-  it("closes the history modal", async () => {
-    const { user } = await renderPanel();
+  it("opens and closes the history modal", async () => {
+    const { user } = await renderSelected();
 
     await user.click(screen.getByRole("button", { name: "history u-1" }));
-    await user.click(screen.getByRole("button", { name: "close history" }));
+    expect(screen.getByText("history-modal:true:u-1")).toBeInTheDocument();
 
+    await user.click(screen.getByRole("button", { name: "close history" }));
     expect(screen.getByText("history-modal:false:none")).toBeInTheDocument();
   });
 
   it("opens the schedule modal", async () => {
-    const { user } = await renderPanel();
+    const { user } = await renderSelected();
 
     await user.click(screen.getByRole("button", { name: "schedule u-1" }));
 
     expect(screen.getByText("time-modal:true:u-1")).toBeInTheDocument();
   });
 
-  it("closes the schedule modal", async () => {
-    const { user } = await renderPanel();
+  it("reloads time rules when the schedule modal closes", async () => {
+    const { user } = await renderSelected();
+    await waitFor(() => expect(fetchAllTimeRules).toHaveBeenCalledTimes(1));
+    getAllTimeRules.mockResolvedValue([
+      { id: 1, userId: "u-1", enabled: true, dayOfWeek: 1 },
+      { id: 2, userId: "u-1", enabled: true, dayOfWeek: 2 },
+    ]);
 
     await user.click(screen.getByRole("button", { name: "schedule u-1" }));
     await user.click(screen.getByRole("button", { name: "close schedule" }));
@@ -775,155 +1011,231 @@ describe("DeviceManagement user actions", () => {
     await waitFor(() =>
       expect(screen.getByText("time-modal:false:")).toBeInTheDocument(),
     );
+    expect(fetchAllTimeRules).toHaveBeenCalledTimes(2);
+    expect(fetchAllTimeRules).toHaveBeenLastCalledWith(["u-1"]);
+    await waitFor(() =>
+      expect(screen.getByText("rules:u-1:2")).toBeInTheDocument(),
+    );
   });
 });
 
 describe("DeviceManagement temporary access", () => {
-  it("opens the modal for a user", async () => {
-    const { user } = await renderPanel();
+  it("opens the modal for a user and closes it", async () => {
+    const { user } = await renderSelected();
 
     await user.click(screen.getByRole("button", { name: "temp u-1" }));
-
     expect(screen.getByText("temp-modal:true:u-1")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "close temp" }));
+    expect(screen.getByText("temp-modal:false:none")).toBeInTheDocument();
   });
 
-  it("grants access to the chosen devices", async () => {
-    const { user } = await renderPanel();
+  it("uses the single-device call for one device", async () => {
+    const { user } = await renderSelected();
 
     await user.click(screen.getByRole("button", { name: "temp u-1" }));
     await user.click(screen.getByRole("button", { name: "grant temp" }));
 
-    await waitFor(() => expect(grantTemporaryAccess).toHaveBeenCalled());
+    await waitFor(() =>
+      expect(grantTemporaryAccess).toHaveBeenCalledWith(1, 60, true),
+    );
+    expect(grantBatchTemporaryAccess).not.toHaveBeenCalled();
+    await waitFor(() =>
+      expect(screen.getByText("temp-modal:false:none")).toBeInTheDocument(),
+    );
   });
 
-  it("closes the modal", async () => {
-    const { user } = await renderPanel();
+  it("reports a single-device failure", async () => {
+    grantTemporaryAccess.mockResolvedValue(false);
+    const { user } = await renderSelected();
 
     await user.click(screen.getByRole("button", { name: "temp u-1" }));
-    await user.click(screen.getByRole("button", { name: "close temp" }));
+    await user.click(screen.getByRole("button", { name: "grant temp" }));
 
-    expect(screen.getByText("temp-modal:false:none")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(toast).toHaveBeenCalledWith(
+        expect.objectContaining({
+          description: "Failed to grant temporary access",
+        }),
+      ),
+    );
+    expect(screen.getByText("temp-modal:true:u-1")).toBeInTheDocument();
+  });
+
+  it("uses the batch call for several devices", async () => {
+    const { user } = await renderSelected();
+
+    await user.click(screen.getByRole("button", { name: "temp u-1" }));
+    await user.click(screen.getByRole("button", { name: "grant many" }));
+
+    await waitFor(() =>
+      expect(grantBatchTemporaryAccess).toHaveBeenCalledWith(
+        [1, 2],
+        120,
+        false,
+      ),
+    );
+    expect(toast).toHaveBeenCalledWith(
+      expect.objectContaining({ title: "Temporary access granted" }),
+    );
+  });
+
+  it("reports partial failures", async () => {
+    grantBatchTemporaryAccess.mockResolvedValue({
+      success: true,
+      results: [{ success: true }, { success: false }],
+    });
+    const { user } = await renderSelected();
+
+    await user.click(screen.getByRole("button", { name: "temp u-1" }));
+    await user.click(screen.getByRole("button", { name: "grant many" }));
+
+    await waitFor(() =>
+      expect(toast).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: "Some devices were not granted access",
+        }),
+      ),
+    );
+  });
+
+  it("reports a batch failure", async () => {
+    grantBatchTemporaryAccess.mockResolvedValue({ success: false });
+    const { user } = await renderSelected();
+
+    await user.click(screen.getByRole("button", { name: "temp u-1" }));
+    await user.click(screen.getByRole("button", { name: "grant many" }));
+
+    await waitFor(() =>
+      expect(toast).toHaveBeenCalledWith(
+        expect.objectContaining({
+          description: "Failed to grant temporary access to these devices",
+        }),
+      ),
+    );
   });
 
   describe("eligibility", () => {
-    it("excludes PlexAmp devices", async () => {
-      const { user } = await renderPanel({
-        devices: [device({ id: 1, deviceProduct: "Plexamp" })],
-      });
-
+    const eligible = async (props: Parameters<typeof renderPanel>[0]) => {
+      const { user } = await renderSelected(props);
       await user.click(screen.getByRole("button", { name: "temp u-1" }));
-      expect(screen.getByText("eligible:")).toBeInTheDocument();
+      return screen.getByText(/^eligible:/).textContent;
+    };
+
+    it("excludes Plexamp devices", async () => {
+      expect(
+        await eligible({ devices: [device({ deviceProduct: "Plexamp" })] }),
+      ).toBe("eligible:");
     });
 
     it("excludes approved devices", async () => {
-      const { user } = await renderPanel({
-        devices: [device({ id: 1, status: "approved" })],
-      });
-
-      await user.click(screen.getByRole("button", { name: "temp u-1" }));
-      expect(screen.getByText("eligible:")).toBeInTheDocument();
+      expect(
+        await eligible({ devices: [device({ status: "approved" })] }),
+      ).toBe("eligible:");
     });
 
     it("always includes rejected devices", async () => {
-      const { user } = await renderPanel({
-        devices: [device({ id: 1, status: "rejected" })],
-        users: [preference({ defaultBlock: false })],
-      });
-
-      await user.click(screen.getByRole("button", { name: "temp u-1" }));
-      expect(screen.getByText("eligible:1")).toBeInTheDocument();
+      expect(
+        await eligible({
+          devices: [device({ status: "rejected" })],
+          users: [preference({ defaultBlock: false })],
+        }),
+      ).toBe("eligible:1");
     });
 
     it("excludes pending devices for a user set to allow", async () => {
-      const { user } = await renderPanel({
-        users: [preference({ defaultBlock: false })],
-      });
-
-      await user.click(screen.getByRole("button", { name: "temp u-1" }));
-      expect(screen.getByText("eligible:")).toBeInTheDocument();
+      expect(
+        await eligible({ users: [preference({ defaultBlock: false })] }),
+      ).toBe("eligible:");
     });
 
     it("includes pending devices for a user set to block", async () => {
-      const { user } = await renderPanel({
-        users: [preference({ defaultBlock: true })],
-      });
+      expect(
+        await eligible({ users: [preference({ defaultBlock: true })] }),
+      ).toBe("eligible:1");
+    });
 
-      await user.click(screen.getByRole("button", { name: "temp u-1" }));
-      expect(screen.getByText("eligible:1")).toBeInTheDocument();
+    it("includes pending devices for a user with no preference", async () => {
+      expect(await eligible({ users: [] })).toBe("eligible:1");
     });
 
     it("defers to a global allow default", async () => {
-      const { user } = await renderPanel({
-        users: [preference({ defaultBlock: null })],
-        settings: [
-          { key: "PLEX_GUARD_DEFAULT_BLOCK", value: "false" } as AppSetting,
-        ],
-      });
-
-      await user.click(screen.getByRole("button", { name: "temp u-1" }));
-      expect(screen.getByText("eligible:")).toBeInTheDocument();
+      expect(
+        await eligible({
+          settings: [
+            { key: "PLEX_GUARD_DEFAULT_BLOCK", value: "false" } as AppSetting,
+          ],
+        }),
+      ).toBe("eligible:");
     });
 
     it("defers to a global block default", async () => {
-      const { user } = await renderPanel({
-        users: [preference({ defaultBlock: null })],
-        settings: [
-          { key: "PLEX_GUARD_DEFAULT_BLOCK", value: "true" } as AppSetting,
-        ],
-      });
-
-      await user.click(screen.getByRole("button", { name: "temp u-1" }));
-      expect(screen.getByText("eligible:1")).toBeInTheDocument();
+      expect(
+        await eligible({
+          settings: [
+            { key: "PLEX_GUARD_DEFAULT_BLOCK", value: "true" } as AppSetting,
+          ],
+        }),
+      ).toBe("eligible:1");
     });
-  });
-});
-
-describe("DeviceManagement navigation", () => {
-  it("expands the target user and scrolls to the device", async () => {
-    const scrollIntoView = jest.fn();
-    Element.prototype.scrollIntoView = scrollIntoView;
-    jest.useFakeTimers();
-
-    render(
-      <DeviceManagement
-        devicesData={devicesData([device()])}
-        usersData={[preference()]}
-        navigationTarget={{ userId: "u-1", deviceIdentifier: "device-1" }}
-        onNavigationComplete={jest.fn()}
-      />,
-    );
-    await act(async () => {});
-
-    expect(screen.getByText("expanded:u-1:true")).toBeInTheDocument();
-  });
-
-  it("expands the user when jumping from the history modal", async () => {
-    const { user } = await renderPanel();
-
-    await user.click(screen.getByRole("button", { name: "history u-1" }));
-    await user.click(screen.getByRole("button", { name: "history to device" }));
-
-    expect(screen.getByText("expanded:u-1:true")).toBeInTheDocument();
   });
 });
 
 describe("DeviceManagement hidden users", () => {
+  const openHidden = async (user: User) => {
+    await user.click(screen.getByRole("button", { name: "Hidden users" }));
+    return screen.findByRole("dialog");
+  };
+
+  it("asks before hiding a user", async () => {
+    const { user } = await renderSelected();
+
+    await user.click(screen.getByRole("button", { name: "hide u-1" }));
+
+    expect(await screen.findByText("Hide user?")).toBeInTheDocument();
+    expect(
+      screen.getByText(/show them again from "Hidden users"/),
+    ).toBeInTheDocument();
+    expect(toggleUserVisibility).not.toHaveBeenCalled();
+  });
+
+  it("hides the user once the warning is confirmed", async () => {
+    const { user, onRefresh } = await renderSelected();
+
+    await user.click(screen.getByRole("button", { name: "hide u-1" }));
+    await user.click(await screen.findByRole("button", { name: /Hide user/ }));
+
+    await waitFor(() =>
+      expect(toggleUserVisibility).toHaveBeenCalledWith("u-1"),
+    );
+    expect(onRefresh).toHaveBeenCalled();
+  });
+
+  it("closes the user it just hid", async () => {
+    const { user } = await renderSelected();
+
+    await user.click(screen.getByRole("button", { name: "hide u-1" }));
+    await user.click(await screen.findByRole("button", { name: /Hide user/ }));
+
+    await waitFor(() => expect(screen.queryByText("detail:u-1")).toBeNull());
+  });
+
   it("cancels the hide warning", async () => {
-    const { user } = await renderPanel();
+    const { user } = await renderSelected();
 
     await user.click(screen.getByRole("button", { name: "hide u-1" }));
     await user.click(await screen.findByRole("button", { name: "Cancel" }));
 
     expect(toggleUserVisibility).not.toHaveBeenCalled();
-    await waitFor(() => expect(screen.queryByText("Hide User?")).toBeNull());
+    await waitFor(() => expect(screen.queryByText("Hide user?")).toBeNull());
   });
 
   it("reports a failure hiding a user", async () => {
     toggleUserVisibility.mockRejectedValue(new Error("offline"));
-    const { user } = await renderPanel();
+    const { user } = await renderSelected();
 
     await user.click(screen.getByRole("button", { name: "hide u-1" }));
-    await user.click(await screen.findByRole("button", { name: /Hide User/ }));
+    await user.click(await screen.findByRole("button", { name: /Hide user/ }));
 
     await waitFor(() =>
       expect(toast).toHaveBeenCalledWith(
@@ -934,35 +1246,29 @@ describe("DeviceManagement hidden users", () => {
 
   it("lists hidden users", async () => {
     getHiddenUsers.mockResolvedValue([
-      preference({ userId: "u-9", username: "ghost", hidden: true }),
+      preference({ userId: "u-9", username: "robin", hidden: true }),
     ]);
     const { user } = await renderPanel();
 
-    await user.click(screen.getByRole("button", { name: /Show Hidden Users/ }));
+    const dialog = await openHidden(user);
 
-    expect(await screen.findByText("ghost")).toBeInTheDocument();
+    expect(within(dialog).getByText("Hidden users")).toBeInTheDocument();
+    expect(within(dialog).getByText("robin")).toBeInTheDocument();
   });
 
-  it("closes the hidden users dialog", async () => {
+  it("says when nobody is hidden and closes", async () => {
     const { user } = await renderPanel();
-    await user.click(screen.getByRole("button", { name: /Show Hidden Users/ }));
-    await screen.findByText("No hidden users found");
 
-    await user.click(screen.getByRole("button", { name: "Close" }));
+    const dialog = await openHidden(user);
+    expect(
+      within(dialog).getByText("No hidden users found"),
+    ).toBeInTheDocument();
+
+    await user.click(within(dialog).getByRole("button", { name: "Close" }));
 
     await waitFor(() =>
       expect(screen.queryByText("No hidden users found")).toBeNull(),
     );
-  });
-
-  it("says when nobody is hidden", async () => {
-    const { user } = await renderPanel();
-
-    await user.click(screen.getByRole("button", { name: /Show Hidden Users/ }));
-
-    expect(
-      await screen.findByText("No hidden users found"),
-    ).toBeInTheDocument();
   });
 
   it("names an unnamed hidden user", async () => {
@@ -971,78 +1277,230 @@ describe("DeviceManagement hidden users", () => {
     ]);
     const { user } = await renderPanel();
 
-    await user.click(screen.getByRole("button", { name: /Show Hidden Users/ }));
+    const dialog = await openHidden(user);
 
-    expect(await screen.findByText("Unknown username")).toBeInTheDocument();
+    expect(within(dialog).getByText("Unknown username")).toBeInTheDocument();
   });
 
-  it("unhides a user from the modal", async () => {
+  it("shows a hidden user again from the dialog", async () => {
     getHiddenUsers.mockResolvedValue([
-      preference({ userId: "u-9", username: "ghost", hidden: true }),
+      preference({ userId: "u-9", username: "robin", hidden: true }),
     ]);
     const { user } = await renderPanel();
 
-    await user.click(screen.getByRole("button", { name: /Show Hidden Users/ }));
-    await user.click(await screen.findByRole("button", { name: /Show$/ }));
+    const dialog = await openHidden(user);
+    await user.click(within(dialog).getByRole("button", { name: /Show$/ }));
 
     await waitFor(() =>
       expect(toggleUserVisibility).toHaveBeenCalledWith("u-9"),
     );
+    expect(toast).toHaveBeenCalledWith(
+      expect.objectContaining({ title: "User shown" }),
+    );
   });
 
-  it("reports a failure loading hidden users", async () => {
+  it("logs a failure loading hidden users", async () => {
     getHiddenUsers.mockRejectedValue(new Error("offline"));
     const { user } = await renderPanel();
 
-    await user.click(screen.getByRole("button", { name: /Show Hidden Users/ }));
+    await user.click(screen.getByRole("button", { name: "Hidden users" }));
 
-    await waitFor(() => expect(getHiddenUsers).toHaveBeenCalled());
+    await waitFor(() =>
+      expect(consoleError).toHaveBeenCalledWith(
+        "Failed to load hidden users:",
+        expect.any(Error),
+      ),
+    );
   });
 });
 
-describe("DeviceManagement renaming", () => {
-  it("reports a rename failure", async () => {
-    renameDevice.mockResolvedValue(false);
-    const { user } = await renderPanel();
+describe("DeviceManagement navigation", () => {
+  const scrollIntoView = jest.fn();
 
-    await user.click(screen.getByRole("button", { name: "rename device" }));
-
-    await waitFor(() => expect(renameDevice).toHaveBeenCalled());
+  beforeEach(() => {
+    scrollIntoView.mockClear();
+    Element.prototype.scrollIntoView = scrollIntoView;
   });
-});
 
-describe("DeviceManagement granting temporary access", () => {
-  const openAndGrant = async (user: ReturnType<typeof userEvent.setup>) => {
-    await user.click(screen.getByRole("button", { name: "temp u-1" }));
-    await user.click(screen.getByRole("button", { name: "grant temp" }));
+  const renderWithTarget = async (
+    navigationTarget: { userId: string; deviceIdentifier: string } | null,
+    devices: UserDevice[] = [device()],
+  ) => {
+    jest.useFakeTimers();
+    const onNavigationComplete = jest.fn();
+    render(
+      <DeviceManagement
+        devicesData={devicesData(devices)}
+        usersData={[preference()]}
+        navigationTarget={navigationTarget}
+        onNavigationComplete={onNavigationComplete}
+      />,
+    );
+    await act(async () => {});
+    return { onNavigationComplete };
   };
 
-  it("uses the single-device call for one device", async () => {
-    const { user } = await renderPanel();
+  it("selects the target user, then highlights the device", async () => {
+    const { onNavigationComplete } = await renderWithTarget({
+      userId: "u-1",
+      deviceIdentifier: "device-1",
+    });
 
-    await openAndGrant(user);
+    expect(screen.getByText("detail:u-1")).toBeInTheDocument();
 
-    await waitFor(() => expect(grantTemporaryAccess).toHaveBeenCalled());
-    expect(grantBatchTemporaryAccess).not.toHaveBeenCalled();
+    act(() => {
+      jest.advanceTimersByTime(400);
+    });
+    expect(scrollIntoView).toHaveBeenCalled();
+
+    const target = document.querySelector(
+      '[data-device-identifier="device-1"]',
+    );
+    act(() => {
+      jest.advanceTimersByTime(200);
+    });
+    expect(target).toHaveClass("ring-2", "ring-info");
+
+    act(() => {
+      jest.advanceTimersByTime(1500);
+    });
+    expect(target).not.toHaveClass("ring-2");
+    expect(onNavigationComplete).toHaveBeenCalled();
   });
 
-  it("reports a single-device failure", async () => {
-    grantTemporaryAccess.mockResolvedValue(false);
-    const { user } = await renderPanel();
+  it("highlights a device whose identifier has quotes in it", async () => {
+    const identifier = 'tv "den" \\ 2';
+    await renderWithTarget({ userId: "u-1", deviceIdentifier: identifier }, [
+      device({ deviceIdentifier: identifier }),
+    ]);
 
-    await openAndGrant(user);
+    act(() => {
+      jest.advanceTimersByTime(600);
+    });
 
-    await waitFor(() => expect(grantTemporaryAccess).toHaveBeenCalled());
+    const target = Array.from(
+      document.querySelectorAll<HTMLElement>("[data-device-identifier]"),
+    ).find((element) => element.dataset.deviceIdentifier === identifier);
+    expect(target).toHaveClass("ring-2", "ring-info");
   });
 
-  it("reports a revoke failure", async () => {
-    revokeTemporaryAccess.mockResolvedValue(false);
+  it("highlights a device picked from the approval queue", async () => {
+    await renderWithTarget(null);
+
+    fireEvent.click(screen.getAllByTitle("Show in alex")[0]);
+    expect(screen.getByText("detail:u-1")).toBeInTheDocument();
+
+    act(() => {
+      jest.advanceTimersByTime(600);
+    });
+    const target = document.querySelector(
+      '[data-device-identifier="device-1"]',
+    );
+    expect(scrollIntoView).toHaveBeenCalled();
+    expect(target).toHaveClass("ring-2", "ring-info");
+
+    act(() => {
+      jest.advanceTimersByTime(1500);
+    });
+    expect(target).not.toHaveClass("ring-2");
+  });
+
+  it("forgets the highlighted device once the user is left", async () => {
+    await renderWithTarget(null);
+
+    fireEvent.click(screen.getAllByTitle("Show in alex")[0]);
+    expect(screen.getByText("focus:u-1:device-1")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText("back u-1"));
+    fireEvent.click(screen.getAllByRole("button", { name: /alex/ })[0]);
+
+    expect(screen.getByText("focus:u-1:none")).toBeInTheDocument();
+  });
+
+  it("does nothing without a target", async () => {
+    await renderWithTarget(null);
+
+    act(() => {
+      jest.advanceTimersByTime(5000);
+    });
+
+    expect(scrollIntoView).not.toHaveBeenCalled();
+    expect(screen.queryByText(/^detail:/)).toBeNull();
+  });
+
+  it("gives up on a device that never appears and clears the target", async () => {
+    const { onNavigationComplete } = await renderWithTarget({
+      userId: "u-1",
+      deviceIdentifier: "missing-device",
+    });
+
+    act(() => {
+      jest.advanceTimersByTime(1000);
+    });
+    expect(onNavigationComplete).not.toHaveBeenCalled();
+
+    act(() => {
+      jest.advanceTimersByTime(5000);
+    });
+    expect(scrollIntoView).not.toHaveBeenCalled();
+    expect(onNavigationComplete).toHaveBeenCalledTimes(1);
+  });
+
+  it("waits for a device that renders late", async () => {
+    jest.useFakeTimers();
+    const onNavigationComplete = jest.fn();
+    const target = { userId: "u-1", deviceIdentifier: "device-2" };
+    const { rerender } = render(
+      <DeviceManagement
+        devicesData={devicesData([device()])}
+        usersData={[preference()]}
+        navigationTarget={target}
+        onNavigationComplete={onNavigationComplete}
+      />,
+    );
+    await act(async () => {});
+
+    act(() => {
+      jest.advanceTimersByTime(900);
+    });
+    expect(scrollIntoView).not.toHaveBeenCalled();
+
+    rerender(
+      <DeviceManagement
+        devicesData={devicesData([
+          device(),
+          device({ id: 2, deviceIdentifier: "device-2" }),
+        ])}
+        usersData={[preference()]}
+        navigationTarget={target}
+        onNavigationComplete={onNavigationComplete}
+      />,
+    );
+    await act(async () => {});
+    act(() => {
+      jest.advanceTimersByTime(200);
+    });
+
+    expect(scrollIntoView).toHaveBeenCalled();
+  });
+
+  it("selects the user when jumping from the history modal", async () => {
+    jest.useRealTimers();
     const { user } = await renderPanel();
 
-    await user.click(screen.getByRole("button", { name: "revoke u-1" }));
-    await user.click(screen.getByRole("button", { name: "do it" }));
+    await user.click(screen.getByRole("button", { name: "history to device" }));
 
-    await waitFor(() => expect(revokeTemporaryAccess).toHaveBeenCalled());
+    expect(screen.getByText("detail:u-1")).toBeInTheDocument();
+  });
+
+  it("asks a controlling parent to select the history user", async () => {
+    jest.useRealTimers();
+    const onSelectUser = jest.fn();
+    const { user } = await renderPanel({ onSelectUser, selectedUserId: null });
+
+    await user.click(screen.getByRole("button", { name: "history to device" }));
+
+    expect(onSelectUser).toHaveBeenCalledWith("u-1");
   });
 });
 
@@ -1058,152 +1516,47 @@ describe("DeviceManagement without callbacks", () => {
     await act(async () => {});
 
     await user.click(screen.getByRole("button", { name: /Refresh/ }));
-    await user.click(screen.getByRole("button", { name: /Live|Manual/ }));
 
-    expect(screen.getByText("group:u-1")).toBeInTheDocument();
-  });
-
-  it("shows a skeleton until data arrives", () => {
-    const { container } = render(<DeviceManagement />);
-    expect(container.querySelector(".animate-pulse")).not.toBeNull();
+    expect(listedUsers()).toEqual(["alex"]);
   });
 });
 
-describe("DeviceManagement scroll navigation", () => {
-  const scrollIntoView = jest.fn();
-
-  const renderWithTimers = async (
-    navigationTarget: { userId: string; deviceIdentifier: string } | null,
-  ) => {
-    Element.prototype.scrollIntoView = scrollIntoView;
-    jest.useFakeTimers();
-    const onNavigationComplete = jest.fn();
-    render(
-      <DeviceManagement
-        devicesData={devicesData([device()])}
-        usersData={[preference()]}
-        navigationTarget={navigationTarget}
-        onNavigationComplete={onNavigationComplete}
-      />,
-    );
-    await act(async () => {});
-    return { onNavigationComplete };
-  };
-
-  beforeEach(() => scrollIntoView.mockClear());
-
-  it("expands the target user before scrolling", async () => {
-    await renderWithTimers({ userId: "u-1", deviceIdentifier: "device-1" });
-
-    expect(screen.getByText("expanded:u-1:true")).toBeInTheDocument();
-
-    await act(async () => {
-      jest.advanceTimersByTime(600);
-    });
-  });
-
-  it("does nothing without a target", async () => {
-    await renderWithTimers(null);
-
-    await act(async () => {
-      jest.advanceTimersByTime(5000);
-    });
-
-    expect(scrollIntoView).not.toHaveBeenCalled();
-  });
-
-  it("does nothing for a device that is not on screen", async () => {
-    const { onNavigationComplete } = await renderWithTimers({
-      userId: "u-1",
-      deviceIdentifier: "missing-device",
-    });
-
-    await act(async () => {
-      jest.advanceTimersByTime(5000);
-    });
-
-    expect(onNavigationComplete).not.toHaveBeenCalled();
-  });
-});
-
-describe("DeviceManagement batch temporary access", () => {
-  it("uses the batch call for several devices", async () => {
-    grantBatchTemporaryAccess.mockResolvedValue({
-      success: true,
-      failedDevices: [],
-    });
-    const { user } = await renderPanel();
-
-    await user.click(screen.getByRole("button", { name: "temp u-1" }));
-    await user.click(screen.getByRole("button", { name: "grant many" }));
-
-    await waitFor(() =>
-      expect(grantBatchTemporaryAccess).toHaveBeenCalledWith(
-        [1, 2],
-        120,
-        false,
-      ),
-    );
-  });
-
-  it("reports partial failures", async () => {
-    grantBatchTemporaryAccess.mockResolvedValue({
-      success: true,
-      failedDevices: [2],
-    });
-    const { user } = await renderPanel();
-
-    await user.click(screen.getByRole("button", { name: "temp u-1" }));
-    await user.click(screen.getByRole("button", { name: "grant many" }));
-
-    await waitFor(() => expect(grantBatchTemporaryAccess).toHaveBeenCalled());
-  });
-
-  it("reports a batch failure", async () => {
-    grantBatchTemporaryAccess.mockResolvedValue({ success: false });
-    const { user } = await renderPanel();
-
-    await user.click(screen.getByRole("button", { name: "temp u-1" }));
-    await user.click(screen.getByRole("button", { name: "grant many" }));
-
-    await waitFor(() => expect(grantBatchTemporaryAccess).toHaveBeenCalled());
-  });
-});
-
-describe("DeviceManagement preference failures", () => {
-  it("reports a failed preference update", async () => {
-    updateUserPreference.mockResolvedValue(false);
-    const { user } = await renderPanel();
-
-    await user.click(screen.getByRole("button", { name: "block u-1" }));
-
-    await waitFor(() => expect(updateUserPreference).toHaveBeenCalled());
-    expect(screen.getByText("updating:u-1:none")).toBeInTheDocument();
-  });
-
-  it("reports a failed IP policy update", async () => {
-    updateUserIPPolicy.mockResolvedValue(false);
-    const { user } = await renderPanel();
-
-    await user.click(screen.getByRole("button", { name: "ip u-1" }));
-
-    await waitFor(() => expect(updateUserIPPolicy).toHaveBeenCalled());
-  });
-
-  it("sorts users with no devices to the epoch", async () => {
-    await renderPanel({
+describe("DeviceManagement device updates", () => {
+  it("shows a note read from the row in the open details right away", async () => {
+    const { user } = await renderSelected({
       devices: [
-        device({ id: 1, userId: "u-1", lastSeen: "2026-02-01T00:00:00Z" }),
         device({
-          id: 2,
-          userId: "u-2",
-          username: "bob",
-          lastSeen: "2025-01-01T00:00:00Z",
+          requestDescription: "Please let me in",
+          requestSubmittedAt: "2026-02-01T00:00:00Z",
         }),
       ],
-      users: [preference({ userId: "u-1" }), preference({ userId: "u-2" })],
     });
 
-    expect(screen.getAllByText(/^group:/).length).toBe(2);
+    await user.click(screen.getByText("details u-1"));
+    await user.click(screen.getByText("read note u-1"));
+
+    expect(screen.getByText(`modal-note:${READ_AT}`)).toBeInTheDocument();
+    expect(screen.getByText(`note:u-1:${READ_AT}`)).toBeInTheDocument();
+  });
+
+  it("keeps the list in step with changes made in the details", async () => {
+    const { user } = await renderSelected();
+
+    await user.click(screen.getByText("details u-1"));
+    await user.click(screen.getByText("exclude device"));
+    await user.click(screen.getByText("close details"));
+    await user.click(screen.getByText("details u-1"));
+
+    expect(screen.getByText("details-modal:true:1")).toBeInTheDocument();
+    expect(screen.getByText("modal-exclude:yes")).toBeInTheDocument();
+  });
+
+  it("leaves a closed details modal closed", async () => {
+    const { user } = await renderSelected();
+
+    await user.click(screen.getByText("read note u-1"));
+
+    expect(screen.getByText("details-modal:false:none")).toBeInTheDocument();
+    expect(screen.getByText(`note:u-1:${READ_AT}`)).toBeInTheDocument();
   });
 });

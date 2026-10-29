@@ -30,7 +30,7 @@ const fillForm = async (
 ) => {
   await user.type(screen.getByLabelText("New password"), password);
   await user.type(screen.getByLabelText("Confirm new password"), confirmation);
-  await user.click(screen.getByRole("button", { name: "Set New Password" }));
+  await user.click(screen.getByRole("button", { name: "Set new password" }));
 };
 
 beforeEach(() => {
@@ -63,7 +63,7 @@ describe("ResetPasswordPage", () => {
     fetchMock.mockImplementation(() => json({ valid: false }));
     await renderPage();
 
-    expect(screen.getByText("Link Expired")).toBeInTheDocument();
+    expect(screen.getByText("Link expired")).toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: "Request a new link" }),
     ).toHaveAttribute("href", "/forgot-password");
@@ -73,7 +73,7 @@ describe("ResetPasswordPage", () => {
     token = null;
     await renderPage();
 
-    expect(screen.getByText("Link Expired")).toBeInTheDocument();
+    expect(screen.getByText("Link expired")).toBeInTheDocument();
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
@@ -81,14 +81,14 @@ describe("ResetPasswordPage", () => {
     fetchMock.mockRejectedValue(new Error("offline"));
     await renderPage();
 
-    expect(screen.getByText("Link Expired")).toBeInTheDocument();
+    expect(screen.getByText("Link expired")).toBeInTheDocument();
   });
 
   it("says the link expired when the check returns an error status", async () => {
     fetchMock.mockImplementation(() => json({}, false));
     await renderPage();
 
-    expect(screen.getByText("Link Expired")).toBeInTheDocument();
+    expect(screen.getByText("Link expired")).toBeInTheDocument();
   });
 
   it("tracks each rule as the password is typed", async () => {
@@ -150,7 +150,7 @@ describe("ResetPasswordPage", () => {
 
     await fillForm(user, "BrandNewPass1!");
 
-    expect(await screen.findByText("Password Changed")).toBeInTheDocument();
+    expect(await screen.findByText("Password changed")).toBeInTheDocument();
     expect(
       screen.getByText(/Your other devices were signed out/),
     ).toBeInTheDocument();

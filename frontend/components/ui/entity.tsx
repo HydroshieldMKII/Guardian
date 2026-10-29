@@ -12,92 +12,110 @@ import { cn } from "@/lib/utils";
 export type Tone =
   "neutral" | "positive" | "warning" | "danger" | "info" | "accent";
 
+const TONE_COLOR: Record<Exclude<Tone, "neutral">, string> = {
+  positive: "allowed",
+  warning: "waiting",
+  danger: "blocked",
+  info: "info",
+  accent: "special",
+};
+
 const TONE_PILL: Record<Tone, string> = {
-  neutral: "border-border/70 bg-muted/60 text-muted-foreground",
-  positive:
-    "border-emerald-500/25 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
-  warning:
-    "border-amber-500/25 bg-amber-500/10 text-amber-700 dark:text-amber-300",
-  danger: "border-rose-500/25 bg-rose-500/10 text-rose-700 dark:text-rose-300",
-  info: "border-sky-500/25 bg-sky-500/10 text-sky-700 dark:text-sky-300",
-  accent:
-    "border-violet-500/25 bg-violet-500/10 text-violet-700 dark:text-violet-300",
+  neutral: "border-transparent bg-muted text-muted-foreground",
+  positive: "border-transparent bg-allowed/12 text-allowed",
+  warning: "border-transparent bg-waiting/14 text-waiting",
+  danger: "border-transparent bg-blocked/12 text-blocked",
+  info: "border-transparent bg-info/12 text-info",
+  accent: "border-transparent bg-special/12 text-special",
 };
 
 const TONE_DOT: Record<Tone, string> = {
-  neutral: "bg-muted-foreground/50",
-  positive: "bg-emerald-500",
-  warning: "bg-amber-500",
-  danger: "bg-rose-500",
-  info: "bg-sky-500",
-  accent: "bg-violet-500",
+  neutral: "bg-muted-foreground/60",
+  positive: "bg-allowed",
+  warning: "bg-waiting",
+  danger: "bg-blocked",
+  info: "bg-info",
+  accent: "bg-special",
 };
 
 const TONE_PANEL: Record<Tone, string> = {
-  neutral: "border-border/70 bg-muted/30",
-  positive: "border-emerald-500/25 bg-emerald-500/5",
-  warning: "border-amber-500/25 bg-amber-500/5",
-  danger: "border-rose-500/25 bg-rose-500/5",
-  info: "border-sky-500/25 bg-sky-500/5",
-  accent: "border-violet-500/25 bg-violet-500/5",
+  neutral: "border-border bg-surface/60",
+  positive: "border-allowed/20 bg-allowed/6",
+  warning: "border-waiting/25 bg-waiting/7",
+  danger: "border-blocked/20 bg-blocked/6",
+  info: "border-info/20 bg-info/6",
+  accent: "border-special/20 bg-special/6",
 };
 
 const TONE_RAIL: Record<Tone, string> = {
   neutral: "bg-border",
-  positive: "bg-emerald-500/70",
-  warning: "bg-amber-500/70",
-  danger: "bg-rose-500/70",
-  info: "bg-sky-500/70",
-  accent: "bg-violet-500/70",
+  positive: "bg-allowed",
+  warning: "bg-waiting",
+  danger: "bg-blocked",
+  info: "bg-info",
+  accent: "bg-special",
 };
 
+const INK_SOLID = "bg-primary text-primary-foreground hover:bg-primary/88";
+
 const TONE_SOLID: Record<Tone, string> = {
-  neutral: "bg-foreground text-background hover:bg-foreground/90",
-  positive:
-    "bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-500",
-  warning:
-    "bg-amber-600 text-white hover:bg-amber-700 dark:bg-amber-600 dark:hover:bg-amber-500",
-  danger:
-    "bg-rose-600 text-white hover:bg-rose-700 dark:bg-rose-600 dark:hover:bg-rose-500",
-  info: "bg-sky-600 text-white hover:bg-sky-700 dark:bg-sky-600 dark:hover:bg-sky-500",
-  accent:
-    "bg-violet-600 text-white hover:bg-violet-700 dark:bg-violet-600 dark:hover:bg-violet-500",
+  neutral: INK_SOLID,
+  positive: INK_SOLID,
+  warning: INK_SOLID,
+  danger: "bg-blocked text-white hover:bg-blocked/90 dark:text-background",
+  info: INK_SOLID,
+  accent: INK_SOLID,
 };
 
 const TONE_OUTLINE: Record<Tone, string> = {
   neutral: "",
-  positive:
-    "border-emerald-500/40 text-emerald-700 hover:bg-emerald-500/10 dark:text-emerald-400",
-  warning:
-    "border-amber-500/40 text-amber-700 hover:bg-amber-500/10 dark:text-amber-400",
+  positive: "",
+  warning: "",
   danger:
-    "border-rose-500/40 text-rose-600 hover:bg-rose-500/10 dark:text-rose-400",
-  info: "border-sky-500/40 text-sky-700 hover:bg-sky-500/10 dark:text-sky-400",
-  accent:
-    "border-violet-500/40 text-violet-700 hover:bg-violet-500/10 dark:text-violet-400",
+    "border-blocked/35 text-blocked hover:border-blocked/60 hover:bg-blocked/8",
+  info: "",
+  accent: "",
 };
 
 const TONE_SEGMENT: Record<Tone, { thumb: string; text: string }> = {
-  neutral: { thumb: "bg-background shadow-sm", text: "text-foreground" },
-  positive: { thumb: "bg-emerald-600 shadow-sm", text: "text-white" },
-  warning: { thumb: "bg-amber-600 shadow-sm", text: "text-white" },
-  danger: { thumb: "bg-rose-600 shadow-sm", text: "text-white" },
-  info: { thumb: "bg-sky-600 shadow-sm", text: "text-white" },
-  accent: { thumb: "bg-violet-600 shadow-sm", text: "text-white" },
+  neutral: {
+    thumb:
+      "bg-card shadow-[0_1px_2px_rgb(0_0_0/0.1)] ring-1 ring-black/5 dark:bg-foreground/12 dark:ring-white/10",
+    text: "text-foreground",
+  },
+  positive: {
+    thumb: "bg-allowed shadow-sm",
+    text: "text-white dark:text-background",
+  },
+  warning: {
+    thumb: "bg-waiting shadow-sm",
+    text: "text-white dark:text-background",
+  },
+  danger: {
+    thumb: "bg-blocked shadow-sm",
+    text: "text-white dark:text-background",
+  },
+  info: { thumb: "bg-info shadow-sm", text: "text-white dark:text-background" },
+  accent: {
+    thumb: "bg-special shadow-sm",
+    text: "text-white dark:text-background",
+  },
 };
 
 const TONE_MENU: Record<Tone, string> = {
   neutral: "",
-  positive:
-    "text-emerald-700 focus:bg-emerald-500/10 focus:text-emerald-700 dark:text-emerald-400 dark:focus:text-emerald-300",
-  warning:
-    "text-amber-700 focus:bg-amber-500/10 focus:text-amber-700 dark:text-amber-400 dark:focus:text-amber-300",
-  danger:
-    "text-rose-600 focus:bg-rose-500/10 focus:text-rose-600 dark:text-rose-400 dark:focus:text-rose-300",
-  info: "text-sky-700 focus:bg-sky-500/10 focus:text-sky-700 dark:text-sky-400 dark:focus:text-sky-300",
-  accent:
-    "text-violet-700 focus:bg-violet-500/10 focus:text-violet-700 dark:text-violet-400 dark:focus:text-violet-300",
+  positive: "text-allowed focus:bg-allowed/10 focus:text-allowed",
+  warning: "text-waiting focus:bg-waiting/10 focus:text-waiting",
+  danger: "text-blocked focus:bg-blocked/10 focus:text-blocked",
+  info: "text-info focus:bg-info/10 focus:text-info",
+  accent: "text-special focus:bg-special/10 focus:text-special",
 };
+
+export function toneColorVar(tone: Tone) {
+  return tone === "neutral"
+    ? "var(--muted-foreground)"
+    : `var(--${TONE_COLOR[tone]})`;
+}
 
 export function toneButton(
   tone: Tone,
@@ -108,6 +126,10 @@ export function toneButton(
 
 export function toneMenuItem(tone: Tone) {
   return TONE_MENU[tone];
+}
+
+export function toneTint(tone: Tone) {
+  return TONE_PILL[tone];
 }
 
 export function EntityCard({
@@ -267,13 +289,11 @@ export function Meta({
 }) {
   return (
     <div className={cn("min-w-0", className)}>
-      <dt className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground/80">
-        {label}
-      </dt>
+      <dt className="text-xs text-muted-foreground">{label}</dt>
       <dd
         className={cn(
           "mt-1 text-sm font-medium text-foreground",
-          wrap ? "break-all" : "truncate",
+          wrap ? "[overflow-wrap:anywhere]" : "truncate",
         )}
       >
         {children}
@@ -323,9 +343,7 @@ export function StatTile({
         aria-hidden
         className={cn("absolute inset-y-0 left-0 w-[3px]", TONE_RAIL[tone])}
       />
-      <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-        {label}
-      </p>
+      <p className="text-sm text-muted-foreground">{label}</p>
       <p className="mt-1.5 text-2xl font-semibold tabular-nums leading-none text-foreground sm:text-3xl">
         {value}
       </p>
@@ -378,9 +396,7 @@ export function Section({
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0 space-y-1">
             {title && (
-              <h3 className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                {title}
-              </h3>
+              <h3 className="text-sm font-semibold text-foreground">{title}</h3>
             )}
             {description && (
               <p className="text-sm text-muted-foreground">{description}</p>
@@ -411,10 +427,8 @@ export function CollapsibleSection({
 }) {
   return (
     <Collapsible open={open} onOpenChange={onOpenChange} className={className}>
-      <CollapsibleTrigger className="flex w-full cursor-pointer items-center justify-between gap-3 rounded-lg border bg-muted/30 px-4 py-3 transition-colors duration-200 hover:bg-muted/50">
-        <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-          {title}
-        </span>
+      <CollapsibleTrigger className="flex w-full cursor-pointer items-center justify-between gap-3 rounded-xl border bg-card px-4 py-3 transition-colors duration-200 hover:bg-accent">
+        <span className="text-sm font-semibold text-foreground">{title}</span>
         <span className="flex items-center gap-2">
           {status}
           <svg
@@ -449,7 +463,7 @@ export function Panel({
   children: React.ReactNode;
 }) {
   return (
-    <div className={cn("rounded-lg border p-4", TONE_PANEL[tone], className)}>
+    <div className={cn("rounded-xl border p-4", TONE_PANEL[tone], className)}>
       {children}
     </div>
   );
@@ -460,6 +474,7 @@ export function Field({
   htmlFor,
   hint,
   action,
+  inline = false,
   className,
   children,
 }: {
@@ -467,6 +482,7 @@ export function Field({
   htmlFor?: string;
   hint?: React.ReactNode;
   action?: React.ReactNode;
+  inline?: boolean;
   className?: string;
   children?: React.ReactNode;
 }) {
@@ -482,6 +498,24 @@ export function Field({
   const description = hint ? (
     <p className="text-xs leading-relaxed text-muted-foreground">{hint}</p>
   ) : null;
+
+  if (inline) {
+    return (
+      <div
+        data-slot="field-row"
+        className={cn(
+          "flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-8",
+          className,
+        )}
+      >
+        <div className="min-w-0 space-y-1">
+          {header}
+          {description}
+        </div>
+        {children && <div className="shrink-0">{children}</div>}
+      </div>
+    );
+  }
 
   if (!children) {
     return (
@@ -508,6 +542,7 @@ export function ToggleRow({
   checked,
   onCheckedChange,
   disabled,
+  plain = false,
   className,
 }: {
   id: string;
@@ -516,12 +551,14 @@ export function ToggleRow({
   checked: boolean;
   onCheckedChange: (checked: boolean) => void;
   disabled?: boolean;
+  plain?: boolean;
   className?: string;
 }) {
   return (
     <div
       className={cn(
-        "flex items-start justify-between gap-4 rounded-lg border bg-card p-4",
+        "flex items-start justify-between gap-4 transition-opacity duration-200",
+        !plain && "rounded-lg border bg-card p-4",
         disabled && "opacity-60",
         className,
       )}
@@ -826,5 +863,60 @@ export function EmptyState({
       )}
       {action && <div className="pt-2">{action}</div>}
     </div>
+  );
+}
+
+export function StatusMark({
+  tone = "neutral",
+  className,
+  label,
+}: {
+  tone?: Tone;
+  className?: string;
+  label?: string;
+}) {
+  return (
+    <svg
+      viewBox="0 0 12 14"
+      role={label ? "img" : undefined}
+      aria-label={label}
+      aria-hidden={label ? undefined : true}
+      className={cn("size-3 shrink-0", className)}
+      style={{ color: toneColorVar(tone) }}
+    >
+      <path
+        d="M6 .6a1 1 0 0 1 .5.13l4.6 2.66a1 1 0 0 1 .5.87v5.48a1 1 0 0 1-.5.87L6.5 13.27a1 1 0 0 1-1 0L.9 10.61a1 1 0 0 1-.5-.87V4.26a1 1 0 0 1 .5-.87L5.5.73A1 1 0 0 1 6 .6Z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
+
+export function ActionRow({
+  title,
+  description,
+  action,
+  tone = "neutral",
+}: {
+  title: React.ReactNode;
+  description?: React.ReactNode;
+  action: React.ReactNode;
+  tone?: Tone;
+}) {
+  return (
+    <Panel
+      tone={tone}
+      className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+    >
+      <div className="min-w-0 space-y-1">
+        <p className="text-sm font-medium text-foreground">{title}</p>
+        {description && (
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            {description}
+          </p>
+        )}
+      </div>
+      <div className="shrink-0">{action}</div>
+    </Panel>
   );
 }

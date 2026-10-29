@@ -72,6 +72,19 @@ describe("ConfirmationModal", () => {
     ).toBeInTheDocument();
   });
 
+  it("shows the note the user left so it can inform the decision", () => {
+    renderModal(
+      action("approve", { requestDescription: "My new living room TV" }),
+    );
+    expect(screen.getByText("Note from user")).toBeInTheDocument();
+    expect(screen.getByText("My new living room TV")).toBeInTheDocument();
+  });
+
+  it("leaves the note out when there is none", () => {
+    renderModal(action("approve"));
+    expect(screen.queryByText("Note from user")).toBeNull();
+  });
+
   it("says so when the device has never been seen", () => {
     renderModal(action("approve", { lastSeen: "" }));
     expect(screen.getByText("Never")).toBeInTheDocument();
@@ -108,10 +121,10 @@ describe("ConfirmationModal", () => {
     });
 
     it.each([
-      ["approve", "Approve Device"],
-      ["reject", "Reject Device"],
-      ["delete", "Delete Device"],
-      ["removeTemporaryAccess", "Remove Temporary Access"],
+      ["approve", "Approve device"],
+      ["reject", "Reject device"],
+      ["delete", "Delete device"],
+      ["removeTemporaryAccess", "Remove temporary access"],
     ] as const)("labels the %s button", (act, button) => {
       renderModal(action(act));
       expect(screen.getByRole("button", { name: button })).toBeInTheDocument();
@@ -121,7 +134,7 @@ describe("ConfirmationModal", () => {
       renderModal(action("toggle", { status: "approved" }));
 
       expect(
-        screen.getByRole("button", { name: "Reject Device" }),
+        screen.getByRole("button", { name: "Reject device" }),
       ).toBeInTheDocument();
     });
 
@@ -129,60 +142,60 @@ describe("ConfirmationModal", () => {
       renderModal(action("toggle", { status: "pending" }));
 
       expect(
-        screen.getByRole("button", { name: "Approve Device" }),
+        screen.getByRole("button", { name: "Approve device" }),
       ).toBeInTheDocument();
     });
   });
 
   describe("button styling", () => {
-    it("uses the solid positive tone to approve", () => {
+    it("uses the solid ink primary to approve", () => {
       renderModal(action("approve"));
       expect(
-        screen.getByRole("button", { name: "Approve Device" }).className,
-      ).toContain("bg-emerald-600");
+        screen.getByRole("button", { name: "Approve device" }).className,
+      ).toContain("bg-primary");
     });
 
     it("uses the solid danger tone to reject", () => {
       renderModal(action("reject"));
       expect(
-        screen.getByRole("button", { name: "Reject Device" }).className,
-      ).toContain("bg-rose-600");
+        screen.getByRole("button", { name: "Reject device" }).className,
+      ).toContain("bg-blocked");
     });
 
-    it("uses an outline for the irreversible delete", () => {
+    it("uses the blocked outline for the irreversible delete", () => {
       renderModal(action("delete"));
       expect(
-        screen.getByRole("button", { name: "Delete Device" }).className,
-      ).toContain("border-rose-500/40");
+        screen.getByRole("button", { name: "Delete device" }).className,
+      ).toContain("border-blocked/35");
     });
 
     it("uses an outline for removing temporary access, which cannot be undone", () => {
       renderModal(action("removeTemporaryAccess"));
       expect(
-        screen.getByRole("button", { name: "Remove Temporary Access" })
+        screen.getByRole("button", { name: "Remove temporary access" })
           .className,
-      ).toContain("border-amber-500/40");
+      ).toContain("border-input");
     });
 
-    it("uses an outline when a toggle turns into a rejection", () => {
+    it("uses the blocked outline when a toggle turns into a rejection", () => {
       renderModal(action("toggle", { status: "approved" }));
       expect(
-        screen.getByRole("button", { name: "Reject Device" }).className,
-      ).toContain("border-rose-500/40");
+        screen.getByRole("button", { name: "Reject device" }).className,
+      ).toContain("border-blocked/35");
     });
 
-    it("uses the solid positive tone when a toggle turns into an approval", () => {
+    it("uses the solid ink primary when a toggle turns into an approval", () => {
       renderModal(action("toggle", { status: "rejected" }));
       expect(
-        screen.getByRole("button", { name: "Approve Device" }).className,
-      ).toContain("bg-emerald-600");
+        screen.getByRole("button", { name: "Approve device" }).className,
+      ).toContain("bg-primary");
     });
   });
 
   it("confirms and cancels", async () => {
     const { user, onConfirm, onCancel } = renderModal(action("approve"));
 
-    await user.click(screen.getByRole("button", { name: "Approve Device" }));
+    await user.click(screen.getByRole("button", { name: "Approve device" }));
     expect(onConfirm).toHaveBeenCalled();
 
     await user.click(screen.getByRole("button", { name: "Cancel" }));
@@ -192,7 +205,7 @@ describe("ConfirmationModal", () => {
   it("hands the callbacks no arguments, so a click event is never mistaken for one", async () => {
     const { user, onConfirm, onCancel } = renderModal(action("approve"));
 
-    await user.click(screen.getByRole("button", { name: "Approve Device" }));
+    await user.click(screen.getByRole("button", { name: "Approve device" }));
     expect(onConfirm).toHaveBeenCalledWith();
 
     await user.click(screen.getByRole("button", { name: "Cancel" }));
