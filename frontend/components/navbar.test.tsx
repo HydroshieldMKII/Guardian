@@ -280,6 +280,17 @@ describe("Navbar sections", () => {
     linksNamed(/^Users/).forEach((link) => expect(link).toHaveTextContent("4"));
   });
 
+  it("keeps room for a two-digit count on the counted sections only", () => {
+    render(<Navbar />);
+    const reserved = (name: RegExp) =>
+      linksNamed(name).some((link) =>
+        link.querySelector("[data-width-reserve]"),
+      );
+    expect(reserved(/^Streams/)).toBe(true);
+    expect(reserved(/^Users/)).toBe(true);
+    expect(reserved(/^Settings/)).toBe(false);
+  });
+
   it("reads the dashboard data the dashboard already keeps current", () => {
     render(<Navbar />);
     expect(useDashboardQuery).toHaveBeenCalledWith(false);
