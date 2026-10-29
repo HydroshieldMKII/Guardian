@@ -3,6 +3,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { PlexService } from '@/modules/plex/services/plex.service';
 import { PlexClient } from '@/modules/plex/services/plex-client';
 import { SessionTerminationService } from '@/modules/plex/services/session-termination.service';
+import { SessionPolicyService } from '@/modules/plex/services/session-policy.service';
+import { ConcurrentLimitService } from '@/modules/plex/services/concurrent-limit.service';
 import { UserDevice } from '@/entities/user-device.entity';
 import { SessionHistory } from '@/entities/session-history.entity';
 import { UserPreference } from '@/entities/user-preference.entity';
@@ -27,7 +29,13 @@ import { PlexController } from '@/modules/plex/controllers/plex.controller';
     forwardRef(() => ServicesModule),
   ],
   controllers: [PlexController],
-  providers: [PlexService, PlexClient, SessionTerminationService],
+  providers: [
+    PlexService,
+    PlexClient,
+    SessionTerminationService,
+    SessionPolicyService,
+    ConcurrentLimitService,
+  ],
   exports: [PlexService, PlexClient, SessionTerminationService],
 })
 export class PlexModule {}
