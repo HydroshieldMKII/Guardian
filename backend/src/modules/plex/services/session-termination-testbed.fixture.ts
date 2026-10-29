@@ -14,6 +14,7 @@ import { PlexClient } from '@/modules/plex/services/plex-client';
 import { SessionTerminationService } from '@/modules/plex/services/session-termination.service';
 import { SessionPolicyService } from '@/modules/plex/services/session-policy.service';
 import { ConcurrentLimitService } from '@/modules/plex/services/concurrent-limit.service';
+import { SessionHistoryService } from '@/modules/sessions/services/session-history.service';
 
 export interface SessionOverrides {
   id?: string;
@@ -39,6 +40,7 @@ export interface SessionTerminationTestbed {
   configService: { getSetting: jest.Mock };
   temporaryAccessService: { isTemporaryAccessValid: jest.Mock };
   ipValidationService: { validateIPAccess: jest.Mock };
+  sessionHistory: { markTerminated: jest.Mock };
 }
 
 export const session = ({
@@ -109,6 +111,9 @@ export const createSessionTerminationTestbed =
     const ipValidationService = {
       validateIPAccess: jest.fn().mockReturnValue({ allowed: true }),
     };
+    const sessionHistory = {
+      markTerminated: jest.fn().mockResolvedValue(undefined),
+    };
 
     const module = await Test.createTestingModule({
       providers: [
@@ -131,6 +136,7 @@ export const createSessionTerminationTestbed =
         { provide: ConfigService, useValue: configService },
         { provide: TemporaryAccessService, useValue: temporaryAccessService },
         { provide: IPValidationService, useValue: ipValidationService },
+        { provide: SessionHistoryService, useValue: sessionHistory },
       ],
     }).compile();
 
@@ -146,5 +152,6 @@ export const createSessionTerminationTestbed =
       configService,
       temporaryAccessService,
       ipValidationService,
+      sessionHistory,
     };
   };

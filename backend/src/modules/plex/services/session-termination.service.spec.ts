@@ -19,6 +19,7 @@ describe('SessionTerminationService', () => {
   let plexClient: SessionTerminationTestbed['plexClient'];
   let concurrentStreamService: SessionTerminationTestbed['concurrentStreamService'];
   let configService: SessionTerminationTestbed['configService'];
+  let sessionHistory: SessionTerminationTestbed['sessionHistory'];
 
   beforeEach(async () => {
     const testbed = await createSessionTerminationTestbed();
@@ -28,6 +29,7 @@ describe('SessionTerminationService', () => {
       plexClient,
       concurrentStreamService,
       configService,
+      sessionHistory,
     } = testbed);
     service = testbed.module.get(SessionTerminationService);
   });
@@ -348,6 +350,39 @@ describe('SessionTerminationService', () => {
         'plex-session-id',
         'msg:MSG_DEVICE_REJECTED',
       );
+    });
+
+    it('records the stopped stream as terminated in its history', async () => {
+      live(
+        session({ id: 'a', sessionKey: '42' }),
+        session({ id: 'b', sessionKey: '43' }),
+      );
+
+      await service.terminateDeviceSessions('u1', 'dev-1');
+
+      expect(sessionHistory.markTerminated.mock.calls).toEqual([
+        ['42'],
+        ['43'],
+      ]);
+    });
+
+    it('marks nothing when Plex refuses to stop the stream', async () => {
+      live(session({ sessionKey: '42' }));
+      plexClient.terminateSession.mockRejectedValue(new Error('404'));
+
+      await expect(
+        service.terminateDeviceSessions('u1', 'dev-1'),
+      ).rejects.toThrow('404');
+      expect(sessionHistory.markTerminated).not.toHaveBeenCalled();
+    });
+
+    it('stops a stream Plex gave no session key for without marking it', async () => {
+      live({ ...session(), sessionKey: undefined });
+
+      await expect(
+        service.terminateDeviceSessions('u1', 'dev-1'),
+      ).resolves.toBe(1);
+      expect(sessionHistory.markTerminated).not.toHaveBeenCalled();
     });
 
     it('terminates every stream the device is playing', async () => {

@@ -19,6 +19,6 @@ import { NotificationsModule } from '@/modules/notifications/notifications.modul
   ],
   controllers: [SessionsController],
   providers: [ActiveSessionService, SessionHistoryService],
-  exports: [ActiveSessionService],
+  exports: [ActiveSessionService, SessionHistoryService],
 })
 export class SessionsModule {}

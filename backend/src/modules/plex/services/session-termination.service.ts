@@ -14,6 +14,7 @@ import {
 import { errorMessage } from '@/common/utils/error-types';
 import { StopCode } from '@/common/utils/stop-codes';
 import { DEFAULT_BLOCK_MESSAGES } from '@/common/utils/block-messages';
+import { SessionHistoryService } from '@/modules/sessions/services/session-history.service';
 
 export interface StreamBlockedEvent {
   userId: string;
@@ -44,6 +45,7 @@ export class SessionTerminationService {
     private configService: ConfigService,
     private sessionPolicy: SessionPolicyService,
     private concurrentLimit: ConcurrentLimitService,
+    private sessionHistory: SessionHistoryService,
   ) {}
 
   onStreamBlocked(callback: (event: StreamBlockedEvent) => void): void {
@@ -186,26 +188,25 @@ export class SessionTerminationService {
     deviceIdentifier: string,
   ): Promise<number> {
     const sessionsData = await this.plexClient.getSessions();
-    const sessionIds = (sessionsData?.MediaContainer?.Metadata ?? [])
-      .filter(
-        (session) =>
-          session.Player?.machineIdentifier === deviceIdentifier &&
-          (session.User?.id || session.User?.uuid) === userId,
-      )
-      .map((session) => session.Session?.id)
-      .filter((sessionId): sessionId is string => !!sessionId);
+    const sessions = (sessionsData?.MediaContainer?.Metadata ?? []).filter(
+      (session) =>
+        !!session.Session?.id &&
+        session.Player?.machineIdentifier === deviceIdentifier &&
+        (session.User?.id || session.User?.uuid) === userId,
+    );
 
-    if (sessionIds.length === 0) {
+    if (sessions.length === 0) {
       return 0;
     }
 
     const reason =
       (await this.configService.getSetting('MSG_DEVICE_REJECTED')) ||
       DEFAULT_BLOCK_MESSAGES.deviceRejected;
-    for (const sessionId of sessionIds) {
-      await this.terminateSession(sessionId, reason);
+    for (const { Session, sessionKey } of sessions) {
+      await this.terminateSession(String(Session?.id), reason);
+      if (sessionKey) await this.sessionHistory.markTerminated(sessionKey);
     }
-    return sessionIds.length;
+    return sessions.length;
   }
 
   async terminateSession(sessionKey: string, reason?: string): Promise<void> {

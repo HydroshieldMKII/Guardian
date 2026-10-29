@@ -221,6 +221,34 @@ describe('SessionHistoryService on a database', () => {
     ]);
   });
 
+  describe('markTerminated', () => {
+    const save = (sessionKey: string, startedAt: string) =>
+      dataSource.getRepository(SessionHistory).save({
+        sessionKey,
+        userId: 'u1',
+        startedAt: new Date(startedAt),
+      });
+    const terminated = async (id: number) =>
+      (await dataSource.getRepository(SessionHistory).findOneByOrFail({ id }))
+        .terminated;
+
+    it('marks only the latest play of that session key', async () => {
+      const earlier = await save('reused', '2026-01-01T10:00:00Z');
+      const latest = await save('reused', '2026-01-01T11:00:00Z');
+      const other = await save('other', '2026-01-01T12:00:00Z');
+
+      await service.markTerminated('reused');
+
+      expect(await terminated(earlier.id)).toBe(false);
+      expect(await terminated(latest.id)).toBe(true);
+      expect(await terminated(other.id)).toBe(false);
+    });
+
+    it('does nothing for an unknown session key', async () => {
+      await expect(service.markTerminated('missing')).resolves.toBeUndefined();
+    });
+  });
+
   describe('getUserSessionHistory', () => {
     const history = (sessionKey: string, fields: Partial<SessionHistory>) =>
       dataSource.getRepository(SessionHistory).save({

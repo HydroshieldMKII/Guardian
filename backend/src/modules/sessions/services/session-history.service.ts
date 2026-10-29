@@ -94,6 +94,18 @@ export class SessionHistoryService {
     }
   }
 
+  async markTerminated(sessionKey: string): Promise<void> {
+    const latest = await this.sessionHistoryRepository.findOne({
+      where: { sessionKey },
+      order: { startedAt: 'DESC' },
+    });
+    if (latest) {
+      await this.sessionHistoryRepository.update(latest.id, {
+        terminated: true,
+      });
+    }
+  }
+
   async deleteSessionHistory(sessionId: number): Promise<void> {
     try {
       const result = await this.sessionHistoryRepository.delete(sessionId);
