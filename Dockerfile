@@ -34,6 +34,7 @@ COPY --from=backend-build /app/backend/src/scripts ./backend/src/scripts
 COPY --from=frontend-build /app/frontend/.next/standalone ./frontend/
 COPY --from=frontend-build /app/frontend/.next/static ./frontend/.next/static
 COPY --from=frontend-build /app/frontend/public ./frontend/public
+COPY --from=frontend-build /app/frontend/web-server/package.json /app/frontend/web-server/start.ts /app/frontend/web-server/client-address.ts ./frontend/web-server/
 
 COPY docker-entrypoint.sh /usr/local/bin/guardian-entrypoint
 RUN chmod +x /usr/local/bin/guardian-entrypoint \

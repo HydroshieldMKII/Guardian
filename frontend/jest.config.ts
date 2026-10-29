@@ -17,6 +17,8 @@ const config: Config = {
     "contexts/**/*.{ts,tsx}",
     "components/**/*.{ts,tsx}",
     "app/api/**/*.ts",
+    "web-server/**/*.ts",
+    "!web-server/start.ts",
     "!**/*.d.ts",
   ],
   coverageReporters: ["text-summary", "lcov", "json-summary"],

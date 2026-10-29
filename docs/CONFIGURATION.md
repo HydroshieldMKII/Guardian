@@ -4,7 +4,7 @@
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
-| `TRUST_PROXY_HOPS` | `1` | Proxies in front of Guardian; picks the client address in `X-Forwarded-For`. |
+| `TRUST_PROXY_HOPS` | `1` | Reverse proxies in front of Guardian; picks the client address in `X-Forwarded-For`. Set `0` when browsers connect to Guardian directly. |
 | `APP_URL` | unset | Public URL, for example `https://guardian.example.com`. Required for password reset links. |
 | `DATABASE_PATH` | `/app/data/plex-guard.db` | SQLite database file. |
 
