@@ -1,3 +1,4 @@
+import { NotFoundException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
@@ -113,7 +114,9 @@ describe('SessionHistoryService', () => {
 
     it('refuses when there is no such row', async () => {
       historyRepo.delete.mockResolvedValue({ affected: 0 });
-      await expect(service.deleteSessionHistory(4)).rejects.toThrow(
+      const failure = service.deleteSessionHistory(4);
+      await expect(failure).rejects.toBeInstanceOf(NotFoundException);
+      await expect(failure).rejects.toThrow(
         'Session history with ID 4 not found',
       );
     });
