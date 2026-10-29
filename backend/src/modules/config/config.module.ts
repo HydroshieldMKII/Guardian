@@ -9,6 +9,8 @@ import { TimezoneService } from '@/modules/config/services/timezone.service';
 import { DatabaseService } from '@/modules/config/services/database.service';
 import { VersionService } from '@/modules/config/services/version.service';
 import { AppriseService } from '@/modules/config/services/apprise.service';
+import { ConnectionTestService } from '@/modules/config/services/connection-test.service';
+import { DatabaseMaintenanceService } from '@/modules/config/services/database-maintenance.service';
 import { AppSettings } from '@/entities/app-settings.entity';
 import { Session } from '@/entities/session.entity';
 
@@ -24,6 +26,8 @@ import { Session } from '@/entities/session.entity';
     DatabaseService,
     VersionService,
     AppriseService,
+    ConnectionTestService,
+    DatabaseMaintenanceService,
   ],
   exports: [
     ConfigService,
@@ -34,6 +38,8 @@ import { Session } from '@/entities/session.entity';
     DatabaseService,
     VersionService,
     AppriseService,
+    ConnectionTestService,
+    DatabaseMaintenanceService,
   ],
 })
 export class ConfigModule {}

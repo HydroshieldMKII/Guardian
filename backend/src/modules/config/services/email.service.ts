@@ -1,4 +1,4 @@
-import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import * as nodemailer from 'nodemailer';
 import { EmailTemplateService } from '@/modules/config/services/email-template.service';
 import { StopCodeUtils } from '@/common/utils/stop-code.utils';
@@ -50,7 +50,6 @@ export class EmailService {
 
   constructor(
     private readonly emailTemplateService: EmailTemplateService,
-    @Inject(forwardRef(() => ConfigService))
     private readonly configService: ConfigService,
     private readonly timezoneService: TimezoneService,
   ) {}

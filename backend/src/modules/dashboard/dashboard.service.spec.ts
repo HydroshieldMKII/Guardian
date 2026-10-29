@@ -1,6 +1,7 @@
 import { Test } from '@nestjs/testing';
 import { DevicesService } from '@/modules/devices/services/devices.service';
 import { ConfigService } from '@/modules/config/services/config.service';
+import { ConnectionTestService } from '@/modules/config/services/connection-test.service';
 import { UsersService } from '@/modules/users/services/users.service';
 import { PlexService } from '@/modules/plex/services/plex.service';
 import { DashboardService } from '@/modules/dashboard/dashboard.service';
@@ -13,10 +14,8 @@ const configuredStatus = {
 
 describe('DashboardService', () => {
   let service: DashboardService;
-  let configService: {
-    getPlexConfigurationStatus: jest.Mock;
-    getPublicSettings: jest.Mock;
-  };
+  let configService: { getPublicSettings: jest.Mock };
+  let connectionTest: { getPlexConfigurationStatus: jest.Mock };
   let plexService: { getActiveSessionsWithMediaUrls: jest.Mock };
   let devicesService: {
     getAllDevices: jest.Mock;
@@ -28,8 +27,10 @@ describe('DashboardService', () => {
 
   beforeEach(async () => {
     configService = {
-      getPlexConfigurationStatus: jest.fn().mockResolvedValue(configuredStatus),
       getPublicSettings: jest.fn().mockResolvedValue([{ key: 'TIMEZONE' }]),
+    };
+    connectionTest = {
+      getPlexConfigurationStatus: jest.fn().mockResolvedValue(configuredStatus),
     };
 
     plexService = {
@@ -51,6 +52,7 @@ describe('DashboardService', () => {
       providers: [
         DashboardService,
         { provide: ConfigService, useValue: configService },
+        { provide: ConnectionTestService, useValue: connectionTest },
         { provide: PlexService, useValue: plexService },
         { provide: DevicesService, useValue: devicesService },
         { provide: UsersService, useValue: usersService },
@@ -123,7 +125,7 @@ describe('DashboardService', () => {
 
   describe('when Plex is not usable', () => {
     it('returns an empty payload when unconfigured', async () => {
-      configService.getPlexConfigurationStatus.mockResolvedValue({
+      connectionTest.getPlexConfigurationStatus.mockResolvedValue({
         ...configuredStatus,
         configured: false,
       });
@@ -141,7 +143,7 @@ describe('DashboardService', () => {
     });
 
     it('returns an empty payload when credentials are invalid', async () => {
-      configService.getPlexConfigurationStatus.mockResolvedValue({
+      connectionTest.getPlexConfigurationStatus.mockResolvedValue({
         ...configuredStatus,
         hasValidCredentials: false,
       });
@@ -151,7 +153,7 @@ describe('DashboardService', () => {
     });
 
     it('still returns settings so the UI can render', async () => {
-      configService.getPlexConfigurationStatus.mockResolvedValue({
+      connectionTest.getPlexConfigurationStatus.mockResolvedValue({
         ...configuredStatus,
         configured: false,
       });
@@ -168,7 +170,7 @@ describe('DashboardService', () => {
     });
 
     it('propagates an error from the config lookup', async () => {
-      configService.getPlexConfigurationStatus.mockRejectedValue(
+      connectionTest.getPlexConfigurationStatus.mockRejectedValue(
         new Error('no config'),
       );
       await expect(service.getDashboardData()).rejects.toThrow('no config');

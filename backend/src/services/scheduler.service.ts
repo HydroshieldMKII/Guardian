@@ -2,10 +2,8 @@ import { Injectable, OnModuleInit, Inject, forwardRef } from '@nestjs/common';
 import { Cron, SchedulerRegistry } from '@nestjs/schedule';
 import { CronJob } from 'cron';
 import { PlexService } from '@/modules/plex/services/plex.service';
-import {
-  ConfigService,
-  MIN_REFRESH_INTERVAL_SECONDS,
-} from '@/modules/config/services/config.service';
+import { ConfigService } from '@/modules/config/services/config.service';
+import { MIN_REFRESH_INTERVAL_SECONDS } from '@/modules/config/services/setting-validation';
 import { DeviceTrackingService } from '@/modules/devices/services/device-tracking.service';
 import { DeviceMaintenanceService } from '@/modules/devices/services/device-maintenance.service';
 import { UsersService } from '@/modules/users/services/users.service';

@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { DevicesService } from '@/modules/devices/services/devices.service';
 import { isPlexampDevice } from '@/common/utils/plexamp.utils';
 import { ConfigService } from '@/modules/config/services/config.service';
+import { ConnectionTestService } from '@/modules/config/services/connection-test.service';
 import { UsersService } from '@/modules/users/services/users.service';
 import { PlexService } from '@/modules/plex/services/plex.service';
 import { asHttpError } from '@/common/utils/error-types';
@@ -41,6 +42,7 @@ export class DashboardService {
   constructor(
     private readonly devicesService: DevicesService,
     private readonly configService: ConfigService,
+    private readonly connectionTest: ConnectionTestService,
     private readonly usersService: UsersService,
     private readonly plexService: PlexService,
   ) {}
@@ -49,7 +51,7 @@ export class DashboardService {
     try {
       // Check Plex status and fetch settings in parallel
       const [plexStatus, settings] = await Promise.all([
-        this.configService.getPlexConfigurationStatus(),
+        this.connectionTest.getPlexConfigurationStatus(),
         this.configService.getPublicSettings(),
       ]);
 

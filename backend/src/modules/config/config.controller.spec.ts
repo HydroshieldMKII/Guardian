@@ -3,14 +3,20 @@ import { Test } from '@nestjs/testing';
 import type { Response } from 'express';
 import { ConfigController } from '@/modules/config/config.controller';
 import { ConfigService } from '@/modules/config/services/config.service';
+import { ConnectionTestService } from '@/modules/config/services/connection-test.service';
+import { DatabaseMaintenanceService } from '@/modules/config/services/database-maintenance.service';
+import { DatabaseService } from '@/modules/config/services/database.service';
 import { AppriseService } from '@/modules/config/services/apprise.service';
 import { AuthService } from '@/modules/auth/auth.service';
 import { AdminUser } from '@/entities/admin-user.entity';
 
 describe('ConfigController', () => {
   let controller: ConfigController;
-  let configService: Record<string, jest.Mock>;
+  let services: Record<string, jest.Mock>;
   let authService: { validatePassword: jest.Mock };
+
+  const pick = (...methods: string[]) =>
+    Object.fromEntries(methods.map((method) => [method, services[method]]));
 
   const admin = Object.assign(new AdminUser(), {
     id: 'admin-1',
@@ -22,7 +28,7 @@ describe('ConfigController', () => {
   });
 
   beforeEach(async () => {
-    configService = {
+    services = {
       getVersionInfo: jest.fn().mockResolvedValue({ current: '1.3.5' }),
       getPublicSettings: jest.fn().mockResolvedValue([{ key: 'TIMEZONE' }]),
       getSetting: jest.fn().mockResolvedValue('UTC'),
@@ -47,7 +53,37 @@ describe('ConfigController', () => {
     const module = await Test.createTestingModule({
       controllers: [ConfigController],
       providers: [
-        { provide: ConfigService, useValue: configService },
+        {
+          provide: ConfigService,
+          useValue: pick(
+            'getVersionInfo',
+            'getPublicSettings',
+            'getSetting',
+            'updateSetting',
+            'updateMultipleSettings',
+          ),
+        },
+        {
+          provide: ConnectionTestService,
+          useValue: pick(
+            'testPlexConnection',
+            'testSMTPConnection',
+            'testAppriseConnection',
+            'getPlexConfigurationStatus',
+          ),
+        },
+        {
+          provide: DatabaseMaintenanceService,
+          useValue: pick('exportDatabase', 'importDatabase', 'resetDatabase'),
+        },
+        {
+          provide: DatabaseService,
+          useValue: pick(
+            'resetStreamCounts',
+            'deleteAllDevices',
+            'clearAllSessionHistory',
+          ),
+        },
         { provide: AppriseService, useValue: {} },
         { provide: AuthService, useValue: authService },
       ],
@@ -74,7 +110,7 @@ describe('ConfigController', () => {
     });
 
     it('maps a failure to a 500', async () => {
-      configService.getVersionInfo.mockRejectedValue(new Error('boom'));
+      services.getVersionInfo.mockRejectedValue(new Error('boom'));
       expect(await statusOf(controller.getVersion())).toBe(
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
@@ -87,7 +123,7 @@ describe('ConfigController', () => {
     });
 
     it('maps a failure to a 500', async () => {
-      configService.getPublicSettings.mockRejectedValue(new Error('boom'));
+      services.getPublicSettings.mockRejectedValue(new Error('boom'));
       expect(await statusOf(controller.getAllSettings())).toBe(
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
@@ -103,14 +139,14 @@ describe('ConfigController', () => {
     });
 
     it('returns a 404 for an unknown key', async () => {
-      configService.getSetting.mockResolvedValue(null);
+      services.getSetting.mockResolvedValue(null);
       expect(await statusOf(controller.getSetting('NOPE'))).toBe(
         HttpStatus.NOT_FOUND,
       );
     });
 
     it('maps an unexpected failure to a 500', async () => {
-      configService.getSetting.mockRejectedValue(new Error('boom'));
+      services.getSetting.mockRejectedValue(new Error('boom'));
       expect(await statusOf(controller.getSetting('TIMEZONE'))).toBe(
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
@@ -120,7 +156,7 @@ describe('ConfigController', () => {
       expect(await statusOf(controller.getSetting('NOT_A_SETTING'))).toBe(
         HttpStatus.NOT_FOUND,
       );
-      expect(configService.getSetting).not.toHaveBeenCalled();
+      expect(services.getSetting).not.toHaveBeenCalled();
     });
   });
 
@@ -130,10 +166,7 @@ describe('ConfigController', () => {
         value: 'UTC',
       });
 
-      expect(configService.updateSetting).toHaveBeenCalledWith(
-        'TIMEZONE',
-        'UTC',
-      );
+      expect(services.updateSetting).toHaveBeenCalledWith('TIMEZONE', 'UTC');
       expect(result.message).toBe('Setting updated successfully');
     });
 
@@ -143,11 +176,11 @@ describe('ConfigController', () => {
           controller.updateSetting('NOT_A_SETTING', { value: 'x' }),
         ),
       ).toBe(HttpStatus.NOT_FOUND);
-      expect(configService.updateSetting).not.toHaveBeenCalled();
+      expect(services.updateSetting).not.toHaveBeenCalled();
     });
 
     it('maps a validation failure to a 400 carrying the message', async () => {
-      configService.updateSetting.mockRejectedValue(new Error('bad value'));
+      services.updateSetting.mockRejectedValue(new Error('bad value'));
       await expect(
         controller.updateSetting('TIMEZONE', { value: 'x' }),
       ).rejects.toThrow('bad value');
@@ -162,16 +195,12 @@ describe('ConfigController', () => {
       const settings = [{ key: 'DEFAULT_PAGE' as const, value: 'streams' }];
       const result = await controller.updateMultipleSettings(settings);
 
-      expect(configService.updateMultipleSettings).toHaveBeenCalledWith(
-        settings,
-      );
+      expect(services.updateMultipleSettings).toHaveBeenCalledWith(settings);
       expect(result.message).toBe('Settings updated successfully');
     });
 
     it('maps a failure to a 400', async () => {
-      configService.updateMultipleSettings.mockRejectedValue(
-        new Error('invalid'),
-      );
+      services.updateMultipleSettings.mockRejectedValue(new Error('invalid'));
       expect(await statusOf(controller.updateMultipleSettings([]))).toBe(
         HttpStatus.BAD_REQUEST,
       );
@@ -186,11 +215,11 @@ describe('ConfigController', () => {
   ] as const)('%s', (method, serviceMethod) => {
     it('returns the service result', async () => {
       await expect(controller[method]()).resolves.toBeDefined();
-      expect(configService[serviceMethod]).toHaveBeenCalled();
+      expect(services[serviceMethod]).toHaveBeenCalled();
     });
 
     it('maps a failure to a 500', async () => {
-      configService[serviceMethod].mockRejectedValue(new Error('boom'));
+      services[serviceMethod].mockRejectedValue(new Error('boom'));
       expect(await statusOf(controller[method]())).toBe(
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
@@ -230,7 +259,7 @@ describe('ConfigController', () => {
     });
 
     it('maps a failure to a 500', async () => {
-      configService.exportDatabase.mockRejectedValue(new Error('boom'));
+      services.exportDatabase.mockRejectedValue(new Error('boom'));
       expect(
         await statusOf(controller.exportDatabase(responseStub().res)),
       ).toBe(HttpStatus.INTERNAL_SERVER_ERROR);
@@ -245,7 +274,7 @@ describe('ConfigController', () => {
     it('parses the upload and forwards it', async () => {
       const result = await controller.importDatabase(upload('{"settings":[]}'));
 
-      expect(configService.importDatabase).toHaveBeenCalledWith({
+      expect(services.importDatabase).toHaveBeenCalledWith({
         settings: [],
       });
       expect(result.imported).toEqual({ settings: 3 });
@@ -264,7 +293,7 @@ describe('ConfigController', () => {
     });
 
     it('maps a service failure to a 500', async () => {
-      configService.importDatabase.mockRejectedValue(new Error('bad schema'));
+      services.importDatabase.mockRejectedValue(new Error('bad schema'));
       expect(await statusOf(controller.importDatabase(upload('{}')))).toBe(
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
@@ -299,7 +328,7 @@ describe('ConfigController', () => {
         'admin-1',
         'hunter2',
       );
-      expect(configService[serviceMethod]).toHaveBeenCalled();
+      expect(services[serviceMethod]).toHaveBeenCalled();
     });
 
     it('refuses with a 403 on a bad password', async () => {
@@ -307,14 +336,62 @@ describe('ConfigController', () => {
       expect(await statusOf(controller[method](dto, admin))).toBe(
         HttpStatus.FORBIDDEN,
       );
-      expect(configService[serviceMethod]).not.toHaveBeenCalled();
+      expect(services[serviceMethod]).not.toHaveBeenCalled();
     });
 
     it('maps a script failure to a 500', async () => {
-      configService[serviceMethod].mockRejectedValue(new Error('script died'));
+      services[serviceMethod].mockRejectedValue(new Error('script died'));
       expect(await statusOf(controller[method](dto, admin))).toBe(
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     });
+  });
+
+  describe('an error without a message', () => {
+    const dto = { password: 'hunter2' };
+
+    it.each([
+      [
+        'updateSetting',
+        () => controller.updateSetting('TIMEZONE', { value: 'x' }),
+        'Failed to update setting',
+      ],
+      [
+        'updateMultipleSettings',
+        () => controller.updateMultipleSettings([]),
+        'Failed to update settings',
+      ],
+      [
+        'importDatabase',
+        () => controller.importDatabase({ buffer: Buffer.from('{}') }),
+        'Failed to import database',
+      ],
+      [
+        'resetDatabase',
+        () => controller.resetDatabase(dto, admin),
+        'Failed to reset database',
+      ],
+      [
+        'resetStreamCounts',
+        () => controller.resetStreamCounts(dto, admin),
+        'Failed to reset stream counts',
+      ],
+      [
+        'deleteAllDevices',
+        () => controller.deleteAllDevices(dto, admin),
+        'Failed to delete all devices',
+      ],
+      [
+        'clearAllSessionHistory',
+        () => controller.clearSessionHistory(dto, admin),
+        'Failed to clear session history',
+      ],
+    ] as const)(
+      'reports a generic message when %s fails silently',
+      async (serviceMethod, call, message) => {
+        services[serviceMethod].mockRejectedValue(new Error(''));
+        await expect(call()).rejects.toThrow(message);
+      },
+    );
   });
 });

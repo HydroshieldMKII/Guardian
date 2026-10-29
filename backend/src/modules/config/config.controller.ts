@@ -18,13 +18,18 @@ import {
   ConfigService,
   ConfigSettingDto,
 } from '@/modules/config/services/config.service';
+import { ConnectionTestService } from '@/modules/config/services/connection-test.service';
+import { DatabaseMaintenanceService } from '@/modules/config/services/database-maintenance.service';
+import {
+  DatabaseService,
+  type ImportPayload,
+} from '@/modules/config/services/database.service';
 import { isSettingKey } from '@/modules/config/settings.catalog';
 import { AuthService } from '@/modules/auth/auth.service';
 import { ConfirmPasswordDto } from '@/modules/auth/dto/confirm-password.dto';
 import { CurrentUser } from '@/modules/auth/decorators/current-user.decorator';
 import { AdminOnly } from '@/modules/auth/decorators/admin-only.decorator';
 import type { AdminSessionUser } from '@/modules/auth/session-user.types';
-import type { ImportPayload } from '@/modules/config/services/database.service';
 import { errorMessage } from '@/common/utils/error-types';
 
 interface UploadedDatabaseFile {
@@ -36,6 +41,9 @@ interface UploadedDatabaseFile {
 export class ConfigController {
   constructor(
     private readonly configService: ConfigService,
+    private readonly connectionTest: ConnectionTestService,
+    private readonly databaseMaintenance: DatabaseMaintenanceService,
+    private readonly databaseService: DatabaseService,
     private readonly authService: AuthService,
   ) {}
 
@@ -124,7 +132,7 @@ export class ConfigController {
   @Post('test-plex-connection')
   async testPlexConnection() {
     try {
-      const result = await this.configService.testPlexConnection();
+      const result = await this.connectionTest.testPlexConnection();
       return result;
     } catch {
       throw new HttpException(
@@ -137,7 +145,7 @@ export class ConfigController {
   @Post('test-smtp-connection')
   async testSMTPConnection() {
     try {
-      const result = await this.configService.testSMTPConnection();
+      const result = await this.connectionTest.testSMTPConnection();
       return result;
     } catch {
       throw new HttpException(
@@ -150,7 +158,7 @@ export class ConfigController {
   @Post('test-apprise-connection')
   async testAppriseConnection() {
     try {
-      const result = await this.configService.testAppriseConnection();
+      const result = await this.connectionTest.testAppriseConnection();
       return result;
     } catch {
       throw new HttpException(
@@ -163,7 +171,7 @@ export class ConfigController {
   @Get('plex/status')
   async getPlexStatus() {
     try {
-      const status = await this.configService.getPlexConfigurationStatus();
+      const status = await this.connectionTest.getPlexConfigurationStatus();
       return status;
     } catch {
       throw new HttpException(
@@ -176,7 +184,7 @@ export class ConfigController {
   @Get('database/export')
   async exportDatabase(@Res() res: Response) {
     try {
-      const exportData = await this.configService.exportDatabase();
+      const exportData = await this.databaseMaintenance.exportDatabase();
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
       const filename = `guardian-backup-${timestamp}.json`;
 
@@ -211,7 +219,7 @@ export class ConfigController {
         throw new HttpException('Invalid JSON file', HttpStatus.BAD_REQUEST);
       }
 
-      const result = await this.configService.importDatabase(importData);
+      const result = await this.databaseMaintenance.importDatabase(importData);
       return {
         message: 'Database imported successfully',
         imported: result,
@@ -239,7 +247,7 @@ export class ConfigController {
         throw new ForbiddenException('Invalid password');
       }
 
-      await this.configService.resetDatabase();
+      await this.databaseMaintenance.resetDatabase();
       return { message: 'Database reset successfully' };
     } catch (error) {
       if (error instanceof ForbiddenException) {
@@ -266,7 +274,7 @@ export class ConfigController {
         throw new ForbiddenException('Invalid password');
       }
 
-      await this.configService.resetStreamCounts();
+      await this.databaseService.resetStreamCounts();
       return { message: 'Stream counts reset successfully' };
     } catch (error) {
       if (error instanceof ForbiddenException) {
@@ -293,7 +301,7 @@ export class ConfigController {
         throw new ForbiddenException('Invalid password');
       }
 
-      await this.configService.deleteAllDevices();
+      await this.databaseService.deleteAllDevices();
       return { message: 'All devices deleted successfully' };
     } catch (error) {
       if (error instanceof ForbiddenException) {
@@ -320,7 +328,7 @@ export class ConfigController {
         throw new ForbiddenException('Invalid password');
       }
 
-      await this.configService.clearAllSessionHistory();
+      await this.databaseService.clearAllSessionHistory();
       return { message: 'Session history cleared successfully' };
     } catch (error) {
       if (error instanceof ForbiddenException) {

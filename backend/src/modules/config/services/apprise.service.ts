@@ -1,4 +1,4 @@
-import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { spawn } from 'child_process';
 import { ConfigService } from '@/modules/config/services/config.service';
 import { errorMessage } from '@/common/utils/error-types';
@@ -18,10 +18,7 @@ export interface AppriseNotificationData {
 export class AppriseService {
   private readonly logger = new Logger(AppriseService.name);
 
-  constructor(
-    @Inject(forwardRef(() => ConfigService))
-    private configService: ConfigService,
-  ) {}
+  constructor(private configService: ConfigService) {}
 
   async sendNotification(
     appriseData: AppriseNotificationData,
