@@ -8,7 +8,6 @@ import {
   Param,
   ParseIntPipe,
   Query,
-  HttpException,
   HttpStatus,
   Logger,
 } from '@nestjs/common';
@@ -20,7 +19,8 @@ import type {
 } from '@/modules/users/services/time-rule.service';
 import { UserTimeRule } from '@/entities/user-time-rule.entity';
 import { AdminOnly } from '@/modules/auth/decorators/admin-only.decorator';
-import { asHttpError, errorMessage } from '@/common/utils/error-types';
+import { asHttpError } from '@/common/utils/error-types';
+import { respondOrFail } from '@/common/utils/respond-or-fail';
 
 export interface BatchTimeRulesDto {
   userIds: string[];
@@ -33,14 +33,12 @@ export class RuleController {
 
   constructor(private readonly timeRuleService: TimeRuleService) {}
 
-  // Batch endpoint for fetching multiple users' rules
   @Post('rules/batch')
   async getTimeRulesBatch(
     @Body() dto: BatchTimeRulesDto,
   ): Promise<Record<string, UserTimeRule[]>> {
     const result: Record<string, UserTimeRule[]> = {};
 
-    // Fetch time rules for each user
     for (const userId of dto.userIds) {
       try {
         const rules = await this.timeRuleService.getAllTimeRules(userId);
@@ -50,7 +48,7 @@ export class RuleController {
           `Error fetching time rules for user ${userId}`,
           asHttpError(error).stack || error,
         );
-        result[userId] = []; // Return empty on error
+        result[userId] = [];
       }
     }
 
@@ -129,20 +127,10 @@ export class RuleController {
     @Param('userId') userId: string,
     @Body() createDto: Omit<CreatePresetDto, 'userId'>,
   ): Promise<UserTimeRule[]> {
-    try {
-      return await this.timeRuleService.createPreset({
-        ...createDto,
-        userId,
-      });
-    } catch (error) {
-      this.logger.error(
-        `Controller error creating preset: ${errorMessage(error)}`,
-        asHttpError(error).stack,
-      );
-      throw new HttpException(
-        errorMessage(error) || 'Failed to create preset',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
+    return respondOrFail(
+      () => this.timeRuleService.createPreset({ ...createDto, userId }),
+      'Failed to create preset',
+      { status: HttpStatus.BAD_REQUEST, exposeCause: true },
+    );
   }
 }
