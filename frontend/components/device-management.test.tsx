@@ -629,10 +629,10 @@ describe("DeviceManagement user list", () => {
 });
 
 describe("DeviceManagement selection", () => {
-  it("shows the approval queue in both layouts until a user is picked", async () => {
+  it("shows the approval queue until a user is picked", async () => {
     await renderPanel();
 
-    expect(screen.getAllByText("Waiting for approval")).toHaveLength(2);
+    expect(screen.getByText("Waiting for approval")).toBeInTheDocument();
     expect(screen.queryByText(/^detail:/)).toBeNull();
   });
 
@@ -651,7 +651,7 @@ describe("DeviceManagement selection", () => {
   it("opens a user from the approval queue", async () => {
     const { user } = await renderPanel();
 
-    await user.click(screen.getAllByTitle("Show in alex")[0]);
+    await user.click(screen.getByTitle("Show in alex"));
 
     expect(screen.getByText("detail:u-1")).toBeInTheDocument();
   });
@@ -659,7 +659,7 @@ describe("DeviceManagement selection", () => {
   it("asks before approving from the queue", async () => {
     const { user } = await renderPanel();
 
-    await user.click(screen.getAllByRole("button", { name: "Approve" })[0]);
+    await user.click(screen.getByRole("button", { name: "Approve" }));
     expect(screen.getByText("confirm:approve")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "do it" }));
@@ -670,7 +670,7 @@ describe("DeviceManagement selection", () => {
   it("asks before rejecting from the queue", async () => {
     const { user } = await renderPanel();
 
-    await user.click(screen.getAllByRole("button", { name: "Reject" })[0]);
+    await user.click(screen.getByRole("button", { name: "Reject" }));
 
     expect(screen.getByText("confirm:reject")).toBeInTheDocument();
   });
@@ -681,7 +681,7 @@ describe("DeviceManagement selection", () => {
     await user.click(screen.getByRole("button", { name: "back u-1" }));
 
     expect(screen.queryByText("detail:u-1")).toBeNull();
-    expect(screen.getAllByText("Waiting for approval")).toHaveLength(2);
+    expect(screen.getByText("Waiting for approval")).toBeInTheDocument();
   });
 
   it("reports selection to a parent that controls it", async () => {
@@ -1459,7 +1459,7 @@ describe("DeviceManagement navigation", () => {
   it("highlights a device picked from the approval queue", async () => {
     await renderWithTarget(null);
 
-    fireEvent.click(screen.getAllByTitle("Show in alex")[0]);
+    fireEvent.click(screen.getByTitle("Show in alex"));
     expect(screen.getByText("detail:u-1")).toBeInTheDocument();
 
     act(() => {
@@ -1480,7 +1480,7 @@ describe("DeviceManagement navigation", () => {
   it("forgets the highlighted device once the user is left", async () => {
     await renderWithTarget(null);
 
-    fireEvent.click(screen.getAllByTitle("Show in alex")[0]);
+    fireEvent.click(screen.getByTitle("Show in alex"));
     expect(screen.getByText("focus:u-1:device-1")).toBeInTheDocument();
 
     fireEvent.click(screen.getByText("back u-1"));

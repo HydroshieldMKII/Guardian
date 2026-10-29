@@ -21,7 +21,6 @@ export function ApprovalQueue({
   onApprove,
   onReject,
   onOpenDevice,
-  compact = false,
   className,
 }: {
   items: QueueItem[];
@@ -29,18 +28,17 @@ export function ApprovalQueue({
   onApprove: (device: UserDevice) => void;
   onReject: (device: UserDevice) => void;
   onOpenDevice: (userId: string, deviceIdentifier: string) => void;
-  compact?: boolean;
   className?: string;
 }) {
   const [expanded, setExpanded] = useState(false);
-  const visible = compact && !expanded ? items.slice(0, COMPACT_LIMIT) : items;
+  const foldedOnSmallScreens = (index: number) =>
+    !expanded && index >= COMPACT_LIMIT;
 
   if (items.length === 0) {
     return (
       <section
         className={cn(
-          "flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed px-6 text-center",
-          compact ? "py-6" : "py-20",
+          "flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed px-6 py-6 text-center lg:py-20",
           className,
         )}
       >
@@ -51,7 +49,10 @@ export function ApprovalQueue({
           </h2>
           <p className="mx-auto mt-1 max-w-xs text-sm text-muted-foreground">
             New devices show up here the first time they stream.
-            {!compact && " Pick a user to see their devices and rules."}
+            <span className="hidden lg:inline">
+              {" "}
+              Pick a user to see their devices and rules.
+            </span>
           </p>
         </div>
       </section>
@@ -72,12 +73,15 @@ export function ApprovalQueue({
         </h2>
       </header>
       <ul className="divide-y divide-border/70">
-        {visible.map(({ device, group }) => {
+        {items.map(({ device, group }, index) => {
           const busy = actionLoading === device.id;
           return (
             <li
               key={device.id}
-              className="flex flex-wrap items-center gap-x-3 gap-y-3 px-4 py-3.5 sm:px-5"
+              className={cn(
+                "flex flex-wrap items-center gap-x-3 gap-y-3 px-4 py-3.5 sm:px-5",
+                foldedOnSmallScreens(index) && "hidden lg:flex",
+              )}
             >
               <button
                 type="button"
@@ -137,11 +141,11 @@ export function ApprovalQueue({
           );
         })}
       </ul>
-      {compact && items.length > COMPACT_LIMIT && (
+      {items.length > COMPACT_LIMIT && (
         <button
           type="button"
           onClick={() => setExpanded((value) => !value)}
-          className="w-full cursor-pointer rounded-b-2xl border-t px-4 py-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground"
+          className="w-full cursor-pointer rounded-b-2xl border-t px-4 py-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground lg:hidden"
         >
           {expanded ? "Show fewer" : `Show all ${items.length}`}
         </button>

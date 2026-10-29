@@ -418,25 +418,13 @@ const DeviceManagement = memo(
             ) : loading && userGroups.length === 0 ? (
               <div className="h-64 animate-pulse rounded-2xl border bg-card" />
             ) : (
-              <>
-                <ApprovalQueue
-                  className="hidden lg:block"
-                  items={queueItems}
-                  actionLoading={actionLoading}
-                  onApprove={decisions.confirmApprove}
-                  onReject={decisions.confirmReject}
-                  onOpenDevice={focusDevice}
-                />
-                <ApprovalQueue
-                  compact
-                  className="lg:hidden"
-                  items={queueItems}
-                  actionLoading={actionLoading}
-                  onApprove={decisions.confirmApprove}
-                  onReject={decisions.confirmReject}
-                  onOpenDevice={focusDevice}
-                />
-              </>
+              <ApprovalQueue
+                items={queueItems}
+                actionLoading={actionLoading}
+                onApprove={decisions.confirmApprove}
+                onReject={decisions.confirmReject}
+                onOpenDevice={focusDevice}
+              />
             )}
           </div>
         </div>

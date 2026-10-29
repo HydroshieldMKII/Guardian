@@ -67,13 +67,13 @@ describe("ApprovalQueue empty state", () => {
     expect(
       screen.getByText(/Pick a user to see their devices and rules\./),
     ).toBeInTheDocument();
-    expect(container.firstChild).toHaveClass("py-20");
+    expect(container.firstChild).toHaveClass("lg:py-20");
   });
 
-  it("stays short when compact", () => {
-    const { container } = renderQueue({ items: [], compact: true });
+  it("stays short and drops the hint on small screens", () => {
+    const { container } = renderQueue({ items: [] });
 
-    expect(screen.queryByText(/Pick a user/)).toBeNull();
+    expect(screen.getByText(/Pick a user/)).toHaveClass("hidden", "lg:inline");
     expect(container.firstChild).toHaveClass("py-6");
   });
 });
@@ -188,32 +188,41 @@ describe("ApprovalQueue", () => {
   });
 });
 
-describe("ApprovalQueue compact", () => {
-  it("shows every device when not compact", () => {
+const folded = () =>
+  screen
+    .getAllByRole("listitem")
+    .filter((listItem) => listItem.classList.contains("hidden"));
+
+describe("ApprovalQueue on small screens", () => {
+  it("keeps every device in the list for wide screens", () => {
     renderQueue({ items: many(5) });
 
     expect(screen.getAllByRole("listitem")).toHaveLength(5);
-    expect(screen.queryByRole("button", { name: /Show all/ })).toBeNull();
+    expect(folded()).toHaveLength(2);
+    folded().forEach((listItem) => expect(listItem).toHaveClass("lg:flex"));
   });
 
-  it("shows three and needs no toggle at the limit", () => {
-    renderQueue({ items: many(3), compact: true });
+  it("folds nothing and needs no toggle at the limit", () => {
+    renderQueue({ items: many(3) });
 
-    expect(screen.getAllByRole("listitem")).toHaveLength(3);
+    expect(folded()).toHaveLength(0);
     expect(screen.queryByRole("button", { name: /Show all/ })).toBeNull();
   });
 
   it("expands and collapses past the limit", async () => {
-    const { user } = renderQueue({ items: many(5), compact: true });
+    const { user } = renderQueue({ items: many(5) });
 
-    expect(screen.getAllByRole("listitem")).toHaveLength(3);
-    expect(screen.queryByText("Device 4")).toBeNull();
+    const toggle = screen.getByRole("button", { name: "Show all 5" });
+    expect(toggle).toHaveClass("lg:hidden");
+    expect(folded().map((listItem) => listItem.textContent)).toEqual([
+      expect.stringContaining("Device 4"),
+      expect.stringContaining("Device 5"),
+    ]);
 
-    await user.click(screen.getByRole("button", { name: "Show all 5" }));
-    expect(screen.getAllByRole("listitem")).toHaveLength(5);
-    expect(screen.getByText("Device 5")).toBeInTheDocument();
+    await user.click(toggle);
+    expect(folded()).toHaveLength(0);
 
     await user.click(screen.getByRole("button", { name: "Show fewer" }));
-    expect(screen.getAllByRole("listitem")).toHaveLength(3);
+    expect(folded()).toHaveLength(2);
   });
 });
