@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { spawn } from 'child_process';
 import { ConfigService } from '@/modules/config/services/config.service';
 import { errorMessage } from '@/common/utils/error-types';
+import { StopCode } from '@/common/utils/stop-codes';
 
 export interface AppriseConfig {
   enabled: boolean;
@@ -93,7 +94,7 @@ export class AppriseService {
     username: string,
     deviceName: string,
     ipAddress?: string,
-    stopCode?: string,
+    stopCode?: StopCode,
   ): Promise<{ success: boolean; message: string }> {
     //Check if notifications for blocked streams is enabled
     const notifyOnBlockedStreams = await this.configService.getSetting(

@@ -12,12 +12,13 @@ import {
   SessionTerminationResult,
 } from '@/types/plex.types';
 import { errorMessage } from '@/common/utils/error-types';
+import { StopCode } from '@/common/utils/stop-codes';
 
 export interface StreamBlockedEvent {
   userId: string;
   username: string;
   deviceIdentifier: string;
-  stopCode?: string | null;
+  stopCode?: StopCode | null;
   sessionKey?: string | null;
   ipAddress?: string | null;
 }
@@ -27,7 +28,7 @@ interface BlockRequest {
   sessionId: string;
   userId: string;
   reason?: string;
-  stopCode?: string;
+  stopCode?: StopCode;
 }
 
 @Injectable()

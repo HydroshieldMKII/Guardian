@@ -5,6 +5,7 @@ import { Notification } from '@/entities/notification.entity';
 import { SessionHistory } from '@/entities/session-history.entity';
 import { NotificationsService } from '@/modules/notifications/services/notifications.service';
 import { NotificationDispatchService } from '@/modules/notifications/services/notification-dispatch.service';
+import { StopCode } from '@/common/utils/stop-codes';
 
 export interface NewDeviceNotificationData {
   userId: string;
@@ -18,7 +19,7 @@ export interface StreamBlockedNotificationData {
   userId: string;
   username: string | null;
   deviceIdentifier: string;
-  stopCode?: string | null;
+  stopCode?: StopCode | null;
   sessionKey?: string | null;
   ipAddress?: string | null;
 }

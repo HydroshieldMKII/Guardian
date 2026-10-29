@@ -3,7 +3,10 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { SessionHistory } from '@/entities/session-history.entity';
 import { NotificationsService } from '@/modules/notifications/services/notifications.service';
 import { NotificationDispatchService } from '@/modules/notifications/services/notification-dispatch.service';
-import { NotificationOrchestratorService } from '@/modules/notifications/services/notification-orchestrator.service';
+import {
+  NotificationOrchestratorService,
+  StreamBlockedNotificationData,
+} from '@/modules/notifications/services/notification-orchestrator.service';
 
 const history = (overrides: Partial<SessionHistory> = {}): SessionHistory =>
   Object.assign(new SessionHistory(), {
@@ -110,7 +113,7 @@ describe('NotificationOrchestratorService', () => {
   });
 
   describe('notifyStreamBlocked', () => {
-    const data = {
+    const data: StreamBlockedNotificationData = {
       userId: 'u1',
       username: 'alice',
       deviceIdentifier: 'device-a',

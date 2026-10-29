@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import * as net from 'net';
 import { DEFAULT_BLOCK_MESSAGES } from '@/common/utils/block-messages';
+import { StopCode } from '@/common/utils/stop-codes';
 
 const OCTET = '(?:25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)';
 const IPV4 = new RegExp(`^(?:${OCTET}\\.){3}${OCTET}$`);
@@ -13,7 +14,7 @@ export type NetworkType = 'lan' | 'wan' | 'unknown';
 export interface IPValidationResult {
   allowed: boolean;
   reason?: string;
-  stopCode?: string;
+  stopCode?: StopCode;
 }
 
 export interface NetworkPolicy {

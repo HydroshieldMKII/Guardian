@@ -425,14 +425,14 @@ describe('EmailService', () => {
       ).resolves.toBe('Guardian Alert: Device Location Changed - Shield');
     });
 
-    it('describes an unrecognised stop code rather than dropping it', async () => {
+    it('describes a block that carries no stop code generically', async () => {
       const sendEmail = jest.spyOn(service, 'sendEmail').mockResolvedValue();
 
-      await service.sendBlockedEmail('testuser', 'Shield', 'MYSTERY');
+      await service.sendBlockedEmail('testuser', 'Shield', undefined);
 
       expect(sendEmail).toHaveBeenCalledWith(
         expect.objectContaining({
-          text: 'A streaming session was blocked: MYSTERY',
+          text: 'A streaming session has been blocked on your Plex server',
         }),
       );
       sendEmail.mockRestore();

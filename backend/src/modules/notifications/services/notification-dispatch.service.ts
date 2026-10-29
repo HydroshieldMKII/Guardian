@@ -18,6 +18,7 @@ import {
   newDeviceText,
   streamBlockedText,
 } from '@/modules/notifications/services/notification-text';
+import { StopCode } from '@/common/utils/stop-codes';
 
 type NotificationChannel = 'IN_APP' | 'SMTP' | 'APPRISE';
 type NotificationEvent =
@@ -77,7 +78,7 @@ export class NotificationDispatchService {
     userId: string,
     username: string,
     deviceIdentifier: string,
-    stopCode?: string,
+    stopCode?: StopCode,
     sessionHistoryId?: number,
     ipAddress?: string,
   ): Promise<Notification | null> {
@@ -96,7 +97,7 @@ export class NotificationDispatchService {
         this.emailService.sendBlockedEmail(
           username,
           deviceName,
-          stopCode || 'N/A',
+          stopCode,
           ipAddress,
         ),
       sendApprise: () =>

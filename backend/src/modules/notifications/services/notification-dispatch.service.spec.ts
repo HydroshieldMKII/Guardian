@@ -1,3 +1,4 @@
+import { StopCode } from '@/common/utils/stop-codes';
 import { Notification } from '@/entities/notification.entity';
 import { NotificationDispatchService } from '@/modules/notifications/services/notification-dispatch.service';
 import {
@@ -126,7 +127,7 @@ describe('NotificationDispatchService', () => {
       enabled.add('IN_APP_NOTIFY_ON_BLOCK');
     });
 
-    const blocked = (stopCode?: string) =>
+    const blocked = (stopCode?: StopCode) =>
       service.createStreamBlockedNotification(
         'u1',
         'testuser',
@@ -136,7 +137,7 @@ describe('NotificationDispatchService', () => {
         '10.0.0.5',
       );
 
-    it.each([
+    it.each<[StopCode, string]>([
       ['DEVICE_PENDING', 'device needs approval'],
       ['DEVICE_REJECTED', 'device is not allowed'],
       ['IP_POLICY_LAN_ONLY', 'restricted to LAN only'],
@@ -147,11 +148,6 @@ describe('NotificationDispatchService', () => {
     ])('explains a %s block', async (stopCode, expected) => {
       const result = await blocked(stopCode);
       expect(result?.text).toContain(expected);
-    });
-
-    it('echoes an unrecognised stop code verbatim', async () => {
-      const result = await blocked('SOMETHING_NEW');
-      expect(result?.text).toContain('SOMETHING_NEW');
     });
 
     it('falls back to a generic message with no stop code', async () => {
@@ -198,7 +194,7 @@ describe('NotificationDispatchService', () => {
       );
     });
 
-    it('emails N/A when there is no stop code', async () => {
+    it('emails the block without a stop code when there is none', async () => {
       enabled.add('SMTP_ENABLED');
       enabled.add('SMTP_NOTIFY_ON_BLOCK');
 
@@ -207,7 +203,7 @@ describe('NotificationDispatchService', () => {
       expect(emailService.sendBlockedEmail).toHaveBeenCalledWith(
         'testuser',
         'Unknown Device',
-        'N/A',
+        undefined,
         '10.0.0.5',
       );
     });

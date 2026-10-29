@@ -7,13 +7,17 @@ import { UsersService } from '@/modules/users/services/users.service';
 import { TimePolicyService } from '@/modules/users/services/time-policy.service';
 import { ConfigService } from '@/modules/config/services/config.service';
 import { TemporaryAccessService } from '@/modules/devices/services/temporary-access.service';
-import { IPValidationService } from '@/common/services/ip-validation.service';
+import {
+  IPValidationResult,
+  IPValidationService,
+} from '@/common/services/ip-validation.service';
 import { PlexSession, isPlexampSession } from '@/types/plex.types';
+import { StopCode } from '@/common/utils/stop-codes';
 
 export interface PolicyDecision {
   shouldStop: boolean;
   reason?: string;
-  stopCode?: string;
+  stopCode?: StopCode;
 }
 
 const ALLOW: PolicyDecision = { shouldStop: false };
@@ -167,7 +171,7 @@ export class SessionPolicyService {
   private async validateIPAccess(
     session: PlexSession,
     userId: string,
-  ): Promise<{ allowed: boolean; reason?: string; stopCode?: string }> {
+  ): Promise<IPValidationResult> {
     try {
       const clientIP = session.Player?.address;
 

@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import * as nodemailer from 'nodemailer';
 import { EmailTemplateService } from '@/modules/config/services/email-template.service';
-import { StopCodeUtils } from '@/common/utils/stop-code.utils';
+import { describeStopCode, StopCode } from '@/common/utils/stop-codes';
 import { ConfigService } from '@/modules/config/services/config.service';
 import { TimezoneService } from '@/modules/config/services/timezone.service';
 import { SettingValues } from '@/modules/config/settings.catalog';
@@ -38,7 +38,7 @@ export interface NotificationEmailData {
   text: string;
   username: string;
   deviceName?: string;
-  stopCode?: string;
+  stopCode?: StopCode;
   ipAddress?: string;
   oldIpAddress?: string;
   note?: string;
@@ -197,10 +197,10 @@ export class EmailService {
   async sendBlockedEmail(
     username: string,
     deviceName: string,
-    stopCode: string,
+    stopCode: StopCode | undefined,
     ipAddress?: string,
   ): Promise<void> {
-    const notificationText = StopCodeUtils.getStopCodeDescription(stopCode);
+    const notificationText = describeStopCode(stopCode);
     const type = 'block';
 
     const notificationData: NotificationEmailData = {
@@ -472,7 +472,7 @@ export class EmailService {
 
   private getNotificationEmailContent(
     notificationType: NotificationEmailType,
-    stopCode?: string,
+    stopCode?: StopCode,
     username?: string,
     deviceName?: string,
   ): {
@@ -504,9 +504,7 @@ export class EmailService {
         return {
           subject: `Guardian Alert: Stream Blocked${deviceName ? ` - ${deviceName}` : ''}`,
           statusColor: EMAIL_PALETTE.danger,
-          mainMessage: stopCode
-            ? StopCodeUtils.getStopCodeDescription(stopCode)
-            : 'A streaming session has been blocked on your Plex server',
+          mainMessage: describeStopCode(stopCode),
         };
     }
   }
