@@ -2,7 +2,10 @@ import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { DataSource, IsNull } from 'typeorm';
 import { UserTimeRule } from '@/entities/user-time-rule.entity';
-import { TimeRuleService } from '@/modules/users/services/time-rule.service';
+import {
+  CreatePresetDto,
+  TimeRuleService,
+} from '@/modules/users/services/time-rule.service';
 
 const rule = (overrides: Partial<UserTimeRule> = {}): UserTimeRule =>
   Object.assign(new UserTimeRule(), {
@@ -188,6 +191,18 @@ describe('TimeRuleService', () => {
         service.createPreset({ userId: 'u1', presetType: 'weekdays-only' }),
       ).rejects.toThrow('Failed to create preset: db down');
 
+      expect(queryRunner.rollbackTransaction).toHaveBeenCalled();
+    });
+
+    it('rolls back an unknown preset type', async () => {
+      await expect(
+        service.createPreset({
+          userId: 'u1',
+          presetType: 'fortnightly' as CreatePresetDto['presetType'],
+        }),
+      ).rejects.toThrow('Failed to create preset: Invalid preset type');
+
+      expect(queryRunner.manager.save).not.toHaveBeenCalled();
       expect(queryRunner.rollbackTransaction).toHaveBeenCalled();
     });
 
