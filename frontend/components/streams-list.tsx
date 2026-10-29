@@ -215,7 +215,6 @@ export default function StreamsList({
                   <div key={key} style={{ order: index }}>
                     <StreamCard
                       stream={stream}
-                      index={index}
                       isExpanded={expandedStream === key}
                       isRevoking={revokingAuth === stream.sessionKey}
                       onToggleExpand={() =>

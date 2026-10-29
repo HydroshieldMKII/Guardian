@@ -42,7 +42,6 @@ const renderCard = (
   const view = render(
     <StreamCard
       stream={stream(overrides)}
-      index={0}
       isExpanded={props.isExpanded ?? false}
       isRevoking={props.isRevoking ?? false}
       onToggleExpand={onToggleExpand}
@@ -242,7 +241,6 @@ describe("StreamCard content", () => {
 
   it("tries the poster and artwork again when the next item has new images", () => {
     const props = {
-      index: 0,
       isExpanded: false,
       isRevoking: false,
       onToggleExpand: jest.fn(),
@@ -281,7 +279,6 @@ describe("StreamCard content", () => {
     rerender(
       <StreamCard
         stream={stream({ artUrl: "/two-art.jpg" })}
-        index={0}
         isExpanded={false}
         isRevoking={false}
         onToggleExpand={jest.fn()}
@@ -299,7 +296,6 @@ describe("StreamCard content", () => {
     rerender(
       <StreamCard
         stream={stream()}
-        index={0}
         isExpanded
         isRevoking={false}
         onToggleExpand={jest.fn()}
@@ -387,7 +383,6 @@ describe("StreamCard navigation", () => {
     render(
       <StreamCard
         stream={stream()}
-        index={0}
         isExpanded={false}
         isRevoking={false}
         onToggleExpand={jest.fn()}
@@ -596,7 +591,6 @@ describe("StreamCard opening in Plex", () => {
     rerender(
       <StreamCard
         stream={stream({ type: "track", title: "Roygbiv" })}
-        index={0}
         isExpanded={false}
         isRevoking={false}
         onToggleExpand={jest.fn()}
