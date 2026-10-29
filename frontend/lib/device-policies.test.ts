@@ -1,5 +1,11 @@
-import type { UserDevice, UserPreference, UserTimeRule } from "@/types";
+import type {
+  AppSetting,
+  UserDevice,
+  UserPreference,
+  UserTimeRule,
+} from "@/types";
 import {
+  canGrantTemporaryAccess,
   countWaitingDevices,
   devicePolicies,
   devicePolicyBadges,
@@ -441,5 +447,71 @@ describe("groupPolicyBadges", () => {
     );
 
     expect(badges.map((badge) => badge.label)).toEqual(["Temporary access"]);
+  });
+});
+
+describe("canGrantTemporaryAccess", () => {
+  const globalDefault = (value: string): AppSetting[] => [
+    {
+      id: 1,
+      key: "PLEX_GUARD_DEFAULT_BLOCK",
+      value,
+      description: "",
+      type: "boolean",
+      private: false,
+      updatedAt: "",
+    },
+  ];
+  const pending = device({ status: "pending" });
+
+  it("never offers a grant to Plexamp, which no policy blocks", () => {
+    expect(
+      canGrantTemporaryAccess(
+        device({ status: "rejected", deviceProduct: "Plexamp" }),
+        undefined,
+      ),
+    ).toBe(false);
+  });
+
+  it("offers a grant to a rejected device", () => {
+    expect(
+      canGrantTemporaryAccess(device({ status: "rejected" }), undefined),
+    ).toBe(true);
+  });
+
+  it("offers nothing to an approved device, which already streams", () => {
+    expect(canGrantTemporaryAccess(device(), undefined)).toBe(false);
+  });
+
+  it.each([
+    [true, true],
+    [false, false],
+  ])(
+    "follows the user's own rule for a pending device (blocks: %p)",
+    (defaultBlock, expected) => {
+      expect(
+        canGrantTemporaryAccess(
+          pending,
+          preference({ defaultBlock }),
+          globalDefault(String(!defaultBlock)),
+        ),
+      ).toBe(expected);
+    },
+  );
+
+  it.each([
+    ["no preference", undefined],
+    ["a preference that defers", preference({ defaultBlock: null })],
+  ])("falls back to the global rule with %s", (_, userPreference) => {
+    expect(
+      canGrantTemporaryAccess(pending, userPreference, globalDefault("false")),
+    ).toBe(false);
+    expect(
+      canGrantTemporaryAccess(pending, userPreference, globalDefault("true")),
+    ).toBe(true);
+  });
+
+  it("treats a pending device as blocked when the global rule is unknown", () => {
+    expect(canGrantTemporaryAccess(pending, undefined)).toBe(true);
   });
 });

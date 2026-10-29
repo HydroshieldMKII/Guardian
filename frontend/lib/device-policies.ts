@@ -1,6 +1,11 @@
 import type { Tone } from "@/components/ui/entity";
 import { formatTimeLeft } from "@/lib/duration";
-import type { UserDevice, UserPreference, UserTimeRule } from "@/types";
+import type {
+  AppSetting,
+  UserDevice,
+  UserPreference,
+  UserTimeRule,
+} from "@/types";
 
 export type DevicePolicy = "temporary" | "schedule" | "ip";
 
@@ -51,6 +56,23 @@ export const isPlexampDevice = (device: UserDevice): boolean =>
 
 export const isWaitingDevice = (device: UserDevice): boolean =>
   device.status === "pending" && !isPlexampDevice(device);
+
+export const canGrantTemporaryAccess = (
+  device: UserDevice,
+  preference: UserPreference | undefined,
+  settings: AppSetting[] = [],
+): boolean => {
+  if (isPlexampDevice(device)) return false;
+  if (device.status === "rejected") return true;
+  if (device.status !== "pending") return false;
+  if (preference && preference.defaultBlock !== null) {
+    return preference.defaultBlock !== false;
+  }
+  return (
+    settings.find((setting) => setting.key === "PLEX_GUARD_DEFAULT_BLOCK")
+      ?.value !== "false"
+  );
+};
 
 export const countWaitingDevices = (
   devices: UserDevice[],

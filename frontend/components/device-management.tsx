@@ -20,26 +20,22 @@ import {
 } from "@/components/ui/dialog";
 import { Eye, EyeOff } from "lucide-react";
 
-// Hooks
 import { useDeviceActions } from "@/hooks/device-management/useDeviceActions";
 import { useUserPreferences } from "@/hooks/device-management/useUserPreferences";
 import { useTimeRulesForUsers } from "@/hooks/device-management/useTimeRules";
 import { useToast } from "@/hooks/use-toast";
+import { useStoredChoice } from "@/hooks/use-stored-choice";
 
-// Types
 import { UserDevice, UserPreference, AppSetting } from "@/types";
 import type { TimeRulesByUser } from "@/lib/time-rules-api";
 import {
+  canGrantTemporaryAccess,
   devicePolicyBadges,
-  isPlexampDevice,
-  isWaitingDevice,
 } from "@/lib/device-policies";
 import { formatMinutes } from "@/lib/duration";
 
-// API
 import { apiClient } from "@/lib/api";
 
-// Components
 import {
   UserDetail,
   type DeviceFocus,
@@ -50,11 +46,12 @@ import {
   type UserFilter,
   type UserSort,
 } from "@/components/device-management/UserList";
+import { ApprovalQueue } from "@/components/device-management/ApprovalQueue";
 import {
-  ApprovalQueue,
-  type QueueItem,
-} from "@/components/device-management/ApprovalQueue";
-import {
+  groupDevicesByUser,
+  matchesSearch,
+  sortGroups,
+  waitingQueue,
   withPreferenceChanges,
   type UserDeviceGroup,
 } from "@/components/device-management/user-group";
@@ -70,6 +67,8 @@ import { HIGHLIGHT_CLASSES } from "@/lib/highlight";
 const NO_TIME_RULES: TimeRulesByUser = {};
 const DEVICE_LOOKUP_ATTEMPTS = 20;
 const DEVICE_LOOKUP_RETRY_MS = 100;
+const USER_SORT_BY_KEY = "guardian-unified-sort-by";
+const USER_SORT_ORDER_KEY = "guardian-unified-sort-order";
 
 interface DeviceManagementProps {
   devicesData?: {
@@ -130,7 +129,6 @@ const DeviceManagement = memo(
     selectedUserId: controlledSelectedUserId,
     onSelectUser,
   }: DeviceManagementProps) => {
-    // State management
     const [userGroups, setUserGroups] = useState<UserDeviceGroup[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
@@ -183,7 +181,6 @@ const DeviceManagement = memo(
       string | null
     >(null);
 
-    // Confirmation dialog states
     const [confirmAction, setConfirmAction] =
       useState<ConfirmActionData | null>(null);
     const [hideUserConfirmation, setHideUserConfirmation] = useState<{
@@ -192,7 +189,6 @@ const DeviceManagement = memo(
       isCurrentlyHidden: boolean;
     } | null>(null);
 
-    // Custom hooks
     const deviceActions = useDeviceActions();
     const userPreferences = useUserPreferences();
     const { data: userTimeRules = NO_TIME_RULES } = useTimeRulesForUsers(
@@ -207,153 +203,18 @@ const DeviceManagement = memo(
       selectUserRef.current = selectUser;
     });
 
-    // Local storage keys for sorting preferences
-    const USER_SORT_BY_KEY = "guardian-unified-sort-by";
-    const USER_SORT_ORDER_KEY = "guardian-unified-sort-order";
-
-    const getStoredValue = (key: string, defaultValue: string) => {
-      if (typeof window === "undefined") return defaultValue;
-      try {
-        return localStorage.getItem(key) || defaultValue;
-      } catch {
-        return defaultValue;
-      }
-    };
-
-    const setStoredValue = (key: string, value: string) => {
-      if (typeof window === "undefined") return;
-      try {
-        localStorage.setItem(key, value);
-      } catch {
-        // Silently fail if localStorage is not available
-      }
-    };
-
-    const [sortBy, setSortBy] = useState<UserSort>(
-      () => getStoredValue(USER_SORT_BY_KEY, "pendingCount") as UserSort,
+    const [sortBy, setSortBy] = useStoredChoice<UserSort>(
+      USER_SORT_BY_KEY,
+      "pendingCount",
     );
-    const [sortOrder, setSortOrder] = useState<"asc" | "desc">(
-      () => getStoredValue(USER_SORT_ORDER_KEY, "desc") as "asc" | "desc",
+    const [sortOrder, setSortOrder] = useStoredChoice<"asc" | "desc">(
+      USER_SORT_ORDER_KEY,
+      "desc",
     );
 
-    // Save sorting preferences to localStorage when they change
-    useEffect(() => {
-      setStoredValue(USER_SORT_BY_KEY, sortBy);
-    }, [sortBy]);
-
-    useEffect(() => {
-      setStoredValue(USER_SORT_ORDER_KEY, sortOrder);
-    }, [sortOrder]);
-
-    // Group devices by user and merge with user preferences
     useEffect(() => {
       if (devicesData && usersData) {
-        const deviceGroups = new Map<string, UserDeviceGroup>();
-
-        // Initialize groups from devices
-        devicesData.all.forEach((device) => {
-          const userId = device.userId;
-          if (!deviceGroups.has(userId)) {
-            deviceGroups.set(userId, {
-              user: {
-                userId,
-                username: device.username,
-                preference: usersData.find((u) => u.userId === userId),
-              },
-              devices: [],
-              pendingCount: 0,
-              approvedCount: 0,
-              rejectedCount: 0,
-            });
-          }
-
-          const group = deviceGroups.get(userId)!;
-          group.devices.push(device);
-
-          // Update counts (exclude Plexamp from pending count)
-          switch (device.status) {
-            case "pending":
-              // Only count pending devices that are not Plexamp
-              if (!isPlexampDevice(device)) {
-                group.pendingCount++;
-              }
-              break;
-            case "approved":
-              group.approvedCount++;
-              break;
-            case "rejected":
-              group.rejectedCount++;
-              break;
-          }
-
-          // Use device username if user preference doesn't have it
-          if (!group.user.username && device.username) {
-            group.user.username = device.username;
-          }
-
-          // Update lastSeen to the most recent device activity
-          if (device.lastSeen) {
-            const deviceLastSeen = new Date(device.lastSeen);
-            if (!group.lastSeen || deviceLastSeen > group.lastSeen) {
-              group.lastSeen = deviceLastSeen;
-            }
-          }
-        });
-
-        // Add users without devices (users with preferences but no devices yet)
-        usersData.forEach((userPref) => {
-          if (!deviceGroups.has(userPref.userId)) {
-            deviceGroups.set(userPref.userId, {
-              user: {
-                userId: userPref.userId,
-                username: userPref.username,
-                preference: userPref,
-              },
-              devices: [],
-              pendingCount: 0,
-              approvedCount: 0,
-              rejectedCount: 0,
-            });
-          }
-        });
-
-        // Convert to array and filter out hidden users
-        const groups = Array.from(deviceGroups.values())
-          .filter((group) => {
-            // Filter out users that are explicitly marked as hidden
-            // Include users with no preference (not hidden) or users with preference that are not hidden
-            return !group.user.preference || !group.user.preference.hidden;
-          })
-          .map((group) => ({
-            ...group,
-            devices: group.devices.sort((a, b) => {
-              // Helper function to identify Plex Amp devices
-              // Plexamp devices always go last
-              const aIsPlexamp = isPlexampDevice(a);
-              const bIsPlexamp = isPlexampDevice(b);
-
-              if (aIsPlexamp && !bIsPlexamp) return 1; // a goes after b
-              if (!aIsPlexamp && bIsPlexamp) return -1; // a goes before b
-              if (aIsPlexamp && bIsPlexamp) {
-                // Both are Plexamp, sort by lastSeen
-                return (
-                  new Date(b.lastSeen).getTime() -
-                  new Date(a.lastSeen).getTime()
-                );
-              }
-
-              // For non-Plexamp devices, sort by status (pending first, then rejected, then approved)
-              if (a.status !== b.status) {
-                const statusOrder = { pending: 0, rejected: 1, approved: 2 };
-                return statusOrder[a.status] - statusOrder[b.status];
-              }
-              return (
-                new Date(b.lastSeen).getTime() - new Date(a.lastSeen).getTime()
-              );
-            }),
-          }));
-
-        setUserGroups(groups);
+        setUserGroups(groupDevicesByUser(devicesData.all, usersData));
         setLoading(false);
       }
     }, [devicesData, usersData]);
@@ -439,110 +300,24 @@ const DeviceManagement = memo(
       [userGroups, filter],
     );
 
-    const queueItems = useMemo<QueueItem[]>(
-      () =>
-        userGroups
-          .flatMap((group) =>
-            group.devices
-              .filter(isWaitingDevice)
-              .map((device) => ({ device, group })),
-          )
-          .sort(
-            (a, b) =>
-              new Date(b.device.lastSeen).getTime() -
-              new Date(a.device.lastSeen).getTime(),
-          ),
-      [userGroups],
-    );
+    const queueItems = useMemo(() => waitingQueue(userGroups), [userGroups]);
 
     const selectedGroup = selectedUserId
       ? userGroups.find((group) => group.user.userId === selectedUserId)
       : undefined;
 
-    // Filter and sort user groups
-    const filteredAndSortedGroups = useMemo(() => {
-      return visibleGroups
-        .filter((group) => {
-          // Apply search filter
-          if (deferredSearchTerm.trim()) {
-            const searchLower = deferredSearchTerm.toLowerCase();
-            const username = (
-              group.user.username || group.user.userId
-            ).toLowerCase();
-            const hasMatchingDevice = group.devices.some((device) => {
-              const deviceName = (
-                device.deviceName ||
-                device.deviceIdentifier ||
-                ""
-              ).toLowerCase();
-              const devicePlatform = (
-                device.devicePlatform || ""
-              ).toLowerCase();
-              const deviceProduct = (device.deviceProduct || "").toLowerCase();
-              return (
-                deviceName.includes(searchLower) ||
-                devicePlatform.includes(searchLower) ||
-                deviceProduct.includes(searchLower)
-              );
-            });
+    const filteredAndSortedGroups = useMemo(
+      () =>
+        sortGroups(
+          visibleGroups.filter((group) =>
+            matchesSearch(group, deferredSearchTerm),
+          ),
+          sortBy,
+          sortOrder,
+        ),
+      [visibleGroups, deferredSearchTerm, sortBy, sortOrder],
+    );
 
-            return username.includes(searchLower) || hasMatchingDevice;
-          }
-
-          return true;
-        })
-        .sort((a, b) => {
-          let valueA: string | number;
-          let valueB: string | number;
-
-          switch (sortBy) {
-            case "username":
-              valueA = (a.user.username || a.user.userId).toLowerCase();
-              valueB = (b.user.username || b.user.userId).toLowerCase();
-              break;
-            case "deviceCount":
-              valueA = a.devices.length;
-              valueB = b.devices.length;
-              break;
-            case "pendingCount":
-              valueA = a.pendingCount;
-              valueB = b.pendingCount;
-              break;
-            case "lastSeen":
-              // Use lastSeen date, fallback to 0 (epoch) if no devices
-              valueA = a.lastSeen ? a.lastSeen.getTime() : 0;
-              valueB = b.lastSeen ? b.lastSeen.getTime() : 0;
-              break;
-            case "streamCount":
-              // Sum up session counts across all devices for each user
-              valueA = a.devices.reduce(
-                (total, device) => total + (device.sessionCount || 0),
-                0,
-              );
-              valueB = b.devices.reduce(
-                (total, device) => total + (device.sessionCount || 0),
-                0,
-              );
-              break;
-            default:
-              valueA = (a.user.username || a.user.userId).toLowerCase();
-              valueB = (b.user.username || b.user.userId).toLowerCase();
-              break;
-          }
-
-          // For numeric values, use numeric comparison
-          if (typeof valueA === "number" && typeof valueB === "number") {
-            const comparison = valueA - valueB;
-            return sortOrder === "asc" ? comparison : -comparison;
-          }
-
-          // For string values, use localeCompare
-          const comparison = String(valueA).localeCompare(String(valueB));
-          return sortOrder === "asc" ? comparison : -comparison;
-        });
-    }, [visibleGroups, deferredSearchTerm, sortBy, sortOrder]);
-
-    // User preference update handler
     const handleUpdateUserPreference = async (
       userId: string,
       defaultBlock: boolean | null,
@@ -554,7 +329,6 @@ const DeviceManagement = memo(
           defaultBlock,
         );
         if (success) {
-          // Refresh data without clearing time rule status to prevent "Scheduled" tag flickering
           if (onRefresh) {
             await onRefresh();
           }
@@ -583,7 +357,6 @@ const DeviceManagement = memo(
       }
     };
 
-    // User IP policy update handler
     const handleUpdateUserIPPolicy = async (
       userId: string,
       updates: Partial<UserPreference>,
@@ -606,7 +379,6 @@ const DeviceManagement = memo(
       }
     };
 
-    // User visibility toggle handler
     const handleToggleUserVisibility = async (userId: string) => {
       try {
         const user =
@@ -615,24 +387,20 @@ const DeviceManagement = memo(
         const isCurrentlyHidden = user?.hidden || false;
         const username = user?.username || userId;
 
-        // If hiding a user, show confirmation modal first
         if (!isCurrentlyHidden) {
           setHideUserConfirmation({ userId, username, isCurrentlyHidden });
           return;
         }
 
-        // Directly show user without confirmation
         await apiClient.toggleUserVisibility(userId);
 
         if (isCurrentlyHidden) {
-          // User was hidden, now showing
           toast({
             title: "User shown",
             description: `${username} is back in the main user list`,
             variant: "success",
           });
         } else {
-          // User was visible, now hiding
           toast({
             title: "User hidden",
             description: `${username} is now under "Hidden users" at the bottom of the user list. Their policies still apply.`,
@@ -641,7 +409,6 @@ const DeviceManagement = memo(
         }
 
         void handleRefresh();
-        // If modal is open, refresh hidden users list
         if (hiddenUsersModalOpen) {
           await loadHiddenUsers();
         }
@@ -655,7 +422,6 @@ const DeviceManagement = memo(
       }
     };
 
-    // Confirm hiding user
     const confirmHideUser = async () => {
       if (!hideUserConfirmation) return;
 
@@ -687,7 +453,6 @@ const DeviceManagement = memo(
     };
 
     const handleShowHistory = (userId: string) => {
-      // Find the username for this userId
       const userGroup = userGroups.find(
         (group) => group.user.userId === userId,
       );
@@ -721,7 +486,6 @@ const DeviceManagement = memo(
       });
     };
 
-    // Load hidden users for modal
     const loadHiddenUsers = async () => {
       try {
         const hiddenUsersData =
@@ -732,13 +496,11 @@ const DeviceManagement = memo(
       }
     };
 
-    // Open hidden users modal
     const openHiddenUsersModal = async () => {
       await loadHiddenUsers();
       setHiddenUsersModalOpen(true);
     };
 
-    // Device action handlers
     const handleApprove = async (deviceId: number) => {
       try {
         setActionLoading(deviceId);
@@ -827,7 +589,6 @@ const DeviceManagement = memo(
         setActionLoading(deviceId);
         const success = await deviceActions.renameDevice(deviceId, newName);
         if (success) {
-          // Update the selectedDevice state immediately to reflect the change in the modal
           if (selectedDevice && selectedDevice.id === deviceId) {
             setSelectedDevice({
               ...selectedDevice,
@@ -887,7 +648,6 @@ const DeviceManagement = memo(
     ) => {
       try {
         if (deviceIds.length === 1) {
-          // Use single device endpoint for single device
           setActionLoading(deviceIds[0]);
           const success = await deviceActions.grantTemporaryAccess(
             deviceIds[0],
@@ -903,8 +663,7 @@ const DeviceManagement = memo(
             return;
           }
         } else {
-          // Use batch endpoint for multiple devices
-          setActionLoading(deviceIds[0]); // Set loading indicator
+          setActionLoading(deviceIds[0]);
           const result = await deviceActions.grantBatchTemporaryAccess(
             deviceIds,
             durationMinutes,
@@ -919,7 +678,6 @@ const DeviceManagement = memo(
             return;
           }
 
-          // Check if any devices failed
           const batchResults = result.results as
             { success: boolean }[] | undefined;
           const failedDevices = batchResults?.filter((r) => !r.success) || [];
@@ -997,48 +755,6 @@ const DeviceManagement = memo(
       setSelectedTimeRuleUser(null);
     };
 
-    // Only devices Guardian is currently blocking can be granted temporary access
-    const canGrantTemporaryAccess = (device: UserDevice): boolean => {
-      // Plexamp devices are exempt from every policy, so they never need a grant
-      if (isPlexampDevice(device)) {
-        return false;
-      }
-
-      // Only show for pending or rejected devices
-      if (device.status !== "pending" && device.status !== "rejected") {
-        return false;
-      }
-
-      // A rejected device is always blocked
-      if (device.status === "rejected") {
-        return true;
-      }
-
-      // For pending devices, check user and global policies
-      const userPreference = usersData?.find((u) => u.userId === device.userId);
-
-      // A pending device is only blocked when the effective default policy blocks
-      if (userPreference && userPreference.defaultBlock === false) {
-        return false;
-      }
-
-      // If user has no preference (defaultBlock = null), check global setting for pending devices
-      if (!userPreference || userPreference.defaultBlock === null) {
-        // Find global default block setting
-        const globalDefaultBlock = settingsData?.find(
-          (s) => s.key === "PLEX_GUARD_DEFAULT_BLOCK",
-        );
-
-        // The global default allows, so this pending device is already streaming
-        if (globalDefaultBlock && globalDefaultBlock.value === "false") {
-          return false;
-        }
-      }
-
-      return true;
-    };
-
-    // Confirmation dialog handlers
     const showApproveConfirmation = (device: UserDevice) => {
       setConfirmAction({ device, action: "approve", ...CONFIRM_COPY.approve });
     };
@@ -1242,10 +958,15 @@ const DeviceManagement = memo(
             )
           }
           actionLoading={actionLoading}
-          canGrantTemporaryAccess={canGrantTemporaryAccess}
+          canGrantTemporaryAccess={(device) =>
+            canGrantTemporaryAccess(
+              device,
+              usersData?.find((u) => u.userId === device.userId),
+              settingsData,
+            )
+          }
         />
 
-        {/* Confirmation Modal */}
         <ConfirmationModal
           confirmAction={confirmAction}
           actionLoading={actionLoading}
@@ -1318,7 +1039,6 @@ const DeviceManagement = memo(
           </DialogContent>
         </Dialog>
 
-        {/* User History Modal */}
         <UserHistoryModal
           userId={selectedHistoryUser?.userId || null}
           username={selectedHistoryUser?.username}
