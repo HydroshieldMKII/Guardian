@@ -53,7 +53,10 @@ import {
   ApprovalQueue,
   type QueueItem,
 } from "@/components/device-management/ApprovalQueue";
-import type { UserDeviceGroup } from "@/components/device-management/user-group";
+import {
+  withPreferenceChanges,
+  type UserDeviceGroup,
+} from "@/components/device-management/user-group";
 import { cn } from "@/lib/utils";
 import { DeviceDetailsModal } from "@/components/device-management/DeviceDetailsModal";
 import { TemporaryAccessModal } from "@/components/device-management/TemporaryAccessModal";
@@ -894,6 +897,14 @@ const DeviceManagement = memo(
       );
     };
 
+    const handleUserPreferenceChange = (
+      userId: string,
+      changes: Partial<UserPreference>,
+    ) => {
+      setUserGroups((groups) => withPreferenceChanges(groups, userId, changes));
+      void handleRefresh();
+    };
+
     const startEditing = (device: UserDevice) => {
       setEditingDevice(device.id);
       setNewDeviceName(device.deviceName || "");
@@ -1186,6 +1197,7 @@ const DeviceManagement = memo(
                 onUpdateUserIPPolicy={(userId, updates) =>
                   void handleUpdateUserIPPolicy(userId, updates)
                 }
+                onUserPreferenceChange={handleUserPreferenceChange}
                 onToggleUserVisibility={(userId) =>
                   void handleToggleUserVisibility(userId)
                 }

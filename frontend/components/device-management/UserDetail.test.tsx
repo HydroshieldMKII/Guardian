@@ -63,13 +63,18 @@ jest.mock("@/components/device-management/ConcurrentStreamModal", () => ({
   ConcurrentStreamModal: ({
     isOpen,
     onClose,
+    onUpdate,
   }: {
     isOpen: boolean;
     onClose: () => void;
+    onUpdate?: (changes: { concurrentStreamLimit: number }) => void;
   }) => (
     <div>
       <span>{`limit-modal:${isOpen}`}</span>
       <button onClick={onClose}>close limit</button>
+      <button onClick={() => onUpdate?.({ concurrentStreamLimit: 2 })}>
+        save limit
+      </button>
     </div>
   ),
 }));
@@ -140,6 +145,7 @@ const makeHandlers = () => ({
   onBack: jest.fn(),
   onUpdateUserPreference: jest.fn(),
   onUpdateUserIPPolicy: jest.fn(),
+  onUserPreferenceChange: jest.fn(),
   onToggleUserVisibility: jest.fn(),
   onShowHistory: jest.fn(),
   onGrantUserTemporaryAccess: jest.fn(),
@@ -469,6 +475,31 @@ describe("UserDetail rules", () => {
     expect(screen.getByText("limit-modal:true")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "close limit" }));
+    expect(screen.getByText("limit-modal:false")).toBeInTheDocument();
+  });
+
+  it("reports a saved stream limit for the user", async () => {
+    const { user, handlers } = renderDetail();
+
+    await user.click(screen.getByRole("button", { name: "save limit" }));
+
+    expect(handlers.onUserPreferenceChange).toHaveBeenCalledWith("u-1", {
+      concurrentStreamLimit: 2,
+    });
+  });
+
+  it("tolerates a saved stream limit with nobody listening", async () => {
+    render(
+      <UserDetail
+        group={group()}
+        actionLoading={null}
+        {...makeHandlers()}
+        onUserPreferenceChange={undefined}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "save limit" }));
+
     expect(screen.getByText("limit-modal:false")).toBeInTheDocument();
   });
 

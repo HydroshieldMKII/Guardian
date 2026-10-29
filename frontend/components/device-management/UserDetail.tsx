@@ -154,6 +154,10 @@ interface UserDetailProps {
     userId: string,
     updates: Partial<UserPreference>,
   ) => void;
+  onUserPreferenceChange?: (
+    userId: string,
+    changes: Partial<UserPreference>,
+  ) => void;
   onToggleUserVisibility: (userId: string) => void;
   onShowHistory: (userId: string) => void;
   onGrantUserTemporaryAccess: (userId: string) => void;
@@ -176,6 +180,7 @@ export const UserDetail: React.FC<UserDetailProps> = ({
   onBack,
   onUpdateUserPreference,
   onUpdateUserIPPolicy,
+  onUserPreferenceChange,
   onToggleUserVisibility,
   onShowHistory,
   onGrantUserTemporaryAccess,
@@ -445,6 +450,7 @@ export const UserDetail: React.FC<UserDetailProps> = ({
         onClose={() => setShowConcurrentStreamModal(false)}
         userId={userId}
         username={group.user.username}
+        onUpdate={(changes) => onUserPreferenceChange?.(userId, changes)}
       />
     </div>
   );

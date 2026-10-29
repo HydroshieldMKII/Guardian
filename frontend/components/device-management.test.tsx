@@ -59,12 +59,19 @@ jest.mock("@/lib/api", () => ({
 const READ_AT = "2026-03-01T00:00:00Z";
 
 type DetailProps = {
-  group: { user: { userId: string }; devices: UserDevice[] };
+  group: {
+    user: { userId: string; preference?: UserPreference };
+    devices: UserDevice[];
+  };
   timeRules?: { id: number }[];
   updatingUserPreference?: string | null;
   onBack: () => void;
   onUpdateUserPreference: (id: string, block: boolean | null) => void;
   onUpdateUserIPPolicy: (id: string, updates: unknown) => void;
+  onUserPreferenceChange?: (
+    id: string,
+    changes: Partial<UserPreference>,
+  ) => void;
   onToggleUserVisibility: (id: string) => void;
   onShowHistory: (id: string) => void;
   onGrantUserTemporaryAccess: (id: string) => void;
@@ -87,6 +94,7 @@ jest.mock("@/components/device-management/UserDetail", () => ({
     onBack,
     onUpdateUserPreference,
     onUpdateUserIPPolicy,
+    onUserPreferenceChange,
     onToggleUserVisibility,
     onShowHistory,
     onGrantUserTemporaryAccess,
@@ -108,6 +116,14 @@ jest.mock("@/components/device-management/UserDetail", () => ({
         <span>{`rules:${id}:${timeRules?.length ?? "none"}`}</span>
         <span>{`updating:${id}:${updatingUserPreference ?? "none"}`}</span>
         <span>{`focus:${id}:${deviceFocus?.deviceIdentifier ?? "none"}`}</span>
+        <span>{`limit:${id}:${group.user.preference?.concurrentStreamLimit ?? "default"}`}</span>
+        <button
+          onClick={() =>
+            onUserPreferenceChange?.(id, { concurrentStreamLimit: 2 })
+          }
+        >
+          {`limit ${id}`}
+        </button>
         {group.devices.map((d) => (
           <div key={d.id} data-device-identifier={d.deviceIdentifier} />
         ))}
@@ -946,6 +962,17 @@ describe("DeviceManagement user actions", () => {
     expect(toast).toHaveBeenCalledWith(
       expect.objectContaining({ title: "Update failed" }),
     );
+  });
+
+  it("shows a new stream limit on the row before the refresh lands", async () => {
+    const { user, onRefresh } = await renderSelected();
+    onRefresh.mockReturnValue(new Promise(() => {}));
+    expect(screen.getByText("limit:u-1:default")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "limit u-1" }));
+
+    expect(screen.getByText("limit:u-1:2")).toBeInTheDocument();
+    expect(onRefresh).toHaveBeenCalled();
   });
 
   it("updates an IP policy and refreshes", async () => {
