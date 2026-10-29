@@ -20,6 +20,8 @@ import { ChevronDown, Pencil, RefreshCw, Trash2 } from "lucide-react";
 import { UserTimeRule, CreateTimeRuleDto } from "@/types";
 import { cn } from "@/lib/utils";
 import { useTimeRules } from "@/hooks/device-management/useTimeRules";
+import { windowsOverlap } from "@/lib/time-rules";
+import type { TimeRulePreset } from "@/lib/time-rules-api";
 import { useToast } from "@/hooks/use-toast";
 
 interface TimeRuleModalProps {
@@ -40,7 +42,6 @@ const DAYS_OF_WEEK = [
   { value: 6, label: "Saturday" },
 ];
 
-// Simple input component that maintains focus
 const FocusInput: React.FC<{
   value: string;
   onChange: (value: string) => void;
@@ -51,7 +52,6 @@ const FocusInput: React.FC<{
   const [localValue, setLocalValue] = useState(value);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Update local value when prop changes (but not if input is focused)
   useEffect(() => {
     if (document.activeElement !== inputRef.current) {
       setLocalValue(value);
@@ -76,12 +76,11 @@ const FocusInput: React.FC<{
   );
 };
 
-type EditingRule = UserTimeRule & {
-  isEditing: boolean;
-  tempData?: Partial<UserTimeRule>;
-};
+interface RuleEdit {
+  ruleId: number;
+  tempData: Partial<UserTimeRule>;
+}
 
-// Extended CreateTimeRuleDto with enabled field for UI
 type NewRuleForm = CreateTimeRuleDto & {
   enabled: boolean;
 };
@@ -95,110 +94,49 @@ export function TimeRuleModal({
 }: TimeRuleModalProps) {
   const { toast } = useToast();
   const {
-    getTimeRules,
+    rules,
+    isLoading: loadingRules,
+    isError: loadFailed,
     createTimeRule,
     updateTimeRule,
     deleteTimeRule,
-    createPreset,
-  } = useTimeRules();
+    deleteTimeRules,
+    applyPreset,
+  } = useTimeRules(userId, deviceIdentifier, isOpen);
 
-  const [rules, setRules] = useState<EditingRule[]>([]);
-  const [loadingRules, setLoadingRules] = useState(false);
+  const [edit, setEdit] = useState<RuleEdit | null>(null);
   const [updatingRuleId, setUpdatingRuleId] = useState<number | null>(null);
   const [deletingRuleId, setDeletingRuleId] = useState<number | null>(null);
   const [creatingRule, setCreatingRule] = useState(false);
-  const [creatingPreset, setCreatingPreset] = useState<string | null>(null); // Track which preset is being created
+  const [creatingPreset, setCreatingPreset] = useState<string | null>(null);
   const [deletingAllRules, setDeletingAllRules] = useState(false);
   const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
-  const [showPresetConfirm, setShowPresetConfirm] = useState<string | null>(
-    null,
-  );
+  const [showPresetConfirm, setShowPresetConfirm] =
+    useState<TimeRulePreset | null>(null);
   const [newRule, setNewRule] = useState<NewRuleForm>({
     deviceIdentifier: deviceIdentifier || undefined,
     ruleName: "",
-    action: "block", // Always block
+    action: "block",
     dayOfWeek: 0,
     startTime: "10:00",
     endTime: "15:00",
     enabled: true,
   });
 
-  // Helper function to sort rules by day of week and start time
-  const sortRules = (rules: EditingRule[]): EditingRule[] => {
-    return [...rules].sort((a, b) => {
-      // First sort by day of week
-      if (a.dayOfWeek !== b.dayOfWeek) {
-        return a.dayOfWeek - b.dayOfWeek;
-      }
-      // Then sort by start time
-      const timeToMinutes = (timeStr: string): number => {
-        const [hours, minutes] = timeStr.split(":").map(Number);
-        return hours * 60 + minutes;
-      };
-      return timeToMinutes(a.startTime) - timeToMinutes(b.startTime);
+  useEffect(() => {
+    if (!loadFailed) return;
+    toast({
+      title: "Error",
+      description: "Failed to load this user's time schedule",
+      variant: "destructive",
     });
-  };
+  }, [loadFailed, toast]);
 
-  const loadRules = async () => {
-    setLoadingRules(true);
-    try {
-      const userRules = await getTimeRules(userId, deviceIdentifier);
-      const editingRules = userRules.map((rule: UserTimeRule) => ({
-        ...rule,
-        isEditing: false,
-      }));
-      setRules(sortRules(editingRules));
-    } catch (error) {
-      console.error("Failed to load rules:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load this user's time schedule",
-        variant: "destructive",
-      });
-    } finally {
-      setLoadingRules(false);
-    }
-  };
-
-  const loadRulesRef = useRef(loadRules);
-
-  useEffect(() => {
-    loadRulesRef.current = loadRules;
-  });
-
-  useEffect(() => {
-    if (isOpen) {
-      void loadRulesRef.current();
-    }
-  }, [isOpen, userId, deviceIdentifier]);
-
-  // Helper functions
   const getDayLabel = (dayOfWeek: number): string => {
     const day = DAYS_OF_WEEK.find((d) => d.value === dayOfWeek);
     return day?.label || "Unknown";
   };
 
-  // Helper function to convert time string to minutes since midnight
-  const timeToMinutes = (timeStr: string): number => {
-    const [hours, minutes] = timeStr.split(":").map(Number);
-    return hours * 60 + minutes;
-  };
-
-  // Check if two time rules overlap
-  const doTimeRulesOverlap = (
-    rule1: { startTime: string; endTime: string },
-    rule2: { startTime: string; endTime: string },
-  ): boolean => {
-    const start1 = timeToMinutes(rule1.startTime);
-    const end1 = timeToMinutes(rule1.endTime);
-    const start2 = timeToMinutes(rule2.startTime);
-    const end2 = timeToMinutes(rule2.endTime);
-
-    // Standard overlap check: two time ranges overlap if one starts before the other ends
-    return start1 < end2 && start2 < end1;
-  };
-
-  // Validate if a rule would overlap with existing rules
   const validateRuleOverlap = (
     newRule: { dayOfWeek: number; startTime: string; endTime: string },
     excludeRuleId?: number,
@@ -207,7 +145,7 @@ export function TimeRuleModal({
       (rule) =>
         rule.id !== excludeRuleId &&
         rule.dayOfWeek === newRule.dayOfWeek &&
-        doTimeRulesOverlap(newRule, rule),
+        windowsOverlap(newRule, rule),
     );
 
     return {
@@ -217,49 +155,30 @@ export function TimeRuleModal({
   };
 
   const startEdit = (ruleId: number) => {
-    setRules((prev) =>
-      prev.map((rule) => ({
-        ...rule,
-        isEditing: rule.id === ruleId,
-        tempData: rule.id === ruleId ? { ...rule } : undefined,
-      })),
-    );
+    const rule = rules.find((r) => r.id === ruleId);
+    setEdit(rule ? { ruleId, tempData: { ...rule } } : null);
   };
 
-  const cancelEdit = (_ruleId: number) => {
-    setRules((prev) =>
-      prev.map((rule) => ({
-        ...rule,
-        isEditing: false,
-        tempData: undefined,
-      })),
-    );
-  };
+  const cancelEdit = () => setEdit(null);
 
   const updateTempData = (ruleId: number, updates: Partial<UserTimeRule>) => {
-    setRules((prev) =>
-      prev.map((rule) => {
-        if (rule.id === ruleId && rule.isEditing) {
-          return {
-            ...rule,
-            tempData: { ...rule.tempData, ...updates },
-          };
-        }
-        return rule;
-      }),
+    setEdit((current) =>
+      current?.ruleId === ruleId
+        ? { ...current, tempData: { ...current.tempData, ...updates } }
+        : current,
     );
   };
 
   const saveEdit = async (ruleId: number) => {
     const rule = rules.find((r) => r.id === ruleId);
-    if (!rule?.tempData) return;
+    if (!rule || edit?.ruleId !== ruleId) return;
+    const { tempData } = edit;
 
-    // Validate for overlaps (excluding the current rule being edited)
     const validation = validateRuleOverlap(
       {
-        dayOfWeek: rule.tempData.dayOfWeek ?? rule.dayOfWeek,
-        startTime: rule.tempData.startTime || rule.startTime,
-        endTime: rule.tempData.endTime || rule.endTime,
+        dayOfWeek: tempData.dayOfWeek ?? rule.dayOfWeek,
+        startTime: tempData.startTime || rule.startTime,
+        endTime: tempData.endTime || rule.endTime,
       },
       ruleId,
     );
@@ -275,29 +194,15 @@ export function TimeRuleModal({
 
     setUpdatingRuleId(ruleId);
     try {
-      await updateTimeRule(userId, ruleId, {
-        ruleName: rule.tempData.ruleName || rule.ruleName,
-        dayOfWeek: rule.tempData.dayOfWeek ?? rule.dayOfWeek,
-        startTime: rule.tempData.startTime || rule.startTime,
-        endTime: rule.tempData.endTime || rule.endTime,
-        enabled: rule.tempData.enabled ?? rule.enabled,
+      await updateTimeRule(ruleId, {
+        ruleName: tempData.ruleName || rule.ruleName,
+        dayOfWeek: tempData.dayOfWeek ?? rule.dayOfWeek,
+        startTime: tempData.startTime || rule.startTime,
+        endTime: tempData.endTime || rule.endTime,
+        enabled: tempData.enabled ?? rule.enabled,
       });
 
-      // Update local state and maintain sort order
-      setRules((prev) => {
-        const updatedRules = prev.map((r) => {
-          if (r.id === ruleId) {
-            return {
-              ...r,
-              ...r.tempData,
-              isEditing: false,
-              tempData: undefined,
-            };
-          }
-          return r;
-        });
-        return sortRules(updatedRules);
-      });
+      setEdit(null);
 
       toast({
         title: "Rule updated",
@@ -319,12 +224,7 @@ export function TimeRuleModal({
   const toggleRuleEnabled = async (ruleId: number, checked: boolean) => {
     setUpdatingRuleId(ruleId);
     try {
-      await updateTimeRule(userId, ruleId, {
-        enabled: checked,
-      });
-      setRules((prev) =>
-        prev.map((r) => (r.id === ruleId ? { ...r, enabled: checked } : r)),
-      );
+      await updateTimeRule(ruleId, { enabled: checked });
     } catch (error) {
       toast({
         title: "Error",
@@ -340,8 +240,7 @@ export function TimeRuleModal({
   const deleteRule = async (ruleId: number) => {
     setDeletingRuleId(ruleId);
     try {
-      await deleteTimeRule(userId, ruleId);
-      setRules((prev) => prev.filter((r) => r.id !== ruleId));
+      await deleteTimeRule(ruleId);
       toast({
         title: "Rule deleted",
         description: "The rule has been removed from this user's time schedule",
@@ -369,7 +268,6 @@ export function TimeRuleModal({
       return;
     }
 
-    // Validate for overlaps
     const validation = validateRuleOverlap({
       dayOfWeek: newRule.dayOfWeek,
       startTime: newRule.startTime,
@@ -387,15 +285,9 @@ export function TimeRuleModal({
 
     setCreatingRule(true);
     try {
-      // Extract enabled field and create the DTO
       const { enabled: _enabled, ...createDto } = newRule;
-      const createdRule = await createTimeRule(userId, createDto);
+      await createTimeRule(createDto);
 
-      setRules((prev) =>
-        sortRules([...prev, { ...createdRule, isEditing: false }]),
-      );
-
-      // Reset new rule form
       setNewRule({
         deviceIdentifier: deviceIdentifier || undefined,
         ruleName: "",
@@ -439,10 +331,7 @@ export function TimeRuleModal({
   const confirmDeleteAllRules = async () => {
     setDeletingAllRules(true);
     try {
-      // Delete all rules
-      await Promise.all(rules.map((rule) => deleteTimeRule(userId, rule.id)));
-
-      setRules([]);
+      await deleteTimeRules(rules.map((rule) => rule.id));
       toast({
         title: "Time schedule cleared",
         description: `Deleted ${rules.length} ${rules.length === 1 ? "rule" : "rules"}. This user can now stream at any time.`,
@@ -462,24 +351,14 @@ export function TimeRuleModal({
     }
   };
 
-  const confirmCreatePreset = async (presetType: string) => {
+  const confirmCreatePreset = async (presetType: TimeRulePreset) => {
     if (creatingPreset) {
       return;
     }
 
     setCreatingPreset(presetType);
     try {
-      const createdRules = await createPreset(
-        userId,
-        presetType as "weekdays-only" | "weekends-only",
-        deviceIdentifier,
-      );
-
-      const editingRules = createdRules.map((rule) => ({
-        ...rule,
-        isEditing: false,
-      }));
-      setRules(sortRules(editingRules));
+      await applyPreset(presetType);
       toast({
         title: "Preset applied",
         description:
@@ -552,10 +431,10 @@ export function TimeRuleModal({
               ) : (
                 <div className="space-y-2">
                   {rules.map((rule) => {
-                    const displayData =
-                      rule.isEditing && rule.tempData
-                        ? { ...rule, ...rule.tempData }
-                        : rule;
+                    const isEditing = edit?.ruleId === rule.id;
+                    const displayData = isEditing
+                      ? { ...rule, ...edit.tempData }
+                      : rule;
                     const busy = updatingRuleId === rule.id;
 
                     return (
@@ -563,11 +442,11 @@ export function TimeRuleModal({
                         key={rule.id}
                         className={cn(
                           "rounded-lg border transition-colors duration-200",
-                          rule.isEditing ? "p-4" : "px-3 py-2.5",
+                          isEditing ? "p-4" : "px-3 py-2.5",
                           rule.enabled ? "bg-card" : "bg-muted/30",
                         )}
                       >
-                        {rule.isEditing ? (
+                        {isEditing ? (
                           <div className="space-y-4">
                             <Field label="Rule name">
                               <FocusInput
@@ -648,7 +527,7 @@ export function TimeRuleModal({
                               </Button>
                               <Button
                                 variant="outline"
-                                onClick={() => cancelEdit(rule.id)}
+                                onClick={cancelEdit}
                                 disabled={busy}
                                 size="sm"
                                 className="flex-1 sm:flex-none"

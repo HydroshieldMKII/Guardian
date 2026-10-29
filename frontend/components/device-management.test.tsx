@@ -38,10 +38,12 @@ jest.mock("@/hooks/device-management/useUserPreferences", () => ({
   useUserPreferences: () => ({ updateUserPreference, updateUserIPPolicy }),
 }));
 
-const getAllTimeRules = jest.fn();
-const fetchAllTimeRules = jest.fn();
+const useTimeRulesForUsers = jest.fn<
+  { data?: Record<string, unknown[]> },
+  [string[]]
+>();
 jest.mock("@/hooks/device-management/useTimeRules", () => ({
-  useTimeRules: () => ({ getAllTimeRules, fetchAllTimeRules }),
+  useTimeRulesForUsers: (userIds: string[]) => useTimeRulesForUsers(userIds),
 }));
 
 const toast = jest.fn();
@@ -405,8 +407,7 @@ beforeEach(() => {
   jest.useRealTimers();
   localStorage.clear();
   consoleError = jest.spyOn(console, "error").mockImplementation(() => {});
-  getAllTimeRules.mockResolvedValue([]);
-  fetchAllTimeRules.mockResolvedValue(undefined);
+  useTimeRulesForUsers.mockReturnValue({ data: {} });
   approveDevice.mockResolvedValue(true);
   rejectDevice.mockResolvedValue(true);
   deleteDevice.mockResolvedValue(true);
@@ -498,26 +499,25 @@ describe("DeviceManagement grouping", () => {
   });
 
   it("hands the selected user's time rules to the detail pane", async () => {
-    getAllTimeRules.mockResolvedValue([
-      { id: 1, userId: "u-1", enabled: true, dayOfWeek: 1 },
-    ]);
+    useTimeRulesForUsers.mockReturnValue({
+      data: { "u-1": [{ id: 1, userId: "u-1", enabled: true, dayOfWeek: 1 }] },
+    });
     await renderSelected();
 
-    await waitFor(() =>
-      expect(screen.getByText("rules:u-1:1")).toBeInTheDocument(),
-    );
+    expect(screen.getByText("rules:u-1:1")).toBeInTheDocument();
   });
 
-  it("logs a failure loading time-rule status", async () => {
-    fetchAllTimeRules.mockRejectedValue(new Error("offline"));
+  it("asks for the time rules of every listed user", async () => {
     await renderPanel();
 
-    await waitFor(() =>
-      expect(consoleError).toHaveBeenCalledWith(
-        "Error loading time rule status:",
-        expect.any(Error),
-      ),
-    );
+    expect(useTimeRulesForUsers).toHaveBeenLastCalledWith(["u-1"]);
+  });
+
+  it("shows no rules for a user the overview has not loaded", async () => {
+    useTimeRulesForUsers.mockReturnValue({ data: undefined });
+    await renderSelected();
+
+    expect(screen.getByText("rules:u-1:none")).toBeInTheDocument();
   });
 });
 
@@ -732,9 +732,9 @@ describe("DeviceManagement selection", () => {
 
 describe("DeviceManagement refresh controls", () => {
   it("keeps the current time rules on screen while refreshing", async () => {
-    getAllTimeRules.mockResolvedValue([
-      { id: 1, userId: "u-1", enabled: true, dayOfWeek: 1 },
-    ]);
+    useTimeRulesForUsers.mockReturnValue({
+      data: { "u-1": [{ id: 1, userId: "u-1", enabled: true, dayOfWeek: 1 }] },
+    });
     const { user, onRefresh } = await renderSelected();
     await waitFor(() =>
       expect(screen.getByText("rules:u-1:1")).toBeInTheDocument(),
@@ -1024,25 +1024,13 @@ describe("DeviceManagement user actions", () => {
     expect(screen.getByText("time-modal:true:u-1")).toBeInTheDocument();
   });
 
-  it("reloads time rules when the schedule modal closes", async () => {
+  it("closes the schedule modal", async () => {
     const { user } = await renderSelected();
-    await waitFor(() => expect(fetchAllTimeRules).toHaveBeenCalledTimes(1));
-    getAllTimeRules.mockResolvedValue([
-      { id: 1, userId: "u-1", enabled: true, dayOfWeek: 1 },
-      { id: 2, userId: "u-1", enabled: true, dayOfWeek: 2 },
-    ]);
 
     await user.click(screen.getByRole("button", { name: "schedule u-1" }));
     await user.click(screen.getByRole("button", { name: "close schedule" }));
 
-    await waitFor(() =>
-      expect(screen.getByText("time-modal:false:")).toBeInTheDocument(),
-    );
-    expect(fetchAllTimeRules).toHaveBeenCalledTimes(2);
-    expect(fetchAllTimeRules).toHaveBeenLastCalledWith(["u-1"]);
-    await waitFor(() =>
-      expect(screen.getByText("rules:u-1:2")).toBeInTheDocument(),
-    );
+    expect(screen.getByText("time-modal:false:")).toBeInTheDocument();
   });
 });
 

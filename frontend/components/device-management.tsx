@@ -23,11 +23,12 @@ import { Eye, EyeOff } from "lucide-react";
 // Hooks
 import { useDeviceActions } from "@/hooks/device-management/useDeviceActions";
 import { useUserPreferences } from "@/hooks/device-management/useUserPreferences";
-import { useTimeRules } from "@/hooks/device-management/useTimeRules";
+import { useTimeRulesForUsers } from "@/hooks/device-management/useTimeRules";
 import { useToast } from "@/hooks/use-toast";
 
 // Types
-import { UserDevice, UserPreference, UserTimeRule, AppSetting } from "@/types";
+import { UserDevice, UserPreference, AppSetting } from "@/types";
+import type { TimeRulesByUser } from "@/lib/time-rules-api";
 import {
   devicePolicyBadges,
   isPlexampDevice,
@@ -66,6 +67,7 @@ import { TimeRuleModal } from "@/components/device-management/TimeRuleModal";
 import { UserAvatar } from "@/components/device-management/SharedComponents";
 import { HIGHLIGHT_CLASSES } from "@/lib/highlight";
 
+const NO_TIME_RULES: TimeRulesByUser = {};
 const DEVICE_LOOKUP_ATTEMPTS = 20;
 const DEVICE_LOOKUP_RETRY_MS = 100;
 
@@ -177,10 +179,6 @@ const DeviceManagement = memo(
       username?: string;
       deviceIdentifier?: string;
     } | null>(null);
-    const [userTimeRules, setUserTimeRules] = useState<
-      Record<string, UserTimeRule[]>
-    >({});
-    const loadingTimeRulesRef = useRef(false);
     const [updatingUserPreference, setUpdatingUserPreference] = useState<
       string | null
     >(null);
@@ -197,15 +195,12 @@ const DeviceManagement = memo(
     // Custom hooks
     const deviceActions = useDeviceActions();
     const userPreferences = useUserPreferences();
-    const { getAllTimeRules, fetchAllTimeRules } = useTimeRules();
-    const timeRulesApiRef = useRef({ getAllTimeRules, fetchAllTimeRules });
+    const { data: userTimeRules = NO_TIME_RULES } = useTimeRulesForUsers(
+      userGroups.map((group) => group.user.userId),
+    );
     const selectedUserIdRef = useRef(selectedUserId);
     const selectUserRef = useRef(selectUser);
     const { toast } = useToast();
-
-    useEffect(() => {
-      timeRulesApiRef.current = { getAllTimeRules, fetchAllTimeRules };
-    });
 
     useEffect(() => {
       selectedUserIdRef.current = selectedUserId;
@@ -362,36 +357,6 @@ const DeviceManagement = memo(
         setLoading(false);
       }
     }, [devicesData, usersData]);
-
-    // Load time policy status for all users when user groups change
-    useEffect(() => {
-      const loadTimePolicyStatus = async () => {
-        if (userGroups.length > 0 && !loadingTimeRulesRef.current) {
-          loadingTimeRulesRef.current = true;
-          const userIds = userGroups.map((group) => group.user.userId);
-          const { fetchAllTimeRules, getAllTimeRules } =
-            timeRulesApiRef.current;
-
-          try {
-            // Fetch all time rules at once (cached globally)
-            await fetchAllTimeRules(userIds);
-
-            // Keep the full rules so each device can report its own schedule
-            const ruleMap: Record<string, UserTimeRule[]> = {};
-            for (const userId of userIds) {
-              ruleMap[userId] = await getAllTimeRules(userId);
-            }
-            setUserTimeRules(ruleMap);
-          } catch (error) {
-            console.error("Error loading time rule status:", error);
-          } finally {
-            loadingTimeRulesRef.current = false;
-          }
-        }
-      };
-
-      void loadTimePolicyStatus();
-    }, [userGroups]);
 
     const focusDevice = useCallback(
       (userId: string, deviceIdentifier: string, onDone?: () => void) => {
@@ -1027,30 +992,9 @@ const DeviceManagement = memo(
       }
     };
 
-    const handleTimeRuleModalClose = async () => {
+    const handleTimeRuleModalClose = () => {
       setTimeRuleModalOpen(false);
       setSelectedTimeRuleUser(null);
-      // Refresh time policy status for all users after policy changes
-      if (userGroups.length > 0 && !loadingTimeRulesRef.current) {
-        loadingTimeRulesRef.current = true;
-        const userIds = userGroups.map((group) => group.user.userId);
-
-        try {
-          // Refresh all time rules (cached globally)
-          await fetchAllTimeRules(userIds);
-
-          // Keep the full rules so each device can report its own schedule
-          const ruleMap: Record<string, UserTimeRule[]> = {};
-          for (const userId of userIds) {
-            ruleMap[userId] = await getAllTimeRules(userId);
-          }
-          setUserTimeRules(ruleMap);
-        } catch (error) {
-          console.error("Error refreshing time rule status:", error);
-        } finally {
-          loadingTimeRulesRef.current = false;
-        }
-      }
     };
 
     // Only devices Guardian is currently blocking can be granted temporary access
@@ -1390,7 +1334,7 @@ const DeviceManagement = memo(
 
         <TimeRuleModal
           isOpen={timeRuleModalOpen}
-          onClose={() => void handleTimeRuleModalClose()}
+          onClose={handleTimeRuleModalClose}
           userId={selectedTimeRuleUser?.userId || ""}
           username={selectedTimeRuleUser?.username || "Unknown user"}
           deviceIdentifier={selectedTimeRuleUser?.deviceIdentifier}

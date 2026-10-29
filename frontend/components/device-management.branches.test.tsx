@@ -39,10 +39,12 @@ jest.mock("@/hooks/device-management/useUserPreferences", () => ({
   useUserPreferences: () => ({ updateUserPreference, updateUserIPPolicy }),
 }));
 
-const getAllTimeRules = jest.fn();
-const fetchAllTimeRules = jest.fn();
+const useTimeRulesForUsers = jest.fn<
+  { data?: Record<string, unknown[]> },
+  [string[]]
+>();
 jest.mock("@/hooks/device-management/useTimeRules", () => ({
-  useTimeRules: () => ({ getAllTimeRules, fetchAllTimeRules }),
+  useTimeRulesForUsers: (userIds: string[]) => useTimeRulesForUsers(userIds),
 }));
 
 const toast = jest.fn<void, Parameters<typeof showToast>>();
@@ -349,8 +351,7 @@ beforeEach(() => {
   jest.useRealTimers();
   localStorage.clear();
   consoleError = jest.spyOn(console, "error").mockImplementation(() => {});
-  getAllTimeRules.mockResolvedValue([]);
-  fetchAllTimeRules.mockResolvedValue(undefined);
+  useTimeRulesForUsers.mockReturnValue({ data: {} });
   approveDevice.mockResolvedValue(true);
   rejectDevice.mockResolvedValue(true);
   deleteDevice.mockResolvedValue(true);
@@ -1086,27 +1087,10 @@ describe("time policy modal", () => {
     expect(screen.getByText("time-modal:false:none")).toBeInTheDocument();
   });
 
-  it("skips the refresh when there are no user groups", async () => {
-    const { user } = await renderPanel({ devices: [], users: [] });
+  it("asks for no time rules when there are no users", async () => {
+    await renderPanel({ devices: [], users: [] });
 
-    await user.click(screen.getByRole("button", { name: "close schedule" }));
-
-    expect(fetchAllTimeRules).not.toHaveBeenCalled();
-  });
-
-  it("logs a failure to refresh time rule status", async () => {
-    const { user } = await renderPanel();
-    await waitFor(() => expect(fetchAllTimeRules).toHaveBeenCalled());
-    fetchAllTimeRules.mockRejectedValue(new Error("nope"));
-
-    await user.click(screen.getByRole("button", { name: "close schedule" }));
-
-    await waitFor(() =>
-      expect(consoleError).toHaveBeenCalledWith(
-        "Error refreshing time rule status:",
-        expect.any(Error),
-      ),
-    );
+    expect(useTimeRulesForUsers).toHaveBeenLastCalledWith([]);
   });
 });
 

@@ -1,23 +1,23 @@
-import { act, render, screen, waitFor, within } from "@testing-library/react";
+import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { TimeRuleModal } from "@/components/device-management/TimeRuleModal";
 import type { CreateTimeRuleDto } from "@/types";
+import { renderWithQuery } from "@/test-utils/query";
 
-const getTimeRules = jest.fn();
+const getTimeRules = jest.fn<Promise<unknown>, unknown[]>();
 const createTimeRule = jest.fn<Promise<unknown>, [string, CreateTimeRuleDto]>();
-const updateTimeRule = jest.fn();
-const deleteTimeRule = jest.fn();
-const createPreset = jest.fn();
+const updateTimeRule = jest.fn<Promise<unknown>, unknown[]>();
+const deleteTimeRule = jest.fn<Promise<unknown>, unknown[]>();
+const createPreset = jest.fn<Promise<unknown>, unknown[]>();
 
-jest.mock("@/hooks/device-management/useTimeRules", () => ({
-  useTimeRules: () => ({
-    getTimeRules,
-    createTimeRule,
-    updateTimeRule,
-    deleteTimeRule,
-    createPreset,
-    loading: false,
-  }),
+jest.mock("@/lib/time-rules-api", () => ({
+  timeRulesApi: {
+    forUser: (...args: unknown[]) => getTimeRules(...args),
+    create: (...args: [string, CreateTimeRuleDto]) => createTimeRule(...args),
+    update: (...args: unknown[]) => updateTimeRule(...args),
+    remove: (...args: unknown[]) => deleteTimeRule(...args),
+    applyPreset: (...args: unknown[]) => createPreset(...args),
+  },
 }));
 
 const toast = jest.fn();
@@ -60,7 +60,7 @@ const renderModal = async (
   props: { deviceIdentifier?: string; isOpen?: boolean } = {},
 ) => {
   const onClose = jest.fn();
-  const view = render(
+  const view = renderWithQuery(
     <TimeRuleModal
       isOpen={props.isOpen ?? true}
       onClose={onClose}
@@ -69,7 +69,9 @@ const renderModal = async (
       deviceIdentifier={props.deviceIdentifier}
     />,
   );
-  await act(async () => {});
+  await waitFor(() =>
+    expect(screen.queryByText("Loading rules...")).toBeNull(),
+  );
   return {
     ...view,
     onClose,
@@ -99,12 +101,42 @@ afterEach(() => consoleError.mockRestore());
 describe("TimeRuleModal loading", () => {
   it("loads rules when it opens", async () => {
     await renderModal();
-    expect(getTimeRules).toHaveBeenCalledWith("u-1", undefined);
+    expect(getTimeRules).toHaveBeenCalledWith("u-1");
   });
 
-  it("scopes the load to a device when one is given", async () => {
+  it("shows only the rules of the device it was opened for", async () => {
+    getTimeRules.mockResolvedValue([
+      rule({ id: 1, ruleName: "Whole account" }),
+      rule({ id: 2, ruleName: "Living room", deviceIdentifier: "device-1" }),
+    ]);
     await renderModal({ deviceIdentifier: "device-1" });
-    expect(getTimeRules).toHaveBeenCalledWith("u-1", "device-1");
+
+    expect(screen.getByText("Living room")).toBeInTheDocument();
+    expect(screen.queryByText("Whole account")).toBeNull();
+  });
+
+  it("shows only the account-wide rules without a device", async () => {
+    getTimeRules.mockResolvedValue([
+      rule({ id: 1, ruleName: "Whole account" }),
+      rule({ id: 2, ruleName: "Living room", deviceIdentifier: "device-1" }),
+    ]);
+    await renderModal();
+
+    expect(screen.getByText("Whole account")).toBeInTheDocument();
+    expect(screen.queryByText("Living room")).toBeNull();
+  });
+
+  it("shows a rule saved elsewhere once it has reloaded", async () => {
+    const { user } = await renderModal();
+    getTimeRules.mockResolvedValue([rule({ ruleName: "Sleep time" })]);
+
+    await user.type(
+      screen.getByPlaceholderText("e.g. School hours, Sleep time, Work hours"),
+      "Sleep time",
+    );
+    await user.click(screen.getByRole("button", { name: /Create rule/ }));
+
+    expect(await screen.findByText("Sleep time")).toBeInTheDocument();
   });
 
   it("loads nothing while closed", async () => {
@@ -169,13 +201,16 @@ describe("TimeRuleModal loading", () => {
     getTimeRules.mockRejectedValue(new Error("offline"));
     await renderModal();
 
-    expect(toast).toHaveBeenCalledWith(
-      expect.objectContaining({
-        description: "Failed to load this user's time schedule",
-      }),
+    await waitFor(() =>
+      expect(toast).toHaveBeenCalledWith(
+        expect.objectContaining({
+          description: "Failed to load this user's time schedule",
+        }),
+      ),
     );
     expect(consoleError).toHaveBeenCalledWith(
-      "Failed to load rules:",
+      "Request failed:",
+      ["timeRules", "user", "u-1"],
       expect.any(Error),
     );
   });
