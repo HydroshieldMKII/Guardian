@@ -6,7 +6,7 @@ import { UserDevice } from '@/entities/user-device.entity';
 import { UserTimeRule } from '@/entities/user-time-rule.entity';
 import { UserPreference } from '@/entities/user-preference.entity';
 import { AppSettings } from '@/entities/app-settings.entity';
-import { NotificationsService } from '@/modules/notifications/services/notifications.service';
+import { NotificationDispatchService } from '@/modules/notifications/services/notification-dispatch.service';
 import { UserPortalService } from '@/modules/user-portal/services/user-portal.service';
 import { anyDate, anyValue } from '@/test-matchers';
 
@@ -16,7 +16,7 @@ describe('UserPortalService', () => {
   let timeRuleRepo: Record<string, jest.Mock>;
   let preferenceRepo: { findOne: jest.Mock };
   let settingsRepo: { findOne: jest.Mock };
-  let notificationsService: { createDeviceNoteNotification: jest.Mock };
+  let notificationDispatch: { createDeviceNoteNotification: jest.Mock };
 
   const settings = new Map<string, string>();
 
@@ -77,7 +77,7 @@ describe('UserPortalService', () => {
       ),
     };
 
-    notificationsService = {
+    notificationDispatch = {
       createDeviceNoteNotification: jest.fn().mockResolvedValue(null),
     };
 
@@ -91,7 +91,10 @@ describe('UserPortalService', () => {
           useValue: preferenceRepo,
         },
         { provide: getRepositoryToken(AppSettings), useValue: settingsRepo },
-        { provide: NotificationsService, useValue: notificationsService },
+        {
+          provide: NotificationDispatchService,
+          useValue: notificationDispatch,
+        },
       ],
     }).compile();
 
@@ -370,7 +373,7 @@ describe('UserPortalService', () => {
         requestSubmittedAt: anyDate(),
       });
       expect(
-        notificationsService.createDeviceNoteNotification,
+        notificationDispatch.createDeviceNoteNotification,
       ).not.toHaveBeenCalled();
     });
 
@@ -380,7 +383,7 @@ describe('UserPortalService', () => {
       await service.requestDeviceApproval('plex-9', 1, 'my new tablet');
 
       expect(
-        notificationsService.createDeviceNoteNotification,
+        notificationDispatch.createDeviceNoteNotification,
       ).toHaveBeenCalledWith(
         'plex-9',
         'guest',
@@ -393,12 +396,12 @@ describe('UserPortalService', () => {
       await service.requestDeviceApproval('plex-9', 1, 'note');
 
       expect(
-        notificationsService.createDeviceNoteNotification,
+        notificationDispatch.createDeviceNoteNotification,
       ).toHaveBeenCalledWith('plex-9', 'Unknown User', anyValue(), 'note');
     });
 
     it('still records the note when the notification fails', async () => {
-      notificationsService.createDeviceNoteNotification.mockRejectedValue(
+      notificationDispatch.createDeviceNoteNotification.mockRejectedValue(
         new Error('no relay'),
       );
 

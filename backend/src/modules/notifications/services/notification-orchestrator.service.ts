@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { Notification } from '@/entities/notification.entity';
 import { SessionHistory } from '@/entities/session-history.entity';
 import { NotificationsService } from '@/modules/notifications/services/notifications.service';
+import { NotificationDispatchService } from '@/modules/notifications/services/notification-dispatch.service';
 
 export interface NewDeviceNotificationData {
   userId: string;
@@ -49,6 +50,7 @@ export class NotificationOrchestratorService {
     @InjectRepository(SessionHistory)
     private sessionHistoryRepository: Repository<SessionHistory>,
     private notificationsService: NotificationsService,
+    private notificationDispatch: NotificationDispatchService,
   ) {}
 
   /** Creates notification for a newly detected device */
@@ -56,7 +58,7 @@ export class NotificationOrchestratorService {
     data: NewDeviceNotificationData,
   ): Promise<Notification | null> {
     try {
-      return await this.notificationsService.createNewDeviceNotification(
+      return await this.notificationDispatch.createNewDeviceNotification(
         data.userId,
         data.username ?? 'Unknown User',
         data.deviceName ?? 'Unknown Device',
@@ -82,7 +84,7 @@ export class NotificationOrchestratorService {
       if (sessionHistoryId) {
         await this.markSessionTerminated(sessionHistoryId);
       }
-      return await this.notificationsService.createStreamBlockedNotification(
+      return await this.notificationDispatch.createStreamBlockedNotification(
         data.userId,
         data.username ?? 'Unknown User',
         data.deviceIdentifier,
@@ -106,7 +108,7 @@ export class NotificationOrchestratorService {
         ? await this.findSessionHistoryId(data.sessionKey)
         : undefined;
 
-      return await this.notificationsService.createLocationChangeNotification(
+      return await this.notificationDispatch.createLocationChangeNotification(
         data.userId,
         data.username ?? 'Unknown User',
         data.deviceName ?? 'Unknown Device',

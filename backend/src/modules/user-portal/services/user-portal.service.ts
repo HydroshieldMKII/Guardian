@@ -11,7 +11,7 @@ import { UserDevice } from '@/entities/user-device.entity';
 import { UserTimeRule } from '@/entities/user-time-rule.entity';
 import { UserPreference } from '@/entities/user-preference.entity';
 import { AppSettings } from '@/entities/app-settings.entity';
-import { NotificationsService } from '@/modules/notifications/services/notifications.service';
+import { NotificationDispatchService } from '@/modules/notifications/services/notification-dispatch.service';
 
 export interface UserPortalDevice {
   id: number;
@@ -71,8 +71,8 @@ export class UserPortalService {
     private userPreferenceRepository: Repository<UserPreference>,
     @InjectRepository(AppSettings)
     private appSettingsRepository: Repository<AppSettings>,
-    @Inject(forwardRef(() => NotificationsService))
-    private notificationsService: NotificationsService,
+    @Inject(forwardRef(() => NotificationDispatchService))
+    private notificationDispatch: NotificationDispatchService,
   ) {}
 
   /**
@@ -326,7 +326,7 @@ export class UserPortalService {
         });
         const username = userPreference?.username || 'Unknown User';
 
-        await this.notificationsService.createDeviceNoteNotification(
+        await this.notificationDispatch.createDeviceNoteNotification(
           plexUserId,
           username,
           device.deviceName,

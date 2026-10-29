@@ -1,14 +1,11 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOptionsRelations, IsNull, MoreThan, Repository } from 'typeorm';
 import { Notification } from '@/entities/notification.entity';
 import { SessionHistory } from '@/entities/session-history.entity';
-import { UserDevice } from '@/entities/user-device.entity';
 import { ConfigService } from '@/modules/config/services/config.service';
-import { AppriseService } from '@/modules/config/services/apprise.service';
-import { EmailService } from '@/modules/config/services/email.service';
 import { LiveEventsService } from '@/modules/events/live-events.service';
-import { Logger } from '@nestjs/common';
+import { UNKNOWN_DEVICE } from '@/modules/notifications/services/notification-text';
 
 export interface CreateNotificationDto {
   userId: string;
@@ -33,21 +30,30 @@ const NOTIFICATION_RELATIONS: FindOptionsRelations<Notification> = {
   sessionHistory: { userPreference: true, userDevice: true },
 };
 
+const toResponse = (notification: Notification): NotificationResponseDto => ({
+  id: notification.id,
+  userId: notification.userId,
+  username:
+    notification.sessionHistory?.userPreference?.username || 'Unknown User',
+  deviceName:
+    notification.sessionHistory?.userDevice?.deviceName || UNKNOWN_DEVICE,
+  text: notification.text,
+  type: notification.type,
+  read: notification.read,
+  createdAt: notification.createdAt,
+  sessionHistoryId: notification.sessionHistoryId,
+});
+
 @Injectable()
 export class NotificationsService {
   private readonly logger = new Logger(NotificationsService.name);
-  private readonly maxDeviceNameLength = 30;
 
   constructor(
     @InjectRepository(Notification)
     private notificationRepository: Repository<Notification>,
     @InjectRepository(SessionHistory)
     private sessionHistoryRepository: Repository<SessionHistory>,
-    @InjectRepository(UserDevice)
-    private userDeviceRepository: Repository<UserDevice>,
     private configService: ConfigService,
-    private appriseService: AppriseService,
-    private emailService: EmailService,
     private liveEvents: LiveEventsService,
   ) {}
 
@@ -61,19 +67,6 @@ export class NotificationsService {
     } catch (error) {
       this.logger.error('Failed to broadcast notification update:', error);
     }
-  }
-
-  /**
-   * Truncates a device name if it exceeds the maximum length
-   */
-  private truncateDeviceName(name: string | null | undefined): string {
-    if (!name) {
-      return 'Unknown Device';
-    }
-    if (name.length > this.maxDeviceNameLength) {
-      return name.substring(0, this.maxDeviceNameLength) + '...';
-    }
-    return name;
   }
 
   async createNotification(
@@ -92,367 +85,6 @@ export class NotificationsService {
     return saved;
   }
 
-  async createNewDeviceNotification(
-    userId: string,
-    username: string,
-    deviceName: string,
-    ipAddress: string,
-    sessionHistoryId?: number,
-  ): Promise<Notification | null> {
-    const truncatedDeviceName = this.truncateDeviceName(deviceName);
-    const text = `New device detected for ${username} on ${truncatedDeviceName} - ${ipAddress}`;
-
-    // Check if in-app notifications are enabled globally and for new devices
-    const [inAppEnabled, inAppNotifyOnNewDevice] = await Promise.all([
-      this.configService.getSetting('IN_APP_ENABLED'),
-      this.configService.getSetting('IN_APP_NOTIFY_ON_NEW_DEVICE'),
-    ]);
-
-    let notification: Notification | null = null;
-    if (inAppEnabled && inAppNotifyOnNewDevice) {
-      notification = await this.createNotification({
-        userId,
-        text,
-        type: 'info',
-        sessionHistoryId,
-      });
-    } else {
-      this.logger.log('In-app notification for new device is disabled.');
-    }
-
-    // Send email notification for new device if enabled
-    try {
-      const [smtpEnabled, smtpNotifyOnNewDevice] = await Promise.all([
-        this.configService.getSetting('SMTP_ENABLED'),
-        this.configService.getSetting('SMTP_NOTIFY_ON_NEW_DEVICE'),
-      ]);
-
-      if (smtpEnabled && smtpNotifyOnNewDevice) {
-        await this.emailService.sendNewDeviceEmail(
-          text,
-          username,
-          deviceName,
-          ipAddress,
-        );
-      } else {
-        this.logger.log('SMTP email notification for new device is disabled.');
-      }
-    } catch (error) {
-      console.error('Failed to send new device notification email:', error);
-    }
-
-    // Send Apprise notification for new device if enabled
-    try {
-      const [appriseEnabled, appriseNotifyOnNewDevice] = await Promise.all([
-        this.configService.getSetting('APPRISE_ENABLED'),
-        this.configService.getSetting('APPRISE_NOTIFY_ON_NEW_DEVICE'),
-      ]);
-
-      if (appriseEnabled && appriseNotifyOnNewDevice) {
-        await this.appriseService.sendNewDeviceNotification(
-          username,
-          deviceName,
-          ipAddress,
-        );
-      } else {
-        this.logger.log('Apprise notification for new device is disabled.');
-      }
-    } catch (error) {
-      console.error('Failed to send Apprise new device notification:', error);
-    }
-
-    return notification;
-  }
-
-  async createStreamBlockedNotification(
-    userId: string,
-    username: string,
-    deviceIdentifier: string,
-    stopCode?: string,
-    sessionHistoryId?: number,
-    ipAddress?: string,
-  ): Promise<Notification | null> {
-    // Look up the custom device name from the database
-    let deviceDisplayName = 'Unknown Device'; // Default if not found
-
-    try {
-      const userDevice = await this.userDeviceRepository.findOne({
-        where: {
-          userId: userId,
-          deviceIdentifier: deviceIdentifier,
-        },
-      });
-
-      if (userDevice && userDevice.deviceName) {
-        deviceDisplayName = this.truncateDeviceName(userDevice.deviceName);
-      }
-    } catch (error) {
-      // If lookup fails, use default
-      console.warn('Failed to lookup custom device name:', error);
-    }
-
-    let text: string;
-
-    if (stopCode) {
-      switch (stopCode) {
-        case 'DEVICE_PENDING':
-          text = `Stream blocked for ${username} on ${deviceDisplayName} - device needs approval`;
-          break;
-        case 'DEVICE_REJECTED':
-          text = `Stream blocked for ${username} on ${deviceDisplayName} - device is not allowed`;
-          break;
-        case 'IP_POLICY_LAN_ONLY':
-          text = `Stream blocked for ${username} on ${deviceDisplayName} - device attempted WAN access but is restricted to LAN only`;
-          break;
-        case 'IP_POLICY_WAN_ONLY':
-          text = `Stream blocked for ${username} on ${deviceDisplayName} - device attempted LAN access but is restricted to WAN only`;
-          break;
-        case 'IP_POLICY_NOT_ALLOWED':
-          text = `Stream blocked for ${username} on ${deviceDisplayName} - IP address is not in the allowed list`;
-          break;
-        case 'TIME_RESTRICTED':
-          text = `Stream blocked for ${username} on ${deviceDisplayName} - user schedule doesn't allow streaming at this moment`;
-          break;
-        case 'CONCURRENT_LIMIT':
-          text = `Stream blocked for ${username} on ${deviceDisplayName} - user exceeded concurrent stream limit`;
-          break;
-        default:
-          text = `Stream blocked for ${username} on ${deviceDisplayName} - ${stopCode}`;
-          break;
-      }
-    } else {
-      // Fallback to generic message if no stop code provided
-      text = `Stream blocked for ${username} on ${deviceDisplayName}`;
-    }
-
-    // Check if in-app notifications are enabled globally and for blocked streams
-    const [inAppEnabled, inAppNotifyEnabled] = await Promise.all([
-      this.configService.getSetting('IN_APP_ENABLED'),
-      this.configService.getSetting('IN_APP_NOTIFY_ON_BLOCK'),
-    ]);
-
-    let notification: Notification | null = null;
-    if (inAppEnabled && inAppNotifyEnabled) {
-      notification = await this.createNotification({
-        userId,
-        text,
-        type: 'block',
-        sessionHistoryId,
-      });
-    } else {
-      this.logger.log('In-app notification for blocked stream is disabled.');
-    }
-
-    // Send email notification for stream blocking if enabled
-    try {
-      const [smtpEnabled, smtpNotifyEnabled] = await Promise.all([
-        this.configService.getSetting('SMTP_ENABLED'),
-        this.configService.getSetting('SMTP_NOTIFY_ON_BLOCK'),
-      ]);
-
-      if (smtpEnabled && smtpNotifyEnabled) {
-        await this.emailService.sendBlockedEmail(
-          username,
-          deviceDisplayName,
-          stopCode || 'N/A',
-          ipAddress,
-        );
-      } else {
-        this.logger.log(
-          'SMTP email notification for stream blocking is disabled.',
-        );
-      }
-    } catch (error) {
-      console.error('Failed to send stream blocked notification email:', error);
-    }
-
-    // Send Apprise notification for stream blocking if enabled
-    try {
-      const [appriseEnabled, appriseNotifyEnabled] = await Promise.all([
-        this.configService.getSetting('APPRISE_ENABLED'),
-        this.configService.getSetting('APPRISE_NOTIFY_ON_BLOCK'),
-      ]);
-
-      if (appriseEnabled && appriseNotifyEnabled) {
-        await this.appriseService.sendBlockedNotification(
-          username,
-          deviceDisplayName,
-          ipAddress,
-          stopCode,
-        );
-      } else {
-        this.logger.log(
-          'Apprise notification for stream blocking is disabled.',
-        );
-      }
-    } catch (error) {
-      console.error(
-        'Failed to send Apprise stream blocked notification:',
-        error,
-      );
-    }
-
-    return notification;
-  }
-
-  async createLocationChangeNotification(
-    userId: string,
-    username: string,
-    deviceName: string,
-    oldIpAddress: string,
-    newIpAddress: string,
-    sessionHistoryId?: number,
-  ): Promise<Notification | null> {
-    const truncatedDeviceName = this.truncateDeviceName(deviceName);
-    const text = `Device location changed for ${username} on ${truncatedDeviceName} - ${oldIpAddress} → ${newIpAddress}`;
-
-    // Check if in-app notifications are enabled globally and for location changes
-    const [inAppEnabled, inAppNotifyOnLocationChange] = await Promise.all([
-      this.configService.getSetting('IN_APP_ENABLED'),
-      this.configService.getSetting('IN_APP_NOTIFY_ON_LOCATION_CHANGE'),
-    ]);
-
-    let notification: Notification | null = null;
-    if (inAppEnabled && inAppNotifyOnLocationChange) {
-      notification = await this.createNotification({
-        userId,
-        text,
-        type: 'info',
-        sessionHistoryId,
-      });
-    } else {
-      this.logger.log('In-app notification for location change is disabled.');
-    }
-
-    // Send email notification for location change if enabled
-    try {
-      const [smtpEnabled, smtpNotifyOnLocationChange] = await Promise.all([
-        this.configService.getSetting('SMTP_ENABLED'),
-        this.configService.getSetting('SMTP_NOTIFY_ON_LOCATION_CHANGE'),
-      ]);
-
-      if (smtpEnabled && smtpNotifyOnLocationChange) {
-        await this.emailService.sendLocationChangeEmail(
-          username,
-          deviceName,
-          oldIpAddress,
-          newIpAddress,
-        );
-      } else {
-        this.logger.log(
-          'SMTP email notification for location change is disabled.',
-        );
-      }
-    } catch (error) {
-      console.error(
-        'Failed to send location change notification email:',
-        error,
-      );
-    }
-
-    // Send Apprise notification for location change if enabled
-    try {
-      const [appriseEnabled, appriseNotifyOnLocationChange] = await Promise.all(
-        [
-          this.configService.getSetting('APPRISE_ENABLED'),
-          this.configService.getSetting('APPRISE_NOTIFY_ON_LOCATION_CHANGE'),
-        ],
-      );
-
-      if (appriseEnabled && appriseNotifyOnLocationChange) {
-        await this.appriseService.sendLocationChangeNotification(
-          username,
-          deviceName,
-          oldIpAddress,
-          newIpAddress,
-        );
-      } else {
-        this.logger.log(
-          'Apprise notification for location change is disabled.',
-        );
-      }
-    } catch (error) {
-      console.error(
-        'Failed to send Apprise location change notification:',
-        error,
-      );
-    }
-
-    return notification;
-  }
-
-  async createDeviceNoteNotification(
-    userId: string,
-    username: string,
-    deviceName: string | null,
-    note: string,
-  ): Promise<Notification | null> {
-    const resolvedDeviceName = deviceName ?? 'Unknown Device';
-    const truncatedDeviceName = this.truncateDeviceName(resolvedDeviceName);
-    const truncatedNote =
-      note.length > 100 ? note.substring(0, 100) + '...' : note;
-    const text = `${username} left a note on ${truncatedDeviceName}: "${truncatedNote}"`;
-
-    // Check if in-app notifications are enabled globally and for device notes
-    const [inAppEnabled, inAppNotifyOnDeviceNote] = await Promise.all([
-      this.configService.getSetting('IN_APP_ENABLED'),
-      this.configService.getSetting('IN_APP_NOTIFY_ON_DEVICE_NOTE'),
-    ]);
-
-    let notification: Notification | null = null;
-    if (inAppEnabled && inAppNotifyOnDeviceNote) {
-      notification = await this.createNotification({
-        userId,
-        text,
-        type: 'info',
-      });
-    } else {
-      this.logger.log('In-app notification for device note is disabled.');
-    }
-
-    // Send email notification for device note if enabled
-    try {
-      const [smtpEnabled, smtpNotifyOnDeviceNote] = await Promise.all([
-        this.configService.getSetting('SMTP_ENABLED'),
-        this.configService.getSetting('SMTP_NOTIFY_ON_DEVICE_NOTE'),
-      ]);
-
-      if (smtpEnabled && smtpNotifyOnDeviceNote) {
-        await this.emailService.sendDeviceNoteEmail(
-          username,
-          resolvedDeviceName,
-          note,
-        );
-      } else {
-        this.logger.log('SMTP email notification for device note is disabled.');
-      }
-    } catch (error) {
-      console.error('Failed to send device note notification email:', error);
-    }
-
-    // Send Apprise notification for device note if enabled
-    try {
-      const [appriseEnabled, appriseNotifyOnDeviceNote] = await Promise.all([
-        this.configService.getSetting('APPRISE_ENABLED'),
-        this.configService.getSetting('APPRISE_NOTIFY_ON_DEVICE_NOTE'),
-      ]);
-
-      if (appriseEnabled && appriseNotifyOnDeviceNote) {
-        await this.appriseService.sendDeviceNoteNotification(
-          username,
-          resolvedDeviceName,
-          note,
-        );
-      } else {
-        this.logger.log('Apprise notification for device note is disabled.');
-      }
-    } catch (error) {
-      console.error('Failed to send Apprise device note notification:', error);
-    }
-
-    return notification;
-  }
-
   async getNotificationsForUser(
     userId: string,
   ): Promise<NotificationResponseDto[]> {
@@ -462,19 +94,7 @@ export class NotificationsService {
       order: { createdAt: 'DESC' },
     });
 
-    return notifications.map((notification) => ({
-      id: notification.id,
-      userId: notification.userId,
-      username:
-        notification.sessionHistory?.userPreference?.username || 'Unknown User',
-      deviceName:
-        notification.sessionHistory?.userDevice?.deviceName || 'Unknown Device',
-      text: notification.text,
-      type: notification.type,
-      read: notification.read,
-      createdAt: notification.createdAt,
-      sessionHistoryId: notification.sessionHistoryId,
-    }));
+    return notifications.map(toResponse);
   }
 
   async getAllNotifications(): Promise<NotificationResponseDto[]> {
@@ -483,19 +103,7 @@ export class NotificationsService {
       order: { createdAt: 'DESC' },
     });
 
-    return notifications.map((notification) => ({
-      id: notification.id,
-      userId: notification.userId,
-      username:
-        notification.sessionHistory?.userPreference?.username || 'Unknown User',
-      deviceName:
-        notification.sessionHistory?.userDevice?.deviceName || 'Unknown Device',
-      text: notification.text,
-      type: notification.type,
-      read: notification.read,
-      createdAt: notification.createdAt,
-      sessionHistoryId: notification.sessionHistoryId,
-    }));
+    return notifications.map(toResponse);
   }
 
   async markAsRead(
@@ -512,7 +120,6 @@ export class NotificationsService {
       );
     }
 
-    // Check if auto-mark as read is enabled
     if (!forced) {
       const autoMarkRead = await this.configService.getSetting(
         'AUTO_MARK_NOTIFICATION_READ',
@@ -558,7 +165,6 @@ export class NotificationsService {
 
   async linkNotificationToSessionHistory(sessionKey: string): Promise<void> {
     try {
-      // Find session history by session key
       const sessionHistory = await this.sessionHistoryRepository.findOne({
         where: { sessionKey },
         order: { startedAt: 'DESC' },
@@ -575,7 +181,6 @@ export class NotificationsService {
         `Searching for orphaned notifications for userId: ${sessionHistory.userId}, sessionHistoryId to link: ${sessionHistory.id}`,
       );
 
-      // Find recent notifications for the same user that don't have a session history link
       const recentNotifications = await this.notificationRepository.find({
         where: {
           userId: sessionHistory.userId,
@@ -590,7 +195,6 @@ export class NotificationsService {
         `Found ${recentNotifications.length} orphaned notifications for user ${sessionHistory.userId}`,
       );
 
-      // Link the most recent device detection notification
       for (const notification of recentNotifications) {
         if (notification.text.includes('New device detected')) {
           await this.notificationRepository.update(notification.id, {
@@ -600,7 +204,7 @@ export class NotificationsService {
             `Linked notification ${notification.id} to session history ${sessionHistory.id} for session key ${sessionKey}`,
           );
           await this.publishNotifications();
-          break; // Only link the first matching notification
+          break;
         }
       }
     } catch (error) {

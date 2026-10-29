@@ -227,6 +227,19 @@ describe('DeviceTrackingService', () => {
       });
     });
 
+    it('notifies listeners without a session key when Plex sent none', async () => {
+      const listener = jest.fn();
+      deviceEvents.onNewDeviceDetected(listener);
+
+      await service.processSessionsForDeviceTracking(
+        sessionsResponse(session({ sessionKey: undefined })),
+      );
+
+      expect(listener).toHaveBeenCalledWith(
+        expect.objectContaining({ sessionKey: undefined }),
+      );
+    });
+
     it('substitutes placeholders for details Plex did not send', async () => {
       const listener = jest.fn();
       deviceEvents.onNewDeviceDetected(listener);
