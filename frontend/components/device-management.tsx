@@ -157,20 +157,16 @@ const DeviceManagement = memo(
       }
     }, [devicesData, usersData]);
 
+    const hasUsers = userGroups.length > 0;
     useEffect(() => {
-      if (navigationTarget && userGroups.length > 0) {
+      if (navigationTarget && hasUsers) {
         focusDevice(
           navigationTarget.userId,
           navigationTarget.deviceIdentifier,
           onNavigationComplete,
         );
       }
-    }, [
-      navigationTarget,
-      userGroups.length,
-      onNavigationComplete,
-      focusDevice,
-    ]);
+    }, [navigationTarget, hasUsers, onNavigationComplete, focusDevice]);
 
     const handleRefresh = async () => {
       if (onRefresh) {

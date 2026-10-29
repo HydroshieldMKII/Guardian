@@ -1556,6 +1556,40 @@ describe("DeviceManagement navigation", () => {
     expect(scrollIntoView).toHaveBeenCalled();
   });
 
+  it("focuses once when another user shows up while navigating", async () => {
+    jest.useFakeTimers();
+    const onNavigationComplete = jest.fn();
+    const target = { userId: "u-1", deviceIdentifier: "device-1" };
+    const { rerender } = render(
+      <DeviceManagement
+        devicesData={devicesData([device()])}
+        usersData={[preference()]}
+        navigationTarget={target}
+        onNavigationComplete={onNavigationComplete}
+      />,
+    );
+    await act(async () => {});
+
+    rerender(
+      <DeviceManagement
+        devicesData={devicesData([
+          device(),
+          device({ id: 2, userId: "u-2", deviceIdentifier: "device-2" }),
+        ])}
+        usersData={[preference(), preference({ id: 2, userId: "u-2" })]}
+        navigationTarget={target}
+        onNavigationComplete={onNavigationComplete}
+      />,
+    );
+    await act(async () => {});
+    act(() => {
+      jest.runAllTimers();
+    });
+
+    expect(scrollIntoView).toHaveBeenCalledTimes(1);
+    expect(onNavigationComplete).toHaveBeenCalledTimes(1);
+  });
+
   it("selects the user when jumping from the history modal", async () => {
     jest.useRealTimers();
     const { user } = await renderPanel();
