@@ -1,9 +1,10 @@
 import { act, cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React from "react";
-import type { UnifiedDashboardData, UserDevice, UserPreference } from "@/types";
+import type { UnifiedDashboardData } from "@/types";
 import { Dashboard } from "@/components/dashboard";
 import { renderWithQuery } from "@/test-utils/query";
+import { queryKeys } from "@/lib/query-keys";
 
 const render = renderWithQuery;
 
@@ -35,19 +36,6 @@ const retryConnection = jest.fn();
 let authState = { setupRequired: false, backendError: null as string | null };
 jest.mock("@/contexts/auth-context", () => ({
   useAuth: () => ({ ...authState, retryConnection }),
-}));
-
-const publish = jest.fn();
-jest.mock("@/contexts/dashboard-nav-context", () => ({
-  ...jest.requireActual<typeof import("@/contexts/dashboard-nav-context")>(
-    "@/contexts/dashboard-nav-context",
-  ),
-  useDashboardNav: () => ({
-    view: null,
-    pendingDevices: 0,
-    activeStreams: 0,
-    publish,
-  }),
 }));
 
 let liveConnected = false;
@@ -316,70 +304,6 @@ describe("Dashboard", () => {
     ).toBeInTheDocument();
   });
 
-  it("leaves the navbar's last counts alone until the first payload", () => {
-    getDashboardData.mockReturnValue(new Promise(() => {}));
-    render(<Dashboard />);
-
-    expect(publish).not.toHaveBeenCalled();
-  });
-
-  it("publishes the view and the counts to the navbar once loaded", async () => {
-    await renderDashboard();
-
-    expect(publish).toHaveBeenLastCalledWith({
-      view: "users",
-      pendingDevices: 0,
-      activeStreams: 2,
-    });
-  });
-
-  it("counts only the devices the approval queue shows", async () => {
-    const device = (
-      id: number,
-      overrides: Partial<UserDevice> = {},
-    ): UserDevice => ({
-      id,
-      userId: "u-1",
-      deviceIdentifier: `device-${id}`,
-      deviceName: "TV",
-      approved: false,
-      status: "pending",
-      firstSeen: "2026-01-01T00:00:00Z",
-      lastSeen: "2026-01-01T00:00:00Z",
-      sessionCount: 0,
-      ...overrides,
-    });
-    const hiddenUser: UserPreference = {
-      id: 1,
-      userId: "u-2",
-      defaultBlock: null,
-      hidden: true,
-      networkPolicy: "both",
-      ipAccessPolicy: "all",
-      createdAt: "2026-01-01T00:00:00Z",
-      updatedAt: "2026-01-01T00:00:00Z",
-    };
-    const all = [
-      device(1),
-      device(2),
-      device(3, { userId: "u-2" }),
-      device(4, { deviceProduct: "Plexamp" }),
-      device(5, { status: "approved", approved: true }),
-    ];
-    getDashboardData.mockResolvedValue(
-      dashboardData({
-        devices: { all, pending: all, approved: [], processed: [] },
-        users: [hiddenUser],
-      }),
-    );
-
-    await renderDashboard();
-
-    expect(publish).toHaveBeenLastCalledWith(
-      expect.objectContaining({ pendingDevices: 2 }),
-    );
-  });
-
   describe("the view", () => {
     const withDefaultPage = (value: string) =>
       getDashboardData.mockResolvedValue(
@@ -421,9 +345,6 @@ describe("Dashboard", () => {
       render(<Dashboard />);
 
       expect(await screen.findByText("streams-list")).toBeInTheDocument();
-      expect(publish).toHaveBeenLastCalledWith(
-        expect.objectContaining({ view: "streams" }),
-      );
     });
 
     it("follows a users view param over a streams default page", async () => {
@@ -530,29 +451,22 @@ describe("Dashboard", () => {
 
     it("applies a pushed payload without any fetch", async () => {
       liveConnected = true;
-      await renderDashboard();
+      const { client } = await renderDashboard();
       getDashboardData.mockClear();
-
-      await act(async () => {
-        pushLive?.(
-          dashboardData({
-            stats: {
-              activeStreams: 9,
-              totalDevices: 9,
-              pendingDevices: 9,
-              approvedDevices: 9,
-            },
-          }),
-        );
+      const pushed = dashboardData({
+        stats: {
+          activeStreams: 9,
+          totalDevices: 9,
+          pendingDevices: 9,
+          approvedDevices: 9,
+        },
       });
 
-      await waitFor(() =>
-        expect(publish).toHaveBeenLastCalledWith({
-          view: "users",
-          pendingDevices: 0,
-          activeStreams: 9,
-        }),
-      );
+      await act(async () => {
+        pushLive?.(pushed);
+      });
+
+      expect(client.getQueryData(queryKeys.dashboard)).toEqual(pushed);
       expect(getDashboardData).not.toHaveBeenCalled();
     });
 

@@ -8,15 +8,10 @@ import { PlexErrorHandler, ErrorHandler } from "./error-handler";
 import { PageLoader } from "./three-dot-loader";
 
 import type { PlexStatus } from "@/types";
-import { countWaitingDevices } from "@/lib/device-policies";
 import { useVersion } from "@/contexts/version-context";
 import { useAuth } from "@/contexts/auth-context";
 import { useDashboardQuery } from "@/hooks/useDashboardQuery";
-import {
-  dashboardHref,
-  useDashboardNav,
-  type DashboardView,
-} from "@/contexts/dashboard-nav-context";
+import { dashboardHref, resolveDashboardView } from "@/lib/dashboard-view";
 
 const BACKEND_UNREACHABLE: PlexStatus = {
   configured: false,
@@ -58,29 +53,8 @@ export function Dashboard() {
     await refetch();
   }, [refetch]);
 
-  const requestedView = searchParams.get("view");
   const selectedUserId = searchParams.get("user");
-  const defaultView: DashboardView | null = dashboardData
-    ? dashboardData.settings.find((s) => s.key === "DEFAULT_PAGE")?.value ===
-      "streams"
-      ? "streams"
-      : "users"
-    : null;
-  const view: DashboardView | null =
-    requestedView === "streams" || requestedView === "users"
-      ? requestedView
-      : defaultView;
-
-  const { publish } = useDashboardNav();
-  const waitingDevices = dashboardData
-    ? countWaitingDevices(dashboardData.devices.all, dashboardData.users)
-    : 0;
-  const activeStreams = dashboardData?.stats.activeStreams ?? 0;
-
-  useEffect(() => {
-    if (!dashboardData) return;
-    publish({ view, pendingDevices: waitingDevices, activeStreams });
-  }, [publish, dashboardData, view, waitingDevices, activeStreams]);
+  const view = resolveDashboardView(searchParams.get("view"), dashboardData);
 
   const handleSelectUser = (userId: string | null) => {
     router.push(usersHref(userId), { scroll: false });

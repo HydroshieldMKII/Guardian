@@ -7,6 +7,8 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Navbar } from "@/components/navbar";
+import { appSetting, dashboardData } from "@/test-utils/dashboard";
+import type { UnifiedDashboardData, UserDevice } from "@/types";
 
 const push = jest.fn();
 const router = { push };
@@ -16,13 +18,6 @@ jest.mock("next/navigation", () => ({
   useRouter: () => router,
   usePathname: () => pathname,
   useSearchParams: () => new URLSearchParams(search),
-}));
-
-let defaultPage: string | null = null;
-jest.mock("@/contexts/settings-context", () => ({
-  useSettings: () => ({
-    getSetting: (key: string) => (key === "DEFAULT_PAGE" ? defaultPage : null),
-  }),
 }));
 
 jest.mock("next/link", () => ({
@@ -93,16 +88,13 @@ jest.mock("@/contexts/unsaved-changes-context", () => ({
   }),
 }));
 
-let nav = {
-  view: null as "streams" | "users" | null,
-  pendingDevices: 0,
-  activeStreams: 0,
-};
-jest.mock("@/contexts/dashboard-nav-context", () => ({
-  ...jest.requireActual<typeof import("@/contexts/dashboard-nav-context")>(
-    "@/contexts/dashboard-nav-context",
-  ),
-  useDashboardNav: () => ({ ...nav, publish: jest.fn() }),
+let dashboard: UnifiedDashboardData | undefined;
+const useDashboardQuery = jest.fn<
+  { data: UnifiedDashboardData | undefined },
+  [boolean]
+>(() => ({ data: dashboard }));
+jest.mock("@/hooks/useDashboardQuery", () => ({
+  useDashboardQuery: (enabled: boolean) => useDashboardQuery(enabled),
 }));
 
 const toast = jest.fn();
@@ -140,10 +132,9 @@ beforeEach(() => {
   jest.clearAllMocks();
   pathname = "/";
   search = "";
-  defaultPage = null;
   theme = "light";
   versionInfo = null;
-  nav = { view: null, pendingDevices: 0, activeStreams: 0 };
+  dashboard = undefined;
   auth = {
     user: admin,
     userType: "admin",
@@ -259,7 +250,26 @@ describe("Navbar sections", () => {
   });
 
   it("counts active streams and devices waiting for approval", () => {
-    nav = { view: "streams", pendingDevices: 4, activeStreams: 2 };
+    const waiting = (id: number): UserDevice => ({
+      id,
+      userId: "u-1",
+      deviceIdentifier: `device-${id}`,
+      approved: false,
+      status: "pending",
+      firstSeen: "2026-01-01T00:00:00Z",
+      lastSeen: "2026-01-01T00:00:00Z",
+      sessionCount: 0,
+    });
+    const all = [1, 2, 3, 4].map(waiting);
+    dashboard = dashboardData({
+      devices: { all, pending: all, approved: [], processed: [] },
+      stats: {
+        activeStreams: 2,
+        totalDevices: 4,
+        pendingDevices: 4,
+        approvedDevices: 0,
+      },
+    });
     render(<Navbar />);
     linksNamed(/^Streams/).forEach((link) =>
       expect(link).toHaveTextContent("2"),
@@ -267,12 +277,38 @@ describe("Navbar sections", () => {
     linksNamed(/^Users/).forEach((link) => expect(link).toHaveTextContent("4"));
   });
 
-  it.each(["streams", "users"] as const)(
-    "marks the %s view as the current page on the dashboard",
-    (view) => {
-      nav = { ...nav, view };
+  it("reads the dashboard data the dashboard already keeps current", () => {
+    render(<Navbar />);
+    expect(useDashboardQuery).toHaveBeenCalledWith(false);
+  });
+
+  it.each(["/settings", "/elsewhere"])(
+    "keeps the counts current itself on %s",
+    (path) => {
+      pathname = path;
       render(<Navbar />);
-      const current = document.querySelectorAll('[aria-current="page"]');
+      expect(useDashboardQuery).toHaveBeenCalledWith(true);
+      expect(useDashboardQuery).not.toHaveBeenCalledWith(false);
+    },
+  );
+
+  it("loads nothing while it is hidden", () => {
+    pathname = "/login";
+    render(<Navbar />);
+    expect(useDashboardQuery).toHaveBeenCalledWith(false);
+  });
+
+  const currentLinks = () =>
+    Array.from(document.querySelectorAll('[aria-current="page"]'));
+
+  it.each(["streams", "users"] as const)(
+    "marks the %s default page as the current page on the dashboard",
+    (view) => {
+      dashboard = dashboardData({
+        settings: [appSetting("DEFAULT_PAGE", view)],
+      });
+      render(<Navbar />);
+      const current = currentLinks();
       expect(current).toHaveLength(2);
       current.forEach((link) =>
         expect(link).toHaveAttribute("href", `/?view=${view}`),
@@ -281,10 +317,10 @@ describe("Navbar sections", () => {
   );
 
   it("marks settings as the current page on the settings route", () => {
-    nav = { ...nav, view: "users" };
+    dashboard = dashboardData();
     pathname = "/settings";
     render(<Navbar />);
-    const current = document.querySelectorAll('[aria-current="page"]');
+    const current = currentLinks();
     expect(current).toHaveLength(2);
     current.forEach((link) =>
       expect(link).toHaveAttribute("href", "/settings"),
@@ -292,59 +328,52 @@ describe("Navbar sections", () => {
   });
 
   it.each(["streams", "users"] as const)(
-    "follows the URL to %s before the dashboard catches up",
+    "follows the URL to %s over the default page",
     (view) => {
-      nav = { ...nav, view: view === "streams" ? "users" : "streams" };
+      dashboard = dashboardData({
+        settings: [
+          appSetting("DEFAULT_PAGE", view === "streams" ? "users" : "streams"),
+        ],
+      });
       search = `view=${view}`;
       render(<Navbar />);
-      document
-        .querySelectorAll('[aria-current="page"]')
-        .forEach((link) =>
-          expect(link).toHaveAttribute("href", `/?view=${view}`),
-        );
-      expect(document.querySelectorAll('[aria-current="page"]')).toHaveLength(
-        2,
+      const current = currentLinks();
+      expect(current).toHaveLength(2);
+      current.forEach((link) =>
+        expect(link).toHaveAttribute("href", `/?view=${view}`),
       );
     },
   );
 
-  it("falls back to the default page when the URL names no view", () => {
-    nav = { ...nav, view: "users" };
-    defaultPage = "streams";
+  it("follows the URL before the dashboard data arrives", () => {
+    search = "view=streams";
     render(<Navbar />);
-    document
-      .querySelectorAll('[aria-current="page"]')
-      .forEach((link) =>
-        expect(link).toHaveAttribute("href", "/?view=streams"),
-      );
-  });
-
-  it("treats the stored devices default as the users view", () => {
-    defaultPage = "devices";
-    render(<Navbar />);
-    const current = document.querySelectorAll('[aria-current="page"]');
-    expect(current.length).toBeGreaterThan(0);
-    current.forEach((link) =>
-      expect(link).toHaveAttribute("href", "/?view=users"),
+    currentLinks().forEach((link) =>
+      expect(link).toHaveAttribute("href", "/?view=streams"),
     );
+    expect(currentLinks()).toHaveLength(2);
   });
 
   it("ignores a view the dashboard does not know", () => {
     search = "view=elsewhere";
-    nav = { ...nav, view: "users" };
+    dashboard = dashboardData({
+      settings: [appSetting("DEFAULT_PAGE", "streams")],
+    });
     render(<Navbar />);
-    document
-      .querySelectorAll('[aria-current="page"]')
-      .forEach((link) => expect(link).toHaveAttribute("href", "/?view=users"));
+    const current = currentLinks();
+    expect(current).toHaveLength(2);
+    current.forEach((link) =>
+      expect(link).toHaveAttribute("href", "/?view=streams"),
+    );
   });
 
-  it("marks nothing as current before the dashboard picks a view", () => {
+  it("marks nothing as current before the dashboard data arrives", () => {
     render(<Navbar />);
     expect(document.querySelector('[aria-current="page"]')).toBeNull();
   });
 
   it("marks nothing as current on other routes", () => {
-    nav = { ...nav, view: "streams" };
+    dashboard = dashboardData();
     pathname = "/elsewhere";
     render(<Navbar />);
     expect(document.querySelector('[aria-current="page"]')).toBeNull();

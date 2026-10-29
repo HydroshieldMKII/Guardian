@@ -20,7 +20,6 @@ import { useTheme } from "@/hooks/use-theme";
 import { useVersion } from "@/contexts/version-context";
 import { useAuth, isAdminUser, isPlexUser } from "@/contexts/auth-context";
 import { useUnsavedChanges } from "@/contexts/unsaved-changes-context";
-import { useSettings } from "@/contexts/settings-context";
 import { NotificationMenu } from "@/components/notification-menu";
 import { EditProfileModal } from "@/components/edit-profile-modal";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -41,11 +40,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
+import { useDashboardQuery } from "@/hooks/useDashboardQuery";
 import {
+  dashboardCounts,
   dashboardHref,
-  useDashboardNav,
-  type DashboardView,
-} from "@/contexts/dashboard-nav-context";
+  resolveDashboardView,
+} from "@/lib/dashboard-view";
 import { cn } from "@/lib/utils";
 
 export function Navbar() {
@@ -67,21 +67,23 @@ export function Navbar() {
   const { toast } = useToast();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const { getSetting } = useSettings();
-  const { view, pendingDevices, activeStreams } = useDashboardNav();
 
-  const isOnSettingsPage = pathname === "/settings";
-
-  // Hide navbar if setup required, not authenticated, on auth pages, or plex user (portal has own header)
-  if (
+  const hidden =
     setupRequired ||
     !isAuthenticated ||
     pathname === "/login" ||
     pathname === "/setup" ||
-    userType === "plex_user"
-  ) {
+    userType === "plex_user";
+  const { data: dashboardData } = useDashboardQuery(
+    !hidden && pathname !== "/",
+  );
+
+  if (hidden) {
     return null;
   }
+
+  const isOnSettingsPage = pathname === "/settings";
+  const { pendingDevices, activeStreams } = dashboardCounts(dashboardData);
 
   const guardNavigation = (e: React.MouseEvent, href: string) => {
     if (isOnSettingsPage && hasUnsavedChanges && href !== "/settings") {
@@ -147,7 +149,6 @@ export function Navbar() {
     }
   };
 
-  // Helper functions to get display values for both user types
   const getDisplayName = () => {
     if (!user) return "";
     if (isAdminUser(user)) return user.username;
@@ -158,7 +159,7 @@ export function Navbar() {
   const getDisplayEmail = () => {
     if (!user) return "";
     if (isAdminUser(user)) return user.email;
-    return ""; // Plex users don't have email exposed
+    return "";
   };
 
   const getAvatarUrl = () => {
@@ -214,16 +215,10 @@ export function Navbar() {
     },
   ];
 
-  const requestedView = searchParams.get("view");
-  const defaultPage = getSetting("DEFAULT_PAGE");
-  const dashboardView: DashboardView | null =
-    requestedView === "streams" || requestedView === "users"
-      ? requestedView
-      : defaultPage === null
-        ? view
-        : defaultPage === "streams"
-          ? "streams"
-          : "users";
+  const dashboardView = resolveDashboardView(
+    searchParams.get("view"),
+    dashboardData,
+  );
   const activeKey =
     pathname === "/settings"
       ? "settings"

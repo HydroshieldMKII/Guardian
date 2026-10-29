@@ -7,7 +7,6 @@ import { VersionProvider } from "@/contexts/version-context";
 import { NotificationProvider } from "@/contexts/notification-context";
 import { SettingsProvider } from "@/contexts/settings-context";
 import { UnsavedChangesProvider } from "@/contexts/unsaved-changes-context";
-import { DashboardNavProvider } from "@/contexts/dashboard-nav-context";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { GlobalVersionMismatchBanner } from "@/components/global-version-mismatch-banner";
 import { GlobalUpdateBanner } from "@/components/global-update-banner";
@@ -24,18 +23,16 @@ function AppProvidersContent({ children }: { children: React.ReactNode }) {
       <NotificationProvider>
         <SettingsProvider>
           <UnsavedChangesProvider>
-            <DashboardNavProvider>
-              <ErrorBoundary>
-                <GlobalVersionMismatchBanner />
-                <GlobalUpdateBanner />
-                <Suspense fallback={null}>
-                  <Navbar />
-                </Suspense>
-                <GlobalNotificationHandler />
-                {children}
-              </ErrorBoundary>
-              <Toaster />
-            </DashboardNavProvider>
+            <ErrorBoundary>
+              <GlobalVersionMismatchBanner />
+              <GlobalUpdateBanner />
+              <Suspense fallback={null}>
+                <Navbar />
+              </Suspense>
+              <GlobalNotificationHandler />
+              {children}
+            </ErrorBoundary>
+            <Toaster />
           </UnsavedChangesProvider>
         </SettingsProvider>
       </NotificationProvider>
