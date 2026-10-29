@@ -28,8 +28,15 @@ jest.mock("@/components/ui/calendar", () => ({
     <div>
       <span>{`calendar:${selected ? selected.toISOString() : "none"}`}</span>
       <span>{`past-disabled:${disabled(new Date(Date.now() - 86400000))}`}</span>
+      <span>{`far-disabled:${disabled(new Date(Date.now() + 11 * 365 * 86400000))}`}</span>
+      <span>{`near-disabled:${disabled(new Date(Date.now() + 3 * 86400000))}`}</span>
       <button onClick={() => onSelect(new Date(Date.now() + 3 * 86400000))}>
         pick date
+      </button>
+      <button
+        onClick={() => onSelect(new Date(Date.now() + 11 * 365 * 86400000))}
+      >
+        pick far date
       </button>
       <button onClick={() => onSelect(undefined)}>clear date</button>
     </div>
@@ -291,6 +298,31 @@ describe("TemporaryAccessModal", () => {
       ).toBeDisabled();
     });
 
+    it("blocks a duration just over ten years", async () => {
+      convertToMinutes.mockReturnValue(10 * 365 * 24 * 60 + 1);
+      const { user } = renderModal();
+      await selectDevice(user);
+
+      expect(screen.getByText(/Duration is too large/)).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: /Grant access/ }),
+      ).toBeDisabled();
+    });
+
+    it("allows a duration of exactly ten years", async () => {
+      convertToMinutes.mockReturnValue(10 * 365 * 24 * 60);
+      const { user, onGrantAccess } = renderModal();
+      await selectDevice(user);
+
+      await user.click(screen.getByRole("button", { name: /Grant access/ }));
+
+      expect(onGrantAccess).toHaveBeenCalledWith(
+        [1],
+        10 * 365 * 24 * 60,
+        false,
+      );
+    });
+
     it("blocks a unit the hook rejects", async () => {
       isValidDuration.mockReturnValue(false);
       const { user } = renderModal();
@@ -333,6 +365,28 @@ describe("TemporaryAccessModal", () => {
       await openCalendar(user);
 
       expect(screen.getByText("past-disabled:true")).toBeInTheDocument();
+    });
+
+    it("disables dates beyond ten years but not nearer ones", async () => {
+      const { user } = renderModal();
+      await openCalendar(user);
+
+      expect(screen.getByText("far-disabled:true")).toBeInTheDocument();
+      expect(screen.getByText("near-disabled:false")).toBeInTheDocument();
+    });
+
+    it("refuses a date beyond ten years", async () => {
+      const { user } = renderModal();
+      await openCalendar(user);
+
+      await user.click(screen.getByRole("button", { name: "pick far date" }));
+
+      expect(
+        screen.getByText(/Selected date is too far away/),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: /Grant access/ }),
+      ).toBeDisabled();
     });
 
     it("grants until the chosen date", async () => {
