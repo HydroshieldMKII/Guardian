@@ -4,24 +4,25 @@ import type { ClientRequest, IncomingMessage, RequestOptions } from 'http';
 import { PlexConnectionService } from './plex-connection.service';
 import { PlexErrorCode } from '@/types/plex-errors';
 import { callArgs } from '@/test-matchers';
+import type { Mock } from 'vitest';
 
-const mockHttpRequest = jest.fn<unknown, unknown[]>();
-const mockHttpsRequest = jest.fn<unknown, unknown[]>();
+const mockHttpRequest = vi.fn<(...args: unknown[]) => unknown>();
+const mockHttpsRequest = vi.fn<(...args: unknown[]) => unknown>();
 
-jest.mock('http', () => ({
+vi.mock('http', () => ({
   request: (...args: unknown[]) => mockHttpRequest(...args),
 }));
 
-jest.mock('https', () => ({
+vi.mock('https', () => ({
   request: (...args: unknown[]) => mockHttpsRequest(...args),
 }));
 
 type ResponseListener = (res: IncomingMessage) => void;
 
 class FakeRequest extends EventEmitter {
-  destroy = jest.fn();
-  setTimeout = jest.fn();
-  end = jest.fn();
+  destroy = vi.fn();
+  setTimeout = vi.fn();
+  end = vi.fn();
 }
 
 describe('PlexConnectionService', () => {
@@ -31,7 +32,7 @@ describe('PlexConnectionService', () => {
   const connect = () =>
     service.testConnection('10.0.0.5', '32400', 'plex-token', false, false);
 
-  const optionsOf = (mock: jest.Mock): RequestOptions =>
+  const optionsOf = (mock: Mock): RequestOptions =>
     callArgs<[RequestOptions]>(mock)[0];
 
   const respondWith = (res: Partial<IncomingMessage>) => {
@@ -40,7 +41,7 @@ describe('PlexConnectionService', () => {
   };
 
   beforeEach(async () => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     request = new FakeRequest();
 
     const asClientRequest = (): ClientRequest => {

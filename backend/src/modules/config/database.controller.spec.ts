@@ -6,11 +6,12 @@ import { DatabaseMaintenanceService } from '@/modules/config/services/database-m
 import { DatabaseService } from '@/modules/config/services/database.service';
 import { AuthService } from '@/modules/auth/auth.service';
 import { AdminUser } from '@/entities/admin-user.entity';
+import type { Mock } from 'vitest';
 
 describe('DatabaseController', () => {
   let controller: DatabaseController;
-  let services: Record<string, jest.Mock>;
-  let authService: { validatePassword: jest.Mock };
+  let services: Record<string, Mock>;
+  let authService: { validatePassword: Mock };
 
   const pick = (...methods: string[]) =>
     Object.fromEntries(methods.map((method) => [method, services[method]]));
@@ -26,15 +27,15 @@ describe('DatabaseController', () => {
 
   beforeEach(async () => {
     services = {
-      exportDatabase: jest.fn().mockResolvedValue({ settings: [] }),
-      importDatabase: jest.fn().mockResolvedValue({ settings: 3 }),
-      resetDatabase: jest.fn().mockResolvedValue(undefined),
-      resetStreamCounts: jest.fn().mockResolvedValue(undefined),
-      deleteAllDevices: jest.fn().mockResolvedValue(undefined),
-      clearAllSessionHistory: jest.fn().mockResolvedValue(undefined),
+      exportDatabase: vi.fn().mockResolvedValue({ settings: [] }),
+      importDatabase: vi.fn().mockResolvedValue({ settings: 3 }),
+      resetDatabase: vi.fn().mockResolvedValue(undefined),
+      resetStreamCounts: vi.fn().mockResolvedValue(undefined),
+      deleteAllDevices: vi.fn().mockResolvedValue(undefined),
+      clearAllSessionHistory: vi.fn().mockResolvedValue(undefined),
     };
 
-    authService = { validatePassword: jest.fn().mockResolvedValue(true) };
+    authService = { validatePassword: vi.fn().mockResolvedValue(true) };
 
     const module = await Test.createTestingModule({
       controllers: [DatabaseController],
@@ -70,8 +71,8 @@ describe('DatabaseController', () => {
 
   describe('exportDatabase', () => {
     const responseStub = () => {
-      const setHeader = jest.fn();
-      const send = jest.fn();
+      const setHeader = vi.fn();
+      const send = vi.fn();
       const stub: Pick<Response, 'setHeader' | 'send'> = { setHeader, send };
       return { res: stub as Response, setHeader, send };
     };

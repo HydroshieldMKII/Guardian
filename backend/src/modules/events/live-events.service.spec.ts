@@ -5,23 +5,24 @@ import {
   LIVE_EVENT_NOTIFICATIONS,
   LiveEventsService,
 } from '@/modules/events/live-events.service';
+import type { Mock } from 'vitest';
 
 describe('LiveEventsService', () => {
   let service: LiveEventsService;
 
   type Client = {
     res: Response;
-    write: jest.Mock;
-    setHeader: jest.Mock;
-    flushHeaders: jest.Mock;
+    write: Mock;
+    setHeader: Mock;
+    flushHeaders: Mock;
     close: () => void;
   };
 
   const client = (): Client => {
     const listeners = new Map<string, () => void>();
-    const write = jest.fn();
-    const setHeader = jest.fn();
-    const flushHeaders = jest.fn();
+    const write = vi.fn();
+    const setHeader = vi.fn();
+    const flushHeaders = vi.fn();
     const stub: Pick<Response, 'setHeader' | 'flushHeaders' | 'write' | 'on'> =
       {
         setHeader,
@@ -49,7 +50,7 @@ describe('LiveEventsService', () => {
     framesOf(c).filter((frame) => frame.startsWith('event:'));
 
   beforeEach(async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     const module = await Test.createTestingModule({
       providers: [LiveEventsService],
     }).compile();
@@ -57,7 +58,7 @@ describe('LiveEventsService', () => {
     service = module.get(LiveEventsService);
   });
 
-  afterEach(() => jest.useRealTimers());
+  afterEach(() => vi.useRealTimers());
 
   describe('register', () => {
     it('announces an event stream that must not be cached', () => {
@@ -225,7 +226,7 @@ describe('LiveEventsService', () => {
       const c = client();
       service.register(c.res);
 
-      jest.advanceTimersByTime(25000);
+      vi.advanceTimersByTime(25000);
 
       expect(framesOf(c)).toContain(': keep-alive\n\n');
     });
@@ -234,7 +235,7 @@ describe('LiveEventsService', () => {
       const c = client();
       service.register(c.res);
 
-      jest.advanceTimersByTime(75000);
+      vi.advanceTimersByTime(75000);
 
       expect(
         framesOf(c).filter((frame) => frame === ': keep-alive\n\n'),
@@ -247,7 +248,7 @@ describe('LiveEventsService', () => {
       service.register(a.res);
       service.register(b.res);
 
-      jest.advanceTimersByTime(25000);
+      vi.advanceTimersByTime(25000);
 
       expect(
         framesOf(a).filter((frame) => frame === ': keep-alive\n\n'),
@@ -259,7 +260,7 @@ describe('LiveEventsService', () => {
       service.register(c.res);
       c.close();
 
-      jest.advanceTimersByTime(50000);
+      vi.advanceTimersByTime(50000);
 
       expect(framesOf(c)).not.toContain(': keep-alive\n\n');
     });
@@ -271,7 +272,7 @@ describe('LiveEventsService', () => {
         throw new Error('EPIPE');
       });
 
-      jest.advanceTimersByTime(25000);
+      vi.advanceTimersByTime(25000);
 
       expect(service.hasListeners()).toBe(false);
     });
@@ -283,7 +284,7 @@ describe('LiveEventsService', () => {
 
       const second = client();
       service.register(second.res);
-      jest.advanceTimersByTime(25000);
+      vi.advanceTimersByTime(25000);
 
       expect(framesOf(second)).toContain(': keep-alive\n\n');
     });

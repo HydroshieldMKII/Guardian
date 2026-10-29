@@ -8,9 +8,9 @@ import {
   validateSmtpConfig,
 } from './smtp-config';
 
-const mockCreateTransport = jest.fn<unknown, unknown[]>();
+const mockCreateTransport = vi.fn<(...args: unknown[]) => unknown>();
 
-jest.mock('nodemailer', () => ({
+vi.mock('nodemailer', () => ({
   createTransport: (...args: unknown[]) => mockCreateTransport(...args),
 }));
 

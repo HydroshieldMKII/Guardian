@@ -5,6 +5,7 @@ import { UserPreference } from '@/entities/user-preference.entity';
 import { UserDevice } from '@/entities/user-device.entity';
 import { ConfigService } from '@/modules/config/services/config.service';
 import { UsersService } from '@/modules/users/services/users.service';
+import type { Mock } from 'vitest';
 
 type IpPolicyField = 'networkPolicy' | 'ipAccessPolicy' | 'allowedIPs';
 
@@ -22,24 +23,24 @@ describe('UsersService', () => {
   let service: UsersService;
   let preferenceRepository: Record<
     'find' | 'findOne' | 'create' | 'save',
-    jest.Mock
+    Mock
   >;
-  let deviceRepository: { findOne: jest.Mock };
-  let configService: { getSetting: jest.Mock };
+  let deviceRepository: { findOne: Mock };
+  let configService: { getSetting: Mock };
 
   beforeEach(async () => {
     preferenceRepository = {
-      find: jest.fn().mockResolvedValue([]),
-      findOne: jest.fn().mockResolvedValue(null),
-      create: jest.fn((value: Partial<UserPreference>) => preference(value)),
-      save: jest.fn((value: UserPreference) => Promise.resolve(value)),
+      find: vi.fn().mockResolvedValue([]),
+      findOne: vi.fn().mockResolvedValue(null),
+      create: vi.fn((value: Partial<UserPreference>) => preference(value)),
+      save: vi.fn((value: UserPreference) => Promise.resolve(value)),
     };
 
     deviceRepository = {
-      findOne: jest.fn().mockResolvedValue(null),
+      findOne: vi.fn().mockResolvedValue(null),
     };
 
-    configService = { getSetting: jest.fn().mockResolvedValue(true) };
+    configService = { getSetting: vi.fn().mockResolvedValue(true) };
 
     const module = await Test.createTestingModule({
       providers: [

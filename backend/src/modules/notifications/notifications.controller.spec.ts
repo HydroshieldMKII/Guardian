@@ -1,20 +1,21 @@
 import { Test } from '@nestjs/testing';
 import { NotificationsController } from '@/modules/notifications/notifications.controller';
 import { NotificationsService } from '@/modules/notifications/services/notifications.service';
+import type { Mock } from 'vitest';
 
 describe('NotificationsController', () => {
   let controller: NotificationsController;
-  let notificationsService: Record<string, jest.Mock>;
+  let notificationsService: Record<string, Mock>;
 
   beforeEach(async () => {
     notificationsService = {
-      getAllNotifications: jest.fn().mockResolvedValue([{ id: 1 }]),
-      getNotificationsForUser: jest.fn().mockResolvedValue([{ id: 2 }]),
-      getUnreadCountForUser: jest.fn().mockResolvedValue(4),
-      markAsRead: jest.fn().mockResolvedValue({ id: 1, read: true }),
-      markAllAsRead: jest.fn().mockResolvedValue(undefined),
-      clearAll: jest.fn().mockResolvedValue(undefined),
-      deleteNotification: jest.fn().mockResolvedValue(undefined),
+      getAllNotifications: vi.fn().mockResolvedValue([{ id: 1 }]),
+      getNotificationsForUser: vi.fn().mockResolvedValue([{ id: 2 }]),
+      getUnreadCountForUser: vi.fn().mockResolvedValue(4),
+      markAsRead: vi.fn().mockResolvedValue({ id: 1, read: true }),
+      markAllAsRead: vi.fn().mockResolvedValue(undefined),
+      clearAll: vi.fn().mockResolvedValue(undefined),
+      deleteNotification: vi.fn().mockResolvedValue(undefined),
     };
 
     const module = await Test.createTestingModule({

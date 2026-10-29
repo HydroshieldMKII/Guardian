@@ -12,6 +12,7 @@ import { ConfigService } from '@/modules/config/services/config.service';
 import { PUBLIC_KEY } from '@/modules/auth/decorators/public.decorator';
 import { ADMIN_ONLY_KEY } from '@/modules/auth/decorators/admin-only.decorator';
 import { AuthGuard } from '@/modules/auth/guards/auth.guard';
+import type { Mock } from 'vitest';
 
 const adminUser = { userType: 'admin', sessionId: 's1', username: 'admin' };
 const plexUser = {
@@ -23,9 +24,9 @@ const plexUser = {
 
 describe('AuthGuard', () => {
   let guard: AuthGuard;
-  let authSessions: { validateSession: jest.Mock };
-  let configService: { getSetting: jest.Mock };
-  let reflector: { get: jest.Mock };
+  let authSessions: { validateSession: Mock };
+  let configService: { getSetting: Mock };
+  let reflector: { get: Mock };
   let request: Partial<Request>;
 
   class RouteController {}
@@ -49,9 +50,9 @@ describe('AuthGuard', () => {
 
   beforeEach(async () => {
     request = { method: 'GET', cookies: { session_token: 'token-1' } };
-    authSessions = { validateSession: jest.fn().mockResolvedValue(adminUser) };
-    configService = { getSetting: jest.fn().mockResolvedValue(true) };
-    reflector = { get: jest.fn().mockReturnValue(undefined) };
+    authSessions = { validateSession: vi.fn().mockResolvedValue(adminUser) };
+    configService = { getSetting: vi.fn().mockResolvedValue(true) };
+    reflector = { get: vi.fn().mockReturnValue(undefined) };
 
     const module = await Test.createTestingModule({
       providers: [

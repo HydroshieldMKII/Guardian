@@ -7,13 +7,12 @@ import {
   ConfigTestbed,
   createConfigTestbed,
 } from '@/modules/config/services/config-testbed.fixture';
+import type { Mock } from 'vitest';
 
-const mockCreateTransport = jest.fn<
-  { verify: jest.Mock; sendMail: jest.Mock },
-  unknown[]
->();
+const mockCreateTransport =
+  vi.fn<(...args: unknown[]) => { verify: Mock; sendMail: Mock }>();
 
-jest.mock('nodemailer', () => ({
+vi.mock('nodemailer', () => ({
   createTransport: (...args: unknown[]) => mockCreateTransport(...args),
 }));
 
@@ -31,16 +30,16 @@ describe('ConnectionTestService', () => {
   let settingsRepo: ConfigTestbed['settingsRepo'];
   let emailService: ConfigTestbed['emailService'];
   let emailTemplateService: ConfigTestbed['emailTemplateService'];
-  let verify: jest.Mock;
-  let sendMail: jest.Mock<Promise<unknown>, [MailOptions]>;
+  let verify: Mock;
+  let sendMail: Mock<(...args: [MailOptions]) => Promise<unknown>>;
   let plexConnectionService: ConfigTestbed['plexConnectionService'];
 
   const build = async () => (await testbed.build()).get(ConnectionTestService);
 
   beforeEach(async () => {
-    verify = jest.fn().mockResolvedValue(true);
-    sendMail = jest
-      .fn<Promise<unknown>, [MailOptions]>()
+    verify = vi.fn().mockResolvedValue(true);
+    sendMail = vi
+      .fn<(...args: [MailOptions]) => Promise<unknown>>()
       .mockResolvedValue({ messageId: 'abc' });
     mockCreateTransport.mockReset().mockReturnValue({ verify, sendMail });
 
@@ -104,7 +103,9 @@ describe('ConnectionTestService', () => {
 
     const sentMail = () => sendMail.mock.calls[0][0];
 
-    beforeEach(() => smtp());
+    beforeEach(() => {
+      smtp();
+    });
 
     it('refuses while SMTP is switched off', async () => {
       smtp({ SMTP_ENABLED: false });

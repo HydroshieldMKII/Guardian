@@ -21,12 +21,12 @@ export const storedSession = () => ({
 });
 
 export const sessionRepository = () => ({
-  save: jest
+  save: vi
     .fn()
     .mockImplementation((entity: Record<string, unknown>) =>
       Promise.resolve({ ...storedSession(), ...entity }),
     ),
-  findOne: jest.fn().mockResolvedValue(storedSession()),
-  remove: jest.fn().mockResolvedValue(undefined),
-  delete: jest.fn().mockResolvedValue({ affected: 3 }),
+  findOne: vi.fn().mockResolvedValue(storedSession()),
+  remove: vi.fn().mockResolvedValue(undefined),
+  delete: vi.fn().mockResolvedValue({ affected: 3 }),
 });

@@ -3,27 +3,28 @@ import { Test } from '@nestjs/testing';
 import { ConfigController } from '@/modules/config/config.controller';
 import { ConfigService } from '@/modules/config/services/config.service';
 import { ConnectionTestService } from '@/modules/config/services/connection-test.service';
+import type { Mock } from 'vitest';
 
 describe('ConfigController', () => {
   let controller: ConfigController;
-  let services: Record<string, jest.Mock>;
+  let services: Record<string, Mock>;
 
   const pick = (...methods: string[]) =>
     Object.fromEntries(methods.map((method) => [method, services[method]]));
 
   beforeEach(async () => {
     services = {
-      getVersionInfo: jest.fn().mockResolvedValue({ current: '1.3.5' }),
-      getPublicSettings: jest.fn().mockResolvedValue([{ key: 'TIMEZONE' }]),
-      getPublicSetting: jest
+      getVersionInfo: vi.fn().mockResolvedValue({ current: '1.3.5' }),
+      getPublicSettings: vi.fn().mockResolvedValue([{ key: 'TIMEZONE' }]),
+      getPublicSetting: vi
         .fn()
         .mockResolvedValue({ key: 'TIMEZONE', value: '+00:00' }),
-      updateSetting: jest.fn().mockResolvedValue({ key: 'TIMEZONE' }),
-      updateMultipleSettings: jest.fn().mockResolvedValue([{ key: 'A' }]),
-      testPlexConnection: jest.fn().mockResolvedValue({ success: true }),
-      testSMTPConnection: jest.fn().mockResolvedValue({ success: true }),
-      testAppriseConnection: jest.fn().mockResolvedValue({ success: true }),
-      getPlexConfigurationStatus: jest.fn().mockResolvedValue({
+      updateSetting: vi.fn().mockResolvedValue({ key: 'TIMEZONE' }),
+      updateMultipleSettings: vi.fn().mockResolvedValue([{ key: 'A' }]),
+      testPlexConnection: vi.fn().mockResolvedValue({ success: true }),
+      testSMTPConnection: vi.fn().mockResolvedValue({ success: true }),
+      testAppriseConnection: vi.fn().mockResolvedValue({ success: true }),
+      getPlexConfigurationStatus: vi.fn().mockResolvedValue({
         configured: true,
       }),
     };

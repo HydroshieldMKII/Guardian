@@ -34,7 +34,7 @@ export class Notification {
   @Column({ name: 'text', type: 'text' })
   text: string;
 
-  @Column({ name: 'type', default: 'info' })
+  @Column({ name: 'type', type: 'varchar', default: 'info' })
   type: 'info' | 'warning' | 'error' | 'block';
 
   @Column({ name: 'read', default: false })

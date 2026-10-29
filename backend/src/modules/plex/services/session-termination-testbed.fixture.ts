@@ -15,6 +15,7 @@ import { SessionTerminationService } from '@/modules/plex/services/session-termi
 import { SessionPolicyService } from '@/modules/plex/services/session-policy.service';
 import { ConcurrentLimitService } from '@/modules/plex/services/concurrent-limit.service';
 import { SessionHistoryService } from '@/modules/sessions/services/session-history.service';
+import type { Mock } from 'vitest';
 
 export interface SessionOverrides {
   id?: string;
@@ -30,17 +31,17 @@ export interface SessionOverrides {
 
 export interface SessionTerminationTestbed {
   module: TestingModule;
-  deviceRepo: { findOne: jest.Mock };
-  historyRepo: { findOne: jest.Mock };
-  preferenceRepo: { findOne: jest.Mock };
-  plexClient: { terminateSession: jest.Mock; getSessions: jest.Mock };
-  usersService: { getEffectiveDefaultBlock: jest.Mock };
-  timePolicyService: Record<string, jest.Mock>;
-  concurrentStreamService: Record<string, jest.Mock>;
-  configService: { getSetting: jest.Mock };
-  temporaryAccessService: { isTemporaryAccessValid: jest.Mock };
-  ipValidationService: { validateIPAccess: jest.Mock };
-  sessionHistory: { markTerminated: jest.Mock };
+  deviceRepo: { findOne: Mock };
+  historyRepo: { findOne: Mock };
+  preferenceRepo: { findOne: Mock };
+  plexClient: { terminateSession: Mock; getSessions: Mock };
+  usersService: { getEffectiveDefaultBlock: Mock };
+  timePolicyService: Record<string, Mock>;
+  concurrentStreamService: Record<string, Mock>;
+  configService: { getSetting: Mock };
+  temporaryAccessService: { isTemporaryAccessValid: Mock };
+  ipValidationService: { validateIPAccess: Mock };
+  sessionHistory: { markTerminated: Mock };
 }
 
 export const session = ({
@@ -81,38 +82,38 @@ export const approvedDevice = (overrides: Partial<UserDevice> = {}) =>
 export const createSessionTerminationTestbed =
   async (): Promise<SessionTerminationTestbed> => {
     const deviceRepo = {
-      findOne: jest.fn().mockResolvedValue(approvedDevice()),
+      findOne: vi.fn().mockResolvedValue(approvedDevice()),
     };
-    const historyRepo = { findOne: jest.fn().mockResolvedValue(null) };
-    const preferenceRepo = { findOne: jest.fn().mockResolvedValue(null) };
+    const historyRepo = { findOne: vi.fn().mockResolvedValue(null) };
+    const preferenceRepo = { findOne: vi.fn().mockResolvedValue(null) };
     const plexClient = {
-      terminateSession: jest.fn().mockResolvedValue(undefined),
-      getSessions: jest.fn().mockResolvedValue({}),
+      terminateSession: vi.fn().mockResolvedValue(undefined),
+      getSessions: vi.fn().mockResolvedValue({}),
     };
     const usersService = {
-      getEffectiveDefaultBlock: jest.fn().mockResolvedValue(true),
+      getEffectiveDefaultBlock: vi.fn().mockResolvedValue(true),
     };
     const timePolicyService = {
-      isTimeScheduleAllowed: jest.fn().mockResolvedValue(true),
-      getPolicySummary: jest.fn().mockResolvedValue('always allowed'),
+      isTimeScheduleAllowed: vi.fn().mockResolvedValue(true),
+      getPolicySummary: vi.fn().mockResolvedValue('always allowed'),
     };
     const concurrentStreamService = {
-      getEffectiveLimit: jest.fn().mockResolvedValue(0),
-      filterCountableSessions: jest.fn((_userId: string, sessions: unknown[]) =>
+      getEffectiveLimit: vi.fn().mockResolvedValue(0),
+      filterCountableSessions: vi.fn((_userId: string, sessions: unknown[]) =>
         Promise.resolve(sessions),
       ),
     };
     const configService = {
-      getSetting: jest.fn((key: string) => Promise.resolve(`msg:${key}`)),
+      getSetting: vi.fn((key: string) => Promise.resolve(`msg:${key}`)),
     };
     const temporaryAccessService = {
-      isTemporaryAccessValid: jest.fn().mockResolvedValue(false),
+      isTemporaryAccessValid: vi.fn().mockResolvedValue(false),
     };
     const ipValidationService = {
-      validateIPAccess: jest.fn().mockReturnValue({ allowed: true }),
+      validateIPAccess: vi.fn().mockReturnValue({ allowed: true }),
     };
     const sessionHistory = {
-      markTerminated: jest.fn().mockResolvedValue(undefined),
+      markTerminated: vi.fn().mockResolvedValue(undefined),
     };
 
     const module = await Test.createTestingModule({

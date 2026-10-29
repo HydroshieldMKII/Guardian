@@ -7,6 +7,7 @@ import { ConfigService } from '@/modules/config/services/config.service';
 import { TemporaryAccessService } from '@/modules/devices/services/temporary-access.service';
 import { userDevice } from '@/modules/devices/services/user-device.fixture';
 import { callArgs, containing } from '@/test-matchers';
+import type { Mock } from 'vitest';
 
 interface TemporaryAccessPatch {
   temporaryAccessDurationMinutes: number;
@@ -16,8 +17,8 @@ interface TemporaryAccessPatch {
 
 describe('TemporaryAccessService', () => {
   let service: TemporaryAccessService;
-  let deviceRepo: { update: jest.Mock };
-  let configService: { getTimezone: jest.Mock };
+  let deviceRepo: { update: Mock };
+  let configService: { getTimezone: Mock };
 
   const revokedAccess = {
     temporaryAccessUntil: null,
@@ -27,8 +28,8 @@ describe('TemporaryAccessService', () => {
   };
 
   beforeEach(async () => {
-    deviceRepo = { update: jest.fn().mockResolvedValue({ affected: 1 }) };
-    configService = { getTimezone: jest.fn().mockResolvedValue('+00:00') };
+    deviceRepo = { update: vi.fn().mockResolvedValue({ affected: 1 }) };
+    configService = { getTimezone: vi.fn().mockResolvedValue('+00:00') };
 
     const module = await Test.createTestingModule({
       providers: [
@@ -90,8 +91,8 @@ describe('TemporaryAccessService', () => {
     ])(
       'logs the expiry in the configured timezone %s whatever the host timezone',
       async (timezone, expiry) => {
-        jest.useFakeTimers({ now: new Date('2026-03-01T00:00:00Z') });
-        const hostOffset = jest
+        vi.useFakeTimers({ now: new Date('2026-03-01T00:00:00Z') });
+        const hostOffset = vi
           .spyOn(Date.prototype, 'getTimezoneOffset')
           .mockReturnValue(240);
         configService.getTimezone.mockResolvedValue(timezone);
@@ -100,7 +101,7 @@ describe('TemporaryAccessService', () => {
           await service.grantTemporaryAccess(7, 30);
         } finally {
           hostOffset.mockRestore();
-          jest.useRealTimers();
+          vi.useRealTimers();
         }
 
         expect(Logger.prototype.log).toHaveBeenCalledWith(

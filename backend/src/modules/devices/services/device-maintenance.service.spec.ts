@@ -9,27 +9,28 @@ import { DeviceMaintenanceService } from '@/modules/devices/services/device-main
 import { DevicesService } from '@/modules/devices/services/devices.service';
 import { userDevice } from '@/modules/devices/services/user-device.fixture';
 import { callArgs } from '@/test-matchers';
+import type { Mock } from 'vitest';
 
 describe('DeviceMaintenanceService', () => {
   let service: DeviceMaintenanceService;
-  let deviceRepo: Record<'find' | 'save' | 'delete', jest.Mock>;
-  let historyRepo: { delete: jest.Mock };
-  let usersService: { getEffectiveDefaultBlock: jest.Mock };
-  let configService: { getSetting: jest.Mock };
-  let devicesService: { getPendingDevices: jest.Mock };
+  let deviceRepo: Record<'find' | 'save' | 'delete', Mock>;
+  let historyRepo: { delete: Mock };
+  let usersService: { getEffectiveDefaultBlock: Mock };
+  let configService: { getSetting: Mock };
+  let devicesService: { getPendingDevices: Mock };
 
   beforeEach(async () => {
     deviceRepo = {
-      find: jest.fn().mockResolvedValue([]),
-      save: jest.fn((entity: UserDevice) => Promise.resolve(entity)),
-      delete: jest.fn().mockResolvedValue({ affected: 1 }),
+      find: vi.fn().mockResolvedValue([]),
+      save: vi.fn((entity: UserDevice) => Promise.resolve(entity)),
+      delete: vi.fn().mockResolvedValue({ affected: 1 }),
     };
-    historyRepo = { delete: jest.fn().mockResolvedValue({ affected: 2 }) };
+    historyRepo = { delete: vi.fn().mockResolvedValue({ affected: 2 }) };
     usersService = {
-      getEffectiveDefaultBlock: jest.fn().mockResolvedValue(true),
+      getEffectiveDefaultBlock: vi.fn().mockResolvedValue(true),
     };
-    configService = { getSetting: jest.fn().mockResolvedValue(false) };
-    devicesService = { getPendingDevices: jest.fn().mockResolvedValue([]) };
+    configService = { getSetting: vi.fn().mockResolvedValue(false) };
+    devicesService = { getPendingDevices: vi.fn().mockResolvedValue([]) };
 
     const module = await Test.createTestingModule({
       providers: [

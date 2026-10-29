@@ -1,14 +1,15 @@
 import { Test } from '@nestjs/testing';
 import { DashboardController } from '@/modules/dashboard/dashboard.controller';
 import { DashboardService } from '@/modules/dashboard/dashboard.service';
+import type { Mock } from 'vitest';
 
 describe('DashboardController', () => {
   let controller: DashboardController;
-  let dashboardService: { getDashboardData: jest.Mock };
+  let dashboardService: { getDashboardData: Mock };
 
   beforeEach(async () => {
     dashboardService = {
-      getDashboardData: jest.fn().mockResolvedValue({ stats: {} }),
+      getDashboardData: vi.fn().mockResolvedValue({ stats: {} }),
     };
 
     const module = await Test.createTestingModule({

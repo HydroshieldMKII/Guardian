@@ -4,40 +4,41 @@ import { DevicesController } from '@/modules/devices/devices.controller';
 import { DevicesService } from '@/modules/devices/services/devices.service';
 import { TemporaryAccessService } from '@/modules/devices/services/temporary-access.service';
 import { SessionTerminationService } from '@/modules/plex/services/session-termination.service';
+import type { Mock } from 'vitest';
 
 describe('DevicesController', () => {
   let controller: DevicesController;
-  let devices: Record<string, jest.Mock>;
-  let temporaryAccess: Record<string, jest.Mock>;
-  let sessionTermination: { terminateDeviceSessions: jest.Mock };
+  let devices: Record<string, Mock>;
+  let temporaryAccess: Record<string, Mock>;
+  let sessionTermination: { terminateDeviceSessions: Mock };
 
   beforeEach(async () => {
     devices = {
-      getAllDevices: jest.fn().mockResolvedValue([{ id: 1 }]),
-      getPendingDevices: jest.fn().mockResolvedValue([{ id: 2 }]),
-      getProcessedDevices: jest.fn().mockResolvedValue([{ id: 3 }]),
-      getApprovedDevices: jest.fn().mockResolvedValue([{ id: 4 }]),
-      approveDevice: jest.fn().mockResolvedValue(undefined),
-      deleteDevice: jest.fn().mockResolvedValue(undefined),
-      rejectDevice: jest.fn().mockResolvedValue(undefined),
-      setPendingDevice: jest.fn().mockResolvedValue(undefined),
-      renameDevice: jest.fn().mockResolvedValue(undefined),
-      updateExcludeFromConcurrentLimit: jest.fn().mockResolvedValue(undefined),
-      markNoteAsRead: jest.fn().mockResolvedValue(undefined),
-      deleteNote: jest.fn().mockResolvedValue(undefined),
-      findDeviceByUserAndIdentifier: jest.fn().mockResolvedValue({
+      getAllDevices: vi.fn().mockResolvedValue([{ id: 1 }]),
+      getPendingDevices: vi.fn().mockResolvedValue([{ id: 2 }]),
+      getProcessedDevices: vi.fn().mockResolvedValue([{ id: 3 }]),
+      getApprovedDevices: vi.fn().mockResolvedValue([{ id: 4 }]),
+      approveDevice: vi.fn().mockResolvedValue(undefined),
+      deleteDevice: vi.fn().mockResolvedValue(undefined),
+      rejectDevice: vi.fn().mockResolvedValue(undefined),
+      setPendingDevice: vi.fn().mockResolvedValue(undefined),
+      renameDevice: vi.fn().mockResolvedValue(undefined),
+      updateExcludeFromConcurrentLimit: vi.fn().mockResolvedValue(undefined),
+      markNoteAsRead: vi.fn().mockResolvedValue(undefined),
+      deleteNote: vi.fn().mockResolvedValue(undefined),
+      findDeviceByUserAndIdentifier: vi.fn().mockResolvedValue({
         id: 7,
         currentSessionKey: 'session-7',
       }),
     };
 
     temporaryAccess = {
-      grantTemporaryAccess: jest.fn().mockResolvedValue(undefined),
-      revokeTemporaryAccess: jest.fn().mockResolvedValue(undefined),
+      grantTemporaryAccess: vi.fn().mockResolvedValue(undefined),
+      revokeTemporaryAccess: vi.fn().mockResolvedValue(undefined),
     };
 
     sessionTermination = {
-      terminateDeviceSessions: jest.fn().mockResolvedValue(1),
+      terminateDeviceSessions: vi.fn().mockResolvedValue(1),
     };
 
     const module = await Test.createTestingModule({
@@ -52,7 +53,7 @@ describe('DevicesController', () => {
     controller = module.get(DevicesController);
   });
 
-  const serviceMock = (method: string): jest.Mock =>
+  const serviceMock = (method: string): Mock =>
     temporaryAccess[method] ?? devices[method];
 
   describe.each([

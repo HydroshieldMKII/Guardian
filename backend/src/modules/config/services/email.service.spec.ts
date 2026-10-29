@@ -5,10 +5,11 @@ import { EmailTemplateService } from './email-template.service';
 import { ConfigService } from './config.service';
 import { TimezoneService } from './timezone.service';
 import { EMAIL_PALETTE } from '@/common/utils/email-palette';
+import type { Mock } from 'vitest';
 
-const mockCreateTransport = jest.fn<{ sendMail: jest.Mock }, unknown[]>();
+const mockCreateTransport = vi.fn<(...args: unknown[]) => { sendMail: Mock }>();
 
-jest.mock('nodemailer', () => ({
+vi.mock('nodemailer', () => ({
   createTransport: (...args: unknown[]) => mockCreateTransport(...args),
 }));
 
@@ -22,10 +23,10 @@ type MailOptions = {
 
 describe('EmailService', () => {
   let service: EmailService;
-  let sendMail: jest.Mock<Promise<unknown>, [MailOptions]>;
-  let templateService: Record<string, jest.Mock>;
-  let configService: Record<string, jest.Mock>;
-  let timezoneService: { formatTimestamp: jest.Mock };
+  let sendMail: Mock<(...args: [MailOptions]) => Promise<unknown>>;
+  let templateService: Record<string, Mock>;
+  let configService: Record<string, Mock>;
+  let timezoneService: { formatTimestamp: Mock };
   let stored: SmtpSettings;
 
   const workingSettings = (): SmtpSettings => ({
@@ -43,30 +44,30 @@ describe('EmailService', () => {
   const sentMail = () => sendMail.mock.calls[0][0];
 
   beforeEach(async () => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     stored = workingSettings();
 
-    sendMail = jest
-      .fn<Promise<unknown>, [MailOptions]>()
+    sendMail = vi
+      .fn<(...args: [MailOptions]) => Promise<unknown>>()
       .mockResolvedValue({ messageId: 'abc' });
     mockCreateTransport.mockReturnValue({ sendMail });
 
     templateService = {
-      generateNotificationEmail: jest.fn().mockReturnValue('<p>notice</p>'),
-      generatePasswordResetEmail: jest.fn().mockReturnValue('<p>reset</p>'),
+      generateNotificationEmail: vi.fn().mockReturnValue('<p>notice</p>'),
+      generatePasswordResetEmail: vi.fn().mockReturnValue('<p>reset</p>'),
     };
 
     configService = {
-      getSetting: jest.fn((key: keyof SmtpSettings) =>
+      getSetting: vi.fn((key: keyof SmtpSettings) =>
         Promise.resolve(stored[key]),
       ),
-      getCurrentTimeInTimezone: jest
+      getCurrentTimeInTimezone: vi
         .fn()
         .mockResolvedValue(new Date('2026-08-21T12:00:00Z')),
     };
 
     timezoneService = {
-      formatTimestamp: jest.fn().mockReturnValue('2026-08-21 12:00:00'),
+      formatTimestamp: vi.fn().mockReturnValue('2026-08-21 12:00:00'),
     };
 
     const module = await Test.createTestingModule({
@@ -193,7 +194,7 @@ describe('EmailService', () => {
     });
 
     it('describes a block that carries no stop code generically', async () => {
-      const sendEmail = jest.spyOn(service, 'sendEmail').mockResolvedValue();
+      const sendEmail = vi.spyOn(service, 'sendEmail').mockResolvedValue();
 
       await service.sendBlockedEmail('testuser', 'Shield', undefined);
 

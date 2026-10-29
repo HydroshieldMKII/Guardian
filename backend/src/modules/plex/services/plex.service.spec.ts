@@ -10,13 +10,14 @@ import { SessionOrchestratorService } from '@/services/session-orchestrator.serv
 import { SettingValues } from '@/modules/config/settings.catalog';
 import { PlexSessionsResponse } from '@/types/plex.types';
 import { anyValue } from '@/test-matchers';
+import type { Mock } from 'vitest';
 
 describe('PlexService', () => {
   let service: PlexService;
-  let plexClient: Record<string, jest.Mock>;
-  let devicesService: { findDeviceByIdentifier: jest.Mock };
-  let activeSessionService: { getActiveSessionsFormatted: jest.Mock };
-  let sessionOrchestratorService: { orchestrateSessionUpdate: jest.Mock };
+  let plexClient: Record<string, Mock>;
+  let devicesService: { findDeviceByIdentifier: Mock };
+  let activeSessionService: { getActiveSessionsFormatted: Mock };
+  let sessionOrchestratorService: { orchestrateSessionUpdate: Mock };
   let settings: Partial<SettingValues>;
 
   const session = (overrides: Record<string, unknown> = {}) => ({
@@ -41,7 +42,7 @@ describe('PlexService', () => {
   };
 
   beforeEach(async () => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 
     settings = {
       ENABLE_MEDIA_THUMBNAILS: true,
@@ -53,22 +54,22 @@ describe('PlexService', () => {
     };
 
     plexClient = {
-      getServerIdentity: jest.fn().mockResolvedValue('server-abc'),
-      getSessions: jest.fn().mockResolvedValue(sessionsResponse([session()])),
+      getServerIdentity: vi.fn().mockResolvedValue('server-abc'),
+      getSessions: vi.fn().mockResolvedValue(sessionsResponse([session()])),
     };
 
     devicesService = {
-      findDeviceByIdentifier: jest.fn().mockResolvedValue({ sessionCount: 3 }),
+      findDeviceByIdentifier: vi.fn().mockResolvedValue({ sessionCount: 3 }),
     };
 
     activeSessionService = {
-      getActiveSessionsFormatted: jest
+      getActiveSessionsFormatted: vi
         .fn()
         .mockResolvedValue(sessionsResponse([session()])),
     };
 
     sessionOrchestratorService = {
-      orchestrateSessionUpdate: jest.fn((s: unknown) => Promise.resolve(s)),
+      orchestrateSessionUpdate: vi.fn((s: unknown) => Promise.resolve(s)),
     };
 
     const module = await Test.createTestingModule({
@@ -80,7 +81,7 @@ describe('PlexService', () => {
         {
           provide: ConfigService,
           useValue: {
-            getSetting: jest.fn((key: keyof SettingValues) =>
+            getSetting: vi.fn((key: keyof SettingValues) =>
               Promise.resolve(settings[key] ?? null),
             ),
           },
@@ -315,8 +316,12 @@ describe('PlexService', () => {
     });
 
     it('logs an invalid Plex address as a warning and rethrows', async () => {
-      const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
-      const error = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+      const warn = vi
+        .spyOn(Logger.prototype, 'warn')
+        .mockImplementation(() => undefined);
+      const error = vi
+        .spyOn(Logger.prototype, 'error')
+        .mockImplementation(() => undefined);
       sessionOrchestratorService.orchestrateSessionUpdate.mockRejectedValue(
         new PlexConfigurationError('Invalid Plex server address or port.'),
       );

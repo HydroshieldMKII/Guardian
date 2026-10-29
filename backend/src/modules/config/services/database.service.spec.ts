@@ -6,65 +6,64 @@ import { UserPreference } from '@/entities/user-preference.entity';
 import { SessionHistory } from '@/entities/session-history.entity';
 import { Notification } from '@/entities/notification.entity';
 import { DatabaseService, ExportData } from './database.service';
+import type { Mock } from 'vitest';
 
 describe('DatabaseService', () => {
   let service: DatabaseService;
-  let settingsRepo: Record<string, jest.Mock>;
-  let deviceRepo: Record<string, jest.Mock>;
-  let preferenceRepo: Record<string, jest.Mock>;
-  let repos: Map<unknown, Record<string, jest.Mock>>;
+  let settingsRepo: Record<string, Mock>;
+  let deviceRepo: Record<string, Mock>;
+  let preferenceRepo: Record<string, Mock>;
+  let repos: Map<unknown, Record<string, Mock>>;
   let cleared: unknown[];
-  let transaction: jest.Mock;
-  let updateBuilder: Record<string, jest.Mock>;
+  let transaction: Mock;
+  let updateBuilder: Record<string, Mock>;
 
   const clearableRepo = (token: unknown) => ({
-    clear: jest.fn(() => {
+    clear: vi.fn(() => {
       cleared.push(token);
       return Promise.resolve();
     }),
-    count: jest.fn().mockResolvedValue(0),
+    count: vi.fn().mockResolvedValue(0),
   });
 
   beforeEach(async () => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     cleared = [];
 
     updateBuilder = {
-      update: jest.fn(),
-      set: jest.fn(),
-      execute: jest.fn().mockResolvedValue({ affected: 3 }),
+      update: vi.fn(),
+      set: vi.fn(),
+      execute: vi.fn().mockResolvedValue({ affected: 3 }),
     };
     updateBuilder.update.mockReturnValue(updateBuilder);
     updateBuilder.set.mockReturnValue(updateBuilder);
 
     deviceRepo = {
       ...clearableRepo(UserDevice),
-      find: jest.fn().mockResolvedValue([]),
-      findOne: jest.fn().mockResolvedValue(null),
-      create: jest.fn((entity: Partial<UserDevice>) => entity),
-      save: jest.fn((entity: Partial<UserDevice>) => Promise.resolve(entity)),
-      count: jest.fn().mockResolvedValue(7),
-      createQueryBuilder: jest.fn(() => updateBuilder),
+      find: vi.fn().mockResolvedValue([]),
+      findOne: vi.fn().mockResolvedValue(null),
+      create: vi.fn((entity: Partial<UserDevice>) => entity),
+      save: vi.fn((entity: Partial<UserDevice>) => Promise.resolve(entity)),
+      count: vi.fn().mockResolvedValue(7),
+      createQueryBuilder: vi.fn(() => updateBuilder),
     };
 
     preferenceRepo = {
       ...clearableRepo(UserPreference),
-      find: jest.fn().mockResolvedValue([]),
-      findOne: jest.fn().mockResolvedValue(null),
-      create: jest.fn((entity: Partial<UserPreference>) => entity),
-      save: jest.fn((entity: Partial<UserPreference>) =>
-        Promise.resolve(entity),
-      ),
+      find: vi.fn().mockResolvedValue([]),
+      findOne: vi.fn().mockResolvedValue(null),
+      create: vi.fn((entity: Partial<UserPreference>) => entity),
+      save: vi.fn((entity: Partial<UserPreference>) => Promise.resolve(entity)),
     };
 
-    repos = new Map<unknown, Record<string, jest.Mock>>([
+    repos = new Map<unknown, Record<string, Mock>>([
       [UserDevice, deviceRepo],
       [UserPreference, preferenceRepo],
       [
         SessionHistory,
         {
           ...clearableRepo(SessionHistory),
-          count: jest.fn().mockResolvedValue(42),
+          count: vi.fn().mockResolvedValue(42),
         },
       ],
       [Notification, clearableRepo(Notification)],
@@ -73,23 +72,23 @@ describe('DatabaseService', () => {
       ['admin_users', clearableRepo('admin_users')],
     ]);
 
-    const getRepository = jest.fn((token: unknown) => {
+    const getRepository = vi.fn((token: unknown) => {
       const repo = repos.get(token);
       if (!repo)
         throw new Error(`no repository registered for ${String(token)}`);
       return repo;
     });
 
-    transaction = jest.fn(
-      async (run: (manager: { getRepository: jest.Mock }) => Promise<void>) =>
+    transaction = vi.fn(
+      async (run: (manager: { getRepository: Mock }) => Promise<void>) =>
         run({ getRepository }),
     );
 
     settingsRepo = {
-      find: jest.fn().mockResolvedValue([]),
-      findOne: jest.fn().mockResolvedValue(null),
-      save: jest.fn((entity: AppSettings) => Promise.resolve(entity)),
-      manager: Object.assign(jest.fn(), { getRepository, transaction }),
+      find: vi.fn().mockResolvedValue([]),
+      findOne: vi.fn().mockResolvedValue(null),
+      save: vi.fn((entity: AppSettings) => Promise.resolve(entity)),
+      manager: Object.assign(vi.fn(), { getRepository, transaction }),
     };
     settingsRepo.manager = { getRepository, transaction } as never;
 

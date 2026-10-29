@@ -6,32 +6,33 @@ import { SessionHistory } from '@/entities/session-history.entity';
 import { DevicesService } from '@/modules/devices/services/devices.service';
 import { TemporaryAccessService } from '@/modules/devices/services/temporary-access.service';
 import { anyDate } from '@/test-matchers';
+import type { Mock } from 'vitest';
 
 describe('DevicesService', () => {
   let service: DevicesService;
   let deviceRepo: {
-    find: jest.Mock;
-    findOne: jest.Mock;
-    update: jest.Mock;
-    manager: { transaction: jest.Mock };
+    find: Mock;
+    findOne: Mock;
+    update: Mock;
+    manager: { transaction: Mock };
   };
-  let temporaryAccess: { revokeTemporaryAccess: jest.Mock };
+  let temporaryAccess: { revokeTemporaryAccess: Mock };
   let transactionRepos: {
-    history: { delete: jest.Mock };
-    devices: { delete: jest.Mock };
+    history: { delete: Mock };
+    devices: { delete: Mock };
   };
 
   beforeEach(async () => {
     transactionRepos = {
-      history: { delete: jest.fn().mockResolvedValue({ affected: 3 }) },
-      devices: { delete: jest.fn().mockResolvedValue({ affected: 1 }) },
+      history: { delete: vi.fn().mockResolvedValue({ affected: 3 }) },
+      devices: { delete: vi.fn().mockResolvedValue({ affected: 1 }) },
     };
     deviceRepo = {
-      find: jest.fn().mockResolvedValue([]),
-      findOne: jest.fn().mockResolvedValue(null),
-      update: jest.fn().mockResolvedValue({ affected: 1 }),
+      find: vi.fn().mockResolvedValue([]),
+      findOne: vi.fn().mockResolvedValue(null),
+      update: vi.fn().mockResolvedValue({ affected: 1 }),
       manager: {
-        transaction: jest.fn(async (run: (manager: unknown) => Promise<void>) =>
+        transaction: vi.fn(async (run: (manager: unknown) => Promise<void>) =>
           run({
             getRepository: (entity: unknown) =>
               entity === SessionHistory
@@ -42,7 +43,7 @@ describe('DevicesService', () => {
       },
     };
     temporaryAccess = {
-      revokeTemporaryAccess: jest.fn().mockResolvedValue(undefined),
+      revokeTemporaryAccess: vi.fn().mockResolvedValue(undefined),
     };
 
     const module = await Test.createTestingModule({

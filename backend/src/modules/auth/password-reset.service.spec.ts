@@ -12,6 +12,7 @@ import {
   PASSWORD_RESET_TTL_MS,
   PasswordResetService,
 } from '@/modules/auth/password-reset.service';
+import type { Mock } from 'vitest';
 
 const ADMIN = {
   id: 'admin-1',
@@ -26,56 +27,61 @@ const hashOf = (token: string) =>
 describe('PasswordResetService', () => {
   let service: PasswordResetService;
   let adminRepo: {
-    find: jest.Mock;
-    findOne: jest.Mock;
-    save: jest.Mock<{ passwordHash: string }, [{ passwordHash: string }]>;
-  };
-  let tokenRepo: {
-    findOne: jest.Mock;
-    delete: jest.Mock<Promise<void>, [Record<string, unknown>]>;
-    save: jest.Mock;
-    manager: { transaction: jest.Mock };
-  };
-  let transactionRepo: {
-    delete: jest.Mock;
-    save: jest.Mock<Promise<void>, [{ tokenHash: string; userId: string }]>;
-  };
-  let configService: { getSetting: jest.Mock };
-  let emailService: {
-    loadSmtpSettings: jest.Mock;
-    sendPasswordResetEmail: jest.Mock<
-      Promise<void>,
-      [string, string, string, number]
+    find: Mock;
+    findOne: Mock;
+    save: Mock<
+      (...args: [{ passwordHash: string }]) => { passwordHash: string }
     >;
   };
-  let authSessions: { clearAllSessions: jest.Mock };
+  let tokenRepo: {
+    findOne: Mock;
+    delete: Mock<(...args: [Record<string, unknown>]) => Promise<void>>;
+    save: Mock;
+    manager: { transaction: Mock };
+  };
+  let transactionRepo: {
+    delete: Mock;
+    save: Mock<
+      (...args: [{ tokenHash: string; userId: string }]) => Promise<void>
+    >;
+  };
+  let configService: { getSetting: Mock };
+  let emailService: {
+    loadSmtpSettings: Mock;
+    sendPasswordResetEmail: Mock<
+      (...args: [string, string, string, number]) => Promise<void>
+    >;
+  };
+  let authSessions: { clearAllSessions: Mock };
 
   beforeEach(async () => {
     process.env.APP_URL = 'https://guardian.example.com';
 
     adminRepo = {
-      find: jest.fn().mockResolvedValue([ADMIN]),
-      findOne: jest.fn().mockResolvedValue({ ...ADMIN }),
-      save: jest
-        .fn<{ passwordHash: string }, [{ passwordHash: string }]>()
+      find: vi.fn().mockResolvedValue([ADMIN]),
+      findOne: vi.fn().mockResolvedValue({ ...ADMIN }),
+      save: vi
+        .fn<(...args: [{ passwordHash: string }]) => { passwordHash: string }>()
         .mockImplementation((entity) => entity),
     };
 
     transactionRepo = {
-      delete: jest.fn().mockResolvedValue(undefined),
-      save: jest
-        .fn<Promise<void>, [{ tokenHash: string; userId: string }]>()
+      delete: vi.fn().mockResolvedValue(undefined),
+      save: vi
+        .fn<
+          (...args: [{ tokenHash: string; userId: string }]) => Promise<void>
+        >()
         .mockResolvedValue(undefined),
     };
 
     tokenRepo = {
-      findOne: jest.fn().mockResolvedValue(null),
-      delete: jest
-        .fn<Promise<void>, [Record<string, unknown>]>()
+      findOne: vi.fn().mockResolvedValue(null),
+      delete: vi
+        .fn<(...args: [Record<string, unknown>]) => Promise<void>>()
         .mockResolvedValue(undefined),
-      save: jest.fn().mockResolvedValue(undefined),
+      save: vi.fn().mockResolvedValue(undefined),
       manager: {
-        transaction: jest
+        transaction: vi
           .fn()
           .mockImplementation(
             (
@@ -87,20 +93,20 @@ describe('PasswordResetService', () => {
       },
     };
 
-    configService = { getSetting: jest.fn().mockResolvedValue(true) };
+    configService = { getSetting: vi.fn().mockResolvedValue(true) };
 
     emailService = {
-      loadSmtpSettings: jest.fn().mockResolvedValue({
+      loadSmtpSettings: vi.fn().mockResolvedValue({
         SMTP_ENABLED: true,
         SMTP_HOST: 'smtp.example.com',
         SMTP_FROM_EMAIL: 'guardian@example.com',
       }),
-      sendPasswordResetEmail: jest
-        .fn<Promise<void>, [string, string, string, number]>()
+      sendPasswordResetEmail: vi
+        .fn<(...args: [string, string, string, number]) => Promise<void>>()
         .mockResolvedValue(undefined),
     };
 
-    authSessions = { clearAllSessions: jest.fn().mockResolvedValue(undefined) };
+    authSessions = { clearAllSessions: vi.fn().mockResolvedValue(undefined) };
 
     const module = await Test.createTestingModule({
       providers: [

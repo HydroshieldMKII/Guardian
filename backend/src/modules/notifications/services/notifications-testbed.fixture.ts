@@ -9,6 +9,7 @@ import { EmailService } from '@/modules/config/services/email.service';
 import { LiveEventsService } from '@/modules/events/live-events.service';
 import { NotificationsService } from '@/modules/notifications/services/notifications.service';
 import { NotificationDispatchService } from '@/modules/notifications/services/notification-dispatch.service';
+import type { Mock } from 'vitest';
 
 export interface NotificationsTestbed {
   module: TestingModule;
@@ -22,14 +23,14 @@ export interface NotificationsTestbed {
     | 'count'
     | 'clear'
     | 'find',
-    jest.Mock
+    Mock
   >;
-  historyRepo: { findOne: jest.Mock };
-  deviceRepo: { findOne: jest.Mock };
-  configService: { getSetting: jest.Mock };
-  appriseService: Record<string, jest.Mock>;
-  emailService: Record<string, jest.Mock>;
-  liveEvents: { hasListeners: jest.Mock; broadcastNotifications: jest.Mock };
+  historyRepo: { findOne: Mock };
+  deviceRepo: { findOne: Mock };
+  configService: { getSetting: Mock };
+  appriseService: Record<string, Mock>;
+  emailService: Record<string, Mock>;
+  liveEvents: { hasListeners: Mock; broadcastNotifications: Mock };
 }
 
 export const notification = (
@@ -51,37 +52,37 @@ export const createNotificationsTestbed =
     const enabled = new Set<string>();
 
     const notificationRepo = {
-      create: jest.fn((entity: Partial<Notification>) =>
+      create: vi.fn((entity: Partial<Notification>) =>
         Object.assign(new Notification(), entity),
       ),
-      save: jest.fn((entity: Notification) => Promise.resolve(entity)),
-      findOne: jest.fn().mockResolvedValue(notification()),
-      delete: jest.fn().mockResolvedValue({ affected: 1 }),
-      update: jest.fn().mockResolvedValue({ affected: 1 }),
-      count: jest.fn().mockResolvedValue(4),
-      clear: jest.fn().mockResolvedValue(undefined),
-      find: jest.fn().mockResolvedValue([]),
+      save: vi.fn((entity: Notification) => Promise.resolve(entity)),
+      findOne: vi.fn().mockResolvedValue(notification()),
+      delete: vi.fn().mockResolvedValue({ affected: 1 }),
+      update: vi.fn().mockResolvedValue({ affected: 1 }),
+      count: vi.fn().mockResolvedValue(4),
+      clear: vi.fn().mockResolvedValue(undefined),
+      find: vi.fn().mockResolvedValue([]),
     };
-    const historyRepo = { findOne: jest.fn().mockResolvedValue(null) };
-    const deviceRepo = { findOne: jest.fn().mockResolvedValue(null) };
+    const historyRepo = { findOne: vi.fn().mockResolvedValue(null) };
+    const deviceRepo = { findOne: vi.fn().mockResolvedValue(null) };
     const configService = {
-      getSetting: jest.fn((key: string) => Promise.resolve(enabled.has(key))),
+      getSetting: vi.fn((key: string) => Promise.resolve(enabled.has(key))),
     };
     const appriseService = {
-      sendNewDeviceNotification: jest.fn().mockResolvedValue(undefined),
-      sendBlockedNotification: jest.fn().mockResolvedValue(undefined),
-      sendLocationChangeNotification: jest.fn().mockResolvedValue(undefined),
-      sendDeviceNoteNotification: jest.fn().mockResolvedValue(undefined),
+      sendNewDeviceNotification: vi.fn().mockResolvedValue(undefined),
+      sendBlockedNotification: vi.fn().mockResolvedValue(undefined),
+      sendLocationChangeNotification: vi.fn().mockResolvedValue(undefined),
+      sendDeviceNoteNotification: vi.fn().mockResolvedValue(undefined),
     };
     const emailService = {
-      sendNewDeviceEmail: jest.fn().mockResolvedValue(undefined),
-      sendBlockedEmail: jest.fn().mockResolvedValue(undefined),
-      sendLocationChangeEmail: jest.fn().mockResolvedValue(undefined),
-      sendDeviceNoteEmail: jest.fn().mockResolvedValue(undefined),
+      sendNewDeviceEmail: vi.fn().mockResolvedValue(undefined),
+      sendBlockedEmail: vi.fn().mockResolvedValue(undefined),
+      sendLocationChangeEmail: vi.fn().mockResolvedValue(undefined),
+      sendDeviceNoteEmail: vi.fn().mockResolvedValue(undefined),
     };
     const liveEvents = {
-      hasListeners: jest.fn().mockReturnValue(false),
-      broadcastNotifications: jest.fn(),
+      hasListeners: vi.fn().mockReturnValue(false),
+      broadcastNotifications: vi.fn(),
     };
 
     const module = await Test.createTestingModule({

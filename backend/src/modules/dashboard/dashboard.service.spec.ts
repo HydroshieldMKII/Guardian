@@ -5,6 +5,7 @@ import { ConnectionTestService } from '@/modules/config/services/connection-test
 import { UsersService } from '@/modules/users/services/users.service';
 import { PlexService } from '@/modules/plex/services/plex.service';
 import { DashboardService } from '@/modules/dashboard/dashboard.service';
+import type { Mock } from 'vitest';
 
 const configuredStatus = {
   configured: true,
@@ -14,39 +15,39 @@ const configuredStatus = {
 
 describe('DashboardService', () => {
   let service: DashboardService;
-  let configService: { getPublicSettings: jest.Mock };
-  let connectionTest: { getPlexConfigurationStatus: jest.Mock };
-  let plexService: { getActiveSessionsWithMediaUrls: jest.Mock };
+  let configService: { getPublicSettings: Mock };
+  let connectionTest: { getPlexConfigurationStatus: Mock };
+  let plexService: { getActiveSessionsWithMediaUrls: Mock };
   let devicesService: {
-    getAllDevices: jest.Mock;
-    getPendingDevices: jest.Mock;
-    getApprovedDevices: jest.Mock;
-    getProcessedDevices: jest.Mock;
+    getAllDevices: Mock;
+    getPendingDevices: Mock;
+    getApprovedDevices: Mock;
+    getProcessedDevices: Mock;
   };
-  let usersService: { getAllUsers: jest.Mock };
+  let usersService: { getAllUsers: Mock };
 
   beforeEach(async () => {
     configService = {
-      getPublicSettings: jest.fn().mockResolvedValue([{ key: 'TIMEZONE' }]),
+      getPublicSettings: vi.fn().mockResolvedValue([{ key: 'TIMEZONE' }]),
     };
     connectionTest = {
-      getPlexConfigurationStatus: jest.fn().mockResolvedValue(configuredStatus),
+      getPlexConfigurationStatus: vi.fn().mockResolvedValue(configuredStatus),
     };
 
     plexService = {
-      getActiveSessionsWithMediaUrls: jest
+      getActiveSessionsWithMediaUrls: vi
         .fn()
         .mockResolvedValue({ MediaContainer: { size: 2, Metadata: [{}, {}] } }),
     };
 
     devicesService = {
-      getAllDevices: jest.fn().mockResolvedValue([{ id: 1 }, { id: 2 }]),
-      getPendingDevices: jest.fn().mockResolvedValue([{ id: 2 }]),
-      getApprovedDevices: jest.fn().mockResolvedValue([{ id: 1 }]),
-      getProcessedDevices: jest.fn().mockResolvedValue([{ id: 1 }]),
+      getAllDevices: vi.fn().mockResolvedValue([{ id: 1 }, { id: 2 }]),
+      getPendingDevices: vi.fn().mockResolvedValue([{ id: 2 }]),
+      getApprovedDevices: vi.fn().mockResolvedValue([{ id: 1 }]),
+      getProcessedDevices: vi.fn().mockResolvedValue([{ id: 1 }]),
     };
 
-    usersService = { getAllUsers: jest.fn().mockResolvedValue([{ id: 'u1' }]) };
+    usersService = { getAllUsers: vi.fn().mockResolvedValue([{ id: 'u1' }]) };
 
     const module = await Test.createTestingModule({
       providers: [

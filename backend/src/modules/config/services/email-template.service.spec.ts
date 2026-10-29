@@ -2,11 +2,10 @@ import { Logger } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { EmailTemplateService } from './email-template.service';
 
-const realReadFileSync =
-  jest.requireActual<typeof import('fs')>('fs').readFileSync;
-const mockReadFileSync = jest.fn<unknown, unknown[]>();
+let realReadFileSync: typeof import('fs').readFileSync;
+const mockReadFileSync = vi.fn<(...args: unknown[]) => unknown>();
 
-jest.mock('fs', () => ({
+vi.mock('fs', () => ({
   readFileSync: (...args: unknown[]) => mockReadFileSync(...args),
 }));
 
@@ -28,6 +27,11 @@ const readTemplatesForReal = (
   });
 
 const MISSING = '\u0000missing';
+
+beforeAll(async () => {
+  ({ readFileSync: realReadFileSync } =
+    await vi.importActual<typeof import('fs')>('fs'));
+});
 
 describe('EmailTemplateService', () => {
   let service: EmailTemplateService;
@@ -69,7 +73,7 @@ describe('EmailTemplateService', () => {
   };
 
   beforeEach(async () => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     readTemplatesForReal('<svg>logo</svg>');
 
     const module = await Test.createTestingModule({
@@ -147,7 +151,7 @@ describe('EmailTemplateService', () => {
 
   describe('missing template files', () => {
     it('renders nothing rather than a broken document', () => {
-      const logged = jest
+      const logged = vi
         .spyOn(Logger.prototype, 'error')
         .mockImplementation(() => {});
       readTemplatesForReal('<svg>logo</svg>', (file) =>

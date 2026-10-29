@@ -6,6 +6,7 @@ import { UserTimeRule } from '@/entities/user-time-rule.entity';
 import { ConfigService } from '@/modules/config/services/config.service';
 import { TimePolicyService } from '@/modules/users/services/time-policy.service';
 import { arrayContaining } from '@/test-matchers';
+import type { Mock } from 'vitest';
 
 const rule = (overrides: Partial<UserTimeRule> = {}): UserTimeRule =>
   Object.assign(new UserTimeRule(), {
@@ -23,22 +24,22 @@ describe('TimePolicyService', () => {
   let service: TimePolicyService;
   let repository: Record<
     'create' | 'save' | 'find' | 'findOne' | 'update' | 'delete',
-    jest.Mock
+    Mock
   >;
-  let configService: { getCurrentTimeInTimezone: jest.Mock };
+  let configService: { getCurrentTimeInTimezone: Mock };
 
   beforeEach(async () => {
     repository = {
-      create: jest.fn((value: Partial<UserTimeRule>) => rule(value)),
-      save: jest.fn((value: UserTimeRule) => Promise.resolve(value)),
-      find: jest.fn().mockResolvedValue([]),
-      findOne: jest.fn().mockResolvedValue(null),
-      update: jest.fn().mockResolvedValue({ affected: 1 }),
-      delete: jest.fn().mockResolvedValue({ affected: 1 }),
+      create: vi.fn((value: Partial<UserTimeRule>) => rule(value)),
+      save: vi.fn((value: UserTimeRule) => Promise.resolve(value)),
+      find: vi.fn().mockResolvedValue([]),
+      findOne: vi.fn().mockResolvedValue(null),
+      update: vi.fn().mockResolvedValue({ affected: 1 }),
+      delete: vi.fn().mockResolvedValue({ affected: 1 }),
     };
 
     configService = {
-      getCurrentTimeInTimezone: jest
+      getCurrentTimeInTimezone: vi
         .fn()
         .mockResolvedValue(new Date('2026-01-05T23:00:00.000Z')),
     };

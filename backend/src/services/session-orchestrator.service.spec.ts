@@ -4,12 +4,13 @@ import { ActiveSessionService } from '@/modules/sessions/services/active-session
 import { DeviceTrackingService } from '@/modules/devices/services/device-tracking.service';
 import { SessionTerminationService } from '@/modules/plex/services/session-termination.service';
 import { SessionOrchestratorService } from '@/services/session-orchestrator.service';
+import type { Mock } from 'vitest';
 
 describe('SessionOrchestratorService', () => {
   let service: SessionOrchestratorService;
-  let activeSessionService: Record<string, jest.Mock>;
-  let deviceTrackingService: Record<string, jest.Mock>;
-  let sessionTerminationService: { stopUnapprovedSessions: jest.Mock };
+  let activeSessionService: Record<string, Mock>;
+  let deviceTrackingService: Record<string, Mock>;
+  let sessionTerminationService: { stopUnapprovedSessions: Mock };
   let order: string[];
 
   const sessionsData = {
@@ -20,21 +21,21 @@ describe('SessionOrchestratorService', () => {
     order = [];
 
     deviceTrackingService = {
-      processSessionsForDeviceTracking: jest.fn(async () => {
+      processSessionsForDeviceTracking: vi.fn(async () => {
         order.push('track');
       }),
-      getAllDevices: jest.fn().mockResolvedValue([{ id: 1 }]),
+      getAllDevices: vi.fn().mockResolvedValue([{ id: 1 }]),
     };
     activeSessionService = {
-      updateActiveSessions: jest.fn(async () => {
+      updateActiveSessions: vi.fn(async () => {
         order.push('history');
       }),
-      getActiveSessionsFormatted: jest
+      getActiveSessionsFormatted: vi
         .fn()
         .mockResolvedValue({ MediaContainer: { size: 0 } }),
     };
     sessionTerminationService = {
-      stopUnapprovedSessions: jest.fn(async () => {
+      stopUnapprovedSessions: vi.fn(async () => {
         order.push('enforce');
         return { stoppedSessions: [], errors: [] };
       }),

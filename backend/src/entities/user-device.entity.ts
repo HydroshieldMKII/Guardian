@@ -39,7 +39,7 @@ export class UserDevice {
   @Column({ type: 'varchar', name: 'device_version', nullable: true })
   deviceVersion: string | null;
 
-  @Column({ name: 'status', default: 'pending' })
+  @Column({ name: 'status', type: 'varchar', default: 'pending' })
   status: DeviceStatus;
 
   @CreateDateColumn({ name: 'first_seen' })

@@ -5,9 +5,9 @@ import { ConfigService } from './config.service';
 import { SettingValues } from '@/modules/config/settings.catalog';
 import { containing } from '@/test-matchers';
 
-const mockSpawn = jest.fn<unknown, unknown[]>();
+const mockSpawn = vi.fn<(...args: unknown[]) => unknown>();
 
-jest.mock('child_process', () => ({
+vi.mock('child_process', () => ({
   spawn: (...args: unknown[]) => mockSpawn(...args),
 }));
 
@@ -15,7 +15,7 @@ class FakeProcess extends EventEmitter {
   stdout = new EventEmitter();
   stderr = new EventEmitter();
   killed = false;
-  kill = jest.fn(() => {
+  kill = vi.fn(() => {
     this.killed = true;
     return true;
   });
@@ -40,8 +40,16 @@ describe('AppriseService', () => {
   const spawnArgs = () => mockSpawn.mock.calls[0][1] as string[];
 
   beforeEach(async () => {
-    jest.clearAllMocks();
-    jest.useFakeTimers({ doNotFake: ['setImmediate', 'nextTick'] });
+    vi.clearAllMocks();
+    vi.useFakeTimers({
+      toFake: [
+        'setTimeout',
+        'clearTimeout',
+        'setInterval',
+        'clearInterval',
+        'Date',
+      ],
+    });
 
     child = new FakeProcess();
     mockSpawn.mockImplementation(() => child);
@@ -61,7 +69,7 @@ describe('AppriseService', () => {
         {
           provide: ConfigService,
           useValue: {
-            getSetting: jest.fn((key: keyof SettingValues) =>
+            getSetting: vi.fn((key: keyof SettingValues) =>
               Promise.resolve(settings[key] ?? null),
             ),
           },
@@ -73,7 +81,7 @@ describe('AppriseService', () => {
   });
 
   afterEach(() => {
-    jest.useRealTimers();
+    vi.useRealTimers();
   });
 
   const flush = () => new Promise((resolve) => setImmediate(resolve));
@@ -269,7 +277,7 @@ describe('AppriseService', () => {
     it('kills a process that never exits', async () => {
       const pending = service.sendNotification(notification);
       await flush();
-      jest.advanceTimersByTime(20000);
+      vi.advanceTimersByTime(20000);
 
       await expect(pending).resolves.toMatchObject({
         success: false,
@@ -280,7 +288,7 @@ describe('AppriseService', () => {
 
     it('leaves a process alone once it has exited', async () => {
       await send(() => service.sendNotification(notification));
-      jest.advanceTimersByTime(20000);
+      vi.advanceTimersByTime(20000);
 
       expect(child.kill).not.toHaveBeenCalled();
     });

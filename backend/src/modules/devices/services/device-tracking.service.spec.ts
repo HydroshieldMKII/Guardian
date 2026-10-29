@@ -13,17 +13,18 @@ import {
 } from '@/modules/devices/services/device-events.service';
 import { userDevice } from '@/modules/devices/services/user-device.fixture';
 import { anyDate, callArgs } from '@/test-matchers';
+import type { Mock } from 'vitest';
 
 describe('DeviceTrackingService', () => {
   let service: DeviceTrackingService;
   let deviceEvents: DeviceEventsService;
   let deviceRepo: Record<
     'find' | 'findOne' | 'create' | 'save' | 'update',
-    jest.Mock
+    Mock
   >;
-  let historyRepo: { update: jest.Mock };
-  let usersService: Record<string, jest.Mock>;
-  let configService: { getSetting: jest.Mock };
+  let historyRepo: { update: Mock };
+  let usersService: Record<string, Mock>;
+  let configService: { getSetting: Mock };
 
   const session = (overrides: Partial<PlexSession> = {}): PlexSession => ({
     sessionKey: 'sk-1',
@@ -47,20 +48,20 @@ describe('DeviceTrackingService', () => {
 
   beforeEach(async () => {
     deviceRepo = {
-      find: jest.fn().mockResolvedValue([]),
-      findOne: jest.fn().mockResolvedValue(null),
-      create: jest.fn((entity: Partial<UserDevice>) =>
+      find: vi.fn().mockResolvedValue([]),
+      findOne: vi.fn().mockResolvedValue(null),
+      create: vi.fn((entity: Partial<UserDevice>) =>
         Object.assign(new UserDevice(), entity),
       ),
-      save: jest.fn((entity: UserDevice) => Promise.resolve(entity)),
-      update: jest.fn().mockResolvedValue({ affected: 1 }),
+      save: vi.fn((entity: UserDevice) => Promise.resolve(entity)),
+      update: vi.fn().mockResolvedValue({ affected: 1 }),
     };
-    historyRepo = { update: jest.fn().mockResolvedValue({ affected: 1 }) };
+    historyRepo = { update: vi.fn().mockResolvedValue({ affected: 1 }) };
     usersService = {
-      updateUserFromSessionData: jest.fn().mockResolvedValue(undefined),
-      getEffectiveDefaultBlock: jest.fn().mockResolvedValue(true),
+      updateUserFromSessionData: vi.fn().mockResolvedValue(undefined),
+      getEffectiveDefaultBlock: vi.fn().mockResolvedValue(true),
     };
-    configService = { getSetting: jest.fn().mockResolvedValue(false) };
+    configService = { getSetting: vi.fn().mockResolvedValue(false) };
 
     const module = await Test.createTestingModule({
       providers: [
@@ -211,7 +212,7 @@ describe('DeviceTrackingService', () => {
     );
 
     it('notifies listeners with the device details', async () => {
-      const listener = jest.fn();
+      const listener = vi.fn();
       deviceEvents.onNewDeviceDetected(listener);
 
       await service.processSessionsForDeviceTracking(
@@ -230,7 +231,7 @@ describe('DeviceTrackingService', () => {
     });
 
     it('notifies listeners without a session key when Plex sent none', async () => {
-      const listener = jest.fn();
+      const listener = vi.fn();
       deviceEvents.onNewDeviceDetected(listener);
 
       await service.processSessionsForDeviceTracking(
@@ -243,7 +244,7 @@ describe('DeviceTrackingService', () => {
     });
 
     it('substitutes placeholders for details Plex did not send', async () => {
-      const listener = jest.fn();
+      const listener = vi.fn();
       deviceEvents.onNewDeviceDetected(listener);
 
       await service.processSessionsForDeviceTracking(
@@ -266,7 +267,7 @@ describe('DeviceTrackingService', () => {
     });
 
     it('keeps notifying the other listeners when one throws', async () => {
-      const survivor = jest.fn();
+      const survivor = vi.fn();
       deviceEvents.onNewDeviceDetected(() => {
         throw new Error('listener blew up');
       });
@@ -424,7 +425,7 @@ describe('DeviceTrackingService', () => {
     });
 
     it('records the first IP address without raising a location change', async () => {
-      const listener = jest.fn();
+      const listener = vi.fn();
       deviceEvents.onDeviceLocationChanged(listener);
       deviceRepo.findOne.mockResolvedValue(userDevice({ ipAddress: null }));
 
@@ -437,7 +438,7 @@ describe('DeviceTrackingService', () => {
     });
 
     it('raises a location change when the IP moves', async () => {
-      const listener = jest.fn();
+      const listener = vi.fn();
       deviceEvents.onDeviceLocationChanged(listener);
       deviceRepo.findOne.mockResolvedValue(
         userDevice({ ipAddress: '10.0.0.5' }),
@@ -461,7 +462,7 @@ describe('DeviceTrackingService', () => {
     });
 
     it('stays quiet when the IP is unchanged', async () => {
-      const listener = jest.fn();
+      const listener = vi.fn();
       deviceEvents.onDeviceLocationChanged(listener);
       deviceRepo.findOne.mockResolvedValue(userDevice());
 
@@ -473,7 +474,7 @@ describe('DeviceTrackingService', () => {
     });
 
     it('keeps notifying the other location listeners when one throws', async () => {
-      const survivor = jest.fn();
+      const survivor = vi.fn();
       deviceEvents.onDeviceLocationChanged(() => {
         throw new Error('listener blew up');
       });
@@ -501,9 +502,9 @@ describe('DeviceTrackingService', () => {
         sessionsResponse(session()),
       );
 
-      jest.spyOn(Date, 'now').mockReturnValue(Date.now() + 25 * 60 * 60 * 1000);
+      vi.spyOn(Date, 'now').mockReturnValue(Date.now() + 25 * 60 * 60 * 1000);
       service.cleanupStaleSessionKeys();
-      jest.spyOn(Date, 'now').mockRestore();
+      vi.spyOn(Date, 'now').mockRestore();
 
       await service.processSessionsForDeviceTracking(
         sessionsResponse(session()),

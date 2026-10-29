@@ -226,7 +226,7 @@ describe('NotificationsService', () => {
     it('only considers notifications with no session link from the last five minutes', async () => {
       historyRepo.findOne.mockResolvedValue(history);
       const now = new Date('2026-08-01T12:00:00Z');
-      const clock = jest.spyOn(Date, 'now').mockReturnValue(now.getTime());
+      const clock = vi.spyOn(Date, 'now').mockReturnValue(now.getTime());
       await service.linkNotificationToSessionHistory('sk-1');
       clock.mockRestore();
 

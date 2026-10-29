@@ -12,17 +12,18 @@ import { PlexOAuthService } from '@/modules/auth/plex-oauth.service';
 import { PlexAccountService } from '@/modules/auth/plex-account.service';
 import { PasswordResetService } from '@/modules/auth/password-reset.service';
 import { ConfigService } from '@/modules/config/services/config.service';
+import type { Mock } from 'vitest';
 
 export interface AuthControllersTestbed {
   module: TestingModule;
-  authService: Record<string, jest.Mock>;
-  authSessions: { logout: jest.Mock; createPlexUserSession: jest.Mock };
-  plexOAuthService: Record<string, jest.Mock>;
-  plexAccounts: Record<string, jest.Mock>;
-  configService: { getSetting: jest.Mock };
+  authService: Record<string, Mock>;
+  authSessions: { logout: Mock; createPlexUserSession: Mock };
+  plexOAuthService: Record<string, Mock>;
+  plexAccounts: Record<string, Mock>;
+  configService: { getSetting: Mock };
   passwordResetService: Record<
     'getStatus' | 'requestReset' | 'verify' | 'confirm',
-    jest.Mock
+    Mock
   >;
 }
 
@@ -45,8 +46,8 @@ export const session = {
 };
 
 export const responseStub = () => {
-  const cookie = jest.fn();
-  const clearCookie = jest.fn();
+  const cookie = vi.fn();
+  const clearCookie = vi.fn();
   const stub: Pick<Response, 'cookie' | 'clearCookie'> = {
     cookie,
     clearCookie,
@@ -69,22 +70,22 @@ export const requestStub = (
 export const createAuthControllersTestbed =
   async (): Promise<AuthControllersTestbed> => {
     const authService = {
-      hasAdminUsers: jest.fn().mockResolvedValue(false),
-      createAdmin: jest
+      hasAdminUsers: vi.fn().mockResolvedValue(false),
+      createAdmin: vi
         .fn()
         .mockResolvedValue({ user: { id: 'admin-1' }, session }),
-      login: jest.fn().mockResolvedValue({ user: { id: 'admin-1' }, session }),
-      updateProfile: jest.fn().mockResolvedValue({ id: 'admin-1' }),
-      updatePassword: jest.fn().mockResolvedValue(undefined),
-      findAdminByPlexUserId: jest.fn().mockResolvedValue(null),
-      createAdminSessionByPlex: jest
+      login: vi.fn().mockResolvedValue({ user: { id: 'admin-1' }, session }),
+      updateProfile: vi.fn().mockResolvedValue({ id: 'admin-1' }),
+      updatePassword: vi.fn().mockResolvedValue(undefined),
+      findAdminByPlexUserId: vi.fn().mockResolvedValue(null),
+      createAdminSessionByPlex: vi
         .fn()
         .mockResolvedValue({ user: { id: 'admin-1' }, session }),
     };
 
     const authSessions = {
-      logout: jest.fn().mockResolvedValue(undefined),
-      createPlexUserSession: jest.fn().mockResolvedValue({
+      logout: vi.fn().mockResolvedValue(undefined),
+      createPlexUserSession: vi.fn().mockResolvedValue({
         token: 'plex-session-token',
         expiresAt: session.expiresAt,
         plexUserId: '9',
@@ -94,8 +95,8 @@ export const createAuthControllersTestbed =
     };
 
     const plexOAuthService = {
-      generateClientId: jest.fn().mockReturnValue('client-1'),
-      createPlexPin: jest.fn().mockResolvedValue({
+      generateClientId: vi.fn().mockReturnValue('client-1'),
+      createPlexPin: vi.fn().mockResolvedValue({
         pin: {
           id: 42,
           code: 'ABCD',
@@ -103,9 +104,9 @@ export const createAuthControllersTestbed =
           expiresAt: new Date('2026-08-21T12:00:00Z'),
         },
       }),
-      checkPlexPin: jest.fn().mockResolvedValue(false),
-      cancelPlexPin: jest.fn(),
-      claimPlexUser: jest.fn().mockReturnValue({
+      checkPlexPin: vi.fn().mockResolvedValue(false),
+      cancelPlexPin: vi.fn(),
+      claimPlexUser: vi.fn().mockReturnValue({
         id: 9,
         username: 'guest',
         thumb: 'thumb.png',
@@ -113,28 +114,28 @@ export const createAuthControllersTestbed =
     };
 
     const plexAccounts = {
-      getAdminWithPlexLinked: jest.fn().mockResolvedValue(null),
-      isPlexUserOnServer: jest.fn().mockResolvedValue(true),
-      linkPlexAccountToAdmin: jest.fn().mockResolvedValue({
+      getAdminWithPlexLinked: vi.fn().mockResolvedValue(null),
+      isPlexUserOnServer: vi.fn().mockResolvedValue(true),
+      linkPlexAccountToAdmin: vi.fn().mockResolvedValue({
         plexUserId: '9',
         plexUsername: 'guest',
         plexEmail: 'guest@example.com',
         plexThumb: 'thumb.png',
       }),
-      unlinkPlexAccountFromAdmin: jest.fn().mockResolvedValue(undefined),
+      unlinkPlexAccountFromAdmin: vi.fn().mockResolvedValue(undefined),
     };
 
-    const configService = { getSetting: jest.fn().mockResolvedValue(true) };
+    const configService = { getSetting: vi.fn().mockResolvedValue(true) };
 
     const passwordResetService = {
-      getStatus: jest.fn().mockResolvedValue({
+      getStatus: vi.fn().mockResolvedValue({
         enabled: true,
         emailConfigured: true,
         appUrlConfigured: true,
       }),
-      requestReset: jest.fn().mockResolvedValue(undefined),
-      verify: jest.fn().mockResolvedValue(true),
-      confirm: jest.fn().mockResolvedValue(undefined),
+      requestReset: vi.fn().mockResolvedValue(undefined),
+      verify: vi.fn().mockResolvedValue(true),
+      confirm: vi.fn().mockResolvedValue(undefined),
     };
 
     const module = await Test.createTestingModule({

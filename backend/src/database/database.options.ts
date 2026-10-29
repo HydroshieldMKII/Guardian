@@ -10,6 +10,11 @@ import { UserTimeRule } from '@/entities/user-time-rule.entity';
 import { AdminUser } from '@/entities/admin-user.entity';
 import { Session } from '@/entities/session.entity';
 import { PasswordResetToken } from '@/entities/password-reset-token.entity';
+import { RemoveOldSmtpSetting1729870958000 } from '@/migrations/20251025-remove-old-smtp-setting';
+import { BaselineSchema1792972800000 } from '@/migrations/20261026-baseline-schema';
+import { RaiseRefreshIntervalMinimum1793145600000 } from '@/migrations/20261028-raise-refresh-interval-minimum';
+import { LowercaseAdminEmails1793232000000 } from '@/migrations/20261029-lowercase-admin-emails';
+import { OpenEmptyIpAllowLists1793235600000 } from '@/migrations/20261029-open-empty-ip-allow-lists';
 
 export const ENTITIES = [
   UserDevice,
@@ -21,6 +26,14 @@ export const ENTITIES = [
   AdminUser,
   Session,
   PasswordResetToken,
+];
+
+export const MIGRATIONS = [
+  RemoveOldSmtpSetting1729870958000,
+  BaselineSchema1792972800000,
+  RaiseRefreshIntervalMinimum1793145600000,
+  LowercaseAdminEmails1793232000000,
+  OpenEmptyIpAllowLists1793235600000,
 ];
 
 export function databasePath(): string {
@@ -36,7 +49,7 @@ export function databaseOptions(database: string): DataSourceOptions {
     entities: ENTITIES,
     synchronize: false,
     logging: config.database.logging,
-    migrations: [path.join(__dirname, '..', 'migrations', '*{.ts,.js}')],
+    migrations: MIGRATIONS,
     migrationsRun: true,
   };
 }

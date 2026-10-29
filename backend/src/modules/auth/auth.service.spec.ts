@@ -13,11 +13,12 @@ import { AuthService } from '@/modules/auth/auth.service';
 import { AuthSessionService } from '@/modules/auth/auth-session.service';
 import { CaptchaService } from '@/modules/auth/captcha.service';
 import { adminAccount, sessionRepository } from '@/modules/auth/auth.fixture';
+import type { Mock } from 'vitest';
 
-const mockHash = jest.fn<Promise<string>, [string, number]>();
-const mockCompare = jest.fn<Promise<boolean>, [string, string]>();
+const mockHash = vi.fn<(...args: [string, number]) => Promise<string>>();
+const mockCompare = vi.fn<(...args: [string, string]) => Promise<boolean>>();
 
-jest.mock('bcrypt', () => ({
+vi.mock('bcrypt', () => ({
   hash: (data: string, rounds: number) => mockHash(data, rounds),
   compare: (data: string, encrypted: string) => mockCompare(data, encrypted),
 }));
@@ -28,32 +29,32 @@ const compare = mockCompare;
 describe('AuthService', () => {
   let service: AuthService;
   let adminRepo: {
-    count: jest.Mock;
-    save: jest.Mock;
-    findOne: jest.Mock;
-    manager: { transaction: jest.Mock };
+    count: Mock;
+    save: Mock;
+    findOne: Mock;
+    manager: { transaction: Mock };
   };
   let sessionRepo: ReturnType<typeof sessionRepository>;
-  let configService: { getSetting: jest.Mock };
+  let configService: { getSetting: Mock };
 
   const admin = adminAccount();
 
   beforeEach(async () => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     hash.mockResolvedValue('new-hash');
     compare.mockResolvedValue(true);
 
     adminRepo = {
-      count: jest.fn().mockResolvedValue(0),
-      save: jest.fn().mockImplementation((entity: Record<string, unknown>) =>
+      count: vi.fn().mockResolvedValue(0),
+      save: vi.fn().mockImplementation((entity: Record<string, unknown>) =>
         Promise.resolve({
           id: 'admin-1',
           ...entity,
         }),
       ),
-      findOne: jest.fn().mockResolvedValue({ ...admin }),
+      findOne: vi.fn().mockResolvedValue({ ...admin }),
       manager: {
-        transaction: jest.fn(
+        transaction: vi.fn(
           async (run: (manager: { getRepository: () => unknown }) => unknown) =>
             run({ getRepository: () => adminRepo }),
         ),
@@ -61,7 +62,7 @@ describe('AuthService', () => {
     };
 
     sessionRepo = sessionRepository();
-    configService = { getSetting: jest.fn().mockResolvedValue(null) };
+    configService = { getSetting: vi.fn().mockResolvedValue(null) };
 
     const module = await Test.createTestingModule({
       providers: [

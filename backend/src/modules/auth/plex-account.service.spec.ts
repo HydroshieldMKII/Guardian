@@ -4,20 +4,21 @@ import { IsNull, Not } from 'typeorm';
 import { AdminUser } from '@/entities/admin-user.entity';
 import { UserPreference } from '@/entities/user-preference.entity';
 import { PlexAccountService } from '@/modules/auth/plex-account.service';
+import type { Mock } from 'vitest';
 
 describe('PlexAccountService', () => {
   let service: PlexAccountService;
-  let adminRepo: Record<string, jest.Mock>;
-  let preferenceRepo: { findOne: jest.Mock };
+  let adminRepo: Record<string, Mock>;
+  let preferenceRepo: { findOne: Mock };
 
   beforeEach(async () => {
     adminRepo = {
-      findOne: jest.fn().mockResolvedValue(null),
-      findOneOrFail: jest.fn().mockResolvedValue({ id: 'admin-1' }),
-      update: jest.fn().mockResolvedValue({ affected: 1 }),
+      findOne: vi.fn().mockResolvedValue(null),
+      findOneOrFail: vi.fn().mockResolvedValue({ id: 'admin-1' }),
+      update: vi.fn().mockResolvedValue({ affected: 1 }),
     };
 
-    preferenceRepo = { findOne: jest.fn().mockResolvedValue(null) };
+    preferenceRepo = { findOne: vi.fn().mockResolvedValue(null) };
 
     const module = await Test.createTestingModule({
       providers: [

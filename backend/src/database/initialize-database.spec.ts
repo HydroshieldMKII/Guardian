@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { DataSource, MigrationInterface } from 'typeorm';
-import { databaseOptions } from '@/database/database.options';
+import { MIGRATIONS, databaseOptions } from '@/database/database.options';
 import {
   initializeDatabase,
   preMigrationBackupPath,
@@ -28,7 +28,7 @@ describe('initializeDatabase', () => {
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
     fs.rmSync(workDir, { recursive: true, force: true });
   });
 
@@ -89,10 +89,7 @@ describe('initializeDatabase', () => {
   const startWithFailingMigration = () =>
     start({
       ...databaseOptions(database),
-      migrations: [
-        ...(databaseOptions(database).migrations as string[]),
-        FailingMigration9999999999999,
-      ],
+      migrations: [...MIGRATIONS, FailingMigration9999999999999],
     });
 
   it('creates a new database without a backup', async () => {
@@ -165,7 +162,7 @@ describe('initializeDatabase', () => {
   });
 
   it('closes its connection when a migration fails', async () => {
-    const destroy = jest.spyOn(DataSource.prototype, 'destroy');
+    const destroy = vi.spyOn(DataSource.prototype, 'destroy');
     await createLegacyDatabase();
     destroy.mockClear();
 

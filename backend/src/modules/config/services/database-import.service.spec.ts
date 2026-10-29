@@ -9,16 +9,17 @@ import {
   ImportRules,
 } from '@/modules/config/services/database-import.service';
 import { SECRET_MASK } from '@/modules/config/services/public-setting';
+import type { Mock } from 'vitest';
 
 describe('DatabaseImportService', () => {
   let service: DatabaseImportService;
-  let settingsFindOne: jest.Mock;
-  let settingsSave: jest.Mock;
-  let deviceRepo: Record<string, jest.Mock>;
-  let preferenceRepo: Record<string, jest.Mock>;
-  let transaction: jest.Mock;
+  let settingsFindOne: Mock;
+  let settingsSave: Mock;
+  let deviceRepo: Record<string, Mock>;
+  let preferenceRepo: Record<string, Mock>;
+  let transaction: Mock;
 
-  const prepareSetting = jest.fn((_key: string, value: string) => value);
+  const prepareSetting = vi.fn((_key: string, value: string) => value);
   const rules: ImportRules = {
     currentAppVersion: '1.3.5',
     compareVersions: (a, b) => (a === b ? 0 : a < b ? -1 : 1),
@@ -30,25 +31,23 @@ describe('DatabaseImportService', () => {
     expect.objectContaining({ imported, skipped });
 
   beforeEach(async () => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     prepareSetting.mockImplementation((_key: string, value: string) => value);
 
     deviceRepo = {
-      findOne: jest.fn().mockResolvedValue(null),
-      create: jest.fn((entity: Partial<UserDevice>) => entity),
-      save: jest.fn((entity: Partial<UserDevice>) => Promise.resolve(entity)),
+      findOne: vi.fn().mockResolvedValue(null),
+      create: vi.fn((entity: Partial<UserDevice>) => entity),
+      save: vi.fn((entity: Partial<UserDevice>) => Promise.resolve(entity)),
     };
 
     preferenceRepo = {
-      findOne: jest.fn().mockResolvedValue(null),
-      create: jest.fn((entity: Partial<UserPreference>) => entity),
-      save: jest.fn((entity: Partial<UserPreference>) =>
-        Promise.resolve(entity),
-      ),
+      findOne: vi.fn().mockResolvedValue(null),
+      create: vi.fn((entity: Partial<UserPreference>) => entity),
+      save: vi.fn((entity: Partial<UserPreference>) => Promise.resolve(entity)),
     };
 
-    settingsFindOne = jest.fn().mockResolvedValue(null);
-    settingsSave = jest.fn((entity: AppSettings) => Promise.resolve(entity));
+    settingsFindOne = vi.fn().mockResolvedValue(null);
+    settingsSave = vi.fn((entity: AppSettings) => Promise.resolve(entity));
     const settingsRepo: Record<string, unknown> = {
       findOne: settingsFindOne,
       save: settingsSave,
@@ -62,7 +61,7 @@ describe('DatabaseImportService', () => {
     const manager: Record<string, unknown> = {
       getRepository: (token: unknown) => repos.get(token),
     };
-    transaction = jest.fn((work: (m: unknown) => Promise<unknown>) =>
+    transaction = vi.fn((work: (m: unknown) => Promise<unknown>) =>
       work(manager),
     );
     manager.transaction = transaction;

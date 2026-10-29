@@ -72,7 +72,7 @@ describe('SessionTerminationService', () => {
     });
 
     it('notifies listeners about a blocked stream', async () => {
-      const listener = jest.fn();
+      const listener = vi.fn();
       service.onStreamBlocked(listener);
       deviceRepo.findOne.mockResolvedValue(
         approvedDevice({ status: 'rejected' }),
@@ -91,7 +91,7 @@ describe('SessionTerminationService', () => {
     });
 
     it('keeps notifying the other listeners when one throws', async () => {
-      const survivor = jest.fn();
+      const survivor = vi.fn();
       service.onStreamBlocked(() => {
         throw new Error('listener blew up');
       });
@@ -222,7 +222,7 @@ describe('SessionTerminationService', () => {
     });
 
     it('reports the block with a concurrent-limit stop code', async () => {
-      const listener = jest.fn();
+      const listener = vi.fn();
       service.onStreamBlocked(listener);
       concurrentStreamService.getEffectiveLimit.mockResolvedValue(1);
 
