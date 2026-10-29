@@ -99,14 +99,14 @@ describe('DeviceMaintenanceService', () => {
       expect(savedDevice().status).toBe('rejected');
     });
 
-    it('always approves Plexamp devices', async () => {
+    it('rejects Plexamp devices like any other', async () => {
       configService.getSetting.mockResolvedValue(true);
       devicesService.getPendingDevices.mockResolvedValue([
         userDevice({ deviceProduct: 'Plexamp' }),
       ]);
 
       await service.enforceStrictModeOnPendingDevices();
-      expect(savedDevice().status).toBe('approved');
+      expect(savedDevice().status).toBe('rejected');
     });
 
     it('counts only the devices it managed to update', async () => {

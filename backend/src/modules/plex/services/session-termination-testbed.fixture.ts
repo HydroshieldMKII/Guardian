@@ -24,6 +24,7 @@ export interface SessionOverrides {
   product?: string;
   address?: string;
   title?: string;
+  type?: string;
 }
 
 export interface SessionTerminationTestbed {
@@ -49,8 +50,10 @@ export const session = ({
   product = 'Plex for Android',
   address = '10.0.0.5',
   title = 'Living Room TV',
+  type,
 }: SessionOverrides = {}) => ({
   sessionKey,
+  type,
   Session: { id },
   User: { id: userId, title: username },
   Player: { machineIdentifier, product, address, title },

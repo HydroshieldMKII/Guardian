@@ -9,5 +9,7 @@ export const isPlexampDevice = ({
   deviceProduct?: string | null;
 }): boolean => isPlexampProduct(deviceProduct);
 
+const MUSIC_TYPE = 'track';
+
 export const isPlexampSession = (session?: PlexSession): boolean =>
-  isPlexampProduct(session?.Player?.product);
+  isPlexampProduct(session?.Player?.product) && session?.type === MUSIC_TYPE;

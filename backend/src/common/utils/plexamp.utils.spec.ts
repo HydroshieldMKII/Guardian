@@ -36,13 +36,26 @@ describe('isPlexampDevice', () => {
 });
 
 describe('isPlexampSession', () => {
-  it('recognises a session played from Plexamp', () => {
-    expect(isPlexampSession({ Player: { product: 'Plexamp' } })).toBe(true);
+  it('recognises music played from Plexamp', () => {
+    expect(
+      isPlexampSession({ type: 'track', Player: { product: 'Plexamp' } }),
+    ).toBe(true);
   });
 
   it('matches the product whatever its case', () => {
-    expect(isPlexampSession({ Player: { product: 'plexamp' } })).toBe(true);
+    expect(
+      isPlexampSession({ type: 'track', Player: { product: 'plexamp' } }),
+    ).toBe(true);
   });
+
+  it.each(['movie', 'episode', 'clip', undefined])(
+    'treats %p from a player calling itself Plexamp as a normal session',
+    (type) => {
+      expect(isPlexampSession({ type, Player: { product: 'Plexamp' } })).toBe(
+        false,
+      );
+    },
+  );
 
   it('ignores a player title the user picked', () => {
     expect(

@@ -113,7 +113,7 @@ export class DeviceMaintenanceService {
       const defaultBlock = await this.usersService.getEffectiveDefaultBlock(
         device.userId,
       );
-      device.status = strictModeStatus(device, defaultBlock);
+      device.status = strictModeStatus(defaultBlock);
       await this.userDeviceRepository.save(device);
 
       this.logger.log(
