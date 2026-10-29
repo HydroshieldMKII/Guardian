@@ -17,6 +17,7 @@ import type { TimeRulesByUser } from "@/lib/time-rules-api";
 
 import { UserDetail } from "@/components/device-management/UserDetail";
 import { UserList } from "@/components/device-management/UserList";
+import { PANEL_HEIGHT } from "@/components/device-management/panel-height";
 import { ApprovalQueue } from "@/components/device-management/ApprovalQueue";
 import {
   groupDevicesByUser,
@@ -212,7 +213,8 @@ const DeviceManagement = memo(
         <div className="grid items-start gap-6 lg:grid-cols-[minmax(300px,360px)_1fr]">
           <UserList
             className={cn(
-              "lg:sticky lg:top-24 lg:h-[calc(100dvh-8rem)]",
+              "lg:sticky lg:top-24",
+              PANEL_HEIGHT,
               selectedUserId && "hidden lg:flex",
             )}
             {...listControls}
@@ -265,7 +267,12 @@ const DeviceManagement = memo(
             ) : selectedUserId && !loading ? (
               <MissingUserNotice onBack={() => selectUser(null)} />
             ) : loading && userGroups.length === 0 ? (
-              <div className="h-64 animate-pulse rounded-2xl border bg-card" />
+              <div
+                className={cn(
+                  "h-64 animate-pulse rounded-2xl border bg-card",
+                  PANEL_HEIGHT,
+                )}
+              />
             ) : (
               <ApprovalQueue
                 items={queueItems}

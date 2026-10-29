@@ -7,6 +7,7 @@ import {
   type QueueItem,
 } from "@/components/device-management/ApprovalQueue";
 import type { UserDeviceGroup } from "@/components/device-management/user-group";
+import { PANEL_HEIGHT } from "@/components/device-management/panel-height";
 
 const device = (overrides: Partial<UserDevice> = {}): UserDevice => ({
   id: 1,
@@ -67,7 +68,7 @@ describe("ApprovalQueue empty state", () => {
     expect(
       screen.getByText(/Pick a user to see their devices and rules\./),
     ).toBeInTheDocument();
-    expect(container.firstChild).toHaveClass("lg:py-20");
+    expect(container.firstChild).toHaveClass(PANEL_HEIGHT);
   });
 
   it("stays short and drops the hint on small screens", () => {
