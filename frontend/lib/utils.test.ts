@@ -1,4 +1,4 @@
-import { cn } from "./utils";
+import { cn, errorMessage } from "./utils";
 
 describe("cn", () => {
   it("joins plain class names", () => {
@@ -28,5 +28,15 @@ describe("cn", () => {
 
   it("returns an empty string with no input", () => {
     expect(cn()).toBe("");
+  });
+});
+
+describe("errorMessage", () => {
+  it("uses the error's own message", () => {
+    expect(errorMessage(new Error("Not found"), "Failed")).toBe("Not found");
+  });
+
+  it("falls back for anything else", () => {
+    expect(errorMessage("nope", "Failed")).toBe("Failed");
   });
 });

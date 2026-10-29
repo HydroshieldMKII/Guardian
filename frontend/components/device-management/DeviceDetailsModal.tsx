@@ -1,36 +1,19 @@
-import React, { useState } from "react";
+import React from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { HintTooltip } from "@/components/ui/hint-tooltip";
-import {
-  ActionRow,
-  Meta,
-  MetaGrid,
-  Panel,
-  PillRow,
-  Section,
-  StatusPill,
-  ToggleRow,
-  toneButton,
-} from "@/components/ui/entity";
-import {
-  Modal,
-  ModalBody,
-  ModalFooter,
-  ModalHeader,
-} from "@/components/ui/modal";
-import { Pencil, RefreshCw } from "lucide-react";
+import { Modal, ModalBody, ModalFooter } from "@/components/ui/modal";
 import { UserDevice, AppSetting } from "@/types";
+import { isPlexampDevice, type PolicyBadge } from "@/lib/device-policies";
+import { useConcurrentLimitExclusion } from "@/hooks/device-management/useConcurrentLimitExclusion";
+import { useDeviceNote } from "@/hooks/device-management/useDeviceNote";
+import { useSetDevicePending } from "@/hooks/device-management/useSetDevicePending";
+import { DeviceNameHeader } from "./device-details/DeviceNameHeader";
+import { DeviceOverview } from "./device-details/DeviceOverview";
+import { DeviceSettingsSection } from "./device-details/DeviceSettingsSection";
 import {
-  BYPASSED_BY_TEMPORARY_ACCESS,
-  hasTemporaryAccess,
-  isPlexampDevice,
-  type PolicyBadge,
-} from "@/lib/device-policies";
-import { formatMinutes } from "@/lib/duration";
-import { ClickableIP, DeviceStatus } from "./SharedComponents";
-import { apiClient } from "@/lib/api";
-import { useToast } from "@/hooks/use-toast";
+  hasTemporaryAccessHistory,
+  TemporaryAccessSection,
+} from "./device-details/TemporaryAccessSection";
+import { UserNoteSection } from "./device-details/UserNoteSection";
 
 interface DeviceDetailsModalProps {
   device: UserDevice | null;
@@ -49,7 +32,16 @@ interface DeviceDetailsModalProps {
   policies?: PolicyBadge[];
 }
 
+const isStrictMode = (settings?: AppSetting[]) =>
+  settings?.find((setting) => setting.key === "PLEX_GUARD_STRICT_MODE")
+    ?.value === "true";
+
 export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
+  device,
+  ...props
+}) => (device ? <DeviceDetails device={device} {...props} /> : null);
+
+function DeviceDetails({
   device,
   isOpen,
   onClose,
@@ -64,146 +56,8 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
   onSetPending,
   settingsData,
   policies = [],
-}) => {
-  const { toast } = useToast();
-  const [excludeLoading, setExcludeLoading] = useState(false);
-  const [deletingNote, setDeletingNote] = useState(false);
-  const [setPendingLoading, setSetPendingLoading] = useState(false);
-  const [excludeFromConcurrentLimit, setExcludeFromConcurrentLimit] = useState(
-    device?.excludeFromConcurrentLimit ?? false,
-  );
-  const [noteReadAt, setNoteReadAt] = useState<string | undefined>(
-    device?.requestNoteReadAt,
-  );
-
-  const plexamp = device ? isPlexampDevice(device) : false;
-
-  const isStrictModeEnabled =
-    settingsData?.find((s) => s.key === "PLEX_GUARD_STRICT_MODE")?.value ===
-    "true";
-
-  const deviceId = device?.id;
-  const deviceExcludeFromConcurrentLimit = device?.excludeFromConcurrentLimit;
-  const deviceRequestNoteReadAt = device?.requestNoteReadAt;
-
-  // Sync local state when device prop changes
-  React.useEffect(() => {
-    if (deviceId !== undefined) {
-      setExcludeFromConcurrentLimit(deviceExcludeFromConcurrentLimit ?? false);
-      setNoteReadAt(deviceRequestNoteReadAt);
-    }
-  }, [deviceId, deviceExcludeFromConcurrentLimit, deviceRequestNoteReadAt]);
-
-  if (!device) return null;
-
-  const handleDeleteNote = async () => {
-    setDeletingNote(true);
-    try {
-      await apiClient.deleteDeviceNote(device.id);
-      setNoteReadAt(undefined);
-      toast({
-        title: "Note deleted",
-        description: "The note this user left on the device is gone for good.",
-        variant: "success",
-      });
-      // Update parent state if callback provided
-      if (onDeviceUpdate) {
-        onDeviceUpdate({
-          ...device,
-          requestDescription: undefined,
-          requestSubmittedAt: undefined,
-          requestNoteReadAt: undefined,
-        });
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description:
-          error instanceof Error ? error.message : "Failed to delete note",
-        variant: "destructive",
-      });
-    } finally {
-      setDeletingNote(false);
-    }
-  };
-
-  const handleExcludeFromConcurrentLimitChange = async (exclude: boolean) => {
-    setExcludeLoading(true);
-    try {
-      await apiClient.updateDeviceExcludeFromConcurrentLimit(
-        device.id,
-        exclude,
-      );
-      // Update local state immediately
-      setExcludeFromConcurrentLimit(exclude);
-      toast({
-        title: "Success",
-        description: exclude
-          ? "Streams from this device no longer count towards the user's concurrent stream limit"
-          : "Streams from this device now count towards the user's concurrent stream limit",
-        variant: "success",
-      });
-      // Update the parent device state
-      if (onDeviceUpdate) {
-        onDeviceUpdate({ ...device, excludeFromConcurrentLimit: exclude });
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description:
-          error instanceof Error
-            ? error.message
-            : "Failed to update this device's settings",
-        variant: "destructive",
-      });
-    } finally {
-      setExcludeLoading(false);
-    }
-  };
-
-  const handleSetPending = async () => {
-    if (!onSetPending || !device) return;
-
-    setSetPendingLoading(true);
-    try {
-      const success = await onSetPending(device.id);
-      if (success) {
-        toast({
-          title: "Device set to pending",
-          description:
-            "This device is waiting for approval again and follows this user's New devices rule until you decide.",
-          variant: "success",
-        });
-        // Update parent state
-        if (onDeviceUpdate) {
-          onDeviceUpdate({ ...device, status: "pending" });
-        }
-        handleClose();
-      } else {
-        toast({
-          title: "Error",
-          description: "Failed to set device to pending",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description:
-          error instanceof Error
-            ? error.message
-            : "Failed to set device to pending",
-        variant: "destructive",
-      });
-    } finally {
-      setSetPendingLoading(false);
-    }
-  };
-
+}: DeviceDetailsModalProps & { device: UserDevice }) {
   const renaming = editingDevice === device.id;
-  const busy = actionLoading === device.id;
-  const spinner = <RefreshCw className="size-4 animate-spin" />;
-
   const handleClose = () => {
     if (renaming) {
       onCancelEdit();
@@ -211,225 +65,57 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
     onClose();
   };
 
+  const note = useDeviceNote(device, onDeviceUpdate);
+  const exclusion = useConcurrentLimitExclusion(device, onDeviceUpdate);
+  const pending = useSetDevicePending({
+    device,
+    onSetPending,
+    onDeviceUpdate,
+    onDone: handleClose,
+  });
+
   return (
     <Modal open={isOpen} onOpenChange={handleClose} size="lg" focusDialogOnOpen>
-      <ModalHeader
-        title={device.deviceName || "Unknown"}
-        titleHidden={renaming}
-        titleSuffix={
-          renaming ? (
-            <>
-              <Input
-                value={newDeviceName}
-                onChange={(e) => onNewDeviceNameChange(e.target.value)}
-                className="h-8 min-w-40 flex-1"
-                placeholder="Device name"
-                aria-label="Device name"
-                autoFocus
-              />
-              <Button
-                size="sm"
-                onClick={() => onRename(device.id, newDeviceName)}
-                disabled={!newDeviceName.trim() || busy}
-              >
-                {busy ? spinner : "Save"}
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={onCancelEdit}
-                disabled={busy}
-              >
-                Cancel
-              </Button>
-            </>
-          ) : (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onEdit(device)}
-              aria-label="Rename"
-              className="size-7 shrink-0 px-0 text-muted-foreground"
-            >
-              <Pencil className="size-3.5" />
-            </Button>
-          )
-        }
+      <DeviceNameHeader
+        device={device}
+        renaming={renaming}
+        busy={actionLoading === device.id}
+        newName={newDeviceName}
+        onNameChange={onNewDeviceNameChange}
+        onEdit={() => onEdit(device)}
+        onRename={() => onRename(device.id, newDeviceName)}
+        onCancel={onCancelEdit}
       />
 
       <ModalBody>
-        <MetaGrid className="sm:grid-cols-3">
-          <Meta label="User">{device.username || device.userId}</Meta>
-          <Meta label="Platform">{device.devicePlatform || "Unknown"}</Meta>
-          <Meta label="Product">{device.deviceProduct || "Unknown"}</Meta>
-          <Meta label="Version">{device.deviceVersion || "Unknown"}</Meta>
-          <Meta label="IP address">
-            <ClickableIP ipAddress={device.ipAddress} />
-          </Meta>
-          <Meta label="Streams started">{device.sessionCount}</Meta>
-          <Meta label="First seen">
-            {new Date(device.firstSeen).toLocaleString()}
-          </Meta>
-          <Meta label="Last seen">
-            {new Date(device.lastSeen).toLocaleString()}
-          </Meta>
-          <Meta label="Status">
-            <DeviceStatus device={device} />
-          </Meta>
-          <Meta
-            label="Enforced policies"
-            wrap
-            className="col-span-2 sm:col-span-3"
-          >
-            {policies.length === 0 ? (
-              <span className="text-muted-foreground">
-                None. This device streams without restriction.
-              </span>
-            ) : (
-              <PillRow>
-                {policies.map(({ policy, label, tone, hint }) => (
-                  <StatusPill key={policy} tone={tone} hint={hint}>
-                    {label}
-                  </StatusPill>
-                ))}
-              </PillRow>
-            )}
-          </Meta>
-          <Meta label="Identifier" wrap className="col-span-2 sm:col-span-3">
-            <span className="font-mono text-xs">{device.deviceIdentifier}</span>
-          </Meta>
-        </MetaGrid>
+        <DeviceOverview device={device} policies={policies} />
 
         {device.requestDescription &&
           device.requestSubmittedAt &&
-          noteReadAt && (
-            <Section title="User note">
-              <Panel>
-                <p className="text-sm leading-relaxed text-foreground">
-                  {device.requestDescription}
-                </p>
-              </Panel>
-              <MetaGrid className="sm:grid-cols-2">
-                <Meta label="Submitted">
-                  {new Date(device.requestSubmittedAt).toLocaleString()}
-                </Meta>
-                <Meta label="Read">
-                  {new Date(noteReadAt).toLocaleString()}
-                </Meta>
-              </MetaGrid>
-              <div className="flex sm:justify-end">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => void handleDeleteNote()}
-                  disabled={deletingNote}
-                  className={`w-full sm:w-auto ${toneButton("danger")}`}
-                >
-                  {deletingNote && spinner}
-                  Delete note
-                </Button>
-              </div>
-            </Section>
+          note.readAt && (
+            <UserNoteSection
+              description={device.requestDescription}
+              submittedAt={device.requestSubmittedAt}
+              readAt={note.readAt}
+              deleting={note.deleting}
+              onDelete={() => void note.deleteNote()}
+            />
           )}
 
-        {(device.temporaryAccessUntil ||
-          device.temporaryAccessGrantedAt ||
-          device.temporaryAccessDurationMinutes) && (
-          <Section title="Temporary access">
-            <MetaGrid className="sm:grid-cols-2">
-              {device.temporaryAccessDurationMinutes && (
-                <Meta label="Duration granted">
-                  {formatMinutes(device.temporaryAccessDurationMinutes)}
-                </Meta>
-              )}
-              {device.temporaryAccessGrantedAt && (
-                <Meta label="Granted at">
-                  {new Date(device.temporaryAccessGrantedAt).toLocaleString()}
-                </Meta>
-              )}
-              {device.temporaryAccessUntil && (
-                <Meta
-                  label={
-                    hasTemporaryAccess(device) ? "Expires at" : "Expired at"
-                  }
-                >
-                  {new Date(device.temporaryAccessUntil).toLocaleString()}
-                </Meta>
-              )}
-              <Meta label="Policy bypass">
-                <StatusPill
-                  tone={
-                    device.temporaryAccessBypassPolicies ? "warning" : "neutral"
-                  }
-                  hint={
-                    device.temporaryAccessBypassPolicies
-                      ? `While this grant lasts, ${BYPASSED_BY_TEMPORARY_ACCESS} are not enforced against this device`
-                      : "This grant does not lift any of the user's other policies"
-                  }
-                >
-                  {device.temporaryAccessBypassPolicies
-                    ? "Policies bypassed"
-                    : "Policies enforced"}
-                </StatusPill>
-              </Meta>
-            </MetaGrid>
-          </Section>
+        {hasTemporaryAccessHistory(device) && (
+          <TemporaryAccessSection device={device} />
         )}
 
-        <Section title="Device settings">
-          {!plexamp && (
-            <ToggleRow
-              id="exclude-concurrent-limit"
-              label="Exclude from concurrent stream limit"
-              hint="Streams from this device stop counting towards the user's concurrent stream limit, and never block another device from starting."
-              checked={excludeFromConcurrentLimit}
-              onCheckedChange={(checked) =>
-                void handleExcludeFromConcurrentLimitChange(checked)
-              }
-              disabled={excludeLoading}
-            />
-          )}
-
-          {!plexamp && device.status !== "pending" && onSetPending && (
-            <ActionRow
-              title="Set back to pending"
-              description="Undo your decision on this device. It follows this user's New devices rule until you approve or reject it again."
-              action={
-                isStrictModeEnabled ? (
-                  <HintTooltip
-                    side="top"
-                    align="center"
-                    triggerClassName="h-8 w-full cursor-not-allowed items-center justify-center whitespace-nowrap rounded-md border border-dashed bg-background px-3 text-sm font-medium text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring sm:w-auto"
-                    hint="Strict mode is on, so every device is approved or rejected automatically using this user's New devices rule. Turn strict mode off in settings to move a device back to pending."
-                  >
-                    Set to pending
-                  </HintTooltip>
-                ) : (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => void handleSetPending()}
-                    disabled={setPendingLoading}
-                    className="w-full sm:w-auto"
-                  >
-                    {setPendingLoading && spinner}
-                    Set to pending
-                  </Button>
-                )
-              }
-            />
-          )}
-
-          {plexamp && (
-            <Panel>
-              <p className="text-xs leading-relaxed text-muted-foreground">
-                Plex provides no way to terminate a Plexamp stream, so nothing
-                can be enforced against this device. It is exempt from every
-                policy, including the concurrent stream limit.
-              </p>
-            </Panel>
-          )}
-        </Section>
+        <DeviceSettingsSection
+          plexamp={isPlexampDevice(device)}
+          excluded={exclusion.excluded}
+          savingExclusion={exclusion.saving}
+          onExcludedChange={(exclude) => void exclusion.change(exclude)}
+          canSetPending={device.status !== "pending" && Boolean(onSetPending)}
+          strictMode={isStrictMode(settingsData)}
+          savingPending={pending.saving}
+          onSetPending={() => void pending.setPending()}
+        />
       </ModalBody>
 
       <ModalFooter>
@@ -439,4 +125,4 @@ export const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
       </ModalFooter>
     </Modal>
   );
-};
+}
