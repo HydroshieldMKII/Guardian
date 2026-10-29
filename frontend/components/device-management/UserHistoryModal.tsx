@@ -1,21 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { cn } from "@/lib/utils";
-import {
-  ActionBar,
-  EmptyState,
-  EntityCard,
-  EntityHeader,
-  Meta,
-  MetaGrid,
-  SegmentedControl,
-  StatusPill,
-  type Tone,
-} from "@/components/ui/entity";
+import { EmptyState } from "@/components/ui/entity";
 import {
   Modal,
   ModalBody,
@@ -23,55 +9,13 @@ import {
   ModalHeader,
 } from "@/components/ui/modal";
 import { RefreshCw } from "lucide-react";
-import { RefreshButton } from "@/components/ui/refresh-button";
 import { config } from "@/lib/config";
-import { ClickableIP } from "./SharedComponents";
-import { formatElapsed } from "@/lib/duration";
 import { ConfirmationModal } from "@/components/ui/confirmation-modal";
 import { useToast } from "@/hooks/use-toast";
 import { HIGHLIGHT_CLASSES } from "@/lib/highlight";
-
-type AppFilter = "all" | "plex" | "plexamp";
-
-const APP_FILTERS: { value: AppFilter; label: string }[] = [
-  { value: "all", label: "All" },
-  { value: "plex", label: "Plex" },
-  { value: "plexamp", label: "Plexamp" },
-];
-
-interface UserDevice {
-  id: number;
-  userId: string;
-  deviceIdentifier: string;
-  deviceName?: string;
-  devicePlatform?: string;
-  deviceProduct?: string;
-  deviceVersion?: string;
-  status: string;
-  sessionCount: number;
-}
-
-interface SessionHistoryEntry {
-  id: number;
-  sessionKey: string;
-  userId: string;
-  username?: string;
-  userDevice?: UserDevice;
-  deviceAddress?: string;
-  contentTitle?: string;
-  contentType?: string;
-  grandparentTitle?: string;
-  parentTitle?: string;
-  year?: number;
-  startedAt: string;
-  endedAt?: string;
-  duration?: number;
-  viewOffset?: number;
-  terminated?: boolean;
-  thumb?: string;
-  art?: string;
-  product?: string;
-}
+import type { SessionHistoryEntry } from "@/lib/session-history";
+import { SessionHistoryCard } from "./SessionHistoryCard";
+import { SessionHistoryFilters, type AppFilter } from "./SessionHistoryFilters";
 
 interface UserHistoryModalProps {
   userId: string | null;
@@ -274,64 +218,6 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
     return () => observer.disconnect();
   }, [loadMore, hasMore, loadingMore]);
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return (
-      date.toLocaleDateString() +
-      " " +
-      date.toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      })
-    );
-  };
-
-  const formatTitle = (session: SessionHistoryEntry) => {
-    if (session.contentType === "episode" && session.grandparentTitle) {
-      let result = session.grandparentTitle;
-      if (session.parentTitle && session.contentTitle) {
-        result += ` - ${session.parentTitle}: ${session.contentTitle}`;
-      } else if (session.parentTitle) {
-        result += ` - ${session.parentTitle}`;
-      } else if (session.contentTitle) {
-        result += ` - ${session.contentTitle}`;
-      }
-      return result;
-    }
-
-    return session.contentTitle || "Unknown title";
-  };
-
-  const formatSubtitle = (session: SessionHistoryEntry) => {
-    if (session.contentType === "track" && session.grandparentTitle) {
-      if (session.year) {
-        return `${session.grandparentTitle} • ${session.year}`;
-      }
-      return session.grandparentTitle;
-    }
-
-    return session.year ? String(session.year) : null;
-  };
-
-  const getDeviceDisplayName = (session: SessionHistoryEntry) => {
-    return (
-      session.userDevice?.deviceName ||
-      session.userDevice?.deviceProduct ||
-      "Unknown device"
-    );
-  };
-
-  const formatProduct = (session: SessionHistoryEntry) => {
-    const product = session.product || session.userDevice?.deviceProduct;
-    if (!product) return "Unknown";
-
-    if (product.toLowerCase() === "plexamp") {
-      return "Plexamp";
-    }
-
-    return "Plex";
-  };
-
   useEffect(() => {
     if (!scrollToSessionId || loading || !sessionsListRef.current) return;
     if (scrolledToRef.current === scrollToSessionId) return;
@@ -374,14 +260,6 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
     );
     return () => clearTimeout(timeout);
   }, [scrollToSessionId, sessions, loading, hasMore, loadingMore, loadMore]);
-
-  const formatDuration = (session: SessionHistoryEntry) => {
-    const endTime = session.endedAt
-      ? new Date(session.endedAt).getTime()
-      : Date.now();
-
-    return formatElapsed(endTime - new Date(session.startedAt).getTime());
-  };
 
   const handleDeviceClick = (session: SessionHistoryEntry) => {
     onClose();
@@ -441,11 +319,6 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
     setSessionToDelete(null);
   };
 
-  const sessionTone = (session: SessionHistoryEntry): Tone => {
-    if (!session.endedAt) return "positive";
-    return session.terminated ? "danger" : "neutral";
-  };
-
   const filtered = Boolean(
     activeSearch || terminatedOnly || appFilter !== "all",
   );
@@ -465,54 +338,17 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
             </>
           }
         >
-          <div className="space-y-3 pt-3">
-            <div className="flex items-center gap-2">
-              <Input
-                placeholder="Search by title, device or IP address"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="flex-1"
-              />
-              <RefreshButton
-                refreshing={refreshing}
-                disabled={loading}
-                onRefresh={() => void refreshLoaded(true)}
-                className="size-9"
-              />
-            </div>
-            <div className="flex items-center justify-between gap-3">
-              <SegmentedControl
-                options={APP_FILTERS}
-                value={appFilter}
-                onChange={setAppFilter}
-              />
-              <div
-                className={cn(
-                  "flex items-center gap-2 transition-opacity duration-200",
-                  !canFilterTerminated && "opacity-50",
-                )}
-                title={
-                  canFilterTerminated
-                    ? undefined
-                    : "Plexamp streams are never terminated"
-                }
-              >
-                <Switch
-                  id="terminated-filter"
-                  checked={terminatedOnly}
-                  onCheckedChange={setShowTerminatedOnly}
-                  disabled={!canFilterTerminated}
-                  className="cursor-pointer disabled:cursor-not-allowed"
-                />
-                <Label
-                  htmlFor="terminated-filter"
-                  className="whitespace-nowrap text-sm text-muted-foreground"
-                >
-                  Terminated only
-                </Label>
-              </div>
-            </div>
-          </div>
+          <SessionHistoryFilters
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
+            refreshing={refreshing}
+            refreshDisabled={loading}
+            onRefresh={() => void refreshLoaded(true)}
+            appFilter={appFilter}
+            onAppFilterChange={setAppFilter}
+            terminatedOnly={terminatedOnly}
+            onTerminatedOnlyChange={setShowTerminatedOnly}
+          />
         </ModalHeader>
 
         <ModalBody className="min-h-96 space-y-3" ref={sessionsListRef}>
@@ -533,74 +369,12 @@ export const UserHistoryModal: React.FC<UserHistoryModalProps> = ({
           ) : (
             <>
               {sessions.map((session) => (
-                <EntityCard
+                <SessionHistoryCard
                   key={session.id}
-                  data-session-id={session.id}
-                  tone={sessionTone(session)}
-                >
-                  <div className="space-y-3 p-4 pl-5 sm:space-y-4">
-                    <EntityHeader
-                      title={formatTitle(session)}
-                      subtitle={formatSubtitle(session) || undefined}
-                      status={
-                        !session.endedAt ? (
-                          <StatusPill tone="positive">Active</StatusPill>
-                        ) : session.terminated ? (
-                          <StatusPill tone="danger">Terminated</StatusPill>
-                        ) : (
-                          <StatusPill tone="neutral">Ended</StatusPill>
-                        )
-                      }
-                    />
-
-                    <MetaGrid className="gap-y-3 sm:grid-cols-3 sm:gap-y-4 lg:grid-cols-4">
-                      <Meta label="Device">
-                        {getDeviceDisplayName(session)}
-                      </Meta>
-                      <Meta label="Platform">
-                        {session.userDevice?.devicePlatform || "Unknown"}
-                      </Meta>
-                      <Meta label="Product">{formatProduct(session)}</Meta>
-                      <Meta label="IP address">
-                        <ClickableIP ipAddress={session.deviceAddress} />
-                      </Meta>
-                      <Meta label="Started">
-                        {formatDate(session.startedAt)}
-                      </Meta>
-                      <Meta label="Ended">
-                        {session.endedAt
-                          ? formatDate(session.endedAt)
-                          : "Active"}
-                      </Meta>
-                      <Meta label="Duration" wrap className="tabular-nums">
-                        {formatDuration(session)}
-                      </Meta>
-                    </MetaGrid>
-
-                    <ActionBar>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDeviceClick(session)}
-                        title="Go to this device"
-                        className="h-10 flex-1 sm:h-8 sm:flex-none"
-                      >
-                        See device
-                      </Button>
-                      {session.endedAt && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDeleteClick(session)}
-                          title="Delete this entry"
-                          className="h-10 flex-1 border-rose-500/40 text-rose-600 hover:bg-rose-500/10 dark:text-rose-400 sm:ml-auto sm:h-8 sm:flex-none"
-                        >
-                          Delete
-                        </Button>
-                      )}
-                    </ActionBar>
-                  </div>
-                </EntityCard>
+                  session={session}
+                  onSeeDevice={() => handleDeviceClick(session)}
+                  onDelete={() => handleDeleteClick(session)}
+                />
               ))}
 
               {hasMore && (
