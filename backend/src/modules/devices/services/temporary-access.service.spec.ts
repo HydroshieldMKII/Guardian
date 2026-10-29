@@ -115,6 +115,23 @@ describe('TemporaryAccessService', () => {
       expect(deviceRepo.update).toHaveBeenCalledWith(7, revokedAccess);
     });
 
+    it('answers 404 when revoking access of an unknown device', async () => {
+      deviceRepo.update.mockResolvedValue({ affected: 0 });
+
+      await expect(service.revokeTemporaryAccess(7)).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+    });
+
+    it('cleans up lapsed access of a device deleted meanwhile', async () => {
+      deviceRepo.update.mockResolvedValue({ affected: 0 });
+      const lapsed = userDevice({
+        temporaryAccessUntil: new Date(Date.now() - 60_000),
+      });
+
+      await expect(service.isTemporaryAccessValid(lapsed)).resolves.toBe(false);
+    });
+
     it('accepts access that has not expired', async () => {
       const active = userDevice({
         temporaryAccessUntil: new Date(Date.now() + 60_000),

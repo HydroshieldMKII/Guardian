@@ -9,6 +9,7 @@ import {
   Logger,
   HttpException,
   HttpStatus,
+  NotFoundException,
 } from '@nestjs/common';
 import { DevicesService } from '@/modules/devices/services/devices.service';
 import { TemporaryAccessService } from '@/modules/devices/services/temporary-access.service';
@@ -209,7 +210,7 @@ export class DevicesController {
       deviceIdentifier,
     );
     if (!device) {
-      return { message: 'Device not found' };
+      throw new NotFoundException('Device not found');
     }
 
     await this.temporaryAccessService.revokeTemporaryAccess(device.id);

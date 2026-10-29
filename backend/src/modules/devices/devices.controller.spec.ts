@@ -1,4 +1,4 @@
-import { HttpException, HttpStatus } from '@nestjs/common';
+import { HttpException, HttpStatus, NotFoundException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { DevicesController } from '@/modules/devices/devices.controller';
 import { DevicesService } from '@/modules/devices/services/devices.service';
@@ -202,12 +202,12 @@ describe('DevicesController', () => {
   });
 
   describe('revokeDeviceByIdentifier', () => {
-    it('reports back when no such device exists', async () => {
+    it('answers 404 when no such device exists', async () => {
       devices.findDeviceByUserAndIdentifier.mockResolvedValue(null);
 
       await expect(
         controller.revokeDeviceByIdentifier('u1', 'dev-1'),
-      ).resolves.toEqual({ message: 'Device not found' });
+      ).rejects.toBeInstanceOf(NotFoundException);
       expect(devices.rejectDevice).not.toHaveBeenCalled();
     });
 
