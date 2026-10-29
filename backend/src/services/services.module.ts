@@ -1,13 +1,13 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { SessionOrchestratorService } from '@/services/session-orchestrator.service';
 import { SessionsModule } from '@/modules/sessions/sessions.module';
-import { DevicesModule } from '@/modules/devices/devices.module';
+import { DeviceTrackingModule } from '@/modules/devices/services/device-tracking.module';
 import { PlexModule } from '@/modules/plex/plex.module';
 
 @Module({
   imports: [
     forwardRef(() => SessionsModule),
-    forwardRef(() => DevicesModule),
+    forwardRef(() => DeviceTrackingModule),
     forwardRef(() => PlexModule),
   ],
   providers: [SessionOrchestratorService],

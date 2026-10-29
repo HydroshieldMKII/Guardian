@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ScheduleModule } from '@nestjs/schedule';
 import { SessionsModule } from '@/modules/sessions/sessions.module';
 import { DevicesModule } from '@/modules/devices/devices.module';
+import { DeviceTrackingModule } from '@/modules/devices/services/device-tracking.module';
 import { PlexModule } from '@/modules/plex/plex.module';
 import { HealthModule } from '@/modules/health/health.module';
 import { UsersModule } from '@/modules/users/users.module';
@@ -27,6 +28,7 @@ import { initializeDatabase } from '@/database/initialize-database';
     }),
     SessionsModule,
     DevicesModule,
+    DeviceTrackingModule,
     PlexModule,
     HealthModule,
     UsersModule,

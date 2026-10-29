@@ -11,14 +11,14 @@ import { UserDevice } from '@/entities/user-device.entity';
 import { UserTimeRule } from '@/entities/user-time-rule.entity';
 import { ConfigModule } from '@/modules/config/config.module';
 import { PlexModule } from '@/modules/plex/plex.module';
-import { DevicesModule } from '@/modules/devices/devices.module';
+import { DeviceTrackingModule } from '@/modules/devices/services/device-tracking.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([UserPreference, UserDevice, UserTimeRule]),
     forwardRef(() => ConfigModule),
     forwardRef(() => PlexModule),
-    forwardRef(() => DevicesModule),
+    forwardRef(() => DeviceTrackingModule),
   ],
   controllers: [UsersController, RuleController],
   providers: [
