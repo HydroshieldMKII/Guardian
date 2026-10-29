@@ -1,47 +1,27 @@
 import { Injectable, Logger } from '@nestjs/common';
-import * as nodemailer from 'nodemailer';
 import { EmailTemplateService } from '@/modules/config/services/email-template.service';
 import { describeStopCode, StopCode } from '@/common/utils/stop-codes';
 import { ConfigService } from '@/modules/config/services/config.service';
 import { TimezoneService } from '@/modules/config/services/timezone.service';
-import { SettingValues } from '@/modules/config/settings.catalog';
 import { asHttpError } from '@/common/utils/error-types';
-import { EMAIL_PALETTE } from '@/common/utils/email-palette';
-import { NotificationEmailType } from '@/common/utils/notification-email-type';
+import {
+  createSmtpTransport,
+  senderAddress,
+  SMTPConfig,
+  SmtpSettings,
+  toSmtpConfig,
+  validateSmtpConfig,
+} from '@/modules/config/services/smtp-config';
+import {
+  NotificationEmailData,
+  notificationEmailContent,
+  notificationEmailText,
+} from '@/modules/config/services/notification-email-content';
 
-export interface SMTPConfig {
-  host: string;
-  port: number;
-  user: string;
-  password: string;
-  fromEmail: string;
-  fromName?: string;
-  useTLS: boolean;
-  toEmails: string[];
-}
-
-export type SmtpSettings = Pick<
-  SettingValues,
-  | 'SMTP_ENABLED'
-  | 'SMTP_HOST'
-  | 'SMTP_PORT'
-  | 'SMTP_USER'
-  | 'SMTP_PASSWORD'
-  | 'SMTP_FROM_EMAIL'
-  | 'SMTP_FROM_NAME'
-  | 'SMTP_USE_TLS'
-  | 'SMTP_TO_EMAILS'
->;
-
-export interface NotificationEmailData {
-  type: NotificationEmailType;
-  text: string;
-  username: string;
-  deviceName?: string;
-  stopCode?: StopCode;
-  ipAddress?: string;
-  oldIpAddress?: string;
-  note?: string;
+interface OutgoingMail {
+  subject: string;
+  text: (timestamp: string) => string;
+  html: (timestamp: string) => string;
 }
 
 @Injectable()
@@ -54,165 +34,20 @@ export class EmailService {
     private readonly timezoneService: TimezoneService,
   ) {}
 
-  private createTransporter(config: SMTPConfig) {
-    return nodemailer.createTransport({
-      host: config.host,
-      port: config.port,
-      secure: config.useTLS && config.port === 465,
-      auth: {
-        user: config.user,
-        pass: config.password,
-      },
-      tls: {
-        rejectUnauthorized: false,
-      },
-      connectionTimeout: 15000,
-      greetingTimeout: 15000,
-      socketTimeout: 15000,
-    });
-  }
-
-  private validateEmailAddresses(emails: string[]): string[] {
-    const emailRegex = /^[a-zA-Z0-9._%-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-    return emails.filter((email) => !emailRegex.test(email));
-  }
-
-  private validateSMTPConfig(config: SMTPConfig): string | null {
-    if (
-      !config.host ||
-      !config.port ||
-      !config.user ||
-      !config.password ||
-      !config.fromEmail
-    ) {
-      return 'Missing required SMTP configuration (host, port, user, password, or from email)';
-    }
-
-    if (config.useTLS && config.port !== 465 && config.port !== 587) {
-      return 'TLS is not supported on this port. Please use port 465 or 587.';
-    }
-
-    if (config.toEmails.length === 0) {
-      return 'No recipient email addresses configured. Please provide at least one recipient.';
-    }
-
-    const invalidEmails = this.validateEmailAddresses(config.toEmails);
-    if (invalidEmails.length > 0) {
-      return `Invalid email format(s): ${invalidEmails.join(', ')}`;
-    }
-
-    return null;
-  }
-
-  async testSMTPConnection(
-    config: SMTPConfig,
-    enabled: boolean,
-    timestamp: string,
-  ): Promise<{ success: boolean; message: string }> {
-    try {
-      if (!enabled) {
-        return {
-          success: false,
-          message: 'SMTP email notifications are disabled',
-        };
-      }
-
-      const validationError = this.validateSMTPConfig(config);
-      if (validationError) {
-        return {
-          success: false,
-          message: validationError,
-        };
-      }
-
-      const transporter = this.createTransporter(config);
-      await transporter.verify();
-
-      const emailHtml =
-        this.emailTemplateService.generateSMTPTestEmail(timestamp);
-
-      const testMailOptions = {
-        from: config.fromName
-          ? `${config.fromName} <${config.fromEmail}>`
-          : config.fromEmail,
-        to: config.toEmails,
-        subject: 'Guardian SMTP Test - Connection Successful',
-        text: 'This is a test email from Guardian to verify SMTP configuration. If you received this email, your SMTP settings are working correctly.',
-        html: emailHtml,
-      };
-
-      await transporter.sendMail(testMailOptions);
-
-      const recipientCount = config.toEmails.length;
-      const recipientText =
-        recipientCount === 1
-          ? config.toEmails[0]
-          : `${recipientCount} recipients (${config.toEmails.join(', ')})`;
-
-      this.logger.log(
-        `SMTP test email sent successfully to ${recipientCount} recipient(s): ${config.toEmails.join(', ')}`,
-      );
-
-      return {
-        success: true,
-        message: `SMTP connection successful! Test email sent to ${recipientText}`,
-      };
-    } catch (caught) {
-      const error = asHttpError(caught);
-      this.logger.error('SMTP Connection Test Failed', {
-        error: error.message,
-        code: error.code,
-        command: error.command,
-        response: error.response,
-        responseCode: error.responseCode,
-        stack: error.stack,
-      });
-
-      let userMessage = `SMTP error: ${error.message}`;
-
-      if (error.code === 'EAUTH') {
-        userMessage =
-          'Authentication failed. Please check your username and password.';
-      } else if (error.code === 'ECONNECTION') {
-        userMessage =
-          'Failed to connect to SMTP server. Please check the host and port.';
-      } else if (error.code === 'ETIMEDOUT') {
-        userMessage = 'Connection timed out. Please check your email settings.';
-      } else if (error.code === 'ENOTFOUND') {
-        userMessage = 'SMTP server not found. Please check the hostname.';
-      } else if (error.responseCode === 535) {
-        userMessage = 'Authentication failed. Please verify your credentials.';
-      } else if (error.responseCode === 550) {
-        userMessage =
-          'Email rejected by server. Please check recipient addresses.';
-      }
-
-      return {
-        success: false,
-        message: userMessage,
-      };
-    }
-  }
-
   async sendBlockedEmail(
     username: string,
     deviceName: string,
     stopCode: StopCode | undefined,
     ipAddress?: string,
   ): Promise<void> {
-    const notificationText = describeStopCode(stopCode);
-    const type = 'block';
-
-    const notificationData: NotificationEmailData = {
-      type,
-      text: notificationText,
+    await this.sendEmail({
+      type: 'block',
+      text: describeStopCode(stopCode),
       username,
       deviceName,
       stopCode,
       ipAddress,
-    };
-
-    await this.sendEmail(notificationData);
+    });
   }
 
   async sendNewDeviceEmail(
@@ -221,19 +56,13 @@ export class EmailService {
     deviceName?: string,
     ipAddress?: string,
   ): Promise<void> {
-    try {
-      const notificationData: NotificationEmailData = {
-        type: 'new-device',
-        text: notificationText,
-        username,
-        deviceName,
-        ipAddress,
-      };
-
-      await this.sendEmail(notificationData);
-    } catch (error) {
-      this.logger.error('Error in sendNotificationEmail:', error);
-    }
+    await this.sendEmail({
+      type: 'new-device',
+      text: notificationText,
+      username,
+      deviceName,
+      ipAddress,
+    });
   }
 
   async sendLocationChangeEmail(
@@ -242,22 +71,14 @@ export class EmailService {
     oldIpAddress: string,
     newIpAddress: string,
   ): Promise<void> {
-    try {
-      const notificationText = `Device location changed for ${username} on ${deviceName} - ${oldIpAddress} → ${newIpAddress}`;
-
-      const notificationData: NotificationEmailData = {
-        type: 'location-change',
-        text: notificationText,
-        username,
-        deviceName,
-        ipAddress: newIpAddress,
-        oldIpAddress,
-      };
-
-      await this.sendEmail(notificationData);
-    } catch (error) {
-      this.logger.error('Error in sendLocationChangeEmail:', error);
-    }
+    await this.sendEmail({
+      type: 'location-change',
+      text: `Device location changed for ${username} on ${deviceName} - ${oldIpAddress} → ${newIpAddress}`,
+      username,
+      deviceName,
+      ipAddress: newIpAddress,
+      oldIpAddress,
+    });
   }
 
   async sendDeviceNoteEmail(
@@ -265,21 +86,13 @@ export class EmailService {
     deviceName: string,
     note: string,
   ): Promise<void> {
-    try {
-      const notificationText = `${username} left a note on device ${deviceName}`;
-
-      const notificationData: NotificationEmailData = {
-        type: 'device-note',
-        text: notificationText,
-        username,
-        deviceName,
-        note,
-      };
-
-      await this.sendEmail(notificationData);
-    } catch (error) {
-      this.logger.error('Error in sendDeviceNoteEmail:', error);
-    }
+    await this.sendEmail({
+      type: 'device-note',
+      text: `${username} left a note on device ${deviceName}`,
+      username,
+      deviceName,
+      note,
+    });
   }
 
   async sendPasswordResetEmail(
@@ -288,52 +101,64 @@ export class EmailService {
     resetUrl: string,
     expiresInMinutes: number,
   ): Promise<void> {
-    const settings = await this.loadSmtpSettings();
-    const smtpConfig = this.toSmtpConfig(settings);
-    smtpConfig.toEmails = [toEmail];
-
-    if (!settings.SMTP_ENABLED) {
-      this.logger.warn(
-        'Password reset email skipped: SMTP email notifications are disabled',
-      );
-      return;
-    }
-
-    const validationError = this.validateSMTPConfig(smtpConfig);
-    if (validationError) {
-      this.logger.warn(`Password reset email skipped: ${validationError}`);
-      return;
-    }
-
-    const currentTimeInTimezone =
-      await this.configService.getCurrentTimeInTimezone();
-    const timestamp = this.timezoneService.formatTimestamp(
-      currentTimeInTimezone,
-    );
-
     try {
-      const transporter = this.createTransporter(smtpConfig);
-
-      await transporter.sendMail({
-        from: smtpConfig.fromName
-          ? `${smtpConfig.fromName} <${smtpConfig.fromEmail}>`
-          : smtpConfig.fromEmail,
-        to: [toEmail],
+      const sent = await this.deliver('Password reset email', [toEmail], {
         subject: 'Guardian: Reset your password',
-        text: `Someone asked to reset the password for your Guardian account (${username}).\n\nOpen this link to choose a new password:\n${resetUrl}\n\nThe link expires in ${expiresInMinutes} minutes and works once. If this was not you, you can safely ignore this email.\n\nSent at: ${timestamp}`,
-        html: this.emailTemplateService.generatePasswordResetEmail(
-          username,
-          resetUrl,
-          expiresInMinutes,
-          timestamp,
-        ),
+        text: (timestamp) =>
+          `Someone asked to reset the password for your Guardian account (${username}).\n\nOpen this link to choose a new password:\n${resetUrl}\n\nThe link expires in ${expiresInMinutes} minutes and works once. If this was not you, you can safely ignore this email.\n\nSent at: ${timestamp}`,
+        html: (timestamp) =>
+          this.emailTemplateService.generatePasswordResetEmail(
+            username,
+            resetUrl,
+            expiresInMinutes,
+            timestamp,
+          ),
       });
-
-      this.logger.log('Password reset email sent');
+      if (sent) this.logger.log('Password reset email sent');
     } catch (caught) {
       const error = asHttpError(caught);
       this.logger.error('Failed to send password reset email', {
         error: error.message,
+        stack: error.stack,
+      });
+    }
+  }
+
+  async sendEmail(data: NotificationEmailData): Promise<void> {
+    this.logger.debug('Preparing to send notification email with data:', data);
+
+    try {
+      const content = notificationEmailContent(data);
+      const sent = await this.deliver('SMTP notification email', undefined, {
+        subject: content.subject,
+        text: (timestamp) => notificationEmailText(data, content, timestamp),
+        html: (timestamp) =>
+          this.emailTemplateService.generateNotificationEmail(
+            data.type,
+            content.statusColor,
+            content.mainMessage,
+            data.username,
+            data.deviceName,
+            data.stopCode,
+            timestamp,
+            data.ipAddress,
+            data.oldIpAddress,
+            data.note,
+          ),
+      });
+      if (sent) {
+        this.logger.log(
+          `Notification email sent successfully for ${data.type} event: ${data.username}${data.deviceName ? ` on ${data.deviceName}` : ''}`,
+        );
+      }
+    } catch (caught) {
+      const error = asHttpError(caught);
+      this.logger.error('Failed to send notification email', {
+        error: error.message,
+        notificationType: data.type,
+        username: data.username,
+        deviceName: data.deviceName,
+        stopCode: data.stopCode,
         stack: error.stack,
       });
     }
@@ -375,137 +200,43 @@ export class EmailService {
     };
   }
 
-  toSmtpConfig(settings: SmtpSettings): SMTPConfig {
-    return {
-      host: settings.SMTP_HOST,
-      port: settings.SMTP_PORT,
-      user: settings.SMTP_USER,
-      password: settings.SMTP_PASSWORD,
-      fromEmail: settings.SMTP_FROM_EMAIL,
-      fromName: settings.SMTP_FROM_NAME,
-      useTLS: settings.SMTP_USE_TLS,
-      toEmails: settings.SMTP_TO_EMAILS.split(/[,;\n]/)
-        .map((email) => email.trim())
-        .filter((email) => email.length > 0),
-    };
+  private async currentTimestamp(): Promise<string> {
+    return this.timezoneService.formatTimestamp(
+      await this.configService.getCurrentTimeInTimezone(),
+    );
   }
 
-  async sendEmail(data: NotificationEmailData): Promise<void> {
-    //Print all data
-    this.logger.debug('Preparing to send notification email with data:', data);
-
-    try {
-      const settings = await this.loadSmtpSettings();
-
-      if (!settings.SMTP_ENABLED) {
-        this.logger.log(
-          'SMTP notification email skipped: SMTP email notifications are disabled',
-        );
-        return;
-      }
-
-      const smtpConfig = this.toSmtpConfig(settings);
-
-      const validationError = this.validateSMTPConfig(smtpConfig);
-
-      if (validationError) {
-        this.logger.warn(`SMTP notification email skipped: ${validationError}`);
-        return;
-      }
-
-      const transporter = this.createTransporter(smtpConfig);
-
-      const { subject, statusColor, mainMessage } =
-        this.getNotificationEmailContent(
-          data.type,
-          data.stopCode,
-          data.username,
-          data.deviceName,
-        );
-
-      const currentTimeInTimezone =
-        await this.configService.getCurrentTimeInTimezone();
-      const timestamp = this.timezoneService.formatTimestamp(
-        currentTimeInTimezone,
-      );
-
-      const emailHtml = this.emailTemplateService.generateNotificationEmail(
-        data.type,
-        statusColor,
-        mainMessage,
-        data.username,
-        data.deviceName,
-        data.stopCode,
-        timestamp,
-        data.ipAddress,
-        data.oldIpAddress,
-        data.note,
-      );
-
-      const mailOptions = {
-        from: smtpConfig.fromName
-          ? `${smtpConfig.fromName} <${smtpConfig.fromEmail}>`
-          : smtpConfig.fromEmail,
-        to: smtpConfig.toEmails,
-        subject,
-        text: `${subject}\n\n${mainMessage}\n\nUser: ${data.username}${data.deviceName ? `\nDevice: ${data.deviceName}` : ''}\nType: ${data.type.toUpperCase()}${data.stopCode ? `\nReason: ${data.stopCode}` : ''}\n\nNotification sent at: ${timestamp}`,
-        html: emailHtml,
-      };
-
-      await transporter.sendMail(mailOptions);
-
+  private async deliver(
+    label: string,
+    recipients: string[] | undefined,
+    mail: OutgoingMail,
+  ): Promise<boolean> {
+    const settings = await this.loadSmtpSettings();
+    if (!settings.SMTP_ENABLED) {
       this.logger.log(
-        `Notification email sent successfully for ${data.type} event: ${data.username}${data.deviceName ? ` on ${data.deviceName}` : ''}`,
+        `${label} skipped: SMTP email notifications are disabled`,
       );
-    } catch (caught) {
-      const error = asHttpError(caught);
-      this.logger.error('Failed to send notification email', {
-        error: error.message,
-        notificationType: data.type,
-        username: data.username,
-        deviceName: data.deviceName,
-        stopCode: data.stopCode,
-        stack: error.stack,
-      });
+      return false;
     }
-  }
 
-  private getNotificationEmailContent(
-    notificationType: NotificationEmailType,
-    stopCode?: StopCode,
-    username?: string,
-    deviceName?: string,
-  ): {
-    subject: string;
-    statusColor: string;
-    mainMessage: string;
-  } {
-    switch (notificationType) {
-      case 'new-device':
-        return {
-          subject: `Guardian Alert: New Device Detected${deviceName ? ` - ${deviceName}` : ''}`,
-          statusColor: EMAIL_PALETTE.info,
-          mainMessage: `A new device "${deviceName}" has been detected for user "${username}".`,
-        };
-      case 'location-change':
-        return {
-          subject: `Guardian Alert: Device Location Changed${deviceName ? ` - ${deviceName}` : ''}`,
-          statusColor: EMAIL_PALETTE.warning,
-          mainMessage: 'A device is streaming from a new location.',
-        };
-      case 'device-note':
-        return {
-          subject: `Guardian Alert: Device Note Received${deviceName ? ` - ${deviceName}` : ''}`,
-          statusColor: EMAIL_PALETTE.accent,
-          mainMessage: `User "${username}" has left a note on device "${deviceName}".`,
-        };
-      case 'block':
-      default:
-        return {
-          subject: `Guardian Alert: Stream Blocked${deviceName ? ` - ${deviceName}` : ''}`,
-          statusColor: EMAIL_PALETTE.danger,
-          mainMessage: describeStopCode(stopCode),
-        };
+    const config: SMTPConfig = {
+      ...toSmtpConfig(settings),
+      ...(recipients && { toEmails: recipients }),
+    };
+    const validationError = validateSmtpConfig(config);
+    if (validationError) {
+      this.logger.warn(`${label} skipped: ${validationError}`);
+      return false;
     }
+
+    const timestamp = await this.currentTimestamp();
+    await createSmtpTransport(config).sendMail({
+      from: senderAddress(config),
+      to: config.toEmails,
+      subject: mail.subject,
+      text: mail.text(timestamp),
+      html: mail.html(timestamp),
+    });
+    return true;
   }
 }

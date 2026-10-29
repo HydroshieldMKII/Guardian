@@ -1,4 +1,6 @@
 import { PlexErrorCode } from '@/types/plex-errors';
+import { containing } from '@/test-matchers';
+import { SmtpSettings } from '@/modules/config/services/smtp-config';
 import { ConfigService } from '@/modules/config/services/config.service';
 import { ConnectionTestService } from '@/modules/config/services/connection-test.service';
 import {
@@ -6,19 +8,49 @@ import {
   createConfigTestbed,
 } from '@/modules/config/services/config-testbed.fixture';
 
+const mockCreateTransport = jest.fn<
+  { verify: jest.Mock; sendMail: jest.Mock },
+  unknown[]
+>();
+
+jest.mock('nodemailer', () => ({
+  createTransport: (...args: unknown[]) => mockCreateTransport(...args),
+}));
+
+type MailOptions = {
+  from: string;
+  to: string[];
+  subject: string;
+  html: string;
+};
+
 describe('ConnectionTestService', () => {
   let testbed: ConfigTestbed;
   let service: ConnectionTestService;
   let config: ConfigService;
   let settingsRepo: ConfigTestbed['settingsRepo'];
   let emailService: ConfigTestbed['emailService'];
+  let emailTemplateService: ConfigTestbed['emailTemplateService'];
+  let verify: jest.Mock;
+  let sendMail: jest.Mock<Promise<unknown>, [MailOptions]>;
   let plexConnectionService: ConfigTestbed['plexConnectionService'];
 
   const build = async () => (await testbed.build()).get(ConnectionTestService);
 
   beforeEach(async () => {
+    verify = jest.fn().mockResolvedValue(true);
+    sendMail = jest
+      .fn<Promise<unknown>, [MailOptions]>()
+      .mockResolvedValue({ messageId: 'abc' });
+    mockCreateTransport.mockReset().mockReturnValue({ verify, sendMail });
+
     testbed = createConfigTestbed();
-    ({ settingsRepo, emailService, plexConnectionService } = testbed);
+    ({
+      settingsRepo,
+      emailService,
+      emailTemplateService,
+      plexConnectionService,
+    } = testbed);
     const module = await testbed.build();
     service = module.get(ConnectionTestService);
     config = module.get(ConfigService);
@@ -56,49 +88,108 @@ describe('ConnectionTestService', () => {
   });
 
   describe('testSMTPConnection', () => {
-    it('hands the loaded settings to the email service', async () => {
-      await service.testSMTPConnection();
-
-      expect(emailService.loadSmtpSettings).toHaveBeenCalled();
-      expect(emailService.toSmtpConfig).toHaveBeenCalledWith(
-        await emailService.loadSmtpSettings.mock.results[0].value,
-      );
-    });
-
-    it('forwards the config, the enabled flag and a timestamp', async () => {
-      await service.testSMTPConnection();
-
-      expect(emailService.testSMTPConnection).toHaveBeenCalledWith(
-        expect.objectContaining({ host: 'smtp.example.com', port: 465 }),
-        false,
-        '2026-08-21 12:00:00',
-      );
-    });
-
-    it('passes the enabled flag through as stored', async () => {
+    const smtp = (overrides: Partial<SmtpSettings> = {}) =>
       emailService.loadSmtpSettings.mockResolvedValue({
         SMTP_ENABLED: true,
         SMTP_HOST: 'smtp.example.com',
-        SMTP_PORT: 465,
-        SMTP_USER: '',
-        SMTP_PASSWORD: '',
-        SMTP_FROM_EMAIL: '',
-        SMTP_FROM_NAME: '',
+        SMTP_PORT: 587,
+        SMTP_USER: 'guardian',
+        SMTP_PASSWORD: 'secret',
+        SMTP_FROM_EMAIL: 'from@example.com',
+        SMTP_FROM_NAME: 'Guardian',
         SMTP_USE_TLS: true,
-        SMTP_TO_EMAILS: '',
+        SMTP_TO_EMAILS: 'admin@example.com',
+        ...overrides,
       });
 
+    const sentMail = () => sendMail.mock.calls[0][0];
+
+    beforeEach(() => smtp());
+
+    it('refuses while SMTP is switched off', async () => {
+      smtp({ SMTP_ENABLED: false });
+
+      await expect(service.testSMTPConnection()).resolves.toEqual({
+        success: false,
+        message: 'SMTP email notifications are disabled',
+      });
+      expect(mockCreateTransport).not.toHaveBeenCalled();
+    });
+
+    it('reports an invalid configuration without dialling out', async () => {
+      smtp({ SMTP_TO_EMAILS: '' });
+
+      await expect(service.testSMTPConnection()).resolves.toMatchObject({
+        success: false,
+        message: containing('No recipient email addresses'),
+      });
+      expect(mockCreateTransport).not.toHaveBeenCalled();
+    });
+
+    it('verifies the server before sending anything', async () => {
       await service.testSMTPConnection();
 
-      expect(emailService.testSMTPConnection).toHaveBeenCalledWith(
-        expect.anything(),
-        true,
-        expect.anything(),
+      expect(verify).toHaveBeenCalled();
+      expect(verify.mock.invocationCallOrder[0]).toBeLessThan(
+        sendMail.mock.invocationCallOrder[0],
       );
     });
 
+    it('sends the rendered test email from the configured identity', async () => {
+      await service.testSMTPConnection();
+
+      expect(emailTemplateService.generateSMTPTestEmail).toHaveBeenCalledWith(
+        '2026-08-21 12:00:00',
+      );
+      expect(sentMail()).toMatchObject({
+        from: 'Guardian <from@example.com>',
+        to: ['admin@example.com'],
+        subject: 'Guardian SMTP Test - Connection Successful',
+        html: '<p>test</p>',
+      });
+    });
+
+    it('names the single recipient in the success message', async () => {
+      await expect(service.testSMTPConnection()).resolves.toEqual({
+        success: true,
+        message:
+          'SMTP connection successful! Test email sent to admin@example.com',
+      });
+    });
+
+    it('counts the recipients when there is more than one', async () => {
+      smtp({ SMTP_TO_EMAILS: 'a@example.com, b@example.com' });
+
+      await expect(service.testSMTPConnection()).resolves.toMatchObject({
+        message: containing('2 recipients (a@example.com, b@example.com)'),
+      });
+    });
+
+    it('translates a transport failure for the user', async () => {
+      verify.mockRejectedValue(
+        Object.assign(new Error('raw'), { code: 'EAUTH' }),
+      );
+
+      await expect(service.testSMTPConnection()).resolves.toEqual({
+        success: false,
+        message:
+          'Authentication failed. Please check your username and password.',
+      });
+    });
+
+    it('translates a rejected send for the user', async () => {
+      sendMail.mockRejectedValue(
+        Object.assign(new Error('raw'), { responseCode: 550 }),
+      );
+
+      await expect(service.testSMTPConnection()).resolves.toEqual({
+        success: false,
+        message: 'Email rejected by server. Please check recipient addresses.',
+      });
+    });
+
     it('reports an unexpected failure rather than throwing', async () => {
-      emailService.testSMTPConnection.mockRejectedValue(new Error('no route'));
+      emailService.loadSmtpSettings.mockRejectedValue(new Error('no route'));
 
       await expect(service.testSMTPConnection()).resolves.toEqual({
         success: false,

@@ -6,6 +6,7 @@ import { ConfigService } from '@/modules/config/services/config.service';
 import { ConnectionTestService } from '@/modules/config/services/connection-test.service';
 import { DatabaseMaintenanceService } from '@/modules/config/services/database-maintenance.service';
 import { EmailService } from '@/modules/config/services/email.service';
+import { EmailTemplateService } from '@/modules/config/services/email-template.service';
 import { PlexConnectionService } from '@/modules/config/services/plex-connection.service';
 import { TimezoneService } from '@/modules/config/services/timezone.service';
 import { DatabaseService } from '@/modules/config/services/database.service';
@@ -22,10 +23,8 @@ export interface ConfigTestbed {
   ) => AppSettings;
   settingsRepo: Record<'find' | 'findOne' | 'save', jest.Mock>;
   sessionRepo: { delete: jest.Mock };
-  emailService: Record<
-    'testSMTPConnection' | 'loadSmtpSettings' | 'toSmtpConfig',
-    jest.Mock
-  >;
+  emailService: { loadSmtpSettings: jest.Mock };
+  emailTemplateService: { generateSMTPTestEmail: jest.Mock };
   plexConnectionService: { testConnection: jest.Mock };
   timezoneService: Record<
     'getCurrentTimeInTimezone' | 'formatTimestamp',
@@ -86,9 +85,6 @@ export const createConfigTestbed = (): ConfigTestbed => {
   };
 
   const emailService = {
-    testSMTPConnection: jest
-      .fn()
-      .mockResolvedValue({ success: true, message: 'sent' }),
     loadSmtpSettings: jest.fn().mockResolvedValue({
       SMTP_ENABLED: false,
       SMTP_HOST: 'smtp.example.com',
@@ -100,16 +96,10 @@ export const createConfigTestbed = (): ConfigTestbed => {
       SMTP_USE_TLS: true,
       SMTP_TO_EMAILS: '',
     }),
-    toSmtpConfig: jest.fn().mockReturnValue({
-      host: 'smtp.example.com',
-      port: 465,
-      user: 'guardian',
-      password: 'secret',
-      fromEmail: 'from@example.com',
-      fromName: 'Guardian',
-      useTLS: true,
-      toEmails: [],
-    }),
+  };
+
+  const emailTemplateService = {
+    generateSMTPTestEmail: jest.fn().mockReturnValue('<p>test</p>'),
   };
 
   const plexConnectionService = {
@@ -158,6 +148,7 @@ export const createConfigTestbed = (): ConfigTestbed => {
         { provide: getRepositoryToken(AppSettings), useValue: settingsRepo },
         { provide: getRepositoryToken(Session), useValue: sessionRepo },
         { provide: EmailService, useValue: emailService },
+        { provide: EmailTemplateService, useValue: emailTemplateService },
         { provide: PlexConnectionService, useValue: plexConnectionService },
         { provide: TimezoneService, useValue: timezoneService },
         { provide: DatabaseService, useValue: databaseService },
@@ -178,6 +169,7 @@ export const createConfigTestbed = (): ConfigTestbed => {
     settingsRepo,
     sessionRepo,
     emailService,
+    emailTemplateService,
     plexConnectionService,
     timezoneService,
     databaseService,

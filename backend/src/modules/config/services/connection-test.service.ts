@@ -5,12 +5,26 @@ import { EmailService } from '@/modules/config/services/email.service';
 import { PlexConnectionService } from '@/modules/config/services/plex-connection.service';
 import { TimezoneService } from '@/modules/config/services/timezone.service';
 import { AppriseService } from '@/modules/config/services/apprise.service';
-import { errorMessage } from '@/common/utils/error-types';
+import { EmailTemplateService } from '@/modules/config/services/email-template.service';
+import { asHttpError, errorMessage } from '@/common/utils/error-types';
+import {
+  createSmtpTransport,
+  senderAddress,
+  SMTPConfig,
+  smtpErrorMessage,
+  toSmtpConfig,
+  validateSmtpConfig,
+} from '@/modules/config/services/smtp-config';
 
 export interface PlexConfigurationStatus {
   configured: boolean;
   hasValidCredentials: boolean;
   connectionStatus: string;
+}
+
+export interface ConnectionTestResult {
+  success: boolean;
+  message: string;
 }
 
 @Injectable()
@@ -23,6 +37,7 @@ export class ConnectionTestService {
     private readonly emailService: EmailService,
     private readonly timezoneService: TimezoneService,
     private readonly appriseService: AppriseService,
+    private readonly emailTemplateService: EmailTemplateService,
   ) {}
 
   async testPlexConnection(): Promise<PlexResponse> {
@@ -53,10 +68,21 @@ export class ConnectionTestService {
     }
   }
 
-  async testSMTPConnection(): Promise<{ success: boolean; message: string }> {
+  async testSMTPConnection(): Promise<ConnectionTestResult> {
     try {
       const settings = await this.emailService.loadSmtpSettings();
-      const smtpConfig = this.emailService.toSmtpConfig(settings);
+      if (!settings.SMTP_ENABLED) {
+        return {
+          success: false,
+          message: 'SMTP email notifications are disabled',
+        };
+      }
+
+      const smtpConfig = toSmtpConfig(settings);
+      const validationError = validateSmtpConfig(smtpConfig);
+      if (validationError) {
+        return { success: false, message: validationError };
+      }
 
       const currentTimeInTimezone =
         await this.configService.getCurrentTimeInTimezone();
@@ -64,11 +90,7 @@ export class ConnectionTestService {
         currentTimeInTimezone,
       );
 
-      return await this.emailService.testSMTPConnection(
-        smtpConfig,
-        settings.SMTP_ENABLED,
-        timestamp,
-      );
+      return await this.sendSmtpTestEmail(smtpConfig, timestamp);
     } catch (error) {
       this.logger.error('Error in testSMTPConnection:', error);
       return {
@@ -78,10 +100,49 @@ export class ConnectionTestService {
     }
   }
 
-  async testAppriseConnection(): Promise<{
-    success: boolean;
-    message: string;
-  }> {
+  private async sendSmtpTestEmail(
+    config: SMTPConfig,
+    timestamp: string,
+  ): Promise<ConnectionTestResult> {
+    try {
+      const transporter = createSmtpTransport(config);
+      await transporter.verify();
+      await transporter.sendMail({
+        from: senderAddress(config),
+        to: config.toEmails,
+        subject: 'Guardian SMTP Test - Connection Successful',
+        text: 'This is a test email from Guardian to verify SMTP configuration. If you received this email, your SMTP settings are working correctly.',
+        html: this.emailTemplateService.generateSMTPTestEmail(timestamp),
+      });
+
+      const recipients = config.toEmails.join(', ');
+      this.logger.log(
+        `SMTP test email sent successfully to ${config.toEmails.length} recipient(s): ${recipients}`,
+      );
+
+      const recipientText =
+        config.toEmails.length === 1
+          ? config.toEmails[0]
+          : `${config.toEmails.length} recipients (${recipients})`;
+      return {
+        success: true,
+        message: `SMTP connection successful! Test email sent to ${recipientText}`,
+      };
+    } catch (caught) {
+      const error = asHttpError(caught);
+      this.logger.error('SMTP Connection Test Failed', {
+        error: error.message,
+        code: error.code,
+        command: error.command,
+        response: error.response,
+        responseCode: error.responseCode,
+        stack: error.stack,
+      });
+      return { success: false, message: smtpErrorMessage(error) };
+    }
+  }
+
+  async testAppriseConnection(): Promise<ConnectionTestResult> {
     return this.appriseService.testAppriseConnection();
   }
 
