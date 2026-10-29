@@ -19,5 +19,4 @@ Everything else is set in the web UI.
 | `v2.0` | Patch releases of a minor version |
 | `v2.0.1` | One exact release |
 
-A patch release ships automatically at most every two weeks. Database migrations run on startup,
-so downgrading after one is not supported: restore a settings export instead.
+A patch release ships automatically at most every two weeks.
