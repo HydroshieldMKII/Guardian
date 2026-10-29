@@ -16,6 +16,7 @@ describe('GlobalExceptionFilter', () => {
 
   beforeEach(() => {
     jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
 
     filter = new GlobalExceptionFilter();
     json = jest.fn();
@@ -91,9 +92,42 @@ describe('GlobalExceptionFilter', () => {
     expect(captured().message).toBe('Unknown error');
   });
 
-  it('logs the failure', () => {
+  it('logs a server failure as an error', () => {
     const log = jest.spyOn(Logger.prototype, 'error');
     filter.catch(new Error('boom'), host);
     expect(log).toHaveBeenCalled();
+  });
+
+  it('logs a client error as a warning', () => {
+    const error = jest.spyOn(Logger.prototype, 'error');
+    const warn = jest.spyOn(Logger.prototype, 'warn');
+    filter.catch(new BadRequestException('Validation failed'), host);
+    expect(warn).toHaveBeenCalled();
+    expect(error).not.toHaveBeenCalled();
+  });
+
+  const parserError = (
+    message: string,
+    fields: { status: number; expose: boolean },
+  ) => Object.assign(new Error(message), fields);
+
+  it('keeps the status of an exposed body parser error', () => {
+    filter.catch(
+      parserError('request entity too large', { status: 413, expose: true }),
+      host,
+    );
+    expect(status).toHaveBeenCalledWith(HttpStatus.PAYLOAD_TOO_LARGE);
+    expect(captured().message).toBe('request entity too large');
+  });
+
+  it('hides an error that is not marked as exposed', () => {
+    filter.catch(parserError('secret', { status: 400, expose: false }), host);
+    expect(status).toHaveBeenCalledWith(HttpStatus.INTERNAL_SERVER_ERROR);
+    expect(captured().message).toBe('Internal server error');
+  });
+
+  it('ignores an exposed status outside the client error range', () => {
+    filter.catch(parserError('upstream', { status: 502, expose: true }), host);
+    expect(status).toHaveBeenCalledWith(HttpStatus.INTERNAL_SERVER_ERROR);
   });
 });
