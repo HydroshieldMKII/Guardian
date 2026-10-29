@@ -31,5 +31,10 @@ export const loginPathReturningTo = (path: string) => {
   return `/login?${RETURN_TO_PARAM}=${encodeURIComponent(target)}`;
 };
 
+export const loginPathReturningToCurrentPage = () =>
+  loginPathReturningTo(
+    `${window.location.pathname}${window.location.search}${window.location.hash}`,
+  );
+
 export const returnPathFrom = (search: string) =>
   safeReturnPath(new URLSearchParams(search).get(RETURN_TO_PARAM));
