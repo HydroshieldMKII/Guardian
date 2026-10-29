@@ -7,7 +7,7 @@ import { AdminUser } from '@/entities/admin-user.entity';
 import { PasswordResetToken } from '@/entities/password-reset-token.entity';
 import { ConfigService } from '@/modules/config/services/config.service';
 import { EmailService } from '@/modules/config/services/email.service';
-import { AuthService } from '@/modules/auth/auth.service';
+import { AuthSessionService } from '@/modules/auth/auth-session.service';
 import { ConfirmPasswordResetDto } from '@/modules/auth/dto/password-reset.dto';
 import { appUrl } from '@/config/app.config';
 
@@ -29,7 +29,7 @@ export class PasswordResetService {
     private readonly tokenRepository: Repository<PasswordResetToken>,
     private readonly configService: ConfigService,
     private readonly emailService: EmailService,
-    private readonly authService: AuthService,
+    private readonly authSessions: AuthSessionService,
   ) {}
 
   async getStatus(): Promise<{
@@ -134,7 +134,7 @@ export class PasswordResetService {
     admin.passwordHash = await bcrypt.hash(dto.password, 12);
     await this.adminUserRepository.save(admin);
     await this.tokenRepository.delete({ id: stored.id });
-    await this.authService.clearAllSessions(admin.id);
+    await this.authSessions.clearAllSessions(admin.id);
   }
 
   private async findValidToken(

@@ -7,7 +7,7 @@ import { MIN_REFRESH_INTERVAL_SECONDS } from '@/modules/config/services/setting-
 import { DeviceTrackingService } from '@/modules/devices/services/device-tracking.service';
 import { DeviceMaintenanceService } from '@/modules/devices/services/device-maintenance.service';
 import { UsersService } from '@/modules/users/services/users.service';
-import { AuthService } from '@/modules/auth/auth.service';
+import { AuthSessionService } from '@/modules/auth/auth-session.service';
 import { Logger } from '@nestjs/common';
 import { errorMessage } from '@/common/utils/error-types';
 import { DashboardService } from '@/modules/dashboard/dashboard.service';
@@ -24,7 +24,7 @@ export class SchedulerService implements OnModuleInit {
     private readonly deviceTrackingService: DeviceTrackingService,
     private readonly deviceMaintenanceService: DeviceMaintenanceService,
     private readonly usersService: UsersService,
-    private readonly authService: AuthService,
+    private readonly authSessions: AuthSessionService,
     private readonly schedulerRegistry: SchedulerRegistry,
     private readonly dashboardService: DashboardService,
     private readonly liveEvents: LiveEventsService,
@@ -251,7 +251,7 @@ export class SchedulerService implements OnModuleInit {
   async handleSessionCleanup() {
     try {
       this.logger.log('Running scheduled session cleanup...');
-      const deletedCount = await this.authService.cleanupExpiredSessions();
+      const deletedCount = await this.authSessions.cleanupExpiredSessions();
       this.logger.log(
         `Session cleanup completed: ${deletedCount} expired sessions removed`,
       );

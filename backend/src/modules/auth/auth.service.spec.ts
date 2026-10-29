@@ -8,8 +8,11 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { Not } from 'typeorm';
 import { AdminUser } from '@/entities/admin-user.entity';
 import { Session } from '@/entities/session.entity';
-import { AppSettings } from '@/entities/app-settings.entity';
+import { ConfigService } from '@/modules/config/services/config.service';
 import { AuthService } from '@/modules/auth/auth.service';
+import { AuthSessionService } from '@/modules/auth/auth-session.service';
+import { CaptchaService } from '@/modules/auth/captcha.service';
+import { adminAccount, sessionRepository } from '@/modules/auth/auth.fixture';
 
 const mockHash = jest.fn<Promise<string>, [string, number]>();
 const mockCompare = jest.fn<Promise<boolean>, [string, string]>();
@@ -30,30 +33,10 @@ describe('AuthService', () => {
     findOne: jest.Mock;
     manager: { transaction: jest.Mock };
   };
-  let sessionRepo: Record<string, jest.Mock>;
-  let settingsRepo: { findOne: jest.Mock };
+  let sessionRepo: ReturnType<typeof sessionRepository>;
+  let configService: { getSetting: jest.Mock };
 
-  const admin = {
-    id: 'admin-1',
-    username: 'testuser',
-    email: 'v@example.com',
-    avatarUrl: undefined,
-    passwordHash: 'stored-hash',
-  };
-
-  const storedSession = {
-    id: 'session-1',
-    userId: 'admin-1',
-    token: 'token-1',
-    userType: 'admin' as const,
-    expiresAt: new Date(Date.now() + 60_000),
-    createdAt: new Date('2026-01-01T00:00:00Z'),
-    lastActivityAt: new Date('2026-01-01T00:00:00Z'),
-    plexUserId: null,
-    plexUsername: null,
-    plexThumb: null,
-    user: admin,
-  };
+  const admin = adminAccount();
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -77,25 +60,17 @@ describe('AuthService', () => {
       },
     };
 
-    sessionRepo = {
-      save: jest
-        .fn()
-        .mockImplementation((entity: Record<string, unknown>) =>
-          Promise.resolve({ ...storedSession, ...entity }),
-        ),
-      findOne: jest.fn().mockResolvedValue({ ...storedSession }),
-      remove: jest.fn().mockResolvedValue(undefined),
-      delete: jest.fn().mockResolvedValue({ affected: 3 }),
-    };
-
-    settingsRepo = { findOne: jest.fn().mockResolvedValue(null) };
+    sessionRepo = sessionRepository();
+    configService = { getSetting: jest.fn().mockResolvedValue(null) };
 
     const module = await Test.createTestingModule({
       providers: [
         AuthService,
+        AuthSessionService,
+        CaptchaService,
         { provide: getRepositoryToken(AdminUser), useValue: adminRepo },
         { provide: getRepositoryToken(Session), useValue: sessionRepo },
-        { provide: getRepositoryToken(AppSettings), useValue: settingsRepo },
+        { provide: ConfigService, useValue: configService },
       ],
     }).compile();
 
@@ -204,270 +179,13 @@ describe('AuthService', () => {
       expect(compare).toHaveBeenCalledWith('hunter2hunter2', 'stored-hash');
     });
 
-    describe('with Turnstile configured', () => {
-      const fetchMock = jest.fn();
+    it('checks the captcha before looking up the admin', async () => {
+      configService.getSetting.mockResolvedValue('secret');
 
-      beforeEach(() => {
-        settingsRepo.findOne.mockResolvedValue({
-          key: 'CLOUDFLARE_TURNSTILE_SECRET_KEY',
-          value: '  secret  ',
-        });
-        globalThis.fetch = fetchMock;
-        fetchMock.mockImplementation(async () => ({
-          json: async () => ({ success: true }),
-        }));
-      });
-
-      it('verifies the token against Cloudflare with the trimmed secret', async () => {
-        await service.login({ ...dto, captchaToken: 'captcha-token' });
-
-        const [url, init] = fetchMock.mock.calls[0] as [
-          string,
-          { body: string },
-        ];
-        expect(url).toBe(
-          'https://challenges.cloudflare.com/turnstile/v0/siteverify',
-        );
-        expect(JSON.parse(init.body)).toEqual({
-          secret: 'secret',
-          response: 'captcha-token',
-        });
-      });
-
-      it('refuses a login with no captcha token', async () => {
-        await expect(service.login(dto)).rejects.toThrow(
-          'Captcha validation required',
-        );
-        expect(fetchMock).not.toHaveBeenCalled();
-      });
-
-      it('refuses a login whose captcha Cloudflare rejects', async () => {
-        fetchMock.mockImplementation(async () => ({
-          json: async () => ({ success: false }),
-        }));
-        await expect(
-          service.login({ ...dto, captchaToken: 'bad' }),
-        ).rejects.toThrow('Captcha validation failed');
-      });
-
-      it('refuses a login when Cloudflare is unreachable', async () => {
-        fetchMock.mockRejectedValue(new Error('network down'));
-        await expect(
-          service.login({ ...dto, captchaToken: 'token' }),
-        ).rejects.toThrow('Failed to verify captcha');
-      });
-
-      it('skips verification when the configured secret is blank', async () => {
-        settingsRepo.findOne.mockResolvedValue({ value: '   ' });
-        await expect(service.login(dto)).resolves.toBeDefined();
-        expect(fetchMock).not.toHaveBeenCalled();
-      });
-    });
-  });
-
-  describe('createPlexUserSession', () => {
-    const plexUser = {
-      plexUserId: 'plex-9',
-      plexUsername: 'guest',
-      plexThumb: 'https://plex.tv/thumb.png',
-    };
-
-    it('stores a plex_user session with no admin user id', async () => {
-      await service.createPlexUserSession(plexUser);
-
-      expect(sessionRepo.save).toHaveBeenCalledWith(
-        expect.objectContaining({
-          userId: null,
-          userType: 'plex_user',
-          plexUserId: 'plex-9',
-        }),
+      await expect(service.login(dto)).rejects.toThrow(
+        'Captcha validation required',
       );
-    });
-
-    it('returns the Plex identity alongside the token', async () => {
-      const result = await service.createPlexUserSession(plexUser);
-      expect(result.plexUsername).toBe('guest');
-      expect(result.userType).toBe('plex_user');
-      expect(result.token).toHaveLength(64);
-    });
-
-    it('normalises a missing thumbnail to undefined', async () => {
-      const result = await service.createPlexUserSession({
-        plexUserId: 'plex-9',
-        plexUsername: 'guest',
-      });
-
-      expect(sessionRepo.save).toHaveBeenCalledWith(
-        expect.objectContaining({ plexThumb: null }),
-      );
-      expect(result.plexThumb).toBeUndefined();
-    });
-  });
-
-  describe('validateSession', () => {
-    it('returns the admin user with the session id', async () => {
-      const result = await service.validateSession('token-1');
-      expect(result).toMatchObject({
-        id: 'admin-1',
-        sessionId: 'session-1',
-        userType: 'admin',
-      });
-    });
-
-    it('refreshes the last activity timestamp', async () => {
-      const before = Date.now();
-      await service.validateSession('token-1');
-
-      const [saved] = sessionRepo.save.mock.calls[0] as [
-        { lastActivityAt: Date },
-      ];
-      expect(saved.lastActivityAt.getTime()).toBeGreaterThanOrEqual(before);
-    });
-
-    it('leaves lastActivityAt alone on a burst of requests', async () => {
-      sessionRepo.findOne.mockResolvedValue({
-        ...storedSession,
-        lastActivityAt: new Date(),
-      });
-      sessionRepo.save.mockClear();
-
-      await service.validateSession('token-1');
-      expect(sessionRepo.save).not.toHaveBeenCalled();
-    });
-
-    it('refreshes a session that has never recorded activity', async () => {
-      sessionRepo.findOne.mockResolvedValue({
-        ...storedSession,
-        lastActivityAt: null,
-      });
-      sessionRepo.save.mockClear();
-
-      await service.validateSession('token-1');
-      expect(sessionRepo.save).toHaveBeenCalled();
-    });
-
-    it('returns null for an unknown token', async () => {
-      sessionRepo.findOne.mockResolvedValue(null);
-      await expect(service.validateSession('nope')).resolves.toBeNull();
-    });
-
-    it('deletes and rejects an expired session', async () => {
-      const expired = {
-        ...storedSession,
-        expiresAt: new Date(Date.now() - 1000),
-      };
-      sessionRepo.findOne.mockResolvedValue(expired);
-
-      await expect(service.validateSession('token-1')).resolves.toBeNull();
-      expect(sessionRepo.remove).toHaveBeenCalledWith(expired);
-    });
-
-    it('returns the Plex identity for a plex_user session', async () => {
-      sessionRepo.findOne.mockResolvedValue({
-        ...storedSession,
-        userType: 'plex_user',
-        userId: null,
-        user: null,
-        plexUserId: 'plex-9',
-        plexUsername: 'guest',
-        plexThumb: 'thumb.png',
-      });
-
-      await expect(service.validateSession('token-1')).resolves.toEqual({
-        sessionId: 'session-1',
-        userType: 'plex_user',
-        plexUserId: 'plex-9',
-        plexUsername: 'guest',
-        plexThumb: 'thumb.png',
-      });
-    });
-
-    it('rejects a plex_user session missing its identity', async () => {
-      sessionRepo.findOne.mockResolvedValue({
-        ...storedSession,
-        userType: 'plex_user',
-        plexUserId: null,
-        plexUsername: null,
-      });
-
-      await expect(service.validateSession('token-1')).resolves.toBeNull();
-    });
-
-    it('rejects an admin session whose user row has gone', async () => {
-      sessionRepo.findOne.mockResolvedValue({ ...storedSession, user: null });
-      await expect(service.validateSession('token-1')).resolves.toBeNull();
-    });
-
-    it('returns null rather than throwing when the lookup fails', async () => {
-      sessionRepo.findOne.mockRejectedValue(new Error('db down'));
-      await expect(service.validateSession('token-1')).resolves.toBeNull();
-    });
-  });
-
-  describe('session cleanup', () => {
-    it('deletes the session on logout', async () => {
-      await service.logout('token-1');
-      expect(sessionRepo.delete).toHaveBeenCalledWith({ token: 'token-1' });
-    });
-
-    it('reports how many expired sessions were purged', async () => {
-      await expect(service.cleanupExpiredSessions()).resolves.toBe(3);
-    });
-
-    it('reports zero when the purge affected nothing', async () => {
-      sessionRepo.delete.mockResolvedValue({ affected: 0 });
-      await expect(service.cleanupExpiredSessions()).resolves.toBe(0);
-    });
-
-    it('reports zero when the driver omits the affected count', async () => {
-      sessionRepo.delete.mockResolvedValue({});
-      await expect(service.cleanupExpiredSessions()).resolves.toBe(0);
-    });
-
-    it('revokes every Plex user session', async () => {
-      await expect(service.revokeAllPlexUserSessions()).resolves.toBe(3);
-      expect(sessionRepo.delete).toHaveBeenCalledWith({
-        userType: 'plex_user',
-      });
-    });
-
-    it('clears one Plex user’s sessions', async () => {
-      await service.clearPlexUserSessions('plex-9');
-      expect(sessionRepo.delete).toHaveBeenCalledWith({
-        userType: 'plex_user',
-        plexUserId: 'plex-9',
-      });
-    });
-
-    it('reports a failure clearing Plex user sessions as a 500', async () => {
-      sessionRepo.delete.mockRejectedValue(new Error('db down'));
-      await expect(service.clearPlexUserSessions('plex-9')).rejects.toThrow(
-        InternalServerErrorException,
-      );
-    });
-  });
-
-  describe('clearAllSessions', () => {
-    it('spares the current session when one is given', async () => {
-      await service.clearAllSessions('admin-1', 'session-1');
-
-      expect(sessionRepo.delete).toHaveBeenCalledTimes(1);
-      expect(sessionRepo.delete).toHaveBeenCalledWith({
-        userId: 'admin-1',
-        id: Not('session-1'),
-      });
-    });
-
-    it('deletes every session when no current one is given', async () => {
-      await service.clearAllSessions('admin-1');
-      expect(sessionRepo.delete).toHaveBeenCalledWith({ userId: 'admin-1' });
-    });
-
-    it('reports a failure as a 500', async () => {
-      sessionRepo.delete.mockRejectedValue(new Error('db down'));
-      await expect(service.clearAllSessions('admin-1')).rejects.toThrow(
-        InternalServerErrorException,
-      );
+      expect(adminRepo.findOne).not.toHaveBeenCalled();
     });
   });
 
@@ -643,18 +361,5 @@ describe('AuthService', () => {
         'Admin not found',
       );
     });
-  });
-
-  it('expires new sessions seven days out', async () => {
-    const result = await service.login({
-      username: 'testuser',
-      password: 'hunter2hunter2',
-    });
-
-    const sevenDays = 7 * 24 * 60 * 60 * 1000;
-    const drift = Math.abs(
-      result.session.expiresAt.getTime() - (Date.now() + sevenDays),
-    );
-    expect(drift).toBeLessThan(5000);
   });
 });

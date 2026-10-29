@@ -5,7 +5,7 @@ import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import { AdminUser } from '@/entities/admin-user.entity';
 import { PasswordResetToken } from '@/entities/password-reset-token.entity';
-import { AuthService } from '@/modules/auth/auth.service';
+import { AuthSessionService } from '@/modules/auth/auth-session.service';
 import { ConfigService } from '@/modules/config/services/config.service';
 import { EmailService } from '@/modules/config/services/email.service';
 import {
@@ -48,7 +48,7 @@ describe('PasswordResetService', () => {
       [string, string, string, number]
     >;
   };
-  let authService: { clearAllSessions: jest.Mock };
+  let authSessions: { clearAllSessions: jest.Mock };
   let queryBuilder: {
     where: jest.Mock;
     getOne: jest.Mock;
@@ -111,7 +111,7 @@ describe('PasswordResetService', () => {
         .mockResolvedValue(undefined),
     };
 
-    authService = { clearAllSessions: jest.fn().mockResolvedValue(undefined) };
+    authSessions = { clearAllSessions: jest.fn().mockResolvedValue(undefined) };
 
     const module = await Test.createTestingModule({
       providers: [
@@ -123,7 +123,7 @@ describe('PasswordResetService', () => {
         },
         { provide: ConfigService, useValue: configService },
         { provide: EmailService, useValue: emailService },
-        { provide: AuthService, useValue: authService },
+        { provide: AuthSessionService, useValue: authSessions },
       ],
     }).compile();
 
@@ -347,7 +347,7 @@ describe('PasswordResetService', () => {
       });
 
       expect(tokenRepo.delete).toHaveBeenCalledWith({ id: 't-1' });
-      expect(authService.clearAllSessions).toHaveBeenCalledWith(ADMIN.id);
+      expect(authSessions.clearAllSessions).toHaveBeenCalledWith(ADMIN.id);
     });
 
     it('refuses a mismatched confirmation', async () => {
@@ -385,7 +385,7 @@ describe('PasswordResetService', () => {
         }),
       ).rejects.toThrow(BadRequestException);
       expect(tokenRepo.delete).toHaveBeenCalledWith({ id: 't-1' });
-      expect(authService.clearAllSessions).not.toHaveBeenCalled();
+      expect(authSessions.clearAllSessions).not.toHaveBeenCalled();
     });
   });
 });

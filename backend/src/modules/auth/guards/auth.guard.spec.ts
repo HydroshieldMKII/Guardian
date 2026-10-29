@@ -7,7 +7,7 @@ import {
 import { Reflector } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
 import { Request } from 'express';
-import { AuthService } from '@/modules/auth/auth.service';
+import { AuthSessionService } from '@/modules/auth/auth-session.service';
 import { ConfigService } from '@/modules/config/services/config.service';
 import { PUBLIC_KEY } from '@/modules/auth/decorators/public.decorator';
 import { ADMIN_ONLY_KEY } from '@/modules/auth/decorators/admin-only.decorator';
@@ -23,7 +23,7 @@ const plexUser = {
 
 describe('AuthGuard', () => {
   let guard: AuthGuard;
-  let authService: { validateSession: jest.Mock };
+  let authSessions: { validateSession: jest.Mock };
   let configService: { getSetting: jest.Mock };
   let reflector: { get: jest.Mock };
   let request: Partial<Request>;
@@ -49,14 +49,14 @@ describe('AuthGuard', () => {
 
   beforeEach(async () => {
     request = { method: 'GET', cookies: { session_token: 'token-1' } };
-    authService = { validateSession: jest.fn().mockResolvedValue(adminUser) };
+    authSessions = { validateSession: jest.fn().mockResolvedValue(adminUser) };
     configService = { getSetting: jest.fn().mockResolvedValue(true) };
     reflector = { get: jest.fn().mockReturnValue(undefined) };
 
     const module = await Test.createTestingModule({
       providers: [
         AuthGuard,
-        { provide: AuthService, useValue: authService },
+        { provide: AuthSessionService, useValue: authSessions },
         { provide: ConfigService, useValue: configService },
         { provide: Reflector, useValue: reflector },
       ],
@@ -68,7 +68,7 @@ describe('AuthGuard', () => {
   it('lets a CORS preflight through untouched', async () => {
     request.method = 'OPTIONS';
     await expect(guard.canActivate(context())).resolves.toBe(true);
-    expect(authService.validateSession).not.toHaveBeenCalled();
+    expect(authSessions.validateSession).not.toHaveBeenCalled();
   });
 
   it('lets a public route through without a token', async () => {
@@ -76,7 +76,7 @@ describe('AuthGuard', () => {
     request.cookies = {};
 
     await expect(guard.canActivate(context())).resolves.toBe(true);
-    expect(authService.validateSession).not.toHaveBeenCalled();
+    expect(authSessions.validateSession).not.toHaveBeenCalled();
   });
 
   it('rejects a request with no session cookie', async () => {
@@ -94,7 +94,7 @@ describe('AuthGuard', () => {
   });
 
   it('rejects an invalid session', async () => {
-    authService.validateSession.mockResolvedValue(null);
+    authSessions.validateSession.mockResolvedValue(null);
     await expect(guard.canActivate(context())).rejects.toBeInstanceOf(
       UnauthorizedException,
     );
@@ -107,18 +107,18 @@ describe('AuthGuard', () => {
 
   it('reads the token from the session cookie', async () => {
     await guard.canActivate(context());
-    expect(authService.validateSession).toHaveBeenCalledWith('token-1');
+    expect(authSessions.validateSession).toHaveBeenCalledWith('token-1');
   });
 
   it('admits a Plex user while the portal is enabled', async () => {
-    authService.validateSession.mockResolvedValue(plexUser);
+    authSessions.validateSession.mockResolvedValue(plexUser);
     configService.getSetting.mockResolvedValue(true);
 
     await expect(guard.canActivate(context())).resolves.toBe(true);
   });
 
   it('rejects a Plex user while the portal is disabled', async () => {
-    authService.validateSession.mockResolvedValue(plexUser);
+    authSessions.validateSession.mockResolvedValue(plexUser);
     configService.getSetting.mockResolvedValue(false);
 
     await expect(guard.canActivate(context())).rejects.toBeInstanceOf(
@@ -127,7 +127,7 @@ describe('AuthGuard', () => {
   });
 
   it('treats a non-boolean portal setting as disabled', async () => {
-    authService.validateSession.mockResolvedValue(plexUser);
+    authSessions.validateSession.mockResolvedValue(plexUser);
     configService.getSetting.mockResolvedValue('true');
 
     await expect(guard.canActivate(context())).rejects.toBeInstanceOf(
@@ -141,7 +141,7 @@ describe('AuthGuard', () => {
   });
 
   it('rejects a Plex user on an admin-only route', async () => {
-    authService.validateSession.mockResolvedValue(plexUser);
+    authSessions.validateSession.mockResolvedValue(plexUser);
     reflector.get.mockImplementation((key: string) =>
       key === ADMIN_ONLY_KEY ? true : undefined,
     );

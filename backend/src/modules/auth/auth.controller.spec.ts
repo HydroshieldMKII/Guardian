@@ -5,6 +5,7 @@ import { AdminUser } from '@/entities/admin-user.entity';
 import { AdminSessionUser } from '@/modules/auth/session-user.types';
 import { AuthController } from '@/modules/auth/auth.controller';
 import { AuthService } from '@/modules/auth/auth.service';
+import { AuthSessionService } from '@/modules/auth/auth-session.service';
 import { PlexOAuthService } from '@/modules/auth/plex-oauth.service';
 import { PasswordResetService } from '@/modules/auth/password-reset.service';
 import { ConfigService } from '@/modules/config/services/config.service';
@@ -12,6 +13,7 @@ import { ConfigService } from '@/modules/config/services/config.service';
 describe('AuthController', () => {
   let controller: AuthController;
   let authService: Record<string, jest.Mock>;
+  let authSessions: { logout: jest.Mock; createPlexUserSession: jest.Mock };
   let plexOAuthService: Record<string, jest.Mock>;
   let configService: { getSetting: jest.Mock };
   let passwordResetService: {
@@ -73,13 +75,16 @@ describe('AuthController', () => {
         .fn()
         .mockResolvedValue({ user: { id: 'admin-1' }, session }),
       login: jest.fn().mockResolvedValue({ user: { id: 'admin-1' }, session }),
-      logout: jest.fn().mockResolvedValue(undefined),
       updateProfile: jest.fn().mockResolvedValue({ id: 'admin-1' }),
       updatePassword: jest.fn().mockResolvedValue(undefined),
       findAdminByPlexUserId: jest.fn().mockResolvedValue(null),
       createAdminSessionByPlex: jest
         .fn()
         .mockResolvedValue({ user: { id: 'admin-1' }, session }),
+    };
+
+    authSessions = {
+      logout: jest.fn().mockResolvedValue(undefined),
       createPlexUserSession: jest.fn().mockResolvedValue({
         token: 'plex-session-token',
         expiresAt: session.expiresAt,
@@ -134,6 +139,7 @@ describe('AuthController', () => {
       controllers: [AuthController],
       providers: [
         { provide: AuthService, useValue: authService },
+        { provide: AuthSessionService, useValue: authSessions },
         { provide: PlexOAuthService, useValue: plexOAuthService },
         { provide: PasswordResetService, useValue: passwordResetService },
         { provide: ConfigService, useValue: configService },
@@ -269,7 +275,7 @@ describe('AuthController', () => {
         res,
       );
 
-      expect(authService.logout).toHaveBeenCalledWith('session-token');
+      expect(authSessions.logout).toHaveBeenCalledWith('session-token');
       expect(clearCookie).toHaveBeenCalledWith(
         'session_token',
         expect.any(Object),
@@ -281,7 +287,7 @@ describe('AuthController', () => {
       const { res, clearCookie } = responseStub();
       await controller.logout(requestWithCookies({}), res);
 
-      expect(authService.logout).not.toHaveBeenCalled();
+      expect(authSessions.logout).not.toHaveBeenCalled();
       expect(clearCookie).toHaveBeenCalled();
     });
   });

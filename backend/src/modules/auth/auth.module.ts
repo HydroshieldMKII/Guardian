@@ -3,10 +3,11 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { APP_GUARD } from '@nestjs/core';
 import { AdminUser } from '@/entities/admin-user.entity';
 import { Session } from '@/entities/session.entity';
-import { AppSettings } from '@/entities/app-settings.entity';
 import { UserPreference } from '@/entities/user-preference.entity';
 import { PasswordResetToken } from '@/entities/password-reset-token.entity';
 import { AuthService } from '@/modules/auth/auth.service';
+import { AuthSessionService } from '@/modules/auth/auth-session.service';
+import { CaptchaService } from '@/modules/auth/captcha.service';
 import { PlexOAuthService } from '@/modules/auth/plex-oauth.service';
 import { PasswordResetService } from '@/modules/auth/password-reset.service';
 import { AuthController } from '@/modules/auth/auth.controller';
@@ -19,7 +20,6 @@ import { ConfigModule } from '@/modules/config/config.module';
     TypeOrmModule.forFeature([
       AdminUser,
       Session,
-      AppSettings,
       UserPreference,
       PasswordResetToken,
     ]),
@@ -27,6 +27,8 @@ import { ConfigModule } from '@/modules/config/config.module';
   ],
   providers: [
     AuthService,
+    AuthSessionService,
+    CaptchaService,
     PlexOAuthService,
     PasswordResetService,
     {
@@ -35,6 +37,11 @@ import { ConfigModule } from '@/modules/config/config.module';
     },
   ],
   controllers: [AuthController],
-  exports: [AuthService, PlexOAuthService, PasswordResetService],
+  exports: [
+    AuthService,
+    AuthSessionService,
+    PlexOAuthService,
+    PasswordResetService,
+  ],
 })
 export class AuthModule {}

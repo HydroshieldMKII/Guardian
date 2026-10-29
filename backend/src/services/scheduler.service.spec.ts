@@ -5,7 +5,7 @@ import { ConfigService } from '@/modules/config/services/config.service';
 import { DeviceTrackingService } from '@/modules/devices/services/device-tracking.service';
 import { DeviceMaintenanceService } from '@/modules/devices/services/device-maintenance.service';
 import { UsersService } from '@/modules/users/services/users.service';
-import { AuthService } from '@/modules/auth/auth.service';
+import { AuthSessionService } from '@/modules/auth/auth-session.service';
 import { SchedulerService } from '@/services/scheduler.service';
 import { DashboardService } from '@/modules/dashboard/dashboard.service';
 import { LiveEventsService } from '@/modules/events/live-events.service';
@@ -39,7 +39,7 @@ describe('SchedulerService', () => {
     jest.Mock
   >;
   let usersService: { syncUsersFromPlexTV: jest.Mock };
-  let authService: { cleanupExpiredSessions: jest.Mock };
+  let authSessions: { cleanupExpiredSessions: jest.Mock };
   let schedulerRegistry: Record<string, jest.Mock>;
   let dashboardService: { getDashboardData: jest.Mock };
   let liveEvents: { hasListeners: jest.Mock; broadcastDashboard: jest.Mock };
@@ -90,7 +90,7 @@ describe('SchedulerService', () => {
         .mockResolvedValue({ created: 1, updated: 2, errors: 0 }),
     };
 
-    authService = { cleanupExpiredSessions: jest.fn().mockResolvedValue(3) };
+    authSessions = { cleanupExpiredSessions: jest.fn().mockResolvedValue(3) };
 
     dashboardService = {
       getDashboardData: jest.fn().mockResolvedValue({ stats: { total: 1 } }),
@@ -116,7 +116,7 @@ describe('SchedulerService', () => {
           useValue: deviceMaintenanceService,
         },
         { provide: UsersService, useValue: usersService },
-        { provide: AuthService, useValue: authService },
+        { provide: AuthSessionService, useValue: authSessions },
         { provide: SchedulerRegistry, useValue: schedulerRegistry },
         { provide: DashboardService, useValue: dashboardService },
         { provide: LiveEventsService, useValue: liveEvents },
@@ -348,11 +348,11 @@ describe('SchedulerService', () => {
 
     it('purges expired sessions', async () => {
       await service.handleSessionCleanup();
-      expect(authService.cleanupExpiredSessions).toHaveBeenCalled();
+      expect(authSessions.cleanupExpiredSessions).toHaveBeenCalled();
     });
 
     it('swallows a session purge failure', async () => {
-      authService.cleanupExpiredSessions.mockRejectedValue(
+      authSessions.cleanupExpiredSessions.mockRejectedValue(
         new Error('db down'),
       );
       await expect(service.handleSessionCleanup()).resolves.toBeUndefined();

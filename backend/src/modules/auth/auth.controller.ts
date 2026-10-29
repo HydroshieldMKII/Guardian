@@ -13,6 +13,7 @@ import {
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { AuthService } from '@/modules/auth/auth.service';
+import { AuthSessionService } from '@/modules/auth/auth-session.service';
 import { PlexOAuthService } from '@/modules/auth/plex-oauth.service';
 import { PasswordResetService } from '@/modules/auth/password-reset.service';
 import { ConfigService } from '@/modules/config/services/config.service';
@@ -43,6 +44,7 @@ import {
 export class AuthController {
   constructor(
     private authService: AuthService,
+    private authSessions: AuthSessionService,
     private plexOAuthService: PlexOAuthService,
     private passwordResetService: PasswordResetService,
     private configService: ConfigService,
@@ -135,7 +137,7 @@ export class AuthController {
     const token = extractSessionToken(req);
 
     if (token) {
-      await this.authService.logout(token);
+      await this.authSessions.logout(token);
     }
 
     res.clearCookie(SESSION_COOKIE_NAME, sessionCookieOptions(req));
@@ -405,7 +407,7 @@ export class AuthController {
       }
 
       // Create Plex user session (limited scope)
-      const plexSession = await this.authService.createPlexUserSession({
+      const plexSession = await this.authSessions.createPlexUserSession({
         plexUserId: String(plexUser.id),
         plexUsername: plexUser.username,
         plexThumb: plexUser.thumb,
