@@ -139,11 +139,45 @@ describe('SchedulerService', () => {
       ).toHaveBeenCalledTimes(1);
     });
 
-    it('listens for refresh interval and strict mode changes', async () => {
+    it('listens for refresh interval, strict mode and token changes', async () => {
       await service.onModuleInit();
 
       expect(listeners.has('PLEXGUARD_REFRESH_INTERVAL')).toBe(true);
       expect(listeners.has('PLEX_GUARD_STRICT_MODE')).toBe(true);
+      expect(listeners.has('PLEX_TOKEN')).toBe(true);
+    });
+
+    it('syncs Plex users as soon as a token is saved', async () => {
+      settings.delete('PLEX_TOKEN');
+      await service.onModuleInit();
+      expect(plexUserSync.syncUsersFromPlexTV).not.toHaveBeenCalled();
+
+      settings.set('PLEX_TOKEN', 'new-token');
+      await listeners.get('PLEX_TOKEN')![0]();
+      await tick(0);
+
+      expect(plexUserSync.syncUsersFromPlexTV).toHaveBeenCalledTimes(1);
+    });
+
+    it('skips the sync when the token is cleared', async () => {
+      await service.onModuleInit();
+      plexUserSync.syncUsersFromPlexTV.mockClear();
+
+      settings.delete('PLEX_TOKEN');
+      await listeners.get('PLEX_TOKEN')![0]();
+      await tick(0);
+
+      expect(plexUserSync.syncUsersFromPlexTV).not.toHaveBeenCalled();
+    });
+
+    it('keeps a failed sync after a token change out of the save', async () => {
+      await service.onModuleInit();
+      plexUserSync.syncUsersFromPlexTV.mockRejectedValue(
+        new Error('invalid token'),
+      );
+
+      await listeners.get('PLEX_TOKEN')![0]();
+      await expect(tick(0)).resolves.toBeUndefined();
     });
 
     it('replaces the interval when the refresh interval changes', async () => {

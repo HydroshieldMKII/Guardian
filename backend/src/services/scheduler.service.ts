@@ -55,6 +55,11 @@ export class SchedulerService implements OnModuleInit {
       void this.enforceStrictMode();
     });
 
+    this.configService.addConfigChangeListener('PLEX_TOKEN', () => {
+      this.logger.log('Plex token changed, syncing Plex users...');
+      void this.syncPlexUsers();
+    });
+
     await this.handleSessionUpdates();
     await this.performDeviceCleanup();
     await this.syncPlexUsers();
