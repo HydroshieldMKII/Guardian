@@ -48,10 +48,18 @@ export function AccessDurationSection({
         <p className={ERROR_TEXT}>Selected date must be in the future</p>
       )}
 
+      {form.dateTooFar && (
+        <Panel tone="danger">
+          <p className={ERROR_TEXT}>
+            Selected date is too far away. Access can last up to 10 years.
+          </p>
+        </Panel>
+      )}
+
       {form.durationTooLarge && (
         <Panel tone="danger">
           <p className={ERROR_TEXT}>
-            Duration is too large. Please enter a smaller value.
+            Duration is too large. Access can last up to 10 years.
           </p>
         </Panel>
       )}

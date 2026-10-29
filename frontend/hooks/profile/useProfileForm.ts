@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { isAdminUser, useAuth } from "@/contexts/auth-context";
 import { useToast } from "@/hooks/use-toast";
-import { emailError } from "@/lib/profile-validation";
+import { emailError, usernameError } from "@/lib/profile-validation";
 
 export interface ProfileFields {
   username: string;
@@ -47,6 +47,8 @@ export function useProfileForm(open: boolean, onSaved: () => void) {
   const setField = (key: keyof ProfileFields, value: string) =>
     setFields((prev) => ({ ...prev, [key]: value }));
 
+  const usernameFieldError = admin ? usernameError(fields.username) : null;
+
   const hasChanges = Boolean(
     admin &&
     (fields.username !== admin.username ||
@@ -56,6 +58,7 @@ export function useProfileForm(open: boolean, onSaved: () => void) {
 
   const submit = async (event: Pick<React.FormEvent, "preventDefault">) => {
     event.preventDefault();
+    if (usernameFieldError) return;
     const invalid = emailError(fields.email);
     setError(invalid);
     if (invalid) return;
@@ -124,6 +127,7 @@ export function useProfileForm(open: boolean, onSaved: () => void) {
     fields,
     setField,
     error,
+    usernameError: usernameFieldError,
     saving,
     hasChanges,
     submit,

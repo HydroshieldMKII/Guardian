@@ -14,7 +14,6 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import type { Response } from 'express';
 import { DatabaseMaintenanceService } from '@/modules/config/services/database-maintenance.service';
 import { DatabaseService } from '@/modules/config/services/database.service';
-import type { ImportPayload } from '@/modules/config/services/database-import.service';
 import { AuthService } from '@/modules/auth/auth.service';
 import { ConfirmPasswordDto } from '@/modules/auth/dto/confirm-password.dto';
 import { CurrentUser } from '@/modules/auth/decorators/current-user.decorator';
@@ -22,16 +21,18 @@ import { AdminOnly } from '@/modules/auth/decorators/admin-only.decorator';
 import type { AdminSessionUser } from '@/modules/auth/session-user.types';
 import { respondOrFail } from '@/common/utils/respond-or-fail';
 
+const MAX_IMPORT_FILE_BYTES = 8 * 1024 * 1024;
+
 interface UploadedDatabaseFile {
   buffer: Buffer;
 }
 
-const parseUpload = (file: UploadedDatabaseFile | undefined): ImportPayload => {
+const parseUpload = (file: UploadedDatabaseFile | undefined): unknown => {
   if (!file) {
     throw new HttpException('No file provided', HttpStatus.BAD_REQUEST);
   }
   try {
-    return JSON.parse(file.buffer.toString('utf8')) as ImportPayload;
+    return JSON.parse(file.buffer.toString('utf8'));
   } catch {
     throw new HttpException('Invalid JSON file', HttpStatus.BAD_REQUEST);
   }
@@ -63,7 +64,9 @@ export class DatabaseController {
   }
 
   @Post('database/import')
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(
+    FileInterceptor('file', { limits: { fileSize: MAX_IMPORT_FILE_BYTES } }),
+  )
   importDatabase(@UploadedFile() file: UploadedDatabaseFile | undefined) {
     return respondOrFail(
       async () => ({

@@ -38,6 +38,14 @@ describe("useUnsavedChanges", () => {
     expect(result.current.hasUnsavedChanges).toBe(false);
   });
 
+  it("tracks whether saving is blocked", () => {
+    const { result } = setup();
+    expect(result.current.saveBlocked).toBe(false);
+
+    act(() => result.current.setSaveBlocked(true));
+    expect(result.current.saveBlocked).toBe(true);
+  });
+
   it("tracks the pending navigation target", () => {
     const { result } = setup();
 

@@ -1,7 +1,13 @@
+import {
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { DataSource, IsNull } from 'typeorm';
 import { UserTimeRule } from '@/entities/user-time-rule.entity';
+import { ConfigService } from '@/modules/config/services/config.service';
 import {
   CreatePresetDto,
   TimeRuleService,
@@ -25,35 +31,27 @@ describe('TimeRuleService', () => {
     'create' | 'save' | 'find' | 'findOne' | 'remove',
     jest.Mock
   >;
-  let queryRunner: {
-    connect: jest.Mock;
-    startTransaction: jest.Mock;
-    commitTransaction: jest.Mock;
-    rollbackTransaction: jest.Mock;
-    release: jest.Mock;
-    manager: {
-      delete: jest.Mock;
-      create: jest.Mock;
-      save: jest.Mock;
-    };
+  let configService: { getCurrentTimeInTimezone: jest.Mock };
+  let transaction: jest.Mock;
+  let presetManager: {
+    delete: jest.Mock;
+    create: jest.Mock;
+    save: jest.Mock;
   };
 
   beforeEach(async () => {
     let nextId = 100;
-    queryRunner = {
-      connect: jest.fn().mockResolvedValue(undefined),
-      startTransaction: jest.fn().mockResolvedValue(undefined),
-      commitTransaction: jest.fn().mockResolvedValue(undefined),
-      rollbackTransaction: jest.fn().mockResolvedValue(undefined),
-      release: jest.fn().mockResolvedValue(undefined),
-      manager: {
-        delete: jest.fn().mockResolvedValue({ affected: 0 }),
-        create: jest.fn((_entity, value: Partial<UserTimeRule>) => rule(value)),
-        save: jest.fn((value: UserTimeRule) =>
-          Promise.resolve(Object.assign(value, { id: nextId++ })),
-        ),
-      },
+    presetManager = {
+      delete: jest.fn().mockResolvedValue({ affected: 0 }),
+      create: jest.fn((_entity, value: Partial<UserTimeRule>) => rule(value)),
+      save: jest.fn((value: UserTimeRule) =>
+        Promise.resolve(Object.assign(value, { id: nextId++ })),
+      ),
     };
+    transaction = jest.fn(
+      (work: (manager: typeof presetManager) => Promise<unknown>) =>
+        work(presetManager),
+    );
 
     repository = {
       create: jest.fn((value: Partial<UserTimeRule>) => rule(value)),
@@ -63,8 +61,11 @@ describe('TimeRuleService', () => {
       remove: jest.fn().mockResolvedValue(undefined),
     };
 
-    const dataSource = {
-      createQueryRunner: jest.fn().mockReturnValue(queryRunner),
+    const dataSource = { manager: { transaction } };
+    configService = {
+      getCurrentTimeInTimezone: jest
+        .fn()
+        .mockResolvedValue(new Date('2026-01-05T09:00:00Z')),
     };
 
     const module = await Test.createTestingModule({
@@ -72,6 +73,7 @@ describe('TimeRuleService', () => {
         TimeRuleService,
         { provide: getRepositoryToken(UserTimeRule), useValue: repository },
         { provide: DataSource, useValue: dataSource },
+        { provide: ConfigService, useValue: configService },
       ],
     }).compile();
 
@@ -99,7 +101,17 @@ describe('TimeRuleService', () => {
           startTime: '23:00',
           endTime: '22:00',
         }),
-      ).rejects.toThrow('End time must be greater than start time');
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('tells the user to split an overnight rule across two days', async () => {
+      await expect(
+        service.createTimeRule({
+          ...validRule,
+          startTime: '22:00',
+          endTime: '06:00',
+        }),
+      ).rejects.toThrow(/split it into one rule ending at 23:59/);
     });
 
     it('rejects an end time equal to the start', async () => {
@@ -115,9 +127,13 @@ describe('TimeRuleService', () => {
     it.each([-1, 7])('rejects day %s', async (dayOfWeek) => {
       await expect(
         service.createTimeRule({ ...validRule, dayOfWeek }),
-      ).rejects.toThrow(
-        'Day of week must be between 0 (Sunday) and 6 (Saturday)',
-      );
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('rejects a fractional day', async () => {
+      await expect(
+        service.createTimeRule({ ...validRule, dayOfWeek: 1.5 }),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('rejects a rule overlapping an existing one', async () => {
@@ -130,9 +146,29 @@ describe('TimeRuleService', () => {
         }),
       ]);
 
-      await expect(service.createTimeRule(validRule)).rejects.toThrow(
+      const failure = service.createTimeRule(validRule);
+      await expect(failure).rejects.toThrow(ConflictException);
+      await expect(failure).rejects.toThrow(
         'Rule overlaps with existing rule "Existing"',
       );
+    });
+
+    it('reports a clash between a device rule and a user-wide rule as a conflict', async () => {
+      repository.find.mockResolvedValue([
+        rule({ id: 9, ruleName: 'Everyone', deviceIdentifier: undefined }),
+      ]);
+
+      await expect(
+        service.createTimeRule({ ...validRule, deviceIdentifier: 'device-a' }),
+      ).rejects.toThrow(ConflictException);
+    });
+
+    it('allows a rule that starts where another one ends', async () => {
+      repository.find.mockResolvedValue([
+        rule({ id: 9, startTime: '23:30', endTime: '23:59' }),
+      ]);
+
+      await expect(service.createTimeRule(validRule)).resolves.toBeDefined();
     });
 
     it('allows a rule that does not overlap', async () => {
@@ -153,8 +189,8 @@ describe('TimeRuleService', () => {
 
       expect(created).toHaveLength(2);
       expect(created.map((r) => r.dayOfWeek).sort()).toEqual([0, 6]);
-      expect(queryRunner.commitTransaction).toHaveBeenCalled();
-      expect(queryRunner.manager.delete).toHaveBeenCalledWith(UserTimeRule, {
+      expect(transaction).toHaveBeenCalledTimes(1);
+      expect(presetManager.delete).toHaveBeenCalledWith(UserTimeRule, {
         userId: 'u1',
         deviceIdentifier: IsNull(),
       });
@@ -178,23 +214,21 @@ describe('TimeRuleService', () => {
       });
 
       expect(created[0].deviceIdentifier).toBe('device-a');
-      expect(queryRunner.manager.delete).toHaveBeenCalledWith(UserTimeRule, {
+      expect(presetManager.delete).toHaveBeenCalledWith(UserTimeRule, {
         userId: 'u1',
         deviceIdentifier: 'device-a',
       });
     });
 
-    it('rolls back and rethrows on failure', async () => {
-      queryRunner.manager.save.mockRejectedValue(new Error('db down'));
+    it('rethrows a failure inside the transaction', async () => {
+      presetManager.save.mockRejectedValue(new Error('db down'));
 
       await expect(
         service.createPreset({ userId: 'u1', presetType: 'weekdays-only' }),
       ).rejects.toThrow('Failed to create preset: db down');
-
-      expect(queryRunner.rollbackTransaction).toHaveBeenCalled();
     });
 
-    it('rolls back an unknown preset type', async () => {
+    it('rejects an unknown preset type without touching the rules', async () => {
       await expect(
         service.createPreset({
           userId: 'u1',
@@ -202,13 +236,7 @@ describe('TimeRuleService', () => {
         }),
       ).rejects.toThrow('Failed to create preset: Invalid preset type');
 
-      expect(queryRunner.manager.save).not.toHaveBeenCalled();
-      expect(queryRunner.rollbackTransaction).toHaveBeenCalled();
-    });
-
-    it('always releases the query runner', async () => {
-      await service.createPreset({ userId: 'u1', presetType: 'weekdays-only' });
-      expect(queryRunner.release).toHaveBeenCalled();
+      expect(transaction).not.toHaveBeenCalled();
     });
   });
 
@@ -244,7 +272,7 @@ describe('TimeRuleService', () => {
     it('throws when the rule is missing', async () => {
       repository.findOne.mockResolvedValue(null);
       await expect(service.updateTimeRule('u1', 1, {})).rejects.toThrow(
-        'Time rule not found',
+        NotFoundException,
       );
     });
 
@@ -326,7 +354,7 @@ describe('TimeRuleService', () => {
     it('throws when the rule is missing', async () => {
       repository.findOne.mockResolvedValue(null);
       await expect(service.deleteTimeRule('u1', 1)).rejects.toThrow(
-        'Time rule not found',
+        NotFoundException,
       );
     });
   });
@@ -347,13 +375,13 @@ describe('TimeRuleService', () => {
     it('throws when the rule is missing', async () => {
       repository.findOne.mockResolvedValue(null);
       await expect(service.toggleTimeRule('u1', 1)).rejects.toThrow(
-        'Time rule not found',
+        NotFoundException,
       );
     });
   });
 
   describe('checkStreamingAllowed', () => {
-    const monday9am = new Date('2026-01-05T09:00:00');
+    const monday9am = new Date('2026-01-05T09:00:00Z');
 
     it('allows when no rules match', async () => {
       repository.find.mockResolvedValue([]);
@@ -409,7 +437,7 @@ describe('TimeRuleService', () => {
       expect(result.allowed).toBe(true);
     });
 
-    it('treats the window end as exclusive', async () => {
+    it('treats the window end as inclusive, as enforcement does', async () => {
       repository.find.mockResolvedValue([
         rule({ dayOfWeek: 1, startTime: '08:00', endTime: '09:00' }),
       ]);
@@ -419,7 +447,7 @@ describe('TimeRuleService', () => {
         undefined,
         monday9am,
       );
-      expect(result.allowed).toBe(true);
+      expect(result.allowed).toBe(false);
     });
 
     it('treats the window start as inclusive', async () => {
@@ -432,6 +460,31 @@ describe('TimeRuleService', () => {
         undefined,
         monday9am,
       );
+      expect(result.allowed).toBe(false);
+    });
+
+    it('blocks a legacy rule stored without zero padding', async () => {
+      repository.find.mockResolvedValue([
+        rule({ dayOfWeek: 1, startTime: '8:05', endTime: '9:30' }),
+      ]);
+
+      const result = await service.checkStreamingAllowed(
+        'u1',
+        undefined,
+        monday9am,
+      );
+      expect(result.allowed).toBe(false);
+    });
+
+    it('uses the configured timezone clock when no time is given', async () => {
+      repository.find.mockResolvedValue([
+        rule({ dayOfWeek: 2, startTime: '01:00', endTime: '02:00' }),
+      ]);
+      configService.getCurrentTimeInTimezone.mockResolvedValue(
+        new Date('2026-01-06T01:30:00Z'),
+      );
+
+      const result = await service.checkStreamingAllowed('u1');
       expect(result.allowed).toBe(false);
     });
 

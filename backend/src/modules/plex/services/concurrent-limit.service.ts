@@ -72,7 +72,7 @@ export class ConcurrentLimitService {
     userSessions: PlexSession[],
   ): Promise<ExcessStream[]> {
     const limit = await this.concurrentStreamService.getEffectiveLimit(userId);
-    if (limit === 0) return [];
+    if (!Number.isInteger(limit) || limit <= 0) return [];
 
     const countableSessions =
       await this.concurrentStreamService.filterCountableSessions(

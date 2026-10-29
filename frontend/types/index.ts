@@ -178,10 +178,9 @@ export interface UserTimeRule {
   deviceIdentifier?: string;
   ruleName: string;
   enabled: boolean;
-  action: "allow" | "block";
-  dayOfWeek: number; // Single day (0-6, Sunday=0)
-  startTime: string; // HH:MM format
-  endTime: string; // HH:MM format (must be > startTime)
+  dayOfWeek: number;
+  startTime: string;
+  endTime: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -189,16 +188,14 @@ export interface UserTimeRule {
 export interface CreateTimeRuleDto {
   deviceIdentifier?: string;
   ruleName: string;
-  action: "allow" | "block";
-  dayOfWeek: number; // Single day (0-6)
-  startTime: string; // HH:MM
-  endTime: string; // HH:MM (validated to be > startTime)
+  dayOfWeek: number;
+  startTime: string;
+  endTime: string;
 }
 
 export interface UpdateTimeRuleDto {
   ruleName?: string;
   enabled?: boolean;
-  action?: "allow" | "block";
   dayOfWeek?: number;
   startTime?: string;
   endTime?: string;

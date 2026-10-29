@@ -2,11 +2,13 @@ import { renderHook } from "@testing-library/react";
 import { useRegisterUnsavedChanges } from "@/hooks/settings/useRegisterUnsavedChanges";
 
 const setHasUnsavedChanges = jest.fn<void, [boolean]>();
+const setSaveBlocked = jest.fn<void, [boolean]>();
 const setOnSaveAndLeave = jest.fn<void, [(() => Promise<void>) | null]>();
 const setOnDiscardChanges = jest.fn<void, [(() => void) | null]>();
 jest.mock("@/contexts/unsaved-changes-context", () => ({
   useUnsavedChanges: () => ({
     setHasUnsavedChanges,
+    setSaveBlocked,
     setOnSaveAndLeave,
     setOnDiscardChanges,
   }),
@@ -42,6 +44,18 @@ describe("useRegisterUnsavedChanges", () => {
     expect(setHasUnsavedChanges).toHaveBeenLastCalledWith(true);
   });
 
+  it("shares whether saving is currently blocked", () => {
+    const { rerender } = renderHook(
+      ({ blocked }) => useRegisterUnsavedChanges(true, save, discard, blocked),
+      { initialProps: { blocked: false } },
+    );
+    expect(setSaveBlocked).toHaveBeenLastCalledWith(false);
+
+    rerender({ blocked: true });
+
+    expect(setSaveBlocked).toHaveBeenLastCalledWith(true);
+  });
+
   it("clears everything once unmounted", () => {
     const { unmount } = renderHook(() =>
       useRegisterUnsavedChanges(true, save, discard),
@@ -50,6 +64,7 @@ describe("useRegisterUnsavedChanges", () => {
     unmount();
 
     expect(setHasUnsavedChanges).toHaveBeenLastCalledWith(false);
+    expect(setSaveBlocked).toHaveBeenLastCalledWith(false);
     expect(setOnSaveAndLeave).toHaveBeenLastCalledWith(null);
     expect(setOnDiscardChanges).toHaveBeenLastCalledWith(null);
   });

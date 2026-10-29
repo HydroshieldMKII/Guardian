@@ -6,8 +6,16 @@ export const FocusInput: React.FC<{
   onChange: (value: string) => void;
   type?: string;
   placeholder?: string;
+  ariaLabel?: string;
   className?: string;
-}> = ({ value, onChange, type = "text", placeholder, className }) => {
+}> = ({
+  value,
+  onChange,
+  type = "text",
+  placeholder,
+  ariaLabel,
+  className,
+}) => {
   const [localValue, setLocalValue] = useState(value);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -30,6 +38,7 @@ export const FocusInput: React.FC<{
       value={localValue}
       onChange={handleChange}
       placeholder={placeholder}
+      aria-label={ariaLabel}
       className={className}
     />
   );

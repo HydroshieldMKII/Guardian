@@ -1,9 +1,17 @@
-import { Injectable, Logger } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, IsNull } from 'typeorm';
 import { UserTimeRule } from '@/entities/user-time-rule.entity';
 import { asHttpError, errorMessage } from '@/common/utils/error-types';
-import { isTimeInWindow } from '@/common/utils/time-of-day';
+import { isScheduleActive, readClock } from '@/common/utils/time-of-day';
+import { ConfigService } from '@/modules/config/services/config.service';
+import { serialTransaction } from '@/database/serial-transaction';
 import {
   TimeRulePreset,
   presetRules,
@@ -43,6 +51,7 @@ export class TimeRuleService {
     @InjectRepository(UserTimeRule)
     private readonly timeRuleRepository: Repository<UserTimeRule>,
     private readonly dataSource: DataSource,
+    private readonly configService: ConfigService,
   ) {}
 
   async createTimeRule(createDto: CreateTimeRuleDto): Promise<UserTimeRule> {
@@ -62,36 +71,38 @@ export class TimeRuleService {
       `Creating preset: ${createDto.presetType} for user ${createDto.userId}`,
     );
 
-    const queryRunner = this.dataSource.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
+    const rules = presetRules(createDto.presetType);
 
     try {
-      await queryRunner.manager.delete(UserTimeRule, {
-        userId: createDto.userId,
-        deviceIdentifier: createDto.deviceIdentifier || IsNull(),
-      });
-
-      const rules = presetRules(createDto.presetType);
       if (rules.length === 0) {
         throw new Error(`Invalid preset type: ${createDto.presetType}`);
       }
 
-      const createdRules: UserTimeRule[] = [];
-      for (const rule of rules) {
-        createdRules.push(
-          await queryRunner.manager.save(
-            queryRunner.manager.create(UserTimeRule, {
-              ...rule,
-              userId: createDto.userId,
-              deviceIdentifier: createDto.deviceIdentifier || undefined,
-              enabled: true,
-            }),
-          ),
-        );
-      }
+      const createdRules = await serialTransaction(
+        this.dataSource.manager,
+        async (manager) => {
+          await manager.delete(UserTimeRule, {
+            userId: createDto.userId,
+            deviceIdentifier: createDto.deviceIdentifier || IsNull(),
+          });
 
-      await queryRunner.commitTransaction();
+          const saved: UserTimeRule[] = [];
+          for (const rule of rules) {
+            saved.push(
+              await manager.save(
+                manager.create(UserTimeRule, {
+                  ...rule,
+                  userId: createDto.userId,
+                  deviceIdentifier: createDto.deviceIdentifier || undefined,
+                  enabled: true,
+                }),
+              ),
+            );
+          }
+          return saved;
+        },
+      );
+
       this.logger.log(
         `Successfully created ${createdRules.length} preset rules`,
       );
@@ -101,10 +112,7 @@ export class TimeRuleService {
         `Error creating preset: ${errorMessage(error)}`,
         asHttpError(error).stack,
       );
-      await queryRunner.rollbackTransaction();
       throw new Error(`Failed to create preset: ${errorMessage(error)}`);
-    } finally {
-      await queryRunner.release();
     }
   }
 
@@ -163,9 +171,9 @@ export class TimeRuleService {
     deviceIdentifier?: string,
     currentTime?: Date,
   ): Promise<{ allowed: boolean; reason: string }> {
-    const now = currentTime || new Date();
-    const dayOfWeek = now.getDay();
-    const timeStr = now.toTimeString().slice(0, 5);
+    const clock = readClock(
+      currentTime ?? (await this.configService.getCurrentTimeInTimezone()),
+    );
 
     const deviceRules = deviceIdentifier
       ? await this.getTimeRules(userId, deviceIdentifier)
@@ -173,10 +181,7 @@ export class TimeRuleService {
     const userRules = await this.getTimeRules(userId);
 
     const blockingRule = [...deviceRules, ...userRules].find(
-      (rule) =>
-        rule.enabled &&
-        rule.dayOfWeek === dayOfWeek &&
-        isTimeInWindow(timeStr, rule.startTime, rule.endTime),
+      (rule) => rule.enabled && isScheduleActive(rule, clock),
     );
 
     if (blockingRule) {
@@ -198,7 +203,7 @@ export class TimeRuleService {
     });
 
     if (!rule) {
-      throw new Error('Time rule not found');
+      throw new NotFoundException('Time rule not found');
     }
 
     return rule;
@@ -209,11 +214,17 @@ export class TimeRuleService {
     overlapMessage: (ruleName: string) => string,
   ): Promise<void> {
     if (!candidate.validateTimeRange()) {
-      throw new Error('End time must be greater than start time');
+      throw new BadRequestException(
+        'End time must be greater than start time. A rule cannot cross midnight; split it into one rule ending at 23:59 and one starting at 00:00 on the next day',
+      );
     }
 
-    if (candidate.dayOfWeek < 0 || candidate.dayOfWeek > 6) {
-      throw new Error(
+    if (
+      !Number.isInteger(candidate.dayOfWeek) ||
+      candidate.dayOfWeek < 0 ||
+      candidate.dayOfWeek > 6
+    ) {
+      throw new BadRequestException(
         'Day of week must be between 0 (Sunday) and 6 (Saturday)',
       );
     }
@@ -222,7 +233,7 @@ export class TimeRuleService {
       (existing) => candidate.overlaps(existing),
     );
     if (clash) {
-      throw new Error(overlapMessage(clash.ruleName));
+      throw new ConflictException(overlapMessage(clash.ruleName));
     }
   }
 }

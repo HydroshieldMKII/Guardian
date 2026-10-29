@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { useRegisterUnsavedChanges } from "@/hooks/settings/useRegisterUnsavedChanges";
+import { useBrowserLeaveGuard } from "@/hooks/settings/useBrowserLeaveGuard";
 import { useSettingsForm } from "@/hooks/settings/useSettingsForm";
 import { useSettingsTab } from "@/hooks/settings/useSettingsTab";
 import type { SettingUpdate } from "@/hooks/useSettings";
@@ -29,27 +30,37 @@ export function SettingsWorkspace({
   const router = useRouter();
   const { activeTab, selectTab } = useSettingsTab();
   const form = useSettingsForm(settings, updateSettings);
-  const [confirmingLeave, setConfirmingLeave] = useState(false);
+  const [leaveRequest, setLeaveRequest] = useState<"home" | "history" | null>(
+    null,
+  );
   useRegisterUnsavedChanges(
     form.hasUnsavedChanges,
     form.saveBeforeLeaving,
     form.discard,
+    form.hasErrors,
   );
 
-  const leave = () => router.push("/");
+  const { leaveHistory } = useBrowserLeaveGuard(form.hasUnsavedChanges, () =>
+    setLeaveRequest("history"),
+  );
+
+  const leave = () => {
+    if (leaveRequest === "history") leaveHistory();
+    else router.push("/");
+  };
 
   const requestLeave = () => {
-    if (form.hasUnsavedChanges) setConfirmingLeave(true);
-    else leave();
+    if (form.hasUnsavedChanges) setLeaveRequest("home");
+    else router.push("/");
   };
 
   const discardAndLeave = () => {
-    setConfirmingLeave(false);
     leave();
+    setLeaveRequest(null);
   };
 
   const saveAndLeave = () => {
-    setConfirmingLeave(false);
+    setLeaveRequest(null);
     void form.saveBeforeLeaving().then(leave, () => undefined);
   };
 
@@ -85,15 +96,17 @@ export function SettingsWorkspace({
       {form.hasUnsavedChanges && (
         <UnsavedChangesBar
           isSaving={form.isSaving}
+          saveBlocked={form.hasErrors}
           onCancel={form.discard}
           onSave={() => void form.save()}
         />
       )}
 
       <LeaveSettingsModal
-        open={confirmingLeave}
+        open={leaveRequest !== null}
         isSaving={form.isSaving}
-        onStay={() => setConfirmingLeave(false)}
+        saveBlocked={form.hasErrors}
+        onStay={() => setLeaveRequest(null)}
         onDiscard={discardAndLeave}
         onSave={saveAndLeave}
       />

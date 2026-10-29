@@ -1,3 +1,4 @@
+import { NotFoundException } from '@nestjs/common';
 import { Logger } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
@@ -54,6 +55,14 @@ describe('TemporaryAccessService', () => {
       expect(patch.temporaryAccessUntil.getTime()).toBeGreaterThanOrEqual(
         before + 30 * 60 * 1000,
       );
+    });
+
+    it('answers 404 and logs nothing for an unknown device', async () => {
+      deviceRepo.update.mockResolvedValue({ affected: 0 });
+      await expect(
+        service.grantTemporaryAccess(999999, 30),
+      ).rejects.toBeInstanceOf(NotFoundException);
+      expect(configService.getTimezone).not.toHaveBeenCalled();
     });
 
     it('defaults to not bypassing policies', async () => {

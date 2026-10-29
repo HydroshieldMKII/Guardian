@@ -10,6 +10,7 @@ export function Field({
   htmlFor,
   hint,
   action,
+  error,
   inline = false,
   className,
   children,
@@ -18,6 +19,7 @@ export function Field({
   htmlFor?: string;
   hint?: React.ReactNode;
   action?: React.ReactNode;
+  error?: React.ReactNode;
   inline?: boolean;
   className?: string;
   children?: React.ReactNode;
@@ -35,6 +37,12 @@ export function Field({
     <p className="text-xs leading-relaxed text-muted-foreground">{hint}</p>
   ) : null;
 
+  const problem = error ? (
+    <p role="alert" className="text-xs leading-relaxed text-blocked">
+      {error}
+    </p>
+  ) : null;
+
   if (inline) {
     return (
       <div
@@ -47,6 +55,7 @@ export function Field({
         <div className="min-w-0 space-y-1">
           {header}
           {description}
+          {problem}
         </div>
         {children && <div className="shrink-0">{children}</div>}
       </div>
@@ -58,6 +67,7 @@ export function Field({
       <div className={cn("space-y-1", className)}>
         {header}
         {description}
+        {problem}
       </div>
     );
   }
@@ -67,6 +77,7 @@ export function Field({
       {header}
       {children}
       {description}
+      {problem}
     </div>
   );
 }

@@ -21,6 +21,12 @@ import { UserPreference } from "@/types";
 import { apiClient } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { useSettings } from "@/hooks/useSettings";
+import {
+  INTEGER_RULES,
+  integerError,
+} from "@/components/settings/setting-validation";
+
+const STREAM_LIMIT_RULE = INTEGER_RULES.CONCURRENT_STREAM_LIMIT;
 
 interface ConcurrentStreamInfo {
   limit: number | null;
@@ -51,13 +57,11 @@ export const ConcurrentStreamModal: React.FC<ConcurrentStreamModalProps> = ({
   const [useGlobalDefault, setUseGlobalDefault] = useState(true);
   const [customLimit, setCustomLimit] = useState<string>("0");
 
-  // Get global concurrent stream limit from settings
   const globalLimit = settings?.find(
     (s) => s.key === "CONCURRENT_STREAM_LIMIT",
   );
   const globalLimitValue = globalLimit ? Number(globalLimit.value) : 0;
 
-  // Fetch current settings when modal opens
   useEffect(() => {
     if (isOpen) {
       const fetchCurrentLimit = async () => {
@@ -72,7 +76,6 @@ export const ConcurrentStreamModal: React.FC<ConcurrentStreamModalProps> = ({
           setCustomLimit(hasCustomLimit ? String(info.limit ?? 0) : "0");
         } catch (error) {
           console.error("Failed to fetch concurrent stream info:", error);
-          // Fall back to defaults
           setUseGlobalDefault(true);
           setCustomLimit("0");
         } finally {
@@ -83,7 +86,12 @@ export const ConcurrentStreamModal: React.FC<ConcurrentStreamModalProps> = ({
     }
   }, [isOpen, userId]);
 
+  const limitError = useGlobalDefault
+    ? null
+    : integerError(customLimit, STREAM_LIMIT_RULE);
+
   const handleSave = async () => {
+    if (limitError) return;
     setLoading(true);
     try {
       const newLimit = useGlobalDefault ? null : Number(customLimit);
@@ -116,7 +124,8 @@ export const ConcurrentStreamModal: React.FC<ConcurrentStreamModalProps> = ({
   };
 
   const customLimitValue = Number(customLimit);
-  const effectiveLimit = useGlobalDefault ? globalLimitValue : customLimitValue;
+  const effectiveLimit =
+    useGlobalDefault || limitError ? globalLimitValue : customLimitValue;
 
   const streamCount = (limit: number) =>
     limit === 0
@@ -184,12 +193,16 @@ export const ConcurrentStreamModal: React.FC<ConcurrentStreamModalProps> = ({
               label="Custom limit for this user"
               htmlFor="custom-limit"
               hint="How many streams this user may run at once. Set it to 0 for unlimited."
+              error={limitError}
               className={useGlobalDefault ? inactive : undefined}
             >
               <Input
                 id="custom-limit"
                 type="number"
-                min="0"
+                min={STREAM_LIMIT_RULE.min}
+                max={STREAM_LIMIT_RULE.max}
+                step={1}
+                aria-invalid={Boolean(limitError)}
                 value={customLimit}
                 onChange={(e) => setCustomLimit(e.target.value)}
                 disabled={useGlobalDefault}
@@ -204,7 +217,10 @@ export const ConcurrentStreamModal: React.FC<ConcurrentStreamModalProps> = ({
         <Button variant="outline" onClick={() => onClose()} disabled={loading}>
           Cancel
         </Button>
-        <Button onClick={() => void handleSave()} disabled={loading}>
+        <Button
+          onClick={() => void handleSave()}
+          disabled={loading || Boolean(limitError)}
+        >
           {loading && <Loader2 className="size-4 animate-spin" />}
           Save
         </Button>

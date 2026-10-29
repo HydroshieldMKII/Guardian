@@ -10,6 +10,7 @@ import { EmailService } from '@/modules/config/services/email.service';
 import { AuthSessionService } from '@/modules/auth/auth-session.service';
 import { ConfirmPasswordResetDto } from '@/modules/auth/dto/password-reset.dto';
 import { appUrl } from '@/config/app.config';
+import { serialTransaction } from '@/database/serial-transaction';
 
 export const PASSWORD_RESET_TTL_MS = 15 * 60 * 1000;
 
@@ -89,7 +90,7 @@ export class PasswordResetService {
 
     const token = crypto.randomBytes(TOKEN_BYTES).toString('base64url');
 
-    await this.tokenRepository.manager.transaction(async (manager) => {
+    await serialTransaction(this.tokenRepository.manager, async (manager) => {
       const repository = manager.getRepository(PasswordResetToken);
       await repository.delete({ userId: admin.id });
       await repository.save({

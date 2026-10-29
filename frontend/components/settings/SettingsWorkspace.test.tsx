@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { SettingsWorkspace } from "@/components/settings/SettingsWorkspace";
 import type { SettingsFormData } from "@/components/settings/settings-utils";
@@ -9,6 +9,8 @@ jest.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
 
 const updateConfig = jest.fn<Promise<void>, [unknown]>();
 jest.mock("@/lib/api", () => ({
+  ApiError:
+    jest.requireActual<typeof import("@/lib/api")>("@/lib/api").ApiError,
   apiClient: { updateConfig: (changes: unknown) => updateConfig(changes) },
 }));
 
@@ -21,9 +23,11 @@ jest.mock("@/hooks/useVersionInfo", () => ({
 }));
 
 const setHasUnsavedChanges = jest.fn<void, [boolean]>();
+const setSaveBlocked = jest.fn<void, [boolean]>();
 jest.mock("@/contexts/unsaved-changes-context", () => ({
   useUnsavedChanges: () => ({
     setHasUnsavedChanges,
+    setSaveBlocked,
     setOnSaveAndLeave: jest.fn(),
     setOnDiscardChanges: jest.fn(),
   }),
@@ -204,6 +208,110 @@ describe("unsaved changes", () => {
     await waitFor(() =>
       expect(screen.queryByText("You have unsaved changes")).toBeNull(),
     );
+  });
+});
+
+describe("invalid edits", () => {
+  const editInvalid = async (ui: ReturnType<typeof userEvent.setup>) => {
+    const input = screen.getByLabelText("plex server");
+    await ui.clear(input);
+    await ui.type(input, "bad host");
+  };
+
+  it("blocks Save now and tells the page saving is blocked", async () => {
+    const ui = renderWorkspace();
+
+    await editInvalid(ui);
+
+    expect(screen.getByRole("button", { name: "Save now" })).toBeDisabled();
+    expect(setSaveBlocked).toHaveBeenLastCalledWith(true);
+  });
+
+  it("blocks Save & Leave in the leave dialog", async () => {
+    const ui = renderWorkspace();
+    await editInvalid(ui);
+    await ui.click(screen.getByRole("button", { name: "Back to Dashboard" }));
+
+    expect(screen.getByRole("button", { name: "Save & Leave" })).toBeDisabled();
+    expect(updateConfig).not.toHaveBeenCalled();
+  });
+});
+
+describe("browser navigation", () => {
+  let go: jest.SpyInstance;
+
+  beforeEach(() => {
+    go = jest.spyOn(window.history, "go").mockImplementation(() => undefined);
+  });
+
+  afterEach(() => go.mockRestore());
+
+  const pressBack = () =>
+    act(() => {
+      window.dispatchEvent(new PopStateEvent("popstate"));
+    });
+
+  it("warns before the tab closes while there are edits", async () => {
+    const ui = renderWorkspace();
+    const clean = new Event("beforeunload", { cancelable: true });
+    window.dispatchEvent(clean);
+    expect(clean.defaultPrevented).toBe(false);
+
+    await edit(ui);
+
+    const dirty = new Event("beforeunload", { cancelable: true });
+    window.dispatchEvent(dirty);
+    expect(dirty.defaultPrevented).toBe(true);
+  });
+
+  it("shows the unsaved changes dialog on browser Back", async () => {
+    const ui = renderWorkspace();
+    await edit(ui);
+
+    pressBack();
+
+    expect(await screen.findByRole("dialog")).toHaveTextContent(
+      "Unsaved changes",
+    );
+    await ui.click(screen.getByRole("button", { name: "Stay on page" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(go).not.toHaveBeenCalled();
+    expect(screen.getByLabelText("plex server")).toHaveValue("10.0.0.3");
+  });
+
+  it("goes back in history after discarding", async () => {
+    const ui = renderWorkspace();
+    await edit(ui);
+    pressBack();
+
+    await ui.click(
+      await screen.findByRole("button", { name: "Discard changes" }),
+    );
+
+    expect(go).toHaveBeenCalledWith(-2);
+    expect(push).not.toHaveBeenCalled();
+  });
+
+  it("goes back in history after saving", async () => {
+    const ui = renderWorkspace();
+    await edit(ui);
+    pressBack();
+
+    await ui.click(await screen.findByRole("button", { name: "Save & Leave" }));
+
+    await waitFor(() => expect(go).toHaveBeenCalledWith(-2));
+    expect(updateConfig).toHaveBeenCalled();
+  });
+
+  it("lets Back through when nothing changed", () => {
+    const onPop = jest.fn();
+    renderWorkspace();
+    window.addEventListener("popstate", onPop);
+
+    pressBack();
+
+    expect(screen.queryByRole("dialog")).toBeNull();
+    window.removeEventListener("popstate", onPop);
   });
 });
 

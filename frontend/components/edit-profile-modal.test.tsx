@@ -169,6 +169,46 @@ describe("EditProfileModal", () => {
       );
     });
 
+    it("blocks an empty username with an inline message", async () => {
+      const { ui } = await renderModal();
+
+      await ui.clear(screen.getByLabelText("Username"));
+
+      expect(screen.getByText("Username is required")).toBeInTheDocument();
+      expect(screen.getByLabelText("Username")).toBeRequired();
+      expect(
+        screen.getByRole("button", { name: /Save changes/ }),
+      ).toBeDisabled();
+      expect(updateProfile).not.toHaveBeenCalled();
+    });
+
+    it("blocks a too short username", async () => {
+      const { ui } = await renderModal();
+
+      await ui.clear(screen.getByLabelText("Username"));
+      await ui.type(screen.getByLabelText("Username"), "ab");
+
+      expect(
+        screen.getByText("Username must be 3 to 255 characters"),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: /Save changes/ }),
+      ).toBeDisabled();
+    });
+
+    it("limits the username and email to 255 characters", async () => {
+      await renderModal();
+
+      expect(screen.getByLabelText("Username")).toHaveAttribute(
+        "maxlength",
+        "255",
+      );
+      expect(screen.getByLabelText(/Email/)).toHaveAttribute(
+        "maxlength",
+        "255",
+      );
+    });
+
     it("rejects a malformed email", async () => {
       const { ui } = await renderModal();
 

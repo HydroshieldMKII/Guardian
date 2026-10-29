@@ -298,7 +298,7 @@ describe("DeviceDetailsModal", () => {
       expect(handlers.onClose).toHaveBeenCalled();
     });
 
-    it("discards it on escape too, not just the close button", async () => {
+    it("cancels only the rename on escape and keeps the modal open", async () => {
       const { user, handlers } = renderModal(
         {},
         { editingDevice: 1, newDeviceName: "Bedroom TV" },
@@ -307,7 +307,48 @@ describe("DeviceDetailsModal", () => {
       await user.keyboard("{Escape}");
 
       expect(handlers.onCancelEdit).toHaveBeenCalled();
+      expect(handlers.onClose).not.toHaveBeenCalled();
+    });
+
+    it("closes the modal on escape when not renaming", async () => {
+      const { user, handlers } = renderModal();
+
+      await user.keyboard("{Escape}");
+
+      expect(handlers.onCancelEdit).not.toHaveBeenCalled();
       expect(handlers.onClose).toHaveBeenCalled();
+    });
+
+    it("saves on enter", async () => {
+      const { user, handlers } = renderModal(
+        {},
+        { editingDevice: 1, newDeviceName: "Bedroom TV" },
+      );
+
+      await user.type(screen.getByPlaceholderText("Device name"), "{Enter}");
+
+      expect(handlers.onRename).toHaveBeenCalledWith(1, "Bedroom TV");
+    });
+
+    it("does not save on enter when the name is blank", async () => {
+      const { user, handlers } = renderModal(
+        {},
+        { editingDevice: 1, newDeviceName: "   " },
+      );
+
+      await user.type(screen.getByPlaceholderText("Device name"), "{Enter}");
+
+      expect(handlers.onRename).not.toHaveBeenCalled();
+    });
+
+    it("limits the name to 100 characters", () => {
+      renderModal({}, { editingDevice: 1, newDeviceName: "x".repeat(101) });
+
+      expect(screen.getByPlaceholderText("Device name")).toHaveAttribute(
+        "maxlength",
+        "100",
+      );
+      expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
     });
 
     it("leaves the edit state alone when nothing is being renamed", async () => {

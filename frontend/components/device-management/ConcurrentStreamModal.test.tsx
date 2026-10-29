@@ -257,6 +257,58 @@ describe("ConcurrentStreamModal", () => {
     });
   });
 
+  describe("validating the custom limit", () => {
+    const typeLimit = async (
+      user: ReturnType<typeof userEvent.setup>,
+      value: string,
+    ) => {
+      await user.click(screen.getByRole("switch"));
+      await user.clear(screen.getByLabelText(/Custom limit/));
+      if (value) await user.type(screen.getByLabelText(/Custom limit/), value);
+    };
+
+    it.each(["-3", "1.5", "99999999999", "1001", ""])(
+      "blocks %p with an inline message",
+      async (value) => {
+        const { user } = await renderModal();
+
+        await typeLimit(user, value);
+
+        expect(screen.getByRole("alert")).toHaveTextContent(
+          "Concurrent stream limit must be",
+        );
+        expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
+        expect(updateUserConcurrentStreamLimit).not.toHaveBeenCalled();
+      },
+    );
+
+    it.each(["0", "1000"])("accepts %p", async (value) => {
+      const { user } = await renderModal();
+
+      await typeLimit(user, value);
+
+      expect(screen.queryByRole("alert")).toBeNull();
+      expect(screen.getByRole("button", { name: "Save" })).toBeEnabled();
+    });
+
+    it("ignores the custom value while following the global default", async () => {
+      const { user } = await renderModal();
+      await typeLimit(user, "-3");
+      await user.click(screen.getByRole("switch"));
+
+      expect(screen.queryByRole("alert")).toBeNull();
+      expect(screen.getByRole("button", { name: "Save" })).toBeEnabled();
+    });
+
+    it("keeps the summary on the global limit while the value is invalid", async () => {
+      const { user } = await renderModal();
+
+      await typeLimit(user, "-3");
+
+      expect(screen.queryByText("-3 concurrent streams")).toBeNull();
+    });
+  });
+
   describe("saving", () => {
     it("clears the override when using the global default", async () => {
       const { user, onClose, onUpdate } = await renderModal();

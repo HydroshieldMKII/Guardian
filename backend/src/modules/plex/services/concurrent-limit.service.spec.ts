@@ -37,6 +37,18 @@ describe('ConcurrentLimitService', () => {
     ).not.toHaveBeenCalled();
   });
 
+  it.each([-1, 1.5, Number.NaN, Infinity])(
+    'treats a stored limit of %s as unlimited',
+    async (limit) => {
+      concurrentStreamService.getEffectiveLimit.mockResolvedValue(limit);
+
+      await expect(excessIds()).resolves.toEqual([]);
+      expect(
+        concurrentStreamService.filterCountableSessions,
+      ).not.toHaveBeenCalled();
+    },
+  );
+
   it('leaves a user at their limit alone', async () => {
     concurrentStreamService.getEffectiveLimit.mockResolvedValue(2);
 

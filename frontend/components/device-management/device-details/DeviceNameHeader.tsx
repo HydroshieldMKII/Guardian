@@ -5,6 +5,8 @@ import { ModalHeader } from "@/components/ui/modal";
 import type { UserDevice } from "@/types";
 import { Spinner } from "./Spinner";
 
+export const MAX_DEVICE_NAME_LENGTH = 100;
+
 export function DeviceNameHeader({
   device,
   renaming,
@@ -24,6 +26,12 @@ export function DeviceNameHeader({
   onRename: () => void;
   onCancel: () => void;
 }) {
+  const trimmedName = newName.trim();
+  const canSave =
+    trimmedName.length > 0 &&
+    trimmedName.length <= MAX_DEVICE_NAME_LENGTH &&
+    !busy;
+
   return (
     <ModalHeader
       title={device.deviceName || "Unknown"}
@@ -37,13 +45,16 @@ export function DeviceNameHeader({
               className="h-8 min-w-40 flex-1"
               placeholder="Device name"
               aria-label="Device name"
+              maxLength={MAX_DEVICE_NAME_LENGTH}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && canSave) {
+                  e.preventDefault();
+                  onRename();
+                }
+              }}
               autoFocus
             />
-            <Button
-              size="sm"
-              onClick={onRename}
-              disabled={!newName.trim() || busy}
-            >
+            <Button size="sm" onClick={onRename} disabled={!canSave}>
               {busy ? <Spinner /> : "Save"}
             </Button>
             <Button

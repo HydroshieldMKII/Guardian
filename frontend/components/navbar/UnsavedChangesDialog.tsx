@@ -12,12 +12,14 @@ import {
 export function UnsavedChangesDialog({
   open,
   isSaving,
+  saveBlocked,
   onStay,
   onSave,
   onDiscard,
 }: {
   open: boolean;
   isSaving: boolean;
+  saveBlocked: boolean;
   onStay: () => void;
   onSave: () => void;
   onDiscard: () => void;
@@ -45,7 +47,7 @@ export function UnsavedChangesDialog({
           </Button>
           <Button
             onClick={onSave}
-            disabled={isSaving}
+            disabled={isSaving || saveBlocked}
             className="order-2 sm:order-2"
           >
             {isSaving ? (

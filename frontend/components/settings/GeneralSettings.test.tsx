@@ -785,3 +785,49 @@ describe("GeneralSettings password reset", () => {
     ]);
   });
 });
+
+describe("GeneralSettings numeric validation", () => {
+  it.each([
+    [
+      "CONCURRENT_STREAM_LIMIT",
+      "-1",
+      "Concurrent stream limit must be between 0 and 1000",
+    ],
+    [
+      "CONCURRENT_STREAM_LIMIT",
+      "1.5",
+      "Concurrent stream limit must be a whole number between 0 and 1000",
+    ],
+    [
+      "CONCURRENT_STREAM_LIMIT",
+      "99999999999",
+      "Concurrent stream limit must be between 0 and 1000",
+    ],
+    [
+      "PLEXGUARD_REFRESH_INTERVAL",
+      "4",
+      "Session refresh interval must be between 5 and 86400",
+    ],
+    [
+      "DEVICE_CLEANUP_INTERVAL_DAYS",
+      "0",
+      "Device cleanup interval must be between 1 and 3650",
+    ],
+  ])("flags %s = %s inline", (key, value, message) => {
+    const { container } = renderPanel("guardian", {
+      formData: { [key]: value },
+    });
+
+    expect(screen.getByRole("alert")).toHaveTextContent(message);
+    expect(container.querySelector(`#${key}`)).toHaveAttribute(
+      "aria-invalid",
+      "true",
+    );
+  });
+
+  it("shows no error for stored values", () => {
+    renderPanel("guardian");
+
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+});

@@ -123,6 +123,7 @@ export const isPrivateIP = (ip: string): boolean => {
       a === 10 ||
       (a === 172 && b >= 16 && b <= 31) ||
       (a === 192 && b === 168) ||
+      (a === 169 && b === 254) ||
       a === 127
     );
   }
@@ -183,9 +184,7 @@ export const isIPInCIDR = (ip: string, cidr: string): boolean => {
     const [network, prefixLength] = trimmedCIDR.split("/");
     const mask = prefixToMask(parseInt(prefixLength));
 
-    return (
-      (ipToNumber(normalizedIP) & mask) === (ipToNumber(network) & mask)
-    );
+    return (ipToNumber(normalizedIP) & mask) === (ipToNumber(network) & mask);
   }
 
   const prefixLength = cidrPrefixLength(trimmedCIDR, 128);
@@ -268,9 +267,9 @@ export const validateIPAccess = (
 
   if (!isIPAllowed(clientIP, allowedIPs)) {
     return {
-    allowed: false,
-    reason: "This IP address is not on the allowed list",
-  };
+      allowed: false,
+      reason: "This IP address is not on the allowed list",
+    };
   }
 
   return { allowed: true };

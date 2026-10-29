@@ -8,6 +8,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { MAX_TEMPORARY_ACCESS_MINUTES } from "@/lib/duration";
 import { cn } from "@/lib/utils";
 import { EXPIRY_FORMAT } from "./options";
 
@@ -25,6 +26,14 @@ const TIME_PARTS = [
     write: (date: Date, value: number) => date.setMinutes(value),
   },
 ];
+
+const isSelectable = (day: Date) => {
+  const now = Date.now();
+  return (
+    day.getTime() >= now &&
+    day.getTime() <= now + MAX_TEMPORARY_ACCESS_MINUTES * 60_000
+  );
+};
 
 const anHourFromNowOn = (date: Date) => {
   const now = new Date();
@@ -64,7 +73,7 @@ export function ExpiryDateField({ date, onChange }: ExpiryDateFieldProps) {
             onSelect={(picked) =>
               onChange(picked ? anHourFromNowOn(picked) : undefined)
             }
-            disabled={(day) => day < new Date()}
+            disabled={(day) => !isSelectable(day)}
             autoFocus
           />
           {date && (

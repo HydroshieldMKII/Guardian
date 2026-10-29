@@ -10,21 +10,10 @@ import {
 import { UsersService } from '@/modules/users/services/users.service';
 import { ConcurrentStreamService } from '@/modules/users/services/concurrent-stream.service';
 import { UserPreference } from '@/entities/user-preference.entity';
+import { UpdateUserPreferenceDto } from '@/modules/users/dto/update-user-preference.dto';
+import { UpdateUserIPPolicyDto } from '@/modules/users/dto/update-user-ip-policy.dto';
+import { UpdateConcurrentStreamLimitDto } from '@/modules/users/dto/update-concurrent-stream-limit.dto';
 import { AdminOnly } from '@/modules/auth/decorators/admin-only.decorator';
-
-interface UpdateUserPreferenceDto {
-  defaultBlock: boolean | null;
-}
-
-interface UpdateUserIPPolicyDto {
-  networkPolicy?: 'both' | 'lan' | 'wan';
-  ipAccessPolicy?: 'all' | 'restricted';
-  allowedIPs?: string[];
-}
-
-interface UpdateConcurrentStreamLimitDto {
-  concurrentStreamLimit: number | null;
-}
 
 @Controller('users')
 @AdminOnly()

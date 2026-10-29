@@ -127,13 +127,10 @@ export class UserPortalService {
     plexUserId: string,
   ): Promise<UserDevice> {
     const device = await this.userDeviceRepository.findOne({
-      where: { id: deviceId },
+      where: { id: deviceId, userId: plexUserId },
     });
     if (!device) {
       throw new ForbiddenException('Device not found');
-    }
-    if (device.userId !== plexUserId) {
-      throw new ForbiddenException('Access denied to this device');
     }
     if (device.status === 'approved') {
       throw new ForbiddenException('Device is already approved');

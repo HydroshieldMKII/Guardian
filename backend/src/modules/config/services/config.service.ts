@@ -1,4 +1,10 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  NotFoundException,
+  OnModuleInit,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AppSettings } from '@/entities/app-settings.entity';
@@ -9,7 +15,15 @@ import {
   parseSettingValue,
   toStoredValue,
 } from '@/modules/config/services/setting-values';
-import { validateSettingValue } from '@/modules/config/services/setting-validation';
+import {
+  isReadOnlySetting,
+  validateSettingValue,
+} from '@/modules/config/services/setting-validation';
+import {
+  isSecretMask,
+  toPublicSetting,
+} from '@/modules/config/services/public-setting';
+import { serialTransaction } from '@/database/serial-transaction';
 import {
   SETTINGS_CATALOG,
   SETTING_KEYS,
@@ -19,11 +33,14 @@ import {
   isSettingKey,
 } from '@/modules/config/settings.catalog';
 
-export interface ConfigSettingDto {
+export interface SettingWrite {
+  key: string;
+  value: unknown;
+}
+
+interface PendingWrite {
   key: SettingKey;
-  value: string;
-  type?: 'string' | 'number' | 'boolean' | 'json';
-  private?: boolean;
+  stringValue: string;
 }
 
 @Injectable()
@@ -47,6 +64,18 @@ export class ConfigService implements OnModuleInit {
 
   async reloadSettings(): Promise<void> {
     await this.loadCache();
+  }
+
+  async applyStoredSettings(keys: readonly string[]): Promise<void> {
+    await this.loadCache();
+    const settingKeys = keys.filter(isSettingKey);
+    if (
+      settingKeys.includes('USER_PORTAL_ENABLED') &&
+      this.cache.get('USER_PORTAL_ENABLED') === false
+    ) {
+      await this.signOutPortalUsers();
+    }
+    settingKeys.forEach((key) => this.notifyConfigChange(key));
   }
 
   async restoreDefaultSettings(): Promise<void> {
@@ -139,14 +168,12 @@ export class ConfigService implements OnModuleInit {
       order: { key: 'ASC' },
     });
 
-    return settings.map((setting) => ({
-      id: setting.id,
-      key: setting.key,
-      type: setting.type,
-      private: setting.private,
-      updatedAt: setting.updatedAt,
-      value: setting.private && setting.value ? '••••••••' : setting.value,
-    }));
+    return settings.map(toPublicSetting);
+  }
+
+  async getPublicSetting(key: SettingKey): Promise<AppSettings | null> {
+    const setting = await this.settingsRepository.findOne({ where: { key } });
+    return setting ? toPublicSetting(setting) : null;
   }
 
   async getSetting<K extends SettingKey>(
@@ -166,26 +193,81 @@ export class ConfigService implements OnModuleInit {
   }
 
   async updateSetting(key: SettingKey, value: unknown): Promise<AppSettings> {
-    const stringValue = toStoredValue(value);
-    validateSettingValue(key, stringValue);
-    return this.writeSetting(key, stringValue);
+    const [updated] = await this.updateMultipleSettings([{ key, value }]);
+    return updated;
   }
 
-  private async writeSetting(
-    key: SettingKey,
-    stringValue: string,
-  ): Promise<AppSettings> {
-    const setting = await this.settingsRepository.findOne({ where: { key } });
-    if (!setting) {
-      throw new Error(`Setting ${key} not found`);
+  async updateMultipleSettings(
+    settings: SettingWrite[],
+  ): Promise<AppSettings[]> {
+    const pending = this.prepareWrites(settings);
+    const written = await serialTransaction(
+      this.settingsRepository.manager,
+      async (manager) => {
+        const repository = manager.getRepository(AppSettings);
+        const rows: Array<{
+          row: AppSettings;
+          stringValue: string;
+          changed: boolean;
+        }> = [];
+        for (const { key, stringValue } of pending) {
+          const row = await repository.findOne({ where: { key } });
+          if (!row) {
+            throw new NotFoundException(`Setting ${key} not found`);
+          }
+          if (isSecretMask(row, stringValue)) {
+            rows.push({ row, stringValue, changed: false });
+            continue;
+          }
+          row.value = stringValue;
+          row.updatedAt = new Date();
+          rows.push({
+            row: await repository.save(row),
+            stringValue,
+            changed: true,
+          });
+        }
+        return rows;
+      },
+    );
+
+    for (const { row, stringValue, changed } of written) {
+      if (changed) await this.applyWrittenSetting(row, stringValue);
     }
 
-    setting.value = stringValue;
-    setting.updatedAt = new Date();
+    return written.map(({ row }) => toPublicSetting(row));
+  }
 
-    const updated = await this.settingsRepository.save(setting);
+  private prepareWrites(settings: SettingWrite[]): PendingWrite[] {
+    const seen = new Set<string>();
+    return settings.map(({ key, value }) => {
+      if (!isSettingKey(key)) {
+        throw new BadRequestException('Unknown setting');
+      }
+      if (seen.has(key)) {
+        throw new BadRequestException(`Duplicate setting ${key}`);
+      }
+      seen.add(key);
+      if (isReadOnlySetting(key)) {
+        throw new BadRequestException(`Setting ${key} is read-only`);
+      }
+      if (typeof value === 'object' || value === undefined) {
+        throw new BadRequestException(
+          'Setting value must be a string, number or boolean',
+        );
+      }
+      const stringValue = toStoredValue(value);
+      validateSettingValue(key, stringValue);
+      return { key, stringValue };
+    });
+  }
 
-    this.cache.set(key, parseSettingValue(stringValue, setting.type, key));
+  private async applyWrittenSetting(
+    row: AppSettings,
+    stringValue: string,
+  ): Promise<void> {
+    const key = row.key as SettingKey;
+    this.cache.set(key, parseSettingValue(stringValue, row.type, key));
 
     if (key === 'TIMEZONE') {
       this.logTimezoneChange(stringValue);
@@ -194,17 +276,10 @@ export class ConfigService implements OnModuleInit {
     }
 
     if (key === 'USER_PORTAL_ENABLED' && stringValue === 'false') {
-      const revokedCount = await this.revokeAllPlexUserSessions();
-      if (revokedCount > 0) {
-        this.logger.log(
-          `User portal disabled - revoked ${revokedCount} Plex user session(s)`,
-        );
-      }
+      await this.signOutPortalUsers();
     }
 
     this.notifyConfigChange(key);
-
-    return updated;
   }
 
   private logTimezoneChange(timezoneOffset: string): void {
@@ -221,9 +296,19 @@ export class ConfigService implements OnModuleInit {
           minute: '2-digit',
           second: '2-digit',
           hour12: false,
+          timeZone: 'UTC',
         },
       )}`,
     );
+  }
+
+  private async signOutPortalUsers(): Promise<void> {
+    const revokedCount = await this.revokeAllPlexUserSessions();
+    if (revokedCount > 0) {
+      this.logger.log(
+        `User portal disabled - revoked ${revokedCount} Plex user session(s)`,
+      );
+    }
   }
 
   private async revokeAllPlexUserSessions(): Promise<number> {
@@ -232,30 +317,6 @@ export class ConfigService implements OnModuleInit {
     });
 
     return result.affected || 0;
-  }
-
-  async updateMultipleSettings(
-    settings: ConfigSettingDto[],
-  ): Promise<AppSettings[]> {
-    const pending = settings.map(({ key, value }) => {
-      const stringValue = toStoredValue(value);
-      validateSettingValue(key, stringValue);
-      return { key, stringValue };
-    });
-
-    const results: AppSettings[] = [];
-
-    for (const { key, stringValue } of pending) {
-      try {
-        const updated = await this.writeSetting(key, stringValue);
-        results.push(updated);
-      } catch (error) {
-        this.logger.error(`Failed to update setting ${key}:`, error);
-        throw error;
-      }
-    }
-
-    return results;
   }
 
   async getTimezone(): Promise<string> {

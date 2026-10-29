@@ -43,6 +43,7 @@ export function NewTimeRuleForm({
         <div className="flex items-center gap-2">
           <Input
             type="time"
+            aria-label="Start time"
             value={value.startTime}
             onChange={(e) => onChange({ startTime: e.target.value })}
             className="flex-1"
@@ -50,6 +51,7 @@ export function NewTimeRuleForm({
           <span className="text-sm text-muted-foreground">to</span>
           <Input
             type="time"
+            aria-label="End time"
             value={value.endTime}
             onChange={(e) => onChange({ endTime: e.target.value })}
             className="flex-1"

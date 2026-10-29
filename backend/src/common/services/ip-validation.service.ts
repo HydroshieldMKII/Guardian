@@ -9,6 +9,8 @@ const IPV4_CIDR = new RegExp(
   `^(?:${OCTET}\\.){3}${OCTET}/(?:[0-9]|[1-2][0-9]|3[0-2])$`,
 );
 
+const NETWORK_POLICIES: readonly string[] = ['lan', 'wan', 'both'];
+
 export type NetworkType = 'lan' | 'wan' | 'unknown';
 
 export interface IPValidationResult {
@@ -77,7 +79,8 @@ export class IPValidationService {
         a === 10 ||
         (a === 172 && b >= 16 && b <= 31) ||
         (a === 192 && b === 168) ||
-        a === 127
+        a === 127 ||
+        (a === 169 && b === 254)
       );
     }
 
@@ -183,9 +186,11 @@ export class IPValidationService {
   isIPInAllowedList(clientIP: string, allowedIPs: string[]): boolean {
     const normalizedClientIP = this.normalizeIP(clientIP);
     if (!this.isValidIP(normalizedClientIP)) return false;
+    if (!Array.isArray(allowedIPs)) return false;
     if (!allowedIPs.length) return true;
 
     for (const allowed of allowedIPs) {
+      if (typeof allowed !== 'string') continue;
       const trimmed = allowed.trim();
       if (this.isValidIP(trimmed)) {
         if (normalizedClientIP === this.normalizeIP(trimmed)) return true;
@@ -213,6 +218,14 @@ export class IPValidationService {
     }
 
     const networkType = this.getNetworkType(clientIP);
+    if (!NETWORK_POLICIES.includes(policy.networkPolicy)) {
+      return {
+        allowed: false,
+        reason: messages.notAllowed || DEFAULT_BLOCK_MESSAGES.notAllowed,
+        stopCode: 'IP_POLICY_NOT_ALLOWED',
+      };
+    }
+
     if (policy.networkPolicy === 'lan' && networkType !== 'lan') {
       return {
         allowed: false,

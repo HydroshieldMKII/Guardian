@@ -11,6 +11,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { FormError } from "@/components/profile/FormError";
 import type { ProfileForm } from "@/hooks/profile/useProfileForm";
+import {
+  PROFILE_FIELD_MAX_LENGTH,
+  USERNAME_MIN_LENGTH,
+} from "@/lib/profile-validation";
+
+const INVALID_INPUT_CLASS = "border-red-500 focus-visible:ring-red-500";
 
 export function ProfileTab({
   form,
@@ -73,8 +79,13 @@ export function ProfileTab({
           onChange={(e) => setField("username", e.target.value)}
           placeholder="Enter username"
           disabled={saving}
-          minLength={3}
+          required
+          minLength={USERNAME_MIN_LENGTH}
+          maxLength={PROFILE_FIELD_MAX_LENGTH}
+          aria-invalid={Boolean(form.usernameError)}
+          className={form.usernameError ? INVALID_INPUT_CLASS : ""}
         />
+        <FormError message={form.usernameError} />
       </div>
 
       <Field
@@ -89,9 +100,8 @@ export function ProfileTab({
           onChange={(e) => setField("email", e.target.value)}
           placeholder="Leave empty to remove email"
           disabled={saving}
-          className={
-            form.error ? "border-red-500 focus-visible:ring-red-500" : ""
-          }
+          maxLength={PROFILE_FIELD_MAX_LENGTH}
+          className={form.error ? INVALID_INPUT_CLASS : ""}
         />
       </Field>
       <FormError message={form.error} />
@@ -105,7 +115,10 @@ export function ProfileTab({
         >
           Cancel
         </Button>
-        <Button type="submit" disabled={saving || !form.hasChanges}>
+        <Button
+          type="submit"
+          disabled={saving || !form.hasChanges || Boolean(form.usernameError)}
+        >
           {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           Save changes
         </Button>

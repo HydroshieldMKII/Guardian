@@ -80,7 +80,7 @@ export function useSetupForm(createAdmin: CreateAdmin) {
       );
       toast({
         title: "Account created",
-        description: "You can sign in with it now",
+        description: "You are signed in as the administrator",
         variant: "success",
       });
     } catch (error) {

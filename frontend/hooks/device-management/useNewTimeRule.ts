@@ -6,7 +6,6 @@ import type { TimeRuleFeedback } from "./useTimeRuleFeedback";
 const blankRule = (deviceIdentifier?: string): CreateTimeRuleDto => ({
   deviceIdentifier: deviceIdentifier || undefined,
   ruleName: "",
-  action: "block",
   dayOfWeek: 0,
   startTime: "10:00",
   endTime: "15:00",

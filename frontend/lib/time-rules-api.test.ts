@@ -34,7 +34,6 @@ describe("timeRulesApi", () => {
   it("creates a rule", async () => {
     const dto = {
       ruleName: "Night",
-      action: "block" as const,
       dayOfWeek: 1,
       startTime: "20:00",
       endTime: "23:00",

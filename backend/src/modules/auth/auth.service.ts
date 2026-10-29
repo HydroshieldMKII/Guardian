@@ -15,8 +15,12 @@ import { UpdateProfileDto } from '@/modules/auth/dto/update-profile.dto';
 import { UpdatePasswordDto } from '@/modules/auth/dto/update-password.dto';
 import { AuthSessionService } from '@/modules/auth/auth-session.service';
 import { CaptchaService } from '@/modules/auth/captcha.service';
+import { serialTransaction } from '@/database/serial-transaction';
 
 const BCRYPT_ROUNDS = 12;
+
+const UNKNOWN_ACCOUNT_HASH =
+  '$2b$12$2oRwdn1IDk13ZyAjUNtmOOCft6x.oqQjxVQPdpk8RxEnGWyiJraOK';
 
 const toUserDto = (admin: AdminUser): UserDto => ({
   id: admin.id,
@@ -51,7 +55,8 @@ export class AuthService {
     const passwordHash = await bcrypt.hash(dto.password, BCRYPT_ROUNDS);
 
     try {
-      const admin = await this.adminUserRepository.manager.transaction(
+      const admin = await serialTransaction(
+        this.adminUserRepository.manager,
         async (manager) => {
           const repository = manager.getRepository(AdminUser);
           if ((await repository.count()) > 0) {
@@ -59,7 +64,7 @@ export class AuthService {
           }
           return repository.save({
             username: dto.username,
-            email: dto.email,
+            email: dto.email ?? '',
             passwordHash,
           });
         },
@@ -85,16 +90,12 @@ export class AuthService {
       where: [{ username: dto.username }, { email: dto.username }],
     });
 
-    if (!admin) {
-      throw new UnauthorizedException('Invalid credentials');
-    }
-
     const passwordValid = await bcrypt.compare(
       dto.password,
-      admin.passwordHash,
+      admin?.passwordHash ?? UNKNOWN_ACCOUNT_HASH,
     );
 
-    if (!passwordValid) {
+    if (!admin || !passwordValid) {
       throw new UnauthorizedException('Invalid credentials');
     }
 
@@ -127,7 +128,7 @@ export class AuthService {
         user.username = dto.username;
       }
       if (dto.email !== undefined) {
-        user.email = dto.email;
+        user.email = dto.email ?? '';
       }
       if (dto.avatarUrl !== undefined) {
         user.avatarUrl = dto.avatarUrl;
@@ -158,6 +159,12 @@ export class AuthService {
 
     if (dto.newPassword !== dto.confirmPassword) {
       throw new BadRequestException('New passwords do not match');
+    }
+
+    if (dto.newPassword === dto.currentPassword) {
+      throw new BadRequestException(
+        'New password must be different from the current password',
+      );
     }
 
     const newPasswordHash = await bcrypt.hash(dto.newPassword, BCRYPT_ROUNDS);

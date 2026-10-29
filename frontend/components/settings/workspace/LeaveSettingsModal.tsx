@@ -5,6 +5,7 @@ import { Modal, ModalFooter, ModalHeader } from "@/components/ui/modal";
 interface LeaveSettingsModalProps {
   open: boolean;
   isSaving: boolean;
+  saveBlocked: boolean;
   onStay: () => void;
   onDiscard: () => void;
   onSave: () => void;
@@ -13,6 +14,7 @@ interface LeaveSettingsModalProps {
 export function LeaveSettingsModal({
   open,
   isSaving,
+  saveBlocked,
   onStay,
   onDiscard,
   onSave,
@@ -30,7 +32,7 @@ export function LeaveSettingsModal({
         <Button variant="destructive" onClick={onDiscard}>
           Discard changes
         </Button>
-        <Button onClick={onSave} disabled={isSaving}>
+        <Button onClick={onSave} disabled={isSaving || saveBlocked}>
           {isSaving && <Loader2 className="size-4 animate-spin" />}
           Save & Leave
         </Button>

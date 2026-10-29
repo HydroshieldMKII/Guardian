@@ -1,3 +1,4 @@
+import { BadRequestException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { SessionsController } from '@/modules/sessions/sessions.controller';
 import { ActiveSessionService } from '@/modules/sessions/services/active-session.service';
@@ -129,9 +130,36 @@ describe('SessionsController', () => {
   });
 
   it('deletes a history row by numeric id', async () => {
-    await expect(controller.deleteSessionHistory('42')).resolves.toEqual({
+    await expect(controller.deleteSessionHistory(42)).resolves.toEqual({
       success: true,
     });
     expect(sessionHistoryService.deleteSessionHistory).toHaveBeenCalledWith(42);
   });
+
+  it.each([0, -1])('rejects the non-positive id %i with a 400', async (id) => {
+    await expect(controller.deleteSessionHistory(id)).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+    expect(sessionHistoryService.deleteSessionHistory).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['abc', undefined, 50, 0],
+    ['-5', '-1', 50, 0],
+    ['0', '1.5', 50, 0],
+    ['99999999999', '30', 200, 30],
+    ['1e30', '1e3', 50, 0],
+  ])(
+    'parses limit=%s offset=%s as %i/%i',
+    async (limit, offset, expectedLimit, expectedOffset) => {
+      await controller.getUserSessionHistory('u1', limit, undefined, offset);
+      expect(sessionHistoryService.getUserSessionHistory).toHaveBeenCalledWith(
+        'u1',
+        expect.objectContaining({
+          limit: expectedLimit,
+          offset: expectedOffset,
+        }),
+      );
+    },
+  );
 });

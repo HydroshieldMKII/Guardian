@@ -7,6 +7,8 @@ const MINUTES_IN: Record<DurationUnit, number> = {
   weeks: 60 * 24 * 7,
 };
 
+export const MAX_TEMPORARY_ACCESS_MINUTES = 10 * 365 * MINUTES_IN.days;
+
 const MINUTE_UNITS: [string, number][] = [
   ["week", MINUTES_IN.weeks],
   ["day", MINUTES_IN.days],

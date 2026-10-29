@@ -7,6 +7,7 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { AdminTools } from "@/components/settings/AdminTools";
+import { MAX_IMPORT_FILE_BYTES } from "@/hooks/settings/useSettingsBackup";
 
 const resetStreamCounts = jest.fn<Promise<unknown>, unknown[]>();
 const clearSessionHistory = jest.fn<Promise<unknown>, unknown[]>();
@@ -420,6 +421,24 @@ describe("AdminTools import", () => {
       expect(toast).toHaveBeenCalledWith(
         expect.objectContaining({ title: "Invalid file" }),
       ),
+    );
+    expect(importDatabase).not.toHaveBeenCalled();
+  });
+
+  it("refuses a file larger than the server accepts before uploading it", async () => {
+    renderPanel();
+    const input = document.querySelector(
+      'input[type="file"]',
+    ) as HTMLInputElement;
+    const file = new File(["{}"], "backup.json", { type: "application/json" });
+    Object.defineProperty(file, "size", { value: MAX_IMPORT_FILE_BYTES + 1 });
+
+    await act(async () => {
+      fireEvent.change(input, { target: { files: [file] } });
+    });
+
+    expect(toast).toHaveBeenCalledWith(
+      expect.objectContaining({ title: "File too large" }),
     );
     expect(importDatabase).not.toHaveBeenCalled();
   });

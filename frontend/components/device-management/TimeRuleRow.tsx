@@ -66,6 +66,7 @@ export function TimeRuleRow({
             <div className="flex items-center gap-2">
               <FocusInput
                 type="time"
+                ariaLabel="Rule start time"
                 value={displayData.startTime}
                 onChange={(value) => onDraftChange({ startTime: value })}
                 className="flex-1"
@@ -73,6 +74,7 @@ export function TimeRuleRow({
               <span className="text-sm text-muted-foreground">to</span>
               <FocusInput
                 type="time"
+                ariaLabel="Rule end time"
                 value={displayData.endTime}
                 onChange={(value) => onDraftChange({ endTime: value })}
                 className="flex-1"

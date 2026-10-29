@@ -23,7 +23,6 @@ const rule = (overrides: Partial<UserTimeRule> = {}): UserTimeRule => ({
   userId: "u1",
   ruleName: "Bedtime",
   enabled: true,
-  action: "block",
   dayOfWeek: 1,
   startTime: "20:00",
   endTime: "22:00",
@@ -36,7 +35,6 @@ const draft = (
   overrides: Partial<CreateTimeRuleDto> = {},
 ): CreateTimeRuleDto => ({
   ruleName: "Bedtime",
-  action: "block",
   dayOfWeek: 1,
   startTime: "20:00",
   endTime: "22:00",

@@ -1,6 +1,8 @@
+import { Logger } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { PlexService } from './plex.service';
 import { PlexClient } from './plex-client';
+import { PlexConfigurationError } from './plex-configuration-error';
 import { DevicesService } from '@/modules/devices/services/devices.service';
 import { ActiveSessionService } from '@/modules/sessions/services/active-session.service';
 import { ConfigService } from '@/modules/config/services/config.service';
@@ -310,6 +312,23 @@ describe('PlexService', () => {
       );
 
       await expect(service.updateActiveSessions()).resolves.toBe(orchestrated);
+    });
+
+    it('logs an invalid Plex address as a warning and rethrows', async () => {
+      const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+      const error = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+      sessionOrchestratorService.orchestrateSessionUpdate.mockRejectedValue(
+        new PlexConfigurationError('Invalid Plex server address or port.'),
+      );
+
+      await expect(service.updateActiveSessions()).rejects.toThrow(
+        'Invalid Plex server address or port.',
+      );
+
+      expect(warn).toHaveBeenCalled();
+      expect(error).not.toHaveBeenCalled();
+      warn.mockRestore();
+      error.mockRestore();
     });
 
     it('propagates an orchestration failure', async () => {

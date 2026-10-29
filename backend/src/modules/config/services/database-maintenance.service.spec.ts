@@ -1,4 +1,5 @@
 import { AppSettings } from '@/entities/app-settings.entity';
+import { ConfigService } from '@/modules/config/services/config.service';
 import { DatabaseMaintenanceService } from '@/modules/config/services/database-maintenance.service';
 import {
   ConfigTestbed,
@@ -88,6 +89,65 @@ describe('DatabaseMaintenanceService', () => {
       expect(prepare('PLEXGUARD_REFRESH_INTERVAL', '2')).toBe('5');
       expect(prepare('SMTP_PORT', '70000')).toBe('65535');
       expect(prepare('DEVICE_CLEANUP_INTERVAL_DAYS', '0')).toBe('1');
+    });
+
+    it('keeps the extra outcome fields out of the result', async () => {
+      databaseImportService.importDatabase.mockResolvedValue({
+        imported: 1,
+        skipped: 0,
+        changedSettings: [],
+      });
+
+      await expect(service.importDatabase({ data: {} })).resolves.toEqual({
+        imported: 1,
+        skipped: 0,
+      });
+    });
+
+    it('notifies the listeners of every setting the import changed', async () => {
+      const listener = jest.fn();
+      const module = await testbed.build();
+      const configService = module.get(ConfigService);
+      const maintenance = module.get(DatabaseMaintenanceService);
+      configService.addConfigChangeListener(
+        'PLEXGUARD_REFRESH_INTERVAL',
+        listener,
+      );
+      store.set(
+        'PLEXGUARD_REFRESH_INTERVAL',
+        testbed.row('PLEXGUARD_REFRESH_INTERVAL', '60', 'number'),
+      );
+      databaseImportService.importDatabase.mockResolvedValue({
+        imported: 2,
+        skipped: 0,
+        changedSettings: [
+          { key: 'PLEXGUARD_REFRESH_INTERVAL', value: '60' },
+          { key: 'RETIRED_SETTING', value: 'x' },
+        ],
+      });
+      settingsRepo.save.mockClear();
+
+      await maintenance.importDatabase({ data: {} });
+
+      expect(listener).toHaveBeenCalledTimes(1);
+      await expect(
+        configService.getSetting('PLEXGUARD_REFRESH_INTERVAL'),
+      ).resolves.toBe(60);
+      expect(settingsRepo.save).not.toHaveBeenCalledWith(
+        expect.objectContaining({ key: 'PLEXGUARD_REFRESH_INTERVAL' }),
+      );
+    });
+
+    it('notifies listeners again when a reset restores the defaults', async () => {
+      const module = await testbed.build();
+      const listener = jest.fn();
+      module
+        .get(ConfigService)
+        .addConfigChangeListener('PLEXGUARD_REFRESH_INTERVAL', listener);
+
+      await module.get(DatabaseMaintenanceService).resetDatabase();
+
+      expect(listener).toHaveBeenCalledTimes(1);
     });
 
     it('re-seeds the defaults after a reset', async () => {

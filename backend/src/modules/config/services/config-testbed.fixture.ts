@@ -22,7 +22,9 @@ export interface ConfigTestbed {
     type?: string,
     isPrivate?: boolean,
   ) => AppSettings;
-  settingsRepo: Record<'find' | 'findOne' | 'save', jest.Mock>;
+  settingsRepo: Record<'find' | 'findOne' | 'save', jest.Mock> & {
+    manager: { transaction: jest.Mock; getRepository: jest.Mock };
+  };
   sessionRepo: { delete: jest.Mock };
   emailService: { loadSmtpSettings: jest.Mock };
   emailTemplateService: { generateSMTPTestEmail: jest.Mock };
@@ -63,15 +65,46 @@ export const createConfigTestbed = (): ConfigTestbed => {
       updatedAt: new Date('2026-01-01T00:00:00Z'),
     });
 
-  const settingsRepo = {
+  const snapshotStore = () =>
+    [...store.values()].map((entry) => ({
+      entry,
+      value: entry.value,
+      updatedAt: entry.updatedAt,
+    }));
+
+  const restoreStore = (snapshot: ReturnType<typeof snapshotStore>) => {
+    for (const { entry, value, updatedAt } of snapshot) {
+      entry.value = value;
+      entry.updatedAt = updatedAt;
+    }
+  };
+
+  const manager: ConfigTestbed['settingsRepo']['manager'] = {
+    getRepository: jest.fn(() => settingsRepo),
+    transaction: jest.fn(
+      async (work: (entityManager: unknown) => Promise<unknown>) => {
+        const snapshot = snapshotStore();
+        try {
+          return await work(manager);
+        } catch (error) {
+          restoreStore(snapshot);
+          throw error;
+        }
+      },
+    ),
+  };
+
+  const settingsRepo: ConfigTestbed['settingsRepo'] = {
+    manager,
     find: jest.fn(() => Promise.resolve([...store.values()])),
     findOne: jest.fn(({ where }: { where: { key: string } }) =>
       Promise.resolve(store.get(where.key) ?? null),
     ),
     save: jest.fn((entity: AppSettings) => {
+      const existing = store.get(entity.key);
       const saved = Object.assign(
-        store.get(entity.key) ?? new AppSettings(),
-        { id: store.size + 1, private: false },
+        existing ?? new AppSettings(),
+        existing ? {} : { id: store.size + 1, private: false },
         entity,
       );
       store.set(saved.key, saved);
@@ -120,7 +153,11 @@ export const createConfigTestbed = (): ConfigTestbed => {
   };
 
   const databaseImportService = {
-    importDatabase: jest.fn().mockResolvedValue({ imported: 5, skipped: 1 }),
+    importDatabase: jest.fn().mockResolvedValue({
+      imported: 5,
+      skipped: 1,
+      changedSettings: [],
+    }),
   };
 
   const versionService = {

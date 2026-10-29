@@ -51,7 +51,7 @@ export function SessionHistoryFilters({
           className="size-9"
         />
       </div>
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
         <SegmentedControl
           options={APP_FILTERS}
           value={appFilter}

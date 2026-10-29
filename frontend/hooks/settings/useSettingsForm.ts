@@ -5,10 +5,11 @@ import {
   hasChangedSettings,
   mergeFormData,
 } from "@/components/settings/settings-form";
+import { invalidChangedSettings } from "@/components/settings/setting-validation";
 import type { SettingsFormData } from "@/components/settings/settings-utils";
 import { useToast } from "@/hooks/use-toast";
 import type { SettingUpdate } from "@/hooks/useSettings";
-import { apiClient } from "@/lib/api";
+import { ApiError, apiClient } from "@/lib/api";
 import type { AppSetting } from "@/types";
 
 export function useSettingsForm(
@@ -30,6 +31,9 @@ export function useSettingsForm(
     setHasUnsavedChanges(hasChangedSettings(settings, formData));
   }, [formData, settings]);
 
+  const hasErrors =
+    Object.keys(invalidChangedSettings(settings, formData)).length > 0;
+
   const change = (updates: Partial<SettingsFormData>) =>
     setFormData((current) => mergeFormData(current, updates));
 
@@ -39,6 +43,7 @@ export function useSettingsForm(
   }, [settings]);
 
   const commit = useCallback(async () => {
+    if (hasErrors) throw new Error("Fix the highlighted settings first");
     const changes = changedSettings(settings, formData);
     setIsSaving(true);
     try {
@@ -51,7 +56,9 @@ export function useSettingsForm(
       });
       setHasUnsavedChanges(false);
     } catch (error) {
-      console.error("Error saving settings:", error);
+      if (!(error instanceof ApiError && error.status < 500)) {
+        console.error("Error saving settings:", error);
+      }
       toast({
         title: "Error",
         description:
@@ -62,7 +69,7 @@ export function useSettingsForm(
     } finally {
       setIsSaving(false);
     }
-  }, [settings, formData, updateSettings, toast]);
+  }, [settings, formData, hasErrors, updateSettings, toast]);
 
   const saveBeforeLeaving = useCallback(async () => {
     if (hasUnsavedChanges) await commit();
@@ -82,6 +89,7 @@ export function useSettingsForm(
     formData,
     isSaving,
     hasUnsavedChanges,
+    hasErrors,
     change,
     discard,
     save,

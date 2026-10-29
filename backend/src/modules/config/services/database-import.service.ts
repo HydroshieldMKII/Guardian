@@ -1,26 +1,30 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { EntityManager, Repository } from 'typeorm';
+import { serialTransaction } from '@/database/serial-transaction';
 import { AppSettings } from '@/entities/app-settings.entity';
 import { UserDevice } from '@/entities/user-device.entity';
 import { UserPreference } from '@/entities/user-preference.entity';
+import {
+  ImportedDevice,
+  ImportedPreference,
+  ImportedSetting,
+  parseImportPayload,
+} from '@/modules/config/services/import-payload';
+import { isSecretMask } from '@/modules/config/services/public-setting';
 
 export interface ImportResult {
   imported: number;
   skipped: number;
 }
 
-interface ImportedSetting {
+export interface AppliedSetting {
   key: string;
   value: string;
 }
 
-export interface ImportPayload {
-  data?: {
-    settings?: ImportedSetting[];
-    userDevices?: Partial<UserDevice>[];
-    userPreferences?: Partial<UserPreference>[];
-  };
+export interface ImportOutcome extends ImportResult {
+  changedSettings: AppliedSetting[];
 }
 
 export interface ImportRules {
@@ -29,8 +33,7 @@ export interface ImportRules {
   prepareSetting: (key: string, value: string) => string;
 }
 
-const asList = <T>(items: T[] | undefined): T[] =>
-  Array.isArray(items) ? items : [];
+type SettingOutcome = AppliedSetting | 'unchanged' | 'skipped';
 
 @Injectable()
 export class DatabaseImportService {
@@ -42,20 +45,12 @@ export class DatabaseImportService {
   ) {}
 
   async importDatabase(
-    importData: ImportPayload | null | undefined,
+    rawPayload: unknown,
     rules: ImportRules,
-  ): Promise<ImportResult> {
+  ): Promise<ImportOutcome> {
     this.logger.log('Starting database import...');
 
-    if (!importData?.data) {
-      this.logger.error('Error importing database: invalid import data format');
-      throw new Error('Failed to import database: Invalid import data format');
-    }
-
-    const { data } = importData;
-    const settings = asList(data.settings);
-    const devices = asList(data.userDevices);
-    const preferences = asList(data.userPreferences);
+    const { settings, devices, preferences } = parseImportPayload(rawPayload);
 
     this.logger.debug('Import data contains:', {
       settings: settings.length,
@@ -63,65 +58,44 @@ export class DatabaseImportService {
       userPreferences: preferences.length,
     });
 
-    const results = [
-      await this.importEach(
-        settings,
-        (setting) => `setting ${setting.key}`,
-        (setting) => this.importSetting(setting, rules),
-      ),
-      await this.importEach(
-        devices,
-        (device) => `device ${device.deviceIdentifier}`,
-        (device) => this.importDevice(device),
-      ),
-      await this.importEach(
-        preferences,
-        (preference) => `preference for user ${preference.userId}`,
-        (preference) => this.importPreference(preference),
-      ),
-    ];
+    const outcome = await serialTransaction(
+      this.settingsRepository.manager,
+      async (manager) => {
+        const settingOutcomes: SettingOutcome[] = [];
+        for (const setting of settings) {
+          settingOutcomes.push(
+            await this.importSetting(manager, setting, rules),
+          );
+        }
+        for (const device of devices) {
+          await this.importDevice(manager, device);
+        }
+        for (const preference of preferences) {
+          await this.importPreference(manager, preference);
+        }
+        return settingOutcomes;
+      },
+    );
 
-    const imported = results.reduce((sum, r) => sum + r.imported, 0);
-    const skipped = results.reduce((sum, r) => sum + r.skipped, 0);
+    const skipped = outcome.filter((entry) => entry === 'skipped').length;
+    const imported =
+      outcome.length - skipped + devices.length + preferences.length;
+    const changedSettings = outcome.filter(
+      (entry): entry is AppliedSetting => typeof entry === 'object',
+    );
 
     this.logger.log(
       `Database import completed: ${imported} items imported, ${skipped} items skipped`,
     );
 
-    return { imported, skipped };
-  }
-
-  private async importEach<T>(
-    items: T[],
-    describe: (item: T) => string,
-    importOne: (item: T) => Promise<boolean>,
-  ): Promise<ImportResult> {
-    const result: ImportResult = { imported: 0, skipped: 0 };
-
-    for (const item of items) {
-      try {
-        if (await importOne(item)) {
-          result.imported++;
-        } else {
-          result.skipped++;
-        }
-      } catch (error) {
-        this.logger.warn(`Failed to import ${describe(item)}:`, error);
-        result.skipped++;
-      }
-    }
-
-    return result;
+    return { imported, skipped, changedSettings };
   }
 
   private async importSetting(
+    manager: EntityManager,
     setting: ImportedSetting,
     rules: ImportRules,
-  ): Promise<boolean> {
-    const existing = await this.settingsRepository.findOne({
-      where: { key: setting.key },
-    });
-
+  ): Promise<SettingOutcome> {
     if (
       setting.key === 'APP_VERSION' &&
       rules.compareVersions(setting.value, rules.currentAppVersion) < 0
@@ -129,50 +103,67 @@ export class DatabaseImportService {
       this.logger.log(
         `Skipping import of APP_VERSION (${setting.value}) to avoid downgrading from current version (${rules.currentAppVersion})`,
       );
-      return false;
+      return 'skipped';
     }
+
+    const repository = manager.getRepository(AppSettings);
+    const existing = await repository.findOne({ where: { key: setting.key } });
 
     if (!existing) {
       this.logger.warn(`Skipping unknown setting ${setting.key}`);
-      return false;
+      return 'skipped';
     }
 
-    const value = rules.prepareSetting(setting.key, setting.value);
+    if (isSecretMask(existing, setting.value)) {
+      return 'unchanged';
+    }
+
+    let value: string;
+    try {
+      value = rules.prepareSetting(setting.key, setting.value);
+    } catch (error) {
+      this.logger.warn(`Skipping invalid setting ${setting.key}:`, error);
+      return 'skipped';
+    }
+
     if (value !== setting.value) {
       this.logger.warn(
         `Adjusted ${setting.key} from ${setting.value} to ${value} to fit the allowed range`,
       );
     }
+
+    const changed = existing.value !== value;
     existing.value = value;
-    await this.settingsRepository.save(existing);
-    return true;
+    await repository.save(existing);
+    return changed ? { key: setting.key, value } : 'unchanged';
   }
 
-  private async importDevice(device: Partial<UserDevice>): Promise<boolean> {
-    const deviceRepo =
-      this.settingsRepository.manager.getRepository(UserDevice);
-    const existing = await deviceRepo.findOne({
+  private async importDevice(
+    manager: EntityManager,
+    device: ImportedDevice,
+  ): Promise<void> {
+    const repository = manager.getRepository(UserDevice);
+    const existing = await repository.findOne({
       where: {
         userId: device.userId,
         deviceIdentifier: device.deviceIdentifier,
       },
     });
 
-    await deviceRepo.save(
-      existing ? Object.assign(existing, device) : deviceRepo.create(device),
+    await repository.save(
+      existing ? Object.assign(existing, device) : repository.create(device),
     );
     this.logger.debug(
       `${existing ? 'Updated' : 'Created'} device ${device.deviceIdentifier} for user ${device.userId}`,
     );
-    return true;
   }
 
   private async importPreference(
-    preference: Partial<UserPreference>,
-  ): Promise<boolean> {
-    const prefRepo =
-      this.settingsRepository.manager.getRepository(UserPreference);
-    const existing = await prefRepo.findOne({
+    manager: EntityManager,
+    preference: ImportedPreference,
+  ): Promise<void> {
+    const repository = manager.getRepository(UserPreference);
+    const existing = await repository.findOne({
       where: { userId: preference.userId },
     });
 
@@ -181,10 +172,9 @@ export class DatabaseImportService {
       existing.username = preference.username || existing.username;
     }
 
-    await prefRepo.save(existing ?? prefRepo.create(preference));
+    await repository.save(existing ?? repository.create(preference));
     this.logger.debug(
       `${existing ? 'Updated' : 'Created'} preference for user ${preference.userId}`,
     );
-    return true;
   }
 }

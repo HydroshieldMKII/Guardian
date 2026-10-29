@@ -244,12 +244,12 @@ describe('ConfigService', () => {
     it.each([
       ['PLEXGUARD_REFRESH_INTERVAL', 'abc', 'must be a number'],
       ['PLEXGUARD_REFRESH_INTERVAL', 7.5, 'whole number of seconds'],
-      ['PLEXGUARD_REFRESH_INTERVAL', 4, 'at least 5 seconds'],
-      ['PLEXGUARD_REFRESH_INTERVAL', 0, 'at least 5 seconds'],
-      ['PLEXGUARD_REFRESH_INTERVAL', -10, 'at least 5 seconds'],
+      ['PLEXGUARD_REFRESH_INTERVAL', 4, 'between 5 and 86400 seconds'],
+      ['PLEXGUARD_REFRESH_INTERVAL', 0, 'between 5 and 86400 seconds'],
+      ['PLEXGUARD_REFRESH_INTERVAL', -10, 'between 5 and 86400 seconds'],
       ['DEVICE_CLEANUP_INTERVAL_DAYS', 'abc', 'must be a number'],
       ['DEVICE_CLEANUP_INTERVAL_DAYS', 1.5, 'whole number'],
-      ['DEVICE_CLEANUP_INTERVAL_DAYS', 0, 'at least 1 day'],
+      ['DEVICE_CLEANUP_INTERVAL_DAYS', 0, 'between 1 and 3650 days'],
       ['SMTP_PORT', 'abc', 'valid number'],
       ['SMTP_PORT', 25.5, 'whole number'],
       ['SMTP_PORT', 0, 'between 1 and 65535'],
@@ -279,7 +279,7 @@ describe('ConfigService', () => {
       store.delete('CUSTOM_PLEX_URL');
       settingsRepo.findOne.mockResolvedValueOnce(null);
       await expect(
-        service.updateSetting('CUSTOM_PLEX_URL', 'x'),
+        service.updateSetting('CUSTOM_PLEX_URL', 'https://plex.example.com'),
       ).rejects.toThrow('Setting CUSTOM_PLEX_URL not found');
     });
   });
@@ -297,16 +297,10 @@ describe('ConfigService', () => {
       await expect(service.getSetting('SMTP_PORT')).resolves.toBe(465);
     });
 
-    it('serialises an object value as json', async () => {
-      store.set('CUSTOM_PLEX_URL', row('CUSTOM_PLEX_URL', '{}', 'json'));
-      const fresh = await build();
-
-      await fresh.updateSetting('CUSTOM_PLEX_URL', { a: 1 });
-
-      expect(store.get('CUSTOM_PLEX_URL')?.value).toBe('{"a":1}');
-      await expect(fresh.getSetting('CUSTOM_PLEX_URL')).resolves.toEqual({
-        a: 1,
-      });
+    it('refuses an object value', async () => {
+      await expect(
+        service.updateSetting('CUSTOM_PLEX_URL', { a: 1 }),
+      ).rejects.toThrow('string, number or boolean');
     });
 
     it('bumps the updated timestamp', async () => {
@@ -341,6 +335,59 @@ describe('ConfigService', () => {
       await expect(
         service.updateSetting('USER_PORTAL_ENABLED', false),
       ).resolves.toBeDefined();
+    });
+  });
+
+  describe('settings written outside the settings page', () => {
+    it('reloads the stored values and notifies their listeners', async () => {
+      const listener = jest.fn();
+      service.addConfigChangeListener('PLEXGUARD_REFRESH_INTERVAL', listener);
+      store.set(
+        'PLEXGUARD_REFRESH_INTERVAL',
+        row('PLEXGUARD_REFRESH_INTERVAL', '60', 'number'),
+      );
+
+      await service.applyStoredSettings([
+        'PLEXGUARD_REFRESH_INTERVAL',
+        'RETIRED_SETTING',
+      ]);
+
+      expect(listener).toHaveBeenCalledTimes(1);
+      await expect(
+        service.getSetting('PLEXGUARD_REFRESH_INTERVAL'),
+      ).resolves.toBe(60);
+    });
+
+    it('signs portal users out when the stored portal switch is off', async () => {
+      store.set(
+        'USER_PORTAL_ENABLED',
+        row('USER_PORTAL_ENABLED', 'false', 'boolean'),
+      );
+
+      await service.applyStoredSettings(['USER_PORTAL_ENABLED']);
+
+      expect(sessionRepo.delete).toHaveBeenCalledWith({
+        userType: 'plex_user',
+      });
+    });
+
+    it('keeps portal sessions when the portal switch was not part of the change', async () => {
+      store.set(
+        'USER_PORTAL_ENABLED',
+        row('USER_PORTAL_ENABLED', 'false', 'boolean'),
+      );
+
+      await service.applyStoredSettings(['DEFAULT_PAGE']);
+
+      expect(sessionRepo.delete).not.toHaveBeenCalled();
+    });
+
+    it('never runs a stored value back through the settings page checks', async () => {
+      store.set('APP_VERSION', row('APP_VERSION', '1.0.0'));
+
+      await expect(
+        service.applyStoredSettings(['APP_VERSION']),
+      ).resolves.toBeUndefined();
     });
   });
 
@@ -432,9 +479,156 @@ describe('ConfigService', () => {
           { key: 'DEFAULT_PAGE', value: 'streams' },
           { key: 'PLEXGUARD_REFRESH_INTERVAL', value: '2' },
         ]),
-      ).rejects.toThrow('at least 5 seconds');
+      ).rejects.toThrow('between 5 and 86400 seconds');
 
       expect(store.get('DEFAULT_PAGE')?.value).toBe(pageBefore);
+    });
+  });
+
+  describe('secret handling', () => {
+    beforeEach(async () => {
+      store.set('PLEX_TOKEN', row('PLEX_TOKEN', 'real-token', 'string', true));
+      service = await build();
+    });
+
+    it('keeps the stored secret when the mask is written back', async () => {
+      await service.updateMultipleSettings([
+        { key: 'PLEX_TOKEN', value: '••••••••' },
+        { key: 'DEFAULT_PAGE', value: 'streams' },
+      ]);
+
+      expect(store.get('PLEX_TOKEN')?.value).toBe('real-token');
+      expect(store.get('DEFAULT_PAGE')?.value).toBe('streams');
+    });
+
+    it('keeps the stored secret on a single write of the mask', async () => {
+      const result = await service.updateSetting('PLEX_TOKEN', '••••••••');
+
+      expect(store.get('PLEX_TOKEN')?.value).toBe('real-token');
+      expect(result.value).toBe('••••••••');
+    });
+
+    it('still lets a new secret through', async () => {
+      await service.updateSetting('PLEX_TOKEN', 'new-token');
+
+      expect(store.get('PLEX_TOKEN')?.value).toBe('new-token');
+    });
+
+    it('masks the secret in the write response', async () => {
+      const [result] = await service.updateMultipleSettings([
+        { key: 'PLEX_TOKEN', value: 'new-token' },
+      ]);
+
+      expect(result.value).toBe('••••••••');
+    });
+
+    it('masks a single secret like the list does', async () => {
+      await expect(service.getPublicSetting('PLEX_TOKEN')).resolves.toEqual(
+        expect.objectContaining({ key: 'PLEX_TOKEN', value: '••••••••' }),
+      );
+    });
+
+    it('returns a plain setting as its stored string', async () => {
+      await expect(
+        service.getPublicSetting('PLEXGUARD_REFRESH_INTERVAL'),
+      ).resolves.toEqual(expect.objectContaining({ value: '10' }));
+    });
+
+    it('has nothing to return for a setting with no row', async () => {
+      store.delete('TIMEZONE');
+      await expect(service.getPublicSetting('TIMEZONE')).resolves.toBeNull();
+    });
+  });
+
+  describe('write safety', () => {
+    it('refuses to write a read-only setting', async () => {
+      await expect(
+        service.updateSetting('APP_VERSION', '9.9.9'),
+      ).rejects.toThrow('read-only');
+      expect(store.get('APP_VERSION')?.value).toBe('1.3.5');
+    });
+
+    it.each([null, undefined, { a: 1 }, ['x']])(
+      'refuses the value %p',
+      async (value) => {
+        await expect(
+          service.updateSetting('MSG_DEVICE_PENDING', value),
+        ).rejects.toThrow('string, number or boolean');
+      },
+    );
+
+    it('refuses a key that is not a setting', async () => {
+      await expect(
+        service.updateMultipleSettings([{ key: '__proto__', value: 'x' }]),
+      ).rejects.toThrow('Unknown setting');
+    });
+
+    it('writes nothing when a later key does not exist', async () => {
+      const before = store.get('MSG_DEVICE_PENDING')?.value;
+
+      await expect(
+        service.updateMultipleSettings([
+          { key: 'MSG_DEVICE_PENDING', value: 'X' },
+          { key: 'NOPE', value: 'x' },
+        ]),
+      ).rejects.toThrow('Unknown setting');
+
+      expect(store.get('MSG_DEVICE_PENDING')?.value).toBe(before);
+    });
+
+    it('rolls back earlier rows when a later row is missing', async () => {
+      const before = store.get('MSG_DEVICE_PENDING')?.value;
+      store.delete('CUSTOM_PLEX_URL');
+
+      await expect(
+        service.updateMultipleSettings([
+          { key: 'MSG_DEVICE_PENDING', value: 'X' },
+          { key: 'CUSTOM_PLEX_URL', value: 'https://plex.example.com' },
+        ]),
+      ).rejects.toThrow('not found');
+
+      expect(store.get('MSG_DEVICE_PENDING')?.value).toBe(before);
+    });
+
+    it('does not notify listeners or cache anything from a rolled back batch', async () => {
+      const listener = jest.fn();
+      service.addConfigChangeListener('MSG_DEVICE_PENDING', listener);
+      store.delete('CUSTOM_PLEX_URL');
+
+      await expect(
+        service.updateMultipleSettings([
+          { key: 'MSG_DEVICE_PENDING', value: 'X' },
+          { key: 'CUSTOM_PLEX_URL', value: 'https://plex.example.com' },
+        ]),
+      ).rejects.toThrow();
+
+      expect(listener).not.toHaveBeenCalled();
+      await expect(service.getSetting('MSG_DEVICE_PENDING')).resolves.not.toBe(
+        'X',
+      );
+    });
+
+    it('rejects the same key twice in one batch', async () => {
+      await expect(
+        service.updateMultipleSettings([
+          { key: 'DEFAULT_PAGE', value: 'streams' },
+          { key: 'DEFAULT_PAGE', value: 'devices' },
+        ]),
+      ).rejects.toThrow('Duplicate setting DEFAULT_PAGE');
+    });
+
+    it('writes inside a transaction', async () => {
+      await service.updateMultipleSettings([
+        { key: 'DEFAULT_PAGE', value: 'streams' },
+      ]);
+
+      expect(settingsRepo.manager.transaction).toHaveBeenCalledTimes(1);
+    });
+
+    it('rejects an over-long message', async () => {
+      await expect(
+        service.updateSetting('MSG_DEVICE_PENDING', 'x'.repeat(20000)),
+      ).rejects.toThrow('at most');
     });
   });
 
@@ -445,7 +639,8 @@ describe('ConfigService', () => {
     });
 
     it('falls back to UTC when the offset is blank', async () => {
-      await service.updateSetting('TIMEZONE', '');
+      store.set('TIMEZONE', row('TIMEZONE', ''));
+      service = await build();
       await expect(service.getTimezone()).resolves.toBe('+00:00');
     });
 

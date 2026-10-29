@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { useDeviceUtils } from "@/hooks/device-management/useDeviceUtils";
-import type { DurationUnit } from "@/lib/duration";
+import {
+  MAX_TEMPORARY_ACCESS_MINUTES,
+  type DurationUnit,
+} from "@/lib/duration";
 import type { UserDevice } from "@/types";
 
 export type ExpiryMode = "duration" | "calendar";
@@ -11,8 +14,10 @@ export type GrantAccess = (
   bypassPolicies?: boolean,
 ) => void;
 
-const LATEST_DATE_MS = 8640000000000000;
 const MINUTE_MS = 60 * 1000;
+
+const withinMaximum = (minutes: number) =>
+  minutes <= MAX_TEMPORARY_ACCESS_MINUTES;
 
 export function useTemporaryAccessForm(
   isOpen: boolean,
@@ -40,20 +45,24 @@ export function useTemporaryAccessForm(
 
   const durationExpiry = () => {
     if (durationValue <= 0 || !durationValid) return null;
-    const expiry = new Date(
-      Date.now() + convertToMinutes(durationValue, durationUnit) * MINUTE_MS,
-    );
-    return isNaN(expiry.getTime()) || expiry.getTime() > LATEST_DATE_MS
-      ? null
-      : expiry;
+    const minutes = convertToMinutes(durationValue, durationUnit);
+    return withinMaximum(minutes)
+      ? new Date(Date.now() + minutes * MINUTE_MS)
+      : null;
   };
 
   const dateInPast =
     selectedDate !== undefined && selectedDate.getTime() <= Date.now();
 
+  const dateTooFar =
+    selectedDate !== undefined &&
+    !withinMaximum(
+      Math.ceil((selectedDate.getTime() - Date.now()) / MINUTE_MS),
+    );
+
   const expiry =
     mode === "calendar"
-      ? selectedDate && !dateInPast
+      ? selectedDate && !dateInPast && !dateTooFar
         ? selectedDate
         : null
       : durationExpiry();
@@ -110,6 +119,7 @@ export function useTemporaryAccessForm(
     durationValid,
     durationInvalid: mode === "duration" && durationValue <= 0,
     dateInPast: mode === "calendar" && dateInPast,
+    dateTooFar: mode === "calendar" && dateTooFar,
     durationTooLarge:
       mode === "duration" && durationValue > 0 && durationValid && !expiry,
     grant,

@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOptionsWhere, ILike, IsNull, Not, Or, Repository } from 'typeorm';
 import { SessionHistory } from '@/entities/session-history.entity';
@@ -99,7 +99,9 @@ export class SessionHistoryService {
       const result = await this.sessionHistoryRepository.delete(sessionId);
 
       if (result.affected === 0) {
-        throw new Error(`Session history with ID ${sessionId} not found`);
+        throw new NotFoundException(
+          `Session history with ID ${sessionId} not found`,
+        );
       }
 
       this.logger.log(`Deleted session history with ID: ${sessionId}`);

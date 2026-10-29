@@ -6,6 +6,7 @@ import { UserDevice } from '@/entities/user-device.entity';
 import { UserPreference } from '@/entities/user-preference.entity';
 import { SessionHistory } from '@/entities/session-history.entity';
 import { Notification } from '@/entities/notification.entity';
+import { serialTransaction } from '@/database/serial-transaction';
 
 export interface ExportData {
   exportedAt: string;
@@ -169,11 +170,14 @@ export class DatabaseService {
   }
 
   private async clearTables(tables: ClearableTable[]): Promise<void> {
-    await this.settingsRepository.manager.transaction(async (manager) => {
-      for (const { target, label } of tables) {
-        await manager.getRepository(target).clear();
-        this.logger.debug(`${label} table cleared`);
-      }
-    });
+    await serialTransaction(
+      this.settingsRepository.manager,
+      async (manager) => {
+        for (const { target, label } of tables) {
+          await manager.getRepository(target).clear();
+          this.logger.debug(`${label} table cleared`);
+        }
+      },
+    );
   }
 }

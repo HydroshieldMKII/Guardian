@@ -9,6 +9,7 @@ import { EditProfileModal } from "@/components/edit-profile-modal";
 import { useDashboardQuery } from "@/hooks/useDashboardQuery";
 import { useLogout } from "@/hooks/navbar/useLogout";
 import { useNavigationGuard } from "@/hooks/navbar/useNavigationGuard";
+import { AUTH_ROUTES } from "@/lib/auth/return-to";
 import { dashboardCounts, resolveDashboardView } from "@/lib/dashboard-view";
 import { DesktopNavLinks } from "./navbar/DesktopNavLinks";
 import { MobileTabBar } from "./navbar/MobileTabBar";
@@ -18,8 +19,6 @@ import { ThemeToggle } from "./navbar/ThemeToggle";
 import { UnsavedChangesDialog } from "./navbar/UnsavedChangesDialog";
 import { userIdentity } from "./navbar/user-identity";
 import { UserMenu } from "./navbar/UserMenu";
-
-const HIDDEN_PATHS = ["/login", "/setup"];
 
 export function Navbar() {
   const [editProfileOpen, setEditProfileOpen] = useState(false);
@@ -33,7 +32,7 @@ export function Navbar() {
   const hidden =
     setupRequired ||
     !isAuthenticated ||
-    HIDDEN_PATHS.includes(pathname) ||
+    AUTH_ROUTES.includes(pathname) ||
     userType === "plex_user";
   const { data: dashboardData } = useDashboardQuery(
     !hidden && pathname !== "/",
@@ -93,6 +92,7 @@ export function Navbar() {
       <UnsavedChangesDialog
         open={navigation.warningOpen}
         isSaving={navigation.isSaving}
+        saveBlocked={navigation.saveBlocked}
         onStay={navigation.stay}
         onSave={() => void navigation.saveAndLeave()}
         onDiscard={navigation.discard}

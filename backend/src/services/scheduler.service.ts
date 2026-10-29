@@ -2,13 +2,16 @@ import { Injectable, OnModuleInit, Inject, forwardRef } from '@nestjs/common';
 import { Cron, SchedulerRegistry } from '@nestjs/schedule';
 import { PlexService } from '@/modules/plex/services/plex.service';
 import { ConfigService } from '@/modules/config/services/config.service';
-import { MIN_REFRESH_INTERVAL_SECONDS } from '@/modules/config/services/setting-validation';
+import { PlexConfigurationError } from '@/modules/plex/services/plex-configuration-error';
+import {
+  MAX_REFRESH_INTERVAL_SECONDS,
+  MIN_REFRESH_INTERVAL_SECONDS,
+} from '@/modules/config/services/setting-validation';
 import { DeviceTrackingService } from '@/modules/devices/services/device-tracking.service';
 import { DeviceMaintenanceService } from '@/modules/devices/services/device-maintenance.service';
 import { PlexUserSyncService } from '@/modules/users/services/plex-user-sync.service';
 import { AuthSessionService } from '@/modules/auth/auth-session.service';
 import { Logger } from '@nestjs/common';
-import { errorMessage } from '@/common/utils/error-types';
 import { DashboardService } from '@/modules/dashboard/dashboard.service';
 import { LiveEventsService } from '@/modules/events/live-events.service';
 
@@ -85,7 +88,10 @@ export class SchedulerService implements OnModuleInit {
     );
     const seconds =
       Number.isInteger(stored) && stored ? stored : DEFAULT_REFRESH_SECONDS;
-    return Math.max(seconds, MIN_REFRESH_INTERVAL_SECONDS);
+    return Math.min(
+      Math.max(seconds, MIN_REFRESH_INTERVAL_SECONDS),
+      MAX_REFRESH_INTERVAL_SECONDS,
+    );
   }
 
   private async runScheduledSessionUpdate(): Promise<void> {
@@ -98,6 +104,16 @@ export class SchedulerService implements OnModuleInit {
       await this.handleSessionUpdates();
     } finally {
       this.sessionUpdateRunning = false;
+    }
+  }
+
+  private logSessionUpdateFailure(error: unknown): void {
+    if (!(error instanceof PlexConfigurationError)) {
+      this.logger.error('Error during scheduled session update:', error);
+      return;
+    }
+    if (!error.message.includes('Missing required Plex configuration')) {
+      this.logger.warn(`Scheduled session update skipped: ${error.message}`);
     }
   }
 
@@ -129,11 +145,7 @@ export class SchedulerService implements OnModuleInit {
 
       await this.plexService.updateActiveSessions();
     } catch (error) {
-      if (
-        !errorMessage(error).includes('Missing required Plex configuration')
-      ) {
-        this.logger.error('Error during scheduled session update:', error);
-      }
+      this.logSessionUpdateFailure(error);
     } finally {
       await this.broadcastDashboard();
     }

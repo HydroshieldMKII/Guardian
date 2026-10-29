@@ -226,6 +226,23 @@ describe('IPValidationService', () => {
     });
   });
 
+  describe('link-local addresses', () => {
+    it.each(['169.254.0.1', '169.254.169.254', '169.254.255.255'])(
+      'treats %s as LAN',
+      (ip) => {
+        expect(service.isPrivateIP(ip)).toBe(true);
+        expect(service.getNetworkType(ip)).toBe('lan');
+      },
+    );
+
+    it.each(['169.253.255.255', '169.255.0.0', '100.64.0.1'])(
+      'keeps %s as WAN',
+      (ip) => {
+        expect(service.getNetworkType(ip)).toBe('wan');
+      },
+    );
+  });
+
   describe('getNetworkType', () => {
     it('classifies a private IPv4 address as lan', () => {
       expect(service.getNetworkType('192.168.1.1')).toBe('lan');
@@ -335,6 +352,16 @@ describe('IPValidationService', () => {
       );
     });
 
+    it('skips non-string entries instead of throwing', () => {
+      const entries = [1, null, {}, '8.8.8.8'] as never[];
+      expect(service.isIPInAllowedList('8.8.8.8', entries)).toBe(true);
+      expect(service.isIPInAllowedList('1.1.1.1', entries)).toBe(false);
+    });
+
+    it('denies everything when the stored list is not an array', () => {
+      expect(service.isIPInAllowedList('8.8.8.8', 'abc' as never)).toBe(false);
+    });
+
     it('allows any IP when the list is empty', () => {
       expect(service.isIPInAllowedList('8.8.8.8', [])).toBe(true);
     });
@@ -397,6 +424,27 @@ describe('IPValidationService', () => {
   });
 
   describe('validateIPAccess', () => {
+    it('denies a WAN client when a restricted list holds only junk', () => {
+      const result = service.validateIPAccess(
+        '8.8.8.8',
+        policy({
+          ipAccessPolicy: 'restricted',
+          allowedIPs: [1, null, {}] as never[],
+        }),
+      );
+      expect(result.allowed).toBe(false);
+      expect(result.stopCode).toBe('IP_POLICY_NOT_ALLOWED');
+    });
+
+    it('denies a client when the network policy is unrecognised', () => {
+      const result = service.validateIPAccess(
+        '8.8.8.8',
+        policy({ networkPolicy: 'bogus' as never }),
+      );
+      expect(result.allowed).toBe(false);
+      expect(result.stopCode).toBe('IP_POLICY_NOT_ALLOWED');
+    });
+
     it('uses the custom lan-only message', () => {
       const result = service.validateIPAccess(
         '8.8.8.8',
