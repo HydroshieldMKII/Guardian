@@ -7,6 +7,7 @@ import { downloadJson } from "@/lib/download";
 import { RELOAD_DELAY_MS } from "@/hooks/settings/useProtectedActions";
 
 const IMPORT_SUCCESS_KEY = "guardianImportSuccess";
+export const MAX_IMPORT_FILE_BYTES = 8 * 1024 * 1024;
 
 interface PendingImport {
   file: File;
@@ -106,10 +107,18 @@ export function useSettingsBackup(onSettingsRefresh?: () => void) {
   const chooseFile = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
+    event.target.value = "";
+    if (file.size > MAX_IMPORT_FILE_BYTES) {
+      toast({
+        title: "File too large",
+        description: "Settings exports are at most 8 MB",
+        variant: "destructive",
+      });
+      return;
+    }
     const reader = new FileReader();
     reader.onload = () => checkAndImport(file, reader.result as string);
     reader.readAsText(file);
-    event.target.value = "";
   };
 
   const proceedWithImport = () => {
