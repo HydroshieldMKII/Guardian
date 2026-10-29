@@ -1,9 +1,9 @@
 import { useState, type ComponentProps } from "react";
 import { Eye, EyeOff, Lock } from "lucide-react";
-import { LoginInput } from "./LoginInput";
+import { AuthInput } from "./AuthInput";
 
 type PasswordInputProps = Omit<
-  ComponentProps<typeof LoginInput>,
+  ComponentProps<typeof AuthInput>,
   "type" | "icon" | "trailing"
 >;
 
@@ -12,7 +12,7 @@ export function PasswordInput({ disabled, ...props }: PasswordInputProps) {
   const Toggle = visible ? EyeOff : Eye;
 
   return (
-    <LoginInput
+    <AuthInput
       {...props}
       icon={Lock}
       type={visible ? "text" : "password"}

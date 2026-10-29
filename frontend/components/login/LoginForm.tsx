@@ -5,10 +5,10 @@ import { useLoginForm } from "@/hooks/login/useLoginForm";
 import { useTurnstile } from "@/hooks/login/useTurnstile";
 import { usePasswordResetStatus } from "@/hooks/usePasswordResetStatus";
 import { usePlexOAuth } from "@/hooks/use-plex-oauth";
+import { AuthInput } from "@/components/auth-form/AuthInput";
+import { PasswordInput } from "@/components/auth-form/PasswordInput";
 import { ForgotPasswordLink } from "./ForgotPasswordLink";
 import { LoginErrorAlert } from "./LoginErrorAlert";
-import { LoginInput } from "./LoginInput";
-import { PasswordInput } from "./PasswordInput";
 import { LOGIN_PLEX_COPY } from "./plex-copy";
 import { PlexSignIn } from "./PlexSignIn";
 
@@ -36,7 +36,7 @@ export function LoginForm({ theme }: { theme: string }) {
   return (
     <>
       <form onSubmit={(e) => void form.submit(e)} className="space-y-4">
-        <LoginInput
+        <AuthInput
           id="username"
           label="Username or Email"
           icon={User}

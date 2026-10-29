@@ -4,27 +4,31 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { FieldError } from "./FieldError";
 
-interface LoginInputProps extends ComponentProps<typeof Input> {
+interface AuthInputProps extends ComponentProps<typeof Input> {
   id: string;
   label: string;
   icon: LucideIcon;
   error?: string;
   trailing?: ReactNode;
+  details?: ReactNode;
   footer?: ReactNode;
+  wrapperClassName?: string;
 }
 
-export function LoginInput({
+export function AuthInput({
   id,
   label,
   icon: Icon,
   error,
   trailing,
+  details,
   footer,
+  wrapperClassName = "space-y-2",
   className,
   ...inputProps
-}: LoginInputProps) {
+}: AuthInputProps) {
   return (
-    <div className="space-y-2">
+    <div className={wrapperClassName}>
       <label htmlFor={id} className="text-sm font-semibold text-foreground">
         {label}
       </label>
@@ -42,6 +46,7 @@ export function LoginInput({
         />
         {trailing}
       </div>
+      {details}
       <FieldError message={error} />
       {footer}
     </div>
