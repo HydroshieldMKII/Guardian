@@ -30,6 +30,22 @@ describe("AuthLayout", () => {
     expect(backdrop).toHaveClass("pointer-events-none");
   });
 
+  it("centres the content by default", () => {
+    renderLayout();
+
+    expect(screen.getByRole("main")).toHaveClass("items-center");
+  });
+
+  it("anchors the content to the top when asked", () => {
+    render(
+      <AuthLayout align="top">
+        <p>form goes here</p>
+      </AuthLayout>,
+    );
+
+    expect(screen.getByRole("main")).toHaveClass("items-start");
+  });
+
   it("toggles the theme", async () => {
     renderLayout();
 

@@ -4,13 +4,32 @@ import type { ReactNode } from "react";
 import { Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/hooks/use-theme";
+import { cn } from "@/lib/utils";
 
-export function AuthLayout({ children }: { children: ReactNode }) {
+export type AuthLayoutAlign = "center" | "top";
+
+const ALIGN_CLASSES: Record<AuthLayoutAlign, string> = {
+  center: "items-center py-16",
+  top: "items-start pt-[max(4rem,calc(50dvh_-_12rem))] pb-16",
+};
+
+export function AuthLayout({
+  children,
+  align = "center",
+}: {
+  children: ReactNode;
+  align?: AuthLayoutAlign;
+}) {
   const { theme, toggleTheme } = useTheme();
   const ThemeIcon = theme === "dark" ? Sun : Moon;
 
   return (
-    <main className="relative flex min-h-dvh items-center justify-center overflow-hidden bg-background px-4 py-16">
+    <main
+      className={cn(
+        "relative flex min-h-dvh justify-center overflow-hidden bg-background px-4",
+        ALIGN_CLASSES[align],
+      )}
+    >
       <div
         data-testid="auth-backdrop"
         aria-hidden

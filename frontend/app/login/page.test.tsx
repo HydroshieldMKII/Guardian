@@ -56,11 +56,18 @@ describe("LoginPage", () => {
     expect(retryConnection).toHaveBeenCalled();
   });
 
-  it("renders nothing once signed in", () => {
+  it("keeps a loader up while redirecting once signed in", () => {
     auth.isAuthenticated = true;
-    const { container } = render(<LoginPage />);
+    render(<LoginPage />);
 
-    expect(container).toBeEmptyDOMElement();
+    expect(screen.getByRole("status", { name: "Loading" })).toBeInTheDocument();
+    expect(screen.queryByText(/form:/)).toBeNull();
+  });
+
+  it("anchors the sign-in card to the top so it does not jump", () => {
+    render(<LoginPage />);
+
+    expect(screen.getByRole("main")).toHaveClass("items-start");
   });
 
   it("shows the sign-in card with the current theme", () => {

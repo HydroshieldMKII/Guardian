@@ -34,7 +34,6 @@ export function useLoginForm({
   const change = (field: LoginField, value: string) => {
     setValues((current) => ({ ...current, [field]: value }));
     setErrors((current) => ({ ...current, [field]: undefined }));
-    setLoginError("");
   };
 
   const validate = () => {
@@ -51,9 +50,9 @@ export function useLoginForm({
     if (!validate()) return;
 
     setIsSubmitting(true);
-    setLoginError("");
     try {
       await login(values.username, values.password, captchaToken());
+      setLoginError("");
     } catch (error) {
       onFailure();
       setLoginError(

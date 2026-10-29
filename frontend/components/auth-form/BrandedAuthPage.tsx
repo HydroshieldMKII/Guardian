@@ -7,17 +7,19 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { LogoMark } from "@/components/ui/logo-mark";
-import { AuthLayout } from "./AuthLayout";
+import { AuthLayout, type AuthLayoutAlign } from "./AuthLayout";
 
 export function BrandedAuthPage({
   description,
+  align,
   children,
 }: {
   description: string;
+  align?: AuthLayoutAlign;
   children: ReactNode;
 }) {
   return (
-    <AuthLayout>
+    <AuthLayout align={align}>
       <Card className="w-full max-w-md shadow-xl">
         <CardHeader className="space-y-1 pt-8 pb-6 text-center">
           <CardTitle className="flex items-center justify-center gap-3 text-3xl font-bold">

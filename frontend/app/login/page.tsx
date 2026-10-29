@@ -26,11 +26,11 @@ export default function LoginPage() {
   }
 
   if (isAuthenticated) {
-    return null;
+    return <PageLoader />;
   }
 
   return (
-    <BrandedAuthPage description="Sign in to your account">
+    <BrandedAuthPage description="Sign in to your account" align="top">
       <LoginForm theme={theme} />
     </BrandedAuthPage>
   );

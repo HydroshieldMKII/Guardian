@@ -99,13 +99,48 @@ describe("useLoginForm", () => {
     expect(result.current.loginError).toBe("Invalid credentials");
   });
 
-  it("clears the sign-in error on the next change", async () => {
+  it("keeps the sign-in error while the user retypes", async () => {
     login.mockRejectedValue(new Error("Account locked"));
     const { result } = setup();
     fill(result);
     await submit(result);
 
     act(() => result.current.change("password", "other"));
+
+    expect(result.current.loginError).toBe("Account locked");
+  });
+
+  it("keeps the sign-in error until the next attempt answers", async () => {
+    let fail: (error: Error) => void = () => {};
+    login.mockRejectedValueOnce(new Error("Account locked"));
+    login.mockImplementationOnce(
+      () => new Promise<void>((_resolve, reject) => (fail = reject)),
+    );
+    const { result } = setup();
+    fill(result);
+    await submit(result);
+
+    let retry: Promise<void> = Promise.resolve();
+    act(() => {
+      retry = result.current.submit(event);
+    });
+
+    expect(result.current.isSubmitting).toBe(true);
+    expect(result.current.loginError).toBe("Account locked");
+    await act(async () => {
+      fail(new Error("Invalid credentials"));
+      await retry;
+    });
+    expect(result.current.loginError).toBe("Invalid credentials");
+  });
+
+  it("clears the sign-in error once the next attempt succeeds", async () => {
+    login.mockRejectedValueOnce(new Error("Account locked"));
+    const { result } = setup();
+    fill(result);
+    await submit(result);
+
+    await submit(result);
 
     expect(result.current.loginError).toBe("");
   });
