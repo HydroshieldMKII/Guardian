@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PlexClient } from '@/modules/plex/services/plex-client';
+import { PlexConfigurationError } from '@/modules/plex/services/plex-configuration-error';
 import {
   EnrichedPlexSession,
   EnrichedPlexSessionsResponse,
@@ -27,31 +28,36 @@ export class PlexService {
   ) {}
 
   async getServerIdentifier(): Promise<string | null> {
-    // Return cached value if available
     if (this.serverIdentifierCache) {
       return this.serverIdentifierCache;
     }
 
-    // If there's already a request in progress, wait for it
     if (this.serverIdentifierPromise) {
       return this.serverIdentifierPromise;
     }
 
-    // Create new request and cache the promise
     this.serverIdentifierPromise = this.plexClient
       .getServerIdentity()
       .then((identifier) => {
         this.serverIdentifierCache = identifier;
-        this.serverIdentifierPromise = null; // Clear the promise once resolved
+        this.serverIdentifierPromise = null;
         return identifier;
       })
       .catch((error) => {
         this.logger.error('Failed to get server identifier:', error);
-        this.serverIdentifierPromise = null; // Clear the promise on error
+        this.serverIdentifierPromise = null;
         return null;
       });
 
     return this.serverIdentifierPromise;
+  }
+
+  private logFailure(context: string, error: unknown): void {
+    if (error instanceof PlexConfigurationError) {
+      this.logger.warn(`${context}: ${error.message}`);
+      return;
+    }
+    this.logger.error(context, error);
   }
 
   async getActiveSessions(): Promise<PlexSessionsResponse> {
@@ -61,7 +67,6 @@ export class PlexService {
         this.getServerIdentifier(),
       ]);
 
-      // Check if media thumbnails and artwork are enabled
       const [enableThumbnails, enableArtwork] = await Promise.all([
         this.configService.getSetting('ENABLE_MEDIA_THUMBNAILS'),
         this.configService.getSetting('ENABLE_MEDIA_ARTWORK'),
@@ -104,7 +109,7 @@ export class PlexService {
 
       return sessions;
     } catch (error) {
-      this.logger.error('Error fetching sessions', error);
+      this.logFailure('Error fetching sessions', error);
       throw error;
     }
   }
@@ -151,13 +156,11 @@ export class PlexService {
 
   async getPlexWebUrl(): Promise<string> {
     try {
-      // Check for custom URL first
       const customUrl = await this.configService.getSetting('CUSTOM_PLEX_URL');
       if (customUrl && customUrl.trim()) {
         return customUrl.trim();
       }
 
-      // Build URL from server configuration
       const [ip, port, useSSL] = await Promise.all([
         this.configService.getSetting('PLEX_SERVER_IP'),
         this.configService.getSetting('PLEX_SERVER_PORT'),
@@ -183,7 +186,7 @@ export class PlexService {
         sessions,
       );
     } catch (error) {
-      this.logger.error('Error in updateActiveSessions', error);
+      this.logFailure('Error in updateActiveSessions', error);
       throw error;
     }
   }

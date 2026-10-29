@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import { SchedulerRegistry } from '@nestjs/schedule';
 import { Test } from '@nestjs/testing';
 import { PlexService } from '@/modules/plex/services/plex.service';
@@ -9,6 +10,7 @@ import { AuthSessionService } from '@/modules/auth/auth-session.service';
 import { SchedulerService } from '@/services/scheduler.service';
 import { DashboardService } from '@/modules/dashboard/dashboard.service';
 import { LiveEventsService } from '@/modules/events/live-events.service';
+import { PlexConfigurationError } from '@/modules/plex/services/plex-configuration-error';
 
 describe('SchedulerService', () => {
   let service: SchedulerService;
@@ -264,11 +266,34 @@ describe('SchedulerService', () => {
       await expect(service.onModuleInit()).resolves.toBeUndefined();
     });
 
+    it('logs an invalid Plex address as a warning without a stack', async () => {
+      const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+      const error = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+      plexService.updateActiveSessions.mockRejectedValue(
+        new PlexConfigurationError('Invalid Plex server address or port.'),
+      );
+
+      await service.onModuleInit();
+
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringContaining('Invalid Plex server address or port.'),
+      );
+      expect(error).not.toHaveBeenCalledWith(
+        'Error during scheduled session update:',
+        expect.anything(),
+      );
+      warn.mockRestore();
+      error.mockRestore();
+    });
+
     it('stays quiet about a configuration error', async () => {
       plexService.updateActiveSessions.mockRejectedValue(
-        new Error('Missing required Plex configuration'),
+        new PlexConfigurationError('Missing required Plex configuration'),
       );
+      const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
       await expect(service.onModuleInit()).resolves.toBeUndefined();
+      expect(warn).not.toHaveBeenCalled();
+      warn.mockRestore();
     });
   });
 

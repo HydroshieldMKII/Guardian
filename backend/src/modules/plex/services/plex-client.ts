@@ -14,6 +14,8 @@ import {
   toPlexHttpResponse,
   withPlexToken,
 } from '@/modules/plex/services/plex-http';
+import { PlexConfigurationError } from '@/modules/plex/services/plex-configuration-error';
+import { MESSAGE_MAX_LENGTH } from '@/modules/config/services/setting-format-rules';
 import { plexConnectionFailure } from '@/modules/plex/services/plex-connection-failure';
 
 const REQUEST_TIMEOUT_MS = 15000;
@@ -57,17 +59,35 @@ export class PlexClient {
     };
   }
 
+  private buildUrl(
+    scheme: string,
+    config: { ip: string; port: string },
+    pathWithToken: string,
+  ): URL {
+    try {
+      return new URL(
+        `${scheme}://${config.ip}:${config.port}/${pathWithToken}`,
+      );
+    } catch {
+      throw new PlexConfigurationError(
+        'Invalid Plex server address or port. Check the Plex server IP and port in settings.',
+      );
+    }
+  }
+
   private async serverTarget(endpoint: string) {
     const config = await this.getConfig();
     if (!config.ip || !config.port || !config.token) {
-      throw new Error(
+      throw new PlexConfigurationError(
         'Missing required Plex configuration. Please configure PLEX_SERVER_IP, PLEX_SERVER_PORT, and PLEX_TOKEN in settings.',
       );
     }
 
     const scheme = config.useSSL ? 'https' : 'http';
-    const url = new URL(
-      `${scheme}://${config.ip}:${config.port}/${withPlexToken(endpoint, config.token)}`,
+    const url = this.buildUrl(
+      scheme,
+      config,
+      withPlexToken(endpoint, config.token),
     );
 
     return {
@@ -81,6 +101,10 @@ export class PlexClient {
         rejectUnauthorized: !config.ignoreCertErrors,
       },
     };
+  }
+
+  private describe(url: URL): string {
+    return `${url.origin}${url.pathname}`;
   }
 
   async request(
@@ -108,7 +132,10 @@ export class PlexClient {
 
       if (!isSuccessStatus(reply.statusCode)) {
         const error = new Error(describeFailedReply(reply));
-        this.logger.error(`Request failed for ${target.url.href}:`, error);
+        this.logger.error(
+          `Request failed for ${this.describe(target.url)}:`,
+          error,
+        );
         throw error;
       }
 
@@ -120,7 +147,10 @@ export class PlexClient {
           `Plex server unreachable (${error.code}): ${target.config.ip}:${target.config.port}`,
         );
       } else if (error.code) {
-        this.logger.error(`Request failed for ${target.url.href}:`, error);
+        this.logger.error(
+          `Request failed for ${this.describe(target.url)}:`,
+          error,
+        );
       }
       throw error;
     }
@@ -221,7 +251,7 @@ export class PlexClient {
 
     const params = new URLSearchParams({
       sessionId: deviceIdentifier,
-      reason: reason,
+      reason: reason.slice(0, MESSAGE_MAX_LENGTH),
     });
 
     const url = `status/sessions/terminate?${params.toString()}`;
