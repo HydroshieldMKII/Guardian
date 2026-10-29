@@ -112,6 +112,14 @@ describe("TimeRuleModal loading", () => {
     expect(getTimeRules).not.toHaveBeenCalled();
   });
 
+  it("asks for an end time after the start time, as the server requires", async () => {
+    await renderModal();
+    expect(
+      screen.getByText(/end time must be later than the start time/),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/past midnight/)).toBeNull();
+  });
+
   it("says when there are no rules", async () => {
     await renderModal();
     expect(screen.getByText("No rules yet")).toBeInTheDocument();

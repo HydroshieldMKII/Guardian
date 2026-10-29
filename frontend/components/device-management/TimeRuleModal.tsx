@@ -809,7 +809,7 @@ export function TimeRuleModal({
 
                 <Field
                   label="Block streaming between"
-                  hint="An end time earlier than the start time runs past midnight into the next day."
+                  hint="The end time must be later than the start time. To block across midnight, add one rule for each day."
                 >
                   <div className="flex items-center gap-2">
                     <Input
