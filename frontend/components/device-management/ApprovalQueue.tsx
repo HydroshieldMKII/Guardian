@@ -42,9 +42,9 @@ export function ApprovalQueue({
           className,
         )}
       >
-        <StatusMark tone="positive" className="size-6" />
         <div>
-          <h2 className="text-[15px] font-semibold text-foreground">
+          <h2 className="inline-flex items-center gap-2 text-[15px] font-semibold text-foreground">
+            <StatusMark tone="positive" className="size-3.5" />
             Nothing waiting for approval
           </h2>
           <p className="mx-auto mt-1 max-w-xs text-sm text-muted-foreground">
