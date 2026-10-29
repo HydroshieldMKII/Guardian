@@ -16,7 +16,6 @@ const config: Config = {
     "hooks/**/*.{ts,tsx}",
     "contexts/**/*.{ts,tsx}",
     "components/**/*.{ts,tsx}",
-    "app/api/**/*.ts",
     "web-server/**/*.ts",
     "!web-server/start.ts",
     "!**/*.d.ts",
