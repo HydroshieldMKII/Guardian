@@ -117,58 +117,52 @@ export function ErrorHandler({
   const errorInfo = getErrorInfo();
 
   return (
-    <div className="min-h-[calc(100vh-3.5rem)]">
-      <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-8">
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <Card className="w-full max-w-2xl">
-            <CardHeader className="pb-2 mt-8">
-              <CardTitle className="text-2xl font-bold text-foreground">
-                {errorInfo.title}
-              </CardTitle>
-              <CardDescription className="text-lg">
-                {errorInfo.description}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {errorInfo.showChecklist && (
-                <div className="space-y-4">
-                  <h4 className="text-sm font-medium text-foreground">
-                    To get started, you&apos;ll need to configure:
-                  </h4>
-                  <ul className="space-y-2 list-disc list-inside">
-                    <li className="text-sm text-muted-foreground">
-                      Plex server IP address
-                    </li>
-                    <li className="text-sm text-muted-foreground">
-                      Plex server port
-                    </li>
-                    <li className="text-sm text-muted-foreground">
-                      Plex authentication token
-                    </li>
-                  </ul>
-                </div>
-              )}
-
-              <div className="pt-4 mb-8">
-                {errorInfo.isBackendError && onRetry ? (
-                  <Button onClick={onRetry} className="w-full" size="lg">
-                    Retry connection
-                  </Button>
-                ) : (
-                  onShowSettings && (
-                    <Button
-                      onClick={onShowSettings}
-                      className="w-full"
-                      size="lg"
-                    >
-                      Go to settings
-                    </Button>
-                  )
-                )}
+    <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-8">
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Card className="w-full max-w-2xl">
+          <CardHeader className="pb-2 mt-8">
+            <CardTitle className="text-2xl font-bold text-foreground">
+              {errorInfo.title}
+            </CardTitle>
+            <CardDescription className="text-lg">
+              {errorInfo.description}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {errorInfo.showChecklist && (
+              <div className="space-y-4">
+                <h4 className="text-sm font-medium text-foreground">
+                  To get started, you&apos;ll need to configure:
+                </h4>
+                <ul className="space-y-2 list-disc list-inside">
+                  <li className="text-sm text-muted-foreground">
+                    Plex server IP address
+                  </li>
+                  <li className="text-sm text-muted-foreground">
+                    Plex server port
+                  </li>
+                  <li className="text-sm text-muted-foreground">
+                    Plex authentication token
+                  </li>
+                </ul>
               </div>
-            </CardContent>
-          </Card>
-        </div>
+            )}
+
+            <div className="pt-4 mb-8">
+              {errorInfo.isBackendError && onRetry ? (
+                <Button onClick={onRetry} className="w-full" size="lg">
+                  Retry connection
+                </Button>
+              ) : (
+                onShowSettings && (
+                  <Button onClick={onShowSettings} className="w-full" size="lg">
+                    Go to settings
+                  </Button>
+                )
+              )}
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
