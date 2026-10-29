@@ -1172,8 +1172,7 @@ describe("grouping details", () => {
         device({
           id: 2,
           deviceIdentifier: "amp-new",
-          deviceName: "Plexamp Kitchen",
-          deviceProduct: undefined,
+          deviceProduct: "plexamp",
           lastSeen: "2026-01-01T00:00:00Z",
         }),
         device({ id: 3, deviceIdentifier: "tv", status: "approved" }),

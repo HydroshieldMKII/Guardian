@@ -7,6 +7,7 @@ import { UserPreference } from '@/entities/user-preference.entity';
 import { DeviceTrackingService } from '@/modules/devices/services/device-tracking.service';
 import { PlexClient } from '@/modules/plex/services/plex-client';
 import { NotificationOrchestratorService } from '@/modules/notifications/services/notification-orchestrator.service';
+import { isPlexampProduct } from '@/common/utils/plexamp.utils';
 import {
   EnrichedPlexSessionsResponse,
   PlexSessionsResponse,
@@ -95,10 +96,6 @@ export class ActiveSessionService {
     }
   }
 
-  private isPlexampDevice(product?: string): boolean {
-    return product?.toLowerCase().includes('plexamp') ?? false;
-  }
-
   private async upsertSession(sessionData: PlexSessionData): Promise<void> {
     try {
       if (!sessionData.sessionKey) {
@@ -143,7 +140,7 @@ export class ActiveSessionService {
 
     const trackChanged =
       existingSession &&
-      this.isPlexampDevice(sessionData.Player?.product) &&
+      isPlexampProduct(sessionData.Player?.product) &&
       sessionData.ratingKey &&
       existingSession.ratingKey &&
       sessionData.ratingKey !== existingSession.ratingKey;

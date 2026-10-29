@@ -168,11 +168,11 @@ describe("DeviceRow status", () => {
     ).toHaveTextContent("Plexamp");
   });
 
-  it("detects Plexamp from the device name too", () => {
+  it("does not treat a device named like Plexamp as Plexamp", () => {
     renderRow({ deviceProduct: "Plex", deviceName: "Office Plexamp" });
     expect(
-      screen.getByRole("button", { name: /always allowed to stream/ }),
-    ).toHaveTextContent("Plexamp");
+      screen.queryByRole("button", { name: /always allowed to stream/ }),
+    ).not.toBeInTheDocument();
   });
 
   it("treats an unknown status as pending", () => {

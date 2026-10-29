@@ -1,4 +1,5 @@
 import { DeviceStatus, UserDevice } from '@/entities/user-device.entity';
+import { isPlexampDevice } from '@/common/utils/plexamp.utils';
 import { UserTimeRule } from '@/entities/user-time-rule.entity';
 
 export interface UserPortalTimeRule {
@@ -71,7 +72,6 @@ export const toPortalDevice = (
   timeRules: UserPortalTimeRule[] | undefined,
   now: Date,
 ): UserPortalDevice => {
-  const isPlexamp = device.deviceProduct?.toLowerCase().includes('plexamp');
   const hasTemporaryAccess = Boolean(
     device.temporaryAccessUntil && device.temporaryAccessUntil > now,
   );
@@ -82,7 +82,7 @@ export const toPortalDevice = (
     deviceName: device.deviceName || 'Unknown Device',
     devicePlatform: device.devicePlatform || 'Unknown',
     deviceProduct: device.deviceProduct || 'Unknown',
-    status: isPlexamp ? 'approved' : device.status,
+    status: isPlexampDevice(device) ? 'approved' : device.status,
     firstSeen: device.firstSeen,
     lastSeen: device.lastSeen,
     requestDescription: device.requestDescription || undefined,

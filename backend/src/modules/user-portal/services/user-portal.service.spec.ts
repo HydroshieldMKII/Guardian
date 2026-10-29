@@ -158,6 +158,19 @@ describe('UserPortalService', () => {
       expect(presented.status).toBe('approved');
     });
 
+    it('shows the stored status of a device only named like Plexamp', async () => {
+      deviceRepo.find.mockResolvedValue([
+        device({
+          status: 'rejected',
+          deviceProduct: 'Plex Web',
+          deviceName: 'Kitchen PlexAmp',
+        }),
+      ]);
+
+      const [presented] = await service.getUserDevices('plex-9');
+      expect(presented.status).toBe('rejected');
+    });
+
     it('surfaces live temporary access', async () => {
       const until = new Date(Date.now() + 60_000);
       deviceRepo.find.mockResolvedValue([

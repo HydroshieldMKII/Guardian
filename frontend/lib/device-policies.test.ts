@@ -60,11 +60,19 @@ const inHours = (hours: number) =>
   new Date(Date.now() + hours * 3600_000).toISOString();
 
 describe("isPlexampDevice", () => {
-  it.each([
-    ["by product", { deviceProduct: "Plexamp" }],
-    ["by name", { deviceName: "Office PlexAmp" }],
-  ])("recognises a Plexamp device %s", (_label, overrides) => {
-    expect(isPlexampDevice(device(overrides))).toBe(true);
+  it.each(["Plexamp", "plexamp"])(
+    "recognises a device whose product is %s",
+    (deviceProduct) => {
+      expect(isPlexampDevice(device({ deviceProduct }))).toBe(true);
+    },
+  );
+
+  it("ignores a device only named like Plexamp", () => {
+    expect(
+      isPlexampDevice(
+        device({ deviceProduct: "Plex Web", deviceName: "Office PlexAmp" }),
+      ),
+    ).toBe(false);
   });
 
   it("leaves an ordinary device alone", () => {

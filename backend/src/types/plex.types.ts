@@ -44,20 +44,6 @@ export interface PlexSession {
   parentRatingKey?: string | null;
 }
 
-/**
- * Check if a session or player product is Plexamp.
- * Plexamp is a dedicated music player that is excluded from most policy checks.
- */
-export function isPlexampSession(
-  sessionOrProduct: PlexSession | string | undefined,
-): boolean {
-  if (!sessionOrProduct) return false;
-  if (typeof sessionOrProduct === 'string') {
-    return sessionOrProduct === 'Plexamp';
-  }
-  return sessionOrProduct.Player?.product === 'Plexamp';
-}
-
 export interface EnrichedPlexSession extends Omit<PlexSession, 'Session'> {
   Session?: NonNullable<PlexSession['Session']> & { sessionCount?: number };
   thumbnailUrl?: string;

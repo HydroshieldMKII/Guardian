@@ -11,7 +11,8 @@ import {
   IPValidationResult,
   IPValidationService,
 } from '@/common/services/ip-validation.service';
-import { PlexSession, isPlexampSession } from '@/types/plex.types';
+import { PlexSession } from '@/types/plex.types';
+import { isPlexampSession } from '@/common/utils/plexamp.utils';
 import { StopCode } from '@/common/utils/stop-codes';
 import { DEFAULT_BLOCK_MESSAGES } from '@/common/utils/block-messages';
 

@@ -187,11 +187,15 @@ describe('DeviceTrackingService', () => {
     });
 
     it.each([
-      ['product', { product: 'Plexamp' }],
-      ['name', { device: 'Kitchen PlexAmp' }],
+      ['a Plexamp product', { product: 'Plexamp' }, 'approved'],
+      [
+        'only a Plexamp-like name',
+        { product: 'Plex Web', device: 'Kitchen PlexAmp' },
+        'rejected',
+      ],
     ])(
-      'always approves a Plexamp device in strict mode, matched by %s',
-      async (_label, player) => {
+      'in strict mode, settles a device with %s as %s',
+      async (_label, player, status) => {
         configService.getSetting.mockResolvedValue(true);
 
         await service.processSessionsForDeviceTracking(
@@ -202,7 +206,7 @@ describe('DeviceTrackingService', () => {
           ),
         );
 
-        expect(savedDevice().status).toBe('approved');
+        expect(savedDevice().status).toBe(status);
       },
     );
 

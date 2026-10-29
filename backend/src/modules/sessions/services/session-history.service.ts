@@ -12,14 +12,10 @@ const SESSION_APP_FILTERS: Record<
   SessionHistoryApp,
   FindOptionsWhere<SessionHistory> | FindOptionsWhere<SessionHistory>[]
 > = {
-  plexamp: [
-    { product: PLEXAMP },
-    { userDevice: { deviceProduct: PLEXAMP } },
-    { userDevice: { deviceName: PLEXAMP } },
-  ],
+  plexamp: [{ product: PLEXAMP }, { userDevice: { deviceProduct: PLEXAMP } }],
   plex: {
     product: NOT_PLEXAMP,
-    userDevice: { deviceProduct: NOT_PLEXAMP, deviceName: NOT_PLEXAMP },
+    userDevice: { deviceProduct: NOT_PLEXAMP },
   },
 };
 

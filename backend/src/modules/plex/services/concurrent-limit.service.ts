@@ -4,7 +4,8 @@ import { Repository } from 'typeorm';
 import { SessionHistory } from '@/entities/session-history.entity';
 import { ConcurrentStreamService } from '@/modules/users/services/concurrent-stream.service';
 import { ConfigService } from '@/modules/config/services/config.service';
-import { PlexSession, isPlexampSession } from '@/types/plex.types';
+import { PlexSession } from '@/types/plex.types';
+import { isPlexampSession } from '@/common/utils/plexamp.utils';
 import { errorMessage } from '@/common/utils/error-types';
 import { DEFAULT_BLOCK_MESSAGES } from '@/common/utils/block-messages';
 

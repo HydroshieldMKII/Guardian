@@ -47,10 +47,7 @@ export const BYPASSED_BY_TEMPORARY_ACCESS =
   "the time schedule, IP access rules and device approval";
 
 export const isPlexampDevice = (device: UserDevice): boolean =>
-  Boolean(
-    device.deviceProduct?.toLowerCase().includes("plexamp") ||
-    device.deviceName?.toLowerCase().includes("plexamp"),
-  );
+  device.deviceProduct?.toLowerCase().includes("plexamp") ?? false;
 
 export const isWaitingDevice = (device: UserDevice): boolean =>
   device.status === "pending" && !isPlexampDevice(device);

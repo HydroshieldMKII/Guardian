@@ -118,15 +118,21 @@ describe("DeviceStatus", () => {
   });
 
   it.each([
-    ["deviceProduct", { deviceProduct: "Plexamp" }],
-    ["deviceName", { deviceName: "Office PlexAmp" }],
+    ["Plexamp", "Not manageable"],
+    ["Plex Web", "Pending"],
   ])(
-    "marks a pending Plexamp device unmanageable via %s",
-    (_label, overrides) => {
+    "shows a pending device whose product is %s as %s",
+    (deviceProduct, label) => {
       render(
-        <DeviceStatus device={device({ status: "pending", ...overrides })} />,
+        <DeviceStatus
+          device={device({
+            status: "pending",
+            deviceProduct,
+            deviceName: "Office PlexAmp",
+          })}
+        />,
       );
-      expect(screen.getByText("Not manageable")).toBeInTheDocument();
+      expect(screen.getByText(label)).toBeInTheDocument();
     },
   );
 

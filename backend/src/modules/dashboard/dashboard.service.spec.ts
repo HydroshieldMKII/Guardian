@@ -98,13 +98,22 @@ describe('DashboardService', () => {
       expect(result.stats.pendingDevices).toBe(1);
     });
 
-    it('excludes Plexamp devices from the pending count by name', async () => {
+    it('excludes Plexamp devices from the pending count', async () => {
       devicesService.getPendingDevices.mockResolvedValue([
-        { id: 2, deviceName: 'Kitchen PlexAmp' },
+        { id: 2, deviceProduct: 'Plexamp' },
       ]);
 
       const result = await service.getDashboardData();
       expect(result.stats.pendingDevices).toBe(0);
+    });
+
+    it('still counts a device that is only named like Plexamp', async () => {
+      devicesService.getPendingDevices.mockResolvedValue([
+        { id: 2, deviceProduct: 'Plex Web', deviceName: 'Kitchen PlexAmp' },
+      ]);
+
+      const result = await service.getDashboardData();
+      expect(result.stats.pendingDevices).toBe(1);
     });
 
     it('still lists Plexamp devices under pending devices', async () => {

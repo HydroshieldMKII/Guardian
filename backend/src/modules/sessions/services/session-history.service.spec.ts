@@ -203,16 +203,19 @@ describe('SessionHistoryService on a database', () => {
     await dataSource.destroy();
   });
 
-  it('matches Plexamp on the session product, device product or device name', async () => {
+  it('matches Plexamp on the session or device product', async () => {
     expect(await keys('plexamp')).toEqual([
-      'device-name',
       'device-product',
       'session-product',
     ]);
   });
 
-  it('keeps sessions without a product or device when only Plex is asked for', async () => {
-    expect(await keys('plex')).toEqual(['no-device', 'plex-web']);
+  it('files a device only named like Plexamp under Plex', async () => {
+    expect(await keys('plex')).toEqual([
+      'device-name',
+      'no-device',
+      'plex-web',
+    ]);
   });
 
   describe('getUserSessionHistory', () => {
