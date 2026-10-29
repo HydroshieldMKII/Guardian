@@ -4,7 +4,6 @@ import React, { Suspense, useState } from "react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { createQueryClient } from "@/lib/query-client";
 import { VersionProvider } from "@/contexts/version-context";
-import { SettingsProvider } from "@/contexts/settings-context";
 import { UnsavedChangesProvider } from "@/contexts/unsaved-changes-context";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { GlobalVersionMismatchBanner } from "@/components/global-version-mismatch-banner";
@@ -18,19 +17,17 @@ function AppProvidersContent({ children }: { children: React.ReactNode }) {
 
   return (
     <VersionProvider>
-      <SettingsProvider>
-        <UnsavedChangesProvider>
-          <ErrorBoundary>
-            <GlobalVersionMismatchBanner />
-            <GlobalUpdateBanner />
-            <Suspense fallback={null}>
-              <Navbar />
-            </Suspense>
-            {children}
-          </ErrorBoundary>
-          <Toaster />
-        </UnsavedChangesProvider>
-      </SettingsProvider>
+      <UnsavedChangesProvider>
+        <ErrorBoundary>
+          <GlobalVersionMismatchBanner />
+          <GlobalUpdateBanner />
+          <Suspense fallback={null}>
+            <Navbar />
+          </Suspense>
+          {children}
+        </ErrorBoundary>
+        <Toaster />
+      </UnsavedChangesProvider>
     </VersionProvider>
   );
 }

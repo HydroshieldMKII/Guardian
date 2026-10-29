@@ -10,6 +10,7 @@ export const queryKeys = {
     settings: ["portal", "settings"] as const,
     rules: ["portal", "rules"] as const,
   },
+  settings: ["settings"] as const,
   sessionHistory: {
     all: ["sessionHistory"] as const,
     forUser: (userId: string, filter: SessionHistoryFilter) =>

@@ -20,7 +20,7 @@ jest.mock("@/hooks/use-toast", () => ({
 }));
 
 let settings: { key: string; value: string }[] = [];
-jest.mock("@/contexts/settings-context", () => ({
+jest.mock("@/hooks/useSettings", () => ({
   useSettings: () => ({ settings }),
 }));
 

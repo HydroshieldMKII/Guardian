@@ -20,7 +20,7 @@ import { Loader2 } from "lucide-react";
 import { UserPreference } from "@/types";
 import { apiClient } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
-import { useSettings } from "@/contexts/settings-context";
+import { useSettings } from "@/hooks/useSettings";
 
 interface ConcurrentStreamInfo {
   limit: number | null;

@@ -17,7 +17,7 @@ import {
 import { UserHistoryModal } from "@/components/device-management/UserHistoryModal";
 import { NotificationItem } from "@/components/notifications/NotificationItem";
 import { isAdminUser, useAuth } from "@/contexts/auth-context";
-import { useSettings } from "@/contexts/settings-context";
+import { useSettings } from "@/hooks/useSettings";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useNotifications } from "@/hooks/useNotifications";
 import type { Notification } from "@/types";

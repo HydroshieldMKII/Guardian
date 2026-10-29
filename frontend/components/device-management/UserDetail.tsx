@@ -35,7 +35,7 @@ import { DeviceRow } from "./DeviceRow";
 import { IPAccessModal } from "./IPAccessModal";
 import { ConcurrentStreamModal } from "./ConcurrentStreamModal";
 import { groupName, type UserDeviceGroup } from "./user-group";
-import { useSettings } from "@/contexts/settings-context";
+import { useSettings } from "@/hooks/useSettings";
 import { cn } from "@/lib/utils";
 
 const POLICY_CHOICES: {

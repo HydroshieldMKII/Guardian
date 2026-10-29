@@ -11,7 +11,7 @@ import type { PolicyBadge } from "@/lib/device-policies";
 
 const getGlobalDefaultBlock = jest.fn();
 let configLoading = false;
-jest.mock("@/contexts/settings-context", () => ({
+jest.mock("@/hooks/useSettings", () => ({
   useSettings: () => ({ getGlobalDefaultBlock, loading: configLoading }),
 }));
 

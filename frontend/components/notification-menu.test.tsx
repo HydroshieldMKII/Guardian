@@ -28,7 +28,7 @@ jest.mock("@/hooks/useNotifications", () => ({
 }));
 
 let autoMarkRead: string | undefined;
-jest.mock("@/contexts/settings-context", () => ({
+jest.mock("@/hooks/useSettings", () => ({
   useSettings: () => ({
     getSetting: (key: string) =>
       key === "AUTO_MARK_NOTIFICATION_READ" ? autoMarkRead : undefined,

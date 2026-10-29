@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useSettings } from "@/contexts/settings-context";
+import { useSettings } from "@/hooks/useSettings";
 import { useVersion } from "@/contexts/version-context";
 import { useUnsavedChanges } from "@/contexts/unsaved-changes-context";
 import { apiClient } from "@/lib/api";
