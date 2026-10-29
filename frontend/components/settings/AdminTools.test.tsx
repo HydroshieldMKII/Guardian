@@ -122,16 +122,16 @@ afterEach(() => {
 });
 
 describe("AdminTools post-reload notice", () => {
-  it("announces a completed reset once", () => {
-    localStorage.setItem("guardianResetSuccess", "true");
+  it("announces a completed import once", () => {
+    localStorage.setItem("guardianImportSuccess", "true");
     renderPanel();
 
-    expect(toast).toHaveBeenCalledWith(
-      expect.objectContaining({
-        description: "Everything is back to its default settings.",
-      }),
-    );
-    expect(localStorage.getItem("guardianResetSuccess")).toBeNull();
+    expect(toast).toHaveBeenCalledWith({
+      title: "Settings imported",
+      description: "Your imported settings are now in use.",
+      variant: "success",
+    });
+    expect(localStorage.getItem("guardianImportSuccess")).toBeNull();
   });
 
   it("stays quiet otherwise", () => {
@@ -482,7 +482,7 @@ describe("AdminTools import", () => {
       jest.advanceTimersByTime(2000);
     });
 
-    expect(localStorage.getItem("guardianResetSuccess")).toBe("true");
+    expect(localStorage.getItem("guardianImportSuccess")).toBe("true");
   });
 
   describe("on a version mismatch", () => {

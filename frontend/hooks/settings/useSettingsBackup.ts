@@ -6,7 +6,7 @@ import { apiClient } from "@/lib/api";
 import { downloadJson } from "@/lib/download";
 import { RELOAD_DELAY_MS } from "@/hooks/settings/useProtectedActions";
 
-const RESET_SUCCESS_KEY = "guardianResetSuccess";
+const IMPORT_SUCCESS_KEY = "guardianImportSuccess";
 
 interface PendingImport {
   file: File;
@@ -24,11 +24,11 @@ export function useSettingsBackup(onSettingsRefresh?: () => void) {
   const [mismatch, setMismatch] = useState<PendingImport | null>(null);
 
   useEffect(() => {
-    if (!localStorage.getItem(RESET_SUCCESS_KEY)) return;
-    localStorage.removeItem(RESET_SUCCESS_KEY);
+    if (!localStorage.getItem(IMPORT_SUCCESS_KEY)) return;
+    localStorage.removeItem(IMPORT_SUCCESS_KEY);
     toast({
-      title: "Factory reset complete",
-      description: "Everything is back to its default settings.",
+      title: "Settings imported",
+      description: "Your imported settings are now in use.",
       variant: "success",
     });
   }, [toast]);
@@ -68,7 +68,7 @@ export function useSettingsBackup(onSettingsRefresh?: () => void) {
       });
       onSettingsRefresh?.();
       setTimeout(() => {
-        localStorage.setItem(RESET_SUCCESS_KEY, "true");
+        localStorage.setItem(IMPORT_SUCCESS_KEY, "true");
         window.location.reload();
       }, RELOAD_DELAY_MS);
     } catch (error) {
