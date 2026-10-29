@@ -1,4 +1,3 @@
-import React from "react";
 import { StatusPill } from "@/components/ui/entity";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { UserDevice } from "@/types";

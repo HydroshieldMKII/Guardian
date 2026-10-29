@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, memo, useMemo } from "react";
+import { useState, useEffect, memo, useMemo } from "react";
 
 import { useDeviceDecisions } from "@/hooks/device-management/useDeviceDecisions";
 import { useDeviceFocus } from "@/hooks/device-management/useDeviceFocus";

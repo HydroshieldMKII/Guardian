@@ -1,6 +1,5 @@
 import { act, cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import React from "react";
 import type { UnifiedDashboardData } from "@/types";
 import { Dashboard } from "@/components/dashboard";
 import { renderWithQuery } from "@/test-utils/query";

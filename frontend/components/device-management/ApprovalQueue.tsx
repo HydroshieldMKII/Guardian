@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { MessageSquareText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatusMark } from "@/components/ui/entity";
