@@ -1,6 +1,6 @@
 import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { In } from 'typeorm';
+import { In, IsNull } from 'typeorm';
 import { UserDevice } from '@/entities/user-device.entity';
 import { SessionHistory } from '@/entities/session-history.entity';
 import { UsersService } from '@/modules/users/services/users.service';
@@ -912,7 +912,7 @@ describe('DeviceTrackingService', () => {
         { currentSessionKey: null },
       );
       expect(historyRepo.update).toHaveBeenCalledWith(
-        { sessionKey: 'sk-1' },
+        { sessionKey: 'sk-1', endedAt: IsNull() },
         { endedAt: anyDate() },
       );
     });

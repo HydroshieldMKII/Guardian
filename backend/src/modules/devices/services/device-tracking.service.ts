@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In } from 'typeorm';
+import { Repository, In, IsNull } from 'typeorm';
 import { UserDevice } from '@/entities/user-device.entity';
 import { SessionHistory } from '@/entities/session-history.entity';
 import { UsersService } from '@/modules/users/services/users.service';
@@ -729,9 +729,8 @@ export class DeviceTrackingService {
       { currentSessionKey: null },
     );
 
-    // Find in session history and mark terminated at true
     await this.sessionHistoryRepository.update(
-      { sessionKey },
+      { sessionKey, endedAt: IsNull() },
       { endedAt: new Date() },
     );
 

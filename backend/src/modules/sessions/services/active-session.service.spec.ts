@@ -305,7 +305,7 @@ describe('ActiveSessionService', () => {
         where: { sessionKey: Not(In(['sk-1'])), endedAt: IsNull() },
       });
       expect(historyRepo.update).toHaveBeenCalledWith(
-        { sessionKey: In(['sk-old']) },
+        { sessionKey: In(['sk-old']), endedAt: IsNull() },
         { endedAt: anyDate(), playerState: 'stopped' },
       );
       expect(deviceTrackingService.clearSessionKey).toHaveBeenCalledWith(
@@ -582,7 +582,7 @@ describe('ActiveSessionService', () => {
   });
 });
 
-describe('ActiveSessionService history app filter', () => {
+describe('ActiveSessionService on a database', () => {
   let dataSource: DataSource;
   let service: ActiveSessionService;
 
@@ -639,7 +639,10 @@ describe('ActiveSessionService history app filter', () => {
           provide: getRepositoryToken(UserPreference),
           useValue: dataSource.getRepository(UserPreference),
         },
-        { provide: DeviceTrackingService, useValue: {} },
+        {
+          provide: DeviceTrackingService,
+          useValue: { clearSessionKey: jest.fn() },
+        },
         { provide: PlexClient, useValue: {} },
         { provide: NotificationOrchestratorService, useValue: {} },
       ],
@@ -681,6 +684,38 @@ describe('ActiveSessionService history app filter', () => {
 
   it('keeps sessions without a product or device when only Plex is asked for', async () => {
     expect(await keys('plex')).toEqual(['no-device', 'plex-web']);
+  });
+
+  describe('updateActiveSessions', () => {
+    it('leaves an earlier session that reused the key as it ended', async () => {
+      const repository = dataSource.getRepository(SessionHistory);
+      const earlierEnd = new Date('2026-01-01T10:00:00Z');
+      const earlier = await repository.save({
+        sessionKey: '7',
+        userId: 'u1',
+        endedAt: earlierEnd,
+        playerState: 'paused',
+      });
+      const current = await repository.save({
+        sessionKey: '7',
+        userId: 'u1',
+        endedAt: null,
+        playerState: 'playing',
+      });
+
+      await service.updateActiveSessions({
+        MediaContainer: { size: 0, Metadata: [] },
+      });
+
+      const [earlierAfter, currentAfter] = await Promise.all([
+        repository.findOneByOrFail({ id: earlier.id }),
+        repository.findOneByOrFail({ id: current.id }),
+      ]);
+      expect(earlierAfter.endedAt).toEqual(earlierEnd);
+      expect(earlierAfter.playerState).toBe('paused');
+      expect(currentAfter.endedAt).toBeInstanceOf(Date);
+      expect(currentAfter.playerState).toBe('stopped');
+    });
   });
 
   describe('getUserSessionHistory', () => {

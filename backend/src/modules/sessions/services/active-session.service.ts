@@ -130,7 +130,7 @@ export class ActiveSessionService {
       // Mark ended sessions with endedAt timestamp and update player state
       if (endingSessionKeys.length > 0) {
         await this.sessionHistoryRepository.update(
-          { sessionKey: In(endingSessionKeys) },
+          { sessionKey: In(endingSessionKeys), endedAt: IsNull() },
           { endedAt: new Date(), playerState: 'stopped' },
         );
       }
