@@ -2,9 +2,7 @@
 
 import React, {
   useState,
-  useCallback,
   useEffect,
-  useRef,
   memo,
   useMemo,
   useDeferredValue,
@@ -12,6 +10,7 @@ import React, {
 import { Button } from "@/components/ui/button";
 
 import { useDeviceDecisions } from "@/hooks/device-management/useDeviceDecisions";
+import { useDeviceFocus } from "@/hooks/device-management/useDeviceFocus";
 import { useUserPolicyUpdates } from "@/hooks/device-management/useUserPolicyUpdates";
 import { useUserVisibility } from "@/hooks/device-management/useUserVisibility";
 import { useTimeRulesForUsers } from "@/hooks/device-management/useTimeRules";
@@ -25,10 +24,7 @@ import {
   devicePolicyBadges,
 } from "@/lib/device-policies";
 
-import {
-  UserDetail,
-  type DeviceFocus,
-} from "@/components/device-management/UserDetail";
+import { UserDetail } from "@/components/device-management/UserDetail";
 import {
   UserList,
   matchesFilter,
@@ -54,11 +50,8 @@ import {
   HiddenUsersDialog,
   HideUserDialog,
 } from "@/components/device-management/HiddenUsersDialogs";
-import { HIGHLIGHT_CLASSES } from "@/lib/highlight";
 
 const NO_TIME_RULES: TimeRulesByUser = {};
-const DEVICE_LOOKUP_ATTEMPTS = 20;
-const DEVICE_LOOKUP_RETRY_MS = 100;
 const USER_SORT_BY_KEY = "guardian-unified-sort-by";
 const USER_SORT_ORDER_KEY = "guardian-unified-sort-order";
 
@@ -95,7 +88,6 @@ const DeviceManagement = memo(
     const [userGroups, setUserGroups] = useState<UserDeviceGroup[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
-    const [deviceFocus, setDeviceFocus] = useState<DeviceFocus | null>(null);
     const [selectedDevice, setSelectedDevice] = useState<UserDevice | null>(
       null,
     );
@@ -106,13 +98,20 @@ const DeviceManagement = memo(
       controlledSelectedUserId !== undefined
         ? controlledSelectedUserId
         : localSelectedUserId;
-    const selectUser = (userId: string | null) => {
-      setDeviceFocus(null);
+    const commitSelection = (userId: string | null) => {
       if (onSelectUser) {
         onSelectUser(userId);
       } else {
         setLocalSelectedUserId(userId);
       }
+    };
+    const { deviceFocus, setDeviceFocus, focusDevice } = useDeviceFocus(
+      selectedUserId,
+      commitSelection,
+    );
+    const selectUser = (userId: string | null) => {
+      setDeviceFocus(null);
+      commitSelection(userId);
     };
     const [filter, setFilter] = useState<UserFilter>("all");
     const [searchTerm, setSearchTerm] = useState("");
@@ -140,14 +139,7 @@ const DeviceManagement = memo(
     const { data: userTimeRules = NO_TIME_RULES } = useTimeRulesForUsers(
       userGroups.map((group) => group.user.userId),
     );
-    const selectedUserIdRef = useRef(selectedUserId);
-    const selectUserRef = useRef(selectUser);
     const { toast } = useToast();
-
-    useEffect(() => {
-      selectedUserIdRef.current = selectedUserId;
-      selectUserRef.current = selectUser;
-    });
 
     const [sortBy, setSortBy] = useStoredChoice<UserSort>(
       USER_SORT_BY_KEY,
@@ -164,54 +156,6 @@ const DeviceManagement = memo(
         setLoading(false);
       }
     }, [devicesData, usersData]);
-
-    const focusDevice = useCallback(
-      (userId: string, deviceIdentifier: string, onDone?: () => void) => {
-        const wasSelected = selectedUserIdRef.current === userId;
-        if (!wasSelected) {
-          selectUserRef.current(userId);
-        }
-        setDeviceFocus({ deviceIdentifier });
-
-        const delay = wasSelected ? 100 : 400;
-
-        const highlightDevice = (attempt: number) => {
-          const deviceElement = Array.from(
-            document.querySelectorAll<HTMLElement>("[data-device-identifier]"),
-          ).find(
-            (element) => element.dataset.deviceIdentifier === deviceIdentifier,
-          );
-          if (!deviceElement) {
-            if (attempt < DEVICE_LOOKUP_ATTEMPTS) {
-              setTimeout(
-                () => highlightDevice(attempt + 1),
-                DEVICE_LOOKUP_RETRY_MS,
-              );
-            } else {
-              onDone?.();
-            }
-            return;
-          }
-
-          deviceElement.scrollIntoView({
-            behavior: "smooth",
-            block: "center",
-            inline: "nearest",
-          });
-
-          setTimeout(() => {
-            deviceElement.classList.add(...HIGHLIGHT_CLASSES);
-            setTimeout(() => {
-              deviceElement.classList.remove(...HIGHLIGHT_CLASSES);
-              onDone?.();
-            }, 1500);
-          }, 200);
-        };
-
-        setTimeout(() => highlightDevice(1), delay);
-      },
-      [],
-    );
 
     useEffect(() => {
       if (navigationTarget && userGroups.length > 0) {
