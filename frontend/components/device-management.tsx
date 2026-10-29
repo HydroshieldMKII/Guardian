@@ -316,9 +316,7 @@ const DeviceManagement = memo(
           defaultBlock,
         );
         if (success) {
-          if (onRefresh) {
-            await onRefresh();
-          }
+          await handleRefresh();
           toast({
             title: "Default device policy updated",
             description:

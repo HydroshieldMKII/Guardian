@@ -1110,6 +1110,23 @@ describe("preference updates without a refresh callback", () => {
     );
   });
 
+  it("keeps the success message when the reload after an update fails", async () => {
+    const { user, onRefresh } = await renderSelected();
+    onRefresh.mockRejectedValue(new Error("offline"));
+
+    await user.click(screen.getByRole("button", { name: "block u-1" }));
+
+    await waitFor(() =>
+      expect(lastToast()).toMatchObject({
+        title: "Default device policy updated",
+      }),
+    );
+    expect(consoleError).toHaveBeenCalledWith(
+      "Failed to refresh:",
+      expect.any(Error),
+    );
+  });
+
   it("reports a thrown preference update", async () => {
     updateUserPreference.mockRejectedValue(new Error("nope"));
     const { user } = await renderSelected();
