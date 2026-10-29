@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import { useAuth } from "@/contexts/auth-context";
 import { useToast } from "@/hooks/use-toast";
+import { usePortalData, useSendPortalNote } from "@/hooks/usePortal";
 import { EmptyState } from "@/components/ui/entity";
 import { PageLoader } from "@/components/three-dot-loader";
 import { NoteRequestDialogs } from "@/components/portal/NoteRequestDialogs";
@@ -10,88 +11,20 @@ import { PortalDeviceRow } from "@/components/portal/PortalDeviceRow";
 import { PortalHeader } from "@/components/portal/PortalHeader";
 import { PortalRules } from "@/components/portal/PortalRules";
 import { canAddNote } from "@/lib/portal";
-import type { PortalDevice, PortalSettings, PortalUserRules } from "@/types";
-
-interface PortalRulesResponse {
-  enabled?: boolean;
-  rules?: PortalUserRules | null;
-}
-
-interface ErrorResponse {
-  message?: string;
-}
+import type { PortalDevice } from "@/types";
 
 export default function UserPortalPage() {
   const { user, isLoading: authLoading } = useAuth();
   const { toast } = useToast();
-
-  const [devices, setDevices] = useState<PortalDevice[]>([]);
-  const [userRules, setUserRules] = useState<PortalUserRules | null>(null);
-  const [settings, setSettings] = useState<PortalSettings | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  const { devices, settings, userRules, loading, refreshing, refresh } =
+    usePortalData(!authLoading && Boolean(user));
+  const sendNote = useSendPortalNote();
 
   const [note, setNote] = useState<{
     device: PortalDevice;
     open: boolean;
     round: number;
   } | null>(null);
-  const [isRequesting, setIsRequesting] = useState(false);
-
-  const fetchData = useCallback(
-    async (showRefreshing = false) => {
-      if (showRefreshing) {
-        setIsRefreshing(true);
-      }
-
-      try {
-        const devicesRes = await fetch("/api/pg/user-portal/devices", {
-          credentials: "include",
-        });
-        if (devicesRes.ok) {
-          const devicesData = (await devicesRes.json()) as PortalDevice[];
-          setDevices(devicesData);
-        }
-
-        const settingsRes = await fetch("/api/pg/user-portal/settings", {
-          credentials: "include",
-        });
-        if (settingsRes.ok) {
-          const settingsData = (await settingsRes.json()) as PortalSettings;
-          setSettings(settingsData);
-
-          if (settingsData.showRules) {
-            const rulesRes = await fetch("/api/pg/user-portal/rules", {
-              credentials: "include",
-            });
-            if (rulesRes.ok) {
-              const rulesData = (await rulesRes.json()) as PortalRulesResponse;
-              if (rulesData.enabled && rulesData.rules) {
-                setUserRules(rulesData.rules);
-              }
-            }
-          }
-        }
-      } catch (error) {
-        console.error("Failed to fetch portal data:", error);
-        toast({
-          title: "Error",
-          description: "Failed to load your data",
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoading(false);
-        setIsRefreshing(false);
-      }
-    },
-    [toast],
-  );
-
-  useEffect(() => {
-    if (!authLoading && user) {
-      void fetchData();
-    }
-  }, [authLoading, user, fetchData]);
 
   const openNote = (device: PortalDevice) =>
     setNote((current) => ({
@@ -103,58 +36,36 @@ export default function UserPortalPage() {
   const closeNote = () =>
     setNote((current) => current && { ...current, open: false });
 
-  const submitApprovalRequest = async (description: string) => {
-    if (!note) return;
-
-    setIsRequesting(true);
-    try {
-      const response = await fetch(
-        `/api/pg/user-portal/devices/${note.device.id}/request`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          credentials: "include",
-          body: JSON.stringify({ description }),
+  const submitNote = (device: PortalDevice, description: string) =>
+    sendNote.mutate(
+      { deviceId: device.id, description },
+      {
+        onSuccess: () => {
+          toast({
+            title: "Note submitted",
+            description:
+              "The server owner will see your note next to this device",
+            variant: "success",
+          });
+          closeNote();
         },
-      );
+        onError: (error) => {
+          toast({
+            title: "Error",
+            description: error.message,
+            variant: "destructive",
+          });
+        },
+      },
+    );
 
-      if (!response.ok) {
-        const error = (await response.json()) as ErrorResponse;
-        throw new Error(error.message || "Failed to submit request");
-      }
-
-      toast({
-        title: "Note submitted",
-        description: "The server owner will see your note next to this device",
-        variant: "success",
-      });
-
-      closeNote();
-      void fetchData();
-    } catch (error) {
-      toast({
-        title: "Error",
-        description:
-          error instanceof Error ? error.message : "Failed to submit note",
-        variant: "destructive",
-      });
-    } finally {
-      setIsRequesting(false);
-    }
-  };
-
-  if (authLoading || isLoading) {
+  if (authLoading || loading) {
     return <PageLoader />;
   }
 
   return (
     <div className="min-h-screen bg-background">
-      <PortalHeader
-        refreshing={isRefreshing}
-        onRefresh={() => void fetchData(true)}
-      />
+      <PortalHeader refreshing={refreshing} onRefresh={() => void refresh()} />
 
       <main className="mx-auto max-w-3xl animate-in fade-in px-4 py-8 duration-300 motion-reduce:animate-none sm:px-6 sm:py-10">
         <div className="space-y-10">
@@ -197,9 +108,9 @@ export default function UserPortalPage() {
           key={note.round}
           device={note.device}
           open={note.open}
-          submitting={isRequesting}
+          submitting={sendNote.isPending}
           onClose={closeNote}
-          onSubmit={(description) => void submitApprovalRequest(description)}
+          onSubmit={(description) => submitNote(note.device, description)}
         />
       )}
     </div>

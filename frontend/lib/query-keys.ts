@@ -3,6 +3,12 @@ import type { SessionHistoryFilter } from "@/lib/session-history-api";
 export const queryKeys = {
   dashboard: ["dashboard"] as const,
   hiddenUsers: ["users", "hidden"] as const,
+  portal: {
+    all: ["portal"] as const,
+    devices: ["portal", "devices"] as const,
+    settings: ["portal", "settings"] as const,
+    rules: ["portal", "rules"] as const,
+  },
   sessionHistory: {
     all: ["sessionHistory"] as const,
     forUser: (userId: string, filter: SessionHistoryFilter) =>
