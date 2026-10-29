@@ -14,42 +14,43 @@ interface IntegerRule {
 
 const isValidEmail = (email: string): boolean => EMAIL_PATTERN.test(email);
 
-const integer =
-  (rule: IntegerRule) =>
-  (value: string): void => {
-    const parsed = Number(value);
+const checkInteger = (rule: IntegerRule, value: string): void => {
+  const parsed = Number(value);
 
-    if (isNaN(parsed)) {
-      throw new Error(rule.notANumber);
-    }
-    if (!Number.isInteger(parsed)) {
-      throw new Error(rule.notWhole);
-    }
-    if (parsed < rule.min || (rule.max !== undefined && parsed > rule.max)) {
-      throw new Error(rule.outOfRange);
-    }
-  };
+  if (isNaN(parsed)) {
+    throw new Error(rule.notANumber);
+  }
+  if (!Number.isInteger(parsed)) {
+    throw new Error(rule.notWhole);
+  }
+  if (parsed < rule.min || (rule.max !== undefined && parsed > rule.max)) {
+    throw new Error(rule.outOfRange);
+  }
+};
 
-const VALIDATORS: Partial<Record<SettingKey, (value: string) => void>> = {
-  PLEXGUARD_REFRESH_INTERVAL: integer({
+const INTEGER_RULES: Partial<Record<SettingKey, IntegerRule>> = {
+  PLEXGUARD_REFRESH_INTERVAL: {
     notANumber: 'Session refresh interval must be a number',
     notWhole: 'Session refresh interval must be a whole number of seconds',
     outOfRange: `Session refresh interval must be at least ${MIN_REFRESH_INTERVAL_SECONDS} seconds`,
     min: MIN_REFRESH_INTERVAL_SECONDS,
-  }),
-  DEVICE_CLEANUP_INTERVAL_DAYS: integer({
+  },
+  DEVICE_CLEANUP_INTERVAL_DAYS: {
     notANumber: 'Device cleanup interval must be a number',
     notWhole: 'Device cleanup interval must be a whole number (no decimals)',
     outOfRange: 'Device cleanup interval must be at least 1 day',
     min: 1,
-  }),
-  SMTP_PORT: integer({
+  },
+  SMTP_PORT: {
     notANumber: 'SMTP port must be a valid number',
     notWhole: 'SMTP port must be a whole number (no decimals)',
     outOfRange: 'SMTP port must be between 1 and 65535',
     min: 1,
     max: 65535,
-  }),
+  },
+};
+
+const FORMAT_RULES: Partial<Record<SettingKey, (value: string) => void>> = {
   SMTP_FROM_EMAIL: (value) => {
     if (value && !isValidEmail(value)) {
       throw new Error('SMTP from email must be a valid email address');
@@ -75,5 +76,16 @@ const VALIDATORS: Partial<Record<SettingKey, (value: string) => void>> = {
 };
 
 export const validateSettingValue = (key: SettingKey, value: string): void => {
-  VALIDATORS[key]?.(value);
+  const integerRule = INTEGER_RULES[key];
+  if (integerRule) checkInteger(integerRule, value);
+  FORMAT_RULES[key]?.(value);
+};
+
+export const clampSettingValue = (key: SettingKey, value: string): string => {
+  const rule = INTEGER_RULES[key];
+  const parsed = Number(value);
+  if (!rule || value.trim() === '' || !Number.isInteger(parsed)) {
+    return value;
+  }
+  return String(Math.min(Math.max(parsed, rule.min), rule.max ?? Infinity));
 };

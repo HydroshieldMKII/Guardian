@@ -16,11 +16,11 @@ describe('DatabaseImportService', () => {
   let deviceRepo: Record<string, jest.Mock>;
   let preferenceRepo: Record<string, jest.Mock>;
 
-  const validateSetting = jest.fn();
+  const prepareSetting = jest.fn((_key: string, value: string) => value);
   const rules: ImportRules = {
     currentAppVersion: '1.3.5',
     compareVersions: (a, b) => (a === b ? 0 : a < b ? -1 : 1),
-    validateSetting,
+    prepareSetting,
   };
   const importing = (payload: ImportPayload) =>
     service.importDatabase(payload, rules);
@@ -118,12 +118,13 @@ describe('DatabaseImportService', () => {
         ({ where }: { where: { key: string } }) =>
           Promise.resolve({ key: where.key, value: '10' }),
       );
-      validateSetting.mockImplementation((key: string) => {
+      prepareSetting.mockImplementation((key: string, value: string) => {
         if (key === 'PLEXGUARD_REFRESH_INTERVAL') {
           throw new Error(
-            'Session refresh interval must be at least 5 seconds',
+            'Session refresh interval must be a whole number of seconds',
           );
         }
+        return value;
       });
 
       await expect(
@@ -135,6 +136,21 @@ describe('DatabaseImportService', () => {
       expect(settingsSave).toHaveBeenCalledTimes(1);
       expect(settingsSave).toHaveBeenCalledWith(
         expect.objectContaining({ key: 'DEFAULT_PAGE', value: 'streams' }),
+      );
+    });
+
+    it('stores the value the settings rules adjusted it to', async () => {
+      settingsFindOne.mockResolvedValue({
+        key: 'PLEXGUARD_REFRESH_INTERVAL',
+        value: '10',
+      });
+      prepareSetting.mockReturnValueOnce('5');
+
+      await expect(
+        importSettings([{ key: 'PLEXGUARD_REFRESH_INTERVAL', value: '2' }]),
+      ).resolves.toEqual({ imported: 1, skipped: 0 });
+      expect(settingsSave).toHaveBeenCalledWith(
+        expect.objectContaining({ value: '5' }),
       );
     });
 

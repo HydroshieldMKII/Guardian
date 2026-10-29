@@ -26,7 +26,7 @@ export interface ImportPayload {
 export interface ImportRules {
   currentAppVersion: string;
   compareVersions: (v1: string, v2: string) => number;
-  validateSetting: (key: string, value: string) => void;
+  prepareSetting: (key: string, value: string) => string;
 }
 
 const asList = <T>(items: T[] | undefined): T[] =>
@@ -137,8 +137,13 @@ export class DatabaseImportService {
       return false;
     }
 
-    rules.validateSetting(setting.key, setting.value);
-    existing.value = setting.value;
+    const value = rules.prepareSetting(setting.key, setting.value);
+    if (value !== setting.value) {
+      this.logger.warn(
+        `Adjusted ${setting.key} from ${setting.value} to ${value} to fit the allowed range`,
+      );
+    }
+    existing.value = value;
     await this.settingsRepository.save(existing);
     return true;
   }

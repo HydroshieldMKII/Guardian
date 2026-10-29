@@ -66,17 +66,28 @@ describe('DatabaseMaintenanceService', () => {
     it('hands the importer the same rules the settings page uses', async () => {
       await service.importDatabase({ data: { settings: [] } });
 
-      const [, { validateSetting: validate }] = callArgs<
-        [unknown, ImportRules]
-      >(databaseImportService.importDatabase);
-      expect(() => validate('PLEXGUARD_REFRESH_INTERVAL', '7.5')).toThrow(
+      const [, { prepareSetting: prepare }] = callArgs<[unknown, ImportRules]>(
+        databaseImportService.importDatabase,
+      );
+      expect(() => prepare('PLEXGUARD_REFRESH_INTERVAL', '7.5')).toThrow(
         'whole number of seconds',
       );
-      expect(() => validate('PLEXGUARD_REFRESH_INTERVAL', '2')).toThrow(
-        'at least 5 seconds',
+      expect(() => prepare('SMTP_FROM_EMAIL', 'not-an-email')).toThrow(
+        'valid email address',
       );
-      expect(() => validate('PLEXGUARD_REFRESH_INTERVAL', '30')).not.toThrow();
-      expect(() => validate('RETIRED_SETTING', 'x')).not.toThrow();
+      expect(prepare('PLEXGUARD_REFRESH_INTERVAL', '30')).toBe('30');
+      expect(prepare('RETIRED_SETTING', 'x')).toBe('x');
+    });
+
+    it('clamps an imported number into the range the settings page allows', async () => {
+      await service.importDatabase({ data: { settings: [] } });
+
+      const [, { prepareSetting: prepare }] = callArgs<[unknown, ImportRules]>(
+        databaseImportService.importDatabase,
+      );
+      expect(prepare('PLEXGUARD_REFRESH_INTERVAL', '2')).toBe('5');
+      expect(prepare('SMTP_PORT', '70000')).toBe('65535');
+      expect(prepare('DEVICE_CLEANUP_INTERVAL_DAYS', '0')).toBe('1');
     });
 
     it('re-seeds the defaults after a reset', async () => {

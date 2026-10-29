@@ -167,9 +167,14 @@ export class ConfigService implements OnModuleInit {
 
   async updateSetting(key: SettingKey, value: unknown): Promise<AppSettings> {
     const stringValue = toStoredValue(value);
-
     validateSettingValue(key, stringValue);
+    return this.writeSetting(key, stringValue);
+  }
 
+  private async writeSetting(
+    key: SettingKey,
+    stringValue: string,
+  ): Promise<AppSettings> {
     const setting = await this.settingsRepository.findOne({ where: { key } });
     if (!setting) {
       throw new Error(`Setting ${key} not found`);
@@ -232,15 +237,17 @@ export class ConfigService implements OnModuleInit {
   async updateMultipleSettings(
     settings: ConfigSettingDto[],
   ): Promise<AppSettings[]> {
-    for (const { key, value } of settings) {
-      validateSettingValue(key, toStoredValue(value));
-    }
+    const pending = settings.map(({ key, value }) => {
+      const stringValue = toStoredValue(value);
+      validateSettingValue(key, stringValue);
+      return { key, stringValue };
+    });
 
     const results: AppSettings[] = [];
 
-    for (const { key, value } of settings) {
+    for (const { key, stringValue } of pending) {
       try {
-        const updated = await this.updateSetting(key, value);
+        const updated = await this.writeSetting(key, stringValue);
         results.push(updated);
       } catch (error) {
         this.logger.error(`Failed to update setting ${key}:`, error);

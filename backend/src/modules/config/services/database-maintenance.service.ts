@@ -7,7 +7,10 @@ import {
   ImportResult,
 } from '@/modules/config/services/database-import.service';
 import { VersionService } from '@/modules/config/services/version.service';
-import { validateSettingValue } from '@/modules/config/services/setting-validation';
+import {
+  clampSettingValue,
+  validateSettingValue,
+} from '@/modules/config/services/setting-validation';
 import { isSettingKey } from '@/modules/config/settings.catalog';
 
 @Injectable()
@@ -30,8 +33,11 @@ export class DatabaseMaintenanceService {
     const result = await this.databaseImportService.importDatabase(importData, {
       currentAppVersion: this.versionService.getCurrentAppVersion(),
       compareVersions: (v1, v2) => this.versionService.compareVersions(v1, v2),
-      validateSetting: (key, value) => {
-        if (isSettingKey(key)) validateSettingValue(key, value);
+      prepareSetting: (key, value) => {
+        if (!isSettingKey(key)) return value;
+        const clamped = clampSettingValue(key, value);
+        validateSettingValue(key, clamped);
+        return clamped;
       },
     });
 
