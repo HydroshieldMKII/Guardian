@@ -48,3 +48,14 @@ export const findConflictingRule = <Rule extends UserTimeRule>(
       rule.dayOfWeek === window.dayOfWeek &&
       windowsOverlap(window, rule),
   );
+
+export const mergeRuleEdit = (
+  rule: UserTimeRule,
+  draft: Partial<UserTimeRule>,
+) => ({
+  ruleName: draft.ruleName || rule.ruleName,
+  dayOfWeek: draft.dayOfWeek ?? rule.dayOfWeek,
+  startTime: draft.startTime || rule.startTime,
+  endTime: draft.endTime || rule.endTime,
+  enabled: draft.enabled ?? rule.enabled,
+});

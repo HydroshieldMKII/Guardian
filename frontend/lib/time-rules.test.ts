@@ -2,6 +2,7 @@ import {
   dayLabel,
   endsAfterStart,
   findConflictingRule,
+  mergeRuleEdit,
   minutesOfDay,
   sortTimeRules,
   windowsOverlap,
@@ -131,5 +132,41 @@ describe("findConflictingRule", () => {
         1,
       ),
     ).toBeUndefined();
+  });
+});
+
+describe("mergeRuleEdit", () => {
+  it("takes every edited value", () => {
+    expect(
+      mergeRuleEdit(rule({}), {
+        ruleName: "Evenings",
+        dayOfWeek: 0,
+        startTime: "18:00",
+        endTime: "22:00",
+        enabled: false,
+      }),
+    ).toEqual({
+      ruleName: "Evenings",
+      dayOfWeek: 0,
+      startTime: "18:00",
+      endTime: "22:00",
+      enabled: false,
+    });
+  });
+
+  it("keeps the rule's values for blank or missing edits", () => {
+    expect(
+      mergeRuleEdit(rule({ enabled: false }), {
+        ruleName: "",
+        startTime: "",
+        endTime: "",
+      }),
+    ).toEqual({
+      ruleName: "Rule",
+      dayOfWeek: 1,
+      startTime: "09:00",
+      endTime: "10:00",
+      enabled: false,
+    });
   });
 });
