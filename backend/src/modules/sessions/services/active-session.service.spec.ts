@@ -1,5 +1,7 @@
 import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { DataSource } from 'typeorm';
+import { ENTITIES } from '@/database/database.options';
 import { SessionHistory } from '@/entities/session-history.entity';
 import { UserDevice } from '@/entities/user-device.entity';
 import { UserPreference } from '@/entities/user-preference.entity';
@@ -557,24 +559,6 @@ describe('ActiveSessionService', () => {
       );
     });
 
-    it('narrows to Plexamp sessions when asked', async () => {
-      await service.getUserSessionHistory('u1', { app: 'plexamp' });
-
-      expect(builders[0].andWhere).toHaveBeenCalledWith(
-        "(LOWER(COALESCE(session.product, '')) LIKE :plexamp OR LOWER(COALESCE(device.deviceProduct, '')) LIKE :plexamp OR LOWER(COALESCE(device.deviceName, '')) LIKE :plexamp)",
-        { plexamp: '%plexamp%' },
-      );
-    });
-
-    it('leaves Plexamp sessions out when only Plex is asked for', async () => {
-      await service.getUserSessionHistory('u1', { app: 'plex' });
-
-      expect(builders[0].andWhere).toHaveBeenCalledWith(
-        "NOT (LOWER(COALESCE(session.product, '')) LIKE :plexamp OR LOWER(COALESCE(device.deviceProduct, '')) LIKE :plexamp OR LOWER(COALESCE(device.deviceName, '')) LIKE :plexamp)",
-        { plexamp: '%plexamp%' },
-      );
-    });
-
     it('matches the search term against titles, addresses and devices', async () => {
       await service.getUserSessionHistory('u1', { search: '  Ennemie ' });
 
@@ -623,5 +607,105 @@ describe('ActiveSessionService', () => {
       historyRepo.delete.mockRejectedValue(new Error('locked'));
       await expect(service.deleteSessionHistory(4)).rejects.toThrow('locked');
     });
+  });
+});
+
+describe('ActiveSessionService history app filter', () => {
+  let dataSource: DataSource;
+  let service: ActiveSessionService;
+
+  const device = (fields: Partial<UserDevice>) =>
+    dataSource.getRepository(UserDevice).save({
+      userId: 'u1',
+      deviceIdentifier: `dev-${fields.deviceName}`,
+      ...fields,
+    });
+
+  const session = async (
+    sessionKey: string,
+    product: string | null,
+    userDevice?: UserDevice,
+  ) => {
+    await dataSource.getRepository(SessionHistory).save({
+      sessionKey,
+      userId: 'u1',
+      product,
+      userDeviceId: userDevice?.id ?? null,
+      endedAt: new Date(),
+    });
+  };
+
+  const keys = async (app: 'plex' | 'plexamp') =>
+    (await service.getUserSessionHistory('u1', { app }))
+      .map((entry) => entry.sessionKey)
+      .sort();
+
+  beforeEach(async () => {
+    dataSource = new DataSource({
+      type: 'sqlite',
+      database: ':memory:',
+      entities: ENTITIES,
+      synchronize: true,
+    });
+    await dataSource.initialize();
+    await dataSource.getRepository(UserPreference).save({ userId: 'u1' });
+
+    const module = await Test.createTestingModule({
+      providers: [
+        ActiveSessionService,
+        {
+          provide: getRepositoryToken(SessionHistory),
+          useValue: dataSource.getRepository(SessionHistory),
+        },
+        {
+          provide: getRepositoryToken(UserDevice),
+          useValue: dataSource.getRepository(UserDevice),
+        },
+        {
+          provide: getRepositoryToken(UserPreference),
+          useValue: dataSource.getRepository(UserPreference),
+        },
+        { provide: DeviceTrackingService, useValue: {} },
+        { provide: PlexClient, useValue: {} },
+        { provide: NotificationOrchestratorService, useValue: {} },
+      ],
+    }).compile();
+
+    service = module.get(ActiveSessionService);
+
+    const plexWeb = await device({
+      deviceName: 'Chrome',
+      deviceProduct: 'Plex Web',
+    });
+    const plexampProduct = await device({
+      deviceName: 'Phone',
+      deviceProduct: 'Plexamp',
+    });
+    const plexampName = await device({
+      deviceName: 'PLEXAMP kitchen',
+      deviceProduct: null,
+    });
+
+    await session('session-product', 'Plexamp');
+    await session('device-product', null, plexampProduct);
+    await session('device-name', 'Plex for Android', plexampName);
+    await session('plex-web', 'Plex Web', plexWeb);
+    await session('no-device', null);
+  });
+
+  afterEach(async () => {
+    await dataSource.destroy();
+  });
+
+  it('matches Plexamp on the session product, device product or device name', async () => {
+    expect(await keys('plexamp')).toEqual([
+      'device-name',
+      'device-product',
+      'session-product',
+    ]);
+  });
+
+  it('keeps sessions without a product or device when only Plex is asked for', async () => {
+    expect(await keys('plex')).toEqual(['no-device', 'plex-web']);
   });
 });

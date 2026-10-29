@@ -1,6 +1,6 @@
 import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { FindOptionsWhere, ILike, IsNull, Not, Or, Repository } from 'typeorm';
 import { SessionHistory } from '@/entities/session-history.entity';
 import { UserDevice } from '@/entities/user-device.entity';
 import { UserPreference } from '@/entities/user-preference.entity';
@@ -14,7 +14,23 @@ import {
 
 export type SessionHistoryApp = 'plex' | 'plexamp';
 
-const PLEXAMP_SESSION_SQL = `(LOWER(COALESCE(session.product, '')) LIKE :plexamp OR LOWER(COALESCE(device.deviceProduct, '')) LIKE :plexamp OR LOWER(COALESCE(device.deviceName, '')) LIKE :plexamp)`;
+const PLEXAMP = ILike('%plexamp%');
+const NOT_PLEXAMP = Or(IsNull(), Not(PLEXAMP));
+
+const SESSION_APP_FILTERS: Record<
+  SessionHistoryApp,
+  FindOptionsWhere<SessionHistory> | FindOptionsWhere<SessionHistory>[]
+> = {
+  plexamp: [
+    { product: PLEXAMP },
+    { userDevice: { deviceProduct: PLEXAMP } },
+    { userDevice: { deviceName: PLEXAMP } },
+  ],
+  plex: {
+    product: NOT_PLEXAMP,
+    userDevice: { deviceProduct: NOT_PLEXAMP, deviceName: NOT_PLEXAMP },
+  },
+};
 
 export interface SessionHistoryQuery {
   limit?: number;
@@ -414,10 +430,7 @@ export class ActiveSessionService {
       }
 
       if (app) {
-        queryBuilder.andWhere(
-          `${app === 'plexamp' ? '' : 'NOT '}${PLEXAMP_SESSION_SQL}`,
-          { plexamp: '%plexamp%' },
-        );
+        queryBuilder.andWhere(SESSION_APP_FILTERS[app]);
       }
 
       const term = search?.trim().toLowerCase();
