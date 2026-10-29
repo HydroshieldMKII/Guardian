@@ -116,7 +116,7 @@ describe('SessionTerminationService', () => {
       );
 
       expect(result.errors).toEqual([
-        'Error processing session sk-1: plex offline',
+        'Error terminating session session-1: plex offline',
       ]);
       expect(result.stoppedSessions).toEqual(['session-2']);
     });
@@ -310,20 +310,14 @@ describe('SessionTerminationService', () => {
       expect(result.stoppedSessions).toEqual([]);
     });
 
-    it('names the session key in an error it could not attribute', async () => {
-      blocked();
-      plexClient.terminateSession.mockRejectedValue(new Error('plex down'));
-
-      const result = await stop([sparse({})]);
-      expect(result.errors[0]).toContain('sk-1');
-    });
-
-    it('falls back to the session id when there is no session key', async () => {
+    it('names the session id Plex refused to terminate', async () => {
       blocked();
       plexClient.terminateSession.mockRejectedValue(new Error('plex down'));
 
       const result = await stop([sparse({ sessionKey: undefined })]);
-      expect(result.errors[0]).toContain('session-1');
+      expect(result.errors).toEqual([
+        'Error terminating session session-1: plex down',
+      ]);
     });
 
     it('cannot terminate a session Plex gave no id for', async () => {

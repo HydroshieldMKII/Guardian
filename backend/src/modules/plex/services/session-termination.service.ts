@@ -2,7 +2,10 @@ import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { PlexClient } from '@/modules/plex/services/plex-client';
 import { ConfigService } from '@/modules/config/services/config.service';
 import { SessionPolicyService } from '@/modules/plex/services/session-policy.service';
-import { ConcurrentLimitService } from '@/modules/plex/services/concurrent-limit.service';
+import {
+  ConcurrentLimitService,
+  ExcessStream,
+} from '@/modules/plex/services/concurrent-limit.service';
 import {
   PlexSession,
   PlexSessionsResponse,
@@ -64,18 +67,22 @@ export class SessionTerminationService {
         return { stoppedSessions: [], errors: [] };
       }
 
-      const overLimit = await this.stopExcessStreams(sessions);
-      const policy = await this.stopPolicyViolations(
+      const { excess, errors: limitErrors } =
+        await this.concurrentLimit.findExcessStreams(sessions);
+      const overLimit = await this.blockAll(this.toLimitRequests(excess));
+
+      const violations = await this.findPolicyViolations(
         sessions,
         new Set(overLimit.stoppedSessions),
       );
+      const policy = await this.blockAll(violations);
 
       return {
         stoppedSessions: [
           ...overLimit.stoppedSessions,
           ...policy.stoppedSessions,
         ],
-        errors: [...overLimit.errors, ...policy.errors],
+        errors: [...limitErrors, ...overLimit.errors, ...policy.errors],
       };
     } catch (error) {
       this.logger.error('Error stopping unapproved sessions', error);
@@ -83,72 +90,61 @@ export class SessionTerminationService {
     }
   }
 
-  private async stopExcessStreams(
-    sessions: PlexSession[],
-  ): Promise<SessionTerminationResult> {
-    const { excess, errors } =
-      await this.concurrentLimit.findExcessStreams(sessions);
-    const stoppedSessions: string[] = [];
-
-    for (const { session, userId, reason } of excess) {
+  private toLimitRequests(excess: ExcessStream[]): BlockRequest[] {
+    return excess.flatMap(({ session, userId, reason }) => {
       const sessionId = session.Session?.id;
-      if (!sessionId) continue;
-
-      try {
-        await this.block({
-          session,
-          sessionId,
-          userId,
-          reason,
-          stopCode: 'CONCURRENT_LIMIT',
-        });
-        stoppedSessions.push(sessionId);
-      } catch (error) {
-        errors.push(
-          `Error terminating session ${sessionId}: ${errorMessage(error)}`,
-        );
-        this.logger.error(`Error terminating session ${sessionId}`, error);
-      }
-    }
-
-    return { stoppedSessions, errors };
+      return sessionId
+        ? [{ session, sessionId, userId, reason, stopCode: 'CONCURRENT_LIMIT' }]
+        : [];
+    });
   }
 
-  private async stopPolicyViolations(
+  private async findPolicyViolations(
     sessions: PlexSession[],
     alreadyStopped: Set<string>,
-  ): Promise<SessionTerminationResult> {
-    const stoppedSessions: string[] = [];
-    const errors: string[] = [];
+  ): Promise<BlockRequest[]> {
+    const requests: BlockRequest[] = [];
 
     for (const session of sessions) {
       const sessionId = session.Session?.id;
       if (sessionId && alreadyStopped.has(sessionId)) continue;
 
+      const decision = await this.sessionPolicy.evaluate(session);
+      if (!decision.shouldStop) continue;
+
+      if (!sessionId) {
+        this.logger.warn('Could not find session identifier in session data');
+        continue;
+      }
+
+      requests.push({
+        session,
+        sessionId,
+        userId: session.User?.id || 'unknown',
+        reason: decision.reason,
+        stopCode: decision.stopCode,
+      });
+    }
+
+    return requests;
+  }
+
+  private async blockAll(
+    requests: BlockRequest[],
+  ): Promise<SessionTerminationResult> {
+    const stoppedSessions: string[] = [];
+    const errors: string[] = [];
+
+    for (const request of requests) {
       try {
-        const decision = await this.sessionPolicy.evaluate(session);
-        if (!decision.shouldStop) continue;
-
-        if (!sessionId) {
-          this.logger.warn('Could not find session identifier in session data');
-          continue;
-        }
-
-        await this.block({
-          session,
-          sessionId,
-          userId: session.User?.id || 'unknown',
-          reason: decision.reason,
-          stopCode: decision.stopCode,
-        });
-        stoppedSessions.push(sessionId);
+        await this.block(request);
+        stoppedSessions.push(request.sessionId);
       } catch (error) {
-        const sessionKeyForError = session.sessionKey || sessionId || 'unknown';
         errors.push(
-          `Error processing session ${sessionKeyForError}: ${errorMessage(error)}`,
+          `Error terminating session ${request.sessionId}: ${errorMessage(error)}`,
         );
         this.logger.error(
-          `Error processing session ${sessionKeyForError}`,
+          `Error terminating session ${request.sessionId}`,
           error,
         );
       }
