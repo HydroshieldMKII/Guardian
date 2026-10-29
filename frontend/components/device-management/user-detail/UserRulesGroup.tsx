@@ -62,14 +62,14 @@ export function UserRulesGroup({
         onClick={onEditStreamLimit}
       />
       <RuleRow
-        title="Schedule"
+        title="Time schedule"
         description="Hours when this user is blocked from streaming"
         value={countLabel(scheduleCount, "rule")}
         active={scheduleCount > 0}
         onClick={onEditSchedule}
       />
       <RuleRow
-        title="Networks"
+        title="Network access"
         description="Where this user can stream from"
         value={networkLabel(preference)}
         active={hasIPPolicy(preference)}

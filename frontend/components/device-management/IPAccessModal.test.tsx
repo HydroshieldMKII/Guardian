@@ -80,7 +80,7 @@ const restrictedModal = async () => {
 describe("IPAccessModal", () => {
   it("renders nothing while closed", () => {
     renderModal({ isOpen: false });
-    expect(screen.queryByText("IP & network access Policies")).toBeNull();
+    expect(screen.queryByText("Network access Policies")).toBeNull();
   });
 
   it("names the user it is configuring", () => {

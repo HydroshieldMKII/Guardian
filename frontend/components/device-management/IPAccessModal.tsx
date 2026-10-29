@@ -50,7 +50,7 @@ export const IPAccessModal: React.FC<IPAccessModalProps> = ({
   return (
     <Modal open={isOpen} onOpenChange={onClose} size="lg">
       <ModalHeader
-        title="IP & network access"
+        title="Network access"
         description={
           <>
             Choose where{" "}

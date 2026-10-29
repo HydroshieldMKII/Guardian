@@ -286,14 +286,14 @@ describe("UserDetail header", () => {
     });
 
     expect(screen.getAllByText("Temporary access")).toHaveLength(2);
-    expect(screen.getByText("Time schedule")).toBeInTheDocument();
+    expect(screen.getAllByText("Time schedule")).toHaveLength(2);
   });
 
   it("shows no policy pills when nothing applies", () => {
     renderDetail();
 
-    expect(screen.queryByText("Time schedule")).toBeNull();
-    expect(screen.queryByText("Network access")).toBeNull();
+    expect(screen.getAllByText("Time schedule")).toHaveLength(1);
+    expect(screen.getAllByText("Network access")).toHaveLength(1);
   });
 });
 
@@ -438,7 +438,7 @@ describe("UserDetail rules", () => {
     renderDetail({ group: group({ user: { userId: "u-1" } }) });
 
     expect(ruleValue("Streams at once")).toBe("Global default");
-    expect(ruleValue("Networks")).toBe("Anywhere");
+    expect(ruleValue("Network access")).toBe("Anywhere");
   });
 
   it("counts devices left out of the stream limit", () => {
@@ -509,18 +509,18 @@ describe("UserDetail rules", () => {
   ])("counts enabled schedule rules %#", (rules, label) => {
     renderDetail({ timeRules: rules });
 
-    expect(ruleValue("Schedule")).toBe(label);
+    expect(ruleValue("Time schedule")).toBe(label);
   });
 
   it("reads no schedule when rules have not loaded", () => {
     renderDetail();
-    expect(ruleValue("Schedule")).toBe("None");
+    expect(ruleValue("Time schedule")).toBe("None");
   });
 
   it("opens the schedule", async () => {
     const { user, handlers } = renderDetail();
 
-    await user.click(screen.getByText("Schedule"));
+    await user.click(screen.getByText("Time schedule"));
 
     expect(handlers.onShowTimePolicy).toHaveBeenCalledWith("u-1");
   });
@@ -544,14 +544,14 @@ describe("UserDetail rules", () => {
   ])("labels networks %p as %s", (overrides, label) => {
     renderDetail({ group: withPreference(overrides) });
 
-    expect(ruleValue("Networks")).toBe(label);
+    expect(ruleValue("Network access")).toBe(label);
   });
 
   it("opens the network modal and saves through it", async () => {
     const { user, handlers } = renderDetail();
     expect(screen.getByText("ip-modal:false")).toBeInTheDocument();
 
-    await user.click(screen.getByText("Networks"));
+    await user.click(screen.getByText("Network access"));
     expect(screen.getByText("ip-modal:true")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "save ip" }));
