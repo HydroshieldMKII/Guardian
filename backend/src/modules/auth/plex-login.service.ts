@@ -1,7 +1,9 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { AuthService } from '@/modules/auth/auth.service';
 import { AuthSessionService } from '@/modules/auth/auth-session.service';
-import { PlexOAuthService, PlexUser } from '@/modules/auth/plex-oauth.service';
+import { PlexOAuthService } from '@/modules/auth/plex-oauth.service';
+import { PlexAccountService } from '@/modules/auth/plex-account.service';
+import { PlexUser } from '@/modules/auth/plex-tv.client';
 import { ConfigService } from '@/modules/config/services/config.service';
 import { AuthResponseDto } from '@/modules/auth/dto/session.dto';
 
@@ -28,11 +30,12 @@ export class PlexLoginService {
     private readonly authService: AuthService,
     private readonly authSessions: AuthSessionService,
     private readonly plexOAuthService: PlexOAuthService,
+    private readonly plexAccounts: PlexAccountService,
     private readonly configService: ConfigService,
   ) {}
 
   async isEnabled(): Promise<boolean> {
-    if (await this.plexOAuthService.getAdminWithPlexLinked()) {
+    if (await this.plexAccounts.getAdminWithPlexLinked()) {
       return true;
     }
     return (await this.portalEnabled()) === true;
@@ -63,7 +66,7 @@ export class PlexLoginService {
 
   private async portalLogin(plexUser: PlexUser): Promise<PlexLogin> {
     const plexUserId = String(plexUser.id);
-    if (!(await this.plexOAuthService.isPlexUserOnServer(plexUserId))) {
+    if (!(await this.plexAccounts.isPlexUserOnServer(plexUserId))) {
       throw new UnauthorizedException(
         'Your Plex account does not have access to this server.',
       );

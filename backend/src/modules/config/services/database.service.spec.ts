@@ -437,6 +437,20 @@ describe('DatabaseService', () => {
         'Stream count reset failed: locked',
       );
     });
+
+    it('reports a non-Error failure by its text', async () => {
+      updateBuilder.execute.mockRejectedValue('disk full');
+
+      await expect(service.resetStreamCounts()).rejects.toThrow(
+        'Stream count reset failed: disk full',
+      );
+    });
+
+    it('tolerates a driver that does not report affected rows', async () => {
+      updateBuilder.execute.mockResolvedValue({});
+
+      await expect(service.resetStreamCounts()).resolves.toBeUndefined();
+    });
   });
 
   describe('deleteAllDevices', () => {

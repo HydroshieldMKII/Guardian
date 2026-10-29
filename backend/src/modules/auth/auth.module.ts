@@ -14,6 +14,8 @@ import { AuthController } from '@/modules/auth/auth.controller';
 import { PasswordResetController } from '@/modules/auth/password-reset.controller';
 import { PlexAuthController } from '@/modules/auth/plex-auth.controller';
 import { PlexLoginService } from '@/modules/auth/plex-login.service';
+import { PlexAccountService } from '@/modules/auth/plex-account.service';
+import { PlexTvClient } from '@/modules/auth/plex-tv.client';
 import { AuthGuard } from '@/modules/auth/guards/auth.guard';
 import { ConfigModule } from '@/modules/config/config.module';
 
@@ -35,6 +37,8 @@ import { ConfigModule } from '@/modules/config/config.module';
     PlexOAuthService,
     PasswordResetService,
     PlexLoginService,
+    PlexAccountService,
+    PlexTvClient,
     {
       provide: APP_GUARD,
       useClass: AuthGuard,

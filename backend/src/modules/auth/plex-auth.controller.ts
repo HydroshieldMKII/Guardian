@@ -12,6 +12,7 @@ import {
 import type { Request, Response } from 'express';
 import { PlexOAuthService } from '@/modules/auth/plex-oauth.service';
 import { PlexLoginService } from '@/modules/auth/plex-login.service';
+import { PlexAccountService } from '@/modules/auth/plex-account.service';
 import { CurrentUser } from '@/modules/auth/decorators/current-user.decorator';
 import { Public } from '@/modules/auth/decorators/public.decorator';
 import { AdminOnly } from '@/modules/auth/decorators/admin-only.decorator';
@@ -24,6 +25,7 @@ export class PlexAuthController {
   constructor(
     private plexOAuthService: PlexOAuthService,
     private plexLoginService: PlexLoginService,
+    private plexAccounts: PlexAccountService,
   ) {}
 
   @Public()
@@ -107,7 +109,7 @@ export class PlexAuthController {
       const plexUser = await this.plexOAuthService.getPlexUserFromToken(
         body.authToken,
       );
-      const result = await this.plexOAuthService.linkPlexAccountToAdmin(
+      const result = await this.plexAccounts.linkPlexAccountToAdmin(
         user.id,
         plexUser,
       );
@@ -126,7 +128,7 @@ export class PlexAuthController {
   @Delete('link')
   async unlinkPlexAccount(@CurrentUser() user: AdminUser) {
     try {
-      await this.plexOAuthService.unlinkPlexAccountFromAdmin(user.id);
+      await this.plexAccounts.unlinkPlexAccountFromAdmin(user.id);
       return { success: true };
     } catch (error) {
       rethrowAsBadRequest(error, 'Failed to unlink Plex account');

@@ -12,18 +12,19 @@ describe('PlexAuthController', () => {
   let controller: PlexAuthController;
   let authService: AuthControllersTestbed['authService'];
   let plexOAuthService: AuthControllersTestbed['plexOAuthService'];
+  let plexAccounts: AuthControllersTestbed['plexAccounts'];
   let configService: AuthControllersTestbed['configService'];
   const adminUser = adminSession();
 
   beforeEach(async () => {
     const testbed = await createAuthControllersTestbed();
-    ({ authService, plexOAuthService, configService } = testbed);
+    ({ authService, plexOAuthService, plexAccounts, configService } = testbed);
     controller = testbed.module.get(PlexAuthController);
   });
 
   describe('checkPlexOAuthEnabled', () => {
     it('is enabled when an admin has linked Plex', async () => {
-      plexOAuthService.getAdminWithPlexLinked.mockResolvedValue(adminUser);
+      plexAccounts.getAdminWithPlexLinked.mockResolvedValue(adminUser);
       await expect(controller.checkPlexOAuthEnabled()).resolves.toEqual({
         enabled: true,
       });
@@ -169,7 +170,7 @@ describe('PlexAuthController', () => {
     });
 
     it('refuses a Plex user with no access to the server', async () => {
-      plexOAuthService.isPlexUserOnServer.mockResolvedValue(false);
+      plexAccounts.isPlexUserOnServer.mockResolvedValue(false);
       await expect(
         controller.plexLogin(
           { authToken: 'tok' },
@@ -241,7 +242,7 @@ describe('PlexAuthController', () => {
         authToken: 'tok',
       });
 
-      expect(plexOAuthService.linkPlexAccountToAdmin).toHaveBeenCalledWith(
+      expect(plexAccounts.linkPlexAccountToAdmin).toHaveBeenCalledWith(
         'admin-1',
         expect.objectContaining({ id: 9 }),
       );
@@ -249,7 +250,7 @@ describe('PlexAuthController', () => {
     });
 
     it('maps a link failure to a 400', async () => {
-      plexOAuthService.linkPlexAccountToAdmin.mockRejectedValue(
+      plexAccounts.linkPlexAccountToAdmin.mockRejectedValue(
         new Error('already linked'),
       );
       await expect(
@@ -270,13 +271,13 @@ describe('PlexAuthController', () => {
       await expect(controller.unlinkPlexAccount(adminUser)).resolves.toEqual({
         success: true,
       });
-      expect(plexOAuthService.unlinkPlexAccountFromAdmin).toHaveBeenCalledWith(
+      expect(plexAccounts.unlinkPlexAccountFromAdmin).toHaveBeenCalledWith(
         'admin-1',
       );
     });
 
     it('maps a failure to a 400', async () => {
-      plexOAuthService.unlinkPlexAccountFromAdmin.mockRejectedValue(
+      plexAccounts.unlinkPlexAccountFromAdmin.mockRejectedValue(
         new Error('not linked'),
       );
       await expect(controller.unlinkPlexAccount(adminUser)).rejects.toThrow(
@@ -285,7 +286,7 @@ describe('PlexAuthController', () => {
     });
 
     it('falls back to a generic message for a non-Error rejection', async () => {
-      plexOAuthService.unlinkPlexAccountFromAdmin.mockRejectedValue('boom');
+      plexAccounts.unlinkPlexAccountFromAdmin.mockRejectedValue('boom');
       await expect(controller.unlinkPlexAccount(adminUser)).rejects.toThrow(
         'Failed to unlink Plex account',
       );

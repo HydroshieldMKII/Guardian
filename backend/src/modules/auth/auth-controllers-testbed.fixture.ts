@@ -9,6 +9,7 @@ import { PlexLoginService } from '@/modules/auth/plex-login.service';
 import { AuthService } from '@/modules/auth/auth.service';
 import { AuthSessionService } from '@/modules/auth/auth-session.service';
 import { PlexOAuthService } from '@/modules/auth/plex-oauth.service';
+import { PlexAccountService } from '@/modules/auth/plex-account.service';
 import { PasswordResetService } from '@/modules/auth/password-reset.service';
 import { ConfigService } from '@/modules/config/services/config.service';
 
@@ -17,6 +18,7 @@ export interface AuthControllersTestbed {
   authService: Record<string, jest.Mock>;
   authSessions: { logout: jest.Mock; createPlexUserSession: jest.Mock };
   plexOAuthService: Record<string, jest.Mock>;
+  plexAccounts: Record<string, jest.Mock>;
   configService: { getSetting: jest.Mock };
   passwordResetService: Record<
     'getStatus' | 'requestReset' | 'verify' | 'confirm',
@@ -92,7 +94,6 @@ export const createAuthControllersTestbed =
     };
 
     const plexOAuthService = {
-      getAdminWithPlexLinked: jest.fn().mockResolvedValue(null),
       generateClientId: jest.fn().mockReturnValue('client-1'),
       createPlexPin: jest.fn().mockResolvedValue({
         pin: {
@@ -109,6 +110,10 @@ export const createAuthControllersTestbed =
         username: 'guest',
         thumb: 'thumb.png',
       }),
+    };
+
+    const plexAccounts = {
+      getAdminWithPlexLinked: jest.fn().mockResolvedValue(null),
       isPlexUserOnServer: jest.fn().mockResolvedValue(true),
       linkPlexAccountToAdmin: jest.fn().mockResolvedValue({
         plexUserId: '9',
@@ -143,6 +148,7 @@ export const createAuthControllersTestbed =
         { provide: AuthService, useValue: authService },
         { provide: AuthSessionService, useValue: authSessions },
         { provide: PlexOAuthService, useValue: plexOAuthService },
+        { provide: PlexAccountService, useValue: plexAccounts },
         { provide: PasswordResetService, useValue: passwordResetService },
         { provide: ConfigService, useValue: configService },
       ],
@@ -153,6 +159,7 @@ export const createAuthControllersTestbed =
       authService,
       authSessions,
       plexOAuthService,
+      plexAccounts,
       configService,
       passwordResetService,
     };
