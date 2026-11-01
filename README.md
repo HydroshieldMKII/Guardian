@@ -3,6 +3,7 @@
 [![CI](https://github.com/HydroshieldMKII/Guardian/actions/workflows/ci.yml/badge.svg)](https://github.com/HydroshieldMKII/Guardian/actions/workflows/ci.yml)
 [![CD](https://github.com/HydroshieldMKII/Guardian/actions/workflows/cd.yml/badge.svg)](https://github.com/HydroshieldMKII/Guardian/actions/workflows/cd.yml)
 [![Docker Pulls](<https://img.shields.io/docker/pulls/hydroshieldmkii/guardian.svg?label=pulls%20(v2)>)](https://hub.docker.com/r/hydroshieldmkii/guardian)
+[![Legacy Pulls](https://img.shields.io/docker/pulls/hydroshieldmkii/guardian-frontend.svg?label=pulls%20(v1))](https://hub.docker.com/r/hydroshieldmkii/guardian-frontend)
 [![Stars](https://img.shields.io/github/stars/HydroshieldMKII/Guardian.svg?style=flat)](https://github.com/HydroshieldMKII/Guardian/stargazers)
 
 ![Guardian Banner](https://github.com/user-attachments/assets/ff8b9bbc-f5d4-451a-bdc1-cb2354023c8b)
