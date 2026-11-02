@@ -62,7 +62,7 @@
     "@types/mdurl": "^2.0.0",
     "@types/node": "^26.6.6",
     "@types/supertest": "^7.2.1",
-    "@vitest/coverage-v8": "^4.1.12",
+    "@vitest/coverage-v8": "^5.0.5",
     "eslint": "^9.39.5",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.7",
