@@ -17,6 +17,7 @@
 - [ ] `cd backend && npm run lint:ci && npm run typecheck && npm run test:cov`
 - [ ] `cd frontend && npm run lint:ci && npm run typecheck && npm run test:cov`
 - [ ] Verified manually in a running instance
+- [ ] Follows the [AI policy](https://github.com/HydroshieldMKII/Guardian/blob/main/AI_POLICY.md)
 
 ## Screenshots
 
