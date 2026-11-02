@@ -23,6 +23,7 @@ In two terminals: `cd backend && npm ci && npm run start:dev` (port 3001) and
 - Existing installs must keep working after an update. Schema changes go through a migration.
 - PR titles use Conventional Commits (`feat:`, `fix:`, ...).
 - No personal data in code, tests or fixtures.
+- AI tools are welcome, follow the [AI policy](AI_POLICY.md).
 
 Report security issues through a
 [private advisory](https://github.com/HydroshieldMKII/Guardian/security/advisories/new).
