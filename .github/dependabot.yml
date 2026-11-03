@@ -11,6 +11,8 @@ updates:
       prefix-development: chore(deps-dev)
     labels: [dependencies, backend]
     groups:
+      vitest:
+        patterns: [vitest, '@vitest/*']
       backend-minor-patch:
         update-types: [minor, patch]
 
