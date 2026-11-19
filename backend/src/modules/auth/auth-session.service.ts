@@ -75,7 +75,7 @@ export class AuthSessionService {
     try {
       const session = await this.sessionRepository.findOne({
         where: { token },
-        relations: ['user'],
+        relations: { user: true },
       });
 
       if (!session) {

@@ -44,7 +44,7 @@ export function databasePath(): string {
 
 export function databaseOptions(database: string): DataSourceOptions {
   return {
-    type: 'sqlite',
+    type: 'better-sqlite3',
     database,
     entities: ENTITIES,
     synchronize: false,

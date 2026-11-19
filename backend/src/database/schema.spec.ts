@@ -77,7 +77,7 @@ describe('database schema', () => {
   const legacyDatabase = async (statements: string[]): Promise<string> => {
     const database = path.join(workDir, 'legacy.db');
     const dataSource = await new DataSource({
-      type: 'sqlite',
+      type: 'better-sqlite3',
       database,
     }).initialize();
     try {

@@ -31,7 +31,7 @@ describe('database options', () => {
 
   it('never lets TypeORM synchronize the schema', () => {
     expect(databaseOptions('guardian.db')).toMatchObject({
-      type: 'sqlite',
+      type: 'better-sqlite3',
       database: 'guardian.db',
       entities: ENTITIES,
       synchronize: false,
