@@ -30,7 +30,10 @@ export class UserTimeRule {
 
   // Single day constraint (0=Sunday, 1=Monday, ..., 6=Saturday)
   @Column({ name: 'day_of_week', type: 'int' })
-  @Check('day_of_week >= 0 AND day_of_week <= 6')
+  @Check(
+    'CHK_d6a5b9eee1de3c91f510b3b0d5',
+    'day_of_week >= 0 AND day_of_week <= 6',
+  )
   dayOfWeek: number;
 
   @Column({ name: 'start_time', type: 'varchar' })

@@ -57,7 +57,12 @@ export class DeviceTrackingService {
 
     const devicesWithSession = await this.userDeviceRepository.find({
       where: { currentSessionKey: sessionKey },
-      select: ['id', 'deviceIdentifier', 'currentSessionKey', 'userId'],
+      select: {
+        id: true,
+        deviceIdentifier: true,
+        currentSessionKey: true,
+        userId: true,
+      },
     });
 
     this.logger.debug(

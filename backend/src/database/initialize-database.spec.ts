@@ -37,7 +37,7 @@ describe('initializeDatabase', () => {
     run: (dataSource: DataSource) => Promise<T>,
   ): Promise<T> => {
     const dataSource = await new DataSource({
-      type: 'sqlite',
+      type: 'better-sqlite3',
       database: file,
     }).initialize();
     try {
