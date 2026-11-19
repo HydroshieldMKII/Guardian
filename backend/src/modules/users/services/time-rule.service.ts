@@ -112,7 +112,9 @@ export class TimeRuleService {
         `Error creating preset: ${errorMessage(error)}`,
         asHttpError(error).stack,
       );
-      throw new Error(`Failed to create preset: ${errorMessage(error)}`);
+      throw new Error(`Failed to create preset: ${errorMessage(error)}`, {
+        cause: error,
+      });
     }
   }
 

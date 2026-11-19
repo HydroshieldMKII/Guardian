@@ -91,7 +91,7 @@ export class DatabaseService {
       return JSON.stringify(exportData, null, 2);
     } catch (error) {
       this.logger.error('Error exporting database:', error);
-      throw new Error('Failed to export database');
+      throw new Error('Failed to export database', { cause: error });
     }
   }
 
@@ -104,7 +104,9 @@ export class DatabaseService {
       );
     } catch (error) {
       this.logger.error('Failed to reset database:', error);
-      throw new Error(`Database reset failed: ${describeError(error)}`);
+      throw new Error(`Database reset failed: ${describeError(error)}`, {
+        cause: error,
+      });
     }
   }
 
@@ -127,7 +129,9 @@ export class DatabaseService {
       );
     } catch (error) {
       this.logger.error('Failed to reset stream counts:', error);
-      throw new Error(`Stream count reset failed: ${describeError(error)}`);
+      throw new Error(`Stream count reset failed: ${describeError(error)}`, {
+        cause: error,
+      });
     }
   }
 
@@ -145,7 +149,9 @@ export class DatabaseService {
       );
     } catch (error) {
       this.logger.error('Failed to delete all devices:', error);
-      throw new Error(`Device deletion failed: ${describeError(error)}`);
+      throw new Error(`Device deletion failed: ${describeError(error)}`, {
+        cause: error,
+      });
     }
   }
 
@@ -165,6 +171,7 @@ export class DatabaseService {
       this.logger.error('Failed to clear session history:', error);
       throw new Error(
         `Session history clearing failed: ${describeError(error)}`,
+        { cause: error },
       );
     }
   }

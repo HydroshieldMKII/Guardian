@@ -173,11 +173,13 @@ describe('DatabaseService', () => {
     });
 
     it('reports a failure with its cause', async () => {
-      transaction.mockRejectedValue(new Error('locked'));
+      const cause = new Error('locked');
+      transaction.mockRejectedValue(cause);
 
-      await expect(service.resetDatabase()).rejects.toThrow(
-        'Database reset failed: locked',
-      );
+      await expect(service.resetDatabase()).rejects.toMatchObject({
+        message: 'Database reset failed: locked',
+        cause,
+      });
     });
   });
 
