@@ -206,13 +206,13 @@ describe('DevicesService', () => {
     });
 
     it('reports a transaction failure with context', async () => {
-      transactionRepos.devices.delete.mockRejectedValue(
-        new Error('foreign key'),
-      );
+      const cause = new Error('foreign key');
+      transactionRepos.devices.delete.mockRejectedValue(cause);
 
-      await expect(service.deleteDevice(7)).rejects.toThrow(
-        'Device deletion failed: foreign key',
-      );
+      await expect(service.deleteDevice(7)).rejects.toMatchObject({
+        message: 'Device deletion failed: foreign key',
+        cause,
+      });
     });
   });
 });

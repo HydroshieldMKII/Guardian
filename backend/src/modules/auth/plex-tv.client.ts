@@ -140,7 +140,7 @@ export class PlexTvClient {
       return map(JSON.parse(body) as TRaw);
     } catch (error) {
       this.logger.error(logMessage, error);
-      throw new Error(errorMessage);
+      throw new Error(errorMessage, { cause: error });
     }
   }
 

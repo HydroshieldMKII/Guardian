@@ -120,7 +120,9 @@ export class DevicesService {
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error(`Failed to delete device ${deviceId}:`, error);
-      throw new Error(`Device deletion failed: ${errorMessage(error)}`);
+      throw new Error(`Device deletion failed: ${errorMessage(error)}`, {
+        cause: error,
+      });
     }
   }
 
