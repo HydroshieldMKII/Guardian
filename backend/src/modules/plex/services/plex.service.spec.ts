@@ -269,6 +269,18 @@ describe('PlexService', () => {
       );
     });
 
+    it.each([
+      ['a trailing slash', 'https://plex.example.com/'],
+      ['several trailing slashes', 'https://plex.example.com///'],
+      ['no trailing slash', 'https://plex.example.com'],
+    ])('returns a custom URL without %s', async (_label, url) => {
+      settings.CUSTOM_PLEX_URL = url;
+
+      await expect(service.getPlexWebUrl()).resolves.toBe(
+        'https://plex.example.com',
+      );
+    });
+
     it('builds an http URL from the server settings', async () => {
       await expect(service.getPlexWebUrl()).resolves.toBe(
         'http://10.0.0.5:32400',

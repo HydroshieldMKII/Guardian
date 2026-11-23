@@ -158,7 +158,7 @@ export class PlexService {
     try {
       const customUrl = await this.configService.getSetting('CUSTOM_PLEX_URL');
       if (customUrl && customUrl.trim()) {
-        return customUrl.trim();
+        return customUrl.trim().replace(/\/+$/, '');
       }
 
       const [ip, port, useSSL] = await Promise.all([
