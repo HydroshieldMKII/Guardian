@@ -141,6 +141,9 @@ export class PlexService {
     enableThumbnails: boolean | null,
     enableArtwork: boolean | null,
   ): EnrichedPlexSession {
+    const backdropPath = session.thumb || session.art;
+    const backdropType = session.thumb ? 'thumb' : 'art';
+
     return {
       ...session,
       thumbnailUrl:
@@ -150,6 +153,10 @@ export class PlexService {
       artUrl:
         enableArtwork && session.art
           ? this.buildMediaUrl('art', session.art)
+          : undefined,
+      backdropUrl:
+        enableArtwork && backdropPath
+          ? this.buildMediaUrl(backdropType, backdropPath)
           : undefined,
     };
   }

@@ -518,39 +518,102 @@ describe("StreamCard opening in Plex", () => {
   });
 });
 
-describe("StreamCard music disc", () => {
-  const disc = () => screen.queryByTestId("music-disc");
+describe("StreamCard thumbnail backdrop", () => {
+  it("uses a blurred poster wash for a movie without artwork", () => {
+    renderCard({ backdropUrl: "/poster.jpg" });
 
-  it("fills the empty background of a track that has no artwork", () => {
-    renderCard({ type: "track", title: "Roygbiv" });
-    expect(disc()).toBeInTheDocument();
+    expect(screen.getByTestId("stream-ambient")).toHaveAttribute(
+      "src",
+      "/poster.jpg",
+    );
+    expect(screen.queryByTestId("stream-art")).toBeNull();
   });
 
-  it("stays out of the way of real artwork", () => {
-    renderCard({ type: "track", title: "Roygbiv", artUrl: "/art.jpg" });
-    expect(disc()).toBeNull();
+  it("uses a blurred still for an episode without artwork", () => {
+    renderCard({ type: "episode", backdropUrl: "/episode.jpg" });
+
+    expect(screen.getByTestId("stream-ambient")).toHaveAttribute(
+      "src",
+      "/episode.jpg",
+    );
+    expect(screen.queryByTestId("stream-art")).toBeNull();
   });
 
-  it("leaves video alone", () => {
-    renderCard();
-    expect(disc()).toBeNull();
+  it("returns to a plain card when a movie poster fails to load", () => {
+    const { container } = renderCard({ backdropUrl: "/poster.jpg" });
+
+    fireEvent.error(screen.getByTestId("stream-ambient"));
+
+    expect(screen.queryByTestId("stream-ambient")).toBeNull();
+    expect(container.firstElementChild).not.toHaveClass("bg-neutral-900");
   });
 
-  it("turns only while the track is playing", () => {
+  it("prefers real artwork over the thumbnail wash", () => {
+    renderCard({ backdropUrl: "/poster.jpg", artUrl: "/art.jpg" });
+
+    expect(screen.getByTestId("stream-art")).toHaveAttribute(
+      "src",
+      "/art.jpg",
+    );
+    expect(screen.getByTestId("stream-ambient")).toHaveAttribute(
+      "src",
+      "/art.jpg",
+    );
+  });
+});
+
+describe("StreamCard music backdrop", () => {
+  it("leaves a track with no images on a plain card", () => {
+    const { container } = renderCard({ type: "track", title: "Roygbiv" });
+
+    expect(screen.queryByTestId("stream-art")).toBeNull();
+    expect(screen.queryByTestId("stream-ambient")).toBeNull();
+    expect(container.firstElementChild).not.toHaveClass("bg-neutral-900");
+  });
+
+  it("uses only a blurred cover wash when the track has no artwork", () => {
+    const { container } = renderCard({
+      type: "track",
+      title: "Roygbiv",
+      backdropUrl: "/cover.jpg",
+    });
+    const ambient = screen.getByTestId("stream-ambient");
+
+    expect(ambient).toHaveAttribute("src", "/cover.jpg");
+    expect(ambient).toHaveClass("blur-3xl", "scale-150", "opacity-0");
+    expect(screen.queryByTestId("stream-art")).toBeNull();
+    expect(container.firstElementChild).toHaveClass("bg-neutral-900");
+
+    fireEvent.load(ambient);
+    expect(ambient).toHaveClass("opacity-70");
+  });
+
+  it("uses the cover wash when real artwork fails to load", () => {
     renderCard({
       type: "track",
       title: "Roygbiv",
-      Player: { title: "Phone", state: "playing" },
+      backdropUrl: "/cover.jpg",
+      artUrl: "/art.jpg",
     });
-    expect(disc()).toHaveClass("animate-spin");
+
+    fireEvent.error(screen.getByTestId("stream-art"));
+
+    expect(screen.getByTestId("stream-ambient")).toHaveAttribute(
+      "src",
+      "/cover.jpg",
+    );
   });
 
-  it("rests when the track is paused", () => {
-    renderCard({
+  it("returns to a plain card when the cover also fails to load", () => {
+    const { container } = renderCard({
       type: "track",
       title: "Roygbiv",
-      Player: { title: "Phone", state: "paused" },
+      backdropUrl: "/cover.jpg",
     });
-    expect(disc()).not.toHaveClass("animate-spin");
+
+    fireEvent.error(screen.getByTestId("stream-ambient"));
+
+    expect(screen.queryByTestId("stream-ambient")).toBeNull();
+    expect(container.firstElementChild).not.toHaveClass("bg-neutral-900");
   });
 });

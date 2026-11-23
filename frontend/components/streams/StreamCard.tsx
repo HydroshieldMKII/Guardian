@@ -32,7 +32,10 @@ export const StreamCard: React.FC<StreamCardProps> = ({
   onNavigateToUser,
 }) => {
   const art = useLoadableImage(stream.artUrl || "");
-  const overArt = Boolean(art.url);
+  const backdrop = useLoadableImage(
+    !art.url ? stream.backdropUrl || "" : "",
+  );
+  const overArt = Boolean(art.url || backdrop.url);
   const lines = getContentLines(stream);
 
   return (
@@ -43,7 +46,7 @@ export const StreamCard: React.FC<StreamCardProps> = ({
           "border-transparent bg-neutral-900 text-white shadow-lg shadow-black/10 dark:bg-black dark:shadow-none",
       )}
     >
-      <StreamBackdrop stream={stream} art={art} />
+      <StreamBackdrop art={art} backdrop={backdrop} />
 
       <div className="relative z-10 space-y-4 p-4 sm:space-y-5 sm:p-5">
         <div className="flex gap-3.5 sm:min-h-[6.75rem] sm:gap-5">
