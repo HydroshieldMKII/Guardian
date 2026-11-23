@@ -241,7 +241,7 @@ describe('PlexService', () => {
       expect(result.thumbnailUrl).toBeDefined();
     });
 
-    it('leaves both out for a session carrying neither', async () => {
+    it('leaves the media URLs out for a session carrying neither', async () => {
       plexClient.getSessions.mockResolvedValue(
         sessionsResponse([session({ thumb: undefined, art: undefined })]),
       );
@@ -249,6 +249,39 @@ describe('PlexService', () => {
       const result = await firstSession();
       expect(result.thumbnailUrl).toBeUndefined();
       expect(result.artUrl).toBeUndefined();
+      expect(result.backdropUrl).toBeUndefined();
+    });
+
+    it('keeps the cover available for the backdrop when thumbnails are hidden', async () => {
+      settings.ENABLE_MEDIA_THUMBNAILS = false;
+      plexClient.getSessions.mockResolvedValue(
+        sessionsResponse([session({ type: 'track', art: undefined })]),
+      );
+
+      const result = await firstSession();
+      expect(result.thumbnailUrl).toBeUndefined();
+      expect(result.artUrl).toBeUndefined();
+      expect(result.backdropUrl).toBe(
+        '/api/pg/plex/media/thumb/42?t=1700000000',
+      );
+    });
+
+    it('uses artwork for the backdrop when no cover exists', async () => {
+      plexClient.getSessions.mockResolvedValue(
+        sessionsResponse([session({ thumb: undefined })]),
+      );
+
+      expect(await firstSession()).toMatchObject({
+        backdropUrl: '/api/pg/plex/media/art/42?t=1700000000',
+      });
+    });
+
+    it('leaves the backdrop out while artwork is disabled', async () => {
+      settings.ENABLE_MEDIA_ARTWORK = false;
+
+      const result = await firstSession();
+      expect(result.backdropUrl).toBeUndefined();
+      expect(result.thumbnailUrl).toBeDefined();
     });
   });
 

@@ -48,6 +48,7 @@ export interface EnrichedPlexSession extends Omit<PlexSession, 'Session'> {
   Session?: NonNullable<PlexSession['Session']> & { sessionCount?: number };
   thumbnailUrl?: string;
   artUrl?: string;
+  backdropUrl?: string;
   serverMachineIdentifier?: string | null;
 }
 

@@ -46,6 +46,7 @@ export interface PlexSession {
   // Backend-generated media URLs
   thumbnailUrl?: string;
   artUrl?: string;
+  backdropUrl?: string;
 }
 
 export interface StreamsResponse {

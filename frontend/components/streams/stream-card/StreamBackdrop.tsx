@@ -1,28 +1,33 @@
-import { Disc3 } from "lucide-react";
 import type { LoadableImage } from "@/hooks/useLoadableImage";
 import { cn } from "@/lib/utils";
-import type { PlexSession } from "@/types";
 
 export function StreamBackdrop({
-  stream,
   art,
+  backdrop,
 }: {
-  stream: PlexSession;
   art: LoadableImage;
+  backdrop: LoadableImage;
 }) {
-  if (!art.url) {
-    return stream.type === "track" ? (
-      <Disc3
-        aria-hidden
-        data-testid="music-disc"
-        className={cn(
-          "pointer-events-none absolute -bottom-10 -right-8 size-44 text-muted-foreground/10",
-          stream.Player?.state === "playing" &&
-            "animate-spin [animation-duration:8s] motion-reduce:animate-none",
-        )}
-      />
-    ) : null;
+  if (!art.url && backdrop.url) {
+    return (
+      <div aria-hidden className="absolute inset-0 overflow-hidden">
+        <img
+          src={backdrop.url}
+          alt=""
+          data-testid="stream-ambient"
+          onLoad={backdrop.markLoaded}
+          onError={backdrop.markFailed}
+          className={cn(
+            "absolute inset-0 size-full scale-150 object-cover opacity-0 blur-3xl saturate-150 transition-opacity duration-700 motion-reduce:transition-none",
+            backdrop.loaded && "opacity-70 dark:opacity-40",
+          )}
+        />
+        <div className="absolute inset-0 bg-black/50 dark:bg-black/55" />
+      </div>
+    );
   }
+
+  if (!art.url) return null;
 
   return (
     <>
